@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.62 2004/09/07 18:22:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.63 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -372,7 +372,7 @@ RETCODE addRelaxation(
    debugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
    debug( SCIProwPrint(consdata->row, NULL) );
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -860,7 +860,7 @@ RETCODE SCIPseparateKnapsackCardinality(
                debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
                debug(SCIProwPrint(row, NULL));
                CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               CHECK_OKAY( SCIPaddCut(scip, row, 1.0) );
+               CHECK_OKAY( SCIPaddCut(scip, row, FALSE) );
                (*ncuts)++;
             }
             CHECK_OKAY( SCIPreleaseRow(scip, &row) );
@@ -1885,7 +1885,7 @@ DECL_EVENTEXEC(eventExecKnapsack)
       eventdata->consdata->onesweightsum -= eventdata->weight;
       break;
    default:
-      errorMessage("Invalid event type %x\n", SCIPeventGetType(event));
+      errorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 

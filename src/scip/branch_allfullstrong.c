@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.8 2004/09/07 18:22:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.9 2004/09/21 12:07:58 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -48,6 +48,7 @@ static
 RETCODE branch(
    SCIP*            scip,               /**< SCIP data structure */
    BRANCHRULE*      branchrule,         /**< branching rule */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -109,6 +110,8 @@ RETCODE branch(
       Bool lperror;
       Bool downinf;
       Bool upinf;
+      Bool downconflict;
+      Bool upconflict;
       int i;
       int c;
 
@@ -131,7 +134,8 @@ RETCODE branch(
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]), 
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
-         CHECK_OKAY( SCIPgetVarStrongbranch(scip, pseudocands[c], INT_MAX, &down, &up, &lperror) );
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, pseudocands[c], INT_MAX, 
+               &down, &up, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* display node information line in root node */
          if( SCIPgetDepth(scip) == 0 && SCIPgetNStrongbranchs(scip) % 100 == 0 )
@@ -151,21 +155,35 @@ RETCODE branch(
          /* evaluate strong branching */
          down = MAX(down, lpobjval);
          up = MAX(up, lpobjval);
-         downinf = SCIPisGE(scip, down, cutoffbound);
-         upinf = SCIPisGE(scip, up, cutoffbound);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
+         assert(!allcolsinlp || exactsolve || downinf == SCIPisGE(scip, down, cutoffbound));
+         assert(!allcolsinlp || exactsolve || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(downinf || !downconflict);
+         assert(upinf || !upconflict);
 
-         if( allcolsinlp && !exactsolve )
+         /* check if there are infeasible roundings */
+         if( downinf || upinf )
          {
-            /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            if( downinf && upinf )
+            assert(allcolsinlp);
+            assert(!exactsolve);
+            
+            /* if for both infeasibilities, a conflict clause was created, we don't need to fix the variable by hand,
+             * but better wait for the next propagation round to fix them as an inference, and potentially produce a
+             * cutoff that can be analyzed
+             */
+            if( allowaddcons && downinf == downconflict && upinf == upconflict )
+            {
+               *result = SCIP_CONSADDED;
+               break; /* terminate initialization loop, because constraint was added */
+            }
+            else if( downinf && upinf )
             {
                if( integral )
                {
                   Bool infeasible;
                   Bool fixed;
-
+                  
                   /* both bound changes are infeasible: variable can be fixed to its current value */
                   CHECK_OKAY( SCIPfixVar(scip, pseudocands[c], solval, &infeasible, &fixed) );
                   assert(!infeasible);
@@ -186,9 +204,10 @@ RETCODE branch(
             }
             else if( downinf )
             {
-               /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-               Real newlb = SCIPceil(scip, solval);
+               Real newlb;
 
+               /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
+               newlb = SCIPceil(scip, solval);
                if( SCIPvarGetLbLocal(pseudocands[c]) < newlb - 0.5 )
                {
                   CHECK_OKAY( SCIPchgVarLb(scip, pseudocands[c], newlb) );
@@ -197,11 +216,13 @@ RETCODE branch(
                   break; /* terminate initialization loop, because LP was changed */
                }
             }
-            else if( upinf )
+            else
             {
-               /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
-               Real newub = SCIPfloor(scip, solval);
+               Real newub;
 
+               /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
+               assert(upinf);
+               newub = SCIPfloor(scip, solval);
                if( SCIPvarGetUbLocal(pseudocands[c]) > newub + 0.5 )
                {
                   CHECK_OKAY( SCIPchgVarUb(scip, pseudocands[c], newub) );
@@ -210,14 +231,14 @@ RETCODE branch(
                   break; /* terminate initialization loop, because LP was changed */
                }
             }
-            else
-            {
-               Real minbound;
+         }
+         else if( allcolsinlp && !exactsolve )
+         {
+            Real minbound;
                
-               /* the minimal lower bound of both children is a proved lower bound of the current subtree */
-               minbound = MIN(down, up);
-               provedbound = MAX(provedbound, minbound);
-            }
+            /* the minimal lower bound of both children is a proved lower bound of the current subtree */
+            minbound = MIN(down, up);
+            provedbound = MAX(provedbound, minbound);
          }
 
          /* check for a better score, if we are within the maximum priority candidates */
@@ -263,7 +284,7 @@ RETCODE branch(
       branchruledata->lastcand = c;
    }
 
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
       NODE* node;
       VAR* var;
@@ -394,7 +415,7 @@ DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 
    *result = SCIP_DIDNOTRUN;
    
-   CHECK_OKAY( branch(scip, branchrule, result) );
+   CHECK_OKAY( branch(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }
@@ -412,7 +433,7 @@ DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 
    if( SCIPhasCurrentNodeLP(scip) )
    {
-      CHECK_OKAY( branch(scip, branchrule, result) );
+      CHECK_OKAY( branch(scip, branchrule, allowaddcons, result) );
    }
 
    return SCIP_OKAY;

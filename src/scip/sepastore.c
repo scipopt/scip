@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.24 2004/09/09 13:59:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.25 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -215,8 +215,7 @@ RETCODE sepastoreAddCut(
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
-   Real             scorefactor,        /**< factor to weigh separation score of cut with (usually 1.0);
-                                         *   use infinite score factor to force using the cut */
+   Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    Bool             root                /**< are we at the root node? */
    )
 {
@@ -244,7 +243,8 @@ RETCODE sepastoreAddCut(
     *  - use all cuts that have infinite score factor
     *  - the remaining cuts are only forwarded to the LP, if they fit into the maximal separation size
     */
-   if( sepastore->initiallp || SCIPsetIsInfinity(set, scorefactor) )
+   forcecut = forcecut || sepastore->initiallp;
+   if( forcecut )
       maxsepacuts = INT_MAX;
    else
       maxsepacuts = SCIPsetGetMaxsepacuts(set, root);
@@ -263,7 +263,7 @@ RETCODE sepastoreAddCut(
    {
       cutefficacy = -SCIProwGetLPFeasibility(cut, stat, lp) / SCIProwGetNorm(cut);
       cutorthogonality = 1.0;
-      cutscore = scorefactor * (cutefficacy + set->cutorthofac * cutorthogonality);
+      cutscore = cutefficacy + set->cutorthofac * cutorthogonality;
    }
 
    /* check, if cut has potential to belong to the best "maxsepacuts" separation cuts */
@@ -277,23 +277,24 @@ RETCODE sepastoreAddCut(
    CHECK_OKAY( sepastoreEnsureCutsMem(sepastore, set, sepastore->ncuts+1) );
    assert(sepastore->ncuts < sepastore->cutssize);
 
-   debugMessage("adding cut to separation storage of size %d/%d (scorefac=%g, efficacy=%g, score=%g)\n", 
-      sepastore->ncuts, maxsepacuts, scorefactor, cutefficacy, cutscore);
+   debugMessage("adding cut to separation storage of size %d/%d (forcecut=%d, efficacy=%g, score=%g)\n", 
+      sepastore->ncuts, maxsepacuts, forcecut, cutefficacy, cutscore);
    /*debug(SCIProwPrint(cut, NULL));*/
 
    /* search the correct position of the cut in the cuts array */
    for( c = 0; c < sepastore->ncuts && cutscore <= sepastore->scores[c]; ++c )
    {
       /* update the minimal orthogonality of the cut and it's score */
-      if( set->cutorthofac > 0.0 && !SCIPsetIsInfinity(set, cutscore) )
+      if( set->cutorthofac > 0.0 && !forcecut )
       {
          Real thisortho;
          
+         assert(!SCIPsetIsInfinity(set, cutscore));
          thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[c]);
          if( thisortho < cutorthogonality )
          {
             cutorthogonality = thisortho;
-            cutscore = scorefactor * (cutefficacy + set->cutorthofac * cutorthogonality);
+            cutscore = cutefficacy + set->cutorthofac * cutorthogonality;
             
             /* check, if the cut (after regarding orthogonality) is still good enough */
             if( (sepastore->ncuts >= maxsepacuts && cutscore <= sepastore->scores[maxsepacuts-1])
@@ -343,7 +344,7 @@ RETCODE sepastoreAddCut(
             if( currentorthogonality < mincutorthogonality )
                currentscore = -set->infinity;
             else
-               currentscore = scorefactor * (currentefficacy + set->cutorthofac * currentorthogonality);
+               currentscore = currentefficacy + set->cutorthofac * currentorthogonality;
          }
       }
 
@@ -364,7 +365,7 @@ RETCODE sepastoreAddCut(
             if( thisortho < currentorthogonality )
             {
                currentorthogonality = thisortho;
-               currentscore = scorefactor * (currentefficacy + set->cutorthofac * currentorthogonality);
+               currentscore = currentefficacy + set->cutorthofac * currentorthogonality;
             }
          }
       }
@@ -443,8 +444,7 @@ RETCODE SCIPsepastoreAddCut(
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
-   Real             scorefactor,        /**< factor to weigh separation score of cut with (usually 1.0);
-                                         *   use infinite score factor to force using the cut */
+   Bool             forcecut,           /**< should the cut be forced to enter the LP? */
    Bool             root                /**< are we at the root node? */
    )
 {
@@ -531,7 +531,7 @@ RETCODE SCIPsepastoreAddCut(
    else
    {
       /* add LP row cut to separation storage */
-      CHECK_OKAY( sepastoreAddCut(sepastore, memhdr, set, stat, lp, cut, scorefactor, root) );
+      CHECK_OKAY( sepastoreAddCut(sepastore, memhdr, set, stat, lp, cut, forcecut, root) );
    }
 
    return SCIP_OKAY;

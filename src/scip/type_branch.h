@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.5 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -60,6 +60,8 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  input:
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
+ *  - allowaddcons    : is the branching rule allowed to add constraints to the current node in order to cut off the
+ *                      current solution instead of creating a branching?
  *  - result          : pointer to store the result of the branching call
  *
  *  possible return values for *result:
@@ -67,24 +69,30 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
  *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+ *                      returned, if allowaddcons is FALSE
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
+#define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, Bool allowaddcons, RESULT* result)
 
 /** branching execution method for not completely fixed pseudo solutions
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - branchrule      : the branching rule itself
+ *  - allowaddcons    : is the branching rule allowed to add constraints to the current node in order to cut off the
+ *                      current solution instead of creating a branching?
  *  - result          : pointer to store the result of the branching call
  *
  *  possible return values for *result:
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
  *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
+ *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+ *                      returned, if allowaddcons is FALSE
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
-#define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
+#define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, Bool allowaddcons, RESULT* result)
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.27 2004/09/09 13:59:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.28 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -159,6 +159,8 @@ struct Set
    Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
    Bool             usesbconflict;      /**< should infeasible strong branching conflict analysis be used? */
    Bool             usepseudoconflict;  /**< should pseudo solution conflict analysis be used? */
+   Bool             repropconflict;     /**< should earlier nodes be repropagated in order to replace branching
+                                         *   decisions by deductions */
    Bool             checklpfeas;        /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             exactsolve;         /**< should the problem be solved exactly (with proven dual bounds)? */
    Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
@@ -168,6 +170,7 @@ struct Set
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
    Bool             clocksenabled;      /**< is timing enabled? */
    Bool             preferbinbranch;    /**< should branching on binary variables be prefered? */
+   Bool             vbcuserealtime;     /**< should the real solving time be used instead of time step counter in VBC output? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.24 2004/08/25 14:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.25 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -695,8 +695,8 @@ Real SCIPvarGetSol(
    Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
-/** returns the solution of the variable in the root node's relaxation, returns SCIP_INVALID if the root relaxation
- *  is not yet completely solved
+/** returns the solution of the variable in the root node's relaxation, if the root relaxation is not yet completely
+ *  solved, zero is returned
  */
 extern
 Real SCIPvarGetRootSol(
@@ -768,6 +768,21 @@ Real SCIPvarGetBdAtIndex(
    Bool             after               /**< should the bound change with given index be included? */
    );
 
+/** returns the last bound change index, at which the bounds of the given variable were tightened */
+extern
+BDCHGIDX* SCIPvarGetLastBdchgIndex(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the last depth level, at which the bounds of the given variable were tightened;
+ *  returns -2, if the variable's bounds are still the global bounds
+ *  returns -1, if the variable was fixed in presolving
+ */
+extern
+int SCIPvarGetLastBdchgDepth(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether the first binary variable was fixed earlier than the second one;
  *  returns FALSE, if the first variable is not fixed, and returns TRUE, if the first variable is fixed, but the
  *  second one is not fixed
@@ -785,8 +800,8 @@ Bool SCIPvarWasFixedEarlier(
  */
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
- *  if a bound change index is NULL, the bound change belongs to preprocessing or problem modification and
- *  is always earlier than any bound change applied during the solving process
+ *  if a bound change index is NULL, the bound change index represents the current time, i.e. the time after the
+ *  last bound change was applied to the current node
  */
 extern
 Bool SCIPbdchgidxIsEarlier(

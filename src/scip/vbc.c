@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.4 2004/05/03 11:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.5 2004/09/21 12:08:04 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -37,6 +37,41 @@
 #include "struct_vbc.h"
 
 
+
+
+/** node colors in VBC output:
+ *   1: indian red
+ *   2: green
+ *   3: light gray
+ *   4: red
+ *   5: blue
+ *   6: black
+ *   7: light pink
+ *   8: cyan
+ *   9: dark green
+ *  10: brown
+ *  11: orange
+ *  12: yellow
+ *  13: pink
+ *  14: purple
+ *  15: light blue
+ *  16: muddy green
+ *  17: white
+ *  18: light grey
+ *  19: light grey
+ *  20: light grey
+ */
+enum VBCColor
+{
+   SCIP_VBCCOLOR_UNSOLVED   =  3,       /**< color for newly created, unsolved nodes */
+   SCIP_VBCCOLOR_SOLVED     =  2,       /**< color for solved nodes */
+   SCIP_VBCCOLOR_CUTOFF     =  4,       /**< color for nodes that were cut off */
+   SCIP_VBCCOLOR_CONFLICT   = 15,       /**< color for nodes where a conflict clause was found */
+   SCIP_VBCCOLOR_MARKREPROP = 11,       /**< color for nodes that were marked to be repropagated */
+   SCIP_VBCCOLOR_REPROP     = 12,       /**< color for repropagated nodes */
+   SCIP_VBCCOLOR_SOLUTION   = -1        /**< color for solved nodes, where a solution has been found */
+};
+typedef enum VBCColor VBCCOLOR;
 
 
 /** returns the branching variable of the node, or NULL */
@@ -67,6 +102,8 @@ RETCODE SCIPvbcCreate(
 
    (*vbc)->file = NULL;
    (*vbc)->nodenum = NULL;
+   (*vbc)->timestep = 0;
+   (*vbc)->userealtime = FALSE;
 
    return SCIP_OKAY;
 }
@@ -100,6 +137,8 @@ RETCODE SCIPvbcInit(
 
    infoMessage(set->verblevel, SCIP_VERBLEVEL_NORMAL, "storing VBC information in file <%s>\n", set->vbcfilename);
    vbc->file = fopen(set->vbcfilename, "w");
+   vbc->timestep = 0;
+   vbc->userealtime = set->vbcuserealtime;
 
    if( vbc->file == NULL )
    {
@@ -145,7 +184,7 @@ void printTime(
    STAT*            stat                /**< problem statistics */
    )
 {
-   double time;
+   Longint step;
    int hours;
    int mins;
    int secs;
@@ -154,14 +193,24 @@ void printTime(
    assert(vbc != NULL);
    assert(stat != NULL);
 
-   time = SCIPclockGetTime(stat->solvingtime);
-   hunds = (int)(time * 100.0);
-   hours = hunds / (60*60*100);
-   hunds %= 60*60*100;
-   mins = hunds / (60*100);
-   hunds %= 60*100;
-   secs = hunds / 100;
-   hunds %= 100;
+   if( vbc->userealtime )
+   {
+      double time;
+      time = SCIPclockGetTime(stat->solvingtime);
+      step = (Longint)(time * 100.0);
+   }
+   else
+   {
+      step = vbc->timestep;
+      vbc->timestep++;
+   }
+   hours = (int)(step / (60*60*100));
+   step %= 60*60*100;
+   mins = (int)(step / (60*100));
+   step %= 60*100;
+   secs = (int)(step / 100);
+   step %= 100;
+   hunds = (int)step;
 
    fprintf(vbc->file, "%02d:%02d:%02d.%02d ", hours, mins, secs, hunds);
 }
@@ -198,10 +247,32 @@ RETCODE SCIPvbcNewChild(
    printTime(vbc, stat);
    fprintf(vbc->file, "N %d %d %d\n", parentnodenum, nodenum, SCIP_VBCCOLOR_UNSOLVED);
    printTime(vbc, stat);
-   fprintf(vbc->file, "I %d \\inode:\\t%d\\ivar:\\t%s\\nbound:\\t%f\n",
-      nodenum, nodenum, branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node));
+   fprintf(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\n",
+      nodenum, nodenum, node, SCIPnodeGetDepth(node),
+      branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node));
 
    return SCIP_OKAY;
+}
+
+/** changes the color of the node to the given color */
+static
+void vbcSetColor(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node,               /**< node to change color for */
+   VBCCOLOR         color               /**< new color of node, or -1 */
+   )
+{
+   assert(vbc != NULL);
+
+   if( vbc->file != NULL && color != -1 )
+   {
+      int nodenum;
+
+      nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
+      printTime(vbc, stat);
+      fprintf(vbc->file, "P %d %d\n", nodenum, color);
+   }
 }
 
 /** changes the color of the node to the color of solved nodes */
@@ -229,11 +300,51 @@ void SCIPvbcSolvedNode(
    branchvar = getBranchVar(node);
 
    printTime(vbc, stat);
-   fprintf(vbc->file, "I %d \\inode:\\t%d\\ivar:\\t%s\\nbound:\\t%f\\nnr:\\t%lld\n", 
-      nodenum, nodenum, branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
+   fprintf(vbc->file, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s\\nbound:\\t%f\\nnr:\\t%lld\n", 
+      nodenum, nodenum, node, SCIPnodeGetDepth(node),
+      branchvar == NULL ? "-" : SCIPvarGetName(branchvar), SCIPnodeGetLowerbound(node), stat->nnodes);
 
-   printTime(vbc, stat);
-   fprintf(vbc->file, "P %d %d\n", nodenum, SCIP_VBCCOLOR_SOLVED);
+   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLVED);
+}
+
+/** changes the color of the node to the color of cutoff nodes */
+void SCIPvbcCutoffNode(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   )
+{
+   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CUTOFF);
+}
+
+/** changes the color of the node to the color of nodes where a conflict clause was found */
+void SCIPvbcFoundConflict(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   )
+{
+   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_CONFLICT);
+}
+
+/** changes the color of the node to the color of nodes that were marked to be repropagated */
+void SCIPvbcMarkedRepropagateNode(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   )
+{
+   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_MARKREPROP);
+}
+
+/** changes the color of the node to the color of repropagated nodes */
+void SCIPvbcRepropagatedNode(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   )
+{
+   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_REPROP);
 }
 
 /** changes the color of the node to the color of nodes with a primal solution */
@@ -243,21 +354,7 @@ void SCIPvbcFoundSolution(
    NODE*            node                /**< new node, that was created */
    )
 {
-   int nodenum;
-
-   assert(vbc != NULL);
-   assert(stat != NULL);
-   assert(node != NULL);
-
-   /* check, if VBC output should be created */
-   if( vbc->file == NULL )
-      return;
-
-   /* get node num from hash map */
-   nodenum = (int)SCIPhashmapGetImage(vbc->nodenum, node);
-
-   printTime(vbc, stat);
-   fprintf(vbc->file, "P %d %d\n", nodenum, SCIP_VBCCOLOR_SOLUTION);
+   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_SOLUTION);
 }
 
 /** outputs a new global lower bound to the VBC output file */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.27 2004/08/10 15:00:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.28 2004/09/21 12:07:58 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -146,6 +146,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       Bool lperror;
       Bool downinf;
       Bool upinf;
+      Bool downconflict;
+      Bool upconflict;
       int i;
       int c;
 
@@ -160,7 +162,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          debugMessage("applying strong branching on variable <%s> with solution %g\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c]);
 
-         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, &down, &up, &lperror) );
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, 
+               &down, &up, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* display node information line in root node */
          if( SCIPgetDepth(scip) == 0 && SCIPgetNStrongbranchs(scip) % 100 == 0 )
@@ -180,15 +183,29 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          /* evaluate strong branching */
          down = MAX(down, lpobjval);
          up = MAX(up, lpobjval);
-         downinf = SCIPisGE(scip, down, cutoffbound);
-         upinf = SCIPisGE(scip, up, cutoffbound);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
+         assert(!allcolsinlp || exactsolve || downinf == SCIPisGE(scip, down, cutoffbound));
+         assert(!allcolsinlp || exactsolve || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(downinf || !downconflict);
+         assert(upinf || !upconflict);
 
-         if( allcolsinlp && !exactsolve )
+         /* check if there are infeasible roundings */
+         if( downinf || upinf )
          {
-            /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            if( downinf && upinf )
+            assert(allcolsinlp);
+            assert(!exactsolve);
+            
+            /* if for both infeasibilities, a conflict clause was created, we don't need to fix the variable by hand,
+             * but better wait for the next propagation round to fix them as an inference, and potentially produce a
+             * cutoff that can be analyzed
+             */
+            if( allowaddcons && downinf == downconflict && upinf == upconflict )
+            {
+               *result = SCIP_CONSADDED;
+               break; /* terminate initialization loop, because constraint was added */
+            }
+            else if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
                *result = SCIP_CUTOFF;
@@ -203,22 +220,23 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
                debugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
             }
-            else if( upinf )
+            else
             {
                /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
+               assert(upinf);
                CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfloor(scip, lpcandssol[c])) );
                *result = SCIP_REDUCEDDOM;
                debugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
             }
-            else
-            {
-               Real minbound;
-               
-               /* the minimal lower bound of both children is a proved lower bound of the current subtree */
-               minbound = MIN(down, up);
-               provedbound = MAX(provedbound, minbound);
-            }
+         }
+         else if( allcolsinlp && !exactsolve )
+         {
+            Real minbound;
+            
+            /* the minimal lower bound of both children is a proved lower bound of the current subtree */
+            minbound = MIN(down, up);
+            provedbound = MAX(provedbound, minbound);
          }
 
          /* check for a better score, if we are within the maximum priority candidates */
@@ -253,7 +271,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       branchruledata->lastcand = c;
    }
 
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
       NODE* node;
       Real rootsolval;

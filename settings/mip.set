@@ -190,6 +190,10 @@ conflict/minmaxconfvars = 30
 # [type: int, range: [1,2147483647], default: 100]
 conflict/maxconflploops = 100
 
+# should earlier nodes be repropagated in order to replace branching decisions by deductions
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/repropconflict = TRUE
+
 # maximal number of nodes to process (-1: no limit)
 # [type: longint, range: [-1,9223372036854775807], default: -1]
 limits/nodelimit = -1
@@ -273,6 +277,10 @@ misc/catchctrlc = TRUE
 # name of the VBC Tool output file, or - if no VBC Tool output should be created
 # [type: string, default: "-"]
 misc/vbcfilename = "-"
+
+# should the real solving time be used instead of a time step counter in VBC output?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+misc/vbcuserealtime = TRUE
 
 # priority of conflict handler <linear>
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
@@ -661,6 +669,10 @@ branching/relpscost/initcand = 100
 # iteration limit for strong branching initializations of pseudo cost entries (0: auto)
 # [type: int, range: [0,2147483647], default: 0]
 branching/relpscost/inititer = 0
+
+# maximal number of bound tightenings before the node is reevaluated (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+branching/relpscost/maxbdchgs = -1
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1001000]

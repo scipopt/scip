@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.64 2004/09/15 08:11:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.65 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -34,6 +34,8 @@
 #include "type_event.h"
 #include "type_lp.h"
 #include "type_var.h"
+#include "type_prob.h"
+#include "type_primal.h"
 #include "type_tree.h"
 #include "type_branch.h"
 #include "pub_tree.h"
@@ -48,7 +50,7 @@
  * Node methods
  */
 
-/** creates a child node of the active node */
+/** creates a child node of the focus node */
 extern
 RETCODE SCIPnodeCreateChild(
    NODE**           node,               /**< pointer to node data structure */
@@ -84,21 +86,22 @@ RETCODE SCIPnodeReleaseLPIState(
    LP*              lp                  /**< current LP data */
    );
 
-/** activates a child, a sibling, or a leaf node */
+/** installs a child, a sibling, or a leaf node as the new focus node */
 extern
-RETCODE SCIPnodeActivate(
-   NODE**           node,               /**< pointer to node to activate (or NULL to deactivate all nodes); the node
+RETCODE SCIPnodeFocus(
+   NODE**           node,               /**< pointer to node to focus (or NULL to remove focus); the node
                                          *   is freed, if it was cut off due to a cut off subtree */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             cutoffbound,        /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
-   Bool*            cutoff              /**< pointer to store whether the given node can be cut off and no path switching
-                                         *   should be performed */
+   Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
    );
 
 /** cuts off node and whole sub tree from branch and bound tree */
@@ -106,6 +109,23 @@ extern
 void SCIPnodeCutoff(
    NODE*            node,               /**< node that should be cut off */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** marks node, that propagation should be applied again the next time, a node of its subtree is focused */
+extern
+void SCIPnodePropagateAgain(
+   NODE*            node,               /**< node that should be propagated again */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** marks node, that it is completely propagated in the current repropagation subtree level */
+extern
+void SCIPnodeMarkPropagated(
+   NODE*            node,               /**< node that should be propagated again */
    TREE*            tree                /**< branch and bound tree */
    );
 
@@ -135,7 +155,7 @@ RETCODE SCIPnodeDisableCons(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** adds bound change with inference information to active node, child of active node, or probing node;
+/** adds bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value
  */
 extern
@@ -156,7 +176,9 @@ RETCODE SCIPnodeAddBoundinfer(
    Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
-/** adds bound change to active node, or child of active node; if possible, adjusts bound to integral value */
+/** adds bound change to focus node, or child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value
+ */
 extern
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
@@ -173,7 +195,7 @@ RETCODE SCIPnodeAddBoundchg(
    Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
-/** adds hole change to active node, or child of active node */
+/** adds hole change to focus node, or child of focus node */
 extern
 RETCODE SCIPnodeAddHolechg(
    NODE*            node,               /**< node to add bound change to */
@@ -242,11 +264,12 @@ RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
-/** constructs the LP and loads LP state for fork/subroot of the active node */
+/** constructs the LP and loads LP state for fork/subroot of the focus node */
 extern
 RETCODE SCIPtreeLoadLP(
    TREE*            tree,               /**< branch and bound tree */
@@ -281,7 +304,7 @@ RETCODE SCIPtreeStartProbing(
    );
 
 /** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints
- *  arrays of active node
+ *  arrays of focus node
  */
 extern
 RETCODE SCIPtreeEndProbing(
@@ -313,13 +336,44 @@ int SCIPtreeGetNNodes(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets current node of the tree */
+/** returns whether the active path goes completely down to the focus node */
+extern
+Bool SCIPtreeIsPathComplete(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets focus node of the tree */
+extern
+NODE* SCIPtreeGetFocusNode(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets depth of focus node in the tree, or -1 if no focus node exists */
+extern
+int SCIPtreeGetFocusDepth(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns, whether the LP was or is to be solved in the focus node */
+extern
+Bool SCIPtreeHasFocusNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** sets mark to solve or to ignore the LP while processing the focus node */
+extern
+void SCIPtreeSetFocusNodeLP(
+   TREE*            tree,               /**< branch and bound tree */
+   Bool             solvelp             /**< should the LP be solved in focus node? */
+   );
+
+/** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
 extern
 NODE* SCIPtreeGetCurrentNode(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets depth of current node in the tree, or -1 if no current node exists */
+/** gets depth of current node in the tree, i.e. the length of the active path minus 1, or -1 if no current node exists */
 extern
 int SCIPtreeGetCurrentDepth(
    TREE*            tree                /**< branch and bound tree */
@@ -329,31 +383,6 @@ int SCIPtreeGetCurrentDepth(
 extern
 Bool SCIPtreeHasCurrentNodeLP(
    TREE*            tree                /**< branch and bound tree */
-   );
-
-/** gets active node of the tree */
-extern
-NODE* SCIPtreeGetActiveNode(
-   TREE*            tree                /**< branch and bound tree */
-   );
-
-/** gets depth of active node in the tree, or -1 if no active node exists */
-extern
-int SCIPtreeGetActiveDepth(
-   TREE*            tree                /**< branch and bound tree */
-   );
-
-/** returns, whether the LP was or is to be solved in the active node */
-extern
-Bool SCIPtreeHasActiveNodeLP(
-   TREE*            tree                /**< branch and bound tree */
-   );
-
-/** sets mark to solve or to ignore the LP while processing the active node */
-extern
-void SCIPtreeSetActiveNodeLP(
-   TREE*            tree,               /**< branch and bound tree */
-   Bool             solvelp             /**< should the LP be solved in active node? */
    );
 
 /** returns whether the current node is a temporary probing node */
@@ -376,40 +405,40 @@ NODE* SCIPtreeGetProbingNode(
 
 #define SCIPtreeGetNLeaves(tree)        SCIPnodepqLen((tree)->leaves)
 #define SCIPtreeGetNNodes(tree)         ((tree)->nchildren + (tree)->nsiblings + SCIPtreeGetNLeaves(tree))
-#define SCIPtreeGetActiveNode(tree)     (tree)->actnode
-#define SCIPtreeGetActiveDepth(tree)    ((tree)->actnode != NULL ? (tree)->actnode->depth : -1)
-#define SCIPtreeHasActiveNodeLP(tree)   (tree)->actnodehaslp
-#define SCIPtreeSetActiveNodeLP(tree,solvelp)  ((tree)->actnodehaslp = solvelp)
-#define SCIPtreeGetCurrentNode(tree)    ((tree)->probingnode != NULL ? (tree)->probingnode : SCIPtreeGetActiveNode(tree))
-#define SCIPtreeGetCurrentDepth(tree)   ((tree)->probingnode != NULL ? (tree)->probingnode->depth \
-      : SCIPtreeGetActiveDepth(tree))
-#define SCIPtreeHasCurrentNodeLP(tree)  ((tree)->probingnode != NULL ? FALSE : SCIPtreeHasActiveNodeLP(tree))
+#define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
+#define SCIPtreeGetFocusNode(tree)      (tree)->focusnode
+#define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
+#define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
+#define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
+#define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)
+#define SCIPtreeGetCurrentDepth(tree)   ((tree)->pathlen-1)
+#define SCIPtreeHasCurrentNodeLP(tree)  ((tree)->probingnode != NULL ? FALSE : SCIPtreeHasFocusNodeLP(tree))
 #define SCIPtreeProbing(tree)           ((tree)->probingnode != NULL)
 #define SCIPtreeGetProbingNode(tree)    (tree)->probingnode
 
 #endif
 
 
-/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule */
 extern
 NODE* SCIPtreeGetPrioChild(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule */
 extern
 NODE* SCIPtreeGetPrioSibling(
    TREE*            tree                /**< branch and bound tree */
    );
 
-/** gets the best child of the active node w.r.t. the node selection strategy */
+/** gets the best child of the focus node w.r.t. the node selection strategy */
 extern
 NODE* SCIPtreeGetBestChild(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
    );
 
-/** gets the best sibling of the active node w.r.t. the node selection strategy */
+/** gets the best sibling of the focus node w.r.t. the node selection strategy */
 extern
 NODE* SCIPtreeGetBestSibling(
    TREE*            tree,               /**< branch and bound tree */

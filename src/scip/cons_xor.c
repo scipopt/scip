@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.7 2004/09/07 18:22:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.8 2004/09/21 12:08:00 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -523,7 +523,7 @@ RETCODE addRelaxation(
    {
       CHECK_OKAY( createRelaxation(scip, cons) );
    }
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -606,7 +606,7 @@ RETCODE separateCons(
       feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
       if( !SCIPisFeasible(scip, feasibility) )
       {
-         CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
+         CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
          *separated = TRUE;
       }
    }            

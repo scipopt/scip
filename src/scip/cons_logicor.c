@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.52 2004/09/07 18:22:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.53 2004/09/21 12:08:00 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -629,6 +629,8 @@ RETCODE processWatchedVars(
       return SCIP_OKAY;
    }
 
+   debugMessage("processing watched variables of constraint <%s>\n", SCIPconsGetName(cons));
+
    vars = consdata->vars;
    nvars = consdata->nvars;
    assert(nvars == 0 || vars != NULL);
@@ -644,7 +646,7 @@ RETCODE processWatchedVars(
          /* the watched feasible variable is fixed to one, making the constraint redundant;
           * we can disable it and don't have to check it for feasibility
           */
-         debugMessage("disabling constraint <%s> (watched feasible variable still fixed to 1.0)\n", SCIPconsGetName(cons));
+         debugMessage(" -> disabling constraint <%s> (watched feasible variable still fixed to 1.0)\n", SCIPconsGetName(cons));
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          return SCIP_OKAY;
       }
@@ -660,7 +662,8 @@ RETCODE processWatchedVars(
             /* the variable is fixed to one, making the constraint redundant;
              * remember the variable and disable the constraint
              */
-            debugMessage("disabling constraint <%s> (watchedvar1 fixed to 1.0)\n", SCIPconsGetName(cons));
+            debugMessage(" -> disabling constraint <%s> (watchedvar1 <%s> fixed to 1.0)\n",
+               SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]));
             consdata->watchedfeasvar = watchedvar1;
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             return SCIP_OKAY;
@@ -684,7 +687,8 @@ RETCODE processWatchedVars(
             /* the variable is fixed to one, making the constraint redundant;
              * remember the variable and disable the constraint
              */
-            debugMessage("disabling constraint <%s> (watchedvar2 fixed to 1.0)\n", SCIPconsGetName(cons));
+            debugMessage(" -> disabling constraint <%s> (watchedvar2 <%s> fixed to 1.0)\n",
+               SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar2]));
             consdata->watchedfeasvar = watchedvar2;
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             return SCIP_OKAY;
@@ -708,8 +712,13 @@ RETCODE processWatchedVars(
       assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
       assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar2]), 0.0));
       assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar2]), 1.0));
+
+      debugMessage(" -> watched variables <%s> and <%s> of constraint <%s> are still unfixed\n",
+         SCIPvarGetName(vars[watchedvar1]), SCIPvarGetName(vars[watchedvar2]), SCIPconsGetName(cons));
+
       *mustcheck = TRUE;
       consdata->propagated = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -737,7 +746,8 @@ RETCODE processWatchedVars(
             /* the variable is fixed to one, making the constraint redundant;
              * remember the variable and disable the constraint
              */
-            debugMessage("disabling constraint <%s> (found variable fixed to 1.0)\n", SCIPconsGetName(cons));
+            debugMessage(" -> disabling constraint <%s> (variable <%s> fixed to 1.0)\n", 
+               SCIPconsGetName(cons), SCIPvarGetName(vars[v]));
             consdata->watchedfeasvar = v;
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             return SCIP_OKAY;
@@ -761,6 +771,9 @@ RETCODE processWatchedVars(
        *  - an unmodifiable constraint is infeasible and the node can be cut off
        */
       assert(watchedvar2 == -1);
+
+      debugMessage(" -> constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       if( SCIPconsIsModifiable(cons) )
          *addcut = TRUE;
@@ -787,7 +800,7 @@ RETCODE processWatchedVars(
       else
       {
          /* fixed remaining variable to one and disable constraint */
-         debugMessage("single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
+         debugMessage(" -> single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
             SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
          CHECK_OKAY( SCIPinferBinvar(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
          assert(!infeasible);
@@ -798,6 +811,9 @@ RETCODE processWatchedVars(
    }
    else
    {
+      debugMessage(" -> new watched variables <%s> and <%s> of constraint <%s> are still unfixed\n",
+         SCIPvarGetName(vars[watchedvar1]), SCIPvarGetName(vars[watchedvar2]), SCIPconsGetName(cons));
+
       /* switch to the new watched variables */
       CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, watchedvar1, watchedvar2) );
 
@@ -903,7 +919,7 @@ RETCODE addCut(
    assert(!SCIProwIsInLP(consdata->row));
             
    /* insert LP row as cut */
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1919,7 +1935,8 @@ DECL_CONSACTIVE(consActiveLogicor)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   debugMessage("activation information method of logic or constraint handler\n");
+   debugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
+   debug(consdataPrint(scip, consdata, NULL));
 
    /* increase the number of uses for each variable in the constraint */
    for( v = 0; v < consdata->nvars; ++v )
@@ -1950,7 +1967,8 @@ DECL_CONSDEACTIVE(consDeactiveLogicor)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   debugMessage("deactivation information method of logic or constraint handler\n");
+   debugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
+   debug(consdataPrint(scip, consdata, NULL));
 
    /* decrease the number of uses for each variable in the constraint */
    for( v = 0; v < consdata->nvars; ++v )

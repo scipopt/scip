@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.29 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.30 2004/09/21 12:07:58 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -179,6 +179,7 @@ RETCODE SCIPbranchruleExecLPSol(
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -189,6 +190,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -246,6 +248,7 @@ RETCODE SCIPbranchExecLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
@@ -259,6 +262,7 @@ RETCODE SCIPbranchExecPseudo(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 

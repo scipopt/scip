@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.31 2004/08/24 11:57:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.32 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -102,7 +102,7 @@ DECL_CONSENFOLP(consEnfolpIntegral)
    assert(nconss == 0);
    assert(result != NULL);
 
-   debugMessage("Enfolp method of integrality constraint\n");
+   debugMessage("Enfolp method of integrality constraint: %d fractional variables\n", SCIPgetNLPBranchCands(scip));
 
    /* call branching methods */
    CHECK_OKAY( SCIPbranchLP(scip, result) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.110 2004/09/15 08:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.111 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -30,14 +30,18 @@
 #include "set.h"
 #include "stat.h"
 #include "vbc.h"
+#include "event.h"
 #include "lp.h"
 #include "var.h"
+#include "primal.h"
 #include "tree.h"
+#include "solve.h"
 #include "cons.h"
 #include "nodesel.h"
 
 
-#define MAXDEPTH   65535  /**< maximal depth level for nodes, must correspond to node data structure */
+#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
+#define MAXREPROPMARK       511  /**< maximal subtree repropagation marker; must correspond to node data structure */
 
 
 /*
@@ -253,12 +257,14 @@ RETCODE junctionInit(
    assert(junction != NULL);
    assert(tree != NULL);
    assert(tree->nchildren > 0);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(tree->focusnode != NULL);
 
    junction->nchildren = tree->nchildren;
 
    /* increase the LPI state usage counter of the current LP fork */
-   if( tree->actlpfork != NULL )
-      SCIPnodeCaptureLPIState(tree->actlpfork, tree->nchildren);
+   if( tree->focuslpfork != NULL )
+      SCIPnodeCaptureLPIState(tree->focuslpfork, tree->nchildren);
 
    return SCIP_OKAY;
 }
@@ -274,11 +280,13 @@ RETCODE forkCreate(
 {
    assert(fork != NULL);
    assert(memhdr != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren > 0);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(tree->focusnode != NULL);
    assert(lp != NULL);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-   assert(tree != NULL);
-   assert(tree->nchildren > 0);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, fork) );
 
@@ -362,11 +370,13 @@ RETCODE subrootCreate(
       
    assert(subroot != NULL);
    assert(memhdr != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren > 0);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(tree->focusnode != NULL);
    assert(lp != NULL);
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-   assert(tree != NULL);
-   assert(tree->nchildren > 0);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, subroot) );
    
@@ -432,14 +442,91 @@ RETCODE subrootFree(
    return SCIP_OKAY;
 }
 
-/** makes node a child of the given parent node, which must be the active node */
+/** removes given sibling node from the siblings array */
+static
+void treeRemoveSibling(
+   TREE*            tree,               /**< branch and bound tree */
+   NODE*            sibling             /**< sibling node to remove */
+   )
+{
+   int delpos;
+
+   assert(tree != NULL);
+   assert(sibling != NULL);
+   assert(SCIPnodeGetType(sibling) == SCIP_NODETYPE_SIBLING);
+   assert(sibling->data.sibling.arraypos >= 0 && sibling->data.sibling.arraypos < tree->nsiblings);
+   assert(tree->siblings[sibling->data.sibling.arraypos] == sibling);
+   assert(SCIPnodeGetType(tree->siblings[tree->nsiblings-1]) == SCIP_NODETYPE_SIBLING);
+
+   delpos = sibling->data.sibling.arraypos;
+
+   /* move last sibling in array to position of removed sibling */
+   tree->siblings[delpos] = tree->siblings[tree->nsiblings-1];
+   tree->siblingsprio[delpos] = tree->siblingsprio[tree->nsiblings-1];
+   tree->siblings[delpos]->data.sibling.arraypos = delpos;
+   sibling->data.sibling.arraypos = -1;
+   tree->nsiblings--;
+}
+
+/** adds given child node to children array of focus node */
+static
+RETCODE treeAddChild(
+   TREE*            tree,               /**< branch and bound tree */
+   SET*             set,                /**< global SCIP settings */
+   NODE*            child,              /**< child node to add */
+   Real             nodeselprio         /**< node selection priority of child node */
+   )
+{
+   assert(tree != NULL);
+   assert(child != NULL);
+   assert(SCIPnodeGetType(child) == SCIP_NODETYPE_CHILD);
+   assert(child->data.child.arraypos == -1);
+
+   CHECK_OKAY( treeEnsureChildrenMem(tree, set, tree->nchildren+1) );
+   tree->children[tree->nchildren] = child;
+   tree->childrenprio[tree->nchildren] = nodeselprio;
+   child->data.child.arraypos = tree->nchildren;
+   tree->nchildren++;
+
+   return SCIP_OKAY;
+}
+
+/** removes given child node from the children array */
+static
+void treeRemoveChild(
+   TREE*            tree,               /**< branch and bound tree */
+   NODE*            child               /**< child node to remove */
+   )
+{
+   int delpos;
+
+   assert(tree != NULL);
+   assert(child != NULL);
+   assert(SCIPnodeGetType(child) == SCIP_NODETYPE_CHILD);
+   assert(child->data.child.arraypos >= 0 && child->data.child.arraypos < tree->nchildren);
+   assert(tree->children[child->data.child.arraypos] == child);
+   assert(SCIPnodeGetType(tree->children[tree->nchildren-1]) == SCIP_NODETYPE_CHILD);
+
+   delpos = child->data.child.arraypos;
+
+   /* move last child in array to position of removed child */
+   tree->children[delpos] = tree->children[tree->nchildren-1];
+   tree->childrenprio[delpos] = tree->childrenprio[tree->nchildren-1];
+   tree->children[delpos]->data.child.arraypos = delpos;
+   child->data.child.arraypos = -1;
+   tree->nchildren--;
+}
+
+/** makes node a child of the given parent node, which must be the focus node; if the child is the probing node,
+ *  the parent node can also be a refocused node
+ */
 static
 RETCODE nodeAssignParent(
    NODE*            node,               /**< child node */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
-   NODE*            parent,             /**< parent (= active) node (or NULL, if node is root) */
+   NODE*            parent,             /**< parent (= focus) node (or NULL, if node is root) */
    Real             nodeselprio         /**< node selection priority of child node */
    )
 {
@@ -452,8 +539,10 @@ RETCODE nodeAssignParent(
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(tree != NULL);
-   assert(tree->actnode == parent);
-   assert(parent == NULL || SCIPnodeGetType(parent) == SCIP_NODETYPE_ACTNODE);
+   assert(SCIPtreeIsPathComplete(tree));
+   assert(tree->focusnode == parent);
+   assert(parent == NULL || SCIPnodeGetType(parent) == SCIP_NODETYPE_FOCUSNODE
+      || (SCIPnodeGetType(parent) == SCIP_NODETYPE_REFOCUSNODE && SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE));
 
    /* link node to parent */
    node->parent = parent;
@@ -467,23 +556,19 @@ RETCODE nodeAssignParent(
          return SCIP_MAXDEPTHLEVEL;
       }
    }
-   debugMessage("assigning parent %p to node %p in depth %d\n", parent, node, node->depth);
+   debugMessage("assigning parent %p to node %p at depth %d\n", parent, node, node->depth);
 
-   /* register node in the childlist of the active (the parent) node */
+   /* register node in the childlist of the focus (the parent) node */
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
    {
-      assert(node->data.child.arraypos == -1);
-      CHECK_OKAY( treeEnsureChildrenMem(tree, set, tree->nchildren+1) );
-      tree->children[tree->nchildren] = node;
-      tree->childrenprio[tree->nchildren] = nodeselprio;
-      node->data.child.arraypos = tree->nchildren;
-      tree->nchildren++;
+      assert(parent == NULL || SCIPnodeGetType(parent) == SCIP_NODETYPE_FOCUSNODE);
+      CHECK_OKAY( treeAddChild(tree, set, node, nodeselprio) );
    }
 
    return SCIP_OKAY;
 }
 
-/** decreases number of children of the parent, frees it if no children left */
+/** decreases number of children of the parent, frees it if no children are left */
 static
 RETCODE nodeReleaseParent(
    NODE*            node,               /**< child node */
@@ -500,33 +585,35 @@ RETCODE nodeReleaseParent(
    assert(memhdr != NULL);
    
    debugMessage("releasing parent-child relationship of node %p at depth %d of type %d with parent %p of type %d\n",
-      node, node->depth, SCIPnodeGetType(node), node->parent, 
-      node->parent != NULL ? (int)(SCIPnodeGetType(node->parent)) : -1);
+      node, node->depth, SCIPnodeGetType(node), node->parent,
+      node->parent != NULL ? (int)SCIPnodeGetType(node->parent) : -1);
    parent = node->parent;
    if( parent != NULL )
    {
       switch( SCIPnodeGetType(parent) )
       {
-      case SCIP_NODETYPE_ACTNODE:
+      case SCIP_NODETYPE_FOCUSNODE:
          assert(parent->active);
-         /* nothing to do here, because tree->nchildren is updated in treeRemoveChild() */
-         hasChildren = TRUE; /* don't kill the active node at this point */
+         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+         if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
+            treeRemoveChild(tree, node);
+         hasChildren = TRUE; /* don't kill the focus node at this point */
          break;
       case SCIP_NODETYPE_PROBINGNODE:
          errorMessage("probing node cannot be a parent node\n");
-         abort();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_SIBLING:
          errorMessage("sibling cannot be a parent node\n");
-         abort();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_CHILD:
          errorMessage("child cannot be a parent node\n");
-         abort();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_LEAF:
          errorMessage("leaf cannot be a parent node\n");
-         abort();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_DEADEND:
          errorMessage("deadend cannot be a parent node\n");
-         abort();
+         return SCIP_INVALIDDATA;
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction.nchildren > 0);
          parent->data.junction.nchildren--;
@@ -544,9 +631,17 @@ RETCODE nodeReleaseParent(
          parent->data.subroot->nchildren--;
          hasChildren = (parent->data.subroot->nchildren > 0);
          break;
+      case SCIP_NODETYPE_REFOCUSNODE:
+         /* the only possible child a refocused node can have in its refocus stage is the probing node;
+          * we don't want to free the refocused node, because we first have to convert it back to its original
+          * type (where it possibly has children)
+          */
+         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+         hasChildren = TRUE;
+         break;
       default:
          errorMessage("unknown node type\n");
-         abort();
+         return SCIP_INVALIDDATA;
       }
 
       /* free parent, if it has no more children left and is not on the current active path */
@@ -577,11 +672,13 @@ RETCODE nodeCreate(
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
+   (*node)->reprop = FALSE;
+   (*node)->repropsubtreemark = 0;
 
    return SCIP_OKAY;
 }
 
-/** creates a child node of the active node */
+/** creates a child node of the focus node */
 RETCODE SCIPnodeCreateChild(
    NODE**           node,               /**< pointer to node data structure */
    MEMHDR*          memhdr,             /**< block memory */
@@ -596,10 +693,11 @@ RETCODE SCIPnodeCreateChild(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
+   assert(SCIPtreeIsPathComplete(tree));
    assert(tree->pathlen == 0 || tree->path != NULL);
-   assert((tree->pathlen == 0) == (tree->actnode == NULL));
-   assert(tree->actnode == NULL || tree->actnode == tree->path[tree->pathlen-1]);
-   assert(tree->actnode == NULL || SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+   assert((tree->pathlen == 0) == (tree->focusnode == NULL));
+   assert(tree->focusnode == NULL || tree->focusnode == tree->path[tree->pathlen-1]);
+   assert(tree->focusnode == NULL || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
    stat->ncreatednodes++;
 
@@ -610,8 +708,8 @@ RETCODE SCIPnodeCreateChild(
    (*node)->nodetype = SCIP_NODETYPE_CHILD; /*lint !e641*/
    (*node)->data.child.arraypos = -1;
 
-   /* make active node the parent of the new child */
-   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->actnode, nodeselprio) );
+   /* make focus node the parent of the new child */
+   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->focusnode, nodeselprio) );
 
    /* output node creation to VBC file */
    CHECK_OKAY( SCIPvbcNewChild(stat->vbc, stat, *node) );
@@ -621,7 +719,7 @@ RETCODE SCIPnodeCreateChild(
    return SCIP_OKAY;
 }
 
-/** creates a probing child node of the active node */
+/** creates a probing child node of the focus node or the current refocused node */
 static
 RETCODE nodeCreateProbingNode(
    NODE**           node,               /**< pointer to node data structure */
@@ -634,10 +732,12 @@ RETCODE nodeCreateProbingNode(
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(tree != NULL);
+   assert(SCIPtreeIsPathComplete(tree));
    assert(tree->pathlen > 0);
-   assert(tree->actnode != NULL);
-   assert(tree->actnode == tree->path[tree->pathlen-1]);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+   assert(tree->focusnode != NULL);
+   assert(tree->focusnode == tree->path[tree->pathlen-1]);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE
+      || SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE);
 
    /* create the node data structure */
    CHECK_OKAY( nodeCreate(node, memhdr, set) );
@@ -645,64 +745,12 @@ RETCODE nodeCreateProbingNode(
    /* mark node to be a probing child node */
    (*node)->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
 
-   /* make active node the parent of the new probing child node */
-   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->actnode, 0.0) );
+   /* make focus node the parent of the new probing child node */
+   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->focusnode, 0.0) );
 
    debugMessage("created probing child node %p at depth %d\n", *node, (*node)->depth);
 
    return SCIP_OKAY;
-}
-
-/** removes given node from the siblings array */
-static
-void treeRemoveSibling(
-   TREE*            tree,               /**< branch and bound tree */
-   NODE*            sibling             /**< sibling node to remove */
-   )
-{
-   int delpos;
-
-   assert(tree != NULL);
-   assert(sibling != NULL);
-   assert(SCIPnodeGetType(sibling) == SCIP_NODETYPE_SIBLING);
-   assert(sibling->data.sibling.arraypos >= 0 && sibling->data.sibling.arraypos < tree->nsiblings);
-   assert(tree->siblings[sibling->data.sibling.arraypos] == sibling);
-   assert(SCIPnodeGetType(tree->siblings[tree->nsiblings-1]) == SCIP_NODETYPE_SIBLING);
-
-   delpos = sibling->data.sibling.arraypos;
-
-   /* move last sibling in array to position of removed sibling */
-   tree->siblings[delpos] = tree->siblings[tree->nsiblings-1];
-   tree->siblingsprio[delpos] = tree->siblingsprio[tree->nsiblings-1];
-   tree->siblings[delpos]->data.sibling.arraypos = delpos;
-   sibling->data.sibling.arraypos = -1;
-   tree->nsiblings--;
-}
-
-/** removes given node from the children array */
-static
-void treeRemoveChild(
-   TREE*            tree,               /**< branch and bound tree */
-   NODE*            child               /**< child node to remove */
-   )
-{
-   int delpos;
-
-   assert(tree != NULL);
-   assert(child != NULL);
-   assert(SCIPnodeGetType(child) == SCIP_NODETYPE_CHILD);
-   assert(child->data.child.arraypos >= 0 && child->data.child.arraypos < tree->nchildren);
-   assert(tree->children[child->data.child.arraypos] == child);
-   assert(SCIPnodeGetType(tree->children[tree->nchildren-1]) == SCIP_NODETYPE_CHILD);
-
-   delpos = child->data.child.arraypos;
-
-   /* move last child in array to position of removed child */
-   tree->children[delpos] = tree->children[tree->nchildren-1];
-   tree->childrenprio[delpos] = tree->childrenprio[tree->nchildren-1];
-   tree->children[delpos]->data.child.arraypos = delpos;
-   child->data.child.arraypos = -1;
-   tree->nchildren--;
 }
 
 /** frees node */
@@ -727,17 +775,11 @@ RETCODE SCIPnodeFree(
    /* free nodetype specific data, and release no longer needed LPI states */
    switch( SCIPnodeGetType(*node) )
    {
-   case SCIP_NODETYPE_ACTNODE:
-      assert(tree->actnode == *node);
+   case SCIP_NODETYPE_FOCUSNODE:
+      assert(tree->focusnode == *node);
       assert(tree->probingnode == NULL);
-      if( tree->actlpfork != NULL )
-      {
-         assert(SCIPnodeGetType(tree->actlpfork) == SCIP_NODETYPE_FORK
-            || SCIPnodeGetType(tree->actlpfork) == SCIP_NODETYPE_SUBROOT);
-         CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
-      }
-      tree->actnode = NULL;
-      break;
+      errorMessage("cannot free focus node - has to be converted into a dead end first\n");
+      return SCIP_INVALIDDATA;
    case SCIP_NODETYPE_PROBINGNODE:
       assert(tree->probingnode == *node);
       break;
@@ -745,11 +787,11 @@ RETCODE SCIPnodeFree(
       assert((*node)->data.sibling.arraypos >= 0);
       assert((*node)->data.sibling.arraypos < tree->nsiblings);
       assert(tree->siblings[(*node)->data.sibling.arraypos] == *node);
-      if( tree->actlpfork != NULL )
+      if( tree->focuslpfork != NULL )
       {
-         assert(SCIPnodeGetType(tree->actlpfork) == SCIP_NODETYPE_FORK
-            || SCIPnodeGetType(tree->actlpfork) == SCIP_NODETYPE_SUBROOT);
-         CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
+         assert(SCIPnodeGetType(tree->focuslpfork) == SCIP_NODETYPE_FORK
+            || SCIPnodeGetType(tree->focuslpfork) == SCIP_NODETYPE_SUBROOT);
+         CHECK_OKAY( SCIPnodeReleaseLPIState(tree->focuslpfork, memhdr, lp) );
       }
       treeRemoveSibling(tree, *node);
       break;
@@ -757,12 +799,12 @@ RETCODE SCIPnodeFree(
       assert((*node)->data.child.arraypos >= 0);
       assert((*node)->data.child.arraypos < tree->nchildren);
       assert(tree->children[(*node)->data.child.arraypos] == *node);
-      /* The children capture the LPI state at the moment, where the active node is
-       * converted into a junction, fork, or subroot, and a new node is activated.
+      /* The children capture the LPI state at the moment, where the focus node is
+       * converted into a junction, fork, or subroot, and a new node is focused.
        * At the same time, they become siblings or leaves, such that freeing a child
-       * of the active node doesn't require to release the LPI state
+       * of the focus node doesn't require to release the LPI state;
+       * we don't need to call treeRemoveChild(), because this is done in nodeReleaseParent()
        */
-      treeRemoveChild(tree, *node);
       break;
    case SCIP_NODETYPE_LEAF:
       if( (*node)->data.leaf.lpfork != NULL )
@@ -779,9 +821,12 @@ RETCODE SCIPnodeFree(
    case SCIP_NODETYPE_SUBROOT:
       CHECK_OKAY( subrootFree(&((*node)->data.subroot), memhdr, set, lp) );
       break;
+   case SCIP_NODETYPE_REFOCUSNODE:
+      errorMessage("cannot free node as long it is refocused\n");
+      return SCIP_INVALIDDATA;
    default:
       errorMessage("unknown node type\n");
-      abort();
+      return SCIP_INVALIDDATA;
    }
 
    /* check, if the node to be freed is the root node */
@@ -805,18 +850,214 @@ RETCODE SCIPnodeFree(
 void SCIPnodeCutoff(
    NODE*            node,               /**< node that should be cut off */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(node != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(tree != NULL);
-
-   debugMessage("cutting off node %p in depth %d\n", node, node->depth);
 
    node->cutoff = TRUE;
    node->lowerbound = set->infinity;
-   tree->cutoffdepth = MIN(tree->cutoffdepth, node->depth);
+   if( node->active )
+      tree->cutoffdepth = MIN(tree->cutoffdepth, node->depth);
+
+   SCIPvbcCutoffNode(stat->vbc, stat, node);
+
+   debugMessage("cutting off %s node %p at depth %d (cutoffdepth: %d)\n", 
+      node->active ? "active" : "inactive", node, node->depth, tree->cutoffdepth);
+}
+
+/** marks node, that propagation should be applied again the next time, a node of its subtree is focused */
+void SCIPnodePropagateAgain(
+   NODE*            node,               /**< node that should be propagated again */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(node != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+
+   node->reprop = TRUE;
+   if( node->active )
+      tree->repropdepth = MIN(tree->repropdepth, node->depth);
+
+   SCIPvbcMarkedRepropagateNode(stat->vbc, stat, node);
+
+   debugMessage("marked %s node %p at depth %d to be propagated again (repropdepth: %d)\n", 
+      node->active ? "active" : "inactive", node, node->depth, tree->repropdepth);
+}
+
+/** marks node, that it is completely propagated in the current repropagation subtree level */
+void SCIPnodeMarkPropagated(
+   NODE*            node,               /**< node that should be marked to be propagated */
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(node != NULL);
+   assert(tree != NULL);
+
+   if( node->parent != NULL )
+      node->repropsubtreemark = node->parent->repropsubtreemark;
+   node->reprop = FALSE;
+
+   /* if the node was the highest repropagation node in the path, update the repropdepth in the tree data */
+   if( node->active && node->depth == tree->repropdepth )
+   {
+      do
+      {
+         assert(tree->repropdepth < tree->pathlen);
+         assert(tree->path[tree->repropdepth]->active);
+         assert(!tree->path[tree->repropdepth]->reprop);
+         tree->repropdepth++;
+      }
+      while( tree->repropdepth < tree->pathlen && !tree->path[tree->repropdepth]->reprop );
+      if( tree->repropdepth == tree->pathlen )
+         tree->repropdepth = INT_MAX;
+   }
+}
+
+/** moves the subtree repropagation counter to the next value */
+static
+void treeNextRepropsubtreecount(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   tree->repropsubtreecount++;
+   tree->repropsubtreecount %= (MAXREPROPMARK+1);
+}
+
+/** applies propagation on the node, that was marked to be propagated again */
+static
+RETCODE nodeRepropagate(
+   NODE*            node,               /**< node to apply propagation on */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   NODETYPE oldtype;
+   NODE* oldfocusnode;
+   NODE* oldfocuslpfork;
+   NODE* oldfocussubroot;
+   int oldfocuslpforklpcount;
+   int oldnchildren;
+   int oldnsiblings;
+   Bool oldfocusnodehaslp;
+   Longint oldnboundchgs;
+   Bool initialreprop;
+
+   assert(node != NULL);
+   assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
+      || node->nodetype == SCIP_NODETYPE_JUNCTION
+      || node->nodetype == SCIP_NODETYPE_FORK
+      || node->nodetype == SCIP_NODETYPE_SUBROOT);
+   assert(node->active);
+   assert(node->reprop || (node != NULL && node->repropsubtreemark != node->parent->repropsubtreemark));
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(SCIPeventqueueIsDelayed(eventqueue));
+   assert(cutoff != NULL);
+
+   debugMessage("propagating again node %p at depth %d\n", node, node->depth);
+   initialreprop = node->reprop;
+
+   SCIPvbcRepropagatedNode(stat->vbc, stat, node);
+
+   /* process the delayed events in order to flush the problem changes */
+   CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
+
+   /* mark the node refocused and temporarily install it as focus node */
+   oldtype = node->nodetype;
+   oldfocusnode = tree->focusnode;
+   oldfocuslpfork = tree->focuslpfork;
+   oldfocussubroot = tree->focussubroot;
+   oldfocuslpforklpcount = tree->focuslpforklpcount;
+   oldnchildren = tree->nchildren;
+   oldnsiblings = tree->nsiblings;
+   oldfocusnodehaslp = tree->focusnodehaslp;
+   node->nodetype = SCIP_NODETYPE_REFOCUSNODE;
+   tree->focusnode = node;
+   tree->focuslpfork = NULL;
+   tree->focussubroot = NULL;
+   tree->focuslpforklpcount = -1;
+   tree->nchildren = 0;
+   tree->nsiblings = 0;
+   tree->focusnodehaslp = FALSE;
+
+   /* propagate the domains again */
+   oldnboundchgs = stat->nboundchgs;
+   CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, cutoff) );
+   assert(!node->reprop);
+   assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
+   assert(node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
+   assert(tree->focusnode == node);
+   assert(tree->focuslpfork == NULL);
+   assert(tree->focussubroot == NULL);
+   assert(tree->focuslpforklpcount == -1);
+   assert(tree->nchildren == 0);
+   assert(tree->nsiblings == 0);
+   assert(tree->focusnodehaslp == FALSE);
+   assert(stat->nboundchgs >= oldnboundchgs);
+   stat->nreprops++;
+   stat->nrepropboundchgs += stat->nboundchgs - oldnboundchgs;
+
+   debugMessage("repropagation %lld at depth %d changed %lld bounds (total reprop bound changes: %lld)\n",
+      stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs);
+
+   /* if a propagation marked with the reprop flag was successful, we want to repropagate the whole subtree */
+   /**@todo because repropsubtree is only a bit flag, we cannot mark a whole subtree a second time for
+    *       repropagation; use a (small) part of the node's bits to be able to store larger numbers,
+    *       and update tree->repropsubtreelevel with this number
+    */
+   if( initialreprop && !(*cutoff) && stat->nboundchgs > oldnboundchgs )
+   {
+      treeNextRepropsubtreecount(tree);
+      node->repropsubtreemark = tree->repropsubtreecount;
+      debugMessage("initial repropagation at depth %d changed %lld bounds -> repropagating subtree (new mark: %d)\n",
+         node->depth, stat->nboundchgs - oldnboundchgs, tree->repropsubtreecount);
+      assert((int)(node->repropsubtreemark) == tree->repropsubtreecount); /* bitfield must be large enough */
+   }
+
+   /* reset the node's type and reinstall the old focus node */
+   node->nodetype = oldtype;
+   tree->focusnode = oldfocusnode;
+   tree->focuslpfork = oldfocuslpfork;
+   tree->focussubroot = oldfocussubroot;
+   tree->focuslpforklpcount = oldfocuslpforklpcount;
+   tree->nchildren = oldnchildren;
+   tree->nsiblings = oldnsiblings;
+   tree->focusnodehaslp = oldfocusnodehaslp;
+
+   /* make the domain change data static again to save memory */
+   if( node->nodetype != SCIP_NODETYPE_FOCUSNODE )
+   {
+      CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, memhdr, set) );
+   }
+
+   /* delay events in path switching */
+   CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
+
+   /* mark the node to be cut off if a cutoff was detected */
+   if( *cutoff )
+      SCIPnodeCutoff(node, set, stat, tree);
+
+   return SCIP_OKAY;
 }
 
 /** informs node, that it is now on the active path and applies any domain and constraint set changes */
@@ -826,32 +1067,65 @@ RETCODE nodeActivate(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
+   TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    assert(node != NULL);
    assert(!node->active);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(cutoff != NULL);
 
-   debugMessage("activate node %p at depth %d of type %d\n", node, node->depth, SCIPnodeGetType(node));
+   debugMessage("activate node %p at depth %d of type %d (reprop subtree mark: %d)\n",
+      node, node->depth, SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
    CHECK_OKAY( SCIPconssetchgApply(node->conssetchg, memhdr, set, stat, node->depth) );
-   CHECK_OKAY( SCIPdomchgApply(node->domchg, memhdr, set, stat, lp, branchcand, eventqueue, node->depth) );
+   CHECK_OKAY( SCIPdomchgApply(node->domchg, memhdr, set, stat, lp, branchcand, eventqueue, node->depth, cutoff) );
 
    /* mark node active */
    node->active = TRUE;
 
+   /* check if the domain change produced a cutoff */
+   if( *cutoff )
+   {
+      /* try to repropagate the node to see, if the propagation also leads to a conflict and a conflict clause
+       * could be generated; if propagation conflict analysis is turned off, repropagating the node makes no
+       * sense, since it is already cut off
+       */
+      node->reprop = set->usepropconflict;
+
+      /* mark the node to be cut off */
+      SCIPnodeCutoff(node, set, stat, tree);
+   }
+
+   /* propagate node again, if the reprop flag is set; in the new focus node, no repropagation is necessary, because
+    * the focus node is propagated anyways
+    */
+   if( SCIPnodeGetType(node) != SCIP_NODETYPE_FOCUSNODE
+      && (node->reprop || (node->parent != NULL && node->repropsubtreemark != node->parent->repropsubtreemark)) )
+   {
+      Bool propcutoff;
+
+      CHECK_OKAY( nodeRepropagate(node, memhdr, set, stat, prob, primal, tree, lp, branchcand, 
+            eventfilter, eventqueue, &propcutoff) );
+      *cutoff = *cutoff || propcutoff;
+   }
+
    return SCIP_OKAY;
 }
 
-/** informs node, that it is no longer on the active path and undoes any domain and constraint set changes;
- *  frees node, if it has no children
- */
+/** informs node, that it is no longer on the active path and undoes any domain and constraint set changes */
 static
 RETCODE nodeDeactivate(
-   NODE**           node,               /**< pointer to node to deactivate */
+   NODE*            node,               /**< node to deactivate */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -861,69 +1135,19 @@ RETCODE nodeDeactivate(
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   Bool hasChildren;
-
    assert(node != NULL);
-   assert(*node != NULL);
-   assert((*node)->active);
+   assert(node->active);
    assert(tree != NULL);
 
-   debugMessage("deactivate node %p at depth %d of type %d\n", *node, (*node)->depth, SCIPnodeGetType(*node));
+   debugMessage("deactivate node %p at depth %d of type %d  (reprop subtree mark: %d)\n",
+      node, node->depth, SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* undo domain and constraint set changes */
-   CHECK_OKAY( SCIPdomchgUndo((*node)->domchg, memhdr, set, stat, lp, branchcand, eventqueue) );
-   CHECK_OKAY( SCIPconssetchgUndo((*node)->conssetchg, memhdr, set, stat) );
+   CHECK_OKAY( SCIPdomchgUndo(node->domchg, memhdr, set, stat, lp, branchcand, eventqueue) );
+   CHECK_OKAY( SCIPconssetchgUndo(node->conssetchg, memhdr, set, stat) );
 
    /* mark node inactive */
-   (*node)->active = FALSE;
-
-   /* check, if node has any children */
-   switch( SCIPnodeGetType(*node) )
-   {
-   case SCIP_NODETYPE_ACTNODE:
-      if( tree->probingnode != NULL )
-      {
-         errorMessage("Cannot deactivate active node while in probing mode\n");
-         abort();
-      }
-      hasChildren = (tree->nchildren > 0);
-      break;
-   case SCIP_NODETYPE_PROBINGNODE:
-      hasChildren = FALSE;
-      break;
-   case SCIP_NODETYPE_SIBLING:
-      errorMessage("Cannot deactivate sibling (which shouldn't be active)\n");
-      abort();
-   case SCIP_NODETYPE_CHILD:
-      errorMessage("Cannot deactivate child (which shouldn't be active)\n");
-      abort();
-   case SCIP_NODETYPE_LEAF:
-      errorMessage("Cannot deactivate leaf (which shouldn't be active)\n");
-      abort();
-   case SCIP_NODETYPE_DEADEND:
-      hasChildren = FALSE;
-      break;
-   case SCIP_NODETYPE_JUNCTION:
-      hasChildren = ((*node)->data.junction.nchildren > 0);
-      break;
-   case SCIP_NODETYPE_FORK:
-      assert((*node)->data.fork != NULL);
-      hasChildren = ((*node)->data.fork->nchildren > 0);
-      break;
-   case SCIP_NODETYPE_SUBROOT:
-      assert((*node)->data.subroot != NULL);
-      hasChildren = ((*node)->data.subroot->nchildren > 0);
-      break;
-   default:
-      errorMessage("unknown node type\n");
-      abort();
-   }
-
-   /* free node, if it has no children */
-   if( !hasChildren )
-   {
-      CHECK_OKAY( SCIPnodeFree(node, memhdr, set, tree, lp) );
-   }
+   node->active = FALSE;
 
    return SCIP_OKAY;
 }
@@ -975,7 +1199,7 @@ RETCODE SCIPnodeDisableCons(
    assert(tree != NULL);
    assert(cons != NULL);
 
-   debugMessage("disabling constraint <%s> at node in depth %d\n", cons->name, node->depth);
+   debugMessage("disabling constraint <%s> at node at depth %d\n", cons->name, node->depth);
 
    /* add constraint disabling to the node's constraint set change data */
    CHECK_OKAY( SCIPconssetchgAddDisabledCons(&node->conssetchg, memhdr, set, cons) );
@@ -991,7 +1215,7 @@ RETCODE SCIPnodeDisableCons(
    return SCIP_OKAY;
 }
 
-/** adds bound change with inference information to active node, child of active node, or probing node;
+/** adds bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value
  */
 RETCODE SCIPnodeAddBoundinfer(
@@ -1016,15 +1240,16 @@ RETCODE SCIPnodeAddBoundinfer(
    Real oldbound;
 
    assert(node != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_ACTNODE
+   assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || node->nodetype == SCIP_NODETYPE_PROBINGNODE
-      || node->nodetype == SCIP_NODETYPE_CHILD);
+      || node->nodetype == SCIP_NODETYPE_CHILD
+      || node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
    assert(tree != NULL);
    assert(var != NULL);
    assert(node->active || infercons == NULL);
    assert(node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
-   debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
+   debugMessage("adding boundchange at node at depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
       node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
 
@@ -1038,32 +1263,21 @@ RETCODE SCIPnodeAddBoundinfer(
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      oldbound = SCIPvarGetLbLocal(var);
-
-      /* adjust the new bound */
+      /* adjust the new lower bound */
       SCIPvarAdjustLb(var, set, &newbound);
-
-      if( SCIPsetIsLE(set, newbound, oldbound) )
-      {
-         errorMessage("variable's lower bound was not tightened: var <%s>, oldbound=%f, newbound=%f\n",
-            SCIPvarGetName(var), oldbound, newbound);
-         return SCIP_INVALIDDATA;
-      }
+      oldbound = SCIPvarGetLbLocal(var);
+      assert(SCIPsetIsGT(set, newbound, oldbound));
+      assert(SCIPsetIsLE(set, newbound, SCIPvarGetUbLocal(var)));
    }
    else
    {
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
-      oldbound = SCIPvarGetUbLocal(var);
 
-      /* adjust the new bound */
+      /* adjust the new upper bound */
       SCIPvarAdjustUb(var, set, &newbound);
-
-      if( SCIPsetIsGE(set, newbound, oldbound) )
-      {
-         errorMessage("variable's upper bound was not tightened: var <%s>, oldbound=%f, newbound=%f\n",
-            SCIPvarGetName(var), oldbound, newbound);
-         return SCIP_INVALIDDATA;
-      }
+      oldbound = SCIPvarGetUbLocal(var);
+      assert(SCIPsetIsLT(set, newbound, oldbound));
+      assert(SCIPsetIsGE(set, newbound, SCIPvarGetLbLocal(var)));
    }
    
    debugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
@@ -1106,8 +1320,8 @@ RETCODE SCIPnodeAddBoundinfer(
        *  - if the last solved LP was the one in the current lpfork, the LP value in the columns are still valid
        *  - otherwise, the LP values are invalid
        */
-      if( tree->actnodehaslp
-         || (tree->actlpforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
+      if( tree->focusnodehaslp
+         || (tree->focuslpforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
       {
          lpsolval = SCIPvarGetLPSol(var);
       }
@@ -1155,14 +1369,20 @@ RETCODE SCIPnodeAddBoundinfer(
    /* if node is active, apply the bound change immediately */
    if( node->active )
    {
+      Bool cutoff;
+
       CHECK_OKAY( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
-                     memhdr, set, stat, lp, branchcand, eventqueue, node->depth, node->domchg->domchgdyn.nboundchgs-1) );
+            memhdr, set, stat, lp, branchcand, eventqueue, node->depth, node->domchg->domchgdyn.nboundchgs-1, &cutoff) );
+      assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
+      assert(!cutoff);
    }
 
    return SCIP_OKAY;
 }
 
-/** adds bound change to active node, or child of active node; if possible, adjusts bound to integral value */
+/** adds bound change to focus node, or child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value
+ */
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1184,7 +1404,7 @@ RETCODE SCIPnodeAddBoundchg(
    return SCIP_OKAY;
 }
 
-/** adds hole change to active node, or child of active node */
+/** adds hole change to focus node, or child of focus node */
 RETCODE SCIPnodeAddHolechg(
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1196,11 +1416,11 @@ RETCODE SCIPnodeAddHolechg(
    )
 {
    assert(node != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_ACTNODE
+   assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || node->nodetype == SCIP_NODETYPE_PROBINGNODE
       || node->nodetype == SCIP_NODETYPE_CHILD);
 
-   debugMessage("adding holechange at node in depth %d: changed pointer at %p from %p to %p\n",
+   debugMessage("adding holechange at node at depth %d: changed pointer at %p from %p to %p\n",
       node->depth, ptr, newlist, oldlist);
 
    stat->nholechgs++;
@@ -1277,6 +1497,16 @@ Bool SCIPnodeIsActive(
    return node->active;
 }
 
+/** returns whether the node is marked to be propagated again */
+Bool SCIPnodeIsPropagatedAgain(
+   NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->reprop;
+}
+
 #endif
 
 
@@ -1301,7 +1531,6 @@ void treeUpdatePathLPSize(
    assert(tree != NULL);
    assert(startdepth >= 0);
    assert(startdepth <= tree->pathlen);
-   assert(tree->pathlen == 0 || startdepth < tree->pathlen);
 
    if( startdepth == 0 )
    {
@@ -1323,7 +1552,7 @@ void treeUpdatePathLPSize(
       
       switch( SCIPnodeGetType(node) )
       {
-      case SCIP_NODETYPE_ACTNODE:
+      case SCIP_NODETYPE_FOCUSNODE:
          assert(i == tree->pathlen-1
             || (i == tree->pathlen-2 && SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE));
          break;
@@ -1331,16 +1560,16 @@ void treeUpdatePathLPSize(
          assert(i == tree->pathlen-1);
          break;
       case SCIP_NODETYPE_SIBLING:
-         errorMessage("Sibling cannot be in the active path\n");
+         errorMessage("sibling cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_CHILD:
-         errorMessage("Child cannot be in the active path\n");
+         errorMessage("child cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_LEAF:
-         errorMessage("Leaf cannot be in the active path\n");
+         errorMessage("leaf cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_DEADEND:
-         errorMessage("Deadend cannot be in the active path\n");
+         errorMessage("deadend cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_JUNCTION:
          break;
@@ -1363,14 +1592,14 @@ void treeUpdatePathLPSize(
    }
 }
 
-/** finds the common fork node, the new LP defining fork, and the new active subroot, if the path is switched to
+/** finds the common fork node, the new LP defining fork, and the new focus subroot, if the path is switched to
  *  the given node
  */
 static
 void treeFindSwitchForks(
    TREE*            tree,               /**< branch and bound tree */
-   NODE*            node,               /**< new active node, or NULL */
-   NODE**           commonfork,         /**< pointer to store common fork node of old and new active node */
+   NODE*            node,               /**< new focus node, or NULL */
+   NODE**           commonfork,         /**< pointer to store common fork node of old and new focus node */
    NODE**           newlpfork,          /**< pointer to store the new LP defining fork node */
    NODE**           newsubroot,         /**< pointer to store the new subroot node */
    Bool*            cutoff              /**< pointer to store whether the given node can be cut off and no path switching
@@ -1383,14 +1612,17 @@ void treeFindSwitchForks(
 
    assert(tree != NULL);
    assert(tree->root != NULL);
-   assert((tree->actnode == NULL) == !tree->root->active);
-   assert(tree->actlpfork == NULL || tree->actnode != NULL);
-   assert(tree->actlpfork == NULL || tree->actlpfork->depth < tree->actnode->depth);
-   assert(tree->actsubroot == NULL || tree->actlpfork != NULL);
-   assert(tree->actsubroot == NULL || tree->actsubroot->depth <= tree->actlpfork->depth);
+   assert((tree->focusnode == NULL) == !tree->root->active);
+   assert(tree->focuslpfork == NULL || tree->focusnode != NULL);
+   assert(tree->focuslpfork == NULL || tree->focuslpfork->depth < tree->focusnode->depth);
+   assert(tree->focussubroot == NULL || tree->focuslpfork != NULL);
+   assert(tree->focussubroot == NULL || tree->focussubroot->depth <= tree->focuslpfork->depth);
    assert(tree->cutoffdepth >= 0);
    assert(tree->cutoffdepth == INT_MAX || tree->cutoffdepth < tree->pathlen);
    assert(tree->cutoffdepth == INT_MAX || tree->path[tree->cutoffdepth]->cutoff);
+   assert(tree->repropdepth >= 0);
+   assert(tree->repropdepth == INT_MAX || tree->repropdepth < tree->pathlen);
+   assert(tree->repropdepth == INT_MAX || tree->path[tree->repropdepth]->reprop);
    assert(commonfork != NULL);
    assert(newlpfork != NULL);
    assert(newsubroot != NULL);
@@ -1401,18 +1633,28 @@ void treeFindSwitchForks(
    *newsubroot = NULL;
    *cutoff = FALSE;
 
-   /* if the new active node is NULL, there is no common fork node, and the new LP fork and subroot are NULL */
+   /* if the new focus node is NULL, there is no common fork node, and the new LP fork and subroot are NULL */
    if( node == NULL )
+   {
+      tree->cutoffdepth = INT_MAX;
+      tree->repropdepth = INT_MAX;
       return;
+   }
 
-   *cutoff = node->cutoff;
+   /* check if the new node is marked to be cut off */
+   if( node->cutoff )
+   {
+      *cutoff = TRUE;
+      return;
+   }
 
-   /* if the old active node is NULL, there is no common fork node, and we have to search the new LP fork and subroot */
-   if( tree->actnode == NULL )
+   /* if the old focus node is NULL, there is no common fork node, and we have to search the new LP fork and subroot */
+   if( tree->focusnode == NULL )
    {
       assert(!tree->root->active);
       assert(tree->pathlen == 0);
       assert(tree->cutoffdepth == INT_MAX);
+      assert(tree->repropdepth == INT_MAX);
 
       lpfork = node;
       while( SCIPnodeGetType(lpfork) != SCIP_NODETYPE_FORK && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_SUBROOT )
@@ -1455,7 +1697,7 @@ void treeFindSwitchForks(
       return;
    }
 
-   /* find the common fork node, the new LP defining fork, and the new active subroot */
+   /* find the common fork node, the new LP defining fork, and the new focus subroot */
    fork = node;
    lpfork = NULL;
    subroot = NULL;
@@ -1480,8 +1722,8 @@ void treeFindSwitchForks(
    assert(subroot == NULL || !subroot->active || subroot == fork);
    debugMessage("find switch forks: forkdepth=%d\n", fork->depth);
 
-   /* if the common fork node is below the current cutoff depth, the cutoff node is a parent of the common fork
-    * and thus a parent of the new active node, s.t. the new node can also be cut off
+   /* if the common fork node is below the current cutoff depth, the cutoff node is an ancestor of the common fork
+    * and thus an ancestor of the new focus node, s.t. the new node can also be cut off
     */
    assert(fork->depth != tree->cutoffdepth);
    if( fork->depth > tree->cutoffdepth )
@@ -1500,9 +1742,9 @@ void treeFindSwitchForks(
    /* if not already found, continue searching the LP defining fork; it can not be deeper than the common fork */
    if( lpfork == NULL )
    {
-      if( tree->actlpfork != NULL && (int)(tree->actlpfork->depth) > fork->depth )
+      if( tree->focuslpfork != NULL && (int)(tree->focuslpfork->depth) > fork->depth )
       {
-         /* actlpfork is not on the same active path as the new node: we have to continue searching */
+         /* focuslpfork is not on the same active path as the new node: we have to continue searching */
          lpfork = fork;
          while( lpfork != NULL
             && SCIPnodeGetType(lpfork) != SCIP_NODETYPE_FORK
@@ -1514,8 +1756,8 @@ void treeFindSwitchForks(
       }
       else
       {
-         /* actlpfork is on the same active path as the new node: old and new node have the same lpfork */
-         lpfork = tree->actlpfork;
+         /* focuslpfork is on the same active path as the new node: old and new node have the same lpfork */
+         lpfork = tree->focuslpfork;
       }
       assert(lpfork == NULL || (int)(lpfork->depth) <= fork->depth);
       assert(lpfork == NULL || lpfork->active);
@@ -1528,9 +1770,9 @@ void treeFindSwitchForks(
    /* if not already found, continue searching the subroot; it cannot be deeper than the LP fork and common fork */
    if( subroot == NULL )
    {
-      if( tree->actsubroot != NULL && (int)(tree->actsubroot->depth) > fork->depth )
+      if( tree->focussubroot != NULL && (int)(tree->focussubroot->depth) > fork->depth )
       {
-         /* actsubroot is not on the same active path as the new node: we have to continue searching */
+         /* focussubroot is not on the same active path as the new node: we have to continue searching */
          if( lpfork != NULL && lpfork->depth < fork->depth )
             subroot = lpfork;
          else
@@ -1542,7 +1784,7 @@ void treeFindSwitchForks(
          }
       }
       else
-         subroot = tree->actsubroot;
+         subroot = tree->focussubroot;
       assert(subroot == NULL || subroot->depth <= fork->depth);
       assert(subroot == NULL || subroot->active);
    }
@@ -1550,6 +1792,17 @@ void treeFindSwitchForks(
    assert(subroot == NULL || lpfork != NULL);
    assert(subroot == NULL || subroot->depth <= lpfork->depth);
    debugMessage("find switch forks: subrootdepth=%d\n", subroot == NULL ? -1 : (int)(subroot->depth));
+
+   /* if a node prior to the common fork should be repropagated, we select the node to be repropagated as common
+    * fork in order to undo all bound changes up to this node, repropagate the node, and redo the bound changes
+    * afterwards
+    */
+   if( fork->depth > tree->repropdepth )
+   {
+      fork = tree->path[tree->repropdepth];
+      assert(fork->active);
+      assert(fork->reprop);
+   }
 
    *commonfork = fork;
    *newlpfork = lpfork;
@@ -1560,71 +1813,113 @@ void treeFindSwitchForks(
    {
       assert(fork->active);
       assert(!fork->cutoff);
+      assert(fork->parent == NULL || !fork->parent->reprop);
       fork = fork->parent;
    }
 #endif
+   tree->repropdepth = INT_MAX;
 }
 
-/** switches the active path to the new active node, applies domain and constraint set changes */
+/** switches the active path to the new focus node, applies domain and constraint set changes */
 static
 RETCODE treeSwitchPath(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   NODE*            fork                /**< common fork node of old and new active node */
+   NODE*            fork,               /**< common fork node of old and new focus node, or NULL */
+   NODE*            focusnode,          /**< new focus node, or NULL */
+   Bool*            cutoff              /**< pointer to store whether the new focus node can be cut off */
    )
 {
-   NODE* actnode;       /* new active node of the tree */
-   int actnodedepth;    /* depth of the new active node, or -1 if actnode == NULL */
+   int focusnodedepth;  /* depth of the new focus node, or -1 if focusnode == NULL */
    int forkdepth;       /* depth of the common subroot/fork/junction node, or -1 if no common fork exists */
    int i;
 
    assert(tree != NULL);
    assert(fork == NULL || (fork->active && !fork->cutoff));
+   assert(fork == NULL || focusnode != NULL);
+   assert(focusnode == NULL || (!focusnode->active && !focusnode->cutoff));
+   assert(focusnode == NULL || SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(cutoff != NULL);
 
-   actnode = tree->actnode;
-   assert(actnode == NULL || (!actnode->active && !actnode->cutoff));
-   assert(actnode == NULL || SCIPnodeGetType(actnode) == SCIP_NODETYPE_ACTNODE);
+   *cutoff = FALSE;
    
    debugMessage("switch path: old pathlen=%d\n", tree->pathlen);   
 
    /* get the nodes' depth's */
-   actnodedepth = (actnode != NULL ? actnode->depth : -1);
+   focusnodedepth = (focusnode != NULL ? focusnode->depth : -1);
    forkdepth = (fork != NULL ? fork->depth : -1);
-   assert(forkdepth <= actnodedepth);
+   assert(forkdepth <= focusnodedepth);
    assert(forkdepth < tree->pathlen);
 
+   /* delay events in path switching */
+   CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
+         
    /* undo the domain and constraint set changes of the old active path by deactivating the path's nodes */
    for( i = tree->pathlen-1; i > forkdepth; --i )
    {
-      CHECK_OKAY( nodeDeactivate(&(tree->path[i]), memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+      CHECK_OKAY( nodeDeactivate(tree->path[i], memhdr, set, stat, tree, lp, branchcand, eventqueue) );
    }
+   tree->pathlen = forkdepth+1;
 
    /* create the new active path */
-   CHECK_OKAY( treeEnsurePathMem(tree, set, actnodedepth+1) );
-   tree->pathlen = actnodedepth+1;
-   while( actnode != fork )
+   CHECK_OKAY( treeEnsurePathMem(tree, set, focusnodedepth+1) );
+   while( focusnode != fork )
    {
-      assert(actnode != NULL);
-      assert(!actnode->active);
-      assert(!actnode->cutoff);
-      tree->path[actnode->depth] = actnode;
-      actnode = actnode->parent;
+      assert(focusnode != NULL);
+      assert(!focusnode->active);
+      assert(!focusnode->cutoff);
+      tree->path[focusnode->depth] = focusnode;
+      focusnode = focusnode->parent;
    }
 
-   /* apply domain and constraint set changes of the new path by activating the path's nodes */
-   for( i = forkdepth+1; i < tree->pathlen; ++i )
+   /* propagate common fork again, if the reprop flag is set */
+   if( fork != NULL && fork->reprop )
+   {
+      assert(tree->path[forkdepth] == fork);
+      assert(fork->active);
+      assert(!fork->cutoff);
+
+      CHECK_OKAY( nodeRepropagate(fork, memhdr, set, stat, prob, primal, tree, lp, branchcand, 
+            eventfilter, eventqueue, cutoff) );
+   }
+   assert(fork != NULL || !(*cutoff));
+
+   /* apply domain and constraint set changes of the new path by activating the path's nodes;
+    * on the way, domain propagation might be applied again to the path's nodes, which can result in the cutoff of
+    * the node (and its subtree)
+    */
+   for( i = forkdepth+1; i <= focusnodedepth && !(*cutoff); ++i )
    {
       assert(!tree->path[i]->cutoff);
-      CHECK_OKAY( nodeActivate(tree->path[i], memhdr, set, stat, lp, branchcand, eventqueue) );
+      assert(tree->pathlen == i);
+
+      /* activate the node, and apply domain propagation if the reprop flag is set */
+      tree->pathlen++;
+      CHECK_OKAY( nodeActivate(tree->path[i], memhdr, set, stat, prob, primal, tree, lp, branchcand,
+            eventfilter, eventqueue, cutoff) );
+   }
+
+   /* mark last node of path to be cut off, if a cutoff was found */
+   if( *cutoff )
+   {
+      assert(tree->pathlen > 0);
+      assert(tree->path[tree->pathlen-1]->active);
+      SCIPnodeCutoff(tree->path[tree->pathlen-1], set, stat, tree);
    }
 
    /* count the new LP sizes of the path */
    treeUpdatePathLPSize(tree, forkdepth+1);
+
+   /* process the delayed events */
+   CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
 
    debugMessage("switch path: new pathlen=%d\n", tree->pathlen);   
 
@@ -1751,7 +2046,8 @@ void treeCheckPath(
          ncols = node->data.subroot->ncols;
          nrows = node->data.subroot->nrows;
          break;
-      case SCIP_NODETYPE_ACTNODE:
+      case SCIP_NODETYPE_FOCUSNODE:
+      case SCIP_NODETYPE_REFOCUSNODE:
          assert(d == tree->pathlen-1
             || (d == tree->pathlen-2 && SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE));
          break;
@@ -1759,7 +2055,7 @@ void treeCheckPath(
          assert(d == tree->pathlen-1);
          break;
       default:
-         errorMessage("node in depth %d on active path has to be of type FORK, SUBROOT, ACTNODE, or PROBINGNODE, but is %d\n",
+         errorMessage("node at depth %d on active path has to be of type FORK, SUBROOT, FOCUSNODE, REFOCUSNODE, or PROBINGNODE, but is %d\n",
             d, SCIPnodeGetType(node));
          abort();
       }  /*lint !e788*/
@@ -1771,7 +2067,7 @@ void treeCheckPath(
 #define treeCheckPath(tree) /**/
 #endif
 
-/** constructs the LP and loads LP state for fork/subroot of the active node */
+/** constructs the LP and loads LP state for fork/subroot of the focus node */
 RETCODE SCIPtreeLoadLP(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -1788,16 +2084,16 @@ RETCODE SCIPtreeLoadLP(
    assert(tree != NULL);
    assert(tree->path != NULL);
    assert(tree->pathlen > 0);
-   assert(tree->actnode != NULL);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
-   assert(SCIPnodeGetDepth(tree->actnode) == tree->pathlen-1);
-   assert(tree->actnode == tree->path[tree->pathlen-1]);
+   assert(tree->focusnode != NULL);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(SCIPnodeGetDepth(tree->focusnode) == tree->pathlen-1);
+   assert(tree->focusnode == tree->path[tree->pathlen-1]);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(lp != NULL);
 
    debugMessage("load LP for current fork node %p at depth %d\n", 
-      tree->actlpfork, tree->actlpfork == NULL ? -1 : (int)(tree->actlpfork->depth));
+      tree->focuslpfork, tree->focuslpfork == NULL ? -1 : (int)(tree->focuslpfork->depth));
    debugMessage("-> old LP has %d cols and %d rows\n", SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
    debugMessage("-> correct LP has %d cols and %d rows\n", 
       tree->correctlpdepth >= 0 ? tree->pathnlpcols[tree->correctlpdepth] : 0,
@@ -1806,14 +2102,14 @@ RETCODE SCIPtreeLoadLP(
 
    treeCheckPath(tree);
 
-   lpfork = tree->actlpfork;
+   lpfork = tree->focuslpfork;
 
    /* find out the lpfork's depth (or -1, if lpfork is NULL) */
    if( lpfork == NULL )
    {
       assert(tree->correctlpdepth == -1 || tree->pathnlpcols[tree->correctlpdepth] == 0);
       assert(tree->correctlpdepth == -1 || tree->pathnlprows[tree->correctlpdepth] == 0);
-      assert(tree->actsubroot == NULL);
+      assert(tree->focussubroot == NULL);
       lpforkdepth = -1;
    }
    else
@@ -1823,7 +2119,7 @@ RETCODE SCIPtreeLoadLP(
       assert(tree->path[lpfork->depth] == lpfork);
       lpforkdepth = lpfork->depth;
    }
-   assert(lpforkdepth < tree->pathlen-1); /* lpfork must not be the last (the active) node of the active path */
+   assert(lpforkdepth < tree->pathlen-1); /* lpfork must not be the last (the focus) node of the active path */
 
    /* find out, if we are in the same subtree */
    if( tree->correctlpdepth >= 0 )
@@ -1840,10 +2136,10 @@ RETCODE SCIPtreeLoadLP(
    {
       /* other subtree: fill LP with the subroot LP data */
       CHECK_OKAY( SCIPlpClear(lp, memhdr, set) );
-      if( tree->actsubroot != NULL )
+      if( tree->focussubroot != NULL )
       {
-         CHECK_OKAY( subrootConstructLP(tree->actsubroot, memhdr, set, lp) );
-         tree->correctlpdepth = tree->actsubroot->depth; 
+         CHECK_OKAY( subrootConstructLP(tree->focussubroot, memhdr, set, lp) );
+         tree->correctlpdepth = tree->focussubroot->depth; 
       }
    }
 
@@ -1872,7 +2168,7 @@ RETCODE SCIPtreeLoadLP(
    /* load LP state, if existing */
    if( lpfork != NULL )
    {
-      if( tree->actlpforklpcount != stat->lpcount )
+      if( tree->focuslpforklpcount != stat->lpcount )
       {
          if( SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK )
          {
@@ -1894,8 +2190,8 @@ RETCODE SCIPtreeLoadLP(
          lp->dualfeasible = TRUE;
       }
 
-      /* check the path from LP fork to active node for domain changes (destroying primal feasibility of LP basis) */
-      for( d = lpforkdepth; d < (int)(tree->actnode->depth) && lp->primalfeasible; ++d )
+      /* check the path from LP fork to focus node for domain changes (destroying primal feasibility of LP basis) */
+      for( d = lpforkdepth; d < (int)(tree->focusnode->depth) && lp->primalfeasible; ++d )
       {
          assert(d < tree->pathlen);
          lp->primalfeasible = lp->primalfeasible
@@ -1929,6 +2225,7 @@ RETCODE nodeToLeaf(
    NODE**           node,               /**< pointer to child or sibling node to convert */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    NODE*            lpfork,             /**< LP fork of the node */
@@ -1936,6 +2233,7 @@ RETCODE nodeToLeaf(
    )
 {
    assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
+   assert(stat != NULL);
    assert(lpfork == NULL || lpfork->depth < (*node)->depth);
    assert(lpfork == NULL || lpfork->active);
    assert(lpfork == NULL
@@ -1947,7 +2245,6 @@ RETCODE nodeToLeaf(
       *node, (*node)->depth, lpfork, lpfork == NULL ? -1 : (int)(lpfork->depth));
    (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
    (*node)->data.leaf.lpfork = lpfork;
-   assert(lpfork == NULL || lpfork->depth == (*node)->depth - 1); /*???????????????????????? WRONG !!*/
 
    /* if node is good enough to keep, put it on the node queue */
    if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
@@ -1964,6 +2261,7 @@ RETCODE nodeToLeaf(
    else
    {
       /* delete node due to bound cut off */
+      SCIPvbcCutoffNode(stat->vbc, stat, *node);
       CHECK_OKAY( SCIPnodeFree(node, memhdr, set, tree, lp) );
    }
    assert(*node == NULL);
@@ -1971,9 +2269,9 @@ RETCODE nodeToLeaf(
    return SCIP_OKAY;
 }
 
-/** converts the active node into a deadend node */
+/** converts the focus node into a deadend node */
 static
-RETCODE actnodeToDeadend(
+RETCODE focusnodeToDeadend(
    MEMHDR*          memhdr,             /**< block memory buffers */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
@@ -1982,27 +2280,26 @@ RETCODE actnodeToDeadend(
    assert(memhdr != NULL);
    assert(tree != NULL);
    assert(tree->probingnode == NULL);
-   assert(tree->actnode != NULL);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
-   assert(tree->actnode->active);
+   assert(tree->focusnode != NULL);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren == 0);
 
-   debugMessage("actnode to deadend %p at depth %d\n", tree->actnode, tree->actnode->depth);
+   debugMessage("focusnode to deadend %p at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
-   tree->actnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
+   tree->focusnode->nodetype = SCIP_NODETYPE_DEADEND; /*lint !e641*/
 
    /* release LPI state */
-   if( tree->actlpfork != NULL )
+   if( tree->focuslpfork != NULL )
    {
-      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
+      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->focuslpfork, memhdr, lp) );
    }
 
    return SCIP_OKAY;
 }
 
-/** converts the active node into a junction node */
+/** converts the focus node into a junction node */
 static
-RETCODE actnodeToJunction(
+RETCODE focusnodeToJunction(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
@@ -2011,31 +2308,31 @@ RETCODE actnodeToJunction(
 {
    assert(tree != NULL);
    assert(tree->probingnode == NULL);
-   assert(tree->actnode != NULL);
-   assert(tree->actnode->active);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+   assert(tree->focusnode != NULL);
+   assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
-   debugMessage("actnode %p to junction at depth %d\n", tree->actnode, tree->actnode->depth);
+   debugMessage("focusnode %p to junction at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
-   tree->actnode->nodetype = SCIP_NODETYPE_JUNCTION; /*lint !e641*/
+   tree->focusnode->nodetype = SCIP_NODETYPE_JUNCTION; /*lint !e641*/
 
-   CHECK_OKAY( junctionInit(&tree->actnode->data.junction, tree) );
+   CHECK_OKAY( junctionInit(&tree->focusnode->data.junction, tree) );
 
    /* release LPI state */
-   if( tree->actlpfork != NULL )
+   if( tree->focuslpfork != NULL )
    {
-      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
+      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->focuslpfork, memhdr, lp) );
    }
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->focusnode->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }
 
-/** converts the active node into a fork node */
+/** converts the focus node into a fork node */
 static
-RETCODE actnodeToFork(
+RETCODE focusnodeToFork(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -2049,15 +2346,15 @@ RETCODE actnodeToFork(
    assert(memhdr != NULL);
    assert(tree != NULL);
    assert(tree->probingnode == NULL);
-   assert(tree->actnode != NULL);
-   assert(tree->actnode->active);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+   assert(tree->focusnode != NULL);
+   assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren > 0);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
 
-   debugMessage("actnode %p to fork at depth %d\n", tree->actnode, tree->actnode->depth);
+   debugMessage("focusnode %p to fork at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
     * and we have to forget about the LP and transform the node into a junction (see below)
@@ -2107,7 +2404,7 @@ RETCODE actnodeToFork(
       CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
       
       /* convert node into a junction */
-      CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+      CHECK_OKAY( focusnodeToJunction(memhdr, set, tree, lp) );
       
       return SCIP_OKAY;
    }
@@ -2117,24 +2414,24 @@ RETCODE actnodeToFork(
    /* create fork data */
    CHECK_OKAY( forkCreate(&fork, memhdr, tree, lp) );
    
-   tree->actnode->nodetype = SCIP_NODETYPE_FORK; /*lint !e641*/
-   tree->actnode->data.fork = fork;
+   tree->focusnode->nodetype = SCIP_NODETYPE_FORK; /*lint !e641*/
+   tree->focusnode->data.fork = fork;
 
    /* release LPI state */
-   if( tree->actlpfork != NULL )
+   if( tree->focuslpfork != NULL )
    {
-      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
+      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->focuslpfork, memhdr, lp) );
    }
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->focusnode->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }
 
-/** converts the active node into a subroot node */
+/** converts the focus node into a subroot node */
 static
-RETCODE actnodeToSubroot(
+RETCODE focusnodeToSubroot(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -2148,14 +2445,14 @@ RETCODE actnodeToSubroot(
    assert(memhdr != NULL);
    assert(tree != NULL);
    assert(tree->probingnode == NULL);
-   assert(tree->actnode != NULL);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
-   assert(tree->actnode->active);
+   assert(tree->focusnode != NULL);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   assert(tree->focusnode->active); /* otherwise, no children could be created at the focus node */
    assert(tree->nchildren > 0);
    assert(lp != NULL);
    assert(lp->solved);
 
-   debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
+   debugMessage("focusnode %p to subroot at depth %d\n", tree->focusnode, tree->focusnode->depth);
 
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
     * and we have to forget about the LP and transform the node into a junction (see below)
@@ -2165,7 +2462,7 @@ RETCODE actnodeToSubroot(
    {
       /* clean up whole LP to keep only necessary columns and rows */
 #if 0
-      if( tree->actnode->depth == 0 )
+      if( tree->focusnode->depth == 0 )
       {
          CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
       }
@@ -2213,7 +2510,7 @@ RETCODE actnodeToSubroot(
       CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
       
       /* convert node into a junction */
-      CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+      CHECK_OKAY( focusnodeToJunction(memhdr, set, tree, lp) );
       
       return SCIP_OKAY;
    }
@@ -2223,20 +2520,20 @@ RETCODE actnodeToSubroot(
    /* create subroot data */
    CHECK_OKAY( subrootCreate(&subroot, memhdr, tree, lp) );
 
-   tree->actnode->nodetype = SCIP_NODETYPE_SUBROOT; /*lint !e641*/
-   tree->actnode->data.subroot = subroot;
+   tree->focusnode->nodetype = SCIP_NODETYPE_SUBROOT; /*lint !e641*/
+   tree->focusnode->data.subroot = subroot;
 
    /* update the LP column and row counter for the converted node */
-   treeUpdatePathLPSize(tree, tree->actnode->depth);
+   treeUpdatePathLPSize(tree, tree->focusnode->depth);
 
    /* release LPI state */
-   if( tree->actlpfork != NULL )
+   if( tree->focuslpfork != NULL )
    {
-      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
+      CHECK_OKAY( SCIPnodeReleaseLPIState(tree->focuslpfork, memhdr, lp) );
    }
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->focusnode->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }
@@ -2247,6 +2544,7 @@ RETCODE treeNodesToQueue(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp,                 /**< current LP data */
    NODE**           nodes,              /**< array of nodes to put on the queue */
    int*             nnodes,             /**< pointer to number of nodes in the array */
@@ -2264,7 +2562,7 @@ RETCODE treeNodesToQueue(
    for( i = 0; i < *nnodes; ++i )
    {
       /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the cutoff bound */
-      CHECK_OKAY( nodeToLeaf(&nodes[i], memhdr, set, tree, lp, lpfork, cutoffbound) );
+      CHECK_OKAY( nodeToLeaf(&nodes[i], memhdr, set, stat, tree, lp, lpfork, cutoffbound) );
       assert(nodes[i] == NULL);
    }
    *nnodes = 0;
@@ -2310,26 +2608,29 @@ void treeChildrenToSiblings(
    }
 }
 
-/** activates a child, a sibling, or a leaf node */
-RETCODE SCIPnodeActivate(
-   NODE**           node,               /**< pointer to node to activate (or NULL to deactivate all nodes); the node
+/** installs a child, a sibling, or a leaf node as the new focus node */
+RETCODE SCIPnodeFocus(
+   NODE**           node,               /**< pointer to node to focus (or NULL to remove focus); the node
                                          *   is freed, if it was cut off due to a cut off subtree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             cutoffbound,        /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
-   Bool*            cutoff              /**< pointer to store whether the given node can be cut off and no path switching
-                                         *   should be performed */
+   Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
    )
 {
+   NODE* oldfocusnode;
    NODE* fork;
    NODE* lpfork;
    NODE* subroot;
    NODE* childrenlpfork;
+   int oldcutoffdepth;
 
    assert(node != NULL);
    assert(*node == NULL
@@ -2342,11 +2643,14 @@ RETCODE SCIPnodeActivate(
    assert(tree->probingnode == NULL);
    assert(cutoff != NULL);
 
-   /* find the common fork node, the new LP defining fork, and the new active subroot,
+   /* remember old cutoff depth in order to know, whether the children and siblings can be deleted */
+   oldcutoffdepth = tree->cutoffdepth;
+
+   /* find the common fork node, the new LP defining fork, and the new focus subroot,
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &subroot, cutoff);
-   debugMessage("activate node: actnodedepth=%d, forkdepth=%d, lpforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
+   debugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
       *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1, lpfork != NULL ? lpfork->depth : -1,
       subroot != NULL ? subroot->depth : -1, *cutoff);
 
@@ -2354,23 +2658,24 @@ RETCODE SCIPnodeActivate(
    if( *cutoff )
    {
       assert(*node != NULL);
+      assert(tree->cutoffdepth == oldcutoffdepth);
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF )
       {
          CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, *node) );
       }
       CHECK_OKAY( SCIPnodeFree(node, memhdr, set, tree, lp) );
-      stat->ndelayedcutoffs++;
 
       return SCIP_OKAY;
    }
 
+   assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
    assert(lpfork == NULL || fork != NULL);
    assert(subroot == NULL || lpfork != NULL);
 
    /* remember the depth of the common fork node for LP updates */
-   debugMessage("activate node: old correctlpdepth=%d\n", tree->correctlpdepth);
-   if( subroot == tree->actsubroot && fork != NULL )
+   debugMessage("focus node: old correctlpdepth=%d\n", tree->correctlpdepth);
+   if( subroot == tree->focussubroot && fork != NULL )
    {
       /* we are in the same subtree: the LP is correct at most upto the common fork depth */
       assert(subroot == NULL || subroot->active);
@@ -2380,77 +2685,111 @@ RETCODE SCIPnodeActivate(
    {
       /* we are in a different subtree: the LP is completely incorrect */
       assert(subroot == NULL || !subroot->active
-         || (tree->actsubroot != NULL && (int)(tree->actsubroot->depth) > subroot->depth));
+         || (tree->focussubroot != NULL && (int)(tree->focussubroot->depth) > subroot->depth));
       tree->correctlpdepth = -1;
    }
 
    /* if the LP fork changed, the lpcount information for the new LP fork is unknown */
-   if( lpfork != tree->actlpfork )
-      tree->actlpforklpcount = -1;
+   if( lpfork != tree->focuslpfork )
+      tree->focuslpforklpcount = -1;
 
-   /* convert the old active node into a fork or subroot node, if it has children;
+   /* if the old focus node was cut off, we can delete its children;
+    * if the old focus node's parent was cut off, we can also delete the focus node's siblings
+    */
+   if( tree->focusnode != NULL && oldcutoffdepth <= tree->focusnode->depth )
+   {
+      debugMessage("path to old focus node of depth %d was cut off at depth %d\n", 
+         tree->focusnode->depth, oldcutoffdepth);
+
+      /* delete the focus node's children by converting them to leaves with a cutoffbound of REAL_MIN;
+       * we cannot delete them directly, because in SCIPnodeFree(), the children array is changed, which is the
+       * same array we would have to iterate over here;
+       * the children don't have an LP fork, because the old focus node is not yet converted into a fork or subroot
+       */
+      debugMessage(" -> deleting the %d children of the old focus node\n", tree->nchildren);
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, NULL, REAL_MIN) );
+      assert(tree->nchildren == 0);
+
+      if( oldcutoffdepth < tree->focusnode->depth )
+      {
+         /* delete the focus node's siblings by converting them to leaves with a cutoffbound of REAL_MIN;
+          * we cannot delete them directly, because in SCIPnodeFree(), the siblings array is changed, which is the
+          * same array we would have to iterate over here;
+          * the siblings have the same LP fork as the old focus node
+          */
+         debugMessage(" -> deleting the %d siblings of the old focus node\n", tree->nsiblings);
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+               REAL_MIN) );
+         assert(tree->nsiblings == 0);
+      }
+   }
+
+   /* convert the old focus node into a fork or subroot node, if it has children;
     * otherwise, convert it into a deadend, which will be freed later in treeSwitchPath()
     */
    childrenlpfork = NULL;
    if( tree->nchildren > 0 )
    {
-      assert(tree->actnode != NULL);
-      assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+      assert(tree->focusnode != NULL);
+      assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+      assert(oldcutoffdepth == INT_MAX);
 
-      if( tree->actnodehaslp )
+      if( tree->focusnodehaslp )
       {
-         /**@todo decide: old active node becomes fork or subroot */
-         if( FALSE && tree->actnode->depth > 0 && tree->actnode->depth % 25 == 0 ) /* ????????????? */
+         /**@todo decide: old focus node becomes fork or subroot */
+         if( FALSE && tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 ) /* ????????????? */
          {
-            /* convert old active node into a subroot node */
-            CHECK_OKAY( actnodeToSubroot(memhdr, set, stat, tree, lp) );
+            /* convert old focus node into a subroot node */
+            CHECK_OKAY( focusnodeToSubroot(memhdr, set, stat, tree, lp) );
             if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD )
-               subroot = tree->actnode;
+               subroot = tree->focusnode;
          }
          else
          {
-            /* convert old active node into a fork node */
-            CHECK_OKAY( actnodeToFork(memhdr, set, stat, tree, lp) );
+            /* convert old focus node into a fork node */
+            CHECK_OKAY( focusnodeToFork(memhdr, set, stat, tree, lp) );
          }
-         childrenlpfork = tree->actnode;
+         childrenlpfork = tree->focusnode;
 
          /* update the path's LP size */
-         tree->pathnlpcols[tree->actnode->depth] = lp->ncols;
-         tree->pathnlprows[tree->actnode->depth] = lp->nrows;
+         tree->pathnlpcols[tree->focusnode->depth] = lp->ncols;
+         tree->pathnlprows[tree->focusnode->depth] = lp->nrows;
 
-         /* if a child of the old active node was selected as new active node, the old node becomes the new active
+         /* if a child of the old focus node was selected as new focus node, the old node becomes the new focus
           * LP fork
           */
          if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD )
          {
-            lpfork = tree->actnode;
-            tree->correctlpdepth = tree->actnode->depth;
-            tree->actlpforklpcount = stat->lpcount;
+            lpfork = tree->focusnode;
+            tree->correctlpdepth = tree->focusnode->depth;
+            tree->focuslpforklpcount = stat->lpcount;
          }
       }
       else
       {
-         /* convert old active node into junction */
-         CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+         /* convert old focus node into junction */
+         CHECK_OKAY( focusnodeToJunction(memhdr, set, tree, lp) );
          childrenlpfork = lpfork;
       }
    }
-   else if( tree->actnode != NULL )
+   else if( tree->focusnode != NULL )
    {
-      /* convert old active node into deadend */
-      CHECK_OKAY( actnodeToDeadend(memhdr, tree, lp) );
+      /* convert old focus node into deadend */
+      CHECK_OKAY( focusnodeToDeadend(memhdr, tree, lp) );
    }
-   debugMessage("activate node: new correctlpdepth=%d\n", tree->correctlpdepth);
+   debugMessage("focus node: new correctlpdepth=%d\n", tree->correctlpdepth);
 
    /* set up the new lists of siblings and children */
+   oldfocusnode = tree->focusnode;
    if( *node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, tree->actlpfork,
-            cutoffbound) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+            primal->cutoffbound) );
 
       /* move children to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, childrenlpfork, cutoffbound) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork, 
+            primal->cutoffbound) );
    }
    else
    {
@@ -2458,8 +2797,8 @@ RETCODE SCIPnodeActivate(
       {  
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, childrenlpfork,
-               cutoffbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork,
+               primal->cutoffbound) );
 
          /* remove selected sibling from the siblings array */
          treeRemoveSibling(tree, *node);
@@ -2469,13 +2808,13 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_CHILD:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, tree->actlpfork,
-               cutoffbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+               primal->cutoffbound) );
 
          /* remove selected child from the children array */      
          treeRemoveChild(tree, *node);
          
-         /* move other children to the siblings array, make them SIBLINGs */
+         /* move remaining children to the siblings array, make them SIBLINGs */
          treeChildrenToSiblings(tree);
          
          stat->plungedepth++;
@@ -2484,12 +2823,12 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_LEAF:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, tree->actlpfork,
-               cutoffbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->siblings, &tree->nsiblings, tree->focuslpfork,
+               primal->cutoffbound) );
          
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, childrenlpfork,
-               cutoffbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, stat, lp, tree->children, &tree->nchildren, childrenlpfork,
+               primal->cutoffbound) );
 
          /* remove node from the queue */
          CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, *node) );
@@ -2500,27 +2839,36 @@ RETCODE SCIPnodeActivate(
          break;
 
       default:
-         errorMessage("Selected node is neither sibling, child, nor leaf (nodetype=%d)\n", SCIPnodeGetType(*node));
+         errorMessage("selected node is neither sibling, child, nor leaf (nodetype=%d)\n", SCIPnodeGetType(*node));
          return SCIP_INVALIDDATA;
       }  /*lint !e788*/
 
-      /* convert node into the active node */
-      (*node)->nodetype = SCIP_NODETYPE_ACTNODE; /*lint !e641*/
+      /* convert node into the focus node */
+      (*node)->nodetype = SCIP_NODETYPE_FOCUSNODE; /*lint !e641*/
    }
    assert(tree->nchildren == 0);
    
-   /* set new active node, current LP fork, and subroot */
+   /* set new focus node, LP fork, and subroot */
    assert(subroot == NULL || (lpfork != NULL && subroot->depth <= lpfork->depth));
    assert(lpfork == NULL || (*node != NULL && lpfork->depth < (*node)->depth));
-   tree->actnode = *node;
-   tree->actlpfork = lpfork;
-   tree->actsubroot = subroot;
+   tree->focusnode = *node;
+   tree->focuslpfork = lpfork;
+   tree->focussubroot = subroot;
 
-   /* track the path from the old active node to the new node, and perform domain changes */
-   CHECK_OKAY( treeSwitchPath(tree, memhdr, set, stat, lp, branchcand, eventqueue, fork) );
+   /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
+   CHECK_OKAY( treeSwitchPath(tree, memhdr, set, stat, prob, primal, lp, branchcand, eventfilter, eventqueue, 
+         fork, *node, cutoff) );
    assert(tree->pathlen >= 0);
-   assert((*node == NULL) == (tree->pathlen == 0));
-   assert(*node == NULL || tree->path[tree->pathlen-1] == *node);
+   assert(*node != NULL || tree->pathlen == 0);
+   assert(*node == NULL || tree->pathlen-1 <= (*node)->depth);
+
+   /* if the old focus node is a dead end (has no children), delete it */
+   if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
+   {
+      CHECK_OKAY( SCIPnodeFree(&oldfocusnode, memhdr, set, tree, lp) );
+   }
+
+   assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;
 }   
@@ -2552,9 +2900,9 @@ RETCODE SCIPtreeCreate(
    CHECK_OKAY( SCIPnodepqCreate(&(*tree)->leaves, set, nodesel) );
 
    (*tree)->path = NULL;
-   (*tree)->actnode = NULL;
-   (*tree)->actlpfork = NULL;
-   (*tree)->actsubroot = NULL;
+   (*tree)->focusnode = NULL;
+   (*tree)->focuslpfork = NULL;
+   (*tree)->focussubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;
    (*tree)->probingnode = NULL;
@@ -2562,7 +2910,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->siblingsprio = NULL;
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
-   (*tree)->actlpforklpcount = -1;
+   (*tree)->focuslpforklpcount = -1;
    (*tree)->childrensize = 0;
    (*tree)->nchildren = 0;
    (*tree)->siblingssize = 0;
@@ -2571,15 +2919,34 @@ RETCODE SCIPtreeCreate(
    (*tree)->pathsize = 0;
    (*tree)->correctlpdepth = -1;
    (*tree)->cutoffdepth = INT_MAX;
-   (*tree)->actnodehaslp = FALSE;
+   (*tree)->repropdepth = INT_MAX;
+   (*tree)->repropsubtreecount = 0;
+   (*tree)->focusnodehaslp = FALSE;
    (*tree)->cutoffdelayed = FALSE;
 
    /* create root node */
    CHECK_OKAY( SCIPnodeCreateChild(&(*tree)->root, memhdr, set, stat, *tree, 0.0) );
    assert((*tree)->nchildren == 1);
 
+#ifndef NDEBUG
+   /* check, if the sizes in the data structures match the maximal numbers defined here */
+   (*tree)->root->depth = MAXDEPTH;
+   (*tree)->root->repropsubtreemark = MAXREPROPMARK;
+   assert((*tree)->root->depth == MAXDEPTH);
+   assert((*tree)->root->repropsubtreemark == MAXREPROPMARK);
+   (*tree)->root->depth++;             /* this should produce an overflow and reset the value to 0 */
+   (*tree)->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
+   assert((*tree)->root->depth == 0);
+   assert((*tree)->root->nodetype == SCIP_NODETYPE_CHILD);
+   assert(!(*tree)->root->active);
+   assert(!(*tree)->root->cutoff);
+   assert(!(*tree)->root->reprop);
+   assert((*tree)->root->repropsubtreemark == 0);
+#endif
+
    /* move root to the queue, convert it to LEAF */
-   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, lp, (*tree)->children, &(*tree)->nchildren, NULL, set->infinity) );
+   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, stat, lp, (*tree)->children, &(*tree)->nchildren, NULL, 
+         set->infinity) );
 
    return SCIP_OKAY;
 }
@@ -2596,7 +2963,7 @@ RETCODE SCIPtreeFree(
    assert(*tree != NULL);
    assert((*tree)->nchildren == 0);
    assert((*tree)->nsiblings == 0);
-   assert((*tree)->actnode == NULL);
+   assert((*tree)->focusnode == NULL);
    assert((*tree)->probingnode == NULL);
 
    debugMessage("free tree\n");
@@ -2660,6 +3027,7 @@ RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch and bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
@@ -2668,6 +3036,7 @@ RETCODE SCIPtreeCutoff(
    int i;
 
    assert(tree != NULL);
+   assert(stat != NULL);
    assert(lp != NULL);
 
    /* if we are in diving mode, it is not allowed to cut off nodes, because this can lead to deleting LP rows which
@@ -2683,7 +3052,7 @@ RETCODE SCIPtreeCutoff(
    tree->cutoffdelayed = FALSE;
 
    /* cut off leaf nodes in the queue */
-   CHECK_OKAY( SCIPnodepqBound(tree->leaves, memhdr, set, tree, lp, cutoffbound) );
+   CHECK_OKAY( SCIPnodepqBound(tree->leaves, memhdr, set, stat, tree, lp, cutoffbound) );
 
    /* cut off siblings: we have to loop backwards, because a removal leads to moving the last node in empty slot */
    for( i = tree->nsiblings-1; i >= 0; --i )
@@ -2691,8 +3060,9 @@ RETCODE SCIPtreeCutoff(
       node = tree->siblings[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
-         debugMessage("cut off sibling %p in depth %d with lowerbound=%g at position %d\n", 
+         debugMessage("cut off sibling %p at depth %d with lowerbound=%g at position %d\n", 
             node, node->depth, node->lowerbound, i);
+         SCIPvbcCutoffNode(stat->vbc, stat, node);
          CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
       }
    }
@@ -2703,8 +3073,9 @@ RETCODE SCIPtreeCutoff(
       node = tree->children[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
-         debugMessage("cut off child %p in depth %d with lowerbound=%g at position %d\n",
+         debugMessage("cut off child %p at depth %d with lowerbound=%g at position %d\n",
             node, node->depth, node->lowerbound, i);
+         SCIPvbcCutoffNode(stat->vbc, stat, node);
          CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
       }
    }
@@ -2753,7 +3124,7 @@ RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-   solval = SCIPvarGetSol(var, tree->actnodehaslp);
+   solval = SCIPvarGetSol(var, tree->focusnodehaslp);
    rootsolval = SCIPvarGetRootSol(var);
    assert(SCIPsetIsGE(set, solval, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
@@ -2843,10 +3214,10 @@ RETCODE SCIPtreeStartProbing(
 {
    assert(tree != NULL);
    assert(tree->probingnode == NULL);
-   assert(tree->actnode != NULL);
+   assert(tree->focusnode != NULL);
    assert(tree->pathlen >= 1);
-   assert(tree->path[tree->pathlen-1] == tree->actnode);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+   assert(tree->path[tree->pathlen-1] == tree->focusnode);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
    /* create temporary node for probing */
    CHECK_OKAY( nodeCreateProbingNode(&tree->probingnode, memhdr, set, tree) );
@@ -2867,7 +3238,7 @@ RETCODE SCIPtreeStartProbing(
 }
 
 /** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints
- *  arrays of active node
+ *  arrays of focus node
  */
 RETCODE SCIPtreeEndProbing(
    TREE*            tree,               /**< branch and bound tree */
@@ -2881,22 +3252,26 @@ RETCODE SCIPtreeEndProbing(
 {
    assert(tree != NULL);
    assert(tree->probingnode != NULL);
-   assert(tree->actnode != NULL);
-   assert(tree->probingnode->parent == tree->actnode);
-   assert(SCIPnodeGetDepth(tree->probingnode) == SCIPnodeGetDepth(tree->actnode)+1);
+   assert(tree->focusnode != NULL);
+   assert(tree->probingnode->parent == tree->focusnode);
+   assert(SCIPnodeGetDepth(tree->probingnode) == SCIPnodeGetDepth(tree->focusnode)+1);
    assert(tree->pathlen >= 2);
    assert(tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->path[tree->pathlen-2] == tree->actnode);
+   assert(tree->path[tree->pathlen-2] == tree->focusnode);
    assert(SCIPnodeGetType(tree->probingnode) == SCIP_NODETYPE_PROBINGNODE);
-   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
    /* undo the domain and constraint set changes of the temporary probing node */
-   CHECK_OKAY( nodeDeactivate(&tree->probingnode, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+   CHECK_OKAY( nodeDeactivate(tree->probingnode, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
    assert(tree->probingnode == NULL);
 
    /* remove the probing node from the active path */
    tree->pathlen--;
-   assert(tree->pathlen == tree->actnode->depth+1);
+   assert(tree->pathlen == tree->focusnode->depth+1);
+
+   /* free the probing node */
+   CHECK_OKAY( SCIPnodeFree(&tree->probingnode, memhdr, set, tree, lp) );
+   assert(tree->probingnode == NULL);
 
    return SCIP_OKAY;
 }
@@ -2928,66 +3303,110 @@ int SCIPtreeGetNNodes(
    return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree);
 }
 
-/** gets active node of the tree */
-NODE* SCIPtreeGetActiveNode(
+/** returns whether the active path goes completely down to the focus node */
+Bool SCIPtreeIsPathComplete(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return (tree->focusnode == NULL || tree->focusnode->depth < tree->pathlen);
+}
+
+/** gets focus node of the tree */
+NODE* SCIPtreeGetFocusNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return tree->focusnode;
+}
+
+/** gets depth of focus node in the tree */
+int SCIPtreeGetFocusDepth(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return tree->focusnode != NULL ? tree->focusnode->depth : -1;
+}
+
+/** returns, whether the LP was or is to be solved in the focus node */
+Bool SCIPtreeHasFocusNodeLP(
    TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(tree != NULL);
 
-   return tree->actnode;
+   return tree->focusnodehaslp;
 }
 
-/** gets depth of active node in the tree */
-int SCIPtreeGetActiveDepth(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->actnode != NULL);
-
-   return tree->actnode != NULL ? tree->actnode->depth : -1;
-}
-
-/** returns, whether the LP was or is to be solved in the active node */
-Bool SCIPtreeHasActiveNodeLP(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->actnodehaslp;
-}
-
-/** sets mark to solve or to ignore the LP while processing the active node */
-void SCIPtreeSetActiveNodeLP(
+/** sets mark to solve or to ignore the LP while processing the focus node */
+void SCIPtreeSetFocusNodeLP(
    TREE*            tree,               /**< branch and bound tree */
-   Bool             solvelp             /**< should the LP be solved in active node? */
+   Bool             solvelp             /**< should the LP be solved in focus node? */
    )
 {
    assert(tree != NULL);
 
-   tree->actnodehaslp = solvelp;
+   tree->focusnodehaslp = solvelp;
 }
 
-/** gets current node of the tree */
+/** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
 NODE* SCIPtreeGetCurrentNode(
    TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
 
-   return tree->probingnode != NULL ? tree->probingnode : SCIPtreeGetActiveNode(tree);
+   return (tree->pathlen > 0 ? tree->path[tree->pathlen-1] : NULL);
 }
 
-/** gets depth of current node in the tree */
+/** gets depth of current node in the tree, i.e. the length of the active path minus 1, or -1 if no current node exists */
 int SCIPtreeGetCurrentDepth(
    TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
 
-   return tree->probingnode != NULL ? tree->probingnode->depth : SCIPtreeGetActiveDepth(tree);
+   return tree->pathlen-1;
 }
 
 /** returns, whether the LP was or is to be solved in the current node */
@@ -2996,8 +3415,9 @@ Bool SCIPtreeHasCurrentNodeLP(
    )
 {
    assert(tree != NULL);
+   assert(SCIPtreeIsPathComplete(tree));
 
-   return tree->probingnode != NULL ? FALSE : SCIPtreeHasActiveNodeLP(tree);
+   return tree->probingnode != NULL ? FALSE : SCIPtreeHasFocusNodeLP(tree);
 }
 
 /** returns whether the current node is a temporary probing node */
@@ -3025,7 +3445,7 @@ NODE* SCIPtreeGetProbingNode(
 #endif
 
 
-/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule */
 NODE* SCIPtreeGetPrioChild(
    TREE*            tree                /**< branch and bound tree */
    )
@@ -3051,7 +3471,7 @@ NODE* SCIPtreeGetPrioChild(
    return bestnode;
 }
 
-/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule */
 NODE* SCIPtreeGetPrioSibling(
    TREE*            tree                /**< branch and bound tree */
    )
@@ -3077,7 +3497,7 @@ NODE* SCIPtreeGetPrioSibling(
    return bestnode;
 }
 
-/** gets the best child of the active node w.r.t. the node selection strategy */
+/** gets the best child of the focus node w.r.t. the node selection strategy */
 NODE* SCIPtreeGetBestChild(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
@@ -3104,7 +3524,7 @@ NODE* SCIPtreeGetBestChild(
    return bestnode;
 }
 
-/** gets the best sibling of the active node w.r.t. the node selection strategy */
+/** gets the best sibling of the focus node w.r.t. the node selection strategy */
 NODE* SCIPtreeGetBestSibling(
    TREE*            tree,               /**< branch and bound tree */
    SET*             set                 /**< global SCIP settings */
@@ -3204,10 +3624,10 @@ Real SCIPtreeGetLowerbound(
       lowerbound = MIN(lowerbound, tree->siblings[i]->lowerbound); 
    }
 
-   /* compare lower bound with active node */
-   if( tree->actnode != NULL )
+   /* compare lower bound with focus node */
+   if( tree->focusnode != NULL )
    {
-      lowerbound = MIN(lowerbound, tree->actnode->lowerbound);
+      lowerbound = MIN(lowerbound, tree->focusnode->lowerbound);
    }
 
    return lowerbound;
@@ -3281,10 +3701,10 @@ Real SCIPtreeGetAvgLowerbound(
    lowerboundsum = SCIPnodepqGetLowerboundSum(tree->leaves);
    nnodes = SCIPtreeGetNLeaves(tree);
 
-   /* add lower bound of active node */
-   if( tree->actnode != NULL && tree->actnode->lowerbound < cutoffbound )
+   /* add lower bound of focus node */
+   if( tree->focusnode != NULL && tree->focusnode->lowerbound < cutoffbound )
    {
-      lowerboundsum += tree->actnode->lowerbound;
+      lowerboundsum += tree->focusnode->lowerbound;
       nnodes++;
    }
 

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.5 2004/03/30 12:51:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.6 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -100,6 +100,14 @@ Longint SCIPbranchruleGetNCutoffs(
 /** gets the total number of cuts, the branching rule separated */
 extern
 Longint SCIPbranchruleGetNCutsFound(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
+/** gets the total number of constraints, the branching rule added to the respective local nodes (not counting constraints
+ *  that were added to the child nodes as branching decisions)
+ */
+extern
+Longint SCIPbranchruleGetNConssFound(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 

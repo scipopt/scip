@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.5 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.6 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -321,7 +321,7 @@ DECL_EVENTEXEC(eventExecIntobj)
       break;
 
    default:
-      errorMessage("Invalid event type %x\n", SCIPeventGetType(event));
+      errorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.35 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.36 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -29,6 +29,8 @@
 #include "def.h"
 #include "message.h"
 #include "set.h"
+#include "stat.h"
+#include "vbc.h"
 #include "paramset.h"
 #include "tree.h"
 #include "scip.h"
@@ -574,6 +576,7 @@ RETCODE SCIPnodepqBound(
    NODEPQ*          nodepq,             /**< node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
@@ -616,6 +619,8 @@ RETCODE SCIPnodepqBound(
           */
          if( !parentfelldown )
             pos--;
+
+         SCIPvbcCutoffNode(stat->vbc, stat, node);
 
          /* free memory of the node */
          CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
@@ -756,7 +761,7 @@ RETCODE SCIPnodeselInit(
 
    if( nodesel->initialized )
    {
-      errorMessage("Node selector <%s> already initialized", nodesel->name);
+      errorMessage("node selector <%s> already initialized", nodesel->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -780,7 +785,7 @@ RETCODE SCIPnodeselExit(
 
    if( !nodesel->initialized )
    {
-      errorMessage("Node selector <%s> not initialized", nodesel->name);
+      errorMessage("node selector <%s> not initialized", nodesel->name);
       return SCIP_INVALIDCALL;
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.28 2004/09/02 09:55:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.29 2004/09/21 12:08:00 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -118,6 +118,7 @@ DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 {  /*lint --e{715}*/
    SOL* sol;
+   CONSHDLR* infeasconshdlr;
    CONS* infeascons;
    Bool feasible;
 
@@ -133,14 +134,18 @@ DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       printf("no feasible solution available\n");
    else
    {
-      CHECK_OKAY( SCIPcheckSolOrig(scip, sol, &feasible, &infeascons) );
+      CHECK_OKAY( SCIPcheckSolOrig(scip, sol, &feasible, &infeasconshdlr, &infeascons) );
       
       if( feasible )
          printf("best solution is feasible in original problem\n");
+      else if( infeascons == NULL )
+      { 
+         printf("best solution violates constraint handler [%s]\n", SCIPconshdlrGetName(infeasconshdlr));
+      }
       else
       { 
          printf("best solution violates constraint <%s> [%s] of original problem:\n", 
-            SCIPconsGetName(infeascons), SCIPconshdlrGetName(SCIPconsGetHdlr(infeascons)));
+            SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
          CHECK_OKAY( SCIPprintCons(scip, infeascons, NULL) );
       }
    }

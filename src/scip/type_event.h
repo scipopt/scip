@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.7 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.8 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -45,10 +45,10 @@
 #define SCIP_EVENTTYPE_HOLEREMOVED    0x00000100 /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
 
 /* node events */
-#define SCIP_EVENTTYPE_NODEACTIVATED  0x00000200 /**< a node has been activated and is now the active node */
+#define SCIP_EVENTTYPE_NODEFOCUSED    0x00000200 /**< a node has been focused and is now the focus node */
 #define SCIP_EVENTTYPE_NODEFEASIBLE   0x00000400 /**< the LP/pseudo solution of the node was feasible */
-#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00000800 /**< the active node has been proven to be infeasible or was bounded */
-#define SCIP_EVENTTYPE_NODEBRANCHED   0x00001000 /**< the active node has been solved by branching */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00000800 /**< the focus node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED   0x00001000 /**< the focus node has been solved by branching */
 
 /* LP events */
 #define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00002000 /**< the node's initial LP was solved */
@@ -72,7 +72,7 @@
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \
                                        | SCIP_EVENTTYPE_NODEBRANCHED)
-#define SCIP_EVENTTYPE_NODEEVENT      (SCIP_EVENTTYPE_NODEACTIVATED | SCIP_EVENTTYPE_NODESOLVED)
+#define SCIP_EVENTTYPE_NODEEVENT      (SCIP_EVENTTYPE_NODEFOCUSED | SCIP_EVENTTYPE_NODESOLVED)
 
 /* event masks for LP events */
 #define SCIP_EVENTTYPE_LPEVENT        (SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED)

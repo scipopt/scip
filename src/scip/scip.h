@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.166 2004/09/09 13:59:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.167 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1515,6 +1515,12 @@ RETCODE SCIPgetVarStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
+   Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
+   Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   downwards branch, or NULL */
+   Bool*            upconflict,         /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   upwards branch, or NULL */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
@@ -2732,8 +2738,7 @@ extern
 RETCODE SCIPaddCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
-   Real             scorefactor         /**< factor to weigh separation score of cut with (usually 1.0);
-                                         *   use infinite score factor to force using the cut */
+   Bool             forcecut            /**< should the cut be forced to enter the LP? */
    );
 
 /** if not already existing, adds row to global cut pool */
@@ -2904,7 +2909,7 @@ RETCODE SCIPstartProbing(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** quits probing and resets bounds and constraints to the active node's environment */
+/** quits probing and resets bounds and constraints to the focus node's environment */
 extern
 RETCODE SCIPendProbing(
    SCIP*            scip                /**< SCIP data structure */
@@ -3037,7 +3042,7 @@ Real SCIPgetBranchScoreMultiple(
    Real*            gains               /**< prediction of objective gain for each child */
    );
 
-/** creates a child node of the active node */
+/** creates a child node of the focus node */
 extern
 RETCODE SCIPcreateChild(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3370,7 +3375,11 @@ RETCODE SCIPcheckSolOrig(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
    Bool*            feasible,           /**< stores whether given solution is feasible */
-   CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed */
+   CONSHDLR**       infeasconshdlr,     /**< pointer to store constraint handler of first infeasible constraint,
+                                         *   or NULL if not needed */
+   CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed;
+                                         *   stores NULL, if a constraint handler that doesn't need constraints
+                                         *   rejected the solution */
    );
 
 /**@} */
@@ -3435,7 +3444,7 @@ RETCODE SCIPdropVarEvent(
 /**@name Tree Methods */
 /**@{ */
 
-/** gets children of active node along with the number of children */
+/** gets children of focus node along with the number of children */
 extern
 RETCODE SCIPgetChildren(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3443,13 +3452,13 @@ RETCODE SCIPgetChildren(
    int*             nchildren           /**< pointer to store number of children, or NULL if not needed */
    );
 
-/** gets number of children of active node */
+/** gets number of children of focus node */
 extern
 int SCIPgetNChildren(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets siblings of active node along with the number of siblings */
+/** gets siblings of focus node along with the number of siblings */
 extern
 RETCODE SCIPgetSiblings(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3457,7 +3466,7 @@ RETCODE SCIPgetSiblings(
    int*             nsiblings           /**< pointer to store number of siblings, or NULL if not needed */
    );
 
-/** gets number of siblings of active node */
+/** gets number of siblings of focus node */
 extern
 int SCIPgetNSiblings(
    SCIP*            scip                /**< SCIP data structure */
@@ -3477,25 +3486,25 @@ int SCIPgetNLeaves(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule */
 extern
 NODE* SCIPgetPrioChild(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule */
 extern
 NODE* SCIPgetPrioSibling(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best child of the active node w.r.t. the node selection strategy */
+/** gets the best child of the focus node w.r.t. the node selection strategy */
 extern
 NODE* SCIPgetBestChild(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets the best sibling of the active node w.r.t. the node selection strategy */
+/** gets the best sibling of the focus node w.r.t. the node selection strategy */
 extern
 NODE* SCIPgetBestSibling(
    SCIP*            scip                /**< SCIP data structure */
@@ -3544,13 +3553,13 @@ int SCIPgetNRuns(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets number of processed nodes, including the active node */
+/** gets number of processed nodes, including the focus node */
 extern
 Longint SCIPgetNNodes(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets total number of processed nodes in all runs, including the active node */
+/** gets total number of processed nodes in all runs, including the focus node */
 extern
 Longint SCIPgetNTotalNodes(
    SCIP*            scip                /**< SCIP data structure */

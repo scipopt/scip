@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.19 2004/09/13 15:11:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.20 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -171,7 +171,7 @@ RETCODE addCut(
          debugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
          debug(SCIPprintRow(scip, cut, NULL));
-         CHECK_OKAY( SCIPaddCut(scip, cut, 1.0) );
+         CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
          (*ncuts)++;
       }
       

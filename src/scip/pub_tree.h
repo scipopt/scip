@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.6 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.7 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -75,6 +75,12 @@ Bool SCIPnodeIsActive(
    NODE*            node                /**< node */
    );
 
+/** returns whether the node is marked to be propagated again */
+extern
+Bool SCIPnodeIsPropagatedAgain(
+   NODE*            node                /**< node data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -85,6 +91,7 @@ Bool SCIPnodeIsActive(
 #define SCIPnodeGetDepth(node)          ((node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeIsActive(node)          ((node)->active)
+#define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
 
 #endif
 

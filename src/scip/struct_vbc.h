@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_vbc.h,v 1.1 2004/03/22 16:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_vbc.h,v 1.2 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   struct_vbc.h
  * @brief  datastructures for VBC Tool output
@@ -37,6 +37,8 @@ struct Vbc
 {
    FILE*            file;               /**< file to store VBC information */
    HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
+   Longint          timestep;           /**< time step counter for non real time output */
+   Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
 };
 
 

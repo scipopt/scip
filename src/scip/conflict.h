@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.19 2004/08/24 11:57:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.20 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -244,7 +244,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
-   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   downwards branch, or NULL */
+   Bool*            upconflict          /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   upwards branch, or NULL */
    );
 
 /** gets time in seconds used for analyzing infeasible strong branching conflicts */

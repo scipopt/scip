@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_vbc.h,v 1.1 2004/03/22 16:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_vbc.h,v 1.2 2004/09/21 12:08:04 bzfpfend Exp $"
 
 /**@file   type_vbc.h
  * @brief  type definitions for VBC Tool output
@@ -25,15 +25,6 @@
 
 #ifndef __TYPE_VBC_H__
 #define __TYPE_VBC_H__
-
-
-/** node colors in VBC output */
-enum VBCColor
-{
-   SCIP_VBCCOLOR_UNSOLVED = 3,          /**< color for newly created, unsolved nodes */
-   SCIP_VBCCOLOR_SOLVED   = 2,          /**< color for solved nodes */
-   SCIP_VBCCOLOR_SOLUTION = 5           /**< color for solved nodes, where a solution has been found */
-};
 
 
 typedef struct Vbc VBC;                 /**< VBC Tool data structure */

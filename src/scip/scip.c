@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.209 2004/09/15 08:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.210 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -124,7 +124,7 @@ RETCODE checkStage(
 
       if( !init )
       {
-         errorMessage("Cannot call method <%s> in initialization stage\n", method);
+         errorMessage("cannot call method <%s> in initialization stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -146,7 +146,7 @@ RETCODE checkStage(
 
       if( !problem )
       {
-         errorMessage("Cannot call method <%s> in problem creation stage\n", method);
+         errorMessage("cannot call method <%s> in problem creation stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -168,7 +168,7 @@ RETCODE checkStage(
 
       if( !transforming )
       {
-         errorMessage("Cannot call method <%s> in problem transformation stage\n", method);
+         errorMessage("cannot call method <%s> in problem transformation stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -190,7 +190,7 @@ RETCODE checkStage(
 
       if( !transformed )
       {
-         errorMessage("Cannot call method <%s> in problem transformed stage\n", method);
+         errorMessage("cannot call method <%s> in problem transformed stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -212,7 +212,7 @@ RETCODE checkStage(
 
       if( !presolving )
       {
-         errorMessage("Cannot call method <%s> in presolving stage\n", method);
+         errorMessage("cannot call method <%s> in presolving stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -234,7 +234,7 @@ RETCODE checkStage(
 
       if( !presolved )
       {
-         errorMessage("Cannot call method <%s> in problem presolved stage\n", method);
+         errorMessage("cannot call method <%s> in problem presolved stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -256,7 +256,7 @@ RETCODE checkStage(
 
       if( !solving )
       {
-         errorMessage("Cannot call method <%s> in solving stage\n", method);
+         errorMessage("cannot call method <%s> in solving stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -278,7 +278,7 @@ RETCODE checkStage(
 
       if( !solved )
       {
-         errorMessage("Cannot call method <%s> in problem solved stage\n", method);
+         errorMessage("cannot call method <%s> in problem solved stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -295,7 +295,7 @@ RETCODE checkStage(
 
       if( !freesolve )
       {
-         errorMessage("Cannot call method <%s> in solve deinitialization stage\n", method);
+         errorMessage("cannot call method <%s> in solve deinitialization stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -311,7 +311,7 @@ RETCODE checkStage(
 
       if( !freetrans )
       {
-         errorMessage("Cannot call method <%s> in free transformed problem stage\n", method);
+         errorMessage("cannot call method <%s> in free transformed problem stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -2014,7 +2014,7 @@ RETCODE SCIPsetObjsense(
 
    if( objsense != SCIP_OBJSENSE_MAXIMIZE && objsense != SCIP_OBJSENSE_MINIMIZE )
    {
-      errorMessage("Invalid objective sense\n");
+      errorMessage("invalid objective sense\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -2146,7 +2146,7 @@ RETCODE SCIPaddVar(
    case SCIP_STAGE_PROBLEM:
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
       {
-         errorMessage("Cannot add transformed variables to original problem\n");
+         errorMessage("cannot add transformed variables to original problem\n");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->lp, scip->branchcand, 
@@ -2161,11 +2161,11 @@ RETCODE SCIPaddVar(
       {
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
          {
-            errorMessage("Cannot add original variables to transformed problem\n");
+            errorMessage("cannot add original variables to transformed problem\n");
          }
          else
          {
-            errorMessage("Cannot add fixed or aggregated variables to transformed problem\n");
+            errorMessage("cannot add fixed or aggregated variables to transformed problem\n");
          }
          return SCIP_INVALIDDATA;
       }
@@ -2204,11 +2204,11 @@ RETCODE SCIPaddPricedVar(
       {
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
          {
-            errorMessage("Cannot add original variables to transformed problem\n");
+            errorMessage("cannot add original variables to transformed problem\n");
          }
          else
          {
-            errorMessage("Cannot add fixed or aggregated variables to transformed problem\n");
+            errorMessage("cannot add fixed or aggregated variables to transformed problem\n");
          }
          return SCIP_INVALIDDATA;
       }
@@ -3299,14 +3299,14 @@ RETCODE freeSolve(
    /* switch stage to FREESOLVE */
    scip->stage = SCIP_STAGE_FREESOLVE;
 
-   /* deactivate the current node */
-   if( SCIPtreeGetActiveNode(scip->tree) != NULL )
+   /* remove focus from the current focus node */
+   if( SCIPtreeGetFocusNode(scip->tree) != NULL )
    {
       NODE* node = NULL;
       Bool cutoff;
 
-      CHECK_OKAY( SCIPnodeActivate(&node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-            scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, &cutoff) );
+      CHECK_OKAY( SCIPnodeFocus(&node, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal,
+            scip->tree, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue, &cutoff) );
       assert(!cutoff);
    }
 
@@ -3984,12 +3984,29 @@ RETCODE SCIPgetVarStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
+   Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
+   Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   downwards branch, or NULL */
+   Bool*            upconflict,         /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   upwards branch, or NULL */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    COL* col;
 
+   assert(lperror != NULL);
+
    CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranch", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( downinf != NULL )
+      *downinf = FALSE;
+   if( upinf != NULL )
+      *upinf = FALSE;
+   if( downconflict != NULL )
+      *downconflict = FALSE;
+   if( upconflict != NULL )
+      *upconflict = FALSE;
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
@@ -4003,20 +4020,35 @@ RETCODE SCIPgetVarStrongbranch(
    /* call strong branching for column */
    CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, down, up, lperror) );
 
-   /* analyze infeasible strong branching sub problems:
-    * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
-    * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict clause
+   /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough
+    * declare the sub nodes infeasible
     */
-   if( scip->set->usesbconflict && scip->set->nconflicthdlrs > 0
-      && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
-      && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp)
-      && SCIPtreeGetCurrentDepth(scip->tree) > 0 && !(*lperror) )
+   if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->exactsolve )
    {
-      if( (col->strongbranchdown >= scip->lp->cutoffbound && SCIPsetCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
-         || (col->strongbranchup >= scip->lp->cutoffbound && SCIPsetFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
+      Bool downcutoff;
+      Bool upcutoff;
+
+      downcutoff = SCIPsetIsGE(scip->set, col->strongbranchdown, scip->lp->cutoffbound);
+      upcutoff = SCIPsetIsGE(scip->set, col->strongbranchup, scip->lp->cutoffbound);
+      if( downinf != NULL )
+         *downinf = downcutoff;
+      if( upinf != NULL )
+         *upinf = upcutoff;
+   
+      /* analyze infeasible strong branching sub problems:
+       * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
+       * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict clause
+       */
+      if( scip->set->usesbconflict && scip->set->nconflicthdlrs > 0
+         && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
+         && SCIPtreeGetCurrentDepth(scip->tree) > 0 )
       {
-         CHECK_OKAY( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-               scip->transprob, scip->tree, scip->lp, col, NULL) );
+         if( (downcutoff && SCIPsetCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
+            || (upcutoff && SCIPsetFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
+         {
+            CHECK_OKAY( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
+                  scip->transprob, scip->tree, scip->lp, col, downconflict, upconflict) );
+         }
       }
    }
 
@@ -6911,8 +6943,7 @@ Bool SCIPisEfficacious(
 RETCODE SCIPaddCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
-   Real             scorefactor         /**< factor to weigh separation score of cut with (usually 1.0);
-                                         *   use infinite score factor to force using the cut */
+   Bool             forcecut            /**< should the cut be forced to enter the LP? */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -6926,7 +6957,7 @@ RETCODE SCIPaddCut(
    }
 
    CHECK_OKAY( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-         cut, scorefactor, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
+         cut, forcecut, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
    
    return SCIP_OKAY;
 }
@@ -7113,7 +7144,8 @@ RETCODE SCIPendDive(
     */
    if( scip->tree->cutoffdelayed )
    {
-      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->primal->cutoffbound) );
+      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->primal->cutoffbound) );
    }
 
    return SCIP_OKAY;
@@ -7291,7 +7323,7 @@ RETCODE SCIPstartProbing(
    return SCIP_OKAY;
 }
 
-/** quits probing and resets bounds and constraints to the active node's environment */
+/** quits probing and resets bounds and constraints to the focus node's environment */
 RETCODE SCIPendProbing(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -7304,7 +7336,7 @@ RETCODE SCIPendProbing(
       return SCIP_INVALIDCALL;
    }
 
-   /* switch back from probing to normal operation mode and restore variables and constraints to active node */
+   /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
    CHECK_OKAY( SCIPtreeEndProbing(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
          scip->branchcand, scip->eventqueue) );
 
@@ -7550,7 +7582,7 @@ Real SCIPgetBranchScoreMultiple(
    return SCIPbranchGetScoreMultiple(scip->set, var, nchildren, gains);
 }
 
-/** creates a child node of the active node */
+/** creates a child node of the focus node */
 RETCODE SCIPcreateChild(
    SCIP*            scip,               /**< SCIP data structure */
    NODE**           node,               /**< pointer to node data structure */
@@ -7607,7 +7639,7 @@ RETCODE SCIPbranchLP(
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecLP(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->sepastore, scip->branchcand, scip->eventqueue, result) );
+         scip->sepastore, scip->branchcand, scip->eventqueue, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -7621,7 +7653,7 @@ RETCODE SCIPbranchPseudo(
    CHECK_OKAY( checkStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecPseudo(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->branchcand, scip->eventqueue, result) );
+         scip->branchcand, scip->eventqueue, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -8220,7 +8252,6 @@ RETCODE SCIPcheckSol(
    checklprows = checklprows || scip->set->exactsolve;
    
    CHECK_OKAY( SCIPsolCheck(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-         scip->tree == NULL ? -1 : SCIPtreeGetCurrentDepth(scip->tree),
          checkintegrality, checklprows, feasible) );
 
    return SCIP_OKAY;
@@ -8233,27 +8264,57 @@ RETCODE SCIPcheckSolOrig(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
    Bool*            feasible,           /**< stores whether given solution is feasible */
-   CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed */
+   CONSHDLR**       infeasconshdlr,     /**< pointer to store constraint handler of first infeasible constraint,
+                                         *   or NULL if not needed */
+   CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed;
+                                         *   stores NULL, if a constraint handler that doesn't need constraints
+                                         *   rejected the solution */
    )
 {
    RESULT result;
    int c;
+   int h;
 
    assert(feasible != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPcheckSolOrig", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   if( infeasconshdlr != NULL )
+      *infeasconshdlr = NULL;
+   if( infeascons != NULL )
+      *infeascons = NULL;
+
+   /* check original constraints */
    *feasible = TRUE;
-   for( c = 0; c < scip->origprob->nconss && *feasible; ++c )
+   for( c = 0; c < scip->origprob->nconss; ++c )
    {
       CHECK_OKAY( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, TRUE, TRUE, &result) );
-      *feasible = *feasible && (result == SCIP_FEASIBLE);
+      if( result != SCIP_FEASIBLE )
+      {
+         *feasible = FALSE;
+         if( infeasconshdlr != NULL )
+            *infeasconshdlr = SCIPconsGetHdlr(scip->origprob->conss[c]);
+         if( infeascons != NULL )
+            *infeascons = scip->origprob->conss[c];
+         return SCIP_OKAY;
+      }
    }
 
-   if( !(*feasible) && infeascons != NULL )
+   /* call constraint handlers that don't need constraints */
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      assert(1 <= c && c <= scip->origprob->nconss);
-      *infeascons = scip->origprob->conss[c-1];
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         CHECK_OKAY( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->solvemem, scip->set, scip->stat, 
+               scip->origprob, sol, TRUE, TRUE, &result) );
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+            if( infeasconshdlr != NULL )
+               *infeasconshdlr = scip->set->conshdlrs[h];
+            return SCIP_OKAY;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -8353,7 +8414,7 @@ RETCODE SCIPdropVarEvent(
  * tree methods
  */
 
-/** gets children of active node along with the number of children */
+/** gets children of focus node along with the number of children */
 RETCODE SCIPgetChildren(
    SCIP*            scip,               /**< SCIP data structure */
    NODE***          children,           /**< pointer to store children array, or NULL if not needed */
@@ -8370,7 +8431,7 @@ RETCODE SCIPgetChildren(
    return SCIP_OKAY;
 }
 
-/** gets number of children of active node */
+/** gets number of children of focus node */
 int SCIPgetNChildren(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8380,7 +8441,7 @@ int SCIPgetNChildren(
    return scip->tree->nchildren;
 }
 
-/** gets siblings of active node along with the number of siblings */
+/** gets siblings of focus node along with the number of siblings */
 RETCODE SCIPgetSiblings(
    SCIP*            scip,               /**< SCIP data structure */
    NODE***          siblings,           /**< pointer to store siblings array, or NULL if not needed */
@@ -8397,7 +8458,7 @@ RETCODE SCIPgetSiblings(
    return SCIP_OKAY;
 }
 
-/** gets number of siblings of active node */
+/** gets number of siblings of focus node */
 int SCIPgetNSiblings(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8434,7 +8495,7 @@ int SCIPgetNLeaves(
    return SCIPnodepqLen(scip->tree->leaves);
 }
 
-/** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule */
 NODE* SCIPgetPrioChild(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8444,7 +8505,7 @@ NODE* SCIPgetPrioChild(
    return SCIPtreeGetPrioChild(scip->tree);
 }
 
-/** gets the best sibling of the active node w.r.t. the node selection priority assigned by the branching rule */
+/** gets the best sibling of the focus node w.r.t. the node selection priority assigned by the branching rule */
 NODE* SCIPgetPrioSibling(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8454,7 +8515,7 @@ NODE* SCIPgetPrioSibling(
    return SCIPtreeGetPrioSibling(scip->tree);
 }
 
-/** gets the best child of the active node w.r.t. the node selection strategy */
+/** gets the best child of the focus node w.r.t. the node selection strategy */
 NODE* SCIPgetBestChild(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8464,7 +8525,7 @@ NODE* SCIPgetBestChild(
    return SCIPtreeGetBestChild(scip->tree, scip->set);
 }
 
-/** gets the best sibling of the active node w.r.t. the node selection strategy */
+/** gets the best sibling of the focus node w.r.t. the node selection strategy */
 NODE* SCIPgetBestSibling(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8512,7 +8573,7 @@ RETCODE SCIPcutoffNode(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcutoffNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeCutoff(node, scip->set, scip->tree);
+   SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree);
 
    return SCIP_OKAY;
 }
@@ -8534,7 +8595,7 @@ int SCIPgetNRuns(
    return scip->stat->nruns;
 }
 
-/** gets number of processed nodes in current run, including the active node */
+/** gets number of processed nodes in current run, including the focus node */
 Longint SCIPgetNNodes(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -8544,7 +8605,7 @@ Longint SCIPgetNNodes(
    return scip->stat->nnodes;
 }
 
-/** gets total number of processed nodes in all runs, including the active node */
+/** gets total number of processed nodes in all runs, including the focus node */
 Longint SCIPgetNTotalNodes(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -9365,16 +9426,17 @@ void printBranchruleStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts   Children\n");
+   fprintf(file, "Branching Rules    :       Time      Calls    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
-      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld\n",
+      fprintf(file, "  %-17.17s: %10.2f %10lld %10lld %10lld %10lld %10lld %10lld\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetNLPCalls(scip->set->branchrules[i]) + SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutoffs(scip->set->branchrules[i]),
          SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
+         SCIPbranchruleGetNConssFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
 }
 
@@ -9494,6 +9556,8 @@ void printTreeStatistics(
    fprintf(file, "  backtracks       : %10lld (%.1f%%)\n", scip->stat->nbacktracks, 
       scip->stat->nnodes > 0 ? 100.0 * (Real)scip->stat->nbacktracks / (Real)scip->stat->nnodes : 0.0);
    fprintf(file, "  delayed cutoffs  : %10lld\n", scip->stat->ndelayedcutoffs);
+   fprintf(file, "  repropagations   : %10lld (%lld domain reductions)\n", 
+      scip->stat->nreprops, scip->stat->nrepropboundchgs);
    fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 

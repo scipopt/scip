@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.34 2004/06/30 14:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.35 2004/09/21 12:08:00 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -109,7 +109,7 @@ RETCODE SCIPeventhdlrInit(
 
    if( eventhdlr->initialized )
    {
-      errorMessage("Event handler <%s> already initialized\n", eventhdlr->name);
+      errorMessage("event handler <%s> already initialized\n", eventhdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -133,7 +133,7 @@ RETCODE SCIPeventhdlrExit(
 
    if( !eventhdlr->initialized )
    {
-      errorMessage("Event handler <%s> not initialized\n", eventhdlr->name);
+      errorMessage("event handler <%s> not initialized\n", eventhdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -586,7 +586,7 @@ RETCODE SCIPeventProcess(
       break;
 
    case SCIP_EVENTTYPE_VARADDED:
-   case SCIP_EVENTTYPE_NODEACTIVATED:
+   case SCIP_EVENTTYPE_NODEFOCUSED:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
    case SCIP_EVENTTYPE_NODEBRANCHED:
@@ -1237,7 +1237,7 @@ RETCODE SCIPeventqueueAdd(
 
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARFIXED:
-      case SCIP_EVENTTYPE_NODEACTIVATED:
+      case SCIP_EVENTTYPE_NODEFOCUSED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
       case SCIP_EVENTTYPE_NODEBRANCHED:

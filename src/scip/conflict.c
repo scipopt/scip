@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.59 2004/09/15 08:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.60 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -226,7 +226,7 @@ RETCODE SCIPconflicthdlrInit(
 
    if( conflicthdlr->initialized )
    {
-      errorMessage("Conflict handler <%s> already initialized\n", conflicthdlr->name);
+      errorMessage("conflict handler <%s> already initialized\n", conflicthdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -250,7 +250,7 @@ RETCODE SCIPconflicthdlrExit(
 
    if( !conflicthdlr->initialized )
    {
-      errorMessage("Conflict handler <%s> not initialized\n", conflicthdlr->name);
+      errorMessage("conflict handler <%s> not initialized\n", conflicthdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -398,6 +398,7 @@ RETCODE conflictEnsureConflictvarsMem(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(&conflict->conflictvars, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&conflict->conflictvardepths, newsize) );
       conflict->conflictvarssize = newsize;
    }
    assert(num <= conflict->conflictvarssize);
@@ -405,7 +406,7 @@ RETCODE conflictEnsureConflictvarsMem(
    return SCIP_OKAY;
 }
 
-/** puts given variable locally fixed binary or its negation into conflict set, depending which one is fixed to zero */
+/** puts given locally fixed binary variable or its negation into conflict set, depending which one is fixed to zero */
 static
 RETCODE conflictAddConflictVar(
    CONFLICT*        conflict,           /**< conflict analysis data */
@@ -415,12 +416,24 @@ RETCODE conflictAddConflictVar(
    VAR*             var                 /**< variable that should enter the conflict set */
    )
 {
+   int fixdepth;
+   int i;
+
    assert(conflict != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
    assert(SCIPvarGetLbLP(var) > 0.5 || SCIPvarGetUbLP(var) < 0.5);
-               
+
+   /* get the depth level, at which the variable was fixed */
+   fixdepth = SCIPvarGetLastBdchgDepth(var);
+   assert(fixdepth != -1); /* variables fixed in preprocessing shouldn't occur here */
+   if( fixdepth == -2 )
+   {
+      /* the variable is not fixed at the focus node: it was fixed due to diving, probing, or strong branching */
+      fixdepth = INT_MAX;
+   }
+
    /* choose between variable or its negation, such that the literal is fixed to FALSE */
    if( SCIPvarGetLbLP(var) > 0.5 )
    {
@@ -430,17 +443,82 @@ RETCODE conflictAddConflictVar(
    assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
    assert(SCIPsetIsZero(set, SCIPvarGetLbLP(var)));
 
-   debugMessage("putting variable <%s> to conflict set\n", SCIPvarGetName(var));
+   debugMessage("putting variable <%s> fixed at depth %d to conflict set\n", SCIPvarGetName(var), fixdepth);
 
-   /* put variable to conflict set */
+   /* put variable to conflict set, sorted by non-increasing fixing depths */
    CHECK_OKAY( conflictEnsureConflictvarsMem(conflict, set, conflict->nconflictvars+1) );
-   conflict->conflictvars[conflict->nconflictvars] = var;
+   for( i = conflict->nconflictvars; i > 0 && conflict->conflictvardepths[i-1] < fixdepth; --i )
+   {
+      conflict->conflictvars[i] = conflict->conflictvars[i-1];
+      conflict->conflictvardepths[i] = conflict->conflictvardepths[i-1];
+   }
+   conflict->conflictvars[i] = var;
+   conflict->conflictvardepths[i] = fixdepth;
    conflict->nconflictvars++;
 
    /* mark the active problem variable to belong to the current conflict */
    var->conflictsetcount = conflict->count;
 
    return SCIP_OKAY;
+}
+
+/** removes all variables from the conflict set, that were fixed higher in the tree than the conflict set's valid depth */
+static
+void conflictRemoveInvalidConflictVars(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   int              validdepth          /**< minimal depth at which the conflict set is valid */
+   )
+{
+   assert(conflict != NULL);
+
+#ifndef NDEBUG
+   {
+      int i;
+      for( i = 0; i < conflict->nconflictvars; ++i )
+      {
+         assert(conflict->conflictvardepths[i] >= 0);
+         assert(conflict->conflictvardepths[i] == SCIPvarGetLastBdchgDepth(conflict->conflictvars[i])
+            || (conflict->conflictvardepths[i] == INT_MAX && SCIPvarGetLastBdchgDepth(conflict->conflictvars[i]) == -2));
+         assert(i == conflict->nconflictvars-1 || conflict->conflictvardepths[i] >= conflict->conflictvardepths[i+1]);
+      }
+   }
+#endif
+
+   while( conflict->nconflictvars > 0 && conflict->conflictvardepths[conflict->nconflictvars-1] < validdepth )
+      conflict->nconflictvars--;
+}
+
+/** after the conflict set is computated, gets the depth at which now a propagation could be performed with this
+ *  conflict set; this is the depth of the next to last fixed variable
+ */
+static
+int conflictGetPropagateDepth(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+#ifndef NDEBUG
+   {
+      int i;
+      for( i = 0; i < conflict->nconflictvars; ++i )
+      {
+         assert(conflict->conflictvardepths[i] >= 0);
+         assert(conflict->conflictvardepths[i] == SCIPvarGetLastBdchgDepth(conflict->conflictvars[i])
+            || (conflict->conflictvardepths[i] == INT_MAX && SCIPvarGetLastBdchgDepth(conflict->conflictvars[i]) == -2));
+         assert(i == conflict->nconflictvars-1 || conflict->conflictvardepths[i] >= conflict->conflictvardepths[i+1]);
+      }
+   }
+#endif
+   
+   /* if there is at most one variable in the conflict, it can already be fixed in the root node to the opposite value */
+   if( conflict->nconflictvars <= 1 )
+      return 0;
+
+   /* otherwise, the last fixed variable could already be fixed to the opposite value in the depth of the previously
+    * fixed conflict variable by using this conflict clause
+    */
+   return conflict->conflictvardepths[1];
 }
 
 /** compares two conflict set entries, such that bound changes infered later are
@@ -487,6 +565,7 @@ RETCODE SCIPconflictCreate(
    CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->nonbinbdchgqueue, set->memgrowinit, set->memgrowfac, 
          conflictBdchginfoComp) );
    (*conflict)->conflictvars = NULL;
+   (*conflict)->conflictvardepths = NULL;
    (*conflict)->conflictvarssize = 0;
    (*conflict)->nconflictvars = 0;
    (*conflict)->count = 0;
@@ -523,6 +602,7 @@ RETCODE SCIPconflictFree(
    SCIPpqueueFree(&(*conflict)->binbdchgqueue);
    SCIPpqueueFree(&(*conflict)->nonbinbdchgqueue);
    freeMemoryArrayNull(&(*conflict)->conflictvars);
+   freeMemoryArrayNull(&(*conflict)->conflictvardepths);
    freeMemory(conflict);
 
 
@@ -673,6 +753,179 @@ BDCHGINFO* conflictFirstCand(
    return bdchginfo;
 }
 
+/** calls the conflict handlers in order to create a conflict clause */
+static
+RETCODE conflictAddClause(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   Bool*            success             /**< pointer to store whether the conflict set is valid */
+   )
+{
+   NODE* node;
+   VAR* var;
+   BOUNDCHG* boundchgs;
+   BOUNDCHGTYPE boundchgtype;
+   RESULT result;
+   int nboundchgs;
+   int nbranchingvars;
+   int currentdepth;
+   int d;
+   int b;
+   int h;
+
+   assert(conflict != NULL);
+   assert(conflict->conflictvars != NULL);
+   assert(conflict->conflictvardepths != NULL);
+   assert(conflict->nconflictvars >= 0);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(success != NULL);
+
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+   assert(currentdepth == tree->pathlen-1);
+   assert(0 <= validdepth && validdepth <= currentdepth);
+
+#ifndef NDEBUG
+   {
+      int v;
+         
+      for( v = 0; v < conflict->nconflictvars; ++v )
+      {
+         assert(conflict->conflictvars[v] != NULL);
+         assert(conflict->conflictvars[v]->conflictsetcount == conflict->count);
+      }
+   }
+#endif
+
+#if 1
+   /* even if all branching variables up to a certain depth d are member of the conflict, we don't want to delete
+    * those variables from the conflict clause and attach the conflict clause locally to the node in depth d,
+    * because those branching decisions may be changed into inferences due to repropagation of nodes higher in the
+    * tree
+    */
+   d = validdepth+1;
+#else
+   /* identify the depth, at which the conflict clause should be added:
+    * - if the branching rule operates on variables only, and if all branching variables up to a certain
+    *   depth level are member of the conflict, the conflict clause can only be violated in the subtree
+    *   of the node at that depth, because in all other nodes, at least one of these branching variables
+    *   takes a different value, such that the conflict clause is feasible
+    * - if there is at least one branching variable in a node, we assume, that this branching was performed
+    *   on variables, and that the siblings of this node are disjunct w.r.t. the branching variables' fixings
+    * - the variables in the conflict set are labeled with the current conflict set counter
+    * - we have to add the conflict clause at least in the valid depth of the initial conflict set,
+    *   so we start searching at the first branching after this depth level, i.e. validdepth+1
+    */
+   for( d = validdepth+1; d <= currentdepth; ++d )
+   {
+      node = tree->path[d];
+      assert(node != NULL);
+
+      /* if node has no domain changes, the branching was not performed on variables */
+      if( node->domchg == NULL )
+         break;
+
+      /* scan the bound changes of the current depth level: branchings are always first entries */
+      boundchgs = node->domchg->domchgbound.boundchgs;
+      nboundchgs = node->domchg->domchgbound.nboundchgs;
+      nbranchingvars = 0;
+      for( b = 0; b < nboundchgs; ++b )
+      {
+         var = boundchgs[b].var;
+         boundchgtype = boundchgs[b].boundchgtype;
+         if( boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+            break;
+         if( var->conflictsetcount != conflict->count )
+         {
+            /* the branching variable is not member of the conflict set: abort at this depth level */
+            nbranchingvars = 0;
+            break;
+         }
+         nbranchingvars++;
+      }
+
+      /* break, if a branching variable not in the conflict set was found, or no branching variables exist,
+       * which probably means, that this branching was not operating on variables
+       */
+      if( nbranchingvars == 0 )
+         break;
+   }
+#endif
+
+   /* now, d is the depth level of the first node, that has non-variable branching or a branching variable
+    * not in the conflict set; this means, the siblings of the node may benefit from the conflict clause,
+    * and the clause should be added to the node's parent, i.e. at depth level d-1
+    */
+   d--;
+   assert(validdepth <= d && d <= currentdepth);
+   debugMessage(" -> conflict found at depth %d is active in depth %d\n", currentdepth, d);
+   
+   /* if all branching variables are in the conflict set, the conflict clause is of no use */
+   if( d == currentdepth )
+      return SCIP_OKAY;
+
+   /* remove all variables from conflict set, that have fixing depth smaller than the conflict clause's depth */
+   conflictRemoveInvalidConflictVars(conflict, d);
+   
+   /* if no conflict variables exist, the node and its sub tree in the conflict clause's depth can be cut off completely */
+   if( conflict->nconflictvars == 0 )
+   {
+      debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", currentdepth, validdepth);
+      
+      SCIPnodeCutoff(tree->path[d], set, stat, tree);
+      *success = TRUE;
+   }
+   else
+   {
+      int propdepth;
+
+      /* sort conflict handlers by priority */
+      SCIPsetSortConflicthdlrs(set);
+      
+      /* call conflict handlers to create a conflict constraint */
+      for( h = 0; h < set->nconflicthdlrs; ++h )
+      {
+         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d], 
+               conflict->conflictvars, conflict->nconflictvars, (validdepth > 0), *success, &result) );
+         *success = *success || (result == SCIP_CONSADDED);
+      }
+
+      if( *success )
+      {
+         SCIPvbcFoundConflict(stat->vbc, stat, tree->path[currentdepth]);
+
+         /* reactivate propagation on the node at depth level of the last but one fixed conflict variable,
+          * such that the last fixed conflict variable can be deduced to the opposite value
+          */
+         if( set->repropconflict )
+         {
+            propdepth = conflictGetPropagateDepth(conflict);
+            assert(0 <= propdepth && propdepth < tree->pathlen);
+            assert(tree->path[propdepth]->depth == propdepth);
+            SCIPnodePropagateAgain(tree->path[propdepth], set, stat, tree);
+
+            debugMessage("marked node %p in depth %d to be repropagated due to conflict found in depth %d\n", 
+               tree->path[propdepth], propdepth, currentdepth);
+#ifdef DEBUG
+            {
+               int i;
+               printf(" -> clause:");
+               for( i = 0; i < conflict->nconflictvars; ++i )
+                  printf(" <%s>(%d)", SCIPvarGetName(conflict->conflictvars[i]), conflict->conflictvardepths[i]);
+               printf("\n");
+            }
+#endif
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
@@ -727,6 +980,16 @@ RETCODE conflictAnalyze(
       bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
       assert(0 <= bdchgdepth && bdchgdepth <= currentdepth);
       assert(SCIPvarIsActive(SCIPbdchginfoGetVar(bdchginfo)));
+      assert(bdchgdepth < tree->pathlen);
+      assert(tree->path[bdchgdepth] != NULL);
+      assert(tree->path[bdchgdepth]->domchg != NULL);
+      assert(SCIPbdchginfoGetPos(bdchginfo) < tree->path[bdchgdepth]->domchg->domchgbound.nboundchgs);
+      assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].var
+         == SCIPbdchginfoGetVar(bdchginfo));
+      assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].newbound
+         == SCIPbdchginfoGetNewbound(bdchginfo));
+      assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].boundtype
+         == SCIPbdchginfoGetBoundtype(bdchginfo));
 
       /* we don't need to resolve bound changes that are already active in the valid depth of the current conflict set,
        * because the conflict clause can only be added locally at the valid depth, and all bound changes applied in this
@@ -744,7 +1007,7 @@ RETCODE conflictAnalyze(
             SCIPbdchginfoGetNewbound(bdchginfo));
          debugMessage(" - conflict set             :");
          for( v = 0; v < conflict->nconflictvars; ++v )
-            printf(" <%s>", SCIPvarGetName(conflict->conflictvars[v]));
+            printf(" <%s>[%d]", SCIPvarGetName(conflict->conflictvars[v]), conflict->conflictvardepths[v]);
          printf("\n");
          debugMessage(" - candidate queue (non-bin):");
          for( v = 0; v < SCIPpqueueNElems(conflict->nonbinbdchgqueue); ++v )
@@ -866,118 +1129,12 @@ RETCODE conflictAnalyze(
       bdchginfo = conflictRemoveCand(conflict);
    }
 
-   /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
+   /* check, if a valid conflict set was found */
    if( bdchginfo == NULL && validdepth < currentdepth
-       && (!mustresolve || nresolutions >= 1 || conflict->nconflictvars == 0) )
+      && (!mustresolve || nresolutions > 0 || conflict->nconflictvars == 0) )
    {
-      NODE* node;
-      VAR* var;
-      BOUNDCHG* boundchgs;
-      BOUNDCHGTYPE boundchgtype;
-      RESULT result;
-      int nboundchgs;
-      int nbranchingvars;
-      int d;
-      int b;
-      int h;
-
-      /* if no conflict variables exist, the node and its sub tree in the valid depth can be cut off completely */
-      if( conflict->nconflictvars == 0 )
-      {
-         assert(0 <= validdepth && validdepth < tree->pathlen);
-         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", currentdepth, validdepth);
-
-         SCIPnodeCutoff(tree->path[validdepth], set, tree);
-         *success = TRUE;
-
-         return SCIP_OKAY;
-      }
-
-      assert(conflict->conflictvars != NULL);
-      assert(conflict->nconflictvars > 0);
-
-      debugMessage(" -> found conflict set of size %d/%d after %d resolutions\n", 
-         conflict->nconflictvars, maxsize, nresolutions);
-
-#ifndef NDEBUG
-      {
-         int v;
-         
-         for( v = 0; v < conflict->nconflictvars; ++v )
-         {
-            assert(conflict->conflictvars[v] != NULL);
-            assert(conflict->conflictvars[v]->conflictsetcount == conflict->count);
-         }
-      }
-#endif
-
-      /* identify the depth, at which the conflict clause should be added:
-       * - if the branching rule operates on variables only, and if all branching variables up to a certain
-       *   depth level are member of the conflict, the conflict clause can only be violated in the subtree
-       *   of the node at that depth, because in all other nodes, at least one of these branching variables
-       *   takes a different value, such that the conflict clause is feasible
-       * - if there is at least one branching variable in a node, we assume, that this branching was performed
-       *   on variables, and that the siblings of this node are disjunct w.r.t. the branching variables' fixings
-       * - the variables in the conflict set are labeled with the current conflict set counter
-       * - we have to add the conflict clause at least in the valid depth of the initial conflict set,
-       *   so we start searching at the first branching after this depth level, i.e. validdepth+1
-       */
-      for( d = validdepth+1; d < tree->pathlen; ++d )
-      {
-         node = tree->path[d];
-         assert(node != NULL);
-
-         /* if node has no domain changes, the branching was not performed on variables */
-         if( node->domchg == NULL )
-            break;
-
-         /* scan the bound changes of the current depth level: branchings are always first entries */
-         boundchgs = node->domchg->domchgbound.boundchgs;
-         nboundchgs = node->domchg->domchgbound.nboundchgs;
-         nbranchingvars = 0;
-         for( b = 0; b < nboundchgs; ++b )
-         {
-            var = boundchgs[b].var;
-            boundchgtype = boundchgs[b].boundchgtype;
-            if( boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
-               break;
-            if( var->conflictsetcount != conflict->count )
-            {
-               /* the branching variable is not member of the conflict set: abort at this depth level */
-               nbranchingvars = 0;
-               break;
-            }
-            nbranchingvars++;
-         }
-
-         /* break, if a branching variable not in the conflict set was found, or no branching variables exist,
-          * which probably means, that this branching was not operating on variables
-          */
-         if( nbranchingvars == 0 )
-            break;
-      }
-
-      /* now, d is the depth level of the first node, that has non-variable branching or a branching variable
-       * not in the conflict set; this means, the siblings of the node may benefit from the conflict clause,
-       * and the clause should be added to the node's parent, i.e. at depth level d-1
-       */
-      assert(validdepth+1 <= d && d <= tree->pathlen);
-      debugMessage(" -> conflict found at depth %d is active in depth %d\n", tree->pathlen-1, d-1);
-
-      /* if all branching variables are in the conflict set, the conflict clause is of no use */
-      if( d == tree->pathlen )
-         return SCIP_OKAY;
-
-      /* sort conflict handlers by priority */
-      SCIPsetSortConflicthdlrs(set);
-
-      /* call conflict handlers to create a conflict constraint */
-      for( h = 0; h < set->nconflicthdlrs; ++h )
-      {
-         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d-1], 
-               conflict->conflictvars, conflict->nconflictvars, (validdepth > 0), *success, &result) );
-         *success = *success || (result == SCIP_CONSADDED);
-      }
+      /* call the conflict handlers to create a conflict clause */
+      CHECK_OKAY( conflictAddClause(conflict, set, stat, tree, validdepth, success) );
    }
 
    return SCIP_OKAY;
@@ -1846,27 +2003,27 @@ RETCODE addCand(
 
    /* calculate the increase in the proof's activity */
    proofactdelta = (newbound - oldbound)*proofcoef;
-   assert(SCIPsetIsPositive(set, proofactdelta));
+   assert(proofactdelta > 0.0);
 
    /* if the bound change is not useable in conflict analysis, we have to undo it */
    if( !useable )
       score = set->infinity;
    else
    {
-      /* calculate score for undoing the bound change */
-      score = 1.0 - proofactdelta/(prooflhs - proofact);
-      score = MAX(score, 0.0) + 1e-6;
-      score *= depth;
-      score = MIN(score, set->infinity/2);
+       /* calculate score for undoing the bound change */
+       score = 1.0 - proofactdelta/(prooflhs - proofact);
+       score = MAX(score, 0.0) + 1e-6;
+       score *= depth;
+       score = MIN(score, set->infinity/2);
    }
-
+   
    /* get enough memory to store new candidate */
    CHECK_OKAY( ensureCandsSize(set, cands, candscores, newbounds, proofactdeltas, candssize, (*ncands)+1) );
    assert(*cands != NULL);
    assert(*candscores != NULL);
    assert(*newbounds != NULL);
    assert(*proofactdeltas != NULL);
-
+    
    /* insert variable in candidate list without touching the already processed candidates */
    for( i = *ncands; i > firstcand && score > (*candscores)[i-1]; --i )
    {
@@ -1982,7 +2139,7 @@ RETCODE undoBdchgsProof(
     */
    for( i = 0; i < ncands; ++i )
    {
-      assert(SCIPsetIsPositive(set, proofactdeltas[i]));
+      assert(proofactdeltas[i] > 0.0);
 
       if( SCIPsetIsGT(set, prooflhs, proofact + proofactdeltas[i]) )
       {
@@ -3087,7 +3244,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
    COL*             col,                /**< LP column with at least one infeasible strong branching subproblem */
-   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   downwards branch, or NULL */
+   Bool*            upconflict          /**< pointer to store whether a conflict clause was created for an infeasible
+                                         *   upwards branch, or NULL */
    )
 {
    VAR* var;
@@ -3105,11 +3265,13 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(lp->flushed);
    assert(lp->solved);
    assert(col != NULL);
-   assert((col->strongbranchdown >= lp->cutoffbound && SCIPsetCeil(set, col->primsol-1.0) >= col->lb - 0.5)
-      || (col->strongbranchup >= lp->cutoffbound && SCIPsetFloor(set, col->primsol+1.0) <= col->ub + 0.5));
+   assert((SCIPsetIsGE(set, col->strongbranchdown, lp->cutoffbound) && SCIPsetCeil(set, col->primsol-1.0) >= col->lb - 0.5)
+      || (SCIPsetIsGE(set, col->strongbranchup, lp->cutoffbound) && SCIPsetFloor(set, col->primsol+1.0) <= col->ub + 0.5));
 
-   if( success != NULL )
-      *success = FALSE;
+   if( downconflict != NULL )
+      *downconflict = FALSE;
+   if( upconflict != NULL )
+      *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
    if( !set->usesbconflict )
@@ -3171,8 +3333,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          if( found )
          {
             conflict->nsbconflicts++;
-            if( success != NULL )
-               *success = TRUE;
+            if( downconflict != NULL )
+               *downconflict = TRUE;
          }
 
          /* reset the upper bound */
@@ -3215,8 +3377,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          if( found )
          {
             conflict->nsbconflicts++;
-            if( success != NULL )
-               *success = TRUE;
+            if( upconflict != NULL )
+               *upconflict = TRUE;
          }
 
          /* reset the lower bound */

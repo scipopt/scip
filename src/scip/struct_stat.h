@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.21 2004/09/15 08:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.22 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -46,17 +46,19 @@ struct Stat
    Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
    Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
-   Longint          nnodes;             /**< number of nodes processed in current run (including active node) */
-   Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including active node) */
+   Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
+   Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    Longint          ncreatednodes;      /**< number of nodes created */
    Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
+   Longint          nreprops;           /**< number of times, a solved node is repropagated again */
    Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */
    Longint          lastdivenode;       /**< last node where LP diving was applied */
    Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
    Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
+   Longint          nrepropboundchgs;   /**< total number of bound changes generated in repropagating nodes */
    Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    Real             rootlowerbound;     /**< lower bound of root node */

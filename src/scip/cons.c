@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.93 2004/09/09 13:59:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.94 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1304,7 +1304,7 @@ RETCODE SCIPconshdlrInit(
 
    if( conshdlr->initialized )
    {
-      errorMessage("Constraint handler <%s> already initialized\n", conshdlr->name);
+      errorMessage("constraint handler <%s> already initialized\n", conshdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -1372,7 +1372,7 @@ RETCODE SCIPconshdlrExit(
 
    if( !conshdlr->initialized )
    {
-      errorMessage("Constraint handler <%s> not initialized\n", conshdlr->name);
+      errorMessage("constraint handler <%s> not initialized\n", conshdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -1927,7 +1927,6 @@ RETCODE SCIPconshdlrCheck(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
-   int              depth,              /**< depth of current node, or -1 for global problem */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -1959,7 +1958,7 @@ RETCODE SCIPconshdlrCheck(
       debugMessage(" -> checking returned result <%d>\n", *result);
       
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, depth) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, -1) );
 
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
@@ -2032,9 +2031,9 @@ RETCODE SCIPconshdlrPropagate(
          CONS** conss;
          Longint oldndomchgs;
          
-         debugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution)\n",
+         debugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
             firstcons, firstcons + nconss - 1, conshdlr->npropconss, conshdlr->name,
-            conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new");
+            conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);
 
          /* remember the number of processed constraints on the current domains */
          conshdlr->lastpropdomchgcount = stat->domchgcount;
@@ -2060,7 +2059,7 @@ RETCODE SCIPconshdlrPropagate(
          SCIPclockStart(conshdlr->proptime, set);
 
          /* call external method */
-         CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conshdlr->propconss, nconss, nusefulconss, result) );
+         CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> propagation returned result <%d>\n", *result);
       
          /* stop timing */

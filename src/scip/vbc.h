@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.2 2004/04/29 15:20:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.3 2004/09/21 12:08:04 bzfpfend Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -73,6 +73,38 @@ RETCODE SCIPvbcNewChild(
 /** changes the color of the node to the color of solved nodes */
 extern
 void SCIPvbcSolvedNode(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   );
+
+/** changes the color of the node to the color of cutoff nodes */
+extern
+void SCIPvbcCutoffNode(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   );
+
+/** changes the color of the node to the color of nodes where a conflict clause was found */
+extern
+void SCIPvbcFoundConflict(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   );
+
+/** changes the color of the node to the color of nodes that were marked to be repropagated */
+extern
+void SCIPvbcMarkedRepropagateNode(
+   VBC*             vbc,                /**< VBC information */
+   STAT*            stat,               /**< problem statistics */
+   NODE*            node                /**< new node, that was created */
+   );
+
+/** changes the color of the node to the color of repropagated nodes */
+extern
+void SCIPvbcRepropagatedNode(
    VBC*             vbc,                /**< VBC information */
    STAT*            stat,               /**< problem statistics */
    NODE*            node                /**< new node, that was created */

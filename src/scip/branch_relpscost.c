@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.9 2004/09/14 16:12:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.10 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -247,6 +247,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       int ninitcands;
       int maxninitcands;
       int nbdchgs;
+      int nbdconflicts;
       Real downsize;
       Real upsize;
       Real size;
@@ -293,6 +294,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       bdchginds = NULL;
       bdchgdowninfs = NULL;
       nbdchgs = 0;
+      nbdconflicts = 0;
 
       /* get current node number, depth, maximal depth, and number of binary/integer variables */
       nodenum = SCIPgetNNodes(scip);
@@ -417,6 +419,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          Bool lperror;
          Bool downinf;
          Bool upinf;
+         Bool downconflict;
+         Bool upconflict;
 
          /* get candidate number to initialize */
          c = initcands[i];
@@ -429,7 +433,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
          /* use strong branching on candidate */
-         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, &down, &up, &lperror) );
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, 
+               &down, &up, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* check for an error in strong branching */
          if( lperror )
@@ -443,42 +448,55 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          /* evaluate strong branching */
          down = MAX(down, lpobjval);
          up = MAX(up, lpobjval);
-         downinf = SCIPisGE(scip, down, cutoffbound);
-         upinf = SCIPisGE(scip, up, cutoffbound);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
+         assert(!allcolsinlp || exactsolve || downinf == SCIPisGE(scip, down, cutoffbound));
+         assert(!allcolsinlp || exactsolve || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(downinf || !downconflict);
+         assert(upinf || !upconflict);
 
-         /* check for possible fixings */
-         if( allcolsinlp && !exactsolve )
+         /* check if there are infeasible roundings */
+         if( downinf || upinf )
          {
-            /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            if( downinf || upinf )
+            assert(allcolsinlp);
+            assert(!exactsolve);
+            
+            /* if for both infeasibilities, a conflict clause was created, we don't need to fix the variable by hand,
+             * but better wait for the next propagation round to fix them as an inference, and potentially produce a
+             * cutoff that can be analyzed
+             */
+            if( allowaddcons && downinf == downconflict && upinf == upconflict )
             {
-               if( downinf && upinf )
-               {
-                  /* both roundings are infeasible -> node is infeasible */
-                  debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
-                  *result = SCIP_CUTOFF;
-                  break; /* terminate initialization loop, because node is infeasible */
-               }
-               else
-               {
-                  /* rounding is infeasible in one direction -> round variable in other direction */
-                  debugMessage(" -> variable <%s> is infeasible in %s branch\n",
-                     SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward");
-                  CHECK_OKAY( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
-                  if( branchruledata->maxbdchgs >= 0 && nbdchgs >= branchruledata->maxbdchgs )
-                     break; /* terminate initialization loop, because enough roundings are performed */
-               }
+               *result = SCIP_CONSADDED;
+               nbdconflicts++;
+               if( (downinf && upinf)
+                  || (branchruledata->maxbdchgs >= 0 && nbdchgs + nbdconflicts >= branchruledata->maxbdchgs) )
+                  break; /* terminate initialization loop, because enough roundings are performed or a cutoff was found */
+            }
+            else if( downinf && upinf )
+            {
+               /* both roundings are infeasible -> node is infeasible */
+               debugMessage(" -> variable <%s> is infeasible in both directions\n", SCIPvarGetName(lpcands[c]));
+               *result = SCIP_CUTOFF;
+               break; /* terminate initialization loop, because node is infeasible */
             }
             else
             {
-               Real minbound;
-               
-               /* the minimal lower bound of both children is a proved lower bound of the current subtree */
-               minbound = MIN(down, up);
-               provedbound = MAX(provedbound, minbound);
+               /* rounding is infeasible in one direction -> round variable in other direction */
+               debugMessage(" -> variable <%s> is infeasible in %s branch\n",
+                     SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward");
+               CHECK_OKAY( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
+               if( branchruledata->maxbdchgs >= 0 && nbdchgs + nbdconflicts >= branchruledata->maxbdchgs )
+                  break; /* terminate initialization loop, because enough roundings are performed */
             }
+         }
+         else if( allcolsinlp && !exactsolve )
+         {
+            Real minbound;
+            
+            /* the minimal lower bound of both children is a proved lower bound of the current subtree */
+            minbound = MIN(down, up);
+            provedbound = MAX(provedbound, minbound);
          }
 
          /* check for a better score */
@@ -564,7 +582,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
    }
 
    /* if no domain could be reduced, create the branching */
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
+   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
       NODE* node;
       Real rootsolval;

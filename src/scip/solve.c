@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.134 2004/09/15 08:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.135 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -124,14 +124,16 @@ RETCODE SCIPpropagateDomains(
    assert(tree != NULL);
    assert(cutoff != NULL);
 
-   debugMessage("domain propagation\n");
-
    node = SCIPtreeGetCurrentNode(tree);
    assert(node != NULL);
    assert(SCIPnodeIsActive(node));
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE || SCIPnodeGetType(node) == SCIP_NODETYPE_REFOCUSNODE);
+
+   debugMessage("domain propagation of node %p in depth %d\n", node, SCIPnodeGetDepth(node));
 
    maxproprounds = (SCIPnodeGetDepth(node) == 0 ? set->maxproproundsroot : set->maxproprounds);
 
+   /* propagate as long new bound changes were found and the maximal number of propagation rounds is not exceeded */
    *cutoff = FALSE;
    propround = 0;
    do
@@ -147,6 +149,9 @@ RETCODE SCIPpropagateDomains(
       }
    }
    while( propagain && !(*cutoff) && propround < maxproprounds );
+
+   /* mark the node to be completely propagated in the current repropagation subtree level */
+   SCIPnodeMarkPropagated(node, tree);
 
    return SCIP_OKAY;
 }
@@ -201,9 +206,9 @@ RETCODE redcostStrengthening(
       return SCIP_OKAY;
 
    stat->nredcoststrcalls++;
-   node = SCIPtreeGetActiveNode(tree);
+   node = SCIPtreeGetFocusNode(tree);
    assert(node != NULL);
-   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_ACTNODE);
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE);
 
    /* start redcost strengthening timer */
    SCIPclockStart(stat->redcoststrtime, set);
@@ -378,20 +383,20 @@ RETCODE updatePseudocost(
    LP*              lp                  /**< LP data */
    )
 {
-   NODE* actnode;
+   NODE* focusnode;
    int actdepth;
 
    assert(lp != NULL);
    assert(tree != NULL);
    assert(tree->path != NULL);
 
-   actnode = SCIPtreeGetActiveNode(tree);
-   assert(SCIPnodeIsActive(actnode));
-   assert(SCIPnodeGetType(actnode) == SCIP_NODETYPE_ACTNODE);
-   actdepth = SCIPnodeGetDepth(actnode);
-   assert(tree->path[actdepth] == actnode);
+   focusnode = SCIPtreeGetFocusNode(tree);
+   assert(SCIPnodeIsActive(focusnode));
+   assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   actdepth = SCIPnodeGetDepth(focusnode);
+   assert(tree->path[actdepth] == focusnode);
 
-   if( lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->actlpfork != NULL )
+   if( lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->focuslpfork != NULL )
    {
       BOUNDCHG** updates;
       NODE* node;
@@ -403,13 +408,13 @@ RETCODE updatePseudocost(
       int d;
       int i;
 
-      assert(SCIPnodeIsActive(tree->actlpfork));
-      assert(tree->path[tree->actlpfork->depth] == tree->actlpfork);
+      assert(SCIPnodeIsActive(tree->focuslpfork));
+      assert(tree->path[tree->focuslpfork->depth] == tree->focuslpfork);
 
       /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
        * current node and LP fork
        */
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &updates, 2*(actdepth - tree->actlpfork->depth)) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &updates, 2*(actdepth - tree->focuslpfork->depth)) );
       nupdates = 0;
       nvalidupdates = 0;
 
@@ -418,7 +423,7 @@ RETCODE updatePseudocost(
        * attached; collect the bound changes for pseudo cost value updates and mark the corresponding variables such
        * that they are not updated twice in case of more than one bound change on the same variable
        */
-      for( d = tree->actlpfork->depth+1; d <= actdepth; ++d )
+      for( d = tree->focuslpfork->depth+1; d <= actdepth; ++d )
       {
          node = tree->path[d];
 
@@ -434,6 +439,7 @@ RETCODE updatePseudocost(
                if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   var = boundchgs[i].var;
+                  assert(var != NULL);
                   if( var->pseudocostflag == PSEUDOCOST_NONE )
                   {
                      /* remember the bound change and mark the variable */
@@ -459,18 +465,19 @@ RETCODE updatePseudocost(
        * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
       weight = nvalidupdates > 0 ? 1.0 / (Real)nvalidupdates : 1.0;
-      lpgain = SCIPlpGetObjval(lp, set) - tree->actlpfork->lowerbound;
+      lpgain = SCIPlpGetObjval(lp, set) - tree->focuslpfork->lowerbound;
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {
          assert(updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
          var = updates[i]->var;
+         assert(var != NULL);
          assert(var->pseudocostflag != PSEUDOCOST_NONE);
          if( var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
             debugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => gain=%g, weight: %g\n",
                SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
-               tree->actlpfork->lowerbound, SCIPlpGetObjval(lp, set), lpgain, weight);
+               tree->focuslpfork->lowerbound, SCIPlpGetObjval(lp, set), lpgain, weight);
             CHECK_OKAY( SCIPvarUpdatePseudocost(var, set, stat, 
                   SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
          }
@@ -590,7 +597,7 @@ RETCODE solveNodeInitialLP(
    Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
-   NODE* actnode;
+   NODE* focusnode;
    EVENT event;
 
    assert(stat != NULL);
@@ -602,16 +609,16 @@ RETCODE solveNodeInitialLP(
    *cutoff = FALSE;
    *lperror = FALSE;
 
-   actnode = SCIPtreeGetActiveNode(tree);
-   assert(actnode != NULL);
-   assert(SCIPnodeGetType(actnode) == SCIP_NODETYPE_ACTNODE);
+   focusnode = SCIPtreeGetFocusNode(tree);
+   assert(focusnode != NULL);
+   assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
 
    /* load the LP into the solver and load the LP state */
    debugMessage("loading LP\n");
    CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, stat, lp) );
    
    /* init root node LP */
-   if( SCIPnodeGetDepth(actnode) == 0 )
+   if( SCIPnodeGetDepth(focusnode) == 0 )
    {
       CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
    }
@@ -627,7 +634,7 @@ RETCODE solveNodeInitialLP(
    {
       /* issue FIRSTLPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
-      CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+      CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
       CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
       
       /* update pseudo cost values */
@@ -659,7 +666,7 @@ RETCODE priceAndCutLoop(
    Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
-   NODE* actnode;
+   NODE* focusnode;
    RESULT result;
    EVENT event;
    Real loclowerbound;
@@ -688,14 +695,14 @@ RETCODE priceAndCutLoop(
    assert(cutoff != NULL);
    assert(lperror != NULL);
 
-   actnode = SCIPtreeGetActiveNode(tree);
-   assert(actnode != NULL);
-   assert(SCIPnodeGetType(actnode) == SCIP_NODETYPE_ACTNODE);
-   actdepth = SCIPnodeGetDepth(actnode);
+   focusnode = SCIPtreeGetFocusNode(tree);
+   assert(focusnode != NULL);
+   assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   actdepth = SCIPnodeGetDepth(focusnode);
    root = (actdepth == 0);
 
    /* check, if we want to separate at this node */
-   loclowerbound = SCIPnodeGetLowerbound(actnode);
+   loclowerbound = SCIPnodeGetLowerbound(focusnode);
    glblowerbound = SCIPtreeGetLowerbound(tree, set);
    upperbound = primal->upperbound;
    separate = SCIPsetIsLE(set, loclowerbound - glblowerbound, set->maxsepabounddist * (upperbound - glblowerbound));
@@ -802,13 +809,13 @@ RETCODE priceAndCutLoop(
       /* update lower bound w.r.t. the the LP solution */
       if( !(*lperror) )
       {
-         CHECK_OKAY( nodeUpdateLowerboundLP(actnode, set, stat, lp) );
+         CHECK_OKAY( nodeUpdateLowerboundLP(focusnode, set, stat, lp) );
          debugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
-            SCIPnodeGetLowerbound(actnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
+            SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
       }
       else
       {
-         debugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(actnode));
+         debugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
       }
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
@@ -816,7 +823,7 @@ RETCODE priceAndCutLoop(
          && separate
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE)
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT)
-         && SCIPsetIsLT(set, SCIPnodeGetLowerbound(actnode), primal->cutoffbound);
+         && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
 
       /* separation and reduced cost strengthening
        * (needs not to be done completely, because we just want to increase the lower bound)
@@ -952,17 +959,17 @@ RETCODE priceAndCutLoop(
    /* update lower bound w.r.t. the the LP solution */
    if( *cutoff )
    {
-      SCIPnodeUpdateLowerbound(actnode, stat, primal->cutoffbound);
+      SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
    }
    else if( !(*lperror) )
    {
       assert(lp->solved);
 
-      CHECK_OKAY( nodeUpdateLowerboundLP(actnode, set, stat, lp) );
+      CHECK_OKAY( nodeUpdateLowerboundLP(focusnode, set, stat, lp) );
 
       /* issue LPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
-      CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+      CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
       CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
       /* analyze an infeasible LP (not necessary in the root node) */
@@ -973,7 +980,7 @@ RETCODE priceAndCutLoop(
       }
    }
    debugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
-      SCIPnodeGetLowerbound(actnode), SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set));
+      SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set));
 
    return SCIP_OKAY;
 }
@@ -1006,7 +1013,7 @@ RETCODE solveNodeLP(
 
    assert(stat != NULL);
    assert(tree != NULL);
-   assert(SCIPtreeHasActiveNodeLP(tree));
+   assert(SCIPtreeHasFocusNodeLP(tree));
    assert(cutoff != NULL);
    assert(lperror != NULL);
    assert(*cutoff == FALSE);
@@ -1058,7 +1065,8 @@ RETCODE enforceConstraints(
    Bool*            cutoff,             /**< pointer to store whether node can be cut off */
    Bool*            infeasible,         /**< pointer to store whether LP/pseudo solution is infeasible */
    Bool*            solvelpagain,       /**< pointer to store whether the node's LP has to be solved again */
-   Bool*            propagateagain      /**< pointer to store whether domain propagation should be applied again */
+   Bool*            propagateagain,     /**< pointer to store whether domain propagation should be applied again */
+   Bool*            branched            /**< pointer to store whether a branching was created */
    )
 {
    RESULT result;
@@ -1069,8 +1077,9 @@ RETCODE enforceConstraints(
    int h;
 
    assert(set != NULL);
+   assert(stat != NULL);
    assert(tree != NULL);
-   assert(SCIPtreeGetActiveNode(tree) != NULL);
+   assert(SCIPtreeGetFocusNode(tree) != NULL);
    assert(prob != NULL);
    assert(primal != NULL);
    assert(conshdlrs_enfo != NULL);
@@ -1078,26 +1087,27 @@ RETCODE enforceConstraints(
    assert(infeasible != NULL);
    assert(solvelpagain != NULL);
    assert(propagateagain != NULL);
+   assert(branched != NULL);
 
    *cutoff = FALSE;
    *infeasible = FALSE;
    *solvelpagain = FALSE;
    *propagateagain = FALSE;
-
+   *branched = FALSE;
    /**@todo avoid checking the same pseudosolution twice */
 
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
     */
-   debugMessage("enforcing constraints on %s solution\n", SCIPtreeHasActiveNodeLP(tree) ? "LP" : "pseudo");
+   debugMessage("enforcing constraints on %s solution\n", SCIPtreeHasFocusNodeLP(tree) ? "LP" : "pseudo");
 
    /* check, if the solution is infeasible anyway due to it's objective value */
-   if( SCIPtreeHasActiveNodeLP(tree) )
+   if( SCIPtreeHasFocusNodeLP(tree) )
       objinfeasible = FALSE;
    else
    {
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
-      objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetActiveNode(tree)));
+      objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
    }
 
    /* enforce constraints until a handler resolved an infeasibility with cutting off the node, branching, 
@@ -1110,7 +1120,7 @@ RETCODE enforceConstraints(
    {
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
-      if( SCIPtreeHasActiveNodeLP(tree) )
+      if( SCIPtreeHasFocusNodeLP(tree) )
       {
          assert(lp->solved);
          assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
@@ -1133,7 +1143,7 @@ RETCODE enforceConstraints(
       {  
       case SCIP_DIDNOTRUN:
          assert(tree->nchildren == 0);
-         assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+         assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          assert(objinfeasible);
          *infeasible = TRUE;
@@ -1141,20 +1151,20 @@ RETCODE enforceConstraints(
 
       case SCIP_FEASIBLE:
          assert(tree->nchildren == 0);
-         assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+         assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          break;
 
       case SCIP_INFEASIBLE:
          assert(tree->nchildren == 0);
-         assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+         assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
          break;
 
       case SCIP_CUTOFF:
          assert(tree->nchildren == 0);
-         assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+         assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
 
          /* the found cuts are of no use, because the node is infeasible anyway */
          CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
@@ -1189,7 +1199,7 @@ RETCODE enforceConstraints(
 
       case SCIP_CONSADDED:
          assert(tree->nchildren == 0);
-         assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+         assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
          *solvelpagain = TRUE; /* the separation for new constraints should be called */
@@ -1199,20 +1209,21 @@ RETCODE enforceConstraints(
 
       case SCIP_BRANCHED:
          assert(tree->nchildren >= 1);
-         assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+         assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
+         *branched = TRUE;
          resolved = TRUE;
          break;
 
       case SCIP_SOLVELP:
-         assert(!SCIPtreeHasActiveNodeLP(tree));
+         assert(!SCIPtreeHasFocusNodeLP(tree));
          assert(tree->nchildren == 0);
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
          *infeasible = TRUE;
          *solvelpagain = TRUE;
          resolved = TRUE;
-         SCIPtreeSetActiveNodeLP(tree, TRUE); /* the node's LP must be solved */
+         SCIPtreeSetFocusNodeLP(tree, TRUE); /* the node's LP must be solved */
          break;
 
       default:
@@ -1224,7 +1235,7 @@ RETCODE enforceConstraints(
       /* the enforcement method may add a primal solution, after which the LP status could be set to
        * objective limit reached
        */
-      if( SCIPtreeHasActiveNodeLP(tree) && lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
+      if( SCIPtreeHasFocusNodeLP(tree) && lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
       {
          *cutoff = TRUE;
          *infeasible = TRUE;
@@ -1241,77 +1252,12 @@ RETCODE enforceConstraints(
    debugMessage(" -> enforcing result: infeasible=%d, solvelpagain=%d, propagateagain=%d, resolved=%d\n",
       *infeasible, *solvelpagain, *propagateagain, resolved);
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-
-   if( *infeasible && !resolved )
-   {
-      /* the node is infeasible, but no constraint handler could resolve the infeasibility
-       * -> branch on the pseudo solution
-       * -> e.g. select non-fixed binary or integer variable x with value x', create three
-       *    sons: x <= x'-1, x = x', and x >= x'+1.
-       *    In the left and right branch, the current solution is cut off. In the middle
-       *    branch, the constraints can hopefully reduce domains of other variables to cut
-       *    off the current solution.
-       */
-
-      assert(!(*cutoff));
-      assert(!(*solvelpagain));
-   
-      /* branch on pseudo solution */
-      CHECK_OKAY( SCIPbranchPseudo(set->scip, &result) );
-
-      switch( result )
-      {  
-      case SCIP_CUTOFF:
-         assert(tree->nchildren == 0);
-         *cutoff = TRUE;
-         resolved = TRUE;
-         break;
-      case SCIP_BRANCHED:
-         assert(tree->nchildren >= 1);
-         resolved = TRUE;
-         break;
-      case SCIP_REDUCEDDOM:
-         assert(tree->nchildren == 0);
-         *solvelpagain = TRUE;
-         *propagateagain = TRUE;
-         resolved = TRUE;
-         break;
-      case SCIP_DIDNOTRUN:
-         /* all integer variables in the infeasible pseudo solution are fixed,
-          * - if no continuous variables exist and all variables are known, the infeasible pseudo solution is completely
-          *   fixed, and the node is infeasible
-          * - if at least one continuous variable exist or we do not know all variables due to external pricers, we cannot
-          *   resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
-          */
-         assert(tree->nchildren == 0);
-         assert(SCIPbranchcandGetNPseudoCands(branchcand) == 0);
-
-         if( prob->ncontvars == 0 && set->nactivepricers == 0 )
-         {
-            *cutoff = TRUE;
-            resolved = TRUE;
-         }
-         else
-         {
-            assert(!SCIPtreeHasActiveNodeLP(tree));
-            
-            /* solve the LP in the next loop */
-            SCIPtreeSetActiveNodeLP(tree, TRUE);
-            *solvelpagain = TRUE;
-         }
-         break;
-
-      default:
-         errorMessage("invalid result code <%d> from SCIPbranchPseudo()\n", result);
-         abort();
-      }  /*lint !e788*/
-   }
-   assert(*infeasible || !resolved);
+   assert(resolved == (*cutoff || *solvelpagain || *propagateagain || *branched));
 
    return SCIP_OKAY;
 }
 
-/** solves the active node */
+/** solves the focus node */
 static
 RETCODE solveNode(
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -1331,17 +1277,21 @@ RETCODE solveNode(
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers for separating constraints, sorted by priority */
    CONSHDLR**       conshdlrs_enfo,     /**< constraint handlers for enforcing constraints, sorted by priority */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            infeasible,         /**< pointer to store whether the active node's solution is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the focus node's solution is infeasible */
    Bool*            restart             /**< should solving process be started again with presolving? */
    )
 {
-   NODE* actnode;
-   Bool actnodehaslp;
+   NODE* focusnode;
+   Longint lastdomchgcount;
+   int lastlpcount;
+   int actdepth;
+   int nlperrors;
+   Bool focusnodehaslp;
    Bool initiallpsolved;
    Bool solvelpagain;
    Bool propagateagain;
-   int actdepth;
-   int nlperrors;
+   Bool branched;
+   Bool enfoinf;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -1356,10 +1306,10 @@ RETCODE solveNode(
    *infeasible = FALSE;
    *restart = FALSE;
 
-   actnode = SCIPtreeGetActiveNode(tree);
-   assert(actnode != NULL);
-   assert(SCIPnodeGetType(actnode) == SCIP_NODETYPE_ACTNODE);
-   actdepth = SCIPnodeGetDepth(actnode);
+   focusnode = SCIPtreeGetFocusNode(tree);
+   assert(focusnode != NULL);
+   assert(SCIPnodeGetType(focusnode) == SCIP_NODETYPE_FOCUSNODE);
+   actdepth = SCIPnodeGetDepth(focusnode);
 
    debugMessage("Processing node %lld in depth %d, %d siblings\n", stat->nnodes, actdepth, tree->nsiblings);
    debugMessage("current pseudosolution: obj=%g", SCIPlpGetPseudoObjval(lp, set));
@@ -1371,26 +1321,35 @@ RETCODE solveNode(
     * - solve the root LP, if there are continuous variables present
     * - don't solve the node if its cut off by the pseudo objective value anyway
     */
-   actnodehaslp = (set->lpsolvedepth == -1 || actdepth <= set->lpsolvedepth);
-   actnodehaslp = actnodehaslp && (set->lpsolvefreq >= 1 && actdepth % set->lpsolvefreq == 0);
-   actnodehaslp = actnodehaslp || (actdepth == 0 && set->lpsolvefreq == 0);
-   actnodehaslp = actnodehaslp || (actdepth == 0 && prob->ncontvars > 0);
-   actnodehaslp = actnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound);
-   SCIPtreeSetActiveNodeLP(tree, actnodehaslp);
+   focusnodehaslp = (set->lpsolvedepth == -1 || actdepth <= set->lpsolvedepth);
+   focusnodehaslp = focusnodehaslp && (set->lpsolvefreq >= 1 && actdepth % set->lpsolvefreq == 0);
+   focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lpsolvefreq == 0);
+   focusnodehaslp = focusnodehaslp || (actdepth == 0 && prob->ncontvars > 0);
+   focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound);
+   SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
-   /* external node solving loop */
+   /* external node solving loop:
+    *  - propagate domains
+    *  - solve LP
+    *  - enforce constraints
+    * if a constraint handler adds constraints to enforce its own constraints, both, propagation and LP solving
+    * is applied again (if applicable on current node); however, if the new constraints don't have the enforce flag set,
+    * it is possible, that the current infeasible solution is not cut off; in this case, we have to declare the solution
+    * infeasible and perform a branching
+    */
+   lastdomchgcount = stat->domchgcount;
+   lastlpcount = stat->lpcount;
    initiallpsolved = FALSE;
    nlperrors = 0;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
    solvelpagain = TRUE;
    propagateagain = TRUE;
-   while( (solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
+   while( !(*cutoff) && (solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
       Real pseudoobjval;
       Bool lperror;
 
-      *infeasible = FALSE;
       lperror = FALSE;
 
       /* domain propagation */
@@ -1401,14 +1360,14 @@ RETCODE solveNode(
          if( *cutoff )
          {
             debugMessage("domain propagation determined that node is infeasible\n");
-            SCIPnodeUpdateLowerbound(actnode, stat, primal->cutoffbound);
+            SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
             *infeasible = TRUE;
             break;
          }
       }
 
       /* check, if we want to solve the LP at this node */
-      if( solvelpagain && SCIPtreeHasActiveNodeLP(tree) )
+      if( solvelpagain && SCIPtreeHasFocusNodeLP(tree) )
       {
          solvelpagain = FALSE;
 
@@ -1417,13 +1376,13 @@ RETCODE solveNode(
                cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
                initiallpsolved, cutoff, &lperror) );
          initiallpsolved = TRUE;
-         debugMessage(" -> LP status: %d, LP obj: %g\n", 
-            SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set));
+         debugMessage(" -> LP status: %d, LP obj: %g, iter: %lld, count: %d\n", 
+            SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set), stat->nlpiterations, stat->lpcount);
 
          /* if an error occured during LP solving, switch to pseudo solution */
          if( lperror )
          {
-            SCIPtreeSetActiveNodeLP(tree, FALSE);
+            SCIPtreeSetFocusNodeLP(tree, FALSE);
             nlperrors++;
             infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
                "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n", 
@@ -1434,7 +1393,7 @@ RETCODE solveNode(
           * we have to forget about the LP and use the pseudo solution instead
           */
          if( set->exactsolve && lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE
-            && SCIPnodeGetLowerbound(actnode) < primal->cutoffbound )
+            && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
          {
             if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && prob->ncontvars > 0 )
             {
@@ -1446,7 +1405,7 @@ RETCODE solveNode(
             }
             else
             {
-               SCIPtreeSetActiveNodeLP(tree, FALSE);
+               SCIPtreeSetFocusNodeLP(tree, FALSE);
                infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %lld) could not prove infeasibility of LP %d -- using pseudo solution (%d unfixed vars) instead\n", 
                   stat->nnodes, stat->nlps, SCIPbranchcandGetNPseudoCands(branchcand));
@@ -1457,9 +1416,9 @@ RETCODE solveNode(
 
       /* update lower bound w.r.t. the pseudo solution */
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
-      SCIPnodeUpdateLowerbound(actnode, stat, pseudoobjval);
+      SCIPnodeUpdateLowerbound(focusnode, stat, pseudoobjval);
       debugMessage(" -> new lower bound: %g [%g] (pseudoobj: %g [%g])\n",
-         SCIPnodeGetLowerbound(actnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(actnode)),
+         SCIPnodeGetLowerbound(focusnode), SCIPprobExternObjval(prob, set, SCIPnodeGetLowerbound(focusnode)),
          pseudoobjval, SCIPprobExternObjval(prob, set, pseudoobjval));
 
       /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
@@ -1470,24 +1429,136 @@ RETCODE solveNode(
       
       /* check for infeasible node by bounding */
       if( *cutoff
-         || SCIPnodeGetLowerbound(actnode) >= primal->cutoffbound
-         || (!set->exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(actnode), primal->cutoffbound)) )
+         || SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound
+         || (!set->exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
       {
-         debugMessage("node is infeasible (lower=%g, upper=%g)\n", SCIPnodeGetLowerbound(actnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(actnode, stat, primal->cutoffbound);
+         debugMessage("node is infeasible (lower=%g, upper=%g)\n", SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
+         SCIPnodeUpdateLowerbound(focusnode, stat, primal->cutoffbound);
          *infeasible = TRUE;
          break;
       }
-      assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+      assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
+
+      /* if the solution changed since the last enforcement, we have to completely reenforce it; otherwise, we
+       * only have to enforce the additional constraints added in the last enforcement, but keep the infeasible
+       * flag TRUE in order to not declare the infeasible solution feasible due to disregarding the already
+       * enforced constraints
+       */
+      if( lastdomchgcount != stat->domchgcount || lastlpcount != stat->lpcount )
+      {
+         lastdomchgcount = stat->domchgcount;
+         lastlpcount = stat->lpcount;
+         *infeasible = FALSE;
+      }
 
       /* enforce constraints */
       CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, primal, tree, lp, sepastore, branchcand, eventqueue,
-            conshdlrs_enfo, cutoff, infeasible, &solvelpagain, &propagateagain) );
-      assert(!solvelpagain || !(*cutoff));
+            conshdlrs_enfo, cutoff, &enfoinf, &solvelpagain, &propagateagain, &branched) );
+      assert(!(*cutoff) || (enfoinf && !solvelpagain && !propagateagain && !branched));
+      assert(!enfoinf || (*cutoff || solvelpagain || propagateagain || branched));
+      assert(!solvelpagain || (!(*cutoff) && enfoinf && !branched));
+      assert(!propagateagain || (!(*cutoff) && enfoinf && !branched));
+      assert(!branched || (enfoinf && !solvelpagain && !propagateagain));
+      assert(branched == (tree->nchildren > 0));
+      *infeasible = *infeasible || enfoinf;
 
+      /* if the node is infeasible, but no constraint handler could resolve the infeasibility
+       * -> branch on LP or the pseudo solution
+       * -> e.g. select non-fixed binary or integer variable x with value x', create three
+       *    sons: x <= x'-1, x = x', and x >= x'+1.
+       *    In the left and right branch, the current solution is cut off. In the middle
+       *    branch, the constraints can hopefully reduce domains of other variables to cut
+       *    off the current solution.
+       */
+      if( *infeasible && !(*cutoff) && !solvelpagain && !propagateagain && !branched )
+      {
+         RESULT result;
+         int nlpcands;
+
+         if( SCIPtreeHasFocusNodeLP(tree) )
+         {
+            CHECK_OKAY( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL) );
+         }
+         else
+            nlpcands = 0;
+         
+         if( nlpcands > 0 )
+         {
+            /* branch on LP solution */
+            debugMessage("infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
+               SCIPnodeGetDepth(focusnode), nlpcands);
+            CHECK_OKAY( SCIPbranchExecLP(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, TRUE, &result) );
+            assert(result != SCIP_DIDNOTRUN);
+         }
+         else
+         {
+            /* branch on pseudo solution */
+            debugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
+               SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
+            CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, TRUE, &result) );
+         }
+
+         switch( result )
+         {  
+         case SCIP_CUTOFF:
+            assert(tree->nchildren == 0);
+            *cutoff = TRUE;
+            break;
+         case SCIP_BRANCHED:
+            assert(tree->nchildren >= 1);
+            branched = TRUE;
+            break;
+         case SCIP_REDUCEDDOM:
+            assert(tree->nchildren == 0);
+            solvelpagain = TRUE;
+            propagateagain = TRUE;
+            break;
+         case SCIP_SEPARATED:
+            assert(tree->nchildren == 0);
+            solvelpagain = TRUE;
+            break;
+         case SCIP_DIDNOTRUN:
+            /* all integer variables in the infeasible solution are fixed,
+             * - if no continuous variables exist and all variables are known, the infeasible pseudo solution is completely
+             *   fixed, and the node can be cut off
+             * - if at least one continuous variable exist or we do not know all variables due to external pricers, we
+             *   cannot resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
+             */
+            assert(tree->nchildren == 0);
+            assert(SCIPbranchcandGetNPseudoCands(branchcand) == 0);
+
+            if( prob->ncontvars == 0 && set->nactivepricers == 0 )
+               *cutoff = TRUE;
+            else
+            {
+               assert(!SCIPtreeHasFocusNodeLP(tree)); /* feasible LP solutions with all integers fixed must be feasible */
+            
+               /* solve the LP in the next loop */
+               SCIPtreeSetFocusNodeLP(tree, TRUE);
+               solvelpagain = TRUE;
+            }
+            break;
+         default:
+            errorMessage("invalid result code <%d> from SCIPbranchLP() or SCIPbranchPseudo()\n", result);
+            abort();
+         }  /*lint !e788*/
+         assert(*cutoff || solvelpagain || propagateagain || branched); /* something must have been done */
+         assert(!(*cutoff) || (!solvelpagain && !propagateagain && !branched));
+         assert(!solvelpagain || (!(*cutoff) && !branched));
+         assert(!propagateagain || (!(*cutoff) && !branched));
+         assert(!branched || (!solvelpagain && !propagateagain));
+         assert(branched == (tree->nchildren > 0));
+      }
+      
       /* check for immediate restart */
       if( actdepth == 0 && !(*cutoff) && set->restartbdchgs > 0 && stat->nrootboundchgsrun >= set->restartbdchgs )
          *restart = TRUE;
+
+      /* check if current node is marked to be propagated again */
+      propagateagain = propagateagain || SCIPnodeIsPropagatedAgain(focusnode);
+
+      debugMessage("node solving iteration finished: cutoff=%d, propagateagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",
+         *cutoff, propagateagain, solvelpagain, nlperrors, *restart);
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -1505,7 +1576,7 @@ RETCODE solveNode(
    /* remember root LP solution */
    if( actdepth == 0 && !(*restart) )
    {
-      SCIPprobStoreRootSol(prob, SCIPtreeHasActiveNodeLP(tree));
+      SCIPprobStoreRootSol(prob, SCIPtreeHasFocusNodeLP(tree));
    }
 
    return SCIP_OKAY;
@@ -1547,14 +1618,14 @@ RETCODE primalHeuristics(
       || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
       || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
    plunging = (SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
-   depth = SCIPtreeGetActiveDepth(tree);
-   lpforkdepth = tree->actlpfork != NULL ? SCIPnodeGetDepth(tree->actlpfork) : -1;
+   depth = SCIPtreeGetFocusDepth(tree);
+   lpforkdepth = tree->focuslpfork != NULL ? SCIPnodeGetDepth(tree->focuslpfork) : -1;
 
    /* call heuristics */
    ndelayedheurs = 0;
    for( h = 0; h < set->nheurs; ++h )
    {
-      CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, SCIPtreeHasActiveNodeLP(tree), plunging,
+      CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, SCIPtreeHasFocusNodeLP(tree), plunging,
             &ndelayedheurs, &result) );
       *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
    }
@@ -1581,7 +1652,7 @@ RETCODE addCurrentSolution(
    Bool foundsol;
 
    /* found a feasible solution */
-   if( SCIPtreeHasActiveNodeLP(tree) )
+   if( SCIPtreeHasFocusNodeLP(tree) )
    {
       /* start clock for LP solutions */
       SCIPclockStart(stat->lpsoltime, set);
@@ -1655,7 +1726,7 @@ RETCODE SCIPsolveCIP(
    CONSHDLR** conshdlrs_sepa;
    CONSHDLR** conshdlrs_enfo;
    NODESEL* nodesel;
-   NODE* actnode;
+   NODE* focusnode;
    NODE* nextnode;
    EVENT event;
    int nnodes;
@@ -1693,17 +1764,17 @@ RETCODE SCIPsolveCIP(
    {
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-      /* update the memory saving flag, switch algorithms respectively */
-      SCIPstatUpdateMemsaveMode(stat, set, mem);
-
-      /* get the current node selector */
-      nodesel = SCIPsetGetNodesel(set, stat);
-
-      /* inform tree about the current node selector */
-      CHECK_OKAY( SCIPtreeSetNodesel(tree, set, stat, nodesel) );
-      
       do
       {
+         /* update the memory saving flag, switch algorithms respectively */
+         SCIPstatUpdateMemsaveMode(stat, set, mem);
+
+         /* get the current node selector */
+         nodesel = SCIPsetGetNodesel(set, stat);
+         
+         /* inform tree about the current node selector */
+         CHECK_OKAY( SCIPtreeSetNodesel(tree, set, stat, nodesel) );
+      
          /* the next node was usually already selected in the previous solving loop before the primal heuristics were
           * called, because they need to know, if the next node will be a child/sibling (plunging) or not;
           * if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
@@ -1714,67 +1785,62 @@ RETCODE SCIPsolveCIP(
             /* select next node to process */
             CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
          }
-         actnode = nextnode;
+         focusnode = nextnode;
          nextnode = NULL;
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
          
          /* start node activation timer */
          SCIPclockStart(stat->nodeactivationtime, set);
          
-         /* delay events in node activation */
-         CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
-         
-         /* activate selected node */
-         CHECK_OKAY( SCIPnodeActivate(&actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-               primal->cutoffbound, &cutoff) );
-         assert(actnode == NULL || (!cutoff && !actnode->cutoff));
+         /* focus selected node */
+         CHECK_OKAY( SCIPnodeFocus(&focusnode, memhdr, set, stat, prob, primal, tree, lp, branchcand,
+               eventfilter, eventqueue, &cutoff) );
+         if( cutoff )
+            stat->ndelayedcutoffs++;
 
-         /* process the delayed events */
-         CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
-         
          /* stop node activation timer */
          SCIPclockStop(stat->nodeactivationtime, set);
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
       }
       while( cutoff ); /* select new node, if the current one was located in a cut off subtree */
 
-      assert(SCIPtreeGetCurrentNode(tree) == actnode);
-      assert(SCIPtreeGetActiveNode(tree) == actnode);
+      assert(SCIPtreeGetCurrentNode(tree) == focusnode);
+      assert(SCIPtreeGetFocusNode(tree) == focusnode);
 
       /* if no more node was selected, we finished optimization */
-      if( actnode == NULL )
+      if( focusnode == NULL )
          break;
 
       /* update maxdepth and node count statistics */
-      depth = SCIPnodeGetDepth(actnode);
+      depth = SCIPnodeGetDepth(focusnode);
       stat->maxdepth = MAX(stat->maxdepth, depth);
       stat->maxtotaldepth = MAX(stat->maxtotaldepth, depth);
       stat->nnodes++;
       stat->ntotalnodes++;
       
-      /* issue NODEACTIVATED event */
-      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
-      CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+      /* issue NODEFOCUSED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
+      CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
       CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
-      /* solve active node */
+      /* solve focus node */
       CHECK_OKAY( solveNode(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
             conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible, restart) );
       assert(!cutoff || infeasible);
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
-      assert(SCIPtreeGetCurrentNode(tree) == actnode);
-      assert(SCIPtreeGetActiveNode(tree) == actnode);
+      assert(SCIPtreeGetCurrentNode(tree) == focusnode);
+      assert(SCIPtreeGetFocusNode(tree) == focusnode);
 
       /* check for restart */
       if( !(*restart) )
       {
          /* change color of node in VBC output */
-         SCIPvbcSolvedNode(stat->vbc, stat, actnode);
+         SCIPvbcSolvedNode(stat->vbc, stat, focusnode);
 
          /* check, if the current solution is feasible */
          if( !infeasible )
          {
-            assert(!SCIPtreeHasActiveNodeLP(tree) || lp->solved);
+            assert(!SCIPtreeHasFocusNodeLP(tree) || lp->solved);
             assert(!cutoff);
 
             /* node solution is feasible: add it to the solution store */
@@ -1782,7 +1848,7 @@ RETCODE SCIPsolveCIP(
 
             /* issue NODEFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-            CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+            CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
             CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
          }
          else
@@ -1805,7 +1871,7 @@ RETCODE SCIPsolveCIP(
                /* issue NODEBRANCHED event */
                CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
             }
-            CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+            CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
             CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
@@ -1817,7 +1883,7 @@ RETCODE SCIPsolveCIP(
           * in this case, no branching would have been generated by the enforcement of constraints, but we
           * have to further investigate the current sub tree
           */
-         if( !cutoff && tree->nchildren == 0 && SCIPnodeGetLowerbound(actnode) < primal->cutoffbound )
+         if( !cutoff && tree->nchildren == 0 && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
          {
             RESULT result;
 
@@ -1836,7 +1902,7 @@ RETCODE SCIPsolveCIP(
                }
                else
                {
-                  CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, &result) );
+                  CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, FALSE, &result) );
                   assert(result != SCIP_DIDNOTRUN);
                }
             }
@@ -1864,10 +1930,10 @@ RETCODE SCIPsolveCIP(
       }
 
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(actnode) == 0) && infeasible && !foundsol) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
 
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
-         SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
+         SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
       debugMessage("**********************************************************************\n");
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);

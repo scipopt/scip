@@ -15,4 +15,5 @@ $(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/type_retcode.h \
   src/struct_var.h src/history.h src/struct_history.h src/struct_scip.h \
   src/type_interrupt.h src/type_mem.h src/type_primal.h \
   src/type_pricestore.h src/type_sepastore.h src/set.h src/buffer.h \
-  src/type_buffer.h src/struct_set.h src/misc.h src/scipdefplugins.h
+  src/type_buffer.h src/struct_set.h src/misc.h src/tree.h \
+  src/scipdefplugins.h

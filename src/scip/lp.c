@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.143 2004/09/13 15:11:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.144 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7547,7 +7547,7 @@ RETCODE lpSolve(
 #if 0 /* SOPLEX may return with objective limit reached in any case, because it doesn't distinct btw. primal and dual */
       if( lp->lastwasprimal )
       {
-         errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
+         errorMessage("objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
          lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
          lp->lpobjval = -set->infinity;
          return SCIP_LPERROR;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.75 2004/08/24 11:57:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.76 2004/09/21 12:07:59 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -210,7 +210,6 @@ RETCODE SCIPconshdlrCheck(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
-   int              depth,              /**< depth of current node, or -1 for global problem */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */

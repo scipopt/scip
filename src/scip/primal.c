@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.45 2004/09/07 18:22:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.46 2004/09/21 12:08:01 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -295,7 +295,7 @@ RETCODE primalSetUpperbound(
    if( tree != NULL )
    {
       /* cut off leaves of the tree */
-      CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, lp, primal->cutoffbound) );
+      CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, stat, lp, primal->cutoffbound) );
 
       /* update upper bound in VBC output */
       SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
@@ -331,7 +331,7 @@ RETCODE SCIPprimalSetUpperbound(
    }
    else if( upperbound > primal->upperbound )
    {
-      errorMessage("Invalid increase in upper bound\n");
+      errorMessage("invalid increase in upper bound\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -652,8 +652,7 @@ RETCODE SCIPprimalTrySol(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree),
-            checkintegrality, checklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -709,8 +708,7 @@ RETCODE SCIPprimalTrySolFree(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree),
-            checkintegrality, checklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.109 2004/09/09 13:59:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.110 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -149,7 +149,8 @@
 #define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_MINMAXCONFVARS      30 /**< minimal absolute maximum of variables involved in a conflict clause */
 #define SCIP_DEFAULT_MAXCONFLPLOOPS     100 /**< maximal number of LP resolving loops during conflict analysis */
-
+#define SCIP_DEFAULT_REPROPCONFLICT    TRUE /**< should earlier nodes be repropagated in order to replace branching
+                                             *   decisions by deductions */
 
 /* Primal Solutions */
 
@@ -181,6 +182,7 @@
 
 /* VBC Tool output */
 #define SCIP_DEFAULT_VBCFILENAME        "-" /**< name of the VBC Tool output file, or - if no output should be created */
+#define SCIP_DEFAULT_VBCUSEREALTIME    TRUE /**< should the real solving time be used instead of a time step counter in VBC output? */
 
 
 
@@ -544,6 +546,11 @@ RETCODE SCIPsetCreate(
          "maximal number of LP resolving loops during conflict analysis",
          &(*set)->maxconflploops, SCIP_DEFAULT_MAXCONFLPLOOPS, 1, INT_MAX,
          NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/repropconflict",
+         "should earlier nodes be repropagated in order to replace branching decisions by deductions",
+         &(*set)->repropconflict, SCIP_DEFAULT_REPROPCONFLICT,
+         NULL, NULL) );
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
          "limits/nodelimit",
          "maximal number of nodes to process (-1: no limit)",
@@ -658,7 +665,13 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddStringParam(*set, memhdr,
          "misc/vbcfilename",
          "name of the VBC Tool output file, or - if no VBC Tool output should be created",
-         &(*set)->vbcfilename, SCIP_DEFAULT_VBCFILENAME, NULL, NULL) );
+         &(*set)->vbcfilename, SCIP_DEFAULT_VBCFILENAME, 
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "misc/vbcuserealtime",
+         "should the real solving time be used instead of a time step counter in VBC output?",
+         &(*set)->vbcuserealtime, SCIP_DEFAULT_VBCUSEREALTIME,
+         NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1906,7 +1919,7 @@ RETCODE SCIPsetSetVerbLevel(
 
    if( verblevel > SCIP_VERBLEVEL_FULL )
    {
-      errorMessage("Invalid verbosity level <%d>, maximum is <%d>\n", verblevel, SCIP_VERBLEVEL_FULL);
+      errorMessage("invalid verbosity level <%d>, maximum is <%d>\n", verblevel, SCIP_VERBLEVEL_FULL);
       return SCIP_INVALIDCALL;
    }
    

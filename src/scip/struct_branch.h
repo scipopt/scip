@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.8 2004/04/05 15:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.9 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -59,6 +59,8 @@ struct Branchrule
    Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
    Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
    Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
+   Longint          nconssfound;        /**< number of cutting constraints added so far by this branching rule (not
+                                         *   counting constraint additions to child nodes used for branching) */
    Longint          ndomredsfound;      /**< number of domain reductions found so far by this branching rule */
    Longint          nchildren;          /**< number of children created so far by this branching rule */
    char*            name;               /**< name of branching rule */

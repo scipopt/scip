@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.8 2004/08/25 15:40:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.9 2004/09/21 12:08:02 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -71,6 +71,7 @@ struct Conflict
    PQUEUE*          binbdchgqueue;      /**< unprocessed conflict bound changes on binary variables */
    PQUEUE*          nonbinbdchgqueue;   /**< unprocessed conflict bound changes on non-binary variables */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
+   int*             conflictvardepths;  /**< depth at which the conflict variables were fixed */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
    int              count;              /**< conflict set counter to label conflict variables with */

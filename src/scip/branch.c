@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.48 2004/09/09 13:59:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.49 2004/09/21 12:07:58 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -752,6 +752,7 @@ RETCODE SCIPbranchruleCreate(
    (*branchrule)->npseudocalls = 0;
    (*branchrule)->ncutoffs = 0;
    (*branchrule)->ncutsfound = 0;
+   (*branchrule)->nconssfound = 0;
    (*branchrule)->ndomredsfound = 0;
    (*branchrule)->nchildren = 0;
    (*branchrule)->initialized = FALSE;
@@ -816,6 +817,7 @@ RETCODE SCIPbranchruleInit(
    branchrule->npseudocalls = 0;
    branchrule->ncutoffs = 0;
    branchrule->ncutsfound = 0;
+   branchrule->nconssfound = 0;
    branchrule->ndomredsfound = 0;
    branchrule->nchildren = 0;
 
@@ -859,6 +861,7 @@ RETCODE SCIPbranchruleExecLPSol(
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -874,17 +877,19 @@ RETCODE SCIPbranchruleExecLPSol(
    {
       Longint oldndomchgs;
       int oldncutsstored;
+      int oldnactiveconss;
 
       debugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
       oldndomchgs = stat->nboundchgs + stat->nholechgs;
       oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+      oldnactiveconss = stat->nactiveconss;
 
       /* start timing */
       SCIPclockStart(branchrule->clock, set);
    
       /* call external method */
-      CHECK_OKAY( branchrule->branchexeclp(set->scip, branchrule, result) );
+      CHECK_OKAY( branchrule->branchexeclp(set->scip, branchrule, allowaddcons, result) );
 
       /* stop timing */
       SCIPclockStop(branchrule->clock, set);
@@ -894,11 +899,17 @@ RETCODE SCIPbranchruleExecLPSol(
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_SEPARATED
-         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTRUN )
       {
          errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
             branchrule->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+      if( *result == SCIP_CONSADDED && !allowaddcons )
+      {
+         errorMessage("branching rule <%s> added a constraint in LP solution branching without permission\n",
+            branchrule->name);
          return SCIP_INVALIDRESULT;
       }
 
@@ -907,11 +918,12 @@ RETCODE SCIPbranchruleExecLPSol(
          branchrule->nlpcalls++;
       if( *result == SCIP_CUTOFF )
          branchrule->ncutoffs++;
-      branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
       if( *result != SCIP_BRANCHED )
       {
          assert(tree->nchildren == 0);
          branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
+         branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
       }
       else
          branchrule->nchildren += tree->nchildren;
@@ -926,6 +938,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -940,16 +953,18 @@ RETCODE SCIPbranchruleExecPseudoSol(
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
    {
       Longint oldndomchgs;
+      Longint oldnactiveconss;
 
       debugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
 
       oldndomchgs = stat->nboundchgs + stat->nholechgs;
+      oldnactiveconss = stat->nactiveconss;
 
       /* start timing */
       SCIPclockStart(branchrule->clock, set);
    
       /* call external method */
-      CHECK_OKAY( branchrule->branchexecps(set->scip, branchrule, result) );
+      CHECK_OKAY( branchrule->branchexecps(set->scip, branchrule, allowaddcons, result) );
 
       /* stop timing */
       SCIPclockStop(branchrule->clock, set);
@@ -958,11 +973,17 @@ RETCODE SCIPbranchruleExecPseudoSol(
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
-         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTRUN )
       {
-         errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
+         errorMessage("branching rule <%s> returned invalid result code <%d> from pseudo solution branching\n",
             branchrule->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+      if( *result == SCIP_CONSADDED && !allowaddcons )
+      {
+         errorMessage("branching rule <%s> added a constraint in pseudo solution branching without permission\n",
+            branchrule->name);
          return SCIP_INVALIDRESULT;
       }
 
@@ -975,6 +996,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
       {
          assert(tree->nchildren == 0);
          branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
       }
       else
          branchrule->nchildren += tree->nchildren;
@@ -1122,6 +1144,18 @@ Longint SCIPbranchruleGetNCutsFound(
    return branchrule->ncutsfound;
 }
 
+/** gets the total number of constraints, the branching rule added to the respective local nodes (not counting constraints
+ *  that were added to the child nodes as branching decisions)
+ */
+Longint SCIPbranchruleGetNConssFound(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->nconssfound;
+}
+
 /** gets the total number of domain reductions, the branching rule found */
 Longint SCIPbranchruleGetNDomredsFound(
    BRANCHRULE*      branchrule          /**< branching rule */
@@ -1229,6 +1263,7 @@ RETCODE SCIPbranchExecLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
 {
@@ -1256,7 +1291,7 @@ RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, result) );
+      CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN);
       return SCIP_OKAY;
    }
@@ -1267,7 +1302,7 @@ RETCODE SCIPbranchExecLP(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, result) );
+      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, allowaddcons, result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )
@@ -1319,6 +1354,7 @@ RETCODE SCIPbranchExecPseudo(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
 {
@@ -1341,7 +1377,7 @@ RETCODE SCIPbranchExecPseudo(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, result) );
+      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, allowaddcons, result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )

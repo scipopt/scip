@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.13 2004/09/15 08:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.14 2004/09/21 12:08:03 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -105,6 +105,8 @@ struct Node
    unsigned int     nodetype:4;         /**< type of node */
    unsigned int     active:1;           /**< is node in the path to the current node? */
    unsigned int     cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
+   unsigned int     reprop:1;           /**< should propagation be applied again, if the node is on the active path? */
+   unsigned int     repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
 };
 
 /** branch and bound tree */
@@ -112,29 +114,36 @@ struct Tree
 {
    NODE*            root;               /**< root node of the tree */
    NODEPQ*          leaves;             /**< leaves of the tree */
-   NODE**           path;               /**< array of fork/subtree nodes storing the active path from root to leaf */
-   NODE*            actnode;            /**< active node */
-   NODE*            actlpfork;          /**< fork/subroot node defining the LP state of the active node */
-   NODE*            actsubroot;         /**< root of the active subtree */
-   NODE**           children;           /**< array with children of the active node */
-   NODE**           siblings;           /**< array with siblings of the active node */
-   NODE*            probingnode;        /**< temporary probing child node, or NULL if current node is the active node */
+   NODE**           path;               /**< array of nodes storing the active path from root to current node, which
+                                         *   is usually the focus or the probing node; in case of a cut off, the path
+                                         *   may already end earlier */
+   NODE*            focusnode;          /**< focus node: the node that is stored together with its children and
+                                         *   siblings in the tree data structure; the focus node is the currently
+                                         *   processed node; it doesn't need to be active all the time, because it
+                                         *   may be cut off and the active path stops at the cut off node */
+   NODE*            focuslpfork;        /**< LP defining fork/subroot of the focus node */
+   NODE*            focussubroot;       /**< subroot of the focus node's sub tree */
+   NODE*            probingnode;        /**< temporary probing node, or NULL */
+   NODE**           children;           /**< array with children of the focus node */
+   NODE**           siblings;           /**< array with siblings of the focus node */
    Real*            childrenprio;       /**< array with node selection priorities of children */
    Real*            siblingsprio;       /**< array with node selection priorities of children */
-   int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path, except
-                                         *   the newly added columns of the active node */
-   int*             pathnlprows;        /**< array with number of LP rows for each problem in active path, except
-                                         *   the newly added rows of the active node */
-   int              actlpforklpcount;   /**< LP number of last solved LP in current LP fork, or -1 if unknown */
+   int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
+                                         *   newly added columns of the focus node) */
+   int*             pathnlprows;        /**< array with number of LP rows for each problem in active path (except
+                                         *   newly added rows of the focus node) */
+   int              focuslpforklpcount; /**< LP number of last solved LP in current LP fork, or -1 if unknown */
    int              childrensize;       /**< available slots in children vector */
-   int              nchildren;          /**< current number of children (number of used slots in children vector) */
+   int              nchildren;          /**< number of children of focus node (number of used slots in children vector) */
    int              siblingssize;       /**< available slots in siblings vector */
-   int              nsiblings;          /**< current number of siblings (number of used slots in siblings vector) */
-   int              pathlen;            /**< length of the current path (== depth of the current node + 1) */
+   int              nsiblings;          /**< number of siblings of focus node (number of used slots in siblings vector) */
+   int              pathlen;            /**< length of the current path */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
    int              cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
-   Bool             actnodehaslp;       /**< is LP being processed in the active node? */
+   int              repropdepth;        /**< depth of first node in active path that has to be propagated again */
+   int              repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
+   Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
 

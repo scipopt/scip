@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.74 2004/09/07 18:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.75 2004/09/21 12:08:04 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -65,7 +65,8 @@ RETCODE SCIPboundchgApply(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              depth,              /**< depth in the tree, where the bound change takes place */
-   int              pos                 /**< position of the bound change in its bound change array */
+   int              pos,                /**< position of the bound change in its bound change array */
+   Bool*            cutoff              /**< pointer to store whether an infeasible bound change was detected */
    );
 
 /** undoes single bound change */
@@ -106,7 +107,8 @@ RETCODE SCIPdomchgApply(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   int              depth               /**< depth in the tree, where the domain change takes place */
+   int              depth,              /**< depth in the tree, where the domain change takes place */
+   Bool*            cutoff              /**< pointer to store whether an infeasible domain change was detected */
    );
 
 /** undoes domain change */
