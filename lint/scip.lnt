@@ -1,4 +1,21 @@
-// $Id: scip.lnt,v 1.4 2003/10/16 12:07:36 bzfpfend Exp $
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//*                                                                           */
+//*                  This file is part of the program and library             */
+//*         SCIP --- Solving Constraint Integer Programs                      */
+//*                                                                           */
+//*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+//*                                                                           */
+//*                  2002-2003 Konrad-Zuse-Zentrum                            */
+//*                            fuer Informationstechnik Berlin                */
+//*                                                                           */
+//*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
+//*                                                                           */
+//*  You should have received a copy of the SCIP Academic License             */
+//*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+//*                                                                           */
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+// $Id: scip.lnt,v 1.5 2003/11/21 10:35:31 bzfpfend Exp $
+
 -passes(1)
 // esoteric size settings to find erros.
 //-si4    // int's are 4 bytes

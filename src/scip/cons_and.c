@@ -4,7 +4,7 @@
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2003 Tobias Achterberg                              */
-/*                            Thorsten Koch                                  */
+/*                                                                           */
 /*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
@@ -14,6 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: cons_and.c,v 1.11 2003/11/21 10:35:33 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints

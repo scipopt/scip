@@ -4,7 +4,7 @@
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2003 Tobias Achterberg                              */
-/*                            Thorsten Koch                                  */
+/*                                                                           */
 /*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
@@ -14,6 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: heur_diving.c,v 1.10 2003/11/21 10:35:36 bzfpfend Exp $"
 
 /**@file   heur_diving.c
  * @brief  LP diving heuristic

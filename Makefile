@@ -1,11 +1,10 @@
-# $Id: Makefile,v 1.50 2003/11/21 09:18:57 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
 #*    Copyright (C) 2002-2002 Tobias Achterberg                              *
-#*                            Thorsten Koch                                  *
+#*                                                                           *
 #*                  2002-2002 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
@@ -15,6 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# $Id: Makefile,v 1.51 2003/11/21 10:35:31 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile

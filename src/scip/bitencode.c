@@ -4,7 +4,6 @@
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2003 Tobias Achterberg                              */
-/*                            Thorsten Koch                                  */
 /*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
@@ -14,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.4 2003/11/21 09:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.5 2003/11/21 10:35:31 bzfpfend Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values

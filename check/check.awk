@@ -1,12 +1,27 @@
-# $Id: check.awk,v 1.2 2003/11/20 17:42:00 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
-#*   File....: check.awk                                                     *
-#*   Name....: SIP Check Report Generator                                    *
-#*   Author..: Alexander Martin, Thorsten Koch, Tobias Pfender               *
-#*   Copyright by Author, All rights reserved                                *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2002 Tobias Achterberg                              *
+#*                                                                           *
+#*                  2002-2002 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
+#*                                                                           *
+#*  You should have received a copy of the SCIP Academic License             *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# $Id: check.awk,v 1.3 2003/11/21 10:35:31 bzfpfend Exp $
+#
+#@file    check.awk
+#@brief   SCIP Check Report Generator
+#@author  Thorsten Koch
+#@author  Tobias Achterberg
+#@author  Alexander Martin
+#
 #
 # head line
 #
