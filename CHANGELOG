@@ -8,6 +8,8 @@ interface:
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
+- improved knapsack relaxation in linear constraint handler separator to scale the constraint in order to get
+  integral coefficients instead of just rounding down all coefficients
 
 fixed bugs:
 - removed bug in knapsack constraint handler that appears if a variable is fixed to zero in knapsack presolving,
