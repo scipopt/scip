@@ -58,7 +58,7 @@
 
 /* LP Solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes */
 #define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
 #define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
 #define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */
@@ -66,7 +66,7 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING      FALSE /**< activate pricing of variables */
+#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */

@@ -75,6 +75,7 @@ struct LinCons
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             rhs;                /**< right hand side of row */
+   Real             pseudoactivity;     /**< pseudo activity value in actual pseudo solution */
    Real             minactivity;        /**< minimal value w.r.t. the variable's bounds for the constraint's activity,
                                          *   ignoring the coefficients contributing with infinite value */
    Real             maxactivity;        /**< maximal value w.r.t. the variable's bounds for the constraint's activity,
@@ -87,7 +88,7 @@ struct LinCons
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the linear constraint data belongs to the transformed problem? */
-   unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
+   unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
 };
 
 /** constraint data for linear constraints */
@@ -394,6 +395,7 @@ RETCODE linconsCreate(
 
    (*lincons)->lhs = lhs;
    (*lincons)->rhs = rhs;
+   (*lincons)->pseudoactivity = SCIP_INVALID;
    (*lincons)->minactivity = SCIP_INVALID;
    (*lincons)->maxactivity = SCIP_INVALID;
    (*lincons)->minactivityinf = -1;
@@ -404,7 +406,7 @@ RETCODE linconsCreate(
    (*lincons)->modifiable = modifiable;
    (*lincons)->removeable = removeable;
    (*lincons)->transformed = FALSE;
-   (*lincons)->validactivitybds = FALSE;
+   (*lincons)->validactivities = FALSE;
 
    return SCIP_OKAY;
 }
@@ -568,49 +570,6 @@ RETCODE linconsAddCoef(
    return SCIP_OKAY;
 }
 
-/** calculates the activity of the linear constraint for given solution */
-static
-Real linconsGetActivity(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   SOL*             sol                 /**< solution to get activity for, NULL to actual solution */
-   )
-{
-   Real activity;
-   Real solval;
-   int v;
-
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-
-   activity = 0.0;
-   for( v = 0; v < lincons->nvars; ++v )
-   {
-      solval = SCIPgetSolVal(scip, sol, lincons->vars[v]);
-      activity += lincons->vals[v] * solval;
-   }
-
-   return activity;
-}
-
-/** calculates the feasibility of the linear constraint for given solution */
-static
-Real linconsGetFeasibility(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons,            /**< linear constraint object */
-   SOL*             sol                 /**< solution to get feasibility for, NULL to actual solution */
-   )
-{
-   Real activity;
-
-   assert(lincons != NULL);
-   assert(lincons->transformed);
-
-   activity = linconsGetActivity(scip, lincons, sol);
-
-   return MIN(lincons->rhs - activity, activity - lincons->lhs);
-}
-
 /** creates an LP row from a linear constraint object */
 static
 RETCODE linconsToRow(
@@ -641,6 +600,7 @@ static
 void linconsUpdateChgLb(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS*         lincons,            /**< linear constraint object */
+   VAR*             var,                /**< variable that has been changed */
    Real             oldlb,              /**< old lower bound of variable */
    Real             newlb,              /**< new lower bound of variable */
    Real             val                 /**< coefficient of constraint entry */
@@ -648,16 +608,20 @@ void linconsUpdateChgLb(
 {
    assert(lincons != NULL);
    assert(lincons->transformed);
-   
-   if( lincons->validactivitybds )
+
+   if( lincons->validactivities )
    {
+      assert(lincons->pseudoactivity < SCIP_INVALID);
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
       assert(lincons->minactivityinf >= 0);
       assert(lincons->maxactivityinf >= 0);
       assert(!SCIPisInfinity(scip, oldlb));
       assert(!SCIPisInfinity(scip, newlb));
-      
+
+      if( SCIPvarGetObj(var) > 0.0 )
+         lincons->pseudoactivity += val * (newlb - oldlb);
+
       if( val > 0.0 )
       {
          if( SCIPisInfinity(scip, -oldlb) )
@@ -696,6 +660,7 @@ static
 void linconsUpdateChgUb(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS*         lincons,            /**< linear constraint object */
+   VAR*             var,                /**< variable that has been changed */
    Real             oldub,              /**< old upper bound of variable */
    Real             newub,              /**< new upper bound of variable */
    Real             val                 /**< coefficient of constraint entry */
@@ -704,12 +669,16 @@ void linconsUpdateChgUb(
    assert(lincons != NULL);
    assert(lincons->transformed);
 
-   if( lincons->validactivitybds )
+   if( lincons->validactivities )
    {
+      assert(lincons->pseudoactivity < SCIP_INVALID);
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
       assert(!SCIPisInfinity(scip, -oldub));
       assert(!SCIPisInfinity(scip, -newub));
+
+      if( SCIPvarGetObj(var) < 0.0 )
+         lincons->pseudoactivity += val * (newub - oldub);
 
       if( val > 0.0 )
       {
@@ -756,19 +725,20 @@ void linconsUpdateAddVar(
    assert(lincons != NULL);
    assert(lincons->transformed);
 
-   if( lincons->validactivitybds )
+   if( lincons->validactivities )
    {
+      assert(lincons->pseudoactivity < SCIP_INVALID);
       assert(lincons->minactivity < SCIP_INVALID);
       assert(lincons->maxactivity < SCIP_INVALID);
 
-      linconsUpdateChgLb(scip, lincons, 0.0, SCIPvarGetLb(var), val);
-      linconsUpdateChgUb(scip, lincons, 0.0, SCIPvarGetUb(var), val);
+      linconsUpdateChgLb(scip, lincons, var, 0.0, SCIPvarGetLb(var), val);
+      linconsUpdateChgUb(scip, lincons, var, 0.0, SCIPvarGetUb(var), val);
    }
 }
 
-/** calculates minimum and maximum activity for constraint */
+/** calculates pseudo activity, and minimum and maximum activity for constraint */
 static
-void linconsCalcActivityBounds(
+void linconsCalcActivities(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS*         lincons             /**< linear constraint object */
    )
@@ -777,11 +747,13 @@ void linconsCalcActivityBounds(
    
    assert(lincons != NULL);
    assert(lincons->transformed);
-   assert(!lincons->validactivitybds);
+   assert(!lincons->validactivities);
+   assert(lincons->pseudoactivity >= SCIP_INVALID);
    assert(lincons->minactivity >= SCIP_INVALID);
    assert(lincons->maxactivity >= SCIP_INVALID);
    
-   lincons->validactivitybds = TRUE;
+   lincons->validactivities = TRUE;
+   lincons->pseudoactivity = 0.0;
    lincons->minactivity = 0.0;
    lincons->maxactivity = 0.0;
    lincons->minactivityinf = 0;
@@ -789,6 +761,41 @@ void linconsCalcActivityBounds(
 
    for( i = 0; i < lincons->nvars; ++ i )
       linconsUpdateAddVar(scip, lincons, lincons->vars[i], lincons->vals[i]);
+}
+
+/** gets activity bounds for constraint */
+static
+Real linconsGetPseudoActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint */
+   )
+{
+   assert(lincons != NULL);
+
+   if( !lincons->validactivities )
+      linconsCalcActivities(scip, lincons);
+   assert(lincons->pseudoactivity < SCIP_INVALID);
+   assert(lincons->minactivity < SCIP_INVALID);
+   assert(lincons->maxactivity < SCIP_INVALID);
+
+   return lincons->pseudoactivity;
+}
+
+/** calculates the feasibility of the linear constraint for given solution */
+static
+Real linconsGetPseudoFeasibility(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint object */
+   )
+{
+   Real activity;
+
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+
+   activity = linconsGetPseudoActivity(scip, lincons);
+
+   return MIN(lincons->rhs - activity, activity - lincons->lhs);
 }
 
 /** gets activity bounds for constraint */
@@ -805,8 +812,9 @@ void linconsGetActivityBounds(
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
 
-   if( !lincons->validactivitybds )
-      linconsCalcActivityBounds(scip, lincons);
+   if( !lincons->validactivities )
+      linconsCalcActivities(scip, lincons);
+   assert(lincons->pseudoactivity < SCIP_INVALID);
    assert(lincons->minactivity < SCIP_INVALID);
    assert(lincons->maxactivity < SCIP_INVALID);
 
@@ -818,21 +826,6 @@ void linconsGetActivityBounds(
       *maxactivity = SCIPinfinity(scip);
    else
       *maxactivity = lincons->maxactivity;
-}
-
-/** invalidates activity bounds, such that they are recalculated in next get */
-static
-void linconsInvalidateActivityBounds(
-   LINCONS*         lincons             /**< linear constraint */
-   )
-{
-   assert(lincons != NULL);
-
-   lincons->validactivitybds = FALSE;
-   lincons->minactivity = SCIP_INVALID;
-   lincons->maxactivity = SCIP_INVALID;
-   lincons->minactivityinf = -1;
-   lincons->maxactivityinf = -1;
 }
 
 /** gets activity bounds for constraint after setting variable to zero */
@@ -856,8 +849,9 @@ RETCODE linconsGetActivityResiduals(
    assert(maxresactivity != NULL);
 
    /* get activity bounds of linear constraint */
-   if( !lincons->validactivitybds )
-      linconsCalcActivityBounds(scip, lincons);
+   if( !lincons->validactivities )
+      linconsCalcActivities(scip, lincons);
+   assert(lincons->pseudoactivity < SCIP_INVALID);
    assert(lincons->minactivity < SCIP_INVALID);
    assert(lincons->maxactivity < SCIP_INVALID);
    assert(lincons->minactivityinf >= 0);
@@ -936,6 +930,76 @@ RETCODE linconsGetActivityResiduals(
    }
 
    return SCIP_OKAY;
+}
+
+/** invalidates pseudo activity and activity bounds, such that they are recalculated in next get */
+static
+void linconsInvalidateActivities(
+   LINCONS*         lincons             /**< linear constraint */
+   )
+{
+   assert(lincons != NULL);
+
+   lincons->validactivities = FALSE;
+   lincons->pseudoactivity = SCIP_INVALID;
+   lincons->minactivity = SCIP_INVALID;
+   lincons->maxactivity = SCIP_INVALID;
+   lincons->minactivityinf = -1;
+   lincons->maxactivityinf = -1;
+}
+
+/** calculates the activity of the linear constraint for given solution */
+static
+Real linconsGetActivity(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   SOL*             sol                 /**< solution to get activity for, NULL to actual solution */
+   )
+{
+   Real activity;
+
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+
+   if( sol == NULL && SCIPhasActnodeLP(scip) )
+   {
+      /* for performance reasons, the pseudo activity is updated with each bound change, so we don't have to
+       * recalculate it
+       */
+      activity = linconsGetPseudoActivity(scip, lincons);
+   }
+   else
+   {
+      Real solval;
+      int v;
+
+      activity = 0.0;
+      for( v = 0; v < lincons->nvars; ++v )
+      {
+         solval = SCIPgetSolVal(scip, sol, lincons->vars[v]);
+         activity += lincons->vals[v] * solval;
+      }
+   }
+
+   return activity;
+}
+
+/** calculates the feasibility of the linear constraint for given solution */
+static
+Real linconsGetFeasibility(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   SOL*             sol                 /**< solution to get feasibility for, NULL to actual solution */
+   )
+{
+   Real activity;
+
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+
+   activity = linconsGetActivity(scip, lincons, sol);
+
+   return MIN(lincons->rhs - activity, activity - lincons->lhs);
 }
 
 /** forbids roundings of variables in constraint that may violate constraint */
@@ -1299,12 +1363,12 @@ void linconsPrint(
  * local linear constraint handler methods
  */
 
-/** checks linear constraint for feasibility of given solution or actual LP/pseudo solution */
+/** checks linear constraint for feasibility of given solution or actual pseudo solution */
 static
 RETCODE check(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
-   SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
+   SOL*             sol,                /**< solution to be checked, or NULL for actual pseudo solution */
    Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
    Real*            violation,          /**< pointer to store the constraint's violation, or NULL */
    Bool*            violated            /**< pointer to store whether the constraint is violated */
@@ -1328,11 +1392,14 @@ RETCODE check(
    {
       if( !checklprows && SCIProwIsInLP(row) )
          return SCIP_OKAY;
-      feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
+      else if( sol == NULL && !SCIPhasActnodeLP(scip) )
+         feasibility = linconsGetPseudoFeasibility(scip, consdata->lincons);
+      else
+         feasibility = SCIPgetRowFeasibility(scip, row);
    }
    else
       feasibility = linconsGetFeasibility(scip, consdata->lincons, sol);
-
+   
    /*debugMessage("  lincons feasibility = %g\n", feasibility);*/
    if( SCIPisFeasible(scip, feasibility) )
    {
@@ -1659,7 +1726,7 @@ DECL_CONSPROP(consPropLinear)
                Real recalcmaxactivity;
                
                linconsGetActivityBounds(scip, lincons, &newminactivity, &newmaxactivity);
-               linconsInvalidateActivityBounds(lincons);
+               linconsInvalidateActivities(lincons);
                linconsGetActivityBounds(scip, lincons, &recalcminactivity, &recalcmaxactivity);
 
                assert(SCIPisSumRelEQ(scip, newminactivity, recalcminactivity));
@@ -1703,6 +1770,7 @@ static
 DECL_EVENTEXEC(eventExecLinear)
 {
    LINCONS* lincons;
+   VAR* var;
    Real oldbound;
    Real newbound;
    int varpos;
@@ -1722,26 +1790,21 @@ DECL_EVENTEXEC(eventExecLinear)
    assert(0 <= varpos && varpos < lincons->nvars);
 
    CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
+   CHECK_OKAY( SCIPeventGetVar(event, &var) );
    CHECK_OKAY( SCIPeventGetOldbound(event, &oldbound) );
    CHECK_OKAY( SCIPeventGetNewbound(event, &newbound) );
-#ifndef NDEBUG
-   {
-      VAR* var;
-      CHECK_OKAY( SCIPeventGetVar(event, &var) );
-      assert(lincons->vars[varpos] == var);
-   }
-#endif
+   assert(lincons->vars[varpos] == var);
 
    /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
      eventtype, SCIPvarGetName(linconsdata->vars[varpos]), oldbound, newbound, linconsdata->minactivity, 
      linconsdata->maxactivity);*/
 
    if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
-      linconsUpdateChgLb(scip, lincons, oldbound, newbound, lincons->vals[varpos]);
+      linconsUpdateChgLb(scip, lincons, var, oldbound, newbound, lincons->vals[varpos]);
    else
    {
       assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
-      linconsUpdateChgUb(scip, lincons, oldbound, newbound, lincons->vals[varpos]);
+      linconsUpdateChgUb(scip, lincons, var, oldbound, newbound, lincons->vals[varpos]);
    }
 
    /*debug(printf(" -> [%g,%g]\n", linconsdata->minactivity, linconsdata->maxactivity));*/
