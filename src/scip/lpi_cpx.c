@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.49 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.50 2003/12/18 13:44:26 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
- * @brief  LP interface for CPLEX 8.0
+ * @brief  LP interface for CPLEX 8.0 / 9.0
  * @author Tobias Achterberg
  */
 

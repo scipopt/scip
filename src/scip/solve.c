@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.76 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.77 2003/12/18 13:44:27 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -552,13 +552,16 @@ RETCODE redcostStrengthening(
    assert(!SCIPsetIsInfinity(set, primal->upperbound));
    assert(SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->upperbound) );
 
+   /* get LP columns */
+   cols = SCIPlpGetCols(lp);
+   ncols = SCIPlpGetNCols(lp);
+   if( ncols == 0 )
+      return SCIP_OKAY;
+
    stat->nredcoststrcalls++;
 
    /* start redcost strengthening timer */
    SCIPclockStart(stat->redcoststrtime, set);
-
-   cols = SCIPlpGetCols(lp);
-   ncols = SCIPlpGetNCols(lp);
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );

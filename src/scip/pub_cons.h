@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.1 2003/12/01 14:41:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.2 2003/12/18 13:44:27 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -294,6 +294,12 @@ CONSDATA* SCIPconsGetData(
    CONS*            cons                /**< constraint */
    );
 
+/** gets number of times, the constraint is currently captured */
+extern
+int SCIPconsGetNUses(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is active in the current node */
 extern
 Bool SCIPconsIsActive(
@@ -417,6 +423,7 @@ Bool SCIPconsIsLocked(
 #define SCIPconsGetName(cons)           (cons)->name
 #define SCIPconsGetHdlr(cons)           (cons)->conshdlr
 #define SCIPconsGetData(cons)           (cons)->consdata
+#define SCIPconsGetNUses(cons)          (cons)->nuses
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)

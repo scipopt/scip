@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.26 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.27 2003/12/18 13:44:27 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -702,11 +702,11 @@ RETCODE SCIPsolPrint(
       if( !SCIPsetIsZero(set, solval) )
       {
          if( SCIPsetIsInfinity(set, solval) )
-            fprintf(file, "%-32s +infinity\n", prob->vars[v]->name);
+            fprintf(file, "%-32s +infinity\n", SCIPvarGetName(prob->vars[v]));
          else if( SCIPsetIsInfinity(set, -solval) )
-            fprintf(file, "%-32s -infinity\n", prob->vars[v]->name);
+            fprintf(file, "%-32s -infinity\n", SCIPvarGetName(prob->vars[v]));
          else
-            fprintf(file, "%-32s %f\n", prob->vars[v]->name, solval);
+            fprintf(file, "%-32s %f \t(obj:%g)\n", SCIPvarGetName(prob->vars[v]), solval, SCIPvarGetObj(prob->vars[v]));
       }
    }
 

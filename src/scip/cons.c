@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.60 2003/12/01 16:14:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.61 2003/12/18 13:44:26 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3344,6 +3344,16 @@ CONSDATA* SCIPconsGetData(
    assert(cons != NULL);
 
    return cons->consdata;
+}
+
+/** gets number of times, the constraint is currently captured */
+int SCIPconsGetNUses(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->nuses;
 }
 
 /** returns TRUE iff constraint is active in the current node */
