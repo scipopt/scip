@@ -158,6 +158,7 @@ struct Tree
    int              siblingssize;       /**< available slots in siblings vector */
    int              nsiblings;          /**< actual number of siblings (number of used slots in siblings vector) */
    unsigned int     actnodehaslp:1;     /**< is LP being processed in the active node? */
+   unsigned int     cutoffdelayed:1;    /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
 
 

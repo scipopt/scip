@@ -885,7 +885,7 @@ RETCODE SCIPsolveCIP(
       /* call primal heuristics */
       for( h = 0; h < set->nheurs; ++h )
       {
-         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, actnode->depth, stat->plungedepth, &result) );
+         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, actnode->depth, tree->actnodehaslp, &result) );
       }
       
       /* display node information line */

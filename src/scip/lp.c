@@ -46,6 +46,7 @@
 
 #include "sort.h"
 #include "lp.h"
+#include "solve.h"
 
 
 /** list of columns */
@@ -3441,6 +3442,7 @@ RETCODE SCIPlpCreate(
    /* open LP Solver interface */
    CHECK_OKAY( SCIPlpiCreate(&((*lp)->lpi), name) );
 
+   (*lp)->divelpistate = NULL;
    (*lp)->lpicols = NULL;
    (*lp)->lpirows = NULL;
    (*lp)->chgcols = NULL;
@@ -4744,12 +4746,14 @@ RETCODE SCIPlpCleanupAll(
 }
 
 /** initiates LP diving */
-void SCIPlpStartDive(
-   LP*              lp                  /**< actual LP data */
+RETCODE SCIPlpStartDive(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    assert(lp != NULL);
    assert(!lp->diving);
+   assert(lp->divelpistate == NULL);
 
 #ifndef NDEBUG
    {
@@ -4767,13 +4771,21 @@ void SCIPlpStartDive(
    }
 #endif
 
+   /* save current LPI state (basis information) */
+   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, &lp->divelpistate) );
+
+   /* switch to diving mode */
    lp->diving = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** quits LP diving and resets bounds and objective values of columns to the actual node's values */
 RETCODE SCIPlpEndDive(
    LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    VAR**            vars,               /**< array with all active variables */
    int              nvars               /**< number of active variables */
    )
@@ -4783,8 +4795,10 @@ RETCODE SCIPlpEndDive(
 
    assert(lp != NULL);
    assert(lp->diving);
+   assert(lp->divelpistate != NULL);
    assert(nvars == 0 || vars != NULL);
 
+   /* reset all columns' objective values and bounds to its original values */
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -4797,6 +4811,15 @@ RETCODE SCIPlpEndDive(
       }
    }
 
+   /* reload LPI state saved at start of diving, free LPI state afterwards */
+   CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, lp->divelpistate) );
+   CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &lp->divelpistate) );
+   assert(lp->divelpistate == NULL);
+
+   /* resolve LP to reset solution */
+   CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
+
+   /* switch to standard (non-diving) mode */
    lp->diving = FALSE;
 
 #ifndef NDEBUG
@@ -4817,3 +4840,19 @@ RETCODE SCIPlpEndDive(
 
    return SCIP_OKAY;
 }
+
+/** writes LP to a file */
+RETCODE SCIPlpWrite(
+   LP*              lp,                 /**< actual LP data */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(fname != NULL);
+
+   CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, fname) );
+
+   return SCIP_OKAY;
+}
+

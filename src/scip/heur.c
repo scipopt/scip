@@ -192,8 +192,8 @@ RETCODE SCIPheurExec(
        * execution frequency lies between the current node and the last LP node of the path
        */
       execute = actnodehaslp;
-      execute &= (actdepth == 0 && heur->freq == 0)
-         || (heur->freq > 0 && actdepth % heur->freq != (actdepth-set->lpsolvefreq) % heur->freq);
+      execute &= (actdepth == 0 && heur->freq >= 0)
+         || (heur->freq > 0 && (actdepth / heur->freq != (actdepth-set->lpsolvefreq) / heur->freq));
    }
 
    if( execute )

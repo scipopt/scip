@@ -2171,6 +2171,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->siblingssize = 0;
    (*tree)->nsiblings = 0;
    (*tree)->actnodehaslp = FALSE;
+   (*tree)->cutoffdelayed = FALSE;
 
    /* create root node */
    CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, *tree) );
@@ -2246,6 +2247,19 @@ RETCODE SCIPtreeCutoff(
    int i;
 
    assert(tree != NULL);
+   assert(lp != NULL);
+
+   /* if we are in diving mode, it is not allowed to cut off nodes, because this can lead to deleting LP rows which
+    * would modify the currently unavailable (due to diving modifications) LP
+    *  -> the cutoff must be delayed and executed after the diving ends
+    */
+   if( lp->diving )
+   {
+      tree->cutoffdelayed = TRUE;
+      return SCIP_OKAY;
+   }
+
+   tree->cutoffdelayed = FALSE;
 
    /* cut off leaf nodes in the queue */
    CHECK_OKAY( SCIPnodepqBound(tree->leaves, memhdr, set, tree, lp, upperbound) );

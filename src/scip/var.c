@@ -612,14 +612,12 @@ RETCODE SCIPdomchgdynAddBoundchg(
    assert(domchgdyn->domchg != NULL);
    assert(var != NULL);
 
-   debugMessage("(1) adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
+   debugMessage("adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchgdyn->domchg,
       *domchgdyn->domchg);
+
    nboundchg = (*domchgdyn->domchg == NULL ? 0 : (*domchgdyn->domchg)->nboundchg);
    CHECK_OKAY( ensureBoundchgSize(domchgdyn, memhdr, set, nboundchg+1) );
-   debugMessage("(2) adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchgdyn->domchg,
-      *domchgdyn->domchg);
 
    domchg = *domchgdyn->domchg;
    assert(domchg != NULL);

@@ -792,6 +792,13 @@ Bool SCIPallVarsInLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** writes actual LP to a file */
+extern
+RETCODE SCIPwriteLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      fname               /**< file name */
+   );
+
 /**@} */
 
 

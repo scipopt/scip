@@ -178,6 +178,7 @@ struct Row
 struct Lp
 {
    LPI*             lpi;                /**< LP solver interface */
+   LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    COL**            lpicols;            /**< array with columns actually stored in the LP solver */
    ROW**            lpirows;            /**< array with rows actually stored in the LP solver */
    COL**            chgcols;            /**< array of changed columns not yet applied to the LP solver */
@@ -983,17 +984,27 @@ RETCODE SCIPlpCleanupAll(
 
 /** initiates LP diving */
 extern
-void SCIPlpStartDive(
-   LP*              lp                  /**< actual LP data */
+RETCODE SCIPlpStartDive(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr              /**< block memory */
    );
 
 /** quits LP diving and resets bounds and objective values of columns to the actual node's values */
 extern
 RETCODE SCIPlpEndDive(
    LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    VAR**            vars,               /**< array with all active variables */
    int              nvars               /**< number of active variables */
+   );
+
+/** writes LP to a file */
+extern 
+RETCODE SCIPlpWrite(
+   LP*              lp,                 /**< actual LP data */
+   const char*      fname               /**< file name */
    );
 
 #endif

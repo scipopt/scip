@@ -37,6 +37,7 @@
 #include "branch_fullstrong.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
+#include "heur_diving.h"
 #include "heur_rounding.h"
 
 
@@ -96,6 +97,13 @@ DECL_EVENTEXEC(eventExecTest)
 
    CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
    /*printf("exec test event handler: eventtype=0x%x\n", eventtype);*/
+
+   /*???????????*/
+   {
+      char lpname[255];
+      sprintf(lpname, "lp%lld.lp", SCIPgetNodenum(scip));
+      CHECK_OKAY( SCIPwriteLP(scip, lpname) );
+   }
 
    return SCIP_OKAY;
 }
@@ -254,6 +262,7 @@ RETCODE runSCIP(
    /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
+   CHECK_OKAY( SCIPincludeHeurDiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
    
    /*CHECK_OKAY( includeTestEventHdlr(scip) );*/

@@ -1107,7 +1107,8 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddCons(scip->tree->root, scip->mem->solvemem, scip->set, scip->tree, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      CHECK_OKAY( SCIPconsActivate(cons, scip->set) );
       return SCIP_OKAY;
 
    default:
@@ -2047,6 +2048,19 @@ Bool SCIPallVarsInLP(
    return (scip->lp->ncols == scip->transprob->nvars);
 }
 
+/** writes actual LP to a file */
+RETCODE SCIPwriteLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      fname               /**< file name */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   CHECK_OKAY( SCIPlpWrite(scip->lp, fname) );
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -2073,7 +2087,7 @@ RETCODE SCIPstartDive(
       return SCIP_INVALIDCALL;
    }
 
-   SCIPlpStartDive(scip->lp);
+   SCIPlpStartDive(scip->lp, scip->mem->solvemem);
 
    return SCIP_OKAY;
 }
@@ -2091,7 +2105,17 @@ RETCODE SCIPendDive(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->set, scip->transprob->vars, scip->transprob->nvars) );
+   /* unmark the diving flag in the LP and reset all variables' objective and bound values */
+   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, 
+                  scip->transprob->vars, scip->transprob->nvars) );
+
+   /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
+    * the cutoff has to be done now.
+    */
+   if( scip->tree->cutoffdelayed )
+   {
+      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->primal->upperbound) );
+   }
 
    return SCIP_OKAY;
 }
