@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.97 2005/02/14 13:35:37 bzfpfend Exp $
+# $Id: Makefile,v 1.98 2005/02/16 09:41:16 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -80,6 +80,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
+OBJSUBDIRS      =	scip objscip
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -326,11 +327,8 @@ testcplex:
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)
 
-$(OBJDIR)/scip:	$(OBJDIR)
-		-mkdir -p $(OBJDIR)/scip
-
-$(OBJDIR)/objscip:	$(OBJDIR)
-		-mkdir -p $(OBJDIR)/objscip
+$(OBJSUBDIRS):	$(OBJDIR)
+		-mkdir -p $(OBJDIR)/$@
 
 $(LIBDIR):
 		-mkdir -p $(LIBDIR)
@@ -367,7 +365,7 @@ endif
 -include	$(OBJSCIPLIBDEP)
 -include 	$(LPILIBDEP)
 
-$(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
+$(MAINFILE):	$(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
 ifeq ($(LINKER),C)
 		$(CC) $(MAINXXX) \
 		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(LPSLDFLAGS) \
@@ -379,17 +377,17 @@ ifeq ($(LINKER),CPP)
 		$(LDFLAGS) -o $@
 endif
 
-$(SCIPLIBFILE):	$(OBJDIR)/scip $(LIBDIR) $(SCIPLIBXXX) 
+$(SCIPLIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(SCIPLIBXXX) 
 		-rm -f $@
 		$(AR) $(ARFLAGS) $@ $(SCIPLIBXXX) 
 		$(RANLIB) $@
 
-$(OBJSCIPLIBFILE):	$(OBJDIR)/objscip $(LIBDIR) $(OBJSCIPLIBXXX) 
+$(OBJSCIPLIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(OBJSCIPLIBXXX) 
 		-rm -f $@
 		$(AR) $(ARFLAGS) $@ $(OBJSCIPLIBXXX) 
 		$(RANLIB) $@
 
-$(LPILIBFILE):	$(OBJDIR)/scip $(LIBDIR) $(LPILIBXXX)
+$(LPILIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(LPILIBXXX)
 		-rm -f $@
 		$(AR) $(ARFLAGS) $@ $(LPILIBXXX)
 		$(RANLIB) $@
