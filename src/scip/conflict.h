@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.18 2004/08/10 14:18:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.19 2004/08/24 11:57:50 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -124,20 +124,25 @@ RETCODE SCIPconflictFree(
    CONFLICT**       conflict            /**< pointer to conflict analysis data */
    );
 
-/** initializes the propagation conflict analysis by clearing the conflict variable candidate queue */
+/** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 extern
 RETCODE SCIPconflictInit(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** adds variable to conflict variable candidates */
+/** adds variable's bound to conflict candidate queue */
 extern
-RETCODE SCIPconflictAddVar(
+RETCODE SCIPconflictAddBound(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   VAR*             var                 /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR*             var,                /**< problem variable */
+   BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
+   BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
    );
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set;
  *  updates statistics for propagation conflict analysis
  */
@@ -273,7 +278,7 @@ Longint SCIPconflictGetNStrongbranchIterations(
  * pseudo solution conflict analysis
  */
 
-/** analyzes a pseudo solution with objective value exceeding the current cutoff to find out the bound changes on binary
+/** analyzes a pseudo solution with objective value exceeding the current cutoff to find out the bound changes on
  *  variables that were responsible for the objective value degradation;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.7 2004/07/07 09:52:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.8 2004/08/24 11:58:07 bzfpfend Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables
@@ -68,11 +68,13 @@ enum BoundchgType
 };
 typedef enum BoundchgType BOUNDCHGTYPE;
 
-typedef struct DomChgBound DOMCHGBOUND; /**< static domain change for bound changes */
-typedef struct DomChgBoth DOMCHGBOTH;   /**< static domain change for bound and hole changes */
-typedef struct DomChgDyn DOMCHGDYN;     /**< dynamic domain change for bound and hole changes */
+typedef struct DomChgBound DOMCHGBOUND; /**< static domain change data for bound changes */
+typedef struct DomChgBoth DOMCHGBOTH;   /**< static domain change data for bound and hole changes */
+typedef struct DomChgDyn DOMCHGDYN;     /**< dynamic domain change data for bound and hole changes */
 typedef union DomChg DOMCHG;            /**< changes in domains of variables */
 typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
+typedef struct BdChgIdx BDCHGIDX;       /**< bound change index in path from root to current node */
+typedef struct BdChgInfo BDCHGINFO;     /**< bound change information to track bound changes from root to current node */
 typedef struct BranchingData BRANCHINGDATA; /**< data for branching decision bound changes */
 typedef struct InferenceData INFERENCEDATA; /**< data for inferred bound changes */
 typedef struct HoleChg HOLECHG;         /**< changes in holelist of variables */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.22 2004/08/03 16:02:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.23 2004/08/24 11:58:00 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -474,51 +474,6 @@ Real SCIPvarGetUbLocal(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets inference variable of variable (variable that was assigned: parent of var, or var itself), or NULL */
-extern
-VAR* SCIPvarGetInferVar(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets inference constraint of variable (constraint that deduced the current assignment), or NULL */
-extern
-CONS* SCIPvarGetInferCons(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets user information for inference to help resolving the conflict */
-extern
-int SCIPvarGetInferInfo(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets depth level, where the binary variable was fixed, or -1 if unfixed */
-extern
-int SCIPvarGetFixDepth(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** gets fixing index of the variable in the depth level, where the binary variable was fixed, or -1 if unfixed or
- *  fixed during preprocessing
- */
-extern
-int SCIPvarGetFixIndex(
-   VAR*             var                 /**< problem variable */
-   );
-
-/** returns TRUE iff first variable was fixed earlier than second variable */
-extern
-Bool SCIPvarWasFixedEarlier(
-   VAR*             var1,               /**< first problem variable */
-   VAR*             var2                /**< second problem variable */
-   );
-
-/** gets type of bound change of fixed binary variable (fixed due to branching or due to inference) */
-extern
-BOUNDCHGTYPE SCIPvarGetBoundchgType(
-   VAR*             var                 /**< problem variable */
-   );
-
 /** gets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
@@ -675,17 +630,6 @@ Real* SCIPvarGetUbimplInferbounds(
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
 #define SCIPvarGetLbLocal(var)          (var)->locdom.lb
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
-#define SCIPvarGetInferVar(var)         (var)->infervar
-#define SCIPvarGetInferCons(var)        (var)->infercons
-#define SCIPvarGetInferInfo(var)        (var)->inferinfo
-#define SCIPvarGetFixDepth(var)         (var)->fixdepth
-#define SCIPvarGetFixIndex(var)         (var)->fixindex
-#define SCIPvarWasFixedEarlier(var1,var2) ((var1)->fixdepth >= 0                          \
-                                            && ((var2)->fixdepth == -1                    \
-                                              || (var1)->fixdepth < (var2)->fixdepth      \
-                                              || ((var1)->fixdepth == (var2)->fixdepth    \
-                                                && (var1)->fixindex < (var2)->fixindex)))
-#define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
 #define SCIPvarGetNVlbs(var)            ((var)->vlbs != NULL ? (var)->vlbs->len : 0)
@@ -758,5 +702,179 @@ extern
 Real SCIPvarGetRootSol(
    VAR*             var                 /**< problem variable */
    );
+
+/** returns the bound change information for the last lower bound change on given variable before or after the bound change
+ *  with the given index was applied;
+ *  returns NULL, if no change to the lower bound was applied up to this point of time
+ */
+extern
+BDCHGINFO* SCIPvarGetLbchgInfo(
+   VAR*             var,                /**< problem variable */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns the bound change information for the last upper bound change on given variable before or after the bound change
+ *  with the given index was applied;
+ *  returns NULL, if no change to the upper bound was applied up to this point of time
+ */
+extern
+BDCHGINFO* SCIPvarGetUbchgInfo(
+   VAR*             var,                /**< problem variable */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns the bound change information for the last lower or upper bound change on given variable before or after the
+ *  bound change with the given index was applied;
+ *  returns NULL, if no change to the lower/upper bound was applied up to this point of time
+ */
+extern
+BDCHGINFO* SCIPvarGetBdchgInfo(
+   VAR*             var,                /**< problem variable */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns lower bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+extern
+Real SCIPvarGetLbAtIndex(
+   VAR*             var,                /**< problem variable */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+extern
+Real SCIPvarGetUbAtIndex(
+   VAR*             var,                /**< problem variable */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+extern
+Real SCIPvarGetBdAtIndex(
+   VAR*             var,                /**< problem variable */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns whether first bound change index belongs to an earlier applied bound change than second one;
+ *  if a bound change index is NULL, the bound change belongs to preprocessing or problem modification and
+ *  is always earlier than any bound change applied during the solving process
+ */
+extern
+Bool SCIPbdchgidxIsEarlier(
+   BDCHGIDX*        bdchgidx1,          /**< first bound change index, or NULL */
+   BDCHGIDX*        bdchgidx2           /**< second bound change index, or NULL */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** returns old bound that was overwritten for given bound change information */
+extern
+Real SCIPbdchginfoGetOldbound(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returns new bound installed for given bound change information */
+extern
+Real SCIPbdchginfoGetNewbound(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returns variable that belongs to the given bound change information */
+extern
+VAR* SCIPbdchginfoGetVar(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returns whether the bound change information belongs to a branching decision or a deduction */
+extern
+BOUNDCHGTYPE SCIPbdchginfoGetChgtype(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returns whether the bound change information belongs to a lower or upper bound change */
+extern
+BOUNDCHGTYPE SCIPbdchginfoGetBoundtype(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs depth level of given bound change information */
+extern
+int SCIPbdchginfoGetDepth(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs bound change position in its depth level of given bound change information */
+extern
+int SCIPbdchginfoGetPos(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs bound change index of given bound change information */
+extern
+BDCHGIDX* SCIPbdchginfoGetIdx(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs inference variable of given bound change information */
+extern
+VAR* SCIPbdchginfoGetInferVar(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs inference constraint of given bound change information */
+extern
+CONS* SCIPbdchginfoGetInferCons(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs inference user information of given bound change information */
+extern
+int SCIPbdchginfoGetInferInfo(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+/** returs inference bound of inference variable of given bound change information */
+extern
+BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPbdchginfoGetOldbound(bdchginfo)       (bdchginfo)->oldbound
+#define SCIPbdchginfoGetNewbound(bdchginfo)       (bdchginfo)->newbound
+#define SCIPbdchginfoGetVar(bdchginfo)            (bdchginfo)->var
+#define SCIPbdchginfoGetChgtype(bdchginfo)        (BOUNDCHGTYPE)((bdchginfo)->boundchgtype)
+#define SCIPbdchginfoGetBoundtype(bdchginfo)      (BOUNDTYPE)((bdchginfo)->boundtype)
+#define SCIPbdchginfoGetDepth(bdchginfo)          (bdchginfo)->bdchgidx.depth
+#define SCIPbdchginfoGetPos(bdchginfo)            (bdchginfo)->bdchgidx.pos
+#define SCIPbdchginfoGetIdx(bdchginfo)            (&(bdchginfo)->bdchgidx)
+#define SCIPbdchginfoGetInferVar(bdchginfo)       (bdchginfo)->inferencedata.var
+#define SCIPbdchginfoGetInferCons(bdchginfo)      (bdchginfo)->inferencedata.cons
+#define SCIPbdchginfoGetInferInfo(bdchginfo)      (bdchginfo)->inferencedata.info
+#define SCIPbdchginfoGetInferBoundtype(bdchginfo) (BOUNDTYPE)((bdchginfo)->inferboundtype)
+
+#endif
 
 #endif

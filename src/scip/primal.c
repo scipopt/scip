@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.42 2004/08/10 14:19:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.43 2004/08/24 11:58:00 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -425,7 +425,7 @@ RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < set->maxsol);
 
    debugMessage("insert primal solution at position %d:", insertpos);
-   debug( SCIPsolPrint(sol, set, stat, prob, NULL) );
+   debug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL) );
 
 #if 0
 #ifndef NDEBUG

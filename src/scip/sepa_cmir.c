@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.12 2004/08/11 14:30:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.13 2004/08/24 11:58:02 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -676,11 +676,15 @@ DECL_SEPAEXEC(sepaExecCmir)
    if( (depth == 0 && ncalls >= sepadata->maxroundsroot) || (depth > 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-
    /* get all rows and number of columns */
    CHECK_OKAY( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
-   assert(rows != NULL);
+   assert(nrows == 0 || rows != NULL);
+
+   /* nothing to do, if LP is empty */
+   if( nrows == 0 )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
 
    /* get all COLUMN variables and number of variables */
    vars = SCIPgetVars(scip);

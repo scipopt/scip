@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.18 2004/07/07 08:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.19 2004/08/24 11:57:52 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -291,10 +291,10 @@ DECL_CONSPRESOL(consPresolEqknapsack)
 #endif
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 #if 0
 static
-DECL_CONSRESCVAR(consRescvarEqknapsack)
+DECL_CONSRESPROP(consRespropEqknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of eqknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
@@ -302,7 +302,7 @@ DECL_CONSRESCVAR(consRescvarEqknapsack)
    return SCIP_OKAY;
 }
 #else
-#define consRescvarEqknapsack NULL
+#define consRespropEqknapsack NULL
 #endif
 
 
@@ -467,7 +467,7 @@ RETCODE SCIPincludeConshdlrEqknapsack(
          consInitpreEqknapsack, consExitpreEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
          consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
          consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
-         consPropEqknapsack, consPresolEqknapsack, consRescvarEqknapsack,
+         consPropEqknapsack, consPresolEqknapsack, consRespropEqknapsack,
          consLockEqknapsack, consUnlockEqknapsack,
          consActiveEqknapsack, consDeactiveEqknapsack, 
          consEnableEqknapsack, consDisableEqknapsack,

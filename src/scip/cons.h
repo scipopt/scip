@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.74 2004/08/12 14:31:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.75 2004/08/24 11:57:51 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -86,7 +86,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
-   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
    DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
@@ -489,14 +489,17 @@ RETCODE SCIPconsResetAge(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** resolves the given conflict var, that was deduced by the given constraint, by putting all "reason" variables
- *  leading to the deduction into the conflict queue with calls to SCIPaddConflictVar()
+/** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
  */
 extern
-RETCODE SCIPconsResolveConflictVar(
+RETCODE SCIPconsResolveConflictBound(
    CONS*            cons,               /**< constraint that deduced the assignment */
    SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< conflict variable, that was deduced by the constraint */
+   VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int              inferinfo,          /**< user inference information attached to the bound change */
+   BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.15 2004/08/13 09:16:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.16 2004/08/24 11:57:56 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -800,8 +800,8 @@ RETCODE analyzeConflictZero(
 
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-   CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
-   CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[truepos]) );
+   CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
+   CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[truepos]) );
 
    /* analyze the conflict */
    CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
@@ -827,11 +827,11 @@ RETCODE analyzeConflictOne(
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-   CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
+   CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {
       assert(SCIPvarGetUbLocal(consdata->vars[v]) < 0.5);
-      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
@@ -897,7 +897,7 @@ RETCODE propagateCons(
       {
          debugMessage("constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
-         CHECK_OKAY( SCIPinferBinVar(scip, resvar, TRUE, cons, PROPRULE_1, &infeasible, &tightened) );
+         CHECK_OKAY( SCIPinferBinvar(scip, resvar, TRUE, cons, PROPRULE_1, &infeasible, &tightened) );
          if( infeasible )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -929,7 +929,7 @@ RETCODE propagateCons(
       {
          debugMessage("constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
-         CHECK_OKAY( SCIPinferBinVar(scip, vars[i], FALSE, cons, PROPRULE_2, &infeasible, &tightened) );
+         CHECK_OKAY( SCIPinferBinvar(scip, vars[i], FALSE, cons, PROPRULE_2, &infeasible, &tightened) );
          if( infeasible )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -1015,7 +1015,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
-      CHECK_OKAY( SCIPinferBinVar(scip, resvar, FALSE, cons, PROPRULE_3, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvar(scip, resvar, FALSE, cons, PROPRULE_3, &infeasible, &tightened) );
       if( infeasible )
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -1045,7 +1045,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
-      CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons, PROPRULE_4, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvar(scip, vars[watchedvar1], TRUE, cons, PROPRULE_4, &infeasible, &tightened) );
       if( infeasible )
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -1088,7 +1088,8 @@ RETCODE resolveConflict(
    CONS*            cons,               /**< or constraint to be processed */
    VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the value */
-   RESULT*          result              /**< pointer to store the result of the conflict variable resolving call */
+   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
    CONSDATA* consdata;
@@ -1107,54 +1108,51 @@ RETCODE resolveConflict(
    {
    case PROPRULE_1:
       /* the resultant was infered to TRUE, because one operand variable was TRUE */
-      assert(SCIPvarGetLbLocal(infervar) > 0.5);
+      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         if( SCIPvarWasFixedEarlier(vars[i], consdata->resvar) && SCIPvarGetLbLocal(vars[i]) > 0.5 )
+         if( SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE) > 0.5 )
          {
-            CHECK_OKAY( SCIPaddConflictVar(scip, vars[i]) );
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
             break;
          }
       }
+      assert(i < nvars);
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_2:
       /* the operand variable was infered to FALSE, because the resultant was FALSE */
-      assert(SCIPvarGetUbLocal(infervar) < 0.5);
-      assert(SCIPvarWasFixedEarlier(consdata->resvar, infervar));
-      assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
-      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
+      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
+      assert(SCIPvarGetUbAtIndex(consdata->resvar, bdchgidx, FALSE) < 0.5);
+      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_3:
       /* the resultant was infered to FALSE, because all operand variables were FALSE */
-      assert(SCIPvarGetUbLocal(infervar) < 0.5);
+      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {
-         assert(SCIPvarWasFixedEarlier(vars[i], consdata->resvar));
-         assert(SCIPvarGetUbLocal(vars[i]) < 0.5);
-         CHECK_OKAY( SCIPaddConflictVar(scip, vars[i]) );
+         assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+         CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
       }
       *result = SCIP_SUCCESS;
       break;
 
    case PROPRULE_4:
       /* the operand variable was infered to TRUE, because the resultant was TRUE and all other operands were FALSE */
-      assert(SCIPvarGetLbLocal(infervar) > 0.5);
-      assert(SCIPvarWasFixedEarlier(consdata->resvar, infervar));
-      assert(SCIPvarGetLbLocal(consdata->resvar) > 0.5);
-      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
+      assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5);
+      assert(SCIPvarGetLbAtIndex(consdata->resvar, bdchgidx, FALSE) > 0.5);
+      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->resvar) );
       for( i = 0; i < nvars; ++i )
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarWasFixedEarlier(vars[i], infervar));
-            assert(SCIPvarGetUbLocal(vars[i]) < 0.5);
-            CHECK_OKAY( SCIPaddConflictVar(scip, vars[i]) );
+            assert(SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE) < 0.5);
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
          }
       }
       *result = SCIP_SUCCESS;
@@ -1502,11 +1500,11 @@ DECL_CONSPRESOL(consPresolOr)
 }
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESCVAR(consRescvarOr)
+DECL_CONSRESPROP(consRespropOr)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, result) );
+   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -1615,7 +1613,7 @@ RETCODE SCIPincludeConshdlrOr(
          consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
          consDeleteOr, consTransOr, consInitlpOr,
          consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
-         consPropOr, consPresolOr, consRescvarOr,
+         consPropOr, consPresolOr, consRespropOr,
          consLockOr, consUnlockOr,
          consActiveOr, consDeactiveOr, 
          consEnableOr, consDisableOr,

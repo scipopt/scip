@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.19 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.20 2004/08/24 11:57:59 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -472,35 +472,46 @@ public:
       return SCIP_OKAY;
    }
 
-   /** conflict variable resolving method of constraint handler
+   /** propagation conflict resolving method of constraint handler
     *
     *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
-    *  it should call SCIPinferBinVar() in domain propagation in order to fix binary variables to deduced values.
-    *  In this call, the handler provides the constraint, that deduced the variable's assignment, and an integer
-    *  value "inferinfo" that can be arbitrarily chosen.
-    *  The conflict variable resolving method must then be implemented, to provide the "reasons" for the variable
-    *  assignment, i.e. the fixed binary variables, that forced the constraint to set the conflict variable to its
-    *  current value. It can use the "inferinfo" tag to identify its own propagation rule and thus identify the
-    *  "reason" variables. The variables that form the reason of the assignment must then be provided by calls to
-    *  SCIPaddConflictVar() in the conflict variable resolving method.
+    *  it should call SCIPinferVarLb() or SCIPinferVarUb() in domain propagation instead of SCIPchgVarLb() or
+    *  SCIPchgVarUb() in order to deduce bound changes on variables.
+    *  In the SCIPinferVarLb() and SCIPinferVarUb() calls, the handler provides the constraint, that deduced the
+    *  variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
+    *  The propagation conflict resolving method must then be implemented, to provide the "reasons" for the bound
+    *  changes, i.e. the bounds of variables at the time of the propagation, that forced the constraint to set the
+    *  conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
+    *  rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
+    *  by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
     *
-    *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE, if both, x and y, are assigned
-    *  to FALSE. It uses SCIPinferBinVar(scip, z, TRUE, c) to apply this assignment. In the conflict analysis, the
-    *  constraint handler may be asked to resolve variable z with constraint c. With a call to SCIPvarGetLbLocal(z), 
-    *  the handler can find out, that variable z is currently assigned to TRUE, and should call 
-    *  SCIPaddConflictVar(scip, x) and SCIPaddConflictVar(scip, y) to tell SCIP, that the assignments to x and y were
-    *  the reason for the deduction of z.
+    *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e. changes the lower bound of z
+    *  to 1.0), if both, x and y, are assigned to FALSE (i.e. if the upper bounds of these variables are 0.0). It uses
+    *  SCIPinferVarLb(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
+    *  constraint handler and is set to 0).
+    *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
+    *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
+    *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable z was
+    *  set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
+    *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
+    *  the reason for the deduction of the lower bound of z.
     *
     *  possible return values for *result:
-    *  - SCIP_SUCCESS    : the conflict variable has been successfully resolved by adding all reason variables
-    *  - SCIP_DIDNOTFIND : the conflict variable could not be resolved and has to be put into the conflict set
+    *  - SCIP_SUCCESS    : the conflicting bound change has been successfully resolved by adding all reason variables
+    *  - SCIP_DIDNOTFIND : the conflicting bound change could not be resolved and has to be put into the conflict set
     */
-   virtual RETCODE scip_rescvar(
+   virtual RETCODE scip_resprop(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS*         cons,               /**< the constraint that deduced the assignment of the conflict variable */
-      VAR*          infervar,           /**< the binary conflict variable that has to be resolved */
-      RESULT*       result              /**< pointer to store the result of the conflict variable resolving call */
+      CONS*         cons,               /**< the constraint that deduced the bound change of the conflict variable */
+      VAR*          infervar,           /**< the conflict variable whose bound change has to be resolved */
+      int           inferinfo,          /**< the user information passed to the corresponding SCIPinferVarLb()
+                                         *   or SCIPinferVarUb() call */
+      BOUNDTYPE     boundtype,          /**< the type of the changed bound (lower or upper bound) */
+      BDCHGIDX*     bdchgidx,           /**< the index of the bound change, representing the point of time where the
+                                         *   change took place */
+      RESULT*       result              /**< pointer to store the result of the propagation conflict resolving resolving
+                                         *   call */
       )
    {
       assert(result != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.1 2004/08/10 14:19:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.2 2004/08/24 11:57:58 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -491,7 +491,7 @@ RETCODE analyzeConflict(
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
    for( v = 0; v < consdata->nvars; ++v )
    {
-      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
@@ -621,7 +621,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: only one unfixed variable -> fix <%s> to %d\n",
          SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), odd);
-      CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], odd, cons, PROPRULE_1, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvar(scip, vars[watchedvar1], odd, cons, PROPRULE_1, &infeasible, &tightened) );
       assert(!infeasible);
       assert(tightened);
       (*nfixedvars)++;
@@ -650,7 +650,8 @@ RETCODE resolveConflict(
    CONS*            cons,               /**< xor constraint to be processed */
    VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the value */
-   RESULT*          result              /**< pointer to store the result of the conflict variable resolving call */
+   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
 {
    CONSDATA* consdata;
@@ -673,9 +674,13 @@ RETCODE resolveConflict(
       {
          if( vars[i] != infervar )
          {
-            assert(SCIPvarWasFixedEarlier(vars[i], infervar));
-            CHECK_OKAY( SCIPaddConflictVar(scip, vars[i]) );
+            assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, FALSE), 
+                  SCIPvarGetUbAtIndex(vars[i], bdchgidx, FALSE)));
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, vars[i]) );
          }
+         else
+            assert(SCIPisEQ(scip, SCIPvarGetLbAtIndex(vars[i], bdchgidx, TRUE), 
+                  SCIPvarGetUbAtIndex(vars[i], bdchgidx, TRUE)));
       }
       *result = SCIP_SUCCESS;
       break;
@@ -1045,11 +1050,11 @@ DECL_CONSPRESOL(consPresolXor)
 }
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESCVAR(consRescvarXor)
+DECL_CONSRESPROP(consRespropXor)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, result) );
+   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
 
    return SCIP_OKAY;
 }
@@ -1155,7 +1160,7 @@ RETCODE SCIPincludeConshdlrXor(
          consInitpreXor, consExitpreXor, consInitsolXor, consExitsolXor,
          consDeleteXor, consTransXor, consInitlpXor,
          consSepaXor, consEnfolpXor, consEnfopsXor, consCheckXor, 
-         consPropXor, consPresolXor, consRescvarXor,
+         consPropXor, consPresolXor, consRespropXor,
          consLockXor, consUnlockXor,
          consActiveXor, consDeactiveXor, 
          consEnableXor, consDisableXor,

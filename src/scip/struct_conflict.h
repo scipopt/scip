@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.6 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.7 2004/08/24 11:58:03 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -68,7 +68,7 @@ struct Conflict
    CLOCK*           sbanalyzetime;      /**< time used for infeasible LP conflict analysis */
    CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
-   PQUEUE*          varqueue;           /**< unprocessed conflict variables */
+   PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */

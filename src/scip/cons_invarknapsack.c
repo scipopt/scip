@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.18 2004/07/07 08:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.c,v 1.19 2004/08/24 11:57:53 bzfpfend Exp $"
 
 /**@file   cons_invarknapsack.c
  * @brief  constraint handler for invarknapsack constraints
@@ -291,10 +291,10 @@ DECL_CONSPRESOL(consPresolInvarknapsack)
 #endif
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 #if 0
 static
-DECL_CONSRESCVAR(consRescvarInvarknapsack)
+DECL_CONSRESPROP(consRespropInvarknapsack)
 {  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
@@ -302,7 +302,7 @@ DECL_CONSRESCVAR(consRescvarInvarknapsack)
    return SCIP_OKAY;
 }
 #else
-#define consRescvarInvarknapsack NULL
+#define consRespropInvarknapsack NULL
 #endif
 
 
@@ -467,7 +467,7 @@ RETCODE SCIPincludeConshdlrInvarknapsack(
          consInitpreInvarknapsack, consExitpreInvarknapsack, consInitsolInvarknapsack, consExitsolInvarknapsack,
          consDeleteInvarknapsack, consTransInvarknapsack, consInitlpInvarknapsack,
          consSepaInvarknapsack, consEnfolpInvarknapsack, consEnfopsInvarknapsack, consCheckInvarknapsack, 
-         consPropInvarknapsack, consPresolInvarknapsack, consRescvarInvarknapsack,
+         consPropInvarknapsack, consPresolInvarknapsack, consRespropInvarknapsack,
          consLockInvarknapsack, consUnlockInvarknapsack,
          consActiveInvarknapsack, consDeactiveInvarknapsack, 
          consEnableInvarknapsack, consDisableInvarknapsack,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.126 2004/08/12 14:31:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.127 2004/08/24 11:58:03 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1750,6 +1750,7 @@ RETCODE SCIPsolveCIP(
                {
                   CHECK_OKAY( SCIPvarIncNCutoffs(stat->lastbranchvar, stat, stat->lastbranchdir) );
                }
+               /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
             }
             else
             {

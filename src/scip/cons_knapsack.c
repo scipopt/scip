@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.60 2004/08/10 14:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.61 2004/08/24 11:57:53 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -976,7 +976,7 @@ RETCODE propagateCons(
       {
          if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
          {
-            CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
          }
       }
          
@@ -999,7 +999,7 @@ RETCODE propagateCons(
             if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
             {
                CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferBinvar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
                assert(!infeasible);
                assert(tightened);
                (*nfixedvars)++;
@@ -1642,9 +1642,9 @@ DECL_CONSPRESOL(consPresolKnapsack)
    return SCIP_OKAY;
 }
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESCVAR(consRescvarKnapsack)
+DECL_CONSRESPROP(consRespropKnapsack)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    int i;
@@ -1656,11 +1656,14 @@ DECL_CONSRESCVAR(consRescvarKnapsack)
  
    assert(SCIPvarGetUbLocal(infervar) < 0.5);
 
+   /**@todo better conflict resolving method: add variables only up to the point, that their weight plus the weight
+    *       of the conflict variable exceeds the capacity
+    */
    for( i = 0; i < consdata->nvars; i++ )
    {
-      if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5 && SCIPvarWasFixedEarlier(consdata->vars[i], infervar) )
+      if( SCIPvarGetLbAtIndex(consdata->vars[i], bdchgidx, FALSE) > 0.5 )
       {
-         CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
+         CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
       }
    }
    *result = SCIP_SUCCESS;
@@ -1916,7 +1919,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
          consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
          consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
          consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
-         consPropKnapsack, consPresolKnapsack, consRescvarKnapsack,
+         consPropKnapsack, consPresolKnapsack, consRespropKnapsack,
          consLockKnapsack, consUnlockKnapsack,
          consActiveKnapsack, consDeactiveKnapsack, 
          consEnableKnapsack, consDisableKnapsack,

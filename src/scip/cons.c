@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.90 2004/08/12 14:31:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.91 2004/08/24 11:57:51 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1109,7 +1109,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
-   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
    DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
@@ -1155,7 +1155,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->conscheck = conscheck;
    (*conshdlr)->consprop = consprop;
    (*conshdlr)->conspresol = conspresol;
-   (*conshdlr)->consrescvar = consrescvar;
+   (*conshdlr)->consresprop = consresprop;
    (*conshdlr)->conslock = conslock;
    (*conshdlr)->consunlock = consunlock;
    (*conshdlr)->consactive = consactive;
@@ -3648,22 +3648,26 @@ RETCODE SCIPconsResetAge(
    return SCIP_OKAY;
 }
 
-/** resolves the given conflict var, that was deduced by the given constraint, by putting all "reason" variables
- *  leading to the deduction into the conflict queue with calls to SCIPaddConflictVar()
+/** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb() and SCIPaddConflictUb()
  */
-RETCODE SCIPconsResolveConflictVar(
+RETCODE SCIPconsResolveConflictBound(
    CONS*            cons,               /**< constraint that deduced the assignment */
    SET*             set,                /**< global SCIP settings */
-   VAR*             var,                /**< conflict variable, that was deduced by the constraint */
+   VAR*             infervar,           /**< variable whose bound was deduced by the constraint */
+   int              inferinfo,          /**< user inference information attached to the bound change */
+   BOUNDTYPE        inferboundtype,     /**< bound that was deduced (lower or upper bound) */
+   BDCHGIDX*        bdchgidx,           /**< bound change index, representing the point of time where change took place */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    CONSHDLR* conshdlr;
 
    assert(cons != NULL);
-   assert(var != NULL);
-   assert(SCIPvarGetInferCons(var) == cons);
-   assert(SCIPvarGetInferVar(var) == var);
+   assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
+         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+      || (inferboundtype == SCIP_BOUNDTYPE_UPPER
+         && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -3671,21 +3675,22 @@ RETCODE SCIPconsResolveConflictVar(
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
 
-   if( conshdlr->consrescvar != NULL )
+   if( conshdlr->consresprop != NULL )
    {
-      CHECK_OKAY( conshdlr->consrescvar(set->scip, conshdlr, cons, var, SCIPvarGetInferInfo(var), result) );
+      CHECK_OKAY( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, inferboundtype, bdchgidx,
+            result) );
       
       /* check result code */
       if( *result != SCIP_SUCCESS && *result != SCIP_DIDNOTFIND )
       {
-         errorMessage("conflict variable resolving method of constraint handler <%s> returned invalid result <%d>\n", 
+         errorMessage("propagation conflict resolving method of constraint handler <%s> returned invalid result <%d>\n", 
             conshdlr->name, *result);
          return SCIP_INVALIDRESULT;
       }
    }
    else
    {
-      errorMessage("conflict variable resolving method of constraint handler <%s> is not implemented\n", 
+      errorMessage("propagation conflict resolving method of constraint handler <%s> is not implemented\n", 
          conshdlr->name);
       return SCIP_PLUGINNOTFOUND;
    }

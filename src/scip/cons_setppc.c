@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.55 2004/08/10 14:19:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.56 2004/08/24 11:57:57 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -163,7 +163,8 @@ RETCODE conshdlrdataIncVaruses(
    /* increase varuses counter */
    CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), +1) );
 
-   /*debugMessage("varuses of <%s>: %d\n", SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));*/
+   debugMessage("increased varuses of <%s>: %d\n", 
+      SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));
 
    return SCIP_OKAY;
 }
@@ -195,8 +196,50 @@ RETCODE conshdlrdataDecVaruses(
 
    /* decrease varuses counter */
    CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), -1) );
-   /*debugMessage("varuses of <%s>: %d\n", SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));*/
+
+   debugMessage("decreased varuses of <%s>: %d\n", 
+      SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));
    assert(SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)) >= 0);
+
+   return SCIP_OKAY;
+}
+
+/** increases the usage counter of all variable in the constraint */
+static
+RETCODE consdataIncVaruses(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   int v;
+
+   assert(consdata != NULL);
+
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, consdata->vars[v]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** decreases the usage counter of all variable in the constraint */
+static
+RETCODE consdataDecVaruses(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   int v;
+
+   assert(consdata != NULL);
+
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, consdata->vars[v]) );
+   }
 
    return SCIP_OKAY;
 }
@@ -687,6 +730,8 @@ RETCODE applyFixings(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /**@todo replace aggregated variables with active problem variables or their negation */
+
    if( consdata->nfixedzeros >= 1 )
    {
       assert(consdata->vars != NULL);
@@ -728,7 +773,7 @@ RETCODE analyzeConflictZero(
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
    for( v = 0; v < consdata->nvars; ++v )
    {
-      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
@@ -762,7 +807,7 @@ RETCODE analyzeConflictOne(
    {
       if( SCIPvarGetLbLocal(consdata->vars[v]) > 0.5 )
       {
-         CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+         CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
          n++;
       }
    }
@@ -859,7 +904,7 @@ RETCODE processFixings(
                assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
-                  CHECK_OKAY( SCIPinferBinVar(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
+                  CHECK_OKAY( SCIPinferBinvar(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
                   assert(!infeasible);
                   fixed = fixed || tightened;
                }
@@ -949,7 +994,7 @@ RETCODE processFixings(
             assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
-               CHECK_OKAY( SCIPinferBinVar(scip, var, TRUE, cons, 0, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferBinvar(scip, var, TRUE, cons, 0, &infeasible, &tightened) );
                assert(!infeasible);
                assert(tightened);
                break;
@@ -1920,6 +1965,7 @@ DECL_CONSPROP(consPropSetppc)
 static
 DECL_CONSPRESOL(consPresolSetppc)
 {  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
    CONS* cons;
    CONSDATA* consdata;
    int c;
@@ -1930,6 +1976,9 @@ DECL_CONSPRESOL(consPresolSetppc)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTFIND;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* process constraints */
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
@@ -1950,6 +1999,15 @@ DECL_CONSPRESOL(consPresolSetppc)
 
       /* remove all variables that are fixed to zero */
       CHECK_OKAY( applyFixings(scip, cons) );
+
+      /**@todo find pairs of negated variables in constraint:
+       *       partitioning/packing: all other variables must be zero, constraint is redundant
+       *       covering: constraint is redundant
+       */
+      /**@todo find sets of equal variables in constraint:
+       *       partitioning/packing: variable must be zero
+       *       covering: multiple entries of variable can be replaced by single entry
+       */
 
       if( consdata->nfixedones >= 2 )
       {
@@ -2139,10 +2197,22 @@ DECL_CONSPRESOL(consPresolSetppc)
             }
             assert(var1 != NULL && var2 != NULL);
 
+            /* in order to not mess up the variable usage counting, we have to decrease usage counting, aggregate,
+             * and increase usage counting again
+             */
+            CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, var1) );
+            CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, var2) );
+
             /* aggregate binary equality var1 + var2 == 1 */
             debugMessage("set partitioning constraint <%s>: aggregate <%s> + <%s> == 1\n",
                SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
             CHECK_OKAY( SCIPaggregateVars(scip, var1, var2, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
+
+            /* increase variable usage counting again */
+            CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, var1) );
+            CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, var2) );
+
+            /* evaluate aggregation result */
             if( infeasible )
             {
                debugMessage("set partitioning constraint <%s>: infeasible aggregation <%s> + <%s> == 1\n",
@@ -2169,9 +2239,9 @@ DECL_CONSPRESOL(consPresolSetppc)
 }
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESCVAR(consRescvarSetppc)
+DECL_CONSRESPROP(consRespropSetppc)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    int v;
@@ -2187,7 +2257,7 @@ DECL_CONSRESCVAR(consRescvarSetppc)
 
    debugMessage("conflict resolving method of set partitioning / packing / covering constraint handler\n");
 
-   if( SCIPvarGetLbLocal(infervar) > 0.5 )
+   if( SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5 )
    {
       Bool confvarfound;
 
@@ -2200,8 +2270,9 @@ DECL_CONSRESCVAR(consRescvarSetppc)
       {
          if( consdata->vars[v] != infervar )
          {
-            assert(SCIPvarGetUbLocal(consdata->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
-            CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+            /* the reason variable must be assigned to zero */
+            assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
          }
          else
          {
@@ -2219,13 +2290,13 @@ DECL_CONSRESCVAR(consRescvarSetppc)
        * the inference constraint has to be a set partitioning or packing constraint, and the reason for
        * the deduction is the assignment to 1.0 of a single different variable
        */
-      assert(SCIPvarGetUbLocal(infervar) < 0.5);
+      assert(SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5);
       reasonvarfound = FALSE;
       for( v = 0; v < consdata->nvars && !reasonvarfound; ++v )
       {
-         if( SCIPvarGetLbLocal(consdata->vars[v]) > 0.5 )
+         if( SCIPvarGetLbAtIndex(consdata->vars[v], bdchgidx, FALSE) > 0.5 )
          {
-            CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+            CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
             reasonvarfound = TRUE;
          }
       }
@@ -2262,28 +2333,14 @@ DECL_CONSUNLOCK(consUnlockSetppc)
 static
 DECL_CONSACTIVE(consActiveSetppc)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* consdata;
-   int v;
-
-   assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
 
    debugMessage("activation information for set partitioning / packing / covering constraint <%s>\n",
       SCIPconsGetName(cons));
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    /* increase the number of uses for each variable in the constraint */
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, consdata->vars[v]) );
-   }
+   CHECK_OKAY( consdataIncVaruses(scip, SCIPconshdlrGetData(conshdlr), SCIPconsGetData(cons)) );
 
    return SCIP_OKAY;
 }
@@ -2293,28 +2350,14 @@ DECL_CONSACTIVE(consActiveSetppc)
 static
 DECL_CONSDEACTIVE(consDeactiveSetppc)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-   CONSDATA* consdata;
-   int v;
-
-   assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPconsIsTransformed(cons));
 
    debugMessage("deactivation information for set partitioning / packing / covering constraint <%s>\n",
       SCIPconsGetName(cons));
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    /* decrease the number of uses for each variable in the constraint */
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, consdata->vars[v]) );
-   }
+   CHECK_OKAY( consdataDecVaruses(scip, SCIPconshdlrGetData(conshdlr), SCIPconsGetData(cons)) );
 
    return SCIP_OKAY;
 }
@@ -2653,7 +2696,7 @@ RETCODE SCIPincludeConshdlrSetppc(
          consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
          consDeleteSetppc, consTransSetppc, 
          consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
-         consPropSetppc, consPresolSetppc, consRescvarSetppc,
+         consPropSetppc, consPresolSetppc, consRespropSetppc,
          consLockSetppc, consUnlockSetppc,
          consActiveSetppc, consDeactiveSetppc, 
          consEnableSetppc, consDisableSetppc,

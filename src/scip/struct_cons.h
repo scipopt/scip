@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.18 2004/08/12 14:31:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.19 2004/08/24 11:58:03 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -119,7 +119,7 @@ struct Conshdlr
    DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop));      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol));    /**< presolving method */
-   DECL_CONSRESCVAR ((*consrescvar));   /**< conflict variable resolving method */
+   DECL_CONSRESPROP ((*consresprop));   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock));      /**< variable rounding lock method */
    DECL_CONSUNLOCK  ((*consunlock));    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive));    /**< activation notification method */

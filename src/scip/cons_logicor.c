@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.50 2004/08/10 14:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.51 2004/08/24 11:57:56 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -570,7 +570,7 @@ RETCODE analyzeConflict(
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
    for( v = 0; v < consdata->nvars; ++v )
    {
-      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+      CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
    }
 
    /* analyze the conflict */
@@ -789,7 +789,7 @@ RETCODE processWatchedVars(
          /* fixed remaining variable to one and disable constraint */
          debugMessage("single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
             SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
-         CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
+         CHECK_OKAY( SCIPinferBinvar(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
          assert(!infeasible);
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
@@ -1778,6 +1778,9 @@ DECL_CONSPRESOL(consPresolLogicor)
       /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
       CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
+      /**@todo find pairs of negated variables in constraint: constraint is redundant */
+      /**@todo find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
+
       if( redundant )
       {
          debugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
@@ -1828,9 +1831,9 @@ DECL_CONSPRESOL(consPresolLogicor)
 }
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESCVAR(consRescvarLogicor)
+DECL_CONSRESPROP(consRespropLogicor)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    Bool infervarfound;
@@ -1850,16 +1853,16 @@ DECL_CONSRESCVAR(consRescvarLogicor)
    /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
     * are assigned to zero
     */
-   assert(SCIPvarGetLbLocal(infervar) > 0.5); /* the inference variable must be assigned to one */
+   assert(SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5); /* the inference variable must be assigned to one */
 
    infervarfound = FALSE;
    for( v = 0; v < consdata->nvars; ++v )
    {
       if( consdata->vars[v] != infervar )
       {
-         assert(SCIPvarWasFixedEarlier(consdata->vars[v], infervar));
-         assert(SCIPvarGetUbLocal(consdata->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
-         CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+         /* the reason variable must have been assigned to zero */
+         assert(SCIPvarGetUbAtIndex(consdata->vars[v], bdchgidx, FALSE) < 0.5);
+         CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
       }
       else
       {
@@ -2173,7 +2176,7 @@ RETCODE SCIPincludeConshdlrLogicor(
          consDeleteLogicor, consTransLogicor, 
          consInitlpLogicor, consSepaLogicor, 
          consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
-         consPropLogicor, consPresolLogicor, consRescvarLogicor,
+         consPropLogicor, consPresolLogicor, consRespropLogicor,
          consLockLogicor, consUnlockLogicor,
          consActiveLogicor, consDeactiveLogicor,
          consEnableLogicor, consDisableLogicor,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.112 2004/08/10 14:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.113 2004/08/24 11:57:54 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -579,6 +579,13 @@ RETCODE consdataCreate(
    {
       CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, vals, nvars) );
+#ifndef NDEBUG
+      {
+         int v;
+         for( v = 0; v < nvars; ++v )
+            assert(vars[v] != NULL);
+      }
+#endif
    }
    else
    {
@@ -4739,8 +4746,8 @@ DECL_CONSPRESOL(consPresolLinear)
 }
 
 
-/** conflict variable resolving method of constraint handler */
-#define consRescvarLinear NULL
+/** propagation conflict resolving method of constraint handler */
+#define consRespropLinear NULL
 
 
 /** variable rounding lock method of constraint handler */
@@ -4942,7 +4949,7 @@ RETCODE SCIPincludeConshdlrLinear(
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
          consDeleteLinear, consTransLinear, 
          consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
-         consPropLinear, consPresolLinear, consRescvarLinear,
+         consPropLinear, consPresolLinear, consRespropLinear,
          consLockLinear, consUnlockLinear,
          consActiveLinear, consDeactiveLinear, 
          consEnableLinear, consDisableLinear,

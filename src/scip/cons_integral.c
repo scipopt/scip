@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.30 2004/07/07 08:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.31 2004/08/24 11:57:53 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -171,8 +171,8 @@ DECL_CONSCHECK(consCheckIntegral)
 #define consPresolIntegral NULL
 
 
-/** conflict variable resolving method of constraint handler */
-#define consRescvarIntegral NULL
+/** propagation conflict resolving method of constraint handler */
+#define consRespropIntegral NULL
 
 
 /** variable rounding lock method of constraint handler */
@@ -226,7 +226,7 @@ RETCODE SCIPincludeConshdlrIntegral(
          consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
          consDeleteIntegral, consTransIntegral, consInitlpIntegral,
          consSepaIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
-         consPropIntegral, consPresolIntegral, consRescvarIntegral,
+         consPropIntegral, consPresolIntegral, consRespropIntegral,
          consLockIntegral, consUnlockIntegral,
          consActiveIntegral, consDeactiveIntegral, 
          consEnableIntegral, consDisableIntegral,

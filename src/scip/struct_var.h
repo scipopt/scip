@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.17 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.18 2004/08/24 11:58:04 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -62,11 +62,11 @@ struct BranchingData
    Real             lpsolval;           /**< sol val of var in last LP prior to bound change, or SCIP_INVALID if unknown */
 };
 
-/** data for inferred bound changes */
+/** data for infered bound changes */
 struct InferenceData
 {
    VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
-   CONS*            cons;               /**< constraint that inferred this bound change, or NULL */
+   CONS*            cons;               /**< constraint that infered this bound change, or NULL */
    int              info;               /**< user information for inference to help resolving the conflict */
 };
 
@@ -74,18 +74,38 @@ struct InferenceData
 struct BoundChg
 {
    Real             newbound;           /**< new value for bound */
-   Real             oldbound;           /**< old value for bound */
    union
    {
       BRANCHINGDATA branchingdata;      /**< data for branching decisions */
-      INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
+      INFERENCEDATA inferencedata;      /**< data for infered bound changes */
    } data;
    VAR*             var;                /**< active variable to change the bounds for */
+   unsigned int     boundchgtype:1;     /**< bound change type: branching decision or infered bound change */
    unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
-   unsigned int     boundchgtype:1;     /**< bound change type: branching decision or inferred bound change */
+   unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
 };
 
-/** tracks changes of the variable's domains (static arrays, bound changes only) */
+/** bound change index representing the time of the bound change in path from root to current node */
+struct BdChgIdx
+{
+   int              depth;              /**< depth of node where the bound change was created */
+   int              pos;                /**< position of bound change in node's domchg array */
+};
+
+/** bound change information to track bound changes from root node to current node */
+struct BdChgInfo
+{
+   Real             oldbound;           /**< old value for bound */
+   Real             newbound;           /**< new value for bound */
+   VAR*             var;                /**< active variable that changed the bounds */
+   INFERENCEDATA    inferencedata;      /**< data for infered bound changes */
+   BDCHGIDX         bdchgidx;           /**< bound change index in path from root to current node */
+   unsigned int     boundchgtype:1;     /**< bound change type: branching decision or infered bound change */
+   unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
+   unsigned int     inferboundtype:1;   /**< type of bound for inference var (see inference data): lower or upper bound */
+};
+
+/** tracks changes of the variables' domains (static arrays, bound changes only) */
 struct DomChgBound
 {
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
@@ -93,7 +113,7 @@ struct DomChgBound
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
 };
 
-/** tracks changes of the variable's domains (static arrays, bound and hole changes) */
+/** tracks changes of the variables' domains (static arrays, bound and hole changes) */
 struct DomChgBoth
 {
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
@@ -103,7 +123,7 @@ struct DomChgBoth
    int              nholechgs;          /**< number of hole list changes */
 };
 
-/** tracks changes of the variable's domains (dynamic arrays) */
+/** tracks changes of the variables' domains (dynamic arrays) */
 struct DomChgDyn
 {
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
@@ -115,7 +135,7 @@ struct DomChgDyn
    int              holechgssize;       /**< size of hole changes array */
 };
 
-/** tracks changes of the variable's domains */
+/** tracks changes of the variables' domains */
 union DomChg
 {
    DOMCHGBOUND      domchgbound;        /**< bound changes */
@@ -204,8 +224,8 @@ struct Var
    IMPLICS*         lbimplics;          /**< implications z >=/<= c from lower bound information x >= b */
    IMPLICS*         ubimplics;          /**< implications z >=/<= c from upper bound information x <= b */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
-   VAR*             infervar;           /**< variable whose fixing was deduced (parent of var, or var itself) */
-   CONS*            infercons;          /**< constraint that deduced the fixing (binary variables only), or NULL */
+   BDCHGINFO*       lbchginfos;         /**< bound change informations for lower bound changes from root to current node */
+   BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */
    HISTORY*         history;            /**< branching and inference history information */
    HISTORY*         historycrun;        /**< branching and inference history information for current run */
    int              index;              /**< consecutively numbered variable identifier */
@@ -220,11 +240,11 @@ struct Var
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
    int              branchpriority;     /**< priority of the variable for branching */
-   int              inferinfo;          /**< user information for inference to help resolving the conflict */
-   int              fixdepth;           /**< depth in the tree, where the binary variable was fixed, or -1 */
-   int              fixindex;           /**< index of the binary variable's fixing in its depth level, or -1 */
+   int              lbchginfossize;     /**< available slots in lbchginfos array */
+   int              nlbchginfos;        /**< number of lower bound changes from root node to current node */
+   int              ubchginfossize;     /**< available slots in ubchginfos array */
+   int              nubchginfos;        /**< number of upper bound changes from root node to current node */
    int              conflictsetcount;   /**< number of last conflict set, this variable was member of */
-   BOUNDCHGTYPE     boundchgtype;       /**< bound change type (branching or inference) of binary variable's fixing */
    unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */

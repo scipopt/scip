@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.71 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.72 2004/08/24 11:58:07 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -65,7 +65,7 @@ RETCODE SCIPboundchgApply(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              depth,              /**< depth in the tree, where the bound change takes place */
-   int              index               /**< index of the bound change in the bound change array */
+   int              pos                 /**< position of the bound change in its bound change array */
    );
 
 /** undoes single bound change */
@@ -130,13 +130,13 @@ RETCODE SCIPdomchgAddBoundchg(
    STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
-   Real             oldbound,           /**< old value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   int              inferinfo           /**< user information for inference to help resolving the conflict */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    );
 
 /** adds hole change to domain changes */
@@ -385,25 +385,25 @@ void SCIPvarAdjustUb(
    Real*            ub                  /**< pointer to upper bound to adjust */
    );
 
-/** sets global lower bound of variable; if possible, adjusts bound to integral value */
+/** changes global lower bound of variable; if possible, adjusts bound to integral value */
 extern
-RETCODE SCIPvarSetLbGlobal(
+RETCODE SCIPvarChgLbGlobal(
    VAR*             var,                /**< problem variable to change */
    SET*             set,                /**< global SCIP settings */
    Real             newbound            /**< new bound for variable */
    );
 
-/** sets global upper bound of variable; if possible, adjusts bound to integral value */
+/** changes global upper bound of variable; if possible, adjusts bound to integral value */
 extern
-RETCODE SCIPvarSetUbGlobal(
+RETCODE SCIPvarChgUbGlobal(
    VAR*             var,                /**< problem variable to change */
    SET*             set,                /**< global SCIP settings */
    Real             newbound            /**< new bound for variable */
    );
 
-/** sets global bound of variable; if possible, adjusts bound to integral value */
+/** changes global bound of variable; if possible, adjusts bound to integral value */
 extern
-RETCODE SCIPvarSetBdGlobal(
+RETCODE SCIPvarChgBdGlobal(
    VAR*             var,                /**< problem variable to change */
    SET*             set,                /**< global SCIP settings */
    Real             newbound,           /**< new bound for variable */
@@ -422,13 +422,7 @@ RETCODE SCIPvarChgLbLocal(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound,           /**< new bound for variable */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   int              inferinfo,          /**< user information for inference to help resolving the conflict */
-   int              fixdepth,           /**< depth in the tree, where this bound change took place, or -1 */
-   int              fixindex,           /**< bound change index for each node representing the order of changes, or -1 */
-   BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
+   Real             newbound            /**< new bound for variable */
    );
 
 /** changes current local upper bound of variable; if possible, adjusts bound to integral value; stores inference
@@ -443,13 +437,7 @@ RETCODE SCIPvarChgUbLocal(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound,           /**< new bound for variable */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   int              inferinfo,          /**< user information for inference to help resolving the conflict */
-   int              fixdepth,           /**< depth in the tree, where this bound change took place, or -1 */
-   int              fixindex,           /**< bound change index for each node representing the order of changes, or -1 */
-   BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
+   Real             newbound            /**< new bound for variable */
    );
 
 /** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
@@ -457,58 +445,6 @@ RETCODE SCIPvarChgUbLocal(
  */
 extern
 RETCODE SCIPvarChgBdLocal(
-   VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound,           /**< new bound for variable */
-   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
-   int              inferinfo,          /**< user information for inference to help resolving the conflict */
-   int              fixdepth,           /**< depth in the tree, where this bound change took place, or -1 */
-   int              fixindex,           /**< bound change index for each node representing the order of changes, or -1 */
-   BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
-   );
-
-/** sets current local lower bound of variable; if possible, adjusts bound to integral value; doesn't change the
- *  inference information stored in the variable
- */
-extern
-RETCODE SCIPvarSetLbLocal(
-   VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound            /**< new bound for variable */
-   );
-
-/** sets current local upper bound of variable; if possible, adjusts bound to integral value; doesn't change the
- *  inference information stored in the variable
- */
-extern
-RETCODE SCIPvarSetUbLocal(
-   VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound            /**< new bound for variable */
-   );
-
-/** sets current local bound of variable; if possible, adjusts bound to integral value; doesn't change the
- *  inference information stored in the variable
- */
-extern
-RETCODE SCIPvarSetBdLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -634,25 +570,28 @@ void SCIPvarChgBranchPriority(
    int              branchpriority      /**< branching priority of the variable */
    );
 
-/** gets objective value of variable in current dive */
+/** gets objective value of variable in current LP; the value can be different from the bound stored in the variable's own
+ *  data due to diving, that operate only on the LP without updating the variables
+ */
 extern
-Real SCIPvarGetObjDive(
-   VAR*             var,                /**< problem variable */
-   SET*             set                 /**< global SCIP settings */
+Real SCIPvarGetObjLP(
+   VAR*             var                 /**< problem variable */
    );
 
-/** gets lower bound of variable in current dive */
+/** gets lower bound of variable in current LP; the bound can be different from the bound stored in the variable's own
+ *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
+ */
 extern
-Real SCIPvarGetLbDive(
-   VAR*             var,                /**< problem variable */
-   SET*             set                 /**< global SCIP settings */
+Real SCIPvarGetLbLP(
+   VAR*             var                 /**< problem variable */
    );
 
-/** gets upper bound of variable in current dive */
+/** gets upper bound of variable in current LP; the bound can be different from the bound stored in the variable's own
+ *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
+ */
 extern
-Real SCIPvarGetUbDive(
-   VAR*             var,                /**< problem variable */
-   SET*             set                 /**< global SCIP settings */
+Real SCIPvarGetUbLP(
+   VAR*             var                 /**< problem variable */
    );
 
 /** remembers the current solution as root solution in the problem variables */

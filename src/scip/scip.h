@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.154 2004/08/13 09:16:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.155 2004/08/24 11:58:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -521,7 +521,7 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
-   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
    DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
@@ -1650,20 +1650,49 @@ RETCODE SCIPtightenVarUb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** fixes binary variable to given value; in problem creation or preprocessing stage, the variable is converted
- *  into a fixed variable, and the given inference constraint is ignored; in solving stage, the variable is fixed
- *  locally at the given node, and the given inference constraint is stored, such that the conflict analysis is
- *  able to find out the reason for the deduction of the variable fixing
+/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
+ *  if possible, adjusts bound to integral value; the given inference constraint is stored, such that the conflict
+ *  analysis is able to find out the reason for the deduction of the bound change
  */
 extern
-RETCODE SCIPinferBinVar(
+RETCODE SCIPinferVarLb(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< binary variable, that is deduced to a fixed value */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   CONS*            infercons,          /**< constraint that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
+ *  if possible, adjusts bound to integral value; the given inference constraint is stored, such that the conflict
+ *  analysis is able to find out the reason for the deduction of the bound change
+ */
+extern
+RETCODE SCIPinferVarUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   CONS*            infercons,          /**< constraint that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in active node;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason for the
+ *  deduction of the fixing
+ */
+extern
+RETCODE SCIPinferBinvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable to fix */
    Bool             fixedval,           /**< value to fix binary variable to */
    CONS*            infercons,          /**< constraint that deduced the fixing */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
-   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
    );
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
@@ -2008,30 +2037,62 @@ VARDATA* SCIPgetVarData(
 /**@name Conflict Analysis Methods */
 /**@{ */
 
-/** initializes the conflict analysis by clearing the conflict variable candidate queue */
+/** initializes the conflict analysis by clearing the conflict candidate queue */
 extern
 RETCODE SCIPinitConflictAnalysis(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
- *  one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
- *      whose current assignment lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
- *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
- *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
+/** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each lower bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictLb() should be called
+ *      for each lower bound, whose current assignment lead to the deduction of the given conflict bound.
  */
 extern
-RETCODE SCIPaddConflictVar(
+RETCODE SCIPaddConflictLb(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< conflict variable to add to conflict candidate queue */
+   VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
+   BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+                                         *   conflicting bound was valid, NULL for current local bound */
    );
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set;
- *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictVar()
- *  is valid for the whole subtree; if the conflict was found by a violated constraint,
- *  use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
+/** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each upper bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called
+ *      for each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+extern
+RETCODE SCIPaddConflictUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+                                         *   conflicting bound was valid, NULL for current local bound */
+   );
+
+/** adds changed bound of fixed binary variable to the conflict analysis' candidate storage;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBinvar() should be called for each fixed binary
+ *      variable that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBinvar() should be called
+ *      for each binary variable, whose current fixing lead to the deduction of the given conflict bound.
+ */
+extern
+RETCODE SCIPaddConflictBinvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
+   );
+
+/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
+ *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set;
+ *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
+ *  SCIPaddConflictUb() and SCIPaddConflictBinvar() is valid for the whole subtree; if the conflict was found by a
+ *  violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct
+ *  valid depth is used
  */
 extern
 RETCODE SCIPanalyzeConflict(
@@ -2040,10 +2101,12 @@ RETCODE SCIPanalyzeConflict(
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
+ *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set;
  *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
- *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictVar())
+ *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
+ *  and SCIPaddConflictBinvar())
  */
 extern
 RETCODE SCIPanalyzeConflictCons(

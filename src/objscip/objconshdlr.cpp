@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.15 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.16 2004/08/24 11:57:58 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -333,9 +333,9 @@ DECL_CONSPRESOL(consPresolObj)
 }
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 static
-DECL_CONSRESCVAR(consRescvarObj)
+DECL_CONSRESPROP(consRespropObj)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
 
@@ -344,7 +344,8 @@ DECL_CONSRESCVAR(consRescvarObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_rescvar(scip, conshdlr, cons, infervar, result) );
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_resprop(scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx,
+         result) );
 
    return SCIP_OKAY;
 }
@@ -497,7 +498,7 @@ RETCODE SCIPincludeObjConshdlr(
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,
          consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
-         consPropObj, consPresolObj, consRescvarObj,
+         consPropObj, consPresolObj, consRespropObj,
          consLockObj, consUnlockObj,
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,

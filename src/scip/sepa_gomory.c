@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.26 2004/08/03 16:02:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.27 2004/08/24 11:58:02 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -64,6 +64,7 @@ struct SepaData
  * Callback methods
  */
 
+/** destructor of separator to free user data (called when SCIP is exiting) */
 static
 DECL_SEPAFREE(SCIPsepaFreeGomory)
 {  /*lint --e{715}*/
@@ -82,6 +83,7 @@ DECL_SEPAFREE(SCIPsepaFreeGomory)
    return SCIP_OKAY;
 }
 
+/** execution method of separator */
 static
 DECL_SEPAEXEC(SCIPsepaExecGomory)
 {  /*lint --e{715}*/

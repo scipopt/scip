@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.8 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.9 2004/08/24 11:57:57 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -753,8 +753,8 @@ DECL_CONSPRESOL(consPresolVarbound)
 }
 
 
-/** conflict variable resolving method of constraint handler */
-#define consRescvarVarbound NULL
+/** propagation conflict resolving method of constraint handler */
+#define consRespropVarbound NULL
 
 
 /** variable rounding lock method of constraint handler */
@@ -972,7 +972,7 @@ RETCODE SCIPincludeConshdlrVarbound(
          consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
          consDeleteVarbound, consTransVarbound, consInitlpVarbound,
          consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
-         consPropVarbound, consPresolVarbound, consRescvarVarbound,
+         consPropVarbound, consPresolVarbound, consRespropVarbound,
          consLockVarbound, consUnlockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,

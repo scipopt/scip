@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.195 2004/08/13 09:16:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.196 2004/08/24 11:58:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1021,7 +1021,7 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
-   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSRESPROP ((*consresprop)),   /**< propagation conflict resolving method */
    DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
    DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
@@ -1040,7 +1040,7 @@ RETCODE SCIPincludeConshdlr(
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, needscons, 
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
          consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
-         consrescvar, conslock, consunlock, consactive, consdeactive, consenable, consdisable, consprint,
+         consresprop, conslock, consunlock, consactive, consdeactive, consenable, consdisable, consprint,
          conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
    
@@ -3988,8 +3988,12 @@ RETCODE SCIPgetVarStrongbranch(
    /* call strong branching for column */
    CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, down, up, lperror) );
 
-   /* analyze infeasible strong branching sub problems */
+   /* analyze infeasible strong branching sub problems:
+    * because the strong branching's bound change is necessary for infeasibility, it cannot be undone;
+    * therefore, infeasible strong branchings on non-binary variables will not produce a valid conflict clause
+    */
    if( scip->set->usesbconflict && scip->set->nconflicthdlrs > 0
+      && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
       && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp)
       && scip->tree->actnode->depth > 0 && !(*lperror) )
    {
@@ -4152,16 +4156,16 @@ RETCODE SCIPchgVarLb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4191,15 +4195,15 @@ RETCODE SCIPchgVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
-      CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
-      CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
 
@@ -4283,6 +4287,7 @@ RETCODE SCIPtightenVarLb(
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
    
    if( SCIPsetIsFeasLE(scip->set, newbound, lb) )
    {
@@ -4300,9 +4305,9 @@ RETCODE SCIPtightenVarLb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4348,6 +4353,7 @@ RETCODE SCIPtightenVarUb(
    /* get current bounds */
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
    
    if( SCIPsetIsFeasGE(scip->set, newbound, ub) )
    {
@@ -4365,9 +4371,9 @@ RETCODE SCIPtightenVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4387,19 +4393,156 @@ RETCODE SCIPtightenVarUb(
    return SCIP_OKAY;
 }
 
-/** fixes binary variable to given value; in problem creation or preprocessing stage, the variable is converted
- *  into a fixed variable, and the given inference constraint is ignored; in solving stage, the variable is fixed
- *  locally at the given node, and the given inference constraint is stored, such that the conflict analysis is
- *  able to find out the reason for the deduction of the variable fixing
+/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
+ *  if possible, adjusts bound to integral value; the given inference constraint is stored, such that the conflict
+ *  analysis is able to find out the reason for the deduction of the bound change
  */
-RETCODE SCIPinferBinVar(
+RETCODE SCIPinferVarLb(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< binary variable, that is deduced to a fixed value */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   CONS*            infercons,          /**< constraint that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPinferVarLb", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   SCIPvarAdjustLb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+   
+   if( SCIPsetIsFeasLE(scip->set, newbound, lb) )
+   {
+      if( tightened != NULL )
+         *tightened = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, 
+            infercons, inferinfo) );
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
+ *  if possible, adjusts bound to integral value; the given inference constraint is stored, such that the conflict
+ *  analysis is able to find out the reason for the deduction of the bound change
+ */
+RETCODE SCIPinferVarUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound,           /**< new value for bound */
+   CONS*            infercons,          /**< constraint that deduced the bound change */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   Real lb;
+   Real ub;
+
+   assert(infeasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPinferVarUb", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+
+   SCIPvarAdjustUb(var, scip->set, &newbound);
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+   
+   if( SCIPsetIsFeasGE(scip->set, newbound, ub) )
+   {
+      if( tightened != NULL )
+         *tightened = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
+      break;
+
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, 
+            infercons, inferinfo) );
+      break;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in active node;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason for the
+ *  deduction of the fixing
+ */
+RETCODE SCIPinferBinvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable to fix */
    Bool             fixedval,           /**< value to fix binary variable to */
    CONS*            infercons,          /**< constraint that deduced the fixing */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
-   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
    )
 {
    Real lb;
@@ -4409,7 +4552,7 @@ RETCODE SCIPinferBinVar(
    assert(fixedval == TRUE || fixedval == FALSE);
    assert(infeasible != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPinferBinVar", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPinferBinvar", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    *infeasible = FALSE;
    if( tightened != NULL )
@@ -4447,7 +4590,7 @@ RETCODE SCIPinferBinVar(
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-            scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -5489,7 +5632,7 @@ VARDATA* SCIPgetVarData(
  * conflict analysis methods
  */
 
-/** initializes the conflict analysis by clearing the conflict variable candidate queue */
+/** initializes the conflict analysis by clearing the conflict candidate queue */
 RETCODE SCIPinitConflictAnalysis(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -5501,30 +5644,86 @@ RETCODE SCIPinitConflictAnalysis(
    return SCIP_OKAY;
 }
 
-/** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
- *  one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
- *      whose current assignment lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
- *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
- *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
+/** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each lower bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictLb() should be called
+ *      for each lower bound, whose current assignment lead to the deduction of the given conflict bound.
  */
-RETCODE SCIPaddConflictVar(
+RETCODE SCIPaddConflictLb(
    SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< conflict variable to add to conflict candidate queue */
+   VAR*             var,                /**< variable whose lower bound should be added to conflict candidate queue */
+   BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+                                         *   conflicting bound was valid, NULL for current local bound */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConflictVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAddVar(scip->conflict, var) );
+   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
+         var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
 
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set;
- *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictVar()
- *  is valid for the whole subtree; if the conflict was found by a violated constraint,
- *  use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
+/** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each upper bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called
+ *      for each upper bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+RETCODE SCIPaddConflictUb(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+                                         *   conflicting bound was valid, NULL for current local bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
+         var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+
+   return SCIP_OKAY;
+}
+
+/** adds changed bound of fixed binary variable to the conflict analysis' candidate storage;
+ *  this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBinvar() should be called for each fixed binary
+ *      variable that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBinvar() should be called
+ *      for each binary variable, whose current fixing lead to the deduction of the given conflict bound.
+ */
+RETCODE SCIPaddConflictBinvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictBinvar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   if( SCIPvarGetLbLocal(var) > 0.5 )
+   {
+      CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
+            var, SCIP_BOUNDTYPE_LOWER, NULL) );
+   }
+   else if( SCIPvarGetUbLocal(var) < 0.5 )
+   {
+      CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
+            var, SCIP_BOUNDTYPE_UPPER, NULL) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
+ *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set;
+ *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
+ *  SCIPaddConflictUb() and SCIPaddConflictBinvar() is valid for the whole subtree; if the conflict was found by a
+ *  violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct
+ *  valid depth is used
  */
 RETCODE SCIPanalyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
@@ -5540,10 +5739,12 @@ RETCODE SCIPanalyzeConflict(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
+ *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
+ *  resulting conflict set;
  *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
- *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictVar())
+ *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
+ *  and SCIPaddConflictBinvar())
  */
 RETCODE SCIPanalyzeConflictCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6304,7 +6505,7 @@ Real SCIPgetVarObjDive(
       abort();
    }
 
-   return SCIPvarGetObjDive(var, scip->set);
+   return SCIPvarGetObjLP(var);
 }
 
 /** gets variable's lower bound in current dive */
@@ -6321,7 +6522,7 @@ Real SCIPgetVarLbDive(
       abort();
    }
 
-   return SCIPvarGetLbDive(var, scip->set);
+   return SCIPvarGetLbLP(var);
 }
 
 /** gets variable's upper bound in current dive */
@@ -6338,7 +6539,7 @@ Real SCIPgetVarUbDive(
       abort();
    }
 
-   return SCIPvarGetUbDive(var, scip->set);
+   return SCIPvarGetUbLP(var);
 }
 
 /** solves the LP of the current dive */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.21 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.22 2004/08/24 11:57:58 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -312,10 +312,10 @@ DECL_CONSPRESOL(consPresolXxx)
 #endif
 
 
-/** conflict variable resolving method of constraint handler */
+/** propagation conflict resolving method of constraint handler */
 #if 0
 static
-DECL_CONSRESCVAR(consRescvarXxx)
+DECL_CONSRESPROP(consRespropXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
@@ -323,7 +323,7 @@ DECL_CONSRESCVAR(consRescvarXxx)
    return SCIP_OKAY;
 }
 #else
-#define consRescvarXxx NULL
+#define consRespropXxx NULL
 #endif
 
 
@@ -484,7 +484,7 @@ RETCODE SCIPincludeConshdlrXxx(
          consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
          consDeleteXxx, consTransXxx, consInitlpXxx,
          consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
-         consPropXxx, consPresolXxx, consRescvarXxx,
+         consPropXxx, consPresolXxx, consRespropXxx,
          consLockXxx, consUnlockXxx,
          consActiveXxx, consDeactiveXxx, 
          consEnableXxx, consDisableXxx,

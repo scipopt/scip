@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.102 2004/08/10 15:00:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.103 2004/08/24 11:58:04 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -885,6 +885,7 @@ RETCODE SCIPnodeAddBoundinfer(
    )
 {
    VAR* infervar;
+   BOUNDTYPE inferboundtype;
    Real oldbound;
 
    assert(node != NULL);
@@ -899,6 +900,7 @@ RETCODE SCIPnodeAddBoundinfer(
 
    /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
    infervar = var;
+   inferboundtype = boundtype;
    CHECK_OKAY( SCIPvarGetProbvarBound(&var, &newbound, &boundtype) );
 
    assert(var != NULL);
@@ -946,9 +948,8 @@ RETCODE SCIPnodeAddBoundinfer(
       assert(node->active);
 
       debugMessage(" -> bound change in root node: perform global bound change\n");
-      CHECK_OKAY( SCIPvarSetBdGlobal(var, set, newbound, boundtype) );
-      CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound, boundtype,
-                     NULL, NULL, 0, 0, -1, SCIP_BOUNDCHGTYPE_INFERENCE) );
+      CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
+      CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound, boundtype) );
 
       stat->nrootboundchgs++;
       stat->nrootboundchgsrun++;
@@ -984,8 +985,8 @@ RETCODE SCIPnodeAddBoundinfer(
 
       /* remember the bound change as branching decision (infervar/infercons are not important: use NULL) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
-                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
-                     lpsolval, NULL, NULL, 0) );
+            var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
+            lpsolval, NULL, NULL, 0, inferboundtype) );
       
       /* update the child's lower bound */
       if( set->exactsolve )
@@ -1002,14 +1003,15 @@ RETCODE SCIPnodeAddBoundinfer(
    {
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
-                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, 
-                     0.0, infervar, infercons, inferinfo) );
+            var, newbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, 
+            0.0, infervar, infercons, inferinfo, inferboundtype) );
 
       /* update the inference history */
       if( stat->lastbranchvar != NULL )
       {
          CHECK_OKAY( SCIPvarIncNInferences(stat->lastbranchvar, stat, stat->lastbranchdir) );
       }
+      /**@todo if last branching variable is unknown, retrieve it from the nodes' boundchg arrays */
    }
 
    assert(node->domchg != NULL);
@@ -1018,7 +1020,6 @@ RETCODE SCIPnodeAddBoundinfer(
    assert(node->domchg->domchgdyn.nboundchgs > 0);
    assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
    assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].newbound == newbound); /*lint !e777*/
-   assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].oldbound == oldbound); /*lint !e777*/
    
    /* if node is active, apply the bound change immediately */
    if( node->active )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.8 2004/07/07 08:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.9 2004/08/24 11:57:52 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -430,8 +430,8 @@ DECL_CONSPRESOL(consPresolConjunction)
 }
 
 
-/** conflict variable resolving method of constraint handler */
-#define consRescvarConjunction NULL
+/** propagation conflict resolving method of constraint handler */
+#define consRespropConjunction NULL
 
 
 /** variable rounding lock method of constraint handler */
@@ -536,7 +536,7 @@ RETCODE SCIPincludeConshdlrConjunction(
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
          consDeleteConjunction, consTransConjunction, consInitlpConjunction,
          consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
-         consPropConjunction, consPresolConjunction, consRescvarConjunction,
+         consPropConjunction, consPresolConjunction, consRespropConjunction,
          consLockConjunction, consUnlockConjunction,
          consActiveConjunction, consDeactiveConjunction, 
          consEnableConjunction, consDisableConjunction,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.50 2004/08/12 14:59:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.51 2004/08/24 11:57:49 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -23,10 +23,10 @@
  * This file implements a conflict analysis method like the one used in modern
  * SAT solvers like zchaff. The algorithm works as follows:
  * 
- * Given is a set of binary variables that are not allowed being set to their
- * current values simultaneously (e.g. a single clause, i.e. a logicor constraint),
- * rendering the current node infeasible.
- * The goal is to deduce a different clause -- a conflict clause -- representing
+ * Given is a set of bound changes that are not allowed being applied simultaneously,
+ * because they render the current node infeasible (e.g. because a single constraint
+ * is infeasible in the these bounds, or because the LP relaxation is infeasible).
+ * The goal is to deduce a clause on binary variables -- a conflict clause -- representing
  * the "reason" for this conflict, i.e. the branching decisions or the deductions
  * (applied e.g. in domain propagation) that lead to the conflict. This clause
  * can then be added to the constraint set to help cutting off similar parts
@@ -35,44 +35,49 @@
  * locally valid constraint. In this case, the resulting conflict clause is
  * also locally valid in the same depth as the conflict detecting constraint.
  *
- *  1. Put all the given variables to a priority queue, which is ordered,
- *     such that the variable that was fixed last due to branching or deduction
+ *  1. Put all the given bound changes to a priority queue, which is ordered,
+ *     such that the bound change that was applied last due to branching or deduction
  *     is at the top of the queue. The variables in the queue are always active
- *     problem variables.
+ *     problem variables. Because non-binary variables must not exist in the final
+ *     conflict clause, they are resolved first and put on the priority queue prior
+ *     to the binary variables.
  *     Create an empty conflict set.
- *  2. Remove the top variable v from the priority queue.
- *  3. (a) If the remaining queue is non-empty, and variable w (the one that is now
- *         on the top of the queue) was fixed at the same depth level as v, and if
- *         the assignment to v was a deduction with known inference reason, and if
- *         the inference constraint's valid depth is smaller or equal to the
- *         conflict detecting constraint's valid depth:
- *          - Resolve variable v by asking the constraint that infered the
- *            assignment of v to put all the variables on the priority queue, that
- *            when assigned to their current values lead to the deduction of v's
- *            current value.
- *            Note that these variables have at most the same inference depth
- *            level as variable v, and were deduced earlier than v.
- *     (b) Otherwise, the assignment to variable v was a branching decision or
- *         a deduction with missing inference reason, or the inference constraint's
- *         validity is more local than the one of the conflict detecing constraint.
- *          - Put v or the negation of v into the conflict set, depending on which
- *            of them is currently fixed to FALSE.
- *            Note that if v was a branching variable, all deduced variables remaining
- *            in the priority queue have smaller inference depth level than v, since
- *            deductions are always applied after the branching decisions. However,
- *            there is the possibility, that v was a deduced variable, where the
- *            inference reason was not given or the inference constraint was too local.
- *            With this lack of information, we must treat the deduced variable like
- *            a branching variable, and there may exist other deduced variables of the
- *            same inference depth level in the priority queue.
+ *  2. Remove the top bound change b from the priority queue.
+ *  3. (a) If the remaining queue is non-empty, and bound change b' (the one that is now
+ *         on the top of the queue) was applied at the same depth level as b, and if
+ *         b was a deduction with known inference reason, and if the inference constraint's
+ *         valid depth is smaller or equal to the conflict detecting constraint's valid
+ *         depth:
+ *          - Resolve bound change b by asking the constraint that infered the
+ *            bound change to put all the bound changes on the priority queue, that
+ *            lead to the deduction of b.
+ *            Note that these bound changes have at most the same inference depth
+ *            level as b, and were deduced earlier than b.
+ *     (b) Otherwise, the bound change b was a branching decision or a deduction with
+ *         missing inference reason, or the inference constraint's validity is more local
+ *         than the one of the conflict detecing constraint.
+ *          - If b was a bound change on a non-binary variable, abort -- unresolved
+ *            bound changes on non-binary variables cannot be handled, because the
+ *            final conflict set must consist of only binary variables.
+ *          - Otherwise, put the binary variable that was changed, or the negation of it
+ *            into the conflict set, depending on which of them is currently fixed to
+ *            FALSE.
+ *            Note that if the bound change was a branching, all deduced bound changes
+ *            remaining in the priority queue have smaller inference depth level than b,
+ *            since deductions are always applied after the branching decisions. However,
+ *            there is the possibility, that b was a deduction, where the inference
+ *            reason was not given or the inference constraint was too local.
+ *            With this lack of information, we must treat the deduced bound change like
+ *            a branching, and there may exist other deduced bound changes of the same
+ *            inference depth level in the priority queue.
  *  4. If priority queue is non-empty, goto step 2.
  *  5. The conflict set represents the conflict clause saying that at least one
- *     of the conflict variables must be set to TRUE.
+ *     of the binary conflict variables must be set to TRUE.
  *     The conflict set is then passed to the conflict handlers, that may create 
  *     a corresponding constraint (e.g. a logicor constraint) out of these conflict
  *     variables and add it to the problem.
  *
- * If all deduced variables come with (global) inference information, the resulting
+ * If all deduced bound changes come with (global) inference information, the resulting
  * conflict set has the property, that for each depth level at most one variable
  * assigned at that level is member of the conflict set. This conflict variable
  * is the first unique implication point of its depth level (FUIP).
@@ -80,18 +85,16 @@
  * The user has to do the following to get the conflict analysis running in its
  * current implementation:
  *  - A constraint handler supporting the conflict analysis must implement
- *    the CONSRESCVAR call, that processes a candidate variable v and puts all
- *    the reason variables leading to the assignment of v with a call to
- *    SCIPaddConflictVar() on the conflict queue (algorithm step 3.(a)).
- *  - If the current assignment of the binary variables lead to a deduction of
- *    a different binary variable (e.g. in domain propagation), the constraint
- *    handler should call SCIPinferBinVar(), thus providing the constraint that
- *    infered the assignment to SCIP.
- *  - If an (with the current assignment) infeasible constraint is detected,
- *    the constraint handler should
+ *    the CONSRESPROP call, that processes a bound change inference b and puts all
+ *    the reason bounds leading to the application of b with a call to
+ *    SCIPaddConflictBound() on the conflict queue (algorithm step 3.(a)).
+ *  - If the current bounds lead to a deduction of a bound change (e.g. in domain
+ *    propagation), the constraint handler should call SCIPinferVarLb() or
+ *    SCIPinferVarUb(), thus providing the constraint that infered the bound change.
+ *  - If an (in the current bounds) infeasible constraint is detected, the constraint
+ *    handler should
  *     1. call SCIPinitConflictAnalysis() to initialize the conflict queue,
- *     2. call SCIPaddConflictVar() for each variable in the infeasible
- *        constraint,
+ *     2. call SCIPaddConflictBound() for each bound that lead to the conflict,
  *     3. call SCIPanalyzeConflictCons() to analyze the conflict and add an
  *        appropriate conflict constraint.
  */
@@ -118,36 +121,6 @@
 #include "cons.h"
 
 #include "struct_conflict.h"
-
-
-
-/*
- * dynamic memory arrays
- */
-
-/** resizes conflictvars array to be able to store at least num constraints */
-static
-RETCODE conflictEnsureConflictvarsMem(
-   CONFLICT*        conflict,           /**< conflict analysis data */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimal number of slots in array */
-   )
-{
-   assert(conflict != NULL);
-
-   if( num > conflict->conflictvarssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&conflict->conflictvars, newsize) );
-      conflict->conflictvarssize = newsize;
-   }
-   assert(num <= conflict->conflictvarssize);
-
-   return SCIP_OKAY;
-}
-
 
 
 
@@ -409,86 +382,95 @@ Bool SCIPconflicthdlrIsInitialized(
  * Propagation Conflict Analysis
  */
 
-/** compares two binary variables w.r.t. their inference information, such that variables infered later are
- *  ordered prior to variables infered earlier
+/** resizes conflictvars array to be able to store at least num constraints */
+static
+RETCODE conflictEnsureConflictvarsMem(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   SET*             set,                /**< global SCIP settings */
+   int              num                 /**< minimal number of slots in array */
+   )
+{
+   assert(conflict != NULL);
+
+   if( num > conflict->conflictvarssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&conflict->conflictvars, newsize) );
+      conflict->conflictvarssize = newsize;
+   }
+   assert(num <= conflict->conflictvarssize);
+
+   return SCIP_OKAY;
+}
+
+/** puts given variable locally fixed binary or its negation into conflict set, depending which one is fixed to zero */
+static
+RETCODE conflictAddConflictVar(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR*             var                 /**< variable that should enter the conflict set */
+   )
+{
+   assert(conflict != NULL);
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
+   assert(SCIPvarGetLbLP(var) > 0.5 || SCIPvarGetUbLP(var) < 0.5);
+               
+   /* choose between variable or its negation, such that the literal is fixed to FALSE */
+   if( SCIPvarGetLbLP(var) > 0.5 )
+   {
+      /* variable is fixed to TRUE -> use the negation */
+      CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
+   }
+   assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
+   assert(SCIPsetIsZero(set, SCIPvarGetLbLP(var)));
+
+   debugMessage("putting variable <%s> to conflict set\n", SCIPvarGetName(var));
+
+   /* put variable to conflict set */
+   CHECK_OKAY( conflictEnsureConflictvarsMem(conflict, set, conflict->nconflictvars+1) );
+   conflict->conflictvars[conflict->nconflictvars] = var;
+   conflict->nconflictvars++;
+
+   /* mark the active problem variable to belong to the current conflict */
+   var->conflictsetcount = conflict->count;
+
+   return SCIP_OKAY;
+}
+
+/** compares two conflict set entries, such that bound changes infered later are
+ *  ordered prior to ones that were infered earlier; however, bound changes on non-binary variables
+ *  preceed binary bound changes, because they have to be resolved first
  */
 static
-DECL_SORTPTRCOMP(conflictVarComp)
+DECL_SORTPTRCOMP(conflictBdchginfoComp)
 {  /*lint --e{715}*/
+   BDCHGINFO* bdchginfo1;
+   BDCHGINFO* bdchginfo2;
    VAR* var1;
    VAR* var2;
    
-   var1 = (VAR*)elem1;
-   var2 = (VAR*)elem2;
-   assert(var1 != NULL);
-   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
-   assert(var2 != NULL);
-   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+   bdchginfo1 = (BDCHGINFO*)elem1;
+   bdchginfo2 = (BDCHGINFO*)elem2;
+   assert(bdchginfo1 != NULL);
+   assert(bdchginfo2 != NULL);
 
-   if( SCIPvarGetFixDepth(var1) > SCIPvarGetFixDepth(var2) )
+   var1 = SCIPbdchginfoGetVar(bdchginfo1);
+   var2 = SCIPbdchginfoGetVar(bdchginfo2);
+
+   if( SCIPvarGetType(var1) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY )
       return -1;
-   else if( SCIPvarGetFixDepth(var1) < SCIPvarGetFixDepth(var2) )
+   else if( SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY && SCIPvarGetType(var2) != SCIP_VARTYPE_BINARY )
       return +1;
-   else if( SCIPvarGetFixIndex(var1) > SCIPvarGetFixIndex(var2) )
-      return -1;
-   else if( SCIPvarGetFixIndex(var1) < SCIPvarGetFixIndex(var2) )
-      return +1;
-   else if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
-      return +1;
-   else if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+   else if( !SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
-      return 0;
-}
-
-/* forward reference */
-static
-Real getUbLocal(
-   VAR*             var                 /**< active or negated problem variable */
-   );
-
-/** gets current lower bound of variable; if the variable is a COLUMN, the column's bound is returned, because
- *  it can be temporarily different from the variable's bound due to diving or strong branching
- */
-static
-Real getLbLocal(
-   VAR*             var                 /**< active or negated problem variable */
-   )
-{
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPcolGetLb(SCIPvarGetCol(var));
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
-   {
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      return 1.0 - getUbLocal(SCIPvarGetNegatedVar(var));
-   }
-   else
-   {
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-      return SCIPvarGetLbLocal(var);
-   }
-}
-
-/** gets current upper bound of variable; if the variable is a COLUMN, the column's bound is returned, because
- *  it can be temporarily different from the variable's bound due to diving or strong branching
- */
-static
-Real getUbLocal(
-   VAR*             var                 /**< active or negated problem variable */
-   )
-{
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIPcolGetUb(SCIPvarGetCol(var));
-   else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED )
-   {
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      return 1.0 - getLbLocal(SCIPvarGetNegatedVar(var));
-   }
-   else
-   {
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-      return SCIPvarGetUbLocal(var);
-   }
+      return +1;
 }
 
 /** creates conflict analysis data for propagation conflicts */
@@ -508,7 +490,7 @@ RETCODE SCIPconflictCreate(
 #if 0
    CHECK_OKAY( SCIPlpiCreate(&(*conflict)->lpi, "LPconflict") );
 #endif
-   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->varqueue, set->memgrowinit, set->memgrowfac, conflictVarComp) );
+   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->memgrowinit, set->memgrowfac, conflictBdchginfoComp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
    (*conflict)->nconflictvars = 0;
@@ -543,7 +525,7 @@ RETCODE SCIPconflictFree(
 #if 0
    CHECK_OKAY( SCIPlpiFree(&(*conflict)->lpi) );
 #endif
-   SCIPpqueueFree(&(*conflict)->varqueue);
+   SCIPpqueueFree(&(*conflict)->bdchgqueue);
    freeMemoryArrayNull(&(*conflict)->conflictvars);
    freeMemory(conflict);
 
@@ -551,7 +533,7 @@ RETCODE SCIPconflictFree(
    return SCIP_OKAY;
 }
 
-/** initializes the propagation conflict analysis by clearing the conflict variable candidate queue */
+/** initializes the propagation conflict analysis by clearing the conflict candidate queue */
 RETCODE SCIPconflictInit(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -560,54 +542,102 @@ RETCODE SCIPconflictInit(
 
    debugMessage("initializing conflict analysis\n");
 
-   SCIPpqueueClear(conflict->varqueue);
+   /* clear the conflict candidate queue and the conflict set */
+   SCIPpqueueClear(conflict->bdchgqueue);
    conflict->nconflictvars = 0;
+
+   /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
+   conflict->count++;
 
    return SCIP_OKAY;
 }
 
-/** adds variable to conflict variable candidates */
-RETCODE SCIPconflictAddVar(
+/** adds given bound change information to the conflict candidate queue */
+static
+RETCODE conflictAddBdchginfo(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   VAR*             var                 /**< problem variable */
+   BDCHGINFO*       bdchginfo           /**< bound change information */
    )
 {
-   VAR* actvar;
+   assert(conflict != NULL);
+   assert(bdchginfo != NULL);
+
+   /* put candidate in priority queue */
+   CHECK_OKAY( SCIPpqueueInsert(conflict->bdchgqueue, (void*)bdchginfo) );
+
+   return SCIP_OKAY;
+}
+
+/** adds variable's bound to conflict candidate queue */
+RETCODE SCIPconflictAddBound(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   VAR*             var,                /**< problem variable */
+   BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
+   BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
+   )
+{
+   BDCHGINFO* bdchginfo;
+   Real scalar;
+   Real constant;
 
    assert(conflict != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-
-   debugMessage(" -> adding variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>, info:%d] to conflict candidates\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var),
-      SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
-      SCIPvarGetInferCons(var) == NULL ? "null" : SCIPconsGetName(SCIPvarGetInferCons(var)), SCIPvarGetInferInfo(var));
 
    /* get active problem variable */
-   actvar = SCIPvarGetProbvar(var);
+   scalar = 1.0;
+   constant = 0.0;
+   CHECK_OKAY( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
 
    /* we can ignore fixed variables */
-   if( actvar != NULL )
-   {
-      assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY);
-      assert(getLbLocal(actvar) > 0.5 || getUbLocal(actvar) < 0.5);
-      
-#ifdef DEBUG
-      if( actvar != var )
-      {
-         debugMessage("   -> active conflict candidate is <%s>[%g,%g] [status:%d]\n",
-            SCIPvarGetName(actvar), getLbLocal(actvar), getUbLocal(actvar), SCIPvarGetStatus(actvar));
-      }
-#endif
+   if( var == NULL )
+      return SCIP_OKAY;
 
-      /* put candidate in priority queue */
-      CHECK_OKAY( SCIPpqueueInsert(conflict->varqueue, (void*)actvar) );
+   assert(!SCIPsetIsZero(set, scalar));
+
+   /* if the scalar of the aggregation is negative, we have to switch the bound type */
+   if( scalar < 0.0 )
+      boundtype = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+
+   /* get bound change information */
+   bdchginfo = SCIPvarGetBdchgInfo(var, boundtype, bdchgidx, FALSE);
+
+   /* if bound of variable was not changed, we can ignore the conflicting bound */
+   if( bdchginfo == NULL )
+   {
+      assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
+      assert(SCIPsetIsEQ(set, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
+
+      return SCIP_OKAY;
    }
+
+   debugMessage(" -> adding variable <%s>[%g,%g] [status:%d, depth:%d, pos:%d, cons:<%s>, info:%d] to conflict candidates\n",
+      SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
+      SCIPvarGetStatus(var), 
+      SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), 
+      SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_INFERENCE || SCIPbdchginfoGetInferCons(bdchginfo) == NULL
+      ? "null" : SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo)),
+      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_INFERENCE ? SCIPbdchginfoGetInferInfo(bdchginfo) : -1);
+
+   /* the local bound change may be resolved and has to be put on the candidate queue;
+    * we even put bound changes without inference information on the queue in order to automatically
+    * eliminate multiple insertions of the same bound change
+    */
+   assert(SCIPbdchginfoGetVar(bdchginfo) == var);
+   assert(SCIPbdchginfoGetBoundtype(bdchginfo) == boundtype);
+   assert(SCIPbdchginfoGetDepth(bdchginfo) >= 0);
+   assert(SCIPbdchginfoGetPos(bdchginfo) >= 0);
+   assert(SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo), bdchgidx));
+
+   /* put bound change information into priority queue */
+   CHECK_OKAY( conflictAddBdchginfo(conflict, bdchginfo) );
 
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
 static
@@ -623,29 +653,30 @@ RETCODE conflictAnalyze(
    Bool*            success             /**< pointer to store whether the conflict set is valid */
    )
 {
-   VAR* var;
-   VAR* nextvar;
-   VAR* infervar;
-   CONS* infercons;
+   BDCHGINFO* bdchginfo;
+   BDCHGINFO* nextbdchginfo;
    RESULT result;
+   int bdchgdepth;
    int nresolutions;
+   Bool resolved;
 
    assert(conflict != NULL);
+   assert(conflict->nconflictvars >= 0);
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(tree->actnode->depth == tree->pathlen-1);
    assert(0 <= validdepth && validdepth <= tree->actnode->depth);
    assert(success != NULL);
 
-   debugMessage("analyzing conflict with %d conflict candidates (maxsize=%d)\n",
-      SCIPpqueueNElems(conflict->varqueue), maxsize);
+   debugMessage("analyzing conflict with %d conflict candidates and starting conflict set of size %d (maxsize=%d)\n",
+      SCIPpqueueNElems(conflict->bdchgqueue), conflict->nconflictvars, maxsize);
 
    *success = FALSE;
 
    /* check, if there is something to analyze */
-   if( SCIPpqueueNElems(conflict->varqueue) == 0 )
+   if( SCIPpqueueNElems(conflict->bdchgqueue) + conflict->nconflictvars == 0 )
    {
-      errorMessage("no conflict variables to analyze\n");
+      errorMessage("no conflict bound changes to analyze\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -655,120 +686,150 @@ RETCODE conflictAnalyze(
    if( validdepth == tree->actnode->depth )
       return SCIP_OKAY;
 
-   /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
-   conflict->count++;
-
-   /* clear the conflict set */
-   conflict->nconflictvars = 0;
+   /* process all bound changes in the conflict candidate queue */
    nresolutions = 0;
-
-   /* process all variables in the conflict candidate queue;
-    * we need not to resolve variables that were fixed earlier than the valid depth of the initial conflict set,
-    * because the conflict clause can only be added locally at the valid depth, and all variables fixed earlier
-    * can be removed from the conflict clause, since they are already fixed in the constraint's subtree
-    */
-   var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
-   while( var != NULL && conflict->nconflictvars < maxsize && SCIPvarGetFixDepth(var) >= validdepth )
+   bdchginfo = (BDCHGINFO*)(SCIPpqueueRemove(conflict->bdchgqueue));
+   while( bdchginfo != NULL && conflict->nconflictvars < maxsize && validdepth < tree->actnode->depth )
    {
-#ifdef DEBUG
-      {
-         CONS* infercons = SCIPvarGetInferCons(var);
-         int v;
+      resolved = FALSE;
 
-         debugMessage("processing variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>(%s), info:%d]\n",
-            SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var),
-            SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
-            infercons == NULL ? "null" : SCIPconsGetName(infercons),
-            infercons == NULL ? "--" : (SCIPconsIsGlobal(infercons) ? "global" : "local"),
-            SCIPvarGetInferInfo(var));
+      bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
+      assert(0 <= bdchgdepth && bdchgdepth <= tree->actnode->depth);
+      assert(SCIPvarIsActive(SCIPbdchginfoGetVar(bdchginfo)));
+
+      /* we don't need to resolve bound changes that are already active in the valid depth of the current conflict set,
+       * because the conflict clause can only be added locally at the valid depth, and all bound changes applied in this
+       * depth or earlier can be removed from the conflict clause, since they are already applied in the constraint's 
+       * subtree
+       */
+      if( bdchgdepth > validdepth )
+      {
+#ifdef DEBUG
+         int v;
+         
+         debugMessage("processing next conflicting bound (depth: %d, valid depth: %d)\n", bdchgdepth, validdepth);
          debugMessage(" - conflict set   :");
          for( v = 0; v < conflict->nconflictvars; ++v )
             printf(" <%s>", SCIPvarGetName(conflict->conflictvars[v]));
          printf("\n");
          debugMessage(" - candidate queue:");
-         for( v = 0; v < SCIPpqueueNElems(conflict->varqueue); ++v )
-            printf(" <%s>", SCIPvarGetName((VAR*)(SCIPpqueueElems(conflict->varqueue)[v])));
+         for( v = 0; v < SCIPpqueueNElems(conflict->bdchgqueue); ++v )
+         {
+            BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[v]);
+            printf(" [<%s> %s %g]", SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+               SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+               SCIPbdchginfoGetNewbound(info));
+         }
          printf("\n");
-      }
 #endif
 
-      assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
-
-      /* if the first variable on the remaining queue is equal to the current variable,
-       * this is a multiple insertion in the conflict candidate queue and we can ignore the current
-       * variable
-       */
-      nextvar = (VAR*)(SCIPpqueueFirst(conflict->varqueue));
-      assert(nextvar == NULL || SCIPvarGetFixDepth(var) >= SCIPvarGetFixDepth(nextvar));
-
-      if( var != nextvar )
-      {
-         Bool resolved = FALSE;
-
-         /* check, if the variable can and should be resolved:
-          * resolutions on local constraints should only be applied, if the constraint is valid at the valid depth
-          * level of the initial conflict set (because this depth level is the topmost level to add the conflict
-          * clause to anyways)
+         /* if the first bound change on the remaining queue is equal to the current bound change,
+          * this is a multiple insertion in the conflict candidate queue and we can ignore the current
+          * bound change
           */
-         infercons = SCIPvarGetInferCons(var);
-         if( nextvar != NULL
-            && infercons != NULL
-            && (SCIPconsIsGlobal(infercons)
-               || (SCIPconsIsActive(infercons) && SCIPconsGetActiveDepth(infercons) <= validdepth))
-            && SCIPvarGetFixDepth(var) == SCIPvarGetFixDepth(nextvar) )
+         nextbdchginfo = (BDCHGINFO*)(SCIPpqueueFirst(conflict->bdchgqueue));
+         assert(nextbdchginfo == NULL
+            || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo)
+            || (SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) != SCIP_VARTYPE_BINARY
+               && SCIPvarGetType(SCIPbdchginfoGetVar(nextbdchginfo)) == SCIP_VARTYPE_BINARY));
+
+         if( bdchginfo != nextbdchginfo )
          {
-            /* resolve variable v by asking the constraint that infered the
-             * assignment of v to put all the variables that when assigned to their
-             * current values lead to the deduction of v on the priority queue.
+            VAR* actvar;
+
+            actvar = SCIPbdchginfoGetVar(bdchginfo);
+            assert(actvar != NULL);
+            assert(SCIPvarIsActive(actvar));
+
+            /* check, if the bound change can and should be resolved:
+             *  - bound changes on non-binary variables have to be resolved in any case,
+             *  - bound changes on binary variables should be resolved, if they are not the last remaining conflicting
+             *    bound change in their depth level
+             *  - binary resolutions on local constraints should only be applied, if the constraint is valid at the current 
+             *    minimal valid depth level (which is initialized with the valid depth level of the initial conflict set),
+             *    because this depth level is the topmost level to add the conflict clause to anyways
              */
-            infervar = SCIPvarGetInferVar(var);
-            assert(infervar != NULL);
-            assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(infervar), SCIPvarGetUbLocal(infervar)));
-            debugMessage("resolving variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>(%s), info:%d]\n",
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var),
-               SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
-               SCIPconsGetName(infercons), SCIPconsIsGlobal(infercons) ? "global" : "local",
-               SCIPvarGetInferInfo(var));
-            CHECK_OKAY( SCIPconsResolveConflictVar(infercons, set, SCIPvarGetInferVar(var), &result) );
-            resolved = (result == SCIP_SUCCESS);
-         }
-
-         if( resolved )
-            nresolutions++;
-         else
-         {
-            assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
-
-            /* mark the active problem variable to belong to the current conflict */
-            var->conflictsetcount = conflict->count;
-
-            /* choose between variable or its negation, such that the literal is fixed to FALSE */
-            if( getLbLocal(var) > 0.5 )
+            if( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_INFERENCE )
             {
-               /* variable is fixed to TRUE -> use the negation */
-               CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
+               CONS* infercons;
+
+               infercons = SCIPbdchginfoGetInferCons(bdchginfo);
+               if( infercons != NULL )
+               {
+                  if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
+                     || (nextbdchginfo != NULL
+                        && SCIPbdchginfoGetDepth(bdchginfo) == SCIPbdchginfoGetDepth(nextbdchginfo)
+                        && (SCIPconsIsGlobal(infercons)
+                           || (SCIPconsIsActive(infercons) && SCIPconsGetActiveDepth(infercons) <= validdepth))) )
+                  {
+                     VAR* infervar;
+                     int inferinfo;
+                     BOUNDTYPE inferboundtype;
+                     BDCHGIDX* bdchgidx;
+
+                     /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
+                      * the reasons for the conflicting bound change on the priority queue
+                      */
+                     infervar = SCIPbdchginfoGetInferVar(bdchginfo);
+                     inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
+                     inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
+                     bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+                     assert(infervar != NULL);
+                     assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY
+                        || SCIPvarGetType(infervar) != SCIP_VARTYPE_BINARY);
+
+                     debugMessage("resolving bound <%s> %s %g [status:%d, depth:%d, pos:%d]: <%s> %s %g [cons:<%s>(%s), info:%d]\n",
+                        SCIPvarGetName(actvar), 
+                        SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                        SCIPbdchginfoGetNewbound(bdchginfo),
+                        SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+                        SCIPvarGetName(infervar), 
+                        inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                        SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+                        infercons == NULL ? "null" : SCIPconsGetName(infercons),
+                        infercons == NULL ? "--" : (SCIPconsIsGlobal(infercons) ? "global" : "local"),
+                        inferinfo);
+                  
+                     CHECK_OKAY( SCIPconsResolveConflictBound(infercons, set, infervar, inferinfo, inferboundtype,
+                           bdchgidx, &result) );
+                     resolved = (result == SCIP_SUCCESS);
+                  }
+               }
             }
-            assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
-            assert(SCIPsetIsZero(set, getLbLocal(var)));
 
-            debugMessage("putting variable <%s> to conflict set\n", SCIPvarGetName(var));
-
-            /* put variable in the conflict set */
-            CHECK_OKAY( conflictEnsureConflictvarsMem(conflict, set, conflict->nconflictvars+1) );
-            conflict->conflictvars[conflict->nconflictvars] = var;
-            conflict->nconflictvars++;
+            if( resolved )
+               nresolutions++;
+            else if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY )
+            {
+               /* non-binary variables cannot enter the conflict clause: we have to make the conflict clause local, s.t.
+                * the unresolved non-binary bound change is active in the whole sub tree of the conflict clause
+                */
+               assert(bdchgdepth >= validdepth);
+               validdepth = bdchgdepth;
+            }
+            else
+            {
+               assert(SCIPsetIsEQ(set, SCIPbdchginfoGetNewbound(bdchginfo), SCIPvarGetLbLP(actvar)));
+               assert(SCIPsetIsEQ(set, SCIPbdchginfoGetNewbound(bdchginfo), SCIPvarGetUbLP(actvar)));
+               assert(SCIPvarGetLbLP(actvar) > 0.5 || SCIPvarGetUbLP(actvar) < 0.5);
+               
+               /* put variable into the conflict set */
+               CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar) );
+            }
          }
       }
 
-      /* get next variable from the conflict candidate queue */
-      var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
+      /* get next conflicting bound from the conflict candidate queue */
+      bdchginfo = (BDCHGINFO*)(SCIPpqueueRemove(conflict->bdchgqueue));
    }
 
    /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
-   if( var == NULL && (!mustresolve || nresolutions >= 1) )
+   if( bdchginfo == NULL && validdepth < tree->actnode->depth && (!mustresolve || nresolutions >= 1) )
    {
       NODE* node;
+      VAR* var;
       BOUNDCHG* boundchgs;
+      BOUNDCHGTYPE boundchgtype;
       RESULT result;
       int nboundchgs;
       int nbranchingvars;
@@ -781,6 +842,18 @@ RETCODE conflictAnalyze(
 
       debugMessage(" -> found conflict set of size %d/%d after %d resolutions\n", 
          conflict->nconflictvars, maxsize, nresolutions);
+
+#ifndef NDEBUG
+      {
+         int v;
+         
+         for( v = 0; v < conflict->nconflictvars; ++v )
+         {
+            assert(conflict->conflictvars[v] != NULL);
+            assert(conflict->conflictvars[v]->conflictsetcount == conflict->count);
+         }
+      }
+#endif
 
       /* identify the depth, at which the conflict clause should be added:
        * - if the branching rule operates on variables only, and if all branching variables up to a certain
@@ -809,7 +882,8 @@ RETCODE conflictAnalyze(
          for( b = 0; b < nboundchgs; ++b )
          {
             var = boundchgs[b].var;
-            if( SCIPvarGetBoundchgType(var) != SCIP_BOUNDCHGTYPE_BRANCHING )
+            boundchgtype = boundchgs[b].boundchgtype;
+            if( boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
                break;
             if( var->conflictsetcount != conflict->count )
             {
@@ -853,7 +927,7 @@ RETCODE conflictAnalyze(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+/** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set;
  *  updates statistics for propagation conflict analysis
  */
@@ -1352,15 +1426,400 @@ RETCODE conflictAnalyzeLPAltpoly(
 }
 #endif
 
-/** analyzes an infeasible LP and unfixes additional binary variables while staying infeasible */
+/** returns, whether bound change information can be used in conflict analysis:
+ *  - if variable is binary, or
+ *  - if bound change information has valid inference data
+ */
 static
-RETCODE unfixBinariesDualfarkas(
+Bool bdchginfoIsUseable(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   assert(bdchginfo != NULL);
+
+   return (SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) == SCIP_VARTYPE_BINARY
+      || (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_INFERENCE
+         && SCIPbdchginfoGetInferCons(bdchginfo) != NULL));
+}
+
+/** inserts variable's new bounds into bound change arrays */
+static
+void addBdchg(
+   VAR*             var,                /**< variable to change the LP bounds for */
+   Real             newlb,              /**< new lower bound */
+   Real             newub,              /**< new upper bound */
+   int*             nbdchgs,            /**< pointer to count total number of LP column bound changes */
+   int*             bdchginds,          /**< array to store indices of bound changed columns */
+   Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns */
+   Real*            bdchgoldubs,        /**< array to store old upper bounds of bound changed columns */
+   Real*            bdchgnewlbs,        /**< array to store new lower bounds of bound changed columns */
+   Real*            bdchgnewubs         /**< array to store new upper bounds of bound changed columns */
+   )
+{
+   assert(newlb <= newub);
+   assert(nbdchgs != NULL);
+   assert(bdchginds != NULL);
+   assert(bdchgoldlbs != NULL);
+   assert(bdchgoldubs != NULL);
+   assert(bdchgnewlbs != NULL);
+   assert(bdchgnewubs != NULL);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+   {
+      COL* col;
+      int c;
+      
+      col = SCIPvarGetCol(var);
+      c = SCIPcolGetLPPos(col);
+      if( c >= 0 )
+      {
+         bdchginds[*nbdchgs] = c;
+         bdchgoldlbs[*nbdchgs] = SCIPvarGetLbLP(var);
+         bdchgoldubs[*nbdchgs] = SCIPvarGetUbLP(var);
+         bdchgnewlbs[*nbdchgs] = newlb;
+         bdchgnewubs[*nbdchgs] = newub;
+         (*nbdchgs)++;
+      }
+   }
+}
+
+/** ensures, that candidate array can store at least num entries */
+static
+RETCODE ensureCandsSize(
+   SET*             set,                /**< global SCIP settings */
+   VAR***           cands,              /**< pointer to candidate array */
+   Real**           candscores,         /**< pointer to candidate score array */
+   Real**           newbounds,          /**< pointer to candidate new bounds array */
+   Real**           proofactdeltas,     /**< pointer to candidate proof delta array */
+   int*             candssize,          /**< pointer to size of array */
+   int              num                 /**< minimal number of candidates to store in array */
+   )
+{
+   assert(cands != NULL);
+   assert(candssize != NULL);
+   
+   if( num > *candssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, cands, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, candscores, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, newbounds, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, proofactdeltas, newsize) );
+      *candssize = newsize;
+   }
+   assert(num <= *candssize);
+
+   return SCIP_OKAY;
+}
+
+/** adds variable to candidate list, if the current best bound corresponding to the proof coefficient is local;
+ *  returns the array position in the candidate list, where the new candidate was inserted, or -1 if the
+ *  variable can relaxed to global bounds immediately without increasing the proof's activity;
+ *  the candidates are sorted with respect to the following two criteria:
+ *  - prefer bound changes that have been applied deeper in the tree, to get a more global conflict
+ *  - prefer variables with small farkas coefficient to get rid of as many bound changes as possible
+ */
+static
+int addCand(
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable to add to candidate array */
+   int              lbchginfopos,       /**< positions of currently active lower bound change infos in variable's array */
+   int              ubchginfopos,       /**< positions of currently active upper bound change infos in variable's array */
+   Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
+   Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
+   Real             proofact,           /**< activity of infeasibility/bound proof row */
+   int*             ncands,             /**< pointer to count number of candidates in bound change list */
+   VAR**            cands,              /**< pointer to candidate array for undoing bound changes */
+   Real*            candscores,         /**< candidate score array for undoing bound changes */
+   Real*            newbounds,          /**< array to store potentially new bounds of variables */
+   Real*            proofactdeltas,     /**< array to store increases in proof's activity for undoing the bound changes */
+   int              firstcand           /**< position of first unprocessed bound change candidate */
+   )
+{
+   Real oldbound;
+   Real newbound;
+   Real proofactdelta;
+   Real score;
+   int depth;
+   int i;
+   Bool useable;
+
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(-1 <= lbchginfopos && lbchginfopos <= var->nlbchginfos);
+   assert(-1 <= ubchginfopos && ubchginfopos <= var->nubchginfos);
+   assert(SCIPsetIsGT(set, prooflhs, proofact));
+   assert(ncands != NULL);
+   assert(cands != NULL);
+   assert(candscores != NULL);
+   assert(newbounds != NULL);
+   assert(proofactdeltas != NULL);
+   assert(0 <= firstcand && firstcand <= *ncands);
+
+   /* in the infeasibility or dual bound proof, the variable's bound is chosen to maximize the proof's activity */
+   if( SCIPsetIsPositive(set, proofcoef) )
+   {
+      /* if bound is global, nothing has to be done */
+      if( ubchginfopos == -1 )
+         return -1;
+
+      /* calculate the difference of current bound to the previous bound the variable was set to */
+      if( ubchginfopos == var->nubchginfos )
+      {
+         /* current bound is the strong branching or diving bound: this can only happen on binary variables,
+          * because the non-binary bound changes due to strong branching and diving were already removed in
+          * the main loop of the infeasible LP analysis
+          */
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetUbLP(var) < 0.5);
+         assert(SCIPvarGetUbLocal(var) > 0.5);
+         oldbound = 0.0;
+         newbound = 1.0;
+         depth = 1000;
+         useable = TRUE;
+      }
+      else
+      {
+         /* current bound is the result of a local bound change */
+         oldbound = var->ubchginfos[ubchginfopos].newbound;
+         newbound = var->ubchginfos[ubchginfopos].oldbound;
+         depth = var->ubchginfos[ubchginfopos].bdchgidx.depth;
+         useable = bdchginfoIsUseable(&var->ubchginfos[ubchginfopos]);
+      }
+   }
+   else if( SCIPsetIsNegative(set, proofcoef) )
+   {
+      /* if bound is global, nothing has to be done */
+      if( lbchginfopos == -1 )
+         return -1;
+
+      /* calculate the difference of current bound to the previous bound the variable was set to */
+      if( lbchginfopos == var->nlbchginfos )
+      {
+         /* current bound is the strong branching or diving bound: this can only happen on binary variables,
+          * because the non-binary bound changes due to strong branching and diving were already removed in
+          * the main loop of the infeasible LP analysis
+          */
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetLbLP(var) > 0.5);
+         assert(SCIPvarGetLbLocal(var) < 0.5);
+         oldbound = 1.0;
+         newbound = 0.0;
+         depth = 1000;
+         useable = TRUE;
+      }
+      else
+      {
+         /* current bound is the result of a local bound change */
+         oldbound = var->lbchginfos[lbchginfopos].newbound;
+         newbound = var->lbchginfos[lbchginfopos].oldbound;
+         depth = var->lbchginfos[lbchginfopos].bdchgidx.depth;
+         useable = bdchginfoIsUseable(&var->lbchginfos[lbchginfopos]);
+      }
+   }
+   else
+      return -1;
+
+   /* if the bound change is not useable in conflict analysis, we have to undo it */
+   if( !useable )
+      score = set->infinity;
+   else
+   {
+      /* calculate score for undoing the bound change */
+      score = 1.0 - proofactdelta/(prooflhs - proofact);
+      score = MAX(score, 0.0) + 1e-6;
+      score *= depth;
+      score = MIN(score, set->infinity/2);
+   }
+   proofactdelta = (newbound - oldbound)*proofcoef;
+   assert(SCIPsetIsPositive(set, proofactdelta));
+
+   /* insert variable in candidate list without touching the already processed candidates */
+   for( i = *ncands; i > firstcand && score > candscores[i-1]; --i )
+   {
+      cands[i] = cands[i-1];
+      candscores[i] = candscores[i-1];
+      newbounds[i] = newbounds[i-1];
+      proofactdeltas[i] = proofactdeltas[i-1];
+   }
+   cands[i] = var;
+   candscores[i] = score;
+   newbounds[i] = newbound;
+   proofactdeltas[i] = proofactdelta;
+   (*ncands)++;
+
+   return i;
+}
+
+/** undos bound changes on variables, still leaving the given infeasibility proof valid */
+static
+RETCODE undoBdchgsProof(
+   SET*             set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   Real*            proofcoefs,         /**< coefficients in infeasibility proof */
+   Real             prooflhs,           /**< left hand side of proof */
+   Real             proofact,           /**< current activity of proof */
+   Real*            curvarlbs,          /**< current lower bounds of active problem variables */
+   Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
+   int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   int*             nbdchgs,            /**< pointer to count total number of LP column bound changes, or NULL */
+   int*             bdchginds,          /**< array to store indices of bound changed columns, or NULL */
+   Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns, or NULL */
+   Real*            bdchgoldubs,        /**< array to store old upper bounds of bound changed columns, or NULL */
+   Real*            bdchgnewlbs,        /**< array to store new lower bounds of bound changed columns, or NULL */
+   Real*            bdchgnewubs,        /**< array to store new upper bounds of bound changed columns, or NULL */
+   Bool*            resolve             /**< pointer to store whether the changed LP should be resolved again, or NULL */
+   )
+{
+   VAR** vars;
+   VAR** cands;
+   Real* candscores;
+   Real* newbounds;
+   Real* proofactdeltas;
+   int nvars;
+   int ncands;
+   int candssize;
+   int pos;
+   int v;
+   int i;
+
+   assert(prob != NULL);
+   assert(proofcoefs != NULL);
+   assert(SCIPsetIsFeasGT(set, prooflhs, proofact));
+   assert(curvarlbs != NULL);
+   assert(curvarubs != NULL);
+   assert(lbchginfoposs != NULL);
+   assert(ubchginfoposs != NULL);
+
+   if( resolve != NULL )
+      *resolve = FALSE;
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   assert(nvars == 0 || vars != NULL);
+
+   /* calculate the order in which the bound changes are tried to be undone, and relax all bounds if this doesn't
+    * increase the proof's activity
+    */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cands, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &candscores, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &newbounds, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &proofactdeltas, nvars) );
+   ncands = 0;
+   candssize = nvars;
+   for( v = 0; v < nvars; ++v )
+   {
+      /* ignore variables already relaxed to global bounds */
+      if( lbchginfoposs[v] == -1 && ubchginfoposs[v] == -1 )
+         continue;
+
+      /* get enough memory for insertion of candidate */
+      CHECK_OKAY( ensureCandsSize(set, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, ncands+1) );
+
+      /* add variable to candidate list */
+      pos = addCand(set, vars[v], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v], prooflhs, proofact,
+         &ncands, cands, candscores, newbounds, proofactdeltas, 0);
+      assert(-1 <= pos && pos < ncands);
+      if( pos == -1 )
+      {
+         assert(SCIPsetIsZero(set, proofcoefs[v])
+            || (SCIPsetIsPositive(set, proofcoefs[v]) && ubchginfoposs[v] == -1)
+            || (SCIPsetIsNegative(set, proofcoefs[v]) && lbchginfoposs[v] == -1));
+
+         /* variable can be relaxed to global bounds */
+         debugMessage(" -> relaxing variable <%s>[%g,%g] to [%g,%g]: proofcoef=%g, %g <= %g\n",
+            SCIPvarGetName(vars[v]), curvarlbs[v], curvarubs[v], SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]),
+            proofcoefs[v], prooflhs, proofact);
+         curvarlbs[v] = SCIPvarGetLbGlobal(vars[v]);
+         curvarubs[v] = SCIPvarGetUbGlobal(vars[v]);
+         lbchginfoposs[v] = -1;
+         ubchginfoposs[v] = -1;
+         if( nbdchgs != NULL )
+            addBdchg(vars[v], curvarlbs[v], curvarubs[v], 
+               nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs);
+      }
+   }
+
+   /* try to undo remaining local bound changes while still keeping the proof row violated:
+    * bound changes can be undone, if prooflhs > proofact + proofactdelta;
+    * afterwards, the current proof activity has to be updated
+    */
+   for( i = 0; i < ncands; ++i )
+   {
+      assert(SCIPsetIsPositive(set, proofactdeltas[i]));
+
+      if( SCIPsetIsGT(set, prooflhs, proofact + proofactdeltas[i]) )
+      {
+         v = SCIPvarGetProbindex(cands[i]);
+         assert(0 <= v && v < nvars);
+         assert(lbchginfoposs[v] >= 0 || ubchginfoposs[v] >= 0);
+
+         debugMessage(" -> relaxing variable <%s>[%g,%g] to [%g,%g]: proofcoef=%g, %g <= %g + %g\n",
+            SCIPvarGetName(cands[i]), curvarlbs[v], curvarubs[v],
+            proofcoefs[v] > 0.0 ? curvarlbs[v] : newbounds[i],
+            proofcoefs[v] > 0.0 ? newbounds[i] : curvarubs[v],
+            proofcoefs[v], prooflhs, proofact, proofactdeltas[i]);
+
+         assert((SCIPsetIsPositive(set, proofcoefs[v]) && SCIPsetIsGT(set, newbounds[i], curvarubs[v]))
+            || (SCIPsetIsNegative(set, proofcoefs[v]) && SCIPsetIsLT(set, newbounds[i], curvarlbs[v])));
+         assert((SCIPsetIsPositive(set, proofcoefs[v])
+               && SCIPsetIsEQ(set, proofactdeltas[i], (newbounds[i] - curvarubs[v])*proofcoefs[v]))
+            || (SCIPsetIsNegative(set, proofcoefs[v])
+               && SCIPsetIsEQ(set, proofactdeltas[i], (newbounds[i] - curvarlbs[v])*proofcoefs[v])));
+         assert(!SCIPsetIsZero(set, proofcoefs[v]));
+
+         if( proofcoefs[v] > 0.0 )
+         {
+            assert(ubchginfoposs[v] >= 0);
+            curvarubs[v] = newbounds[i];
+            ubchginfoposs[v]--;
+         }
+         else
+         {
+            assert(lbchginfoposs[v] >= 0);
+            curvarlbs[v] = newbounds[i];
+            lbchginfoposs[v]--;
+         }
+         if( nbdchgs != NULL )
+            addBdchg(cands[i], curvarlbs[v], curvarubs[v], 
+               nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs);
+         proofact += proofactdeltas[i];
+         if( resolve != NULL )
+            *resolve = TRUE;
+
+         /* get enough memory for insertion of candidate */
+         CHECK_OKAY( ensureCandsSize(set, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, ncands+1) );
+
+         /* insert the new local bound of the variable into the candidate list */
+         pos = addCand(set, cands[i], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v], prooflhs, proofact,
+            &ncands, cands, candscores, newbounds, proofactdeltas, i+1);
+         assert(pos == -1 || (i < pos && pos < ncands));
+      }
+   }
+
+   /* free the buffer for the sorted bound change candidates */
+   SCIPsetFreeBufferArray(set, &proofactdeltas);
+   SCIPsetFreeBufferArray(set, &newbounds);
+   SCIPsetFreeBufferArray(set, &candscores);
+   SCIPsetFreeBufferArray(set, &cands);
+
+   return SCIP_OKAY;
+}
+
+/** analyzes an infeasible LP and undoes additional bound changes while staying infeasible */
+static
+RETCODE undoBdchgsDualfarkas(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
+   int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
    int*             nbdchgs,            /**< pointer to count total number of LP column bound changes */
    int*             bdchginds,          /**< array to store indices of bound changed columns */
    Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns */
@@ -1390,10 +1849,14 @@ RETCODE unfixBinariesDualfarkas(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(curvarlbs != NULL);
+   assert(curvarubs != NULL);
+   assert(lbchginfoposs != NULL);
+   assert(ubchginfoposs != NULL);
    assert(valid != NULL);
    assert(resolve != NULL);
 
-   debugMessage("unfixing binary variables in infeasible LP: cutoff=%g, depth=%d\n", 
+   debugMessage("undoing bound changes in infeasible LP: cutoff=%g, depth=%d\n", 
       lp->cutoffbound, SCIPgetDepth(set->scip));
 
    *valid = FALSE;
@@ -1466,7 +1929,7 @@ RETCODE unfixBinariesDualfarkas(
       }
       else
       {
-         debugMessage("ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
+         debugMessage(" -> ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
             row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r], 
             row->lhs - row->constant, row->rhs - row->constant);
       }
@@ -1482,7 +1945,7 @@ RETCODE unfixBinariesDualfarkas(
       /* ignore coefs close to 0.0 */
       if( SCIPsetIsZero(set, farkascoefs[v]) )
       {
-         debugMessage("ignoring zero farkas coefficient <%s> [%g,%g]: %.10f\n",
+         debugMessage(" -> ignoring zero farkas coefficient <%s> [%g,%g]: %.10f\n",
             SCIPvarGetName(var), curvarlbs[v], curvarubs[v], farkascoefs[v]);
          farkascoefs[v] = 0.0;
       }
@@ -1503,136 +1966,15 @@ RETCODE unfixBinariesDualfarkas(
          farkasact += farkascoefs[v] * curvarlbs[v];
       }
    }
-   debugMessage("farkaslhs=%g, farkasact=%g\n", farkaslhs, farkasact);
+   debugMessage(" -> farkaslhs=%g, farkasact=%g\n", farkaslhs, farkasact);
 
    /* check, if the farkas row is still violated (using current bounds and ignoring local rows) */
    if( SCIPsetIsFeasGT(set, farkaslhs, farkasact) )
    {
-      VAR** binvars;
-      Real* binvarscores;
-      Real score;
-      Real farkascoef;
-      int nfixings;
-      Bool unfix;
-
-      /* calculate the order in which the binary variables are tried to be unfixed:
-       *  - prefer variables that have been fixed deeper in the tree, to get a more global conflict
-       *  - prefer variables with small farkas coefficient to get rid of as many variables as possible
-       */
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvars, prob->nbinvars) );
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvarscores, prob->nbinvars) );
-      nfixings = 0;
-      for( v = 0; v < prob->nbinvars; ++v )
-      {
-         var = vars[v];
-
-         /* ignore already unfixed variables */
-         if( curvarlbs[v] < 0.5 && curvarubs[v] > 0.5 )
-            continue;
-
-         /* calculate score of variable fixing */
-         farkascoef = ABS(farkascoefs[v]);
-         score = 1.0 - farkascoef/(farkaslhs - farkasact);
-         score = MAX(score, 0.0) + 1e-6;
-#if 0 /*????????????????????*/
-         if( SCIPvarGetInferCons(var) == 0 ) /* prefer unfixing variables that cannot be resolved */
-            score += 1e+6;
-#endif
-         score *= SCIPvarGetFixDepth(var);
-
-         /* insert fixed variable in candidate list */
-         for( i = nfixings; i > 0 && score > binvarscores[i-1]; --i )
-         {
-            binvars[i] = binvars[i-1];
-            binvarscores[i] = binvarscores[i-1];
-         }
-         binvars[i] = var;
-         binvarscores[i] = score;
-         nfixings++;
-      }
-
-      /* try to unfix binary variables and still keep the farkas row violated:
-       * binaries fixed to 0.0 can be unfixed
-       *  - if farkas value is positive and farkasact + farkascoef < farkaslhs (and farkasact has to be updated)
-       *  - if farkas value is non-positive (because 0.0 is best farkas bound anyways)
-       * binaries fixed to 1.0 can be unfixed
-       *  - if farkas value is negative and farkasact - farkascoef < farkaslhs (and farkasact has to be updated)
-       *  - if farkas value is non-negative (because 1.0 is best farkas bound anyways)
-       */
-      for( i = 0; i < nfixings; ++i )
-      {
-         var = binvars[i];
-         v = SCIPvarGetProbindex(var);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         assert(0 <= v && v < prob->nbinvars);
-
-         debugMessage(" <%s> [%g,%g]: farkascoef=%g, %g <= %g\n",
-            SCIPvarGetName(var), curvarlbs[v], curvarubs[v], farkascoefs[v], farkaslhs, farkasact);
-
-         unfix = FALSE;
-         if( curvarubs[v] < 0.5 )
-         {
-            /* variable is fixed to 0.0 */
-            if( SCIPsetIsPositive(set, farkascoefs[v]) )
-            {
-               if( SCIPsetIsFeasGT(set, farkaslhs, farkasact + farkascoefs[v]) )
-               {
-                  /* we can unfix the variable but have to increase the farkas activity */
-                  farkasact += farkascoefs[v];
-                  unfix = TRUE;
-                  *resolve = TRUE;
-               }
-            }
-            else
-               unfix = TRUE;
-         }
-         else
-         {
-            /* variable is fixed to 1.0 */
-            assert(curvarlbs[v] > 0.5);
-            if( SCIPsetIsNegative(set, farkascoefs[v]) )
-            {
-               if( SCIPsetIsFeasGT(set, farkaslhs, farkasact - farkascoefs[v]) )
-               {
-                  /* we can unfix the variable but have to increase the farkas activity */
-                  farkasact -= farkascoefs[v];
-                  unfix = TRUE;
-                  *resolve = TRUE;
-               }
-            }
-            else
-               unfix = TRUE;
-         }
-
-         if( unfix )
-         {
-            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-            {
-               COL* col;
-               int c;
-               
-               col = SCIPvarGetCol(var);
-               c = SCIPcolGetLPPos(col);
-               if( c >= 0 )
-               {
-                  assert(c < lp->ncols);
-                  bdchginds[*nbdchgs] = c;
-                  bdchgoldlbs[*nbdchgs] = curvarlbs[v];
-                  bdchgoldubs[*nbdchgs] = curvarubs[v];
-                  bdchgnewlbs[*nbdchgs] = 0.0;
-                  bdchgnewubs[*nbdchgs] = 1.0;
-                  (*nbdchgs)++;
-               }
-            }
-            curvarlbs[v] = 0.0;
-            curvarubs[v] = 1.0;
-            debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
-         }
-      }
-
-      /* free the buffer for the sorted binary variables */
-      SCIPsetFreeBufferArray(set, &binvarscores);
-      SCIPsetFreeBufferArray(set, &binvars);
+      /* undo bound changes while keeping the infeasibility proof valid */
+      CHECK_OKAY( undoBdchgsProof(set, prob, farkascoefs, farkaslhs, farkasact, 
+            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+            nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, resolve) );
 
       *valid = TRUE;
    }
@@ -1646,17 +1988,19 @@ RETCODE unfixBinariesDualfarkas(
    return SCIP_OKAY;
 }
 
-/** analyzes an LP exceeding the objective limit and unfixes additional binary variables while staying beyond the
+/** analyzes an LP exceeding the objective limit and undoes additional bound changes while staying beyond the
  *  objective limit
  */
 static
-RETCODE unfixBinariesDualsol(
+RETCODE undoBdchgsDualsol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
+   int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
    int*             nbdchgs,            /**< pointer to count total number of LP column bound changes */
    int*             bdchginds,          /**< array to store indices of bound changed columns */
    Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns */
@@ -1676,7 +2020,7 @@ RETCODE unfixBinariesDualsol(
    Real* primsols;
    Real* dualsols;
    Real* redcosts;
-   Real* dualcoef;
+   Real* dualcoefs;
    Real* varredcosts;
    Real duallhs;
    Real dualact;
@@ -1689,19 +2033,23 @@ RETCODE unfixBinariesDualsol(
    int c;
    int v;
    int i;
-   Bool havelocal;
 
+   assert(set != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(curvarlbs != NULL);
+   assert(curvarubs != NULL);
+   assert(lbchginfoposs != NULL);
+   assert(ubchginfoposs != NULL);
    assert(valid != NULL);
    assert(resolve != NULL);
 
    *valid = FALSE;
    *resolve = FALSE;
 
-   debugMessage("unfixing binary variables in LP exceeding cutoff: cutoff=%g, depth=%d\n", 
+   debugMessage("undoing bound changes in LP exceeding cutoff: cutoff=%g, depth=%d\n", 
       lp->cutoffbound, SCIPgetDepth(set->scip));
 
    /* get LP solver interface */
@@ -1720,30 +2068,39 @@ RETCODE unfixBinariesDualsol(
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsols, ncols) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualsols, nrows) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &redcosts, ncols) );
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualcoef, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualcoefs, nvars) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &varredcosts, nvars) );
 
    /* get solution from LPI */
    CHECK_OKAY( SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts) );
 
-   /* calculate the dual row: y'^T{lhs,rhs} + r^T{lb,ub} - c* <= (y'^T A + r^T - c^T) x
-    *  - y'i := 0 for local rows, y'i := yi for global rows
-    *  - if yi > 0, use left hand side, if yi < 0, use right hand side
-    *  - if ri > 0, use lower bound,    if ri < 0, use upper bound
-    *  - c* is the primal bound (the LP's cutoffbound)
+   /* Let y be the dual solution and r be the reduced cost vector. Let z be defined as
+    *    z_i := y_i if i is a global row,
+    *    z_i := 0   if i is a local row.
+    * Define the set X := {x | lhs <= Ax <= rhs, lb <= x <= ub, c^Tx <= c*}, with c* being the current primal bound.
+    * Then the following inequalities are valid for all x \in X:
+    *                                 - c* <= -c^Tx
+    *   <=>                     z^TAx - c* <= (z^TA - c^T) x
+    *   <=>                     z^TAx - c* <= (y^TA - c^T - (y-z)^TA) x
+    *   <=>                     z^TAx - c* <= (-r^T - (y-z)^TA) x         (dual feasibility of (y,r): y^TA + r^T == c^T)
+    * Because lhs <= Ax <= rhs and lb <= x <= ub, the inequality can be relaxed to give
+    *     min{z^Tq | lhs <= q <= rhs} - c* <= max{(-r^T - (y-z)^TA) x | lb <= x <= ub}, or X = {}.
     *
-    * The row coefficients transform into:
-    *  y'^T A + r^T - c^T
-    *   = y^T A + r^T - c^T - z^T A     (with zi := 0 for global, zi := yi for local rows)
-    *   = -z^T A                        (because y^T A + r^T == c^T due to dual feasibility)
-    *
-    * The resulting dual row is: y'^T{lhs,rhs} + r^T{lb,ub} - c* <= -z^T A x
+    * The resulting dual row is:  z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub},
+    * where lhs, rhs, lb, and ub are selected in order to maximize the feasibility of the row.
     */
-   clearMemoryArray(dualcoef, nvars);
-   duallhs = -lp->cutoffbound;
 
-   /* calculate y'^T{lhs,rhs} and -z^T A x */
-   havelocal = FALSE;
+   clearMemoryArray(dualcoefs, nvars);
+
+   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
+    * infeasible
+    */
+   duallhs = -(lp->cutoffbound - set->sumepsilon);
+   dualact = 0.0;
+
+   /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
+    * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
+    */
    for( r = 0; r < nrows; ++r )
    {
       row = rows[r];
@@ -1752,7 +2109,7 @@ RETCODE unfixBinariesDualsol(
       assert(row->len == 0 || row->vals != NULL);
       assert(row == lp->lpirows[r]);
 
-      /* ignore dual solution values of 0.0 */
+      /* ignore dual solution values of 0.0 (in this case: y_i == z_i == 0) */
       if( SCIPsetIsFeasZero(set, dualsols[r]) )
          continue;
 
@@ -1760,49 +2117,47 @@ RETCODE unfixBinariesDualsol(
       if( (SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsFeasPositive(set, dualsols[r]))
          || (SCIPsetIsInfinity(set, row->rhs) && SCIPsetIsFeasNegative(set, dualsols[r])) )
       {
-         debugMessage("infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
+         debugMessage(" -> infeasible dual solution %g in row <%s>: lhs=%g, rhs=%g\n",
             dualsols[r], SCIProwGetName(row), row->lhs, row->rhs);
          goto TERMINATE;
       }
 
-      /* local rows add up (negatively) to the dual row, global rows add up to the left hand side */
+      /* local rows add up to the dual row's coefficients (because z_i == 0 => -(y_i - z_i) == -y_i),
+       * global rows add up to the dual row's left hand side (because z_i == y_i != 0)
+       */
       if( row->local )
       {
-         /* add negated local row coefficients to dual row */
+         /* add -y_i A_i to coefficients of dual row */
          for( i = 0; i < row->len; ++i )
          {
             v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
             assert(0 <= v && v < nvars);
-            dualcoef[v] -= dualsols[r] * row->vals[i];
+            dualcoefs[v] -= dualsols[r] * row->vals[i];
          }
-         havelocal = TRUE;
-         debugMessage(" local row <%s>: dual=%g\n", SCIProwGetName(row), dualsols[r]);
+         debugMessage(" -> local row <%s>: dual=%g\n", SCIProwGetName(row), dualsols[r]);
       }
       else
       {
-         /* add row side to dual row lhs: dualsol > 0 -> lhs, dualsol < 0 -> rhs */
+         /* add minimal value to dual row's left hand side: z_i == y_i > 0 -> lhs, z_i == y_i < 0 -> rhs */
          if( dualsols[r] > 0.0 )
          {
             assert(!SCIPsetIsInfinity(set, -row->lhs));
             duallhs += dualsols[r] * (row->lhs - row->constant);
-            debugMessage(" global row <%s>: lhs=%g, dual=%g -> %g\n", 
-               SCIProwGetName(row), row->lhs - row->constant, dualsols[r], duallhs);
          }
          else
          {
             assert(!SCIPsetIsInfinity(set, row->rhs));
             duallhs += dualsols[r] * (row->rhs - row->constant);
-            debugMessage(" global row <%s>: rhs=%g, dual=%g -> %g\n", 
-               SCIProwGetName(row), row->rhs - row->constant, dualsols[r], duallhs);
          }
+         debugMessage(" -> global row <%s>[%g,%g]: dual=%g -> duallhs=%g\n", 
+            SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, dualsols[r], duallhs);
       }
    }
 
-   /* calculate r^T{lb,ub}
-    * loose variables have reduced costs r_i = c_i, s.t. the LP's loose objective value is equal to
-    * r^T{lb,ub} for the loose variables
+   /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
+    * process variables: subtract reduced costs from dual row's coefficients, and calculate current maximal dual
+    *                    activity by multiplying the resultant coefficient with lb or ub
     */
-   duallhs += lp->looseobjval;
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -1811,198 +2166,68 @@ RETCODE unfixBinariesDualsol(
       {
          /* reduced costs for loose variables are equal to the objective value */
          varredcosts[v] = SCIPvarGetObj(var);
-         continue;
       }
-
-      col = SCIPvarGetCol(var);
-      c = SCIPcolGetLPPos(col);
-      assert(c == -1 || col == lp->cols[c]);
-      assert(c == -1 || col == lp->lpicols[c]);
-
-      v = SCIPvarGetProbindex(var);
-      assert(0 <= v && v < nvars);
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, curvarlbs[v], SCIPvarGetLbGlobal(var)));
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, curvarubs[v], SCIPvarGetUbGlobal(var)));
-
-      /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
-      if( c == -1 )
-         varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
       else
       {
-#ifndef NDEBUG
-         varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
-         assert(SCIPsetIsSumEQ(set, varredcosts[v], redcosts[c]));
-#endif
-         varredcosts[v] = redcosts[c];
-      }
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         col = SCIPvarGetCol(var);
+         c = SCIPcolGetLPPos(col);
+         assert(c == -1 || col == lp->cols[c]);
+         assert(c == -1 || col == lp->lpicols[c]);
 
-      /* ignore reduced costs close to 0.0 */
-      if( SCIPsetIsFeasZero(set, varredcosts[v]) )
-      {
-         varredcosts[v] = 0.0;
-         continue;
+         v = SCIPvarGetProbindex(var);
+         assert(0 <= v && v < nvars);
+
+         /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
+         if( c == -1 )
+            varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
+         else
+         {
+#ifndef NDEBUG
+            varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
+            assert(SCIPsetIsFeasEQ(set, varredcosts[v], redcosts[c]));
+#endif
+            varredcosts[v] = redcosts[c];
+         }
       }
 
       /* check dual feasibility */
       if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsFeasPositive(set, varredcosts[v]))
          || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsFeasNegative(set, varredcosts[v])) )
       {
-         debugMessage("infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
+         debugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
             varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
          goto TERMINATE;
       }
 
-      /* add column's bound to dual row lhs: redcost > 0 -> lb, redcost < 0 -> ub */
-      if( varredcosts[v] > 0.0 )
-      {
-         if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
-            goto TERMINATE;
-         duallhs += varredcosts[v] * curvarlbs[v];
-      }
-      else
+      /* subtract reduced costs from dual row's coefficients */
+      dualcoefs[v] -= varredcosts[v];
+
+      /* add maximal value to dual row's activity: dualcoef > 0 -> ub, dualcoef < 0 -> lb */
+      if( dualcoefs[v] > 0.0 )
       {
          if( SCIPsetIsInfinity(set, curvarubs[v]) )
             goto TERMINATE;
-         duallhs += varredcosts[v] * curvarubs[v];
+         dualact += dualcoefs[v] * curvarubs[v];
       }
-      debugMessage(" col <%s> [%g,%g]: redcost=%g -> %g\n", 
-         SCIPvarGetName(var), curvarlbs[v], curvarubs[v], varredcosts[v], duallhs);
-   }
-   debugMessage("duallhs=%g, localrows=%d\n", duallhs, havelocal);
-
-   /* calculate the current dual activity, always using the best bound w.r.t. the dual coefficient;
-    * if no local rows are included, the dual row is empty
-    */
-   dualact = 0.0;
-   if( havelocal )
-   {
-      for( v = 0; v < nvars; ++v )
+      else
       {
-         var = vars[v];
-         assert(SCIPvarGetProbindex(var) == v);
-         
-         /* ignore coefs close to 0.0 */
-         if( SCIPsetIsZero(set, dualcoef[v]) )
-            dualcoef[v] = 0.0;
-         else if( dualcoef[v] > 0.0 )
-            dualact += dualcoef[v] * curvarubs[v];
-         else
-            dualact += dualcoef[v] * curvarlbs[v];
+         if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
+            goto TERMINATE;
+         dualact += dualcoefs[v] * curvarlbs[v];
       }
+      debugMessage(" -> col <%s> [%g,%g]: redcost=%g, coef=%g -> activity=%g\n", 
+         SCIPvarGetName(var), curvarlbs[v], curvarubs[v], varredcosts[v], dualcoefs[v], dualact);
    }
-   debugMessage("duallhs=%g, dualact=%g, cutoffbound=%g\n", duallhs, dualact, lp->cutoffbound);
+   debugMessage(" -> final dual values: lhs=%g, act=%g\n", duallhs, dualact);
 
    /* check, if the dual row is still violated (using current bounds and ignoring local rows) */
    if( SCIPsetIsFeasGT(set, duallhs, dualact) )
    {
-      VAR** binvars;
-      Real* binvarscores;
-      Real score;
-      Real redcost;
-      int nfixings;
-      int sign;
-
-      /* calculate the order in which the binary variables are tried to be unfixed:
-       *  - prefer variables that have been fixed deeper in the tree, to get a more global conflict
-       *  - prefer variables with small reduced costs to get rid of as many variables as possible
-       */
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvars, prob->nbinvars) );
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvarscores, prob->nbinvars) );
-      nfixings = 0;
-      for( v = 0; v < prob->nbinvars; ++v )
-      {
-         var = prob->vars[v];
-
-         /* ignore already unfixed variables */
-         if( curvarlbs[v] < 0.5 && curvarubs[v] > 0.5 )
-            continue;
-
-         /* calculate score of variable fixing */
-         redcost = ABS(varredcosts[v]);
-         score = 1.0 - redcost/(duallhs - dualact);
-         score = MAX(score, 0.0) + 1e-6;
-#if 0 /*????????????????????*/
-         if( SCIPvarGetInferCons(var) == 0 ) /* prefer unfixing variables that cannot be resolved */
-            score += 1e+6;
-#endif
-         score *= SCIPvarGetFixDepth(var);
-
-         /* insert fixed variable in candidate list */
-         for( i = nfixings; i > 0 && score > binvarscores[i-1]; --i )
-         {
-            binvars[i] = binvars[i-1];
-            binvarscores[i] = binvarscores[i-1];
-         }
-         binvars[i] = var;
-         binvarscores[i] = score;
-         nfixings++;
-      }
-
-      /* try to unfix binary variables and still keep the dual row  y'^T{lhs,rhs} + r^T{lb,ub} - c* <= -z^T A x  violated:
-       * binary variables i fixed to x_i == 0.0:
-       *  - set duallhsdelta := r_i if r_i < 0.0,             and duallhsdelta := 0.0, if r_i >= 0.0
-       *  - set dualactdelta := dualcoef, if dualcoef > 0.0,  and dualactdelta := 0.0, if dualcoef <= 0.0
-       * binary variables i fixed to x_i == 1.0:
-       *  - set duallhsdelta := -r_i if r_i > 0.0,            and duallhsdelta := 0.0, if r_i <= 0.0
-       *  - set dualactdelta := -dualcoef, if dualcoef < 0.0, and dualactdelta := 0.0, if dualcoef >= 0.0
-       * if duallhs + duallhsdelta > dualact + dualactdelta:
-       *  - variable can be unfixed
-       *  - update duallhs and dualact with duallhsdelta and dualactdelta
-       * if duallhs + duallhsdelta <= dualact + dualactdelta:
-       *  - variable cannot be unfixed and has to be put in the conflict set
-       */
-      for( i = 0; i < nfixings; ++i )
-      {
-         var = binvars[i];
-         v = SCIPvarGetProbindex(var);
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         assert(0 <= v && v < prob->nbinvars);
-
-         debugMessage(" <%s> [%g,%g]: score=%g, infdepth=%d, redcost=%g, dualcoef=%g, %g <= %g\n",
-            SCIPvarGetName(var), curvarlbs[v], curvarubs[v], binvarscores[i], SCIPvarGetFixDepth(var),
-            varredcosts[v], dualcoef[v], duallhs, dualact);
-
-         /* variable fixed to lower bound: sign = +1, upper bound: sign = -1 */
-         sign = curvarubs[v] < 0.5 ? +1 : -1;
-         
-         /* calculate duallhsdelta and dualactdelta for unfixing the variable */
-         duallhsdelta = sign * varredcosts[v];
-         duallhsdelta = MIN(duallhsdelta, 0.0);
-         dualactdelta = sign * dualcoef[v];
-         dualactdelta = MAX(dualactdelta, 0.0);
-         assert(SCIPsetIsLE(set, duallhsdelta, dualactdelta));
-
-         /* check, if variable can be unfixed */
-         if( SCIPsetIsFeasGT(set, duallhs + duallhsdelta, dualact + dualactdelta) )
-         {
-            /* we can unfix the variable and have to update the dual row's left hand side and activity */
-            duallhs += duallhsdelta;
-            dualact += dualactdelta;
-            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-            {
-               col = SCIPvarGetCol(var);
-               c = SCIPcolGetLPPos(col);
-               if( c >= 0 )
-               {
-                  assert(c < ncols);
-                  bdchginds[*nbdchgs] = c;
-                  bdchgoldlbs[*nbdchgs] = curvarlbs[v];
-                  bdchgoldubs[*nbdchgs] = curvarubs[v];
-                  bdchgnewlbs[*nbdchgs] = 0.0;
-                  bdchgnewubs[*nbdchgs] = 1.0;
-                  (*nbdchgs)++;
-               }
-            }
-            curvarlbs[v] = 0.0;
-            curvarubs[v] = 1.0;
-            *resolve = *resolve || SCIPsetIsLT(set, duallhsdelta, dualactdelta);
-            debugMessage("  -> unfixed variable <%s> -> %g <= %g\n", SCIPvarGetName(var), duallhs, dualact);
-         }
-      }
-
-      /* free the buffer for the sorted binary variables */
-      SCIPsetFreeBufferArray(set, &binvarscores);
-      SCIPsetFreeBufferArray(set, &binvars);
+      /* undo bound changes while keeping the infeasibility proof valid */
+      CHECK_OKAY( undoBdchgsProof(set, prob, dualcoefs, duallhs, dualact, 
+            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+            nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, resolve) );
 
       *valid = TRUE;
    }
@@ -2011,10 +2236,97 @@ RETCODE unfixBinariesDualsol(
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &varredcosts);
-   SCIPsetFreeBufferArray(set, &dualcoef);
+   SCIPsetFreeBufferArray(set, &dualcoefs);
    SCIPsetFreeBufferArray(set, &redcosts);
    SCIPsetFreeBufferArray(set, &dualsols);
    SCIPsetFreeBufferArray(set, &primsols);
+
+   return SCIP_OKAY;
+}
+
+/** applies conflict analysis starting with given bound changes, that could not be undone during previous 
+ *  infeasibility analysis
+ */
+static
+RETCODE conflictAnalyzeRemainingBdchgs(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
+   int              maxsize,            /**< maximal size of conflict set */
+   int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
+   int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created */
+   )
+{
+   VAR** vars;
+   VAR* var;
+   int nvars;
+   int v;
+
+   assert(prob != NULL);
+   assert(lbchginfoposs != NULL);
+   assert(ubchginfoposs != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   assert(nvars == 0 || vars != NULL);
+
+   /* initialize conflict data */
+   CHECK_OKAY( SCIPconflictInit(conflict) );
+   
+   /* add remaining bound changes to conflict queue */
+   debugMessage("initial conflict set after undoing bound changes:\n");
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+      assert(-1 <= lbchginfoposs[v] && lbchginfoposs[v] <= var->nlbchginfos);
+      assert(-1 <= ubchginfoposs[v] && ubchginfoposs[v] <= var->nubchginfos);
+
+      if( lbchginfoposs[v] == var->nlbchginfos || ubchginfoposs[v] == var->nubchginfos )
+      {
+         /* the strong branching or diving bound stored in the column is responsible for the conflict:
+          * it cannot be resolved and therefore has to be directly put into the conflict set;
+          * the variable must be binary, because non-binary strong branching or diving bound changes
+          * are already undone
+          */
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetLbLocal(var) < 0.5);
+         assert(SCIPvarGetUbLocal(var) > 0.5);
+         assert((lbchginfoposs[v] == var->nlbchginfos) != (ubchginfoposs[v] == var->nubchginfos));
+         assert((lbchginfoposs[v] == var->nlbchginfos) == (SCIPvarGetLbLP(var) > 0.5));
+         assert((ubchginfoposs[v] == var->nubchginfos) == (SCIPvarGetUbLP(var) < 0.5));
+
+         /* put variable into the conflict set */
+         debugMessage("   fixed: <%s> == %g\n", SCIPvarGetName(var), SCIPvarGetLbLP(var));
+         CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var) );
+      }
+      else
+      {
+         /* put remaining bound changes into conflict candidate queue */
+         if( lbchginfoposs[v] >= 0 )
+         {
+            debugMessage("   queue: <%s> >= %g\n", 
+               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->lbchginfos[lbchginfoposs[v]]));
+            CHECK_OKAY( conflictAddBdchginfo(conflict, &var->lbchginfos[lbchginfoposs[v]]) );
+         }
+         if( ubchginfoposs[v] >= 0 )
+         {
+            debugMessage("   queue: <%s> <= %g\n", 
+               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->ubchginfos[ubchginfoposs[v]]));
+            CHECK_OKAY( conflictAddBdchginfo(conflict, &var->ubchginfos[ubchginfoposs[v]]) );
+         }
+      }
+   }
+
+   /* analyze the conflict set, and create a conflict constraint on success */
+   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
 
    return SCIP_OKAY;
 }
@@ -2038,6 +2350,10 @@ RETCODE conflictAnalyzeLP(
    VAR* var;
    Real* curvarlbs;
    Real* curvarubs;
+   int* lbchginfoposs;
+   int* ubchginfoposs;
+   Real lb;
+   Real ub;
    Real objval;
    int nvars;
    int maxsize;
@@ -2083,35 +2399,53 @@ RETCODE conflictAnalyzeLP(
    vars = prob->vars;
    nvars = prob->nvars;
 
-   /* get temporary memory for remembering variables' current bounds */
+   /* get temporary memory for remembering variables' current bounds and corresponding bound change information 
+    * positions in variable's bound change information arrays
+    */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &curvarlbs, nvars) );
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &curvarubs, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lbchginfoposs, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ubchginfoposs, nvars) );
 
-   /* the following algorithm is used to find a subset of fixed binary variables leading to an infeasible LP:
-    * 1. unfix all non-binary variables
+   /* the following algorithm is used to find a subset of changed bounds leading to an infeasible LP:
+    * 1. undo all bound changes on non-binary variables without inference information
+    *    -> update lb/ubchginfoposs arrays
     *    -> store changes in bdchg and curvarlbs/ubs arrays
     *    -> apply changes to the LPI
     * 2. resolve LP
-    * 3. call unfixBinariesDualfarkas() or unfixBinariesDualsol()
+    * 3. call undoBdchgsDualfarkas() or undoBdchgsDualsol()
+    *    -> update lb/ubchginfoposs arrays
     *    -> store additional changes in bdchg and curvarlbs/ubs arrays
     *    -> apply additional changes to the LPI
-    * 4. if additional unfixings were found, goto 2
-    * 5. undo all bound changes in the LPI
+    * 4. if additional bound changes were undone, goto 1
+    * 5. redo all bound changes in the LPI to restore the LPI to its original state
     * 6. analyze conflict
-    *    -> put remaining fixed binaries (see curvarlbs/ubs arrays) into starting conflict set
+    *    -> put remaining changed bounds (see lb/ubchginfoposs arrays) into starting conflict set
     */
-
-   /* get current bounds of binary variables */
+   
+   /* get current bounds and current positions in lb/ubchginfos arrays of binary variables */
    valid = FALSE;
    for( v = 0; v < prob->nbinvars; ++v )
    {
       var = vars[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      
+      curvarlbs[v] = SCIPvarGetLbLP(var);
+      curvarubs[v] = SCIPvarGetUbLP(var);
+      lbchginfoposs[v] = var->nlbchginfos-1;
+      ubchginfoposs[v] = var->nubchginfos-1;
 
-      curvarlbs[v] = getLbLocal(var);
-      curvarubs[v] = getUbLocal(var);
-      valid = valid || (curvarlbs[v] > 0.5 || curvarubs[v] < 0.5);
-      debugMessage("binary variable <%s> [%g,%g]\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
+      /* check, if last bound changes were due to strong branching or diving */
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+      if( !SCIPsetIsEQ(set, curvarlbs[v], lb) )
+         lbchginfoposs[v] = var->nlbchginfos;
+      if( !SCIPsetIsEQ(set, curvarubs[v], ub) )
+         ubchginfoposs[v] = var->nubchginfos;
+
+      valid = valid || (v < prob->nbinvars && (curvarlbs[v] > 0.5 || curvarubs[v] < 0.5));
+      debugMessage(" -> binary variable <%s> [%g,%g], bdchg=(%d,%d)\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v],
+         lbchginfoposs[v], ubchginfoposs[v]);
    }
 
    /* conflict analysis only makes sense, if fixed binary variables exist */
@@ -2130,8 +2464,6 @@ RETCODE conflictAnalyzeLP(
       Real* bdchgnewlbs;
       Real* bdchgnewubs;
       Real lpiinfinity;
-      Real loclb;
-      Real locub;
       Bool resolve;
       int nsidechgs;
       int nbdchgs;
@@ -2141,6 +2473,29 @@ RETCODE conflictAnalyzeLP(
       int iter;
       int nloops;
       int r;
+
+      /* get current bounds and current positions in lb/ubchginfos arrays of non-binary variables */
+      for( v = prob->nbinvars; v < nvars; ++v )
+      {
+         var = vars[v];
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+
+         curvarlbs[v] = SCIPvarGetLbLP(var);
+         curvarubs[v] = SCIPvarGetUbLP(var);
+         lbchginfoposs[v] = var->nlbchginfos-1;
+         ubchginfoposs[v] = var->nubchginfos-1;
+         
+         /* check, if last bound changes were due to strong branching or diving */
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         if( !SCIPsetIsEQ(set, curvarlbs[v], lb) )
+            lbchginfoposs[v] = var->nlbchginfos;
+         if( !SCIPsetIsEQ(set, curvarubs[v], ub) )
+            ubchginfoposs[v] = var->nubchginfos;
+
+         debugMessage(" -> non-binary variable <%s> [%g,%g], bdchg=(%d,%d)\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v],
+            lbchginfoposs[v], ubchginfoposs[v]);
+      }
 
       /* get infinity value of LP solver */
       lpiinfinity = SCIPlpiInfinity(lpi);
@@ -2210,6 +2565,8 @@ RETCODE conflictAnalyzeLP(
                sidechgnewrhss[nsidechgs] = lpiinfinity/2;
             }
             nsidechgs++;
+
+            debugMessage(" -> removing local row <%s> [%g,%g]\n", SCIProwGetName(rows[r]), lhs, rhs);
          }
       }
 
@@ -2219,59 +2576,85 @@ RETCODE conflictAnalyzeLP(
          CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgnewlhss, sidechgnewrhss) );
       }
 
-      /* get current bounds of non-binary variables, and unfix them:
-       * compare local and global bounds of non-binary variables and remember differences
-       */
-      nbdchgs = 0;
-      for( v = prob->nbinvars; v < nvars; ++v )
-      {
-         var = vars[v];
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-         loclb = getLbLocal(var);
-         locub = getUbLocal(var);
-         curvarlbs[v] = SCIPvarGetLbGlobal(var);
-         curvarubs[v] = SCIPvarGetUbGlobal(var);
-
-         debugMessage("non-binary <%s> [%g,%g] -> [%g,%g]\n", SCIPvarGetName(var), 
-            loclb, locub, curvarlbs[v], curvarubs[v]);
-
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-         {
-            COL* col;
-            int c;
-         
-            col = SCIPvarGetCol(var);
-            c = SCIPcolGetLPPos(col);
-            if( c >= 0 && (!SCIPsetIsEQ(set, curvarlbs[v], loclb) || !SCIPsetIsEQ(set, curvarubs[v], locub)) )
-            {
-               assert(c < ncols);
-               assert(cols[c] == col);
-               assert(lp->lpicols[c] == col);
-               bdchginds[nbdchgs] = c;
-               bdchgoldlbs[nbdchgs] = loclb;
-               bdchgoldubs[nbdchgs] = locub;
-               bdchgnewlbs[nbdchgs] = curvarlbs[v];
-               bdchgnewubs[nbdchgs] = curvarubs[v];
-               nbdchgs++;
-            }
-         }
-      }
-
-      /* apply changes of non-binary variables to the LP solver */
-      if( nbdchgs > 0 )
-      {
-         CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, bdchginds, bdchgnewlbs, bdchgnewubs) );
-      }
-
       /* unfix binary variables until no more unfixings could be found */
       nloops = 0;
+      nbdchgs = 0;
+      lastnbdchgs = 0;
       do
       {
          nloops++;
          resolve = FALSE;
-         lastnbdchgs = nbdchgs;
 
+         debugMessage("infeasible LP conflict analysis loop %d (changed col bounds: %d)\n", nloops, nbdchgs);
+
+         /* undo bound changes on non-binary variables without inference information */
+         for( v = prob->nbinvars; v < nvars; ++v )
+         {
+            int lbpos;
+            int ubpos;
+            Bool changed;
+
+            var = vars[v];
+            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+            assert(-1 <= lbchginfoposs[v] && lbchginfoposs[v] <= var->nlbchginfos);
+            assert(-1 <= ubchginfoposs[v] && ubchginfoposs[v] <= var->nubchginfos);
+
+            /* bound change has to be undone, if it is a strong branching/diving bound change, or
+             * if no inference information is available in the corresponding bound change information data
+             */
+
+            /* calculate position of new active lower bound change */
+            lbpos = lbchginfoposs[v];
+            while( lbpos == var->nlbchginfos || (lbpos >= 0 && !bdchginfoIsUseable(&var->lbchginfos[lbpos])) )
+               lbpos--;
+            assert(-1 <= lbpos && lbpos < var->nlbchginfos);
+            
+            /* calculate position of new active upper bound change */
+            ubpos = ubchginfoposs[v];
+            while( ubpos == var->nubchginfos || (ubpos >= 0 && !bdchginfoIsUseable(&var->ubchginfos[ubpos])) )
+               ubpos--;
+            assert(-1 <= ubpos && ubpos < var->nubchginfos);
+
+            /* change bounds and bound change positions if necessary */
+            changed = FALSE;
+            if( lbpos < lbchginfoposs[v] )
+            {
+               lbchginfoposs[v] = lbpos;
+               if( lbpos >= 0 )
+                  curvarlbs[v] = var->lbchginfos[lbpos].newbound;
+               else
+                  curvarlbs[v] = SCIPvarGetLbGlobal(var);
+               changed = TRUE;
+            }
+            if( ubpos < ubchginfoposs[v] )
+            {
+               ubchginfoposs[v] = ubpos;
+               if( ubpos >= 0 )
+                  curvarubs[v] = var->ubchginfos[ubpos].newbound;
+               else
+                  curvarubs[v] = SCIPvarGetUbGlobal(var);
+               changed = TRUE;
+            }
+
+            /* insert bound change in LPI bound change arrays */
+            if( changed )
+            {
+               addBdchg(var, curvarlbs[v], curvarubs[v], 
+                  &nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs);
+               debugMessage(" -> undoing bound change on non-binary variable <%s> without inference info: [%g,%g], bdchg=(%d,%d)\n", 
+                  SCIPvarGetName(var), curvarlbs[v], curvarubs[v], lbchginfoposs[v], ubchginfoposs[v]);
+            }
+         }
+
+         /* apply bound changes to the LP solver */
+         assert(nbdchgs >= lastnbdchgs);
+         if( nbdchgs > lastnbdchgs )
+         {
+            CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs - lastnbdchgs,
+                  &bdchginds[lastnbdchgs], &bdchgnewlbs[lastnbdchgs], &bdchgnewubs[lastnbdchgs]) );
+            lastnbdchgs = nbdchgs;
+         }
+         
          /* start LP timer */
          SCIPclockStart(stat->conflictlptime, set);
 
@@ -2295,33 +2678,28 @@ RETCODE conflictAnalyzeLP(
          (*iterations) += iter;
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
+         debugMessage(" -> resolved LP in %d iterations (total: %lld)\n", iter, stat->nconflictlpiterations);
 
          if( valid )
          {
             /* unfix additional binary variables */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
-               CHECK_OKAY( unfixBinariesDualfarkas(set, stat, prob, lp, curvarlbs, curvarubs,
+               CHECK_OKAY( undoBdchgsDualfarkas(set, stat, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
                      &nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, &valid, &resolve) );
             }
             else
             {
                assert(SCIPlpiIsOptimal(lpi));
-               CHECK_OKAY( unfixBinariesDualsol(set, stat, prob, lp, curvarlbs, curvarubs,
+               CHECK_OKAY( undoBdchgsDualsol(set, stat, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
                      &nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, &valid, &resolve) );
             }
-
-            /* apply additional changes of binary variables to the LP solver */
-            if( resolve )
-            {
-               assert(valid && nbdchgs > lastnbdchgs);
-               CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs - lastnbdchgs, 
-                     &bdchginds[lastnbdchgs], &bdchgnewlbs[lastnbdchgs], &bdchgnewubs[lastnbdchgs]) );
-            }
          }
-         assert(nbdchgs >= lastnbdchgs);
+         assert(!resolve || valid);
+         assert(!resolve || nbdchgs > lastnbdchgs);
       }
       while( resolve && nloops < 100 );
+      debugMessage("finished undoing bound changes after %d loops (valid=%d)\n", nloops, valid);
 
       /* reset variables to local bounds */
       if( nbdchgs > 0 )
@@ -2338,31 +2716,11 @@ RETCODE conflictAnalyzeLP(
       /* reset objective limit in LP solver */
       CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
+      /* analyze the conflict starting with remaining bound changes */
       if( valid )
       {
-         /* initialize conflict data */
-         CHECK_OKAY( SCIPconflictInit(conflict) );
-
-         /* add remaining fixed binary variables to conflit set */
-         debugMessage("initial conflict set after LP analysis:\n");
-         for( v = 0; v < nvars; ++v )
-         {
-            var = vars[v];
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, curvarlbs[v], SCIPvarGetLbGlobal(var)));
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, curvarubs[v], SCIPvarGetUbGlobal(var)));
-
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-            {
-               if( curvarlbs[v] > 0.5 || curvarubs[v] < 0.5 )
-               {
-                  debugMessage("   <%s> [%g,%g]\n", SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
-                  CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
-               }
-            }
-         }
-
-         /* analyze the conflict set, and create a conflict constraint on success */
-         CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
+         CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree, maxsize, 
+               lbchginfoposs, ubchginfoposs, success) );
       }
 
       /* free temporary memory */
@@ -2379,6 +2737,8 @@ RETCODE conflictAnalyzeLP(
    }
 
    /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &ubchginfoposs);
+   SCIPsetFreeBufferArray(set, &lbchginfoposs);
    SCIPsetFreeBufferArray(set, &curvarubs);
    SCIPsetFreeBufferArray(set, &curvarlbs);
 
@@ -2581,10 +2941,6 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          stat->nconflictlpiterations += iter;
          conflict->nsbiterations += iter;
 
-         /* fake the fixdepth of the variable in order to get the conflict analysis running */
-         assert(var->fixdepth == -1);
-         var->fixdepth = tree->actnode->depth+1;
-
          /* perform conflict analysis on infeasible LP */
          CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iter, &found) );
          conflict->nsbiterations += iter;
@@ -2594,9 +2950,6 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
             if( success != NULL )
                *success = TRUE;
          }
-
-         /* reset the fixdepth of the variable */
-         var->fixdepth = -1;
 
          /* reset the upper bound */
          col->ub = oldub;
@@ -2632,10 +2985,6 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          stat->nconflictlpiterations += iter;
          conflict->nsbiterations += iter;
 
-         /* fake the fixdepth of the variable in order to get the conflict analysis running */
-         assert(var->fixdepth == -1);
-         var->fixdepth = tree->actnode->depth+1;
-
          /* perform conflict analysis on infeasible LP */
          CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iter, &found) );
          conflict->nsbiterations += iter;
@@ -2645,9 +2994,6 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
             if( success != NULL )
                *success = TRUE;
          }
-
-         /* reset the fixdepth of the variable */
-         var->fixdepth = -1;
 
          /* reset the lower bound */
          col->lb = oldlb;
@@ -2715,7 +3061,7 @@ Longint SCIPconflictGetNStrongbranchIterations(
  * pseudo solution conflict analysis
  */
 
-/** analyzes a pseudo solution with objective value exceeding the current cutoff to find out the bound changes on binary
+/** analyzes a pseudo solution with objective value exceeding the current cutoff to find out the bound changes on 
  *  variables that were responsible for the objective value degradation;
  *  on success, calls standard conflict analysis with the responsible variables as starting conflict set, thus creating
  *  a conflict constraint out of the resulting conflict set;
@@ -2732,11 +3078,18 @@ RETCODE SCIPconflictAnalyzePseudo(
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+   VAR** vars;
    VAR* var;
-   Real pseudoobjval;
-   Real obj;
-   Bool valid;
+   Real* curvarlbs;
+   Real* curvarubs;
+   int* lbchginfoposs;
+   int* ubchginfoposs;
+   Real* pseudocoefs;
+   Real pseudolhs;
+   Real pseudoact;
+   Bool found;
    int maxsize;
+   int nvars;
    int v;
 
    assert(conflict != NULL);
@@ -2766,73 +3119,82 @@ RETCODE SCIPconflictAnalyzePseudo(
    SCIPclockStart(conflict->pseudoanalyzetime, set);
 
    conflict->npseudocalls++;
-   valid = FALSE;
 
-   /* if any non-binary variable is not on its best bound in current pseudo solution, we have to abort */
-   for( v = prob->nbinvars; v < prob->nvars; ++v )
+   debugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
+      SCIPlpGetPseudoObjval(lp, set), lp->cutoffbound);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+   assert(nvars == 0 || vars != NULL);
+
+   /* The current primal bound c* gives an upper bound for the current pseudo objective value:
+    *   min{c^T x | lb <= x <= ub} <= c*.
+    * We have to transform this row into a >= inequality in order to use methods above:
+    *                          -c* <= max{-c^T x | lb <= x <= ub}.
+    * In the local subproblem, this row is violated. We want to undo bound changes while still keeping the
+    * row violated.
+    */
+
+   /* get temporary memory for remembering variables' current bounds and corresponding bound change information 
+    * positions in variable's bound change information arrays
+    */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &curvarlbs, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &curvarubs, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lbchginfoposs, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ubchginfoposs, nvars) );
+
+   /* get temporary memory for infeasibility proof coefficients */
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &pseudocoefs, nvars) );
+
+   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
+    * infeasible
+    */
+   pseudolhs = -(lp->cutoffbound - set->sumepsilon);
+
+   /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
+   pseudoact = 0.0;
+   for( v = 0; v < nvars; ++v )
    {
-      var = prob->vars[v];
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-      obj = SCIPvarGetObj(var);
-      if( (obj > 0.0 && SCIPvarGetLbLocal(var) != SCIPvarGetLbGlobal(var))
-         || (obj < 0.0 && SCIPvarGetUbLocal(var) != SCIPvarGetUbGlobal(var)) )
-         break;
+      var = vars[v];
+      pseudocoefs[v] = -SCIPvarGetObj(var);
+      curvarlbs[v] = SCIPvarGetLbLocal(var);
+      curvarubs[v] = SCIPvarGetUbLocal(var);
+      if( pseudocoefs[v] > 0.0 )
+         pseudoact += pseudocoefs[v] * curvarubs[v];
+      else
+         pseudoact += pseudocoefs[v] * curvarlbs[v];
+      lbchginfoposs[v] = var->nlbchginfos-1;
+      ubchginfoposs[v] = var->nubchginfos-1;
    }
+   assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set)));
+   debugMessage("  -> recalculated pseudo infeasibility proof:  %g <= %g\n", pseudolhs, pseudoact);
 
-   if( v == prob->nvars )
+   /* check, if the pseudo row is still violated (after recalculation of pseudo activity) */
+   if( SCIPsetIsFeasGT(set, pseudolhs, pseudoact) )
    {
-      pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
-      assert(pseudoobjval >= lp->cutoffbound);
-      
-      debugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
-         pseudoobjval, lp->cutoffbound);
+      /* undo bound changes without destroying the infeasibility proof */
+      CHECK_OKAY( undoBdchgsProof(set, prob, pseudocoefs, pseudolhs, pseudoact, 
+            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-      /* initialize conflict data */
-      CHECK_OKAY( SCIPconflictInit(conflict) );
-      
-      /* add all binary variables, that are not on their best bound in current pseudo solution;
-       * however, the variable need not to be added, if after unfixing the pseudo objective value is still too large
-       */
-      for( v = 0; v < prob->nbinvars; ++v )
-      {
-         var = prob->vars[v];
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         obj = SCIPvarGetObj(var);
-         if( obj > 0.0 && SCIPvarGetLbLocal(var) > 0.5 )
-         {
-            if( pseudoobjval - obj >= lp->cutoffbound )
-               pseudoobjval -= obj;
-            else
-            {
-               debugMessage("adding <%s>[%g,%g] (obj=%g) to conflict set\n", 
-                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), obj);
-               CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
-            }
-         }
-         else if( obj < 0.0 && SCIPvarGetUbLocal(var) < 0.5 )
-         {
-            if( pseudoobjval + obj >= lp->cutoffbound )
-               pseudoobjval += obj;
-            else
-            {
-               debugMessage("adding <%s>[%g,%g] (obj=%g) to conflict set\n", 
-                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), obj);
-               CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
-            }
-         }
-      }
-      
-      /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, TRUE, &valid) );
-      
-      /* check, if a valid conflict was found */
-      if( valid )
+      /* analyze conflict on remaining bound changes */
+      CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree, maxsize,
+            lbchginfoposs, ubchginfoposs, &found) );
+
+      /* check, if a conflict clause was found */
+      if( found )
       {
          conflict->npseudoconflicts++;
          if( success != NULL )
             *success = TRUE;
       }
    }
+
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &pseudocoefs);
+   SCIPsetFreeBufferArray(set, &curvarubs);
+   SCIPsetFreeBufferArray(set, &curvarlbs);
+   SCIPsetFreeBufferArray(set, &ubchginfoposs);
+   SCIPsetFreeBufferArray(set, &lbchginfoposs);
 
    /* stop timing */
    SCIPclockStop(conflict->pseudoanalyzetime, set);
