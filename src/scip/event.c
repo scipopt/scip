@@ -311,17 +311,13 @@ void eventDisable(
 }
 
 /** gets type of event */
-RETCODE SCIPeventGetType(
-   EVENT*           event,              /**< event */
-   EVENTTYPE*       eventtype           /**< pointer to store the event type */
+EVENTTYPE SCIPeventGetType(
+   EVENT*           event               /**< event */
    )
 {
    assert(event != NULL);
-   assert(eventtype != NULL);
 
-   *eventtype = event->eventtype;
-
-   return SCIP_OKAY;
+   return event->eventtype;
 }
 
 /** sets type of event */
@@ -338,13 +334,11 @@ RETCODE SCIPeventChgType(
 }
 
 /** gets variable for a domain change event */
-RETCODE SCIPeventGetVar(
-   EVENT*           event,              /**< event */
-   VAR**            var                 /**< pointer to store the variable */
+VAR* SCIPeventGetVar(
+   EVENT*           event               /**< event */
    )
 {
    assert(event != NULL);
-   assert(var != NULL);
 
    switch( event->eventtype )
    {
@@ -359,9 +353,8 @@ RETCODE SCIPeventGetVar(
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      *var = event->data.eventbdchg.var;
-      assert(*var != NULL);
-      break;
+      assert(event->data.eventbdchg.var != NULL);
+      return event->data.eventbdchg.var;
 
    case SCIP_EVENTTYPE_HOLEADDED:
       errorMessage("HOLEADDED event not implemented yet");
@@ -373,21 +366,16 @@ RETCODE SCIPeventGetVar(
 
    default:
       errorMessage("event does not belong to a variable");
-      *var = NULL;
-      return SCIP_INVALIDDATA;
+      return NULL;
    }
-
-   return SCIP_OKAY;
 }
 
 /** gets old bound for a bound change event */
-RETCODE SCIPeventGetOldbound(
-   EVENT*           event,              /**< event */
-   Real*            bound               /**< pointer to store the bound */
+Real SCIPeventGetOldbound(
+   EVENT*           event               /**< event */
    )
 {
    assert(event != NULL);
-   assert(bound != NULL);
 
    switch( event->eventtype )
    {
@@ -395,25 +383,20 @@ RETCODE SCIPeventGetOldbound(
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      *bound = event->data.eventbdchg.oldbound;
-      break;
+      return event->data.eventbdchg.oldbound;
 
    default:
       errorMessage("event is not a bound change event");
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALID;
    }
-
-   return SCIP_OKAY;
 }
 
 /** gets new bound for a bound change event */
-RETCODE SCIPeventGetNewbound(
-   EVENT*           event,              /**< event */
-   Real*            bound               /**< pointer to store the bound */
+Real SCIPeventGetNewbound(
+   EVENT*           event               /**< event */
    )
 {
    assert(event != NULL);
-   assert(bound != NULL);
 
    switch( event->eventtype )
    {
@@ -421,35 +404,28 @@ RETCODE SCIPeventGetNewbound(
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
-      *bound = event->data.eventbdchg.newbound;
-      break;
+      return event->data.eventbdchg.newbound;
 
    default:
       errorMessage("event is not a bound change event");
-      return SCIP_INVALIDDATA;
+      return SCIP_INVALID;
    }
-
-   return SCIP_OKAY;
 }
 
 /** gets node for a node event */
-RETCODE SCIPeventGetNode(
-   EVENT*           event,              /**< event */
-   NODE**           node                /**< pointer to store the node */
+NODE* SCIPeventGetNode(
+   EVENT*           event               /**< event */
    )
 {
    assert(event != NULL);
-   assert(node != NULL);
-
+   
    if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       errorMessage("event is neither node nor LP event");
-      return SCIP_INVALIDDATA;
+      return NULL;
    }
 
-   *node = event->data.node;
-
-   return SCIP_OKAY;
+   return event->data.node;
 }
 
 /** sets node for a node event */
@@ -472,23 +448,19 @@ RETCODE SCIPeventChgNode(
 }
 
 /** gets solution for a primal solution event */
-RETCODE SCIPeventGetSol(
-   EVENT*           event,              /**< event */
-   SOL**            sol                 /**< pointer to store the new primal solution */
+SOL* SCIPeventGetSol(
+   EVENT*           event               /**< event */
    )
 {
    assert(event != NULL);
-   assert(sol != NULL);
 
    if( (event->eventtype & (SCIP_EVENTTYPE_SOLEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       errorMessage("event is not a primal solution event");
-      return SCIP_INVALIDDATA;
+      return NULL;
    }
 
-   *sol = event->data.sol;
-
-   return SCIP_OKAY;
+   return event->data.sol;
 }
 
 /** sets solution for a primal solution event */
@@ -1158,6 +1130,8 @@ RETCODE SCIPeventqueueDelay(
    assert(eventqueue != NULL);
    assert(!eventqueue->delayevents);
 
+   debugMessage("event processing is delayed\n");
+
    eventqueue->delayevents = TRUE;
 
    return SCIP_OKAY;
@@ -1179,6 +1153,8 @@ RETCODE SCIPeventqueueProcess(
 
    assert(eventqueue != NULL);
    assert(eventqueue->delayevents);
+
+   debugMessage("processing events\n");
 
    /* pass events to the responsible event filters
     * During event processing, new events may be raised. We have to loop to the mutable eventqueue->nevents.

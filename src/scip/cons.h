@@ -61,6 +61,9 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 
 /** frees specific constraint data
  *
+ *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
+ *  the corresponding bound change event was not yet processed.
+ *
  *  input:
  *    scip            : SCIP main data structure
  *    conshdlr        : the constraint handler itself
@@ -245,6 +248,9 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 
 /** constraint enabling notification method of constraint handler
  *
+ *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
+ *  the corresponding bound change event was not yet processed.
+ *
  *  This method is always called after a constraint of the constraint handler was enabled. The constraint
  *  handler may use this call to update his own (statistical) data.
  *
@@ -256,6 +262,9 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 #define DECL_CONSENABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
 
 /** constraint disabling notification method of constraint handler
+ *
+ *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
+ *  the corresponding bound change event was not yet processed.
  *
  *  This method is always called before a constraint of the constraint handler is disabled. The constraint
  *  handler may use this call to update his own (statistical) data.

@@ -1143,6 +1143,8 @@ void SCIPvarForbidRoundDown(
    assert(var != NULL);
    assert(var->nlocksdown >= 0);
 
+   debugMessage("forbid rounding down of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
+
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1190,6 +1192,8 @@ void SCIPvarForbidRoundUp(
 
    assert(var != NULL);
    assert(var->nlocksup >= 0);
+
+   debugMessage("forbid rounding up of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
 
    switch( var->varstatus )
    {
@@ -1250,6 +1254,8 @@ void SCIPvarAllowRoundDown(
    assert(var != NULL);
    assert(var->nlocksdown >= 0);
 
+   debugMessage("allow rounding down of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
+
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1299,6 +1305,8 @@ void SCIPvarAllowRoundUp(
 
    assert(var != NULL);
    assert(var->nlocksup >= 0);
+
+   debugMessage("allow rounding up of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
 
    switch( var->varstatus )
    {

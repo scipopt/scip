@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_setcover.c
- * @brief  constraint handler for setcover constraints
+ * @brief  constraint handler for set covering constraints
  * @author Tobias Achterberg
  */
 
@@ -32,21 +32,20 @@
 
 #define CONSHDLR_NAME          "setcover"
 #define CONSHDLR_DESC          "set covering constraint"
-#define CONSHDLR_SEPAPRIORITY   +800000
-#define CONSHDLR_ENFOPRIORITY   +800000
-#define CONSHDLR_CHECKPRIORITY  -800000
+#define CONSHDLR_SEPAPRIORITY   +700000
+#define CONSHDLR_ENFOPRIORITY   +700000
+#define CONSHDLR_CHECKPRIORITY  -700000
 #define CONSHDLR_SEPAFREQ             4
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define EVENTHDLR_NAME         "setcovering"
+#define EVENTHDLR_NAME         "setcover"
 #define EVENTHDLR_DESC         "bound change event handler for set covering constraints"
 
-#define LINCONSUPGD_PRIORITY   +1000000
+#define LINCONSUPGD_PRIORITY    +700000
 
 #define MINBRANCHWEIGHT               0.4  /**< minimum weight of both sets in set covering branching */
 #define MAXBRANCHWEIGHT               0.8  /**< maximum weight of both sets in set covering branching */
-#define MAXBRANCHACTIVITY             1.1  /**< maximum activity of constraint to check if branching is possible */
 
 
 /** constraint handler data */
@@ -84,7 +83,7 @@ struct ConsData
  * Local methods
  */
 
-/** creates constaint handler data for linear constraint handler */
+/** creates constaint handler data for set covering constraint handler */
 static
 RETCODE conshdlrdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
@@ -99,7 +98,7 @@ RETCODE conshdlrdataCreate(
    return SCIP_OKAY;
 }
 
-/** frees constraint handler data for linear constraint handler */
+/** frees constraint handler data for set covering constraint handler */
 static
 RETCODE conshdlrdataFree(
    SCIP*            scip,               /**< SCIP data structure */
@@ -164,6 +163,219 @@ RETCODE conshdlrdataDecVaruses(
    return SCIP_OKAY;
 }
 
+/** creates event data for variable at given position, and catches events */
+static
+RETCODE setcoverconsCatchEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons,       /**< set covering constraint object */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int              pos                 /**< array position of variable to catch bound change events for */
+   )
+{
+   VAR* var;
+
+   assert(setcovercons != NULL);
+   assert(eventhdlr != NULL);
+   assert(0 <= pos && pos < setcovercons->nvars);
+   assert(setcovercons->vars != NULL);
+
+   var = setcovercons->vars[pos];
+   assert(var != NULL);
+
+   /* catch bound change events on variables */
+   CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)setcovercons) );
+   
+   /* update the fixed variables counters for this variable */
+   if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+      setcovercons->nfixedzeros++;
+   else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+      setcovercons->nfixedones++;
+
+   debugMessage("catched event of constraint %p on <%s> [%g,%g] -> %d fixed zeros, %d fixed ones\n", setcovercons,
+      SCIPvarGetName(var), SCIPvarGetLb(var), SCIPvarGetUb(var), setcovercons->nfixedzeros, setcovercons->nfixedones);
+
+   return SCIP_OKAY;
+}
+
+/** deletes event data for variable at given position, and drops events */
+static
+RETCODE setcoverconsDropEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons,       /**< set covering constraint object */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int              pos                 /**< array position of variable to catch bound change events for */
+   )
+{
+   VAR* var;
+
+   assert(setcovercons != NULL);
+   assert(eventhdlr != NULL);
+   assert(0 <= pos && pos < setcovercons->nvars);
+   assert(setcovercons->vars != NULL);
+   
+   var = setcovercons->vars[pos];
+   assert(var != NULL);
+
+   CHECK_OKAY( SCIPdropVarEvent(scip, var, eventhdlr, (EVENTDATA*)setcovercons) );
+
+   /* update the fixed variables counters for this variable */
+   if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
+      setcovercons->nfixedzeros--;
+   else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
+      setcovercons->nfixedones--;
+
+   debugMessage("dropped event of constraint %p on <%s> [%g,%g] -> %d fixed zeros, %d fixed ones\n", setcovercons,
+      SCIPvarGetName(var), SCIPvarGetLb(var), SCIPvarGetUb(var), setcovercons->nfixedzeros, setcovercons->nfixedones);
+
+   return SCIP_OKAY;
+}
+
+/** catches bound change events and locks rounding for variable at given position in transformed set covering constraint */
+static
+RETCODE setcoverconsLockCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons,       /**< set covering constraint object */
+   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events, or NULL */
+   int              pos                 /**< position of variable in set covering constraint */
+   )
+{
+   VAR* var;
+      
+   assert(scip != NULL);
+   assert(setcovercons != NULL);
+   assert(setcovercons->transformed);
+   assert(0 <= pos && pos < setcovercons->nvars);
+
+   var = setcovercons->vars[pos];
+   
+   debugMessage("locking coefficient <%s> in set covering constraint\n", SCIPvarGetName(var));
+
+   if( eventhdlr == NULL )
+   {
+      /* get event handler for updating set covering constraint activity bounds */
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+      if( eventhdlr == NULL )
+      {
+         errorMessage("event handler for set covering constraints not found");
+         return SCIP_PLUGINNOTFOUND;
+      }
+   }
+
+   /* catch bound change events on variable */
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   CHECK_OKAY( setcoverconsCatchEvent(scip, setcovercons, eventhdlr, pos) );
+
+   /* forbid rounding of variable */
+   if( !setcovercons->local )
+      SCIPvarForbidRoundDown(var);
+
+   return SCIP_OKAY;
+}
+
+/** drops bound change events and unlocks rounding for variable at given position in transformed set covering constraint */
+static
+RETCODE setcoverconsUnlockCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons,       /**< set covering constraint object */
+   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events, or NULL */
+   int              pos                 /**< position of variable in set covering constraint */
+   )
+{
+   VAR* var;
+
+   assert(scip != NULL);
+   assert(setcovercons != NULL);
+   assert(setcovercons->transformed);
+   assert(0 <= pos && pos < setcovercons->nvars);
+
+   var = setcovercons->vars[pos];
+
+   debugMessage("unlocking coefficient <%s> in set covering constraint\n", SCIPvarGetName(var));
+
+   if( eventhdlr == NULL )
+   {
+      /* get event handler for updating set covering constraint activity bounds */
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+      if( eventhdlr == NULL )
+      {
+         errorMessage("event handler for set covering constraints not found");
+         return SCIP_PLUGINNOTFOUND;
+      }
+   }
+   
+   /* drop bound change events on variable */
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   CHECK_OKAY( setcoverconsDropEvent(scip, setcovercons, eventhdlr, pos) );
+
+   /* allow rounding of variable */
+   if( !setcovercons->local )
+      SCIPvarAllowRoundDown(var);
+
+   return SCIP_OKAY;
+}
+
+/** catches bound change events and locks rounding for all variables in transformed set covering constraint */
+static
+RETCODE setcoverconsLockAllCoefs(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons        /**< set covering constraint object */
+   )
+{
+   EVENTHDLR* eventhdlr;
+   int i;
+
+   assert(scip != NULL);
+   assert(setcovercons != NULL);
+   assert(setcovercons->transformed);
+
+   /* get event handler for updating set covering constraint activity bounds */
+   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+   {
+      errorMessage("event handler for set covering constraints not found");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* lock every single coefficient */
+   for( i = 0; i < setcovercons->nvars; ++i )
+   {
+      CHECK_OKAY( setcoverconsLockCoef(scip, setcovercons, eventhdlr, i) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops bound change events and unlocks rounding for all variables in transformed set covering constraint */
+static
+RETCODE setcoverconsUnlockAllCoefs(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons        /**< set covering constraint object */
+   )
+{
+   EVENTHDLR* eventhdlr;
+   int i;
+
+   assert(scip != NULL);
+   assert(setcovercons != NULL);
+   assert(setcovercons->transformed);
+
+   /* get event handler for updating set covering constraint activity bounds */
+   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+   {
+      errorMessage("event handler for set covering constraints not found");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* unlock every single coefficient */
+   for( i = 0; i < setcovercons->nvars; ++i )
+   {
+      CHECK_OKAY( setcoverconsUnlockCoef(scip, setcovercons, eventhdlr, i) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a set covering constraint data object */
 static
 RETCODE setcoverconsCreate(
@@ -171,7 +383,6 @@ RETCODE setcoverconsCreate(
    SETCOVERCONS**   setcovercons,       /**< pointer to store the set covering constraint */
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< variables of the constraint */
-   Bool             local,              /**< is constraint only locally valid? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -197,13 +408,10 @@ RETCODE setcoverconsCreate(
    }
    (*setcovercons)->nfixedzeros = 0;
    (*setcovercons)->nfixedones = 0;
-   (*setcovercons)->local = local;
+   (*setcovercons)->local = FALSE;
    (*setcovercons)->modifiable = modifiable;
    (*setcovercons)->removeable = removeable;
    (*setcovercons)->transformed = FALSE;
-
-   debugMessage("created setcover constraint %p, fixed zeros=%d, fixed ones=%d\n",
-      *setcovercons, (*setcovercons)->nfixedzeros, (*setcovercons)->nfixedones);
 
    return SCIP_OKAY;
 }   
@@ -222,25 +430,19 @@ RETCODE setcoverconsCreateTransformed(
 {
    EVENTHDLR* eventhdlr;
    VAR* var;
-   int v;
+   int i;
 
    assert(setcovercons != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   CHECK_OKAY( setcoverconsCreate(scip, setcovercons, nvars, vars, local, modifiable, removeable) );
+   CHECK_OKAY( setcoverconsCreate(scip, setcovercons, nvars, vars, modifiable, removeable) );
+   (*setcovercons)->local = local;
    (*setcovercons)->transformed = TRUE;
 
-   /* find the bound change event handler */
-   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-   if( eventhdlr == NULL )
+   /* transform the variables */
+   for( i = 0; i < (*setcovercons)->nvars; ++i )
    {
-      errorMessage("event handler for processing bound change events on set covering constraints not found");
-      return SCIP_ERROR;
-   }
-
-   for( v = 0; v < (*setcovercons)->nvars; ++v )
-   {
-      var = (*setcovercons)->vars[v];
+      var = (*setcovercons)->vars[i];
       assert(var != NULL);
       assert(SCIPisLE(scip, 0.0, SCIPvarGetLb(var)));
       assert(SCIPisLE(scip, SCIPvarGetLb(var), SCIPvarGetUb(var)));
@@ -252,20 +454,15 @@ RETCODE setcoverconsCreateTransformed(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
 	 var = SCIPvarGetTransformed(var);
-         (*setcovercons)->vars[v] = var;
+         (*setcovercons)->vars[i] = var;
          assert(var != NULL);
       }
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
-      
-      /* catch bound change events on variables */
-      CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)(*setcovercons)) );
-
-      /* count the fixed variables */
-      if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
-	(*setcovercons)->nfixedzeros++;
-      else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
-	(*setcovercons)->nfixedones++;
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    }
+
+   /* catch bound change events and lock the rounding of variables */
+   CHECK_OKAY( setcoverconsLockAllCoefs(scip, *setcovercons) );
 
    return SCIP_OKAY;
 }
@@ -282,22 +479,8 @@ RETCODE setcoverconsFree(
 
    if( (*setcovercons)->transformed )
    {
-      EVENTHDLR* eventhdlr;
-      int v;
-      
-      /* find the bound change event handler */
-      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-      if( eventhdlr == NULL )
-      {
-         errorMessage("event handler for processing bound change events on set covering constraints not found");
-         return SCIP_ERROR;
-      }
-      
-      /* drop bound change events on variables */
-      for( v = 0; v < (*setcovercons)->nvars; ++v )
-      {
-         CHECK_OKAY( SCIPdropVarEvent(scip, (*setcovercons)->vars[v], eventhdlr, (EVENTDATA*)(*setcovercons)) );
-      }
+      /* drop bound change events and unlock the rounding of variables */
+      CHECK_OKAY( setcoverconsUnlockAllCoefs(scip, *setcovercons) );
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*setcovercons)->vars, (*setcovercons)->varssize);
@@ -326,6 +509,267 @@ RETCODE setcoverconsToRow(
    for( v = 0; v < setcovercons->nvars; ++v )
    {
       CHECK_OKAY( SCIPaddVarToRow(scip, *row, setcovercons->vars[v], 1.0) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks constraint for violation only looking at the fixed variables, applies further fixings if possible */
+static
+RETCODE processFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< set covering constraint to be separated */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            reduceddom,         /**< pointer to store whether a domain reduction was found */
+   Bool*            addcut,             /**< pointer to store whether this constraint must be added as a cut */
+   Bool*            mustcheck           /**< pointer to store whether this constraint must be checked for feasibility */
+   )
+{
+   CONSDATA* consdata;
+   SETCOVERCONS* setcovercons;
+
+   assert(cons != NULL);
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(cutoff != NULL);
+   assert(reduceddom != NULL);
+   assert(addcut != NULL);
+   assert(mustcheck != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   setcovercons = consdata->setcovercons;
+   assert(setcovercons != NULL);
+   assert(setcovercons->nvars == 0 || setcovercons->vars != NULL);
+   assert(0 <= setcovercons->nfixedzeros && setcovercons->nfixedzeros <= setcovercons->nvars);
+   assert(0 <= setcovercons->nfixedones && setcovercons->nfixedones <= setcovercons->nvars);
+
+   *addcut = FALSE;
+   *mustcheck = FALSE;
+
+   if( setcovercons->nfixedzeros == setcovercons->nvars )
+   {
+      if( setcovercons->modifiable )
+      {
+         /* the constraint cannot be feasible with the active variable set, but due to additional pricing,
+          * it may be feasible after the next pricing loop -> just insert it as a cut
+          */
+         *addcut = TRUE;
+      }
+      else
+      {
+         /* the constraint cannot be feasible, because all variables are fixed to zero */
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *cutoff = TRUE;
+      }
+   }
+   else if( setcovercons->nfixedones >= 1 )
+   {
+      /* constraint is feasible anyway, because one of its variables is fixed to one -> constraint can be disabled */
+      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+   }
+   else if( setcovercons->nfixedzeros == setcovercons->nvars - 1 && !setcovercons->modifiable )
+   {
+      VAR** vars;
+      VAR* var;
+      Bool fixed;
+      int nvars;
+      int v;
+
+      /* only one variable is not fixed to zero in an unmodifiable constraint
+       * -> this variable can be fixed to one, and the constraint can be disabled
+       */
+      
+      /* search the single variable that can be fixed */
+      vars = setcovercons->vars;
+      nvars = setcovercons->nvars;
+      fixed = FALSE;
+      for( v = 0; v < nvars && !fixed; ++v )
+      {
+         var = vars[v];
+         assert(SCIPisZero(scip, SCIPvarGetLb(var)));
+         assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
+         if( SCIPvarGetUb(var) > 0.5 )
+         {
+            CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
+            fixed = TRUE;
+         }
+      }
+      assert(fixed);
+
+      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      *reduceddom = TRUE;
+   }
+   else
+   {
+      /* no information can be obtained from the variable's fixings -> we have to check the constraint manually */
+      *mustcheck = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks constraint for violation, returns TRUE iff constraint is feasible */
+static
+Bool check(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETCOVERCONS*    setcovercons,       /**< set covering constraint to be checked */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   VAR** vars;
+   Real solval;
+   Real sum;
+   int nvars;
+   int v;
+   
+   /* calculate the constraint's activity */
+   vars = setcovercons->vars;
+   nvars = setcovercons->nvars;
+   sum = 0.0;
+   for( v = 0; v < nvars && sum < 1.0; ++v )
+   {
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+      assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
+      sum += solval;
+   }
+   return SCIPisFeasGE(scip, sum, 1.0);
+}
+
+/** checks constraint for violation, and adds it as a cut if possible */
+static
+RETCODE separate(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< set covering constraint to be separated */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            separated,          /**< pointer to store whether a cut was found */
+   Bool*            reduceddom          /**< pointer to store whether a domain reduction was found */
+   )
+{
+   CONSDATA* consdata;
+   SETCOVERCONS* setcovercons;
+   Bool addcut;
+   Bool mustcheck;
+
+   assert(cons != NULL);
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(cutoff != NULL);
+   assert(separated != NULL);
+   assert(reduceddom != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   setcovercons = consdata->setcovercons;
+   assert(setcovercons != NULL);
+   assert(setcovercons->nvars == 0 || setcovercons->vars != NULL);
+   assert(0 <= setcovercons->nfixedzeros && setcovercons->nfixedzeros <= setcovercons->nvars);
+   assert(0 <= setcovercons->nfixedones && setcovercons->nfixedones <= setcovercons->nvars);
+
+   /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
+   CHECK_OKAY( processFixings(scip, cons, cutoff, reduceddom, &addcut, &mustcheck) );
+
+   if( mustcheck )
+   {
+      ROW* row;
+
+      assert(!addcut);
+
+      /* variable's fixings didn't give us any information -> we have to check the constraint */
+      row = consdata->row;
+      if( row != NULL )
+      {
+         /* ignore constraints that are in the LP */
+         if( !SCIProwIsInLP(row) )
+         {         
+            Real feasibility;
+            
+            feasibility = SCIPgetRowLPFeasibility(scip, row);
+            addcut = !SCIPisFeasible(scip, feasibility);
+         }
+      }
+      else
+         addcut = !check(scip, setcovercons, NULL);
+
+      if( !addcut )
+      {
+         /* constraint was feasible -> increase age */
+         CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      }
+   }
+
+   if( addcut )
+   {
+      if( consdata->row == NULL )
+      {
+         /* convert set covering constraint data into LP row */
+         CHECK_OKAY( setcoverconsToRow(scip, setcovercons, SCIPconsGetName(cons), &consdata->row) );
+      }
+      assert(consdata->row != NULL);
+      assert(!SCIProwIsInLP(consdata->row));
+            
+      /* insert LP row as cut */
+      CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(setcovercons->nvars+1)) );
+      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      *separated = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** enforces the pseudo solution on the given constraint */
+static
+RETCODE enforcePseudo(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< set covering constraint to be separated */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            infeasible,         /**< pointer to store whether the constraint was infeasible */
+   Bool*            reduceddom,         /**< pointer to store whether a domain reduction was found */
+   Bool*            solvelp             /**< pointer to store whether the LP has to be solved */
+   )
+{
+   Bool addcut;
+   Bool mustcheck;
+
+   assert(!SCIPhasActnodeLP(scip));
+   assert(cons != NULL);
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(cutoff != NULL);
+   assert(infeasible != NULL);
+   assert(reduceddom != NULL);
+   assert(solvelp != NULL);
+
+   /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
+   CHECK_OKAY( processFixings(scip, cons, cutoff, reduceddom, &addcut, &mustcheck) );
+
+   if( mustcheck )
+   {
+      CONSDATA* consdata;
+      SETCOVERCONS* setcovercons;
+
+      assert(!addcut);
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      setcovercons = consdata->setcovercons;
+      assert(setcovercons != NULL);
+
+      *infeasible = !check(scip, setcovercons, NULL);
+
+      if( !infeasible )
+      {
+         /* constraint was feasible -> increase age */
+         CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      }
+   }
+
+   if( addcut )
+   {
+      /* a cut must be added to the LP -> we have to solve the LP immediately */
+      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      *solvelp = TRUE;
    }
 
    return SCIP_OKAY;
@@ -417,176 +861,6 @@ DECL_CONSTRANS(consTransSetcover)
    return SCIP_OKAY;
 }
 
-/** checks constraint for violation, and adds it as a cut if possible */
-static
-RETCODE separate(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< set covering constraint to be separated */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            separated,          /**< pointer to store whether a cut was found */
-   Bool*            reduceddom          /**< pointer to store whether a domain reduction was found */
-   )
-{
-   CONSDATA* consdata;
-   SETCOVERCONS* setcovercons;
-
-   assert(cons != NULL);
-   assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-   assert(cutoff != NULL);
-   assert(separated != NULL);
-   assert(reduceddom != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   setcovercons = consdata->setcovercons;
-   assert(setcovercons != NULL);
-   assert(setcovercons->nvars == 0 || setcovercons->vars != NULL);
-   assert(0 <= setcovercons->nfixedzeros && setcovercons->nfixedzeros <= setcovercons->nvars);
-   assert(0 <= setcovercons->nfixedones && setcovercons->nfixedones <= setcovercons->nvars);
-
-   if( setcovercons->nfixedzeros == setcovercons->nvars )
-   {
-      if( setcovercons->modifiable )
-      {
-         /* the constraint cannot be feasible with the active variable set, but due to additional pricing,
-          * it may be feasible after the next pricing loop -> just insert it as a cut
-          */
-
-         /* convert set covering constraint data into LP row */
-         CHECK_OKAY( setcoverconsToRow(scip, setcovercons, SCIPconsGetName(cons), &consdata->row) );
-         assert(consdata->row != NULL);
-         assert(!SCIProwIsInLP(consdata->row));
-         
-         /* insert LP row as cut */
-         CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(setcovercons->nvars+1)) );
-         *separated = TRUE;
-      }
-      else
-      {
-         /* the constraint cannot be feasible, because all variables are fixed to zero */
-         *cutoff = TRUE;
-      }
-      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-   }
-   else if( setcovercons->nfixedones >= 1 )
-   {
-      /* constraint is feasible anyway, because one of its variables is fixed to one -> constraint can be disabled */
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-   }
-   else if( setcovercons->nfixedzeros == setcovercons->nvars - 1 && !setcovercons->modifiable )
-   {
-      VAR** vars;
-      VAR* var;
-      Bool fixed;
-      int nvars;
-      int v;
-
-      /* only one variable is not fixed to zero in an unmodifiable constraint
-       * -> this variable can be fixed to one, and the constraint can be disabled
-       */
-      
-      /* search the single variable that can be fixed */
-      vars = setcovercons->vars;
-      nvars = setcovercons->nvars;
-      fixed = FALSE;
-      for( v = 0; v < nvars && !fixed; ++v )
-      {
-         var = vars[v];
-         assert(SCIPisZero(scip, SCIPvarGetLb(var)));
-         assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-         if( SCIPvarGetUb(var) > 0.5 )
-         {
-            CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
-            fixed = TRUE;
-         }
-      }
-      assert(fixed);
-
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-      *reduceddom = TRUE;
-   }
-   else
-   {
-      ROW* row;
-
-      /* we have to check the constraint */
-      row = consdata->row;
-      if( row != NULL )
-      {
-         /* ignore constraints that are in the LP */
-         if( !SCIProwIsInLP(row) )
-         {         
-            Real feasibility;
-            
-            feasibility = SCIPgetRowLPFeasibility(scip, row);
-            /*debugMessage("  row feasibility = %g\n", feasibility);*/
-            if( !SCIPisFeasible(scip, feasibility) )
-            {
-               /* insert LP row as cut */
-               CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
-               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               *separated = TRUE;
-            }
-            else
-            {
-               /* constraint was feasible -> increase age */
-               CHECK_OKAY( SCIPincConsAge(scip, cons) );
-            }
-         }
-      }
-      else
-      {
-         VAR** vars;
-         Real solval;
-         Real sum;
-         int nvars;
-         int v;
-
-         /* calculate the constraint's activity */
-         vars = setcovercons->vars;
-         nvars = setcovercons->nvars;
-         sum = 0.0;
-         for( v = 0; v < nvars && sum < 1.0; ++v )
-         {
-            assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
-            solval = SCIPgetSolVal(scip, NULL, vars[v]);
-            assert(SCIPisFeasGE(scip, solval, 0.0) || SCIPisFeasLE(scip, solval, 1.0));
-            sum += solval;
-         }
-         
-         if( SCIPisFeasLT(scip, sum, 1.0) )
-         {
-            /* because sum is smaller than 1.0, the constraint itself can be used as cut */
-            
-            /* convert set covering constraint data into LP row */
-            CHECK_OKAY( setcoverconsToRow(scip, setcovercons, SCIPconsGetName(cons), &consdata->row) );
-            assert(consdata->row != NULL);
-            assert(!SCIProwIsInLP(consdata->row));
-#ifndef NDEBUG
-            {
-               Real rowactivity;
-               rowactivity = SCIPgetRowLPActivity(scip, consdata->row);
-               assert(SCIPisSumEQ(scip, rowactivity, sum));
-            }
-#endif
-            
-            /* insert LP row as cut */
-            CHECK_OKAY( SCIPaddCut(scip, consdata->row, (1.0-sum)/(nvars+1)) );
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-            *separated = TRUE;
-         }
-         else
-         {
-            /* constraint was feasible -> increase age */
-            CHECK_OKAY( SCIPincConsAge(scip, cons) );
-         }
-      }
-   }
-   
-   return SCIP_OKAY;
-}
-
 static
 DECL_CONSSEPA(consSepaSetcover)
 {
@@ -623,7 +897,6 @@ DECL_CONSSEPA(consSepaSetcover)
    {
       for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
       {
-         /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
          CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
       }
    }
@@ -704,16 +977,6 @@ RETCODE branchLP(
     */
    if( nsortcands > 0 )
    {
-#if 0
-      /* select the first variables from the sorted candidate list, until MINBRANCHWEIGHT is reached */
-      branchweight = 0.0;
-      for( nselcands = 0; nselcands < nsortcands && branchweight < MINBRANCHWEIGHT; ++nselcands )
-      {
-         CHECK_OKAY( SCIPgetVarSol(scip, sortcands[nselcands], &solval) );
-         assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-         branchweight += solval;
-      }
-#else
       /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
        * then choose one less
        */
@@ -727,9 +990,8 @@ RETCODE branchLP(
       assert(nselcands > 0);
       nselcands--;
       branchweight -= solval;
-#endif
 
-      /* check, if we accumulated at most MAXBRANCHWEIGHT weight */
+      /* check, if we accumulated at least MIN and at most MAXBRANCHWEIGHT weight */
       if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
       {
          NODE* node;
@@ -783,6 +1045,10 @@ RETCODE branchLP(
    return SCIP_OKAY;
 }
 
+/** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
+ *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1
+ *   - create an additional child node x_0 = ... = x_n-1 = 0
+ */
 static
 RETCODE branchPseudo(
    SCIP*            scip,               /**< SCIP data structure */
@@ -843,7 +1109,7 @@ RETCODE branchPseudo(
 
    if( nsortcands == 0 )
    {
-      /* none of the fractional variables is member of a set covering constraint
+      /* none of the unfixed variables is member of a set covering constraint
        * -> we are not responsible for doing the branching
        */
       return SCIP_OKAY;
@@ -851,7 +1117,7 @@ RETCODE branchPseudo(
    
    /* branch on the first part of the sorted candidates:
     * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
-    * - create an additional child node x_0 = ... = x_n = 0
+    * - create an additional child node x_0 = ... = x_n-1 = 0
     */
    nbranchcands = (nsortcands+9)/10;
    assert(nbranchcands >= 1);
@@ -942,41 +1208,13 @@ DECL_CONSENFOLP(consEnfolpSetcover)
    return SCIP_OKAY;
 }
 
-/** checks constraint for violation, returns TRUE iff constraint is feasible */
-static
-Bool check(
-   SCIP*            scip,               /**< SCIP data structure */
-   SETCOVERCONS*    setcovercons,       /**< set covering constraint to be checked */
-   SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   VAR** vars;
-   Real solval;
-   Bool found;
-   int nvars;
-   int v;
-   
-   /* search all variables of the constraint until one is found with solution value 1.0 */
-   vars = setcovercons->vars;
-   nvars = setcovercons->nvars;
-   found = FALSE;
-   for( v = 0; v < nvars && !found; ++v )
-   {
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
-      solval = SCIPgetSolVal(scip, sol, vars[v]);
-      assert(SCIPisFeasEQ(scip, solval, 0.0) || SCIPisFeasEQ(scip, solval, 1.0));
-      found = SCIPisFeasEQ(scip, solval, 1.0);
-   }
-
-   return found;
-}
-
 static
 DECL_CONSENFOPS(consEnfopsSetcover)
 {
-   CONSDATA* consdata;
-   CONS* cons;
-   SETCOVERCONS* setcovercons;
+   Bool cutoff;
+   Bool infeasible;
+   Bool reduceddom;
+   Bool solvelp;
    int c;
 
    assert(conshdlr != NULL);
@@ -986,91 +1224,33 @@ DECL_CONSENFOPS(consEnfopsSetcover)
 
    *result = SCIP_FEASIBLE;
 
+   cutoff = FALSE;
+   infeasible = FALSE;
+   reduceddom = FALSE;
+   solvelp = FALSE;
+
    /* check all set covering constraints for feasibility */
-   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE); ++c )
+   for( c = 0; c < nconss && !cutoff && !reduceddom && !solvelp; ++c )
    {
-      cons = conss[c];
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-      setcovercons = consdata->setcovercons;
-      assert(setcovercons != NULL);
-      
-      if( setcovercons->nfixedzeros == setcovercons->nvars )
-      {
-         if( setcovercons->modifiable )
-         {
-            /* the constraint is infeasible with the current variable set, but it may be feasible after pricing in
-             * additional variables -> the LP has to be solved to price in new variables
-             */
-            *result = SCIP_SOLVELP;
-         }
-         else
-         {
-            /* the constraint cannot be feasible, because all variables are fixed to zero */
-            *result = SCIP_CUTOFF;
-         }
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      }
-      else if( setcovercons->nfixedones >= 1 )
-      {
-         /* constraint is feasible anyway, because one of its variables if fixed to one -> constraint can be disabled */
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-      }
-      else if( setcovercons->nfixedzeros == setcovercons->nvars-1 && !setcovercons->modifiable )
-      {
-         VAR** vars;
-         VAR* var;
-         Bool fixed;
-         int nvars;
-         int v;
-
-         /* only one variable is not fixed to zero in an unmodifiable constraint
-          * -> this variable can be fixed to one, and the constraint can be disabled
-          */
-      
-         /* search the single variable that can be fixed */
-         vars = setcovercons->vars;
-         nvars = setcovercons->nvars;
-         fixed = FALSE;
-         for( v = 0; v < nvars && !fixed; ++v )
-         {
-            var = vars[v];
-            assert(SCIPisZero(scip, SCIPvarGetLb(var)));
-            assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-            if( SCIPvarGetUb(var) > 0.5 )
-            {
-               CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
-               fixed = TRUE;
-            }
-         }
-         assert(fixed);
-
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-         *result = SCIP_REDUCEDDOM;
-      }
-      else if( *result == SCIP_FEASIBLE )
-      {
-         if( !check(scip, setcovercons, NULL) )
-         {
-            /* constraint is violated by pseudo solution */
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-            *result = SCIP_INFEASIBLE;
-         }
-         else
-         {
-            CHECK_OKAY( SCIPincConsAge(scip, cons) );
-         }
-      }
+      CHECK_OKAY( enforcePseudo(scip, conss[c], &cutoff, &infeasible, &reduceddom, &solvelp) );
    }
-   
-   if( *result == SCIP_INFEASIBLE )
+
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+   else if( solvelp )
+      *result = SCIP_SOLVELP;
+   else if( infeasible )
    {
+      *result = SCIP_INFEASIBLE;
+      
       /* at least one constraint is violated by pseudo solution and we didn't find a better way to resolve this:
        * -> branch on pseudo solution
        */
       CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -1235,7 +1415,7 @@ DECL_EVENTEXEC(eventExecSetcover)
    setcovercons = (SETCOVERCONS*)eventdata;
    assert(setcovercons != NULL);
 
-   CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
+   eventtype = SCIPeventGetType(event);
    switch( eventtype )
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -1342,7 +1522,7 @@ RETCODE SCIPcreateConsSetcover(
       }
 
       /* create constraint in original problem */
-      CHECK_OKAY( setcoverconsCreate(scip, &consdata->setcovercons, nvars, vars, local, modifiable, removeable) );
+      CHECK_OKAY( setcoverconsCreate(scip, &consdata->setcovercons, nvars, vars, modifiable, removeable) );
    }
    else
    {

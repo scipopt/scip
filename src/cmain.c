@@ -97,7 +97,7 @@ DECL_EVENTEXEC(eventExecTest)
 {
    EVENTTYPE eventtype;
 
-   CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
+   eventtype = SCIPeventGetType(event);
    /*printf("exec test event handler: eventtype=0x%x\n", eventtype);*/
 
    /*???????????*/

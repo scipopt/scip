@@ -69,7 +69,6 @@
 /** linear constraint */
 struct LinCons
 {
-   char*            name;               /**< name of linear constraint */
    VAR**            vars;               /**< variables of constraint entries */
    Real*            vals;               /**< coefficients of constraint entries */
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
@@ -346,18 +345,194 @@ RETCODE linconsDropEvent(
    return SCIP_OKAY;
 }
 
+/** catches bound change events and locks rounding for variable at given position in transformed linear constraint */
+static
+RETCODE linconsLockCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events, or NULL */
+   int              pos                 /**< position of variable in linear constraint */
+   )
+{
+   VAR* var;
+   Real val;
+      
+   assert(scip != NULL);
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+   assert(0 <= pos && pos < lincons->nvars);
+
+   var = lincons->vars[pos];
+   val = lincons->vals[pos];
+   
+   debugMessage("locking coefficient %g<%s> in linear constraint\n", val, SCIPvarGetName(var));
+
+   if( eventhdlr == NULL )
+   {
+      /* get event handler for updating linear constraint activity bounds */
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+      if( eventhdlr == NULL )
+      {
+         errorMessage("event handler for linear constraints not found");
+         return SCIP_PLUGINNOTFOUND;
+      }
+   }
+
+   /* catch bound change events on variable */
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   CHECK_OKAY( linconsCatchEvent(scip, lincons, eventhdlr, pos) );
+   
+   if( !lincons->local )
+   {
+      if( SCIPisPositive(scip, val) )
+      {
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarForbidRoundDown(var);
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarForbidRoundUp(var);
+      }
+      else if( SCIPisNegative(scip, val) )
+      {
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarForbidRoundDown(var);
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarForbidRoundUp(var);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops bound change events and unlocks rounding for variable at given position in transformed linear constraint */
+static
+RETCODE linconsUnlockCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events, or NULL */
+   int              pos                 /**< position of variable in linear constraint */
+   )
+{
+   VAR* var;
+   Real val;
+
+   assert(scip != NULL);
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+   assert(0 <= pos && pos < lincons->nvars);
+
+   var = lincons->vars[pos];
+   val = lincons->vals[pos];
+
+   debugMessage("unlocking coefficient %g<%s> in linear constraint\n", val, SCIPvarGetName(var));
+
+   if( eventhdlr == NULL )
+   {
+      /* get event handler for updating linear constraint activity bounds */
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+      if( eventhdlr == NULL )
+      {
+         errorMessage("event handler for linear constraints not found");
+         return SCIP_PLUGINNOTFOUND;
+      }
+   }
+   
+   /* drop bound change events on variable */
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   CHECK_OKAY( linconsDropEvent(scip, lincons, eventhdlr, pos) );
+
+   if( !lincons->local )
+   {
+      if( SCIPisPositive(scip, val) )
+      {
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarAllowRoundDown(var);
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarAllowRoundUp(var);
+      }
+      else if( SCIPisNegative(scip, val) )
+      {
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarAllowRoundDown(var);
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarAllowRoundUp(var);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** catches bound change events and locks rounding for all variables in transformed linear constraint */
+static
+RETCODE linconsLockAllCoefs(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint object */
+   )
+{
+   EVENTHDLR* eventhdlr;
+   int i;
+
+   assert(scip != NULL);
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+
+   /* get event handler for updating linear constraint activity bounds */
+   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+   {
+      errorMessage("event handler for linear constraints not found");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* lock every single coefficient */
+   for( i = 0; i < lincons->nvars; ++i )
+   {
+      CHECK_OKAY( linconsLockCoef(scip, lincons, eventhdlr, i) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops bound change events and unlocks rounding for all variables in transformed linear constraint */
+static
+RETCODE linconsUnlockAllCoefs(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint object */
+   )
+{
+   EVENTHDLR* eventhdlr;
+   int i;
+
+   assert(scip != NULL);
+   assert(lincons != NULL);
+   assert(lincons->transformed);
+
+   /* get event handler for updating linear constraint activity bounds */
+   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   if( eventhdlr == NULL )
+   {
+      errorMessage("event handler for linear constraints not found");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* unlock every single coefficient */
+   for( i = 0; i < lincons->nvars; ++i )
+   {
+      CHECK_OKAY( linconsUnlockCoef(scip, lincons, eventhdlr, i) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a linear constraint object of the original problem */
 static
 RETCODE linconsCreate(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS**        lincons,            /**< pointer to linear constraint object */
-   const char*      name,               /**< name of linear constraint */
    int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             local,              /**< is linear constraint only valid locally? */
    Bool             modifiable,         /**< is data modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -378,8 +553,6 @@ RETCODE linconsCreate(
    }
 
    CHECK_OKAY( SCIPallocBlockMemory(scip, lincons) );
-
-   CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->name, name, strlen(name)+1) );
 
    if( nvars > 0 )
    {
@@ -402,7 +575,7 @@ RETCODE linconsCreate(
    (*lincons)->maxactivityinf = -1;
    (*lincons)->varssize = nvars;
    (*lincons)->nvars = nvars;
-   (*lincons)->local = local;
+   (*lincons)->local = FALSE;
    (*lincons)->modifiable = modifiable;
    (*lincons)->removeable = removeable;
    (*lincons)->transformed = FALSE;
@@ -416,7 +589,6 @@ static
 RETCODE linconsCreateTransformed(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS**        lincons,            /**< pointer to linear constraint object */
-   const char*      name,               /**< name of linear constraint */
    int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
@@ -427,39 +599,33 @@ RETCODE linconsCreateTransformed(
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   EVENTHDLR* eventhdlr;
    int i;
 
    assert(lincons != NULL);
 
    /* create linear constraint data */
-   CHECK_OKAY( linconsCreate(scip, lincons, name, nvars, vars, vals, lhs, rhs, local, modifiable, removeable) );
+   CHECK_OKAY( linconsCreate(scip, lincons, nvars, vars, vals, lhs, rhs, modifiable, removeable) );
+   (*lincons)->local = local;
+   (*lincons)->transformed = TRUE;
 
    /* allocate the additional needed eventdatas array */
    assert((*lincons)->eventdatas == NULL);
    CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*lincons)->eventdatas, (*lincons)->varssize) );
-   (*lincons)->transformed = TRUE;
 
-   /* get event handler for updating linear constraint activity bounds */
-   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-   if( eventhdlr == NULL )
-   {
-      errorMessage("event handler for linear constraints not found");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* transform the variables, catch events */
+   /* initialize the eventdatas array, transform the variables */
    for( i = 0; i < (*lincons)->nvars; ++i )
    {
+      (*lincons)->eventdatas[i] = NULL;
       if( SCIPvarGetStatus((*lincons)->vars[i]) == SCIP_VARSTATUS_ORIGINAL )
       {
          (*lincons)->vars[i] = SCIPvarGetTransformed((*lincons)->vars[i]);
          assert((*lincons)->vars[i] != NULL);
       }
       assert(SCIPvarGetStatus((*lincons)->vars[i]) != SCIP_VARSTATUS_ORIGINAL);
-      (*lincons)->eventdatas[i] = NULL;
-      CHECK_OKAY( linconsCatchEvent(scip, *lincons, eventhdlr, i) );
    }
+
+   /* catch bound change events and lock the rounding of variables */
+   CHECK_OKAY( linconsLockAllCoefs(scip, *lincons) );
 
    return SCIP_OKAY;
 }
@@ -475,30 +641,16 @@ RETCODE linconsFree(
    assert(*lincons != NULL);
    assert((*lincons)->varssize >= 0);
 
-   /* drop events for included variables */
    if( (*lincons)->transformed )
    {
-      EVENTHDLR* eventhdlr;
-      int i;
+      /* drop bound change events and unlock the rounding of variables */
+      CHECK_OKAY( linconsUnlockAllCoefs(scip, *lincons) );
 
-      /* get event handler for updating linear constraint activity bounds */
-      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-      if( eventhdlr == NULL )
-      {
-         errorMessage("event handler for linear constraints not found");
-         return SCIP_PLUGINNOTFOUND;
-      }
-      
-      /* drop all update activity bounds events for constraint's variables */
-      for( i = 0; i < (*lincons)->nvars; ++i )
-      {
-         CHECK_OKAY( linconsDropEvent(scip, *lincons, eventhdlr, i) );
-      }
+      /* free additional eventdatas array */
       SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->eventdatas, (*lincons)->varssize);
    }
    assert((*lincons)->eventdatas == NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &(*lincons)->name, strlen((*lincons)->name)+1);
    SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vars, (*lincons)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vals, (*lincons)->varssize);
    SCIPfreeBlockMemory(scip, lincons);
@@ -534,38 +686,11 @@ RETCODE linconsAddCoef(
 
    if( lincons->transformed )
    {
-      EVENTHDLR* eventhdlr;
+      /* initialize eventdatas array */
+      lincons->eventdatas[lincons->nvars-1] = NULL;
 
-      /* get event handler for updating linear constraint activity bounds */
-      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
-      if( eventhdlr == NULL )
-      {
-         errorMessage("event handler for linear constraints not found");
-         return SCIP_PLUGINNOTFOUND;
-      }
-
-      /* catch bound change events on variable */
-      assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
-      lincons->eventdatas[lincons->nvars] = NULL;
-      CHECK_OKAY( linconsCatchEvent(scip, lincons, eventhdlr, lincons->nvars-1) );
-   }
-
-   if( !lincons->local )
-   {
-      if( SCIPisPositive(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarForbidRoundDown(var);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarForbidRoundUp(var);
-      }
-      else if( SCIPisNegative(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarForbidRoundDown(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarForbidRoundUp(var);
-      }
+      /* catch bound change events and lock the rounding of variable */
+      CHECK_OKAY( linconsLockCoef(scip, lincons, NULL, lincons->nvars-1) );
    }
 
    return SCIP_OKAY;
@@ -576,6 +701,7 @@ static
 RETCODE linconsToRow(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS*         lincons,            /**< linear constraint object */
+   const char*      name,               /**< name of the constraint */
    ROW**            row                 /**< pointer to an LP row data object */
    )
 {
@@ -585,7 +711,7 @@ RETCODE linconsToRow(
    assert(lincons->transformed);
    assert(row != NULL);
 
-   CHECK_OKAY( SCIPcreateRow(scip, row, lincons->name, 0, NULL, NULL, lincons->lhs, lincons->rhs,
+   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, lincons->lhs, lincons->rhs,
                   lincons->local, lincons->modifiable, lincons->removeable) );
    
    for( v = 0; v < lincons->nvars; ++v )
@@ -779,7 +905,7 @@ Real linconsGetPseudoActivity(
    assert(lincons->minactivity < SCIP_INVALID);
    assert(lincons->maxactivity < SCIP_INVALID);
 
-   debugMessage("pseudo activity of linear constraint <%s>: %g\n", lincons->name, lincons->pseudoactivity);
+   debugMessage("pseudo activity of linear constraint: %g\n", lincons->pseudoactivity);
 
    return lincons->pseudoactivity;
 }
@@ -983,7 +1109,7 @@ Real linconsGetActivity(
          activity += lincons->vals[v] * solval;
       }
 
-      debugMessage("activity of linear constraint <%s>: %g\n", lincons->name, activity);
+      debugMessage("activity of linear constraint: %g\n", activity);
    }
 
    return activity;
@@ -1005,96 +1131,6 @@ Real linconsGetFeasibility(
    activity = linconsGetActivity(scip, lincons, sol);
 
    return MIN(lincons->rhs - activity, activity - lincons->lhs);
-}
-
-/** forbids roundings of variables in constraint that may violate constraint */
-static
-void linconsForbidRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
-   )
-{
-   VAR** vars;
-   Real* vals;
-   Bool lhsexists;
-   Bool rhsexists;
-   int v;
-   
-   assert(lincons != NULL);
-   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
-   assert(!SCIPisInfinity(scip, lincons->lhs));
-   assert(!SCIPisInfinity(scip, -lincons->rhs));
-
-   lhsexists = !SCIPisInfinity(scip, -lincons->lhs);
-   rhsexists = !SCIPisInfinity(scip, lincons->rhs);
-   vars = lincons->vars;
-   vals = lincons->vals;
-
-   for( v = 0; v < lincons->nvars; ++v )
-   {
-      assert(vars[v] != NULL);
-
-      if( SCIPisPositive(scip, vals[v]) )
-      {
-         if( lhsexists )
-            SCIPvarForbidRoundDown(vars[v]);
-         if( rhsexists )
-            SCIPvarForbidRoundUp(vars[v]);
-      }
-      else
-      {
-         assert(SCIPisNegative(scip, vals[v]));
-         if( lhsexists )
-            SCIPvarForbidRoundUp(vars[v]);
-         if( rhsexists )
-            SCIPvarForbidRoundDown(vars[v]);
-      }
-   }
-}
-
-/** allows roundings of variables in constraint that may violate constraint */
-static
-void linconsAllowRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   LINCONS*         lincons             /**< linear constraint object */
-   )
-{
-   VAR** vars;
-   Real* vals;
-   Bool lhsexists;
-   Bool rhsexists;
-   int v;
-   
-   assert(lincons != NULL);
-   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
-   assert(!SCIPisInfinity(scip, lincons->lhs));
-   assert(!SCIPisInfinity(scip, -lincons->rhs));
-
-   lhsexists = !SCIPisInfinity(scip, -lincons->lhs);
-   rhsexists = !SCIPisInfinity(scip, lincons->rhs);
-   vars = lincons->vars;
-   vals = lincons->vals;
-
-   for( v = 0; v < lincons->nvars; ++v )
-   {
-      assert(vars[v] != NULL);
-
-      if( SCIPisPositive(scip, vals[v]) )
-      {
-         if( lhsexists )
-            SCIPvarAllowRoundDown(vars[v]);
-         if( rhsexists )
-            SCIPvarAllowRoundUp(vars[v]);
-      }
-      else
-      {
-         assert(SCIPisNegative(scip, vals[v]));
-         if( lhsexists )
-            SCIPvarAllowRoundUp(vars[v]);
-         if( rhsexists )
-            SCIPvarAllowRoundDown(vars[v]);
-      }
-   }
 }
 
 /** tightens bounds of a single variable due to activity bounds */
@@ -1294,18 +1330,64 @@ void linconsChgLhs(
    Real             lhs                 /**< new left hand side */
    )
 {
-   Bool updaterounding;
-
    assert(lincons != NULL);
+   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
+   assert(!SCIPisInfinity(scip, lincons->lhs));
+   assert(!SCIPisInfinity(scip, lhs));
 
-   updaterounding = (!lincons->local && SCIPisInfinity(scip, -lhs) != SCIPisInfinity(scip, -lincons->lhs));
-   if( updaterounding )
-      linconsAllowRounding(scip, lincons);
+   /* if necessary, update the rounding locks of variables */
+   if( lincons->transformed && !lincons->local )
+   {
+      if( SCIPisInfinity(scip, -lincons->lhs) && !SCIPisInfinity(scip, -lhs) )
+      {
+         VAR** vars;
+         Real* vals;
+         int v;
+   
+         /* the left hand side switched from -infinity to a non-infinite value -> forbid rounding */
+         vars = lincons->vars;
+         vals = lincons->vals;
+         
+         for( v = 0; v < lincons->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            
+            if( SCIPisPositive(scip, vals[v]) )
+               SCIPvarForbidRoundDown(vars[v]);
+            else
+            {
+               assert(SCIPisNegative(scip, vals[v]));
+               SCIPvarForbidRoundUp(vars[v]);
+            }
+         }
+      }
+      else if( !SCIPisInfinity(scip, -lincons->lhs) && SCIPisInfinity(scip, -lhs) )
+      {
+         VAR** vars;
+         Real* vals;
+         int v;
+   
+         /* the left hand side switched from a non-infinte value to -infinity -> allow rounding */
+         vars = lincons->vars;
+         vals = lincons->vals;
+         
+         for( v = 0; v < lincons->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            
+            if( SCIPisPositive(scip, vals[v]) )
+               SCIPvarAllowRoundDown(vars[v]);
+            else
+            {
+               assert(SCIPisNegative(scip, vals[v]));
+               SCIPvarAllowRoundUp(vars[v]);
+            }
+         }
+      }
+   }
 
+   /* set new left hand side */
    lincons->lhs = lhs;
-
-   if( updaterounding )
-      linconsForbidRounding(scip, lincons);
 }
 
 /** sets right hand side of linear constraint */
@@ -1316,18 +1398,64 @@ void linconsChgRhs(
    Real             rhs                 /**< new right hand side */
    )
 {
-   Bool updaterounding;
-
    assert(lincons != NULL);
+   assert(lincons->nvars == 0 || (lincons->vars != NULL && lincons->vals != NULL));
+   assert(!SCIPisInfinity(scip, -lincons->rhs));
+   assert(!SCIPisInfinity(scip, -rhs));
 
-   updaterounding = (!lincons->local && SCIPisInfinity(scip, rhs) != SCIPisInfinity(scip, lincons->lhs));
-   if( updaterounding )
-      linconsAllowRounding(scip, lincons);
+   /* if necessary, update the rounding locks of variables */
+   if( lincons->transformed && !lincons->local )
+   {
+      if( SCIPisInfinity(scip, lincons->rhs) && !SCIPisInfinity(scip, rhs) )
+      {
+         VAR** vars;
+         Real* vals;
+         int v;
+   
+         /* the right hand side switched from infinity to a non-infinite value -> forbid rounding */
+         vars = lincons->vars;
+         vals = lincons->vals;
+         
+         for( v = 0; v < lincons->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            
+            if( SCIPisPositive(scip, vals[v]) )
+               SCIPvarForbidRoundUp(vars[v]);
+            else
+            {
+               assert(SCIPisNegative(scip, vals[v]));
+               SCIPvarForbidRoundDown(vars[v]);
+            }
+         }
+      }
+      else if( !SCIPisInfinity(scip, lincons->rhs) && SCIPisInfinity(scip, rhs) )
+      {
+         VAR** vars;
+         Real* vals;
+         int v;
+   
+         /* the right hand side switched from a non-infinte value to infinity -> allow rounding */
+         vars = lincons->vars;
+         vals = lincons->vals;
+         
+         for( v = 0; v < lincons->nvars; ++v )
+         {
+            assert(vars[v] != NULL);
+            
+            if( SCIPisPositive(scip, vals[v]) )
+               SCIPvarAllowRoundUp(vars[v]);
+            else
+            {
+               assert(SCIPisNegative(scip, vals[v]));
+               SCIPvarAllowRoundDown(vars[v]);
+            }
+         }
+      }
+   }
 
+   /* set new right hand side */
    lincons->rhs = rhs;
-
-   if( updaterounding )
-      linconsForbidRounding(scip, lincons);
 }
 
 /** prints linear constraint to file stream */
@@ -1455,7 +1583,7 @@ RETCODE separate(
       if( consdata->row == NULL )
       {
          /* convert lincons object into LP row */
-         CHECK_OKAY( linconsToRow(scip, consdata->lincons, &consdata->row) );
+         CHECK_OKAY( linconsToRow(scip, consdata->lincons, SCIPconsGetName(cons), &consdata->row) );
       }
       row = consdata->row;
       assert(row != NULL);
@@ -1548,7 +1676,7 @@ DECL_CONSTRANS(consTransLinear)
 
    /* create linear constraint object */
    lincons = sourcedata->lincons;
-   CHECK_OKAY( linconsCreateTransformed(scip, &targetdata->lincons, lincons->name, 
+   CHECK_OKAY( linconsCreateTransformed(scip, &targetdata->lincons,
                   lincons->nvars, lincons->vars, lincons->vals, lincons->lhs, lincons->rhs,
                   lincons->local, lincons->modifiable, lincons->removeable) );
 
@@ -1809,10 +1937,11 @@ DECL_EVENTEXEC(eventExecLinear)
    assert(lincons != NULL);
    assert(0 <= varpos && varpos < lincons->nvars);
 
-   CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
-   CHECK_OKAY( SCIPeventGetVar(event, &var) );
-   CHECK_OKAY( SCIPeventGetOldbound(event, &oldbound) );
-   CHECK_OKAY( SCIPeventGetNewbound(event, &newbound) );
+   eventtype = SCIPeventGetType(event);
+   var = SCIPeventGetVar(event);
+   oldbound = SCIPeventGetOldbound(event);
+   newbound = SCIPeventGetNewbound(event);
+   assert(var != NULL);
    assert(lincons->vars[varpos] == var);
 
    /*debugMessage(" -> eventtype=0x%x, var=<%s>, oldbound=%g, newbound=%g => activity: [%g,%g]", 
@@ -1944,13 +2073,12 @@ RETCODE SCIPcreateConsLinear(
       }
 
       /* create constraint in original problem */
-      CHECK_OKAY( linconsCreate(scip, &consdata->lincons, name, nvars, vars, vals, lhs, rhs, 
-                     local, modifiable, removeable) );
+      CHECK_OKAY( linconsCreate(scip, &consdata->lincons, nvars, vars, vals, lhs, rhs, modifiable, removeable) );
    }
    else
    {
       /* create constraint in transformed problem */
-      CHECK_OKAY( linconsCreateTransformed(scip, &consdata->lincons, name, nvars, vars, vals, lhs, rhs, 
+      CHECK_OKAY( linconsCreateTransformed(scip, &consdata->lincons, nvars, vars, vals, lhs, rhs, 
                      local, modifiable, removeable) );
    }
    consdata->row = NULL;

@@ -258,6 +258,7 @@ RETCODE solveNodeLP(
    while( !cutoff && ((set->usepricing && mustprice) || mustsepar) )
    {
       debugMessage("-------- node solving loop --------\n");
+      assert(lp->solved);
 
       /* if the LP is unbounded, we don't need to price */
       mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
@@ -379,7 +380,7 @@ RETCODE solveNodeLP(
             debugMessage("separation: solve LP\n");
             CHECK_OKAY( SCIPsolveLP(memhdr, set, stat, lp) );
          }
-         assert(lp->solved);
+         assert(cutoff || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
 
          /* increase separation round counter */
          stat->nseparounds++;
@@ -399,16 +400,17 @@ RETCODE solveNodeLP(
    }
    else
    {
+      assert(lp->solved);
+
       tree->actnode->lowerbound = SCIPlpGetObjval(lp);
       tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+
+      /* issue LPSOLVED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
+      CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
+      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
    }
    debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
-
-   /* issue LPSOLVED event */
-   assert(lp->solved);
-   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
-   CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -777,14 +779,14 @@ RETCODE SCIPsolveCIP(
       assert(tree->actnode == actnode);
       assert(set->buffer->firstfree == 0);
 
+      /* process the delayed events */
+      CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, tree, lp, branchcand, eventfilter) );
+      assert(set->buffer->firstfree == 0);
+
       /* issue NODEACTIVATED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
       CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-
-      /* process the delayed events */
-      CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, tree, lp, branchcand, eventfilter) );
-      assert(set->buffer->firstfree == 0);
 
       /* if no more node was selected, we finished optimisation */
       if( actnode == NULL )
@@ -854,7 +856,6 @@ RETCODE SCIPsolveCIP(
                /* continue solving the LP with price and cut */
                CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepastore, cutpool, primal, branchcand, 
                               eventfilter, eventqueue, conshdlrs_sepa) );
-               assert(lp->solved);
             }
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             assert(set->buffer->firstfree == 0);
@@ -873,6 +874,8 @@ RETCODE SCIPsolveCIP(
             }
             else
             {
+               assert(!tree->actnodehaslp || lp->solved);
+
                /* enforce constraints */
                CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, sepastore, branchcand, primal, eventqueue,
                               conshdlrs_enfo, &infeasible, &solveagain) );
@@ -885,6 +888,8 @@ RETCODE SCIPsolveCIP(
          {
             SOL* sol;
             int oldnsolsfound;
+
+            assert(!tree->actnodehaslp || lp->solved);
 
             /* issue NODEFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );

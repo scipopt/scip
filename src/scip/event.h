@@ -286,9 +286,8 @@ RETCODE SCIPeventFree(
 
 /** gets type of event */
 extern
-RETCODE SCIPeventGetType(
-   EVENT*           event,              /**< event */
-   EVENTTYPE*       eventtype           /**< pointer to store the event type */
+EVENTTYPE SCIPeventGetType(
+   EVENT*           event               /**< event */
    );
 
 /** sets type of event */
@@ -300,30 +299,26 @@ RETCODE SCIPeventChgType(
 
 /** gets variable for a domain change event */
 extern
-RETCODE SCIPeventGetVar(
-   EVENT*           event,              /**< event */
-   VAR**            var                 /**< pointer to store the variable */
+VAR* SCIPeventGetVar(
+   EVENT*           event               /**< event */
    );
 
 /** gets old bound for a bound change event */
 extern
-RETCODE SCIPeventGetOldbound(
-   EVENT*           event,              /**< event */
-   Real*            bound               /**< pointer to store the bound */
+Real SCIPeventGetOldbound(
+   EVENT*           event               /**< event */
    );
 
 /** gets new bound for a bound change event */
 extern
-RETCODE SCIPeventGetNewbound(
-   EVENT*           event,              /**< event */
-   Real*            bound               /**< pointer to store the bound */
+Real SCIPeventGetNewbound(
+   EVENT*           event               /**< event */
    );
 
 /** gets node for a node event */
 extern
-RETCODE SCIPeventGetNode(
-   EVENT*           event,              /**< event */
-   NODE**           node                /**< pointer to store the node */
+NODE* SCIPeventGetNode(
+   EVENT*           event               /**< event */
    );
 
 /** sets node for a node event */
@@ -335,9 +330,8 @@ RETCODE SCIPeventChgNode(
 
 /** gets solution for a primal solution event */
 extern
-RETCODE SCIPeventGetSol(
-   EVENT*           event,              /**< event */
-   SOL**            sol                 /**< pointer to store the new primal solution */
+SOL* SCIPeventGetSol(
+   EVENT*           event               /**< event */
    );
 
 /** sets solution for a primal solution event */

@@ -1749,6 +1749,12 @@ Real SCIPsumepsilon(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** returns feasibility tolerance */
+extern
+Real SCIPfeastol(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** checks, if values are in range of epsilon */
 extern
 Bool SCIPisEQ(

@@ -865,6 +865,8 @@ RETCODE SCIPnodeDisableCons(
    assert(tree != NULL);
    assert(cons != NULL);
 
+   debugMessage("disabling constraint <%s> at node in depth %d\n", cons->name, node->depth);
+
    switch( node->nodetype )
    {
    case SCIP_NODETYPE_ACTNODE:
@@ -924,6 +926,7 @@ RETCODE SCIPnodeAddBoundchg(
    
    debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
       node->depth, var->name, var->dom.lb, var->dom.ub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
+
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       oldbound = var->dom.lb;
