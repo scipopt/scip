@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.2 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.3 2004/10/14 16:53:19 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -30,6 +30,7 @@
 #include <CoinIndexedVector.hpp>
 #include <ClpFactorization.hpp>
 
+#include <iostream>
 #include <cassert>
 #include <vector>
 #include <string>
@@ -55,6 +56,7 @@ struct LPi
    bool             startscratch;       /**< start from scratch? */
    bool             fastmip;            /**< FASTMIP setting */
    int              pricing;            /**< scip pricing setting  */
+   bool             haveFactorization;  /**< whether we have a factorization in clp */
 };
 
 
@@ -280,14 +282,17 @@ RETCODE SCIPlpiCreate(
    (*lpi)->rstatsize = 0;
    (*lpi)->startscratch = true;
    (*lpi)->pricing = SCIP_PRICING_AUTO;
+   (*lpi)->haveFactorization = false;
+
+   // Set solve type to Osi interface such that we keep factorization etc.
+   //modelPtr_->setSolveType(2);
 
    // set pricing routines
 
    // for primal:
    // 0 is exact devex, 
    // 1 full steepest, 
-   // 2 is partial exact devex    (The weights are updated as normal but only part of the nonbasic variables are scanned.  
-   //                              This can be faster on very easy problems.)
+   // 2 is partial exact devex
    // 3 switches between 0 and 2 depending on factorization
    // 4 starts as partial dantzig/devex but then may switch between 0 and 2.
    ClpPrimalColumnSteepest primalSteepest(3);
@@ -304,6 +309,10 @@ RETCODE SCIPlpiCreate(
 
    // set objective sense: SCIP values are the same as the ones for Clp
    (*lpi)->clp->setOptimizationDirection(objsen);
+
+   // turn off output by default
+   (*lpi)->clp->setLogLevel(0);
+
    
    return SCIP_OKAY;
 }
@@ -589,6 +598,7 @@ RETCODE SCIPlpiDelRows(
    return SCIP_OKAY;   
 }
 
+
 /** deletes rows from LP; the new position of a row must not be greater that its old position */
 RETCODE SCIPlpiDelRowset(
    LPI*             lpi,                /**< LP interface structure */
@@ -642,8 +652,11 @@ RETCODE SCIPlpiClear(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   // Clp does not have a clear method - use destructor (is this a good idea?) ??????????????
-   
+   // We use the resize(0,0) to get rid of the model but keep all other settings
+   lpi->clp->resize(0,0);
+
+   // Other method: delete whole model and copy back parameters (WARNING: this is not complete)
+   /*
    // save problem name and objsen first
    std::string problemName = lpi->clp->problemName();
    double objsen = lpi->clp->optimizationDirection();   // inerestingly objsen is a double
@@ -656,6 +669,7 @@ RETCODE SCIPlpiClear(
 
    // set objective sense: SCIP values are the same as the ones for Clp
    lpi->clp->setOptimizationDirection(objsen);
+   */
 
    return SCIP_OKAY;
 }
@@ -834,38 +848,25 @@ RETCODE SCIPlpiScaleRow(
 
    // apply scaling ...
 
-   // Version 1:
-   // Since we have to loop over the matrix to find the row entries anyway,
-   // we use the method @c reallyScale of @c ClpPackedMatrix. For columns
-   // we can do better, see @c SCIPlpiScaleCol.
-   /*
-   int nrows = clp->numberRows();
-   double* rowScale = new double [nrows];
-   for (int i = 0; i < nrows; ++i)
-      rowScale[i] = 1.0;
-   int ncols = clp->numberColumns();
-   double* colScale = new double [ncols];
-   for (int j = 0; j < ncols; ++j)
-      colScal[j] = 1.0;
-
-   rowScale[row] = scaleval;
-   clp->matrix()->reallyScale(rowScale, columnScale);
-
-   delete [] rowScale;
-   delete [] colScale;
-   */
-
-   // Version 2:
-   // direct method (see SCIPlpiScaleCol)
-   CoinPackedMatrix* M = clp->rowCopy()->getPackedMatrix();   // get row view on matrix
-   assert( M != 0 );
-   assert( M->getNumRows() == clp->numberRows() );
+   // WARNING: the following is quite expensive:
+   // We have to loop over the matrix to find the row entries. 
+   // For columns we can do better, see @c SCIPlpiScaleCol.
+   CoinPackedMatrix* M = clp->matrix();
+   assert( M->getNumCols() == clp->numberColumns() );
 
    const CoinBigIndex* beg = M->getVectorStarts();
    const int* length = M->getVectorLengths();
+   const int* ind = M->getIndices();
    double* val = M->getMutableElements();
-   for (CoinBigIndex k = beg[row]; k < beg[row] + length[row]; ++k)
-      val[k] *= scaleval;
+
+   for (int j = 0; j < M->getNumCols(); ++j)
+   {
+      for (CoinBigIndex k = beg[j]; k < beg[j] + length[j]; ++k)
+      {
+	 if (ind[k] == row)
+	    val[k] *= scaleval;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -895,7 +896,7 @@ RETCODE SCIPlpiScaleCol(
 
    // adjust the objective coefficients
    double* objvec = clp->objective();          // we have direct access to the data of Clp!
-   objvec[col] *= scaleval;                    // adjust the objective function value (divide ??????????)
+   objvec[col] *= scaleval;                    // adjust the objective function value
 
    // adjust the bounds
    double* lb = clp->columnLower();
@@ -904,7 +905,7 @@ RETCODE SCIPlpiScaleCol(
    double ubval = ub[col];
 
    if( lbval > -COIN_DBL_MAX )
-      lbval /= scaleval;            // Why dividing ??????????????
+      lbval /= scaleval;
    else if( scaleval < 0.0 )
       lbval = COIN_DBL_MAX;
    if( ubval < COIN_DBL_MAX )
@@ -930,24 +931,6 @@ RETCODE SCIPlpiScaleCol(
    double* val = M->getMutableElements();
    for (CoinBigIndex k = beg[col]; k < beg[col] + length[col]; ++k)
       val[k] *= scaleval;
-
-   // The following might be the more portable (but slower) version
-  /*
-   int nrows = clp->numberRows();
-   double* rowScale = new double [nrows];
-   for (int i = 0; i < nrows; ++i)
-      rowScale[i] = 1.0;
-   int ncols = clp->numberColumns();
-   double* colScale = new double [ncols];
-   for (int j = 0; j < ncols; ++j)
-      colScal[j] = 1.0;
-
-   colScale[col] = scaleval;
-   clp->matrix()->reallyScale(rowScale, columnScale);
-
-   delete [] rowScale;
-   delete [] colScale;
-  */
 
    return SCIP_OKAY;
 }
@@ -1126,7 +1109,7 @@ RETCODE SCIPlpiGetRows(
       for( int i = firstrow; i <= lastrow; ++i )
       {
          lhs[i-firstrow] = rowLower[i];
-         rhs[i-firstrow] = rowLower[i];
+         rhs[i-firstrow] = rowUpper[i];
       }
    }
    else
@@ -1135,6 +1118,8 @@ RETCODE SCIPlpiGetRows(
    if( nnonz != 0 )
    {
       ClpMatrixBase* M = clp->rowCopy();   // get row view on matrix
+      if ( M == 0 ) // can happen e.g. if no LP was solved yet ...
+	 M = clp->clpMatrix()->reverseOrderedCopy();
       assert( M != 0 );
       assert( M->getNumRows() == clp->numberRows() );
 
@@ -1311,6 +1296,13 @@ RETCODE SCIPlpiSolvePrimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   if (lpi->haveFactorization)
+   {
+      lpi->clp->finish();
+      lpi->haveFactorization = false;
+   }
+
    // Call the primal Simplex without preprocessing   
    int status = -1;
    if ( lpi->startscratch )
@@ -1348,6 +1340,13 @@ RETCODE SCIPlpiSolveDual(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   if (lpi->haveFactorization)
+   {
+      lpi->clp->finish();
+      lpi->haveFactorization = false;
+   }
+
    // Call the dual Simplex without preprocessing
    int status = -1;
    if ( lpi->startscratch )
@@ -1357,6 +1356,9 @@ RETCODE SCIPlpiSolveDual(
    }
    else
       status = lpi->clp->dual();
+
+   //std::cout << "Clp Status: " << status << " ( " << lpi->clp->status();
+   //std::cout << ")   Secondary: " << lpi->clp->secondaryStatus() << std::endl;
 
    // We may need to call ClpModel::status()
 
@@ -1385,6 +1387,10 @@ RETCODE SCIPlpiSolveBarrier(
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+   // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   if (lpi->haveFactorization)
+      lpi->clp->finish();
 
    // Call barrier
    int status = lpi->clp->barrier(crossover);
@@ -1426,32 +1432,58 @@ RETCODE SCIPlpiStrongbranch(
 
    ClpSimplex* clp = lpi->clp;
 
+   // Check whether we have a factorization, if yes destroy it (Clp doesn't like it ...)
+   if (lpi->haveFactorization)
+   {
+      lpi->clp->finish();
+      lpi->haveFactorization = false;
+   }
+
+   /*
+   clp->writeMps("strongbranch.mps", 0, 2, clp->optimizationDirection());
+   abort();
+   */
+
    // WARNING: the documentation for the strong branching routine of Clp is sparse.
    //          Therefore the following code might be wrong.
 
    // prepare call
-   *down = EPSFLOOR(psol + 1.0, 1e-06);
-   *up   = EPSCEIL(psol - 1.0, 1e-06);
+   *down = EPSCEIL(psol - 1.0, 1e-06);
+   *up   = EPSFLOOR(psol + 1.0, 1e-06);
 
    int ncols = clp->numberColumns();
-   double* outputSolution = new double [ncols];
-   int outputStatus = -1;
-   int outputIterations = -1;
+   double** outputSolution = new double* [2];
+   outputSolution[0] = new double [ncols];
+   outputSolution[1] = new double [ncols];
+   int* outputStatus = new int [2];
+   int* outputIterations = new int [2];
 
    // set iteration limit
    int iterlimit = clp->maximumIterations();
    clp->setMaximumIterations(itlim);
 
+   double objval = clp->objectiveValue();
+
    // the last two bools are:
    // bool stopOnFirstInfeasible=true,
    // bool alwaysFinish=false);
-   lpi->clp->strongBranching(1, &col, down, up, &outputSolution, &outputStatus, &outputIterations, false, true);
+   int retval = lpi->clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true);
+   // std::cout << objval << "  down: " << *down << "   up: " << *up << "   status[0]: " << outputStatus[0] << "  status[1]: " << outputStatus[1] << std::endl;
 
-   if (*iter)
-      *iter = outputIterations;
+   *down += objval;
+   *up += objval;
+
+   if (iter)
+      *iter = outputIterations[0] + outputIterations[1];
 
    // reset iteration limit
    clp->setMaximumIterations(iterlimit);
+
+   delete [] outputStatus;
+   delete [] outputIterations;
+   delete [] outputSolution[1];
+   delete [] outputSolution[0];
+   delete [] outputSolution;
 
    return SCIP_OKAY;
 }
@@ -1482,13 +1514,29 @@ RETCODE SCIPlpiGetBasisFeasibility(
    assert(dualfeasible != 0);
 
    *primalfeasible = lpi->clp->primalFeasible();
-   *dualfeasible = lpi->clp->dualFeasible();
+   *dualfeasible   = lpi->clp->dualFeasible();
 
    return SCIP_OKAY;
 }
 
 
-/** returns TRUE iff LP is primal unbounded */
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
+Bool SCIPlpiHasPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiHasPrimalRay()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   // Clp seems to have a primal ray whenever it concludes "dual infeasible", 
+   // (but is not necessarily primal feasible), see ClpModel::unboundedRay
+   return ( lpi->clp->status() == 2);      // status = 2  is "dual infeasible"
+}
+
+
+/** returns TRUE iff LP is proven to be primal unbounded */
 Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1502,7 +1550,7 @@ Bool SCIPlpiIsPrimalUnbounded(
 }
 
 
-/** returns TRUE iff LP is primal infeasible */
+/** returns TRUE iff LP is proven to be primal infeasible */
 Bool SCIPlpiIsPrimalInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1512,11 +1560,43 @@ Bool SCIPlpiIsPrimalInfeasible(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   return ( lpi->clp->isProvenPrimalInfeasible() );
+}
+
+
+/** returns TRUE iff LP is proven to be primal feasible */
+Bool SCIPlpiIsPrimalFeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiIsPrimalFeasible()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
    return (! lpi->clp->primalFeasible() );
 }
 
 
-/** returns TRUE iff LP is dual unbounded */
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
+extern 
+Bool SCIPlpiHasDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiHasDualRay()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   // Clp assumes to have a dual ray whenever it concludes "primal infeasible", 
+   // (but is not necessarily dual feasible), see ClpModel::infeasibilityRay
+
+   return ( lpi->clp->status() == 1 && ! lpi->clp->secondaryStatus() ); // status = 1  is "primal infeasible"
+}
+
+
+/** returns TRUE iff LP is proven to be dual unbounded */
 Bool SCIPlpiIsDualUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1530,12 +1610,26 @@ Bool SCIPlpiIsDualUnbounded(
 }
 
 
-/** returns TRUE iff LP is dual infeasible */
+/** returns TRUE iff LP is proven to be dual infeasible */
 Bool SCIPlpiIsDualInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
    debugMessage("calling SCIPlpiIsDualInfeasible()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   return ( lpi->clp->isProvenDualInfeasible() );
+}
+
+
+/** returns TRUE iff LP is proven to be dual feasible */
+Bool SCIPlpiIsDualFeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiIsDualFeasible()\n");
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
@@ -1554,7 +1648,7 @@ Bool SCIPlpiIsOptimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   return(lpi->clp->isProvenOptimal() );
+   return( lpi->clp->isProvenOptimal() && lpi->clp->secondaryStatus() == 0 );
 }
 
 
@@ -1584,7 +1678,7 @@ Bool SCIPlpiIsStable(
    //    0 - optimal
    //    1 - primal infeasible
    //    2 - dual infeasible
-   return( (lpi->clp->status() <= 2) && (! lpi->clp->isAbandoned()) );
+   return( (lpi->clp->status() <= 2) && (! lpi->clp->isAbandoned()) && (lpi->clp->secondaryStatus() <= 1) );
 }
 
 
@@ -1810,7 +1904,12 @@ RETCODE SCIPlpiGetBase(
 	 case ClpSimplex::atUpperBound: rstat[i] = SCIP_BASESTAT_UPPER; break;
 	 case ClpSimplex::atLowerBound:  rstat[i] = SCIP_BASESTAT_LOWER; break;
 	 case ClpSimplex::superBasic: rstat[i] = SCIP_BASESTAT_ZERO; break;
-	 case ClpSimplex::isFixed:    rstat[i] = SCIP_BASESTAT_LOWER; break;
+	 case ClpSimplex::isFixed:    
+	    if (clp->getRowPrice()[i] > 0.0)
+	       rstat[i] = SCIP_BASESTAT_LOWER; 
+	    else
+	       rstat[i] = SCIP_BASESTAT_UPPER; 
+	    break;
 	 default: errorMessage("invalid basis status\n");  abort();
 	 }
       }
@@ -1827,7 +1926,12 @@ RETCODE SCIPlpiGetBase(
 	 case ClpSimplex::atUpperBound: cstat[j] = SCIP_BASESTAT_UPPER; break;
 	 case ClpSimplex::atLowerBound:  cstat[j] = SCIP_BASESTAT_LOWER; break;
 	 case ClpSimplex::superBasic: cstat[j] = SCIP_BASESTAT_ZERO; break;
-	 case ClpSimplex::isFixed:    cstat[j] = SCIP_BASESTAT_LOWER; break;
+	 case ClpSimplex::isFixed: 
+	    if (clp->getReducedCost()[j] > 0.0)
+	       cstat[j] = SCIP_BASESTAT_LOWER; 
+	    else
+	       cstat[j] = SCIP_BASESTAT_UPPER; 
+	    break;
 	 default: errorMessage("invalid basis status\n");  abort();
 	 }
       }
@@ -1898,17 +2002,17 @@ RETCODE SCIPlpiSetBase(
       {
       case SCIP_BASESTAT_ZERO:
 	 if (lb[j] <= -COIN_DBL_MAX && ub[j] >= COIN_DBL_MAX)
-	    clp->setRowStatus(j, ClpSimplex::isFree);
+	    clp->setColumnStatus(j, ClpSimplex::isFree);
 	 else
-	    clp->setRowStatus(j, ClpSimplex::superBasic);
+	    clp->setColumnStatus(j, ClpSimplex::superBasic);
 	 break;
-      case SCIP_BASESTAT_BASIC: clp->setRowStatus(j, ClpSimplex::basic); break;
-      case SCIP_BASESTAT_UPPER: clp->setRowStatus(j, ClpSimplex::atUpperBound); break;
+      case SCIP_BASESTAT_BASIC: clp->setColumnStatus(j, ClpSimplex::basic); break;
+      case SCIP_BASESTAT_UPPER: clp->setColumnStatus(j, ClpSimplex::atUpperBound); break;
       case SCIP_BASESTAT_LOWER: 
 	 if ( EPSGE(ub[j], lb[j], 1e-6) )
-	    clp->setRowStatus(j, ClpSimplex::isFixed);
+	    clp->setColumnStatus(j, ClpSimplex::isFixed);
 	 else
-	    clp->setRowStatus(j, ClpSimplex::atLowerBound); 
+	    clp->setColumnStatus(j, ClpSimplex::atLowerBound); 
 	 break;
       default: errorMessage("invalid basis status\n");  abort();
       }
@@ -1936,13 +2040,13 @@ RETCODE SCIPlpiGetBasisInd(
    {
       int status = clp->getRowStatus(i);
       if ( status == ClpSimplex::basic )
-	 bind[cnt] = -1 - i;
+	 bind[cnt++] = -1 - i;
    }
    for( int j = 0; j < clp->numberColumns(); ++j )
    {
       int status = clp->getColumnStatus(j);
       if ( status == ClpSimplex::basic )
-	 bind[cnt] = j;
+	 bind[cnt++] = j;
    }
    
    return SCIP_OKAY;
@@ -1966,6 +2070,14 @@ RETCODE SCIPlpiGetBInvRow(
    // Copied from OsiClpInterface::SCIPlpiGetBInvRow
 
    ClpSimplex* clp = lpi->clp;
+
+   // Check whether we have a factorization and the arrays below (if not produce one!)
+   if (! lpi->haveFactorization)
+   {
+      int returnCode = clp->startup(0);
+      assert(! returnCode);
+      lpi->haveFactorization = true;
+   }
 
    ClpFactorization* factorization = clp->factorization();
    CoinIndexedVector* rowArray0 = clp->rowArray(0);
@@ -2001,6 +2113,15 @@ RETCODE SCIPlpiGetBInvARow(
    // WARNING:  binvrow is not used at the moment!  ?????????????
 
    ClpSimplex* clp = lpi->clp;
+
+   // Check whether we have a factorization and the arrays below (if not produce one!)
+   if (! lpi->haveFactorization)
+   {
+      int returnCode = clp->startup(0);
+      assert(! returnCode);
+      lpi->haveFactorization = true;
+   }
+
    ClpFactorization* factorization = clp->factorization();
    CoinIndexedVector* rowArray0 = clp->rowArray(0);
    CoinIndexedVector* rowArray1 = clp->rowArray(1);
@@ -2251,7 +2372,7 @@ RETCODE SCIPlpiSetIntpar(
       case SCIP_PRICING_FULL: primalmode = 0; dualmode = 1; break;
       case SCIP_PRICING_STEEP: primalmode = 1; dualmode = 0; break;
       case SCIP_PRICING_STEEPQSTART: primalmode = 1; dualmode = 2; break;
-      default: errorMessage("unkown pricing parameter!\n"); abort();
+      default: errorMessage("unkown pricing parameter %d!\n", ival); abort();
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
       lpi->clp->setPrimalColumnPivotAlgorithm(primalpivot);      
@@ -2269,7 +2390,7 @@ RETCODE SCIPlpiSetIntpar(
       lpi->fastmip = ival;
       break;
    case SCIP_LPPAR_SCALING:
-      lpi->clp->scaling(ival == TRUE ? 3 : 0);      // could use 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
+      lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
    case SCIP_LPPAR_PRICING:
       abort();
