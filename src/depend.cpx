@@ -5,9 +5,9 @@ $(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/retcode.h src/result.h \
   src/prob.h src/branch.h src/sol.h src/heur.h src/primal.h src/event.h \
   src/sepastore.h src/presol.h src/sepa.h src/disp.h src/reader_cnf.h \
   src/reader_mps.h src/disp_default.h src/cons_and.h src/cons_binpack.h \
-  src/cons_eqknapsack.h src/cons_integral.h src/cons_invarknapsack.h \
-  src/cons_knapsack.h src/cons_linear.h src/cons_logicor.h \
-  src/cons_setppc.h src/cons_varlb.h src/cons_varub.h \
+  src/cons_bitstring.h src/cons_eqknapsack.h src/cons_integral.h \
+  src/cons_invarknapsack.h src/cons_knapsack.h src/cons_linear.h \
+  src/cons_logicor.h src/cons_setppc.h src/cons_varlb.h src/cons_varub.h \
   src/presol_dualfix.h src/nodesel_bfs.h src/nodesel_dfs.h \
   src/nodesel_restartdfs.h src/branch_fullstrong.h src/branch_mostinf.h \
   src/branch_leastinf.h src/heur_diving.h src/heur_rounding.h \

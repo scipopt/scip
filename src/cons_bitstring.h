@@ -15,44 +15,41 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_xxx.h
- * @brief  constraint handler for xxx constraints
+/**@file   cons_bitstring.h
+ * @brief  constraint handler for bitstring constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_XXX_H__
-#define __CONS_XXX_H__
+#ifndef __CONS_BITSTRING_H__
+#define __CONS_BITSTRING_H__
 
 
 #include "scip.h"
 
 
-/** creates the handler for xxx constraints and includes it in SCIP */
+/** creates the handler for bitstring constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrXxx(
+RETCODE SCIPincludeConsHdlrBitstring(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a xxx constraint */
+/** creates and captures a bitstring constraint
+ *  Warning! Either the bitstring should be short, or the objective value should be zero, because the objective
+ *  value of the most significant bit in the string would be 2^(nbits-1)*obj
+ */
 extern
-RETCODE SCIPcreateConsXxx(
+RETCODE SCIPcreateConsBitstring(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
-   Real             rhs,                /**< right hand side of constraint */
+   int              nbits,              /**< number of bits in the bitstring */
+   Real             obj,                /**< objective value of bitstring variable */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   Bool             local,              /**< is constraint only valid locally? */
-   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 

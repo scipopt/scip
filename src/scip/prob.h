@@ -93,6 +93,7 @@ struct Prob
    int              consssize;          /**< available slots in conss array */
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int              maxnconss;          /**< maximum number of constraints existing at the same time */
+   unsigned int     transformed:1;      /**< TRUE iff problem is the transformed problem */
 };
 
 
@@ -107,7 +108,8 @@ RETCODE SCIPprobCreate(
    const char*      name,               /**< problem name */
    DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
    DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
-   PROBDATA*        probdata            /**< user problem data set by the reader */
+   PROBDATA*        probdata,           /**< user problem data set by the reader */
+   Bool             transformed         /**< is this the transformed problem? */
    );
 
 /** frees problem data structure */
@@ -131,21 +133,7 @@ RETCODE SCIPprobTransform(
    PROB**           target              /**< pointer to target problem data structure */
    );
 
-/** activates constraints in the problem */
-extern
-RETCODE SCIPprobActivate(
-   PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   );
 
-/** deactivates constraints in the problem */
-extern
-RETCODE SCIPprobDeactivate(
-   PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   );
 
 
 /*
@@ -189,7 +177,7 @@ RETCODE SCIPprobVarFixed(
    VAR*             var                 /**< variable to add */
    );
 
-/** adds constraint to the problem and captures it */
+/** adds constraint to the problem and captures it; a local constraint is automatically upgraded into a global constraint */
 extern
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */

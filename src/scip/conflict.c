@@ -325,10 +325,9 @@ RETCODE conflictAnalyze(
       {
          /* check, if the variable can and should be resolved */
          infercons = SCIPvarGetInferCons(var);
-         assert(infercons == NULL || infercons->active);
          if( nextvar != NULL
             && infercons != NULL
-            && !SCIPconsIsLocal(infercons)
+            && SCIPconsIsGlobal(infercons)
             && SCIPvarGetInferDepth(var) == SCIPvarGetInferDepth(nextvar) )
          {
             /* resolve variable v by asking the constraint that infered the

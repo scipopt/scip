@@ -237,8 +237,8 @@ RETCODE readCNF(
 
                clausenum++;
                sprintf(s, "c%d", clausenum);
-               CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, s, clauselen, clausevars, 
-                              !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, dynamicrows) );
+               CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
+                              !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
                CHECK_OKAY( SCIPaddCons(scip, cons) );
                CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
                clauselen = 0;

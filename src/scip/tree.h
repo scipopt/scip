@@ -215,7 +215,9 @@ RETCODE SCIPnodeActivate(
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
-/** adds local constraint to the node and captures it; activates constraint, if node is active */
+/** adds constraint locally to the node and captures it; activates constraint, if node is active;
+ *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ */
 extern
 RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */

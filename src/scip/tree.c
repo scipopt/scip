@@ -676,7 +676,7 @@ RETCODE SCIPnodeFree(
 
    /* free common data */
    CHECK_OKAY( SCIPconssetchgFree(&(*node)->conssetchg, memhdr, set) );
-   CHECK_OKAY( SCIPdomchgFree(&(*node)->domchg, memhdr) );
+   CHECK_OKAY( SCIPdomchgFree(&(*node)->domchg, memhdr, set) );
    CHECK_OKAY( nodeReleaseParent(*node, memhdr, set, tree, lp) );
 
    freeBlockMemory(memhdr, node);
@@ -754,7 +754,9 @@ RETCODE nodeDeactivate(
    return SCIP_OKAY;
 }
 
-/** adds local constraint to the node and captures it; activates constraint, if node is active */
+/** adds constraint locally to the node and captures it; activates constraint, if node is active;
+ *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ */
 RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -775,7 +777,7 @@ RETCODE SCIPnodeAddCons(
    if( node->depth == 0 )
    {
       assert(node == tree->root);
-      cons->global = TRUE;
+      cons->local = FALSE;
    }
 
    /* activate constraint, if node is active */
@@ -1583,7 +1585,7 @@ RETCODE nodeToLeaf(
    CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, node) );
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, memhdr) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }
@@ -1647,7 +1649,7 @@ RETCODE actnodeToJunction(
    }
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }
@@ -1709,7 +1711,7 @@ RETCODE actnodeToFork(
    tree->actlpfork = tree->actnode;
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }
@@ -1781,7 +1783,7 @@ RETCODE actnodeToSubroot(
    tree->actsubroot = tree->actnode;
 
    /* make the domain change data static to save memory */
-   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr) );
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
 
    return SCIP_OKAY;
 }

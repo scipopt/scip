@@ -52,6 +52,8 @@ struct ConsHdlr
    DECL_CONSPROP    ((*consprop));      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol));    /**< presolving method */
    DECL_CONSRESCVAR ((*consrescvar));   /**< conflict variable resolving method */
+   DECL_CONSLOCK    ((*conslock));      /**< variable rounding lock method */
+   DECL_CONSUNLOCK  ((*consunlock));    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive));    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive));  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
@@ -674,6 +676,46 @@ RETCODE conshdlrDisableCons(
    return SCIP_OKAY;
 }
 
+/** adds constraint to the chckconss array of constraint handler */
+static
+RETCODE conshdlrAddCheckconss(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   int insertpos;
+
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
+   assert(set != NULL);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(cons->active);
+   assert(cons->check);
+   assert(cons->checkconsspos == -1);
+
+   CHECK_OKAY( conshdlrEnsureCheckconssMem(conshdlr, set, conshdlr->ncheckconss+1) );
+   insertpos = conshdlr->ncheckconss;
+   if( !cons->obsolete )
+   {
+      if( conshdlr->nusefulcheckconss < conshdlr->ncheckconss )
+      {
+         assert(conshdlr->checkconss[conshdlr->nusefulcheckconss] != NULL);
+         conshdlr->checkconss[conshdlr->ncheckconss] = conshdlr->checkconss[conshdlr->nusefulcheckconss];
+         conshdlr->checkconss[conshdlr->ncheckconss]->checkconsspos = conshdlr->ncheckconss;
+         insertpos = conshdlr->nusefulcheckconss;
+      }
+      conshdlr->nusefulcheckconss++;
+   }
+   assert(0 <= insertpos && insertpos <= conshdlr->ncheckconss);
+   conshdlr->checkconss[insertpos] = cons;
+   cons->checkconsspos = insertpos;
+   conshdlr->ncheckconss++;
+
+   return SCIP_OKAY;
+}
+
 /** activates and adds constraint to constraint handler's constraint arrays */
 static
 RETCODE conshdlrActivateCons(
@@ -682,8 +724,6 @@ RETCODE conshdlrActivateCons(
    CONS*            cons                /**< constraint to add */
    )
 {
-   int insertpos;
-
    assert(conshdlr != NULL);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
@@ -713,23 +753,7 @@ RETCODE conshdlrActivateCons(
    /* add constraint to the check array */
    if( cons->check )
    {
-      CHECK_OKAY( conshdlrEnsureCheckconssMem(conshdlr, set, conshdlr->ncheckconss+1) );
-      insertpos = conshdlr->ncheckconss;
-      if( !cons->obsolete )
-      {
-         if( conshdlr->nusefulcheckconss < conshdlr->ncheckconss )
-         {
-            assert(conshdlr->checkconss[conshdlr->nusefulcheckconss] != NULL);
-            conshdlr->checkconss[conshdlr->ncheckconss] = conshdlr->checkconss[conshdlr->nusefulcheckconss];
-            conshdlr->checkconss[conshdlr->ncheckconss]->checkconsspos = conshdlr->ncheckconss;
-            insertpos = conshdlr->nusefulcheckconss;
-         }
-         conshdlr->nusefulcheckconss++;
-      }
-      assert(0 <= insertpos && insertpos <= conshdlr->ncheckconss);
-      conshdlr->checkconss[insertpos] = cons;
-      cons->checkconsspos = insertpos;
-      conshdlr->ncheckconss++;
+      CHECK_OKAY( conshdlrAddCheckconss(conshdlr, set, cons) );
    }
 
    /* call constraint handler's activation notification method */
@@ -1046,6 +1070,8 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -1083,6 +1109,8 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consprop = consprop;
    (*conshdlr)->conspresol = conspresol;
    (*conshdlr)->consrescvar = consrescvar;
+   (*conshdlr)->conslock = conslock;
+   (*conshdlr)->consunlock = consunlock;
    (*conshdlr)->consactive = consactive;
    (*conshdlr)->consdeactive = consdeactive;
    (*conshdlr)->consenable = consenable;
@@ -2726,6 +2754,7 @@ RETCODE SCIPconsCreate(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
@@ -2749,15 +2778,17 @@ RETCODE SCIPconsCreate(
    (*cons)->propconsspos = -1;
    (*cons)->nuses = 0;
    (*cons)->age = 0;
+   (*cons)->nlockspos = 0;
+   (*cons)->nlocksneg = 0;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
    (*cons)->check = check;
    (*cons)->propagate = propagate;
+   (*cons)->local = local;
    (*cons)->modifiable = modifiable;
    (*cons)->removeable = removeable;
    (*cons)->original = original;
-   (*cons)->global = FALSE;
    (*cons)->active = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
@@ -2939,7 +2970,7 @@ RETCODE SCIPconsTransform(
       /* create new constraint with empty constraint data */
       CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL, origcons->initial,
                      origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
-                     origcons->modifiable, origcons->removeable, FALSE) );
+                     origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
    }
    assert(*transcons != NULL);
 
@@ -3165,6 +3196,76 @@ RETCODE SCIPconsResolveConflictVar(
    return SCIP_OKAY;
 }
 
+/** locks rounding of variables involved in the costraint */
+RETCODE SCIPconsLockVars(
+   CONS*            cons,               /**< constraint */
+   const SET*       set,                /**< global SCIP settings */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   )
+{
+   Bool lockpos;
+   Bool lockneg;
+
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(cons->conshdlr->conslock != NULL);
+   assert(0 <= nlockspos && nlockspos <= 2);
+   assert(0 <= nlocksneg && nlocksneg <= 2);
+
+   /* check, if the constraint is currently unlocked and gets locked */
+   lockpos = (cons->nlockspos == 0 && nlockspos > 0);
+   lockneg = (cons->nlocksneg == 0 && nlocksneg > 0);
+
+   /* update the rounding locks */
+   cons->nlockspos += nlockspos;
+   cons->nlocksneg += nlocksneg;
+
+   /* lock the variables, if the constraint switched from unlocked to locked */
+   if( lockpos || lockneg )
+   {
+      CHECK_OKAY( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, (int)lockpos, (int)lockneg) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** unlocks rounding of variables involved in the costraint */
+RETCODE SCIPconsUnlockVars(
+   CONS*            cons,               /**< constraint */
+   const SET*       set,                /**< global SCIP settings */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
+   )
+{
+   Bool unlockpos;
+   Bool unlockneg;
+
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(cons->conshdlr->consunlock != NULL);
+   assert(0 <= nunlockspos && nunlockspos <= 2);
+   assert(0 <= nunlocksneg && nunlocksneg <= 2);
+
+   /* check, if the constraint is currently locked and gets unlocked */
+   unlockpos = (cons->nlockspos > 0 && nunlockspos == cons->nlockspos);
+   unlockneg = (cons->nlocksneg > 0 && nunlocksneg == cons->nlocksneg);
+
+   /* update the rounding locks */
+   cons->nlockspos -= nunlockspos;
+   cons->nlocksneg -= nunlocksneg;
+   assert(cons->nlockspos >= 0);
+   assert(cons->nlocksneg >= 0);
+
+   /* unlock the variables, if the constraint switched from locked to unlocked */
+   if( unlockpos || unlockneg )
+   {
+      CHECK_OKAY( cons->conshdlr->consunlock(set->scip, cons->conshdlr, cons, (int)unlockpos, (int)unlockneg) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks single constraint for feasibility of the given solution */
 RETCODE SCIPconsCheck(
    CONS*            cons,               /**< constraint to check */
@@ -3199,6 +3300,35 @@ RETCODE SCIPconsCheck(
 
    return SCIP_OKAY;
 }
+
+/** marks the constraint to be essential for feasibility */
+RETCODE SCIPconsSetChecked(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+
+   if( !cons->check )
+   {
+      cons->check = TRUE;
+
+      /* if constraint is a problem constraint, lock variable roundings */
+      if( cons->addconssetchg == NULL && cons->addarraypos >= 0 )
+      {
+         CHECK_OKAY( SCIPconsLockVars(cons, set, TRUE, FALSE) );
+      }
+
+      /* if constraint is active, add it to the chckconss array of the constraint handler */
+      if( cons->active )
+      {
+         CHECK_OKAY( conshdlrAddCheckconss(cons->conshdlr, set, cons) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 #ifndef NDEBUG
 
@@ -3313,7 +3443,7 @@ Bool SCIPconsIsGlobal(
 {
    assert(cons != NULL);
 
-   return cons->global;
+   return !cons->local;
 }
 
 /** returns TRUE iff constraint is only locally valid or not added to any (sub)problem */
@@ -3323,7 +3453,7 @@ Bool SCIPconsIsLocal(
 {
    assert(cons != NULL);
 
-   return !cons->global;
+   return cons->local;
 }
 
 /** returns TRUE iff constraint is modifiable (subject to column generation) */
@@ -3364,6 +3494,36 @@ Bool SCIPconsIsTransformed(
    assert(cons != NULL);
 
    return !cons->original;
+}
+
+/** returns TRUE iff roundings for variables in constraint are locked */
+Bool SCIPconsIsLockedPos(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->nlockspos > 0);
+}
+
+/** returns TRUE iff roundings for variables in constraint's negation are locked */
+Bool SCIPconsIsLockedNeg(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->nlocksneg > 0);
+}
+
+/** returns TRUE iff roundings for variables in constraint or in constraint's negation are locked */
+Bool SCIPconsIsLocked(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->nlockspos > 0 || cons->nlocksneg > 0);
 }
 
 #endif

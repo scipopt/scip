@@ -118,7 +118,8 @@ RETCODE SCIPprobCreate(
    const char*      name,               /**< problem name */
    DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
    DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
-   PROBDATA*        probdata            /**< user problem data set by the reader */
+   PROBDATA*        probdata,           /**< user problem data set by the reader */
+   Bool             transformed         /**< is this the transformed problem? */
    )
 {
    assert(prob != NULL);
@@ -150,6 +151,7 @@ RETCODE SCIPprobCreate(
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
+   (*prob)->transformed = transformed;
 
    return SCIP_OKAY;
 }
@@ -175,13 +177,16 @@ RETCODE SCIPprobFree(
       CHECK_OKAY( (*prob)->probdelete(set->scip, &(*prob)->probdata) );
    }
 
+   /* remove all constraints from the problem */
+   while( (*prob)->nconss > 0 )
+   {
+      assert((*prob)->conss != NULL);
+      CHECK_OKAY( SCIPprobDelCons(*prob, memhdr, set, (*prob)->conss[0]) );
+   }
+
    freeMemoryArray(&(*prob)->name);
 
-   /* release constraints and free constraint array */
-   for( c = 0; c < (*prob)->nconss; ++c )
-   {
-      CHECK_OKAY( SCIPconsRelease(&(*prob)->conss[c], memhdr, set) );
-   }
+   /* free constraint array */
    freeMemoryArrayNull(&(*prob)->conss);
    
    /* release problem variables */
@@ -236,7 +241,7 @@ RETCODE SCIPprobTransform(
 
    /* create target problem data (probtrans is not needed, probdata is set later) */
    sprintf(transname, "t_%s", source->name);
-   CHECK_OKAY( SCIPprobCreate(target, transname, source->probdelete, NULL, NULL) );
+   CHECK_OKAY( SCIPprobCreate(target, transname, source->probdelete, NULL, NULL, TRUE) );
 
    /* transform objective limit */
    if( source->objlim < SCIP_INVALID )
@@ -271,46 +276,6 @@ RETCODE SCIPprobTransform(
    return SCIP_OKAY;
 }
 
-/** activates constraints in the problem */
-RETCODE SCIPprobActivate(
-   PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   int c;
-
-   assert(prob != NULL);
-   assert(prob->nconss == 0 || prob->conss != NULL);
-   assert(set != NULL);
-
-   for( c = 0; c < prob->nconss; ++c )
-   {
-      CHECK_OKAY( SCIPconsActivate(prob->conss[c], set) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** deactivates constraints in the problem */
-RETCODE SCIPprobDeactivate(
-   PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   int c;
-
-   assert(prob != NULL);
-   assert(prob->nconss == 0 || prob->conss != NULL);
-
-   for( c = 0; c < prob->nconss; ++c )
-   {
-      CHECK_OKAY( SCIPconsDeactivate(prob->conss[c], set) );
-   }
-
-   return SCIP_OKAY;
-}
 
 
 
@@ -604,7 +569,7 @@ RETCODE SCIPprobVarFixed(
    return SCIP_OKAY;
 }
 
-/** adds constraint to the problem and captures it */
+/** adds constraint to the problem and captures it; a local constraint is automatically upgraded into a global constraint */
 RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
@@ -632,13 +597,26 @@ RETCODE SCIPprobAddCons(
    cons->deleted = FALSE;
 
    /* mark constraint to be globally valid */
-   cons->global = TRUE;
+   cons->local = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(cons);
 
    /* add constraint's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->consnames, memhdr, (void*)cons) );
+
+   /* if the problem is the transformed problem, activate and lock constraint */
+   if( prob->transformed )
+   {
+      /* activate constraint */
+      CHECK_OKAY( SCIPconsActivate(cons, set) );
+
+      /* if constraint is a check-constraint, lock roundings of constraint's variables */
+      if( SCIPconsIsChecked(cons) )
+      {
+         CHECK_OKAY( SCIPconsLockVars(cons, set, 1, 0) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -663,10 +641,20 @@ RETCODE SCIPprobDelCons(
    assert(prob->conss != NULL);
    assert(prob->conss[cons->addarraypos] == cons);
 
-   /* deactivate constraint, if it is currently active */
-   if( cons->active && !cons->updatedeactivate )
+   /* if the problem is the transformed problem, deactivate and unlock constraint */
+   if( prob->transformed )
    {
-      CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+      /* if constraint is a check-constraint, unlock roundings of constraint's variables */
+      if( SCIPconsIsChecked(cons) )
+      {
+         CHECK_OKAY( SCIPconsUnlockVars(cons, set, 1, 0) );
+      }
+
+      /* deactivate constraint, if it is currently active */
+      if( cons->active && !cons->updatedeactivate )
+      {
+         CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+      }
    }
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
@@ -684,9 +672,6 @@ RETCODE SCIPprobDelCons(
 
    /* mark the constraint to be no longer in the problem */
    cons->addarraypos = -1;
-
-   /* mark constraint to be no longer globally valid */
-   cons->global = FALSE;
 
    /* release constraint */
    CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );

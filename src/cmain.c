@@ -32,6 +32,7 @@
 #include "disp_default.h"
 #include "cons_and.h"
 #include "cons_binpack.h"
+#include "cons_bitstring.h"
 #include "cons_eqknapsack.h"
 #include "cons_integral.h"
 #include "cons_invarknapsack.h"
@@ -79,9 +80,10 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrAnd(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrBitstring(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrLogicOr(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrLogicor(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetppc(scip) );
 
 #if 0
@@ -140,7 +142,7 @@ RETCODE runSCIP(
       return SCIP_OKAY;
    }
 
-#if 1 /*?????????????????????*/
+#if 0 /*?????????????????????*/
    printf("\nread problem <%s>\n", argv[1]);
    printf("============\n\n");
    CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
@@ -166,7 +168,7 @@ RETCODE runSCIP(
 
       /* +3x0 -11x1 +4x2 <= 0 */
       CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "lincons1", 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-                     FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+                     FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +3.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], -11.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +4.0) );
@@ -175,7 +177,7 @@ RETCODE runSCIP(
 
       /* +2x0 +3x1 +1x2 <= 7 */
       CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "lincons2", 0, NULL, NULL, -SCIPinfinity(scip), 7.0,
-                     FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+                     FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +2.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], +3.0) );
       CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +1.0) );
@@ -190,6 +192,16 @@ RETCODE runSCIP(
          CHECK_OKAY( SCIPreleaseVar(scip, &vars[v]) );
       }
       SCIPfreeMemoryArray(scip, &vars);
+
+      /* bitstring constraint */
+      CHECK_OKAY( SCIPcreateConsBitstring(scip, &cons, "bitstring", 19, -1.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+      {
+         VAR* var;
+         var = SCIPfindVar(scip, "bitstring_w1");
+         CHECK_OKAY( SCIPchgVarUb(scip, var, 1.0) );
+      }
    }
 #endif
 
@@ -269,6 +281,7 @@ main(
    todoMessage("statistics: count domain reductions and constraint additions of constraint handlers");
    todoMessage("it's a bit ugly, that user call backs may be called before the nodequeue was processed");
    todoMessage("unboundness detection in presolving -> convert problem into feasibility problem to decide unboundness/infeasibility");
+   todoMessage("variable event PSSOLCHANGED, update pseudo activities in constraints to speed up checking of pseudo solutions");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

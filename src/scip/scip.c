@@ -738,6 +738,8 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -753,7 +755,7 @@ RETCODE SCIPincludeConsHdlr(
                   name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
                   consfree, consinit, consexit, consdelete, constrans, consinitlp,
                   conssepa, consenfolp, consenfops, conscheck, consprop, conspresol, consrescvar,
-                  consactive, consdeactive, consenable, consdisable, conshdlrdata) );
+                  conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
@@ -1119,7 +1121,7 @@ RETCODE SCIPcreateProb(
    scip->stage = SCIP_STAGE_PROBLEM;
    
    CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->set) );
-   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelete, probtrans, probdata) );
+   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelete, probtrans, probdata, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -1694,7 +1696,10 @@ Bool SCIPallVarsInProb(
    return (scip->set->npricers == 0);
 }
 
-/** adds global constraint to the problem */
+/** adds constraint to the problem; if constraint is only valid locally, it is added to the local subproblem of the
+ *  active node (and all of its subnodes); otherwise it is added to the global problem;
+ *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ */
 RETCODE SCIPaddCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint to add */
@@ -1711,9 +1716,18 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
-      CHECK_OKAY( SCIPconsActivate(cons, scip->set) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      if( SCIPconsIsGlobal(cons) )
+      {
+         CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPnodeAddCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
+      }
       return SCIP_OKAY;
 
    default:
@@ -1723,7 +1737,7 @@ RETCODE SCIPaddCons(
 }
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
- *  node, where it was created, or from the problem, if it was a problem constraint
+ *  node, where it was added, or from the problem, if it was a problem constraint
  */
 RETCODE SCIPdelCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1795,7 +1809,9 @@ CONS* SCIPfindCons(
  * local subproblem methods
  */
 
-/** adds local constraint to the active node (and all of its subnodes) */
+/** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
+ *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ */
 RETCODE SCIPaddConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint to add */
@@ -1810,7 +1826,9 @@ RETCODE SCIPaddConsLocal(
    return SCIP_OKAY;
 }
 
-/** adds local constraint to the given node (and all of its subnodes) */
+/** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
+ *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ */
 RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to add constraint to */
@@ -1827,8 +1845,7 @@ RETCODE SCIPaddConsNode(
 }
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
- *  if the current node is the root node, or if the method is called during problem modification or presolving,
- *  the constraint is globally deleted from the problem
+ *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
  */
 RETCODE SCIPdisableConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1854,15 +1871,7 @@ RETCODE SCIPdisableConsLocal(
    case SCIP_STAGE_SOLVING:
       assert(scip->tree->actnode != NULL);
       assert(scip->tree->actnode->nodetype == SCIP_NODETYPE_ACTNODE);
-      if( scip->tree->actnode == scip->tree->root )
-      {
-         assert(scip->tree->actnode->depth == 0);
-         CHECK_OKAY( SCIPconsDelete(cons, scip->mem->solvemem, scip->set, scip->transprob) );
-      }
-      else
-      {
-         CHECK_OKAY( SCIPnodeDisableCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
-      }
+      CHECK_OKAY( SCIPnodeDisableCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
       return SCIP_OKAY;
 
    default:
@@ -2042,9 +2051,6 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->branchcand,
                   &scip->transprob) );
 
-   /* activate constraints in the problem */
-   CHECK_OKAY( SCIPprobActivate(scip->transprob, scip->mem->solvemem, scip->set) );
-
    /* init callback methods */
    CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
 
@@ -2223,15 +2229,12 @@ RETCODE SCIPfreeSolve(
       /* exit callback methods */
       CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
 
-      /* deactivate constraints in the problem */
-      CHECK_OKAY( SCIPprobDeactivate(scip->transprob, scip->mem->solvemem, scip->set) );
-
       /* clear the LP */
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
 
       /* free solution process data */
-      CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
+      CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
 
       /* free solve data structures */
@@ -2722,8 +2725,9 @@ RETCODE SCIPchgVarType(
    }   
 }
 
-/** converts variable into fixed variable, changes bounds respectively; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData()
+/** in problem creation and solving stage, both bounds of the variable are set to the given value;
+ *  in presolving stage, the variable is converted into a fixed variable, and bounds are changed respectively;
+ *  conversion into a fixed variable changes the vars array returned from SCIPgetVars() and SCIPgetVarsData()
  */
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2734,12 +2738,12 @@ RETCODE SCIPfixVar(
 {
    assert(var != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      assert(!SCIPvarIsTransformed(var));
+   case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
       CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
       *infeasible = (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval));
@@ -2749,7 +2753,7 @@ RETCODE SCIPfixVar(
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
                      scip->branchcand, scip->eventqueue, fixedval, infeasible) );
       return SCIP_OKAY;
-
+      
    default:
       errorMessage("invalid SCIP stage");
       return SCIP_ERROR;
@@ -2883,6 +2887,7 @@ RETCODE SCIPcreateCons(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -2897,14 +2902,14 @@ RETCODE SCIPcreateCons(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
-                     initial, separate, enforce, check, propagate, modifiable, removeable, TRUE) );
+                     initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata,
-                     initial, separate, enforce, check, propagate, modifiable, removeable, FALSE) );
+                     initial, separate, enforce, check, propagate, local, modifiable, removeable, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -3008,6 +3013,36 @@ RETCODE SCIPresetConsAge(
    return SCIP_OKAY;
 }
 
+/** locks rounding of variables involved in the costraint */
+RETCODE SCIPlockConsVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPlockConsVars", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsLockVars(cons, scip->set, nlockspos, nlocksneg) );
+
+   return SCIP_OKAY;
+}
+
+/** unlocks rounding of variables involved in the costraint */
+RETCODE SCIPunlockConsVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPunlockConsVars", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPconsUnlockVars(cons, scip->set, nunlockspos, nunlocksneg) );
+
+   return SCIP_OKAY;
+}
+
 /** checks single constraint for feasibility of the given solution */
 RETCODE SCIPcheckCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3021,6 +3056,19 @@ RETCODE SCIPcheckCons(
    CHECK_OKAY( checkStage(scip, "SCIPcheckCons", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, result) );
+
+   return SCIP_OKAY;
+}
+
+/** marks the constraint to be essential for feasibility */
+RETCODE SCIPsetConsChecked(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetConsChecked", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   CHECK_OKAY( SCIPconsSetChecked(cons, scip->set) );
 
    return SCIP_OKAY;
 }
@@ -3498,32 +3546,6 @@ RETCODE SCIPreleaseRow(
    CHECK_OKAY( checkStage(scip, "SCIPreleaseRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIProwRelease(row, scip->mem->solvemem, scip->set, scip->lp) );
-   
-   return SCIP_OKAY;
-}
-
-/** forbids roundings of variables in row that may violate row */
-RETCODE SCIPforbidRowRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row                 /**< LP row */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPforbidRowRounding", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   SCIProwForbidRounding(row, scip->set);
-   
-   return SCIP_OKAY;
-}
-
-/** allows roundings of variables in row that may violate row */
-RETCODE SCIPallowRowRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row                 /**< LP row */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPallowRowRounding", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   SCIProwAllowRounding(row, scip->set);
    
    return SCIP_OKAY;
 }

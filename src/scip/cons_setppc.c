@@ -297,10 +297,11 @@ RETCODE consdataDropAllEvents(
 
 /** locks the rounding locks associated to the given variable in the setppc constraint */
 static
-void consdataForbidRounding(
-   SCIP*            scip,               /**< SCIP data structure */
+void consdataLockRounding(
    CONSDATA*        consdata,           /**< linear constraint data */
-   VAR*             var                 /**< variable of constraint entry */
+   VAR*             var,                /**< variable of constraint entry */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
    assert(consdata != NULL);
@@ -309,23 +310,24 @@ void consdataForbidRounding(
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      SCIPvarForbidRound(var);
+      SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg);
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      SCIPvarForbidRoundUp(var);
+      SCIPvarLock(var, nlocksneg, nlockspos);
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      SCIPvarForbidRoundDown(var);
+      SCIPvarLock(var, nlockspos, nlocksneg);
       break;
    }
 }
 
 /** unlocks the rounding locks associated to the given variable in the setppc constraint */
 static
-void consdataAllowRounding(
-   SCIP*            scip,               /**< SCIP data structure */
+void consdataUnlockRounding(
    CONSDATA*        consdata,           /**< linear constraint data */
-   VAR*             var                 /**< variable of constraint entry */
+   VAR*             var,                /**< variable of constraint entry */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    )
 {
    assert(consdata != NULL);
@@ -334,22 +336,23 @@ void consdataAllowRounding(
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      SCIPvarAllowRound(var);
+      SCIPvarUnlock(var, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg);
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      SCIPvarAllowRoundUp(var);
+      SCIPvarUnlock(var, nunlocksneg, nunlockspos);
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      SCIPvarAllowRoundDown(var);
+      SCIPvarUnlock(var, nunlockspos, nunlocksneg);
       break;
    }
 }
 
 /** locks the rounding locks of all variables in the setppc constraint */
 static
-void consdataForbidAllRoundings(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< linear constraint data */
+void consdataLockAllRoundings(
+   CONSDATA*        consdata,           /**< linear constraint data */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
    int i;
@@ -357,14 +360,15 @@ void consdataForbidAllRoundings(
    assert(consdata != NULL);
 
    for( i = 0; i < consdata->nvars; ++i )
-      consdataForbidRounding(scip, consdata, consdata->vars[i]);
+      consdataLockRounding(consdata, consdata->vars[i], nlockspos, nlocksneg);
 }
 
 /** unlocks the rounding locks of all variables in the setppc constraint */
 static
-void consdataAllowAllRoundings(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< linear constraint data */
+void consdataUnlockAllRoundings(
+   CONSDATA*        consdata,           /**< linear constraint data */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    )
 {
    int i;
@@ -372,7 +376,7 @@ void consdataAllowAllRoundings(
    assert(consdata != NULL);
 
    for( i = 0; i < consdata->nvars; ++i )
-      consdataAllowRounding(scip, consdata, consdata->vars[i]);
+      consdataUnlockRounding(consdata, consdata->vars[i], nunlockspos, nunlocksneg);
 }
 
 /** creates a set partitioning / packing / covering constraint data object */
@@ -551,14 +555,17 @@ RETCODE delCoefPos(
    assert(var != NULL);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(var));
 
+   /* if necessary, update the rounding locks of variable */
+   if( SCIPconsIsActive(cons) && SCIPconsIsGlobal(cons) )
+   {
+      assert(SCIPconsIsTransformed(cons));
+      consdataUnlockRounding(consdata, var, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
+   }
+
    if( SCIPconsIsTransformed(cons) )
    {
       CONSHDLR* conshdlr;
       CONSHDLRDATA* conshdlrdata;
-
-      /* if necessary, update the rounding locks of variable */
-      if( SCIPconsIsGlobal(cons) )
-         consdataAllowRounding(scip, consdata, var);
 
       /* get event handler */
       conshdlr = SCIPconsGetHdlr(cons);
@@ -652,7 +659,7 @@ RETCODE analyzeConflictZero(
    {
       sprintf(consname, "cf%d", SCIPgetNConss(scip));
       CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE) );
+                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
@@ -706,7 +713,7 @@ RETCODE analyzeConflictOne(
    {
       sprintf(consname, "cf%d", SCIPgetNConss(scip));
       CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE) );
+                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
@@ -1152,6 +1159,7 @@ RETCODE enforcePseudo(
  * Callback methods of constraint handler
  */
 
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 DECL_CONSFREE(consFreeSetppc)
 {
@@ -1172,6 +1180,16 @@ DECL_CONSFREE(consFreeSetppc)
    return SCIP_OKAY;
 }
 
+
+/** initialization method of constraint handler (called when problem solving starts) */
+#define consInitSetppc NULL
+
+
+/** deinitialization method of constraint handler (called when problem solving exits) */
+#define consExitSetppc NULL
+
+
+/** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteSetppc)
 {
@@ -1191,6 +1209,8 @@ DECL_CONSDELETE(consDeleteSetppc)
    return SCIP_OKAY;
 }
 
+
+/** transforms constraint data into data belonging to the transformed problem */ 
 static
 DECL_CONSTRANS(consTransSetppc)
 {
@@ -1223,11 +1243,13 @@ DECL_CONSTRANS(consTransSetppc)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
 
+
+/** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpSetppc)
 {
@@ -1244,6 +1266,8 @@ DECL_CONSINITLP(consInitlpSetppc)
    return SCIP_OKAY;
 }
 
+
+/** separation method of constraint handler */
 static
 DECL_CONSSEPA(consSepaSetppc)
 {
@@ -1409,7 +1433,7 @@ RETCODE branchLP(
             sprintf(name, "BSB%lld", SCIPgetNodenum(scip));
 
             CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                           FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
+                           FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
@@ -1552,6 +1576,7 @@ RETCODE branchPseudo(
 
 
 
+/** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpSetppc)
 {
@@ -1606,6 +1631,8 @@ DECL_CONSENFOLP(consEnfolpSetppc)
    return SCIP_OKAY;
 }
 
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsSetppc)
 {
@@ -1662,6 +1689,8 @@ DECL_CONSENFOPS(consEnfopsSetppc)
    return SCIP_OKAY;
 }
 
+
+/** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckSetppc)
 {
@@ -1706,6 +1735,8 @@ DECL_CONSCHECK(consCheckSetppc)
    return SCIP_OKAY;
 }
 
+
+/** domain propagation method of constraint handler */
 static
 DECL_CONSPROP(consPropSetppc)
 {
@@ -1752,12 +1783,7 @@ DECL_CONSPROP(consPropSetppc)
 }
 
 
-
-
-/*
- * Presolving
- */
-
+/** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolSetppc)
 {
@@ -1998,12 +2024,7 @@ DECL_CONSPRESOL(consPresolSetppc)
 }
 
 
-
-
-/*
- * conflict analysis resolving
- */
-
+/** conflict variable resolving method of constraint handler */
 static
 DECL_CONSRESCVAR(consRescvarSetppc)
 {
@@ -2069,11 +2090,25 @@ DECL_CONSRESCVAR(consRescvarSetppc)
 }
 
 
+/** variable rounding lock method of constraint handler */
+static
+DECL_CONSLOCK(consLockSetppc)
+{
+   consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
+
+   return SCIP_OKAY;
+}
 
 
-/*
- * variable usage counting and rounding locks
- */
+/** variable rounding unlock method of constraint handler */
+static
+DECL_CONSUNLOCK(consUnlockSetppc)
+{
+   consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+
+   return SCIP_OKAY;
+}
+
 
 /** constraint activation notification method of constraint handler */
 static
@@ -2101,14 +2136,9 @@ DECL_CONSACTIVE(consActiveSetppc)
       CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, consdata->vars[v]) );
    }
 
-   /* forbid rounding of variables in a globally valid constraint */
-   if( SCIPconsIsGlobal(cons) )
-   {
-      consdataForbidAllRoundings(scip, consdata);
-   }
-
    return SCIP_OKAY;
 }
+
 
 /** constraint deactivation notification method of constraint handler */
 static
@@ -2136,14 +2166,18 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
       CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, consdata->vars[v]) );
    }
 
-   /* allow rounding of variables in a globally valid constraint */
-   if( SCIPconsIsGlobal(cons) )
-   {
-      consdataAllowAllRoundings(scip, consdata);
-   }
-
    return SCIP_OKAY;
 }
+
+
+/** constraint enabling notification method of constraint handler */
+#define consEnableSetppc NULL
+
+
+/** constraint disabling notification method of constraint handler */
+#define consDisableSetppc NULL
+
+
 
 /** creates and captures a set partitioning / packing / covering constraint */
 static
@@ -2159,6 +2193,7 @@ RETCODE createConsSetppc(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -2197,7 +2232,7 @@ RETCODE createConsSetppc(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  modifiable, removeable) );
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -2218,6 +2253,7 @@ RETCODE createNormalizedSetppc(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -2246,7 +2282,7 @@ RETCODE createNormalizedSetppc(
 
    /* create the constraint */
    CHECK_OKAY( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
-                  initial, separate, enforce, check, propagate, modifiable, removeable) );
+                  initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* release temporary memory */
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
@@ -2291,7 +2327,7 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                         SCIP_SETPPCTYPE_PARTITIONING,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                        SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
       else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1 - ncoeffsnone))
          || (SCIPisEQ(scip, lhs, ncoeffspone - 1) && SCIPisInfinity(scip, rhs)) )
@@ -2307,7 +2343,7 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                         SCIP_SETPPCTYPE_PACKING,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                        SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
       else if( (SCIPisEQ(scip, lhs, 1 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1)) )
@@ -2323,7 +2359,7 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                         SCIP_SETPPCTYPE_COVERING,
                         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                        SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                        SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
    }
 
@@ -2411,11 +2447,13 @@ RETCODE SCIPincludeConsHdlrSetppc(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeSetppc, NULL, NULL,
+                  consFreeSetppc, consInitSetppc, consExitSetppc,
                   consDeleteSetppc, consTransSetppc, 
                   consInitlpSetppc, consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, 
                   consPropSetppc, consPresolSetppc, consRescvarSetppc,
-                  consActiveSetppc, consDeactiveSetppc, NULL, NULL,
+                  consLockSetppc, consUnlockSetppc,
+                  consActiveSetppc, consDeactiveSetppc, 
+                  consEnableSetppc, consDisableSetppc,
                   conshdlrdata) );
 
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */
@@ -2443,12 +2481,13 @@ RETCODE SCIPcreateConsSetpart(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PARTITIONING,
-      initial, separate, enforce, check, propagate, modifiable, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, removeable);
 }
 
 /** creates and captures a set packing constraint */
@@ -2463,12 +2502,13 @@ RETCODE SCIPcreateConsSetpack(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PACKING,
-      initial, separate, enforce, check, propagate, modifiable, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, removeable);
 }
 
 /** creates and captures a set covering constraint */
@@ -2483,11 +2523,12 @@ RETCODE SCIPcreateConsSetcover(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
-      initial, separate, enforce, check, propagate, modifiable, removeable);
+      initial, separate, enforce, check, propagate, local, modifiable, removeable);
 }
 

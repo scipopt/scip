@@ -337,6 +337,96 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSRESCVAR(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar)
 
+/** variable rounding lock method of constraint handler
+ *
+ *  This method is called, after a constraint is added to the transformed problem. It should lock the rounding
+ *  of all associated variables with calls to SCIPvarLock(), depending on the way, the variable is involved
+ *  in the constraint:
+ *  - If the constraint may get violated by decreasing the value of a variable, it should call
+ *    SCIPvarLock(var, nlockspos, nlocksneg), saying that rounding down is potentially rendering the
+ *    (positive) constraint infeasible and rounding up is potentially rendering the negation of the constraint
+ *    infeasible.
+ *  - If the constraint may get violated by increasing the value of a variable, it should call
+ *    SCIPvarLock(var, nlocksneg, nlockspos), saying that rounding down is potentially rendering the
+ *    constraint's negation infeasible and rounding up is potentially rendering the constraint itself
+ *    infeasible.
+ *  - If the constraint may get violated by changing the variable in any direction, it should call
+ *    SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg).
+ *
+ *  Consider the linear constraint "3x -5y +2z <= 7" as an example. The variable rounding lock method of the
+ *  linear constraint handler should call SCIPvarLock(x, nlocksneg, nlockspos), 
+ *  SCIPvarLock(y, nlockspos, nlocksneg) and SCIPvarLock(z, nlocksneg, nlockspos) to tell SCIP, that
+ *  rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
+ *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation "3x -5y +2z > 7".
+ *  A linear constraint "2 <= 3x -5y +2z <= 7" should call
+ *  SCIPvarLock(..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
+ *  direction of each variable can destroy both the feasibility of the constraint and it's negation
+ *  "3x -5y +2z < 2  or  3x -5y +2z > 7".
+ *
+ *  If the constraint itself contains other constraints as sub constraints (e.g. the "or" constraint concatenation
+ *  "c(x) or d(x)"), the rounding lock methods of these constraints should be called in a proper way.
+ *  - If the constraint may get violated by the violation of the sub constraint c, it should call
+ *    SCIPlockConsVars(scip, c, nlockspos, nlockneg), saying that infeasibility of c may lead to infeasibility of
+ *    the (positive) constraint, and infeasibility of c's negation (i.e. feasibility of c) may lead to infeasibility
+ *    of the constraint's negation (i.e. feasibility of the constraint).
+ *  - If the constraint may get violated by the feasibility of the sub constraint c, it should call
+ *    SCIPlockConsVars(scip, c, nlocksneg, nlockspos), saying that infeasibility of c may lead to infeasibility of
+ *    the constraint's negation (i.e. feasibility of the constraint), and infeasibility of c's negation (i.e. feasibility
+ *    of c) may lead to infeasibility of the (positive) constraint.
+ *  - If the constraint may get violated by any change in the feasibility of the sub constraint c, it should call
+ *    SCIPlockConsVars(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg).
+ *
+ *  Consider the or concatenation "c(x) or d(x)". The variable rounding lock method of the or constraint handler
+ *  should call SCIPlockConsVars(scip, c, nlockspos, nlocksneg) and SCIPlockConsVars(scip, d, nlockspos, nlocksneg)
+ *  to tell SCIP, that infeasibility of c and d can lead to infeasibility of "c(x) or d(x)".
+ *
+ *  As a second example, consider the equivalence constraint "y <-> c(x)" with variable y and constraint c. The
+ *  constraint demands, that y == 1 if and only if c(x) is satisfied. The variable lock method of the corresponding
+ *  constraint handler should call SCIPvarLock(var, nlockspos + nlocksneg, nlockspos + nlocksneg) and
+ *  SCIPlockConsVars(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
+ *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that should lock rounding of its variables
+ *  - nlockspos       : number of times, the roundings should be locked for the constraint
+ *  - nlocksneg       : number of times, the roundings should be locked for the constraint's negation?
+ */
+#define DECL_CONSLOCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, int nlockspos, int nlocksneg)
+
+/** variable rounding unlock method of constraint handler
+ *
+ *  This method is called, before a constraint is deleted from the transformed problem. It should unlock the rounding
+ *  of all associated variables with calls to SCIPvarUnlock(), depending on the way, the variable is involved
+ *  in the constraint:
+ *  - If the constraint may get violated by decreasing the value of a variable, it should call
+ *    SCIPvarUnlock(var, nunlockpos, nunlockneg).
+ *  - If the constraint may get violated by increasing the value of a variable, it should call
+ *    SCIPvarUnlock(var, nunlockneg, nunlockpos).
+ *  - If the constraint may get violated by changing the variable in any direction, it should call
+ *    SCIPvarUnlock(var, nunlockpos + nunlockneg, nunlockpos + nunlockneg).
+ *
+ *  If the constraint itself contains other constraints as sub constraints, the rounding lock methods of these
+ *  constraints should be called in a proper way.
+ *  - If the constraint may get violated by the violation of the sub constraint c, it should call
+ *    SCIPunlockConsVars(scip, c, nunlockspos, nunlockneg).
+ *  - If the constraint may get violated by the feasibility of the sub constraint c, it should call
+ *    SCIPunlockConsVars(scip, c, nunlocksneg, nunlockspos).
+ *  - If the constraint may get violated by any change in the feasibility of the sub constraint c, it should call
+ *    SCIPunlockConsVars(scip, c, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg).
+ *
+ *  The unlocking method should exactly undo all lockings performed in the locking method of the constraint handler.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that should unlock rounding of its variables
+ *  - nunlockspos     : number of times, the roundings should be unlocked for the constraint?
+ *  - nunlocksneg     : number of times, the roundings should be unlocked for the constraint's negation?
+ */
+#define DECL_CONSUNLOCK(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, int nunlockspos, int nunlocksneg)
+
 /** constraint activation notification method of constraint handler
  *
  *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
@@ -428,15 +518,17 @@ struct Cons
    int              propconsspos;       /**< position of constraint in the handler's propconss array */
    int              nuses;              /**< number of times, this constraint is referenced */
    int              age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
+   int              nlockspos;          /**< number of times, the constraint locked rounding of its variables */
+   int              nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
+   unsigned int     local:1;            /**< TRUE iff constraint is only valid locally */
    unsigned int     modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
    unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
-   unsigned int     global:1;           /**< TRUE iff constraint belongs to a problem or the root node */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
    unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
    unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
@@ -506,6 +598,8 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -911,6 +1005,7 @@ RETCODE SCIPconsCreate(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable,         /**< should the constraint be removed from the LP due to aging or cleanup? */
    Bool             original            /**< is constraint belonging to the original problem? */
@@ -1031,6 +1126,24 @@ RETCODE SCIPconsResolveConflictVar(
    VAR*             var                 /**< conflict variable, that was deduced by the constraint */
    );
 
+/** locks rounding of variables involved in the costraint */
+extern
+RETCODE SCIPconsLockVars(
+   CONS*            cons,               /**< constraint */
+   const SET*       set,                /**< global SCIP settings */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   );
+
+/** unlocks rounding of variables involved in the costraint */
+extern
+RETCODE SCIPconsUnlockVars(
+   CONS*            cons,               /**< constraint */
+   const SET*       set,                /**< global SCIP settings */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
+   );
+
 /** checks single constraint for feasibility of the given solution */
 extern
 RETCODE SCIPconsCheck(
@@ -1041,6 +1154,14 @@ RETCODE SCIPconsCheck(
    Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
+
+/** marks the constraint to be essential for feasibility */
+extern
+RETCODE SCIPconsSetChecked(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
 
 #ifndef NDEBUG
 
@@ -1144,6 +1265,24 @@ Bool SCIPconsIsTransformed(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff roundings for variables in constraint are locked */
+extern
+Bool SCIPconsIsLockedPos(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff roundings for variables in constraint's negation are locked */
+extern
+Bool SCIPconsIsLockedNeg(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff roundings for variables in constraint or in constraint's negation are locked */
+extern
+Bool SCIPconsIsLocked(
+   CONS*            cons                /**< constraint */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1160,12 +1299,15 @@ Bool SCIPconsIsTransformed(
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
-#define SCIPconsIsGlobal(cons)          (cons)->global
-#define SCIPconsIsLocal(cons)           !(cons)->global
+#define SCIPconsIsGlobal(cons)          !(cons)->local
+#define SCIPconsIsLocal(cons)           (cons)->local
 #define SCIPconsIsModifiable(cons)      (cons)->modifiable
 #define SCIPconsIsRemoveable(cons)      (cons)->removeable
 #define SCIPconsIsOriginal(cons)        (cons)->original
 #define SCIPconsIsTransformed(cons)     !(cons)->original
+#define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos > 0)
+#define SCIPconsIsLockedNeg(cons)       ((cons)->nlocksneg > 0)
+#define SCIPconsIsLocked(cons)          ((cons)->nlockspos > 0 || (cons)->nlocksneg > 0)
 
 #endif
 

@@ -243,6 +243,28 @@ DECL_CONSRESCVAR(consRescvarVarub)
 #endif
 
 
+/** variable rounding lock method of constraint handler */
+static
+DECL_CONSLOCK(consLockVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
+/** variable rounding unlock method of constraint handler */
+static
+DECL_CONSUNLOCK(consUnlockVarub)
+{
+   errorMessage("method of varub constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint activation notification method of constraint handler */
 #if 0
 static
@@ -354,7 +376,7 @@ DECL_LINCONSUPGD(linconsUpgdVarub)
       CHECK_OKAY( SCIPcreateConsVarub(scip, upgdcons, SCIPconsGetName(cons), nvars, var, switchvar, val,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-                     SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -387,6 +409,7 @@ RETCODE SCIPincludeConsHdlrVarub(
                   consDeleteVarub, consTransVarub, consInitlpVarub,
                   consSepaVarub, consEnfolpVarub, consEnfopsVarub, consCheckVarub, 
                   consPropVarub, consPresolVarub, consRescvarVarub,
+                  consLockVarub, consUnlockVarub,
                   consActiveVarub, consDeactiveVarub, 
                   consEnableVarub, consDisableVarub,
                   conshdlrdata) );
@@ -416,6 +439,7 @@ RETCODE SCIPcreateConsVarub(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -440,7 +464,7 @@ RETCODE SCIPcreateConsVarub(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  modifiable, removeable) );
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

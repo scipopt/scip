@@ -108,6 +108,7 @@ RETCODE SCIPcreateConsLinear(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );

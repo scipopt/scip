@@ -393,11 +393,13 @@ RETCODE consdataDropAllEvents(
 
 /** locks the rounding locks associated to the given coefficient in the linear constraint */
 static
-void consdataForbidRounding(
+void consdataLockRounding(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable of constraint entry */
-   Real             val                 /**< coefficient of constraint entry */
+   Real             val,                /**< coefficient of constraint entry */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
    assert(consdata != NULL);
@@ -406,26 +408,28 @@ void consdataForbidRounding(
    if( SCIPisPositive(scip, val) )
    {
       if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarForbidRoundDown(var);
+         SCIPvarLock(var, nlockspos, nlocksneg);
       if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarForbidRoundUp(var);
+         SCIPvarLock(var, nlocksneg, nlockspos);
    }
    else
    {
       if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarForbidRoundDown(var);
+         SCIPvarLock(var, nlockspos, nlocksneg);
       if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarForbidRoundUp(var);
+         SCIPvarLock(var, nlocksneg, nlockspos);
    }
 }
 
 /** unlocks the rounding locks associated to the given coefficient in the linear constraint */
 static
-void consdataAllowRounding(
+void consdataUnlockRounding(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< linear constraint data */
    VAR*             var,                /**< variable of constraint entry */
-   Real             val                 /**< coefficient of constraint entry */
+   Real             val,                /**< coefficient of constraint entry */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    )
 {
    assert(consdata != NULL);
@@ -434,24 +438,26 @@ void consdataAllowRounding(
    if( SCIPisPositive(scip, val) )
    {
       if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarAllowRoundDown(var);
+         SCIPvarUnlock(var, nunlockspos, nunlocksneg);
       if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarAllowRoundUp(var);
+         SCIPvarUnlock(var, nunlocksneg, nunlockspos);
    }
    else
    {
       if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPvarAllowRoundDown(var);
+         SCIPvarUnlock(var, nunlockspos, nunlocksneg);
       if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPvarAllowRoundUp(var);
+         SCIPvarUnlock(var, nunlocksneg, nunlockspos);
    }
 }
 
 /** locks the rounding locks of all coefficients in the linear constraint */
 static
-void consdataForbidAllRoundings(
+void consdataLockAllRoundings(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< linear constraint data */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
    Bool haslhs;
@@ -469,25 +475,27 @@ void consdataForbidAllRoundings(
       if( SCIPisPositive(scip, consdata->vals[i]) )
       {
          if( haslhs )
-            SCIPvarForbidRoundDown(consdata->vars[i]);
+            SCIPvarLock(consdata->vars[i], nlockspos, nlocksneg);
          if( hasrhs )
-            SCIPvarForbidRoundUp(consdata->vars[i]);
+            SCIPvarLock(consdata->vars[i], nlocksneg, nlockspos);
       }
       else
       {
          if( haslhs )
-            SCIPvarForbidRoundUp(consdata->vars[i]);
+            SCIPvarLock(consdata->vars[i], nlocksneg, nlockspos);
          if( hasrhs )
-            SCIPvarForbidRoundDown(consdata->vars[i]);
+            SCIPvarLock(consdata->vars[i], nlockspos, nlocksneg);
       }
    }
 }
 
 /** unlocks the rounding locks of all coefficients in the linear constraint */
 static
-void consdataAllowAllRoundings(
+void consdataUnlockAllRoundings(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< linear constraint data */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
    )
 {
    Bool haslhs;
@@ -505,16 +513,16 @@ void consdataAllowAllRoundings(
       if( SCIPisPositive(scip, consdata->vals[i]) )
       {
          if( haslhs )
-            SCIPvarAllowRoundDown(consdata->vars[i]);
+            SCIPvarUnlock(consdata->vars[i], nunlockspos, nunlocksneg);
          if( hasrhs )
-            SCIPvarAllowRoundUp(consdata->vars[i]);
+            SCIPvarUnlock(consdata->vars[i], nunlocksneg, nunlockspos);
       }
       else
       {
          if( haslhs )
-            SCIPvarAllowRoundUp(consdata->vars[i]);
+            SCIPvarUnlock(consdata->vars[i], nunlocksneg, nunlockspos);
          if( hasrhs )
-            SCIPvarAllowRoundDown(consdata->vars[i]);
+            SCIPvarUnlock(consdata->vars[i], nunlockspos, nunlocksneg);
       }
    }
 }
@@ -1378,7 +1386,7 @@ RETCODE chgLhs(
    assert(!SCIPisInfinity(scip, consdata->lhs));
 
    /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsTransformed(cons) && SCIPconsIsGlobal(cons) )
+   if( SCIPconsIsLocked(cons) )
    {
       if( SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, -lhs) )
       {
@@ -1393,14 +1401,12 @@ RETCODE chgLhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarForbidRoundDown(vars[v]);
+               SCIPvarLockDownCons(vars[v], cons);
             else
-            {
-               assert(SCIPisNegative(scip, vals[v]));
-               SCIPvarForbidRoundUp(vars[v]);
-            }
+               SCIPvarLockUpCons(vars[v], cons);
          }
       }
       else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -lhs) )
@@ -1416,14 +1422,12 @@ RETCODE chgLhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarAllowRoundDown(vars[v]);
+               SCIPvarUnlockDownCons(vars[v], cons);
             else
-            {
-               assert(SCIPisNegative(scip, vals[v]));
-               SCIPvarAllowRoundUp(vars[v]);
-            }
+               SCIPvarUnlockUpCons(vars[v], cons);
          }
       }
    }
@@ -1460,8 +1464,10 @@ RETCODE chgRhs(
    assert(!SCIPisInfinity(scip, -consdata->rhs));
 
    /* if necessary, update the rounding locks of variables */
-   if( SCIPconsIsTransformed(cons) && SCIPconsIsGlobal(cons) )
+   if( SCIPconsIsLocked(cons) )
    {
+      assert(SCIPconsIsTransformed(cons));
+
       if( SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, rhs) )
       {
          VAR** vars;
@@ -1475,14 +1481,12 @@ RETCODE chgRhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarForbidRoundUp(vars[v]);
+               SCIPvarLockUpCons(vars[v], cons);
             else
-            {
-               assert(SCIPisNegative(scip, vals[v]));
-               SCIPvarForbidRoundDown(vars[v]);
-            }
+               SCIPvarLockDownCons(vars[v], cons);
          }
       }
       else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, rhs) )
@@ -1498,14 +1502,12 @@ RETCODE chgRhs(
          for( v = 0; v < consdata->nvars; ++v )
          {
             assert(vars[v] != NULL);
+            assert(!SCIPisZero(scip, vals[v]));
             
             if( SCIPisPositive(scip, vals[v]) )
-               SCIPvarAllowRoundUp(vars[v]);
+               SCIPvarUnlockUpCons(vars[v], cons);
             else
-            {
-               assert(SCIPisNegative(scip, vals[v]));
-               SCIPvarAllowRoundDown(vars[v]);
-            }
+               SCIPvarUnlockDownCons(vars[v], cons);
          }
       }
    }
@@ -1578,10 +1580,13 @@ RETCODE addCoef(
 
       /* update minimum and maximum activities */
       consdataUpdateAddCoef(scip, consdata, var, val);
+   }
 
-      /* if necessary, update the rounding locks of variable */
-      if( SCIPconsIsGlobal(cons) )
-         consdataForbidRounding(scip, consdata, var, val);
+   /* if necessary, update the rounding locks of variable */
+   if( SCIPconsIsLocked(cons) )
+   {
+      assert(transformed);
+      consdataLockRounding(scip, consdata, var, val, SCIPconsIsLockedPos(cons), SCIPconsIsLockedNeg(cons));
    }
 
    consdata->propagated = FALSE;
@@ -1624,15 +1629,18 @@ RETCODE delCoefPos(
    /* are we in the transformed problem? */
    transformed = SCIPconsIsTransformed(cons);
 
+   /* if necessary, update the rounding locks of variable */
+   if( SCIPconsIsLocked(cons) )
+   {
+      assert(transformed);
+      consdataUnlockRounding(scip, consdata, var, val, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
+   }
+
    /* if we are in transformed problem, delete the event data of the variable */
    if( transformed )
    {
       CONSHDLR* conshdlr;
       CONSHDLRDATA* conshdlrdata;
-
-      /* if necessary, update the rounding locks of variable */
-      if( SCIPconsIsGlobal(cons) )
-         consdataAllowRounding(scip, consdata, var, val);
 
       /* get event handler */
       conshdlr = SCIPconsGetHdlr(cons);
@@ -1699,13 +1707,14 @@ RETCODE chgCoefPos(
       /* update minimum and maximum activities */
       consdataUpdateDelCoef(scip, consdata, var, val);
       consdataUpdateAddCoef(scip, consdata, var, newval);
+   }
 
-      /* if necessary, update the rounding locks of the variable */
-      if( SCIPconsIsGlobal(cons) && newval * val < 0.0 )
-      {
-         consdataAllowRounding(scip, consdata, var, val);
-         consdataForbidRounding(scip, consdata, var, newval);
-      }
+   /* if necessary, update the rounding locks of the variable */
+   if( SCIPconsIsLocked(cons) && newval * val < 0.0 )
+   {
+      assert(SCIPconsIsTransformed(cons));
+      consdataUnlockRounding(scip, consdata, var, val, SCIPconsIsLockedPos(cons), SCIPconsIsLockedNeg(cons));
+      consdataLockRounding(scip, consdata, var, newval, SCIPconsIsLockedPos(cons), SCIPconsIsLockedNeg(cons));
    }
 
    /* change the value */
@@ -2169,12 +2178,12 @@ RETCODE tightenBounds(
    return SCIP_OKAY;
 }
 
-/** checks linear constraint for feasibility of given solution or actual pseudo solution */
+/** checks linear constraint for feasibility of given solution or actual solution */
 static
 RETCODE check(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
-   SOL*             sol,                /**< solution to be checked, or NULL for actual pseudo solution */
+   SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
    Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
    Real*            violation,          /**< pointer to store the constraint's violation, or NULL */
    Bool*            violated            /**< pointer to store whether the constraint is violated */
@@ -2312,6 +2321,7 @@ RETCODE separate(
  * Callback methods of constraint handler
  */
 
+/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 DECL_CONSFREE(consFreeLinear)
 {
@@ -2319,7 +2329,6 @@ DECL_CONSFREE(consFreeLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
 
    /* free constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2332,6 +2341,16 @@ DECL_CONSFREE(consFreeLinear)
    return SCIP_OKAY;
 }
 
+
+/** initialization method of constraint handler (called when problem solving starts) */
+#define consInitLinear NULL
+
+
+/** deinitialization method of constraint handler (called when problem solving exits) */
+#define consExitLinear NULL
+
+
+/** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteLinear)
 {
@@ -2351,6 +2370,8 @@ DECL_CONSDELETE(consDeleteLinear)
    return SCIP_OKAY;
 }
 
+
+/** transforms constraint data into data belonging to the transformed problem */ 
 static
 DECL_CONSTRANS(consTransLinear)
 {
@@ -2384,7 +2405,7 @@ DECL_CONSTRANS(consTransLinear)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    /* normalize constraint, if it is unmodifiable */
    if( !SCIPconsIsModifiable(*targetcons) )
@@ -2405,6 +2426,7 @@ DECL_CONSTRANS(consTransLinear)
    return SCIP_OKAY;
 }
 
+
 /** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpLinear)
@@ -2424,11 +2446,11 @@ DECL_CONSINITLP(consInitlpLinear)
    return SCIP_OKAY;
 }
 
+
 /** separation method of constraint handler */
 static
 DECL_CONSSEPA(consSepaLinear)
 {
-   Bool found;
    int c;
 
    assert(conshdlr != NULL);
@@ -2461,6 +2483,7 @@ DECL_CONSSEPA(consSepaLinear)
 
    return SCIP_OKAY;
 }
+
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -2497,6 +2520,7 @@ DECL_CONSENFOLP(consEnfolpLinear)
    return SCIP_OKAY;
 }
 
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsLinear)
@@ -2532,6 +2556,7 @@ DECL_CONSENFOPS(consEnfopsLinear)
    return SCIP_OKAY;
 }
 
+
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckLinear)
@@ -2541,7 +2566,6 @@ DECL_CONSCHECK(consCheckLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    /*debugMessage("Check method of linear constraints\n");*/
@@ -2560,6 +2584,7 @@ DECL_CONSCHECK(consCheckLinear)
 
    return SCIP_OKAY;
 }
+
 
 /** domain propagation method of constraint handler */
 static
@@ -3135,7 +3160,6 @@ RETCODE fixVariables(
    Bool infeasible;
    int v;
 
-   assert(scip != NULL);
    assert(nfixedvars != NULL);
    assert(result != NULL);
    assert(*result != SCIP_CUTOFF);
@@ -3352,7 +3376,7 @@ RETCODE aggregateEqualities(
       CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newrhs, newrhs,
                      SCIPconsIsInitial(cons0), SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
                      SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
-                     SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
+                     SCIPconsIsLocal(cons0), SCIPconsIsModifiable(cons0), SCIPconsIsRemoveable(cons0)) );
 
       /* update the statistics: we changed all coefficients of the old cons0 */
       (*nchgcoefs) += consdata0->nvars;
@@ -3740,7 +3764,6 @@ DECL_CONSPRESOL(consPresolLinear)
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(result != NULL);
 
    /*debugMessage("Presol method of linear constraints\n");*/
@@ -3910,35 +3933,45 @@ DECL_CONSPRESOL(consPresolLinear)
    return SCIP_OKAY;
 }
 
-/** constraint activation notification method of constraint handler */
-static
-DECL_CONSACTIVE(consActiveLinear)
-{
-   assert(SCIPconsIsTransformed(cons));
 
-   /* forbid rounding of variables in a globally valid constraint */
-   if( SCIPconsIsGlobal(cons) )
-   {
-      consdataForbidAllRoundings(scip, SCIPconsGetData(cons));
-   }
+/** conflict variable resolving method of constraint handler */
+#define consRescvarLinear NULL
+
+
+/** variable rounding lock method of constraint handler */
+static
+DECL_CONSLOCK(consLockLinear)
+{
+   consdataLockAllRoundings(scip, SCIPconsGetData(cons), nlockspos, nlocksneg);
 
    return SCIP_OKAY;
 }
+
+
+/** variable rounding unlock method of constraint handler */
+static
+DECL_CONSUNLOCK(consUnlockLinear)
+{
+   consdataUnlockAllRoundings(scip, SCIPconsGetData(cons), nunlockspos, nunlocksneg);
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint activation notification method of constraint handler */
+#define consActiveLinear NULL
+
 
 /** constraint deactivation notification method of constraint handler */
-static
-DECL_CONSDEACTIVE(consDeactiveLinear)
-{
-   assert(SCIPconsIsTransformed(cons));
+#define consDeactiveLinear NULL
 
-   /* allow rounding of variables in a globally valid constraint */
-   if( SCIPconsIsGlobal(cons) )
-   {
-      consdataAllowAllRoundings(scip, SCIPconsGetData(cons));
-   }
 
-   return SCIP_OKAY;
-}
+/** constraint enabling notification method of constraint handler */
+#define consEnableLinear NULL
+
+
+/** constraint disabling notification method of constraint handler */
+#define consDisableLinear NULL
 
 
 
@@ -3960,7 +3993,6 @@ DECL_EVENTEXEC(eventExecLinear)
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(scip != NULL);
    assert(event != NULL);
 
    /*debugMessage("Exec method of bound change event handler for linear constraints\n");*/
@@ -4022,11 +4054,13 @@ RETCODE SCIPincludeConsHdlrLinear(
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_SEPAFREQ,
                   CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeLinear, NULL, NULL,
+                  consFreeLinear, consInitLinear, consExitLinear,
                   consDeleteLinear, consTransLinear, 
                   consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
-                  consPropLinear, consPresolLinear, NULL,
-                  consActiveLinear, consDeactiveLinear, NULL, NULL,
+                  consPropLinear, consPresolLinear, consRescvarLinear,
+                  consLockLinear, consUnlockLinear,
+                  consActiveLinear, consDeactiveLinear, 
+                  consEnableLinear, consDisableLinear,
                   conshdlrdata) );
 
    /* add linear constraint handler parameters */
@@ -4086,14 +4120,13 @@ RETCODE SCIPcreateConsLinear(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable during node processing (subject to col generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
-
-   assert(scip != NULL);
 
    /* find the linear constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
@@ -4125,7 +4158,7 @@ RETCODE SCIPcreateConsLinear(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  modifiable, removeable) );
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

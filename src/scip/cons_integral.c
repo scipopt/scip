@@ -31,7 +31,7 @@
 
 #define CONSHDLR_NAME          "integral"
 #define CONSHDLR_DESC          "integrality constraint"
-#define CONSHDLR_SEPAPRIORITY  -1000000
+#define CONSHDLR_SEPAPRIORITY         0
 #define CONSHDLR_ENFOPRIORITY         0
 #define CONSHDLR_CHECKPRIORITY        0
 #define CONSHDLR_SEPAFREQ            -1
@@ -116,6 +116,7 @@ RETCODE SCIPincludeConsHdlrIntegral(
                   NULL, NULL, NULL, 
                   NULL, NULL, 
                   NULL, NULL, consEnfolpIntegral, NULL, consCheckIntegral, NULL, NULL, NULL,
+                  NULL, NULL,
                   NULL, NULL, NULL, NULL,
                   NULL) );
 

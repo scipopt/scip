@@ -262,6 +262,26 @@ RETCODE SCIPboundchgUndo(
    return SCIP_OKAY;
 }
 
+/** releases inference constraints of bound changes */
+static
+RETCODE boundchgReleaseInfercons(
+   BOUNDCHG*        boundchg,           /**< bound change to remove */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(boundchg != NULL);
+
+   if( boundchg->infercons != NULL )
+   {
+      assert(boundchg->infervar != NULL);
+      CHECK_OKAY( SCIPconsRelease(&boundchg->infercons, memhdr, set) );
+      boundchg->infervar = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates empty domain change data with dynamic arrays */
 static
 RETCODE domchgCreate(
@@ -287,7 +307,8 @@ RETCODE domchgCreate(
 /** frees domain change data */
 RETCODE SCIPdomchgFree(
    DOMCHG**         domchg,             /**< pointer to domain change */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
@@ -295,6 +316,15 @@ RETCODE SCIPdomchgFree(
 
    if( *domchg != NULL )
    {
+      int i;
+
+      /* release inference constraints associated with the bound changes */
+      for( i = 0; i < (*domchg)->domchgbound.nboundchgs; ++i )
+      {
+         CHECK_OKAY( boundchgReleaseInfercons(&(*domchg)->domchgbound.boundchgs[i], memhdr, set) );
+      }
+
+      /* free memory for bound and hole changes */
       switch( (*domchg)->domchgdyn.domchgtype )
       {
       case SCIP_DOMCHGTYPE_BOUND:
@@ -368,7 +398,8 @@ RETCODE domchgMakeDynamic(
 /** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
 RETCODE SCIPdomchgMakeStatic(
    DOMCHG**         domchg,             /**< pointer to domain change data */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
@@ -383,7 +414,7 @@ RETCODE SCIPdomchgMakeStatic(
       case SCIP_DOMCHGTYPE_BOUND:
          if( (*domchg)->domchgbound.nboundchgs == 0 )
          {
-            CHECK_OKAY( SCIPdomchgFree(domchg, memhdr) );
+            CHECK_OKAY( SCIPdomchgFree(domchg, memhdr, set) );
          }
          break;
       case SCIP_DOMCHGTYPE_BOTH:
@@ -391,7 +422,7 @@ RETCODE SCIPdomchgMakeStatic(
          {
             if( (*domchg)->domchgbound.nboundchgs == 0 )
             {
-               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr) );
+               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr, set) );
             }
             else
             {
@@ -405,7 +436,7 @@ RETCODE SCIPdomchgMakeStatic(
          {
             if( (*domchg)->domchgbound.nboundchgs == 0 )
             {
-               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr) );
+               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr, set) );
             }
             else
             {
@@ -628,6 +659,10 @@ RETCODE SCIPdomchgAddBoundchg(
    boundchg->infernum = (*domchg)->domchgdyn.nboundchgs;
    boundchg->boundtype = boundtype;
    (*domchg)->domchgdyn.nboundchgs++;
+
+   /* capture inference constraint */
+   if( infercons != NULL )
+      SCIPconsCapture(infercons);
 
    return SCIP_OKAY;
 }
@@ -1093,10 +1128,10 @@ void varAddRoundLocks(
    assert(var->nlocksup >= 0);
 }
 
-/** increases lock number for rounding down; tells variable, that rounding its value down will make the
+/** increases lock number for rounding down by one; tells variable, that rounding its value down will make the
  *  solution infeasible
  */
-void SCIPvarForbidRoundDown(
+void SCIPvarLockDown(
    VAR*             var                 /**< problem variable */
    )
 {
@@ -1105,8 +1140,10 @@ void SCIPvarForbidRoundDown(
    varAddRoundLocks(var, 1, 0);
 }
 
-/** increases lock number for rounding up; tells variable, that rounding its value up will make the solution infeasible */
-void SCIPvarForbidRoundUp(
+/** increases lock number for rounding up by one; tells variable, that rounding its value up will make the
+ *  solution infeasible
+ */
+void SCIPvarLockUp(
    VAR*             var                 /**< problem variable */
    )
 {
@@ -1115,20 +1152,77 @@ void SCIPvarForbidRoundUp(
    varAddRoundLocks(var, 0, 1);
 }
 
-/**< increases lock number for rounding down and up; tells variable, that rounding value in either direction will
- *   make the solution infeasible
+/** increases lock number for rounding down and up by one; tells variable, that rounding value in either direction will
+ *  make the solution infeasible
  */
-void SCIPvarForbidRound(
+void SCIPvarLockBoth(
    VAR*             var                 /**< problem variable */
    )
 {
-   debugMessage("forbid rounding of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
+   debugMessage("forbid both roundings of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
 
    varAddRoundLocks(var, 1, 1);
 }
 
-/** decreases lock number for rounding down; cancels a prior forbidRoundDown() */
-void SCIPvarAllowRoundDown(
+/** declares that rounding down the given variable would destroy the feasibility of the given constraint;
+ *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
+ */
+void SCIPvarLockDownCons(
+   VAR*             var,                /**< problem variable */
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   varAddRoundLocks(var, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
+}
+
+/** declares that rounding up the given variable would destroy the feasibility of the given constraint;
+ *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
+ */
+void SCIPvarLockUpCons(
+   VAR*             var,                /**< problem variable */
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   varAddRoundLocks(var, (int)SCIPconsIsLockedNeg(cons), (int)SCIPconsIsLockedPos(cons));
+}
+
+/** declares that rounding the given variable in any direction would destroy the feasibility of the given constraint;
+ *  locks the roundings of the variable corresponding to the lock status of the constraint and its negation
+ */
+void SCIPvarLockBothCons(
+   VAR*             var,                /**< problem variable */
+   CONS*            cons                /**< constraint */
+   )
+{
+   int nlocks;
+
+   assert(cons != NULL);
+
+   nlocks = (int)SCIPconsIsLockedPos(cons) + (int)SCIPconsIsLockedNeg(cons);
+   varAddRoundLocks(var, nlocks, nlocks);
+}
+
+/** increases lock number for roundings of variable; tells variable, that rounding value in a direction set to
+ *  a positive value will make the solution infeasible
+ */
+void SCIPvarLock(
+   VAR*             var,                /**< problem variable */
+   int              nlocksdown,         /**< increase in number of rounding down locks */
+   int              nlocksup            /**< increase in number of rounding up locks */
+   )
+{
+   debugMessage("forbid rounding (%d/%d) of <%s> (locks=%d/%d)\n", 
+      nlocksdown, nlocksup, var->name, var->nlocksdown, var->nlocksup);
+
+   varAddRoundLocks(var, nlocksdown, nlocksup);
+}
+
+/** decreases lock number for rounding down by one; cancels a prior SCIPvarLockDown() */
+void SCIPvarUnlockDown(
    VAR*             var                 /**< problem variable */
    )
 {
@@ -1137,8 +1231,8 @@ void SCIPvarAllowRoundDown(
    varAddRoundLocks(var, -1, 0);
 }
 
-/** decreases lock number for rounding up; cancels a prior forbidRoundUp() */
-void SCIPvarAllowRoundUp(
+/** decreases lock number for rounding up by one; cancels a prior SCIPvarLockUp() */
+void SCIPvarUnlockUp(
    VAR*             var                 /**< problem variable */
    )
 {
@@ -1147,14 +1241,69 @@ void SCIPvarAllowRoundUp(
    varAddRoundLocks(var, 0, -1);
 }
 
-/** decreases lock number for rounding down & up; cancels a prior forbidRound() */
-void SCIPvarAllowRound(
+/** decreases lock number for rounding down and up by one; cancels a prior SCIPvarLockBoth() */
+void SCIPvarUnlockBoth(
    VAR*             var                 /**< problem variable */
    )
 {
-   debugMessage("allow rounding of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
+   debugMessage("allow both roundings of <%s> (locks=%d/%d)\n", var->name, var->nlocksdown, var->nlocksup);
 
    varAddRoundLocks(var, -1, -1);
+}
+
+/** declares that rounding down the given variable would no longer destroy the feasibility of the given constraint;
+ *  unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
+ */
+void SCIPvarUnlockDownCons(
+   VAR*             var,                /**< problem variable */
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   varAddRoundLocks(var, -(int)SCIPconsIsLockedPos(cons), -(int)SCIPconsIsLockedNeg(cons));
+}
+
+/** declares that rounding up the given variable would no longer destroy the feasibility of the given constraint;
+ *  unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
+ */
+void SCIPvarUnlockUpCons(
+   VAR*             var,                /**< problem variable */
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   varAddRoundLocks(var, -(int)SCIPconsIsLockedNeg(cons), -(int)SCIPconsIsLockedPos(cons));
+}
+
+/** declares that rounding the given variable in any direction would no longer destroy the feasibility of the given
+ *  constraint; unlocks the roundings of the variable corresponding to the lock status of the constraint and its negation
+ */
+void SCIPvarUnlockBothCons(
+   VAR*             var,                /**< problem variable */
+   CONS*            cons                /**< constraint */
+   )
+{
+   int nlocks;
+
+   assert(cons != NULL);
+
+   nlocks = (int)SCIPconsIsLockedPos(cons) + (int)SCIPconsIsLockedNeg(cons);
+   varAddRoundLocks(var, -nlocks, -nlocks);
+}
+
+/** decreases lock number for roundings of variable; cancels a prior call to SCIPvarLock() */
+void SCIPvarUnlock(
+   VAR*             var,                /**< problem variable */
+   int              nunlocksdown,       /**< decrease in number of rounding down locks */
+   int              nunlocksup          /**< decrease in number of rounding up locks */
+   )
+{
+   debugMessage("allow rounding (%d/%d) of <%s> (locks=%d/%d)\n", 
+      nunlocksdown, nunlocksup, var->name, var->nlocksdown, var->nlocksup);
+
+   varAddRoundLocks(var, -nunlocksdown, -nunlocksup);
 }
 
 /** gets number of locks for rounding down */

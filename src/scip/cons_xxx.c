@@ -32,9 +32,9 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "xxx"
 #define CONSHDLR_DESC          "constraint handler template"
-#define CONSHDLR_SEPAPRIORITY   +000000
-#define CONSHDLR_ENFOPRIORITY   +000000
-#define CONSHDLR_CHECKPRIORITY  +000000
+#define CONSHDLR_SEPAPRIORITY  +0000000
+#define CONSHDLR_ENFOPRIORITY  +0000000
+#define CONSHDLR_CHECKPRIORITY +0000000
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
@@ -266,6 +266,28 @@ DECL_CONSRESCVAR(consRescvarXxx)
 #endif
 
 
+/** variable rounding lock method of constraint handler */
+static
+DECL_CONSLOCK(consLockXxx)
+{
+   errorMessage("method of xxx constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
+/** variable rounding unlock method of constraint handler */
+static
+DECL_CONSUNLOCK(consUnlockXxx)
+{
+   errorMessage("method of xxx constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint activation notification method of constraint handler */
 #if 0
 static
@@ -353,7 +375,7 @@ DECL_LINCONSUPGD(linconsUpgdXxx)
       CHECK_OKAY( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                     SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -386,6 +408,7 @@ RETCODE SCIPincludeConsHdlrXxx(
                   consDeleteXxx, consTransXxx, consInitlpXxx,
                   consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
                   consPropXxx, consPresolXxx, consRescvarXxx,
+                  consLockXxx, consUnlockXxx,
                   consActiveXxx, consDeactiveXxx, 
                   consEnableXxx, consDisableXxx,
                   conshdlrdata) );
@@ -416,6 +439,7 @@ RETCODE SCIPcreateConsXxx(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -442,7 +466,7 @@ RETCODE SCIPcreateConsXxx(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  modifiable, removeable) );
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

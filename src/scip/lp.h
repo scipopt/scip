@@ -519,20 +519,6 @@ void SCIProwForceSort(
    const SET*       set                 /**< global SCIP settings */
    );
 
-/** forbids roundings of variables in row that may violate row */
-extern
-void SCIProwForbidRounding(
-   ROW*             row,                /**< LP row */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** allows roundings of variables in row that may violate row */
-extern
-void SCIProwAllowRounding(
-   ROW*             row,                /**< LP row */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
 /** adds a previously non existing coefficient to an LP row */
 extern
 RETCODE SCIProwAddCoeff(

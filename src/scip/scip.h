@@ -401,6 +401,8 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSLOCK    ((*conslock)),      /**< variable rounding lock method */
+   DECL_CONSUNLOCK  ((*consunlock)),    /**< variable rounding unlock method */
    DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
    DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
@@ -789,7 +791,10 @@ Bool SCIPallVarsInProb(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** adds global constraint to the problem */
+/** adds constraint to the problem; if constraint is only valid locally, it is added to the local subproblem of the
+ *  active node (and all of its subnodes); otherwise it is added to the global problem;
+ *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ */
 extern
 RETCODE SCIPaddCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -797,7 +802,7 @@ RETCODE SCIPaddCons(
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
- *  node, where it was created, or from the problem, if it was a problem constraint
+ *  node, where it was added, or from the problem, if it was a problem constraint
  */
 extern
 RETCODE SCIPdelCons(
@@ -824,14 +829,18 @@ CONS* SCIPfindCons(
 /**@name Local Subproblem Methods */
 /**@{ */
 
-/** adds local constraint to the active node (and all of its subnodes) */
+/** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
+ *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ */
 extern
 RETCODE SCIPaddConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint to add */
    );
 
-/** adds local constraint to the given node (and all of its subnodes) */
+/** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
+ *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ */
 extern
 RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -840,8 +849,7 @@ RETCODE SCIPaddConsNode(
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
- *  if the current node is the root node, or if the method is called during problem modification or presolving,
- *  the constraint is globally deleted from the problem
+ *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
  */
 extern
 RETCODE SCIPdisableConsLocal(
@@ -1042,8 +1050,9 @@ RETCODE SCIPchgVarType(
    VARTYPE          vartype             /**< new type of variable */
    );
 
-/** converts variable into fixed variable, changes bounds respectively; this changes the vars array returned from
- *  SCIPgetVars() and SCIPgetVarsData()
+/** in problem creation and solving stage, both bounds of the variable are set to the given value;
+ *  in presolving stage, the variable is converted into a fixed variable, and bounds are changed respectively;
+ *  conversion into a fixed variable changes the vars array returned from SCIPgetVars() and SCIPgetVarsData()
  */
 extern
 RETCODE SCIPfixVar(
@@ -1159,6 +1168,7 @@ RETCODE SCIPcreateCons(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
@@ -1205,6 +1215,24 @@ RETCODE SCIPresetConsAge(
    CONS*            cons                /**< constraint */
    );
 
+/** locks rounding of variables involved in the costraint */
+extern
+RETCODE SCIPlockConsVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   int              nlockspos,          /**< increase in number of rounding locks for constraint */
+   int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   );
+
+/** unlocks rounding of variables involved in the costraint */
+extern
+RETCODE SCIPunlockConsVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint */
+   int              nunlockspos,        /**< decrease in number of rounding locks for constraint */
+   int              nunlocksneg         /**< decrease in number of rounding locks for constraint's negation */
+   );
+
 /** checks single constraint for feasibility of the given solution */
 extern
 RETCODE SCIPcheckCons(
@@ -1214,6 +1242,13 @@ RETCODE SCIPcheckCons(
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** marks the constraint to be essential for feasibility */
+extern
+RETCODE SCIPsetConsChecked(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
    );
 
 /**@} */
@@ -1458,20 +1493,6 @@ extern
 RETCODE SCIPreleaseRow(
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row                 /**< pointer to LP row */
-   );
-
-/** forbids roundings of variables in row that may violate row */
-extern
-RETCODE SCIPforbidRowRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row                 /**< LP row */
-   );
-
-/** allows roundings of variables in row that may violate row */
-extern
-RETCODE SCIPallowRowRounding(
-   SCIP*            scip,               /**< SCIP data structure */
-   ROW*             row                 /**< LP row */
    );
 
 /** changes left hand side of LP row */

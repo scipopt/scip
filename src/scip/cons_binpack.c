@@ -243,6 +243,28 @@ DECL_CONSRESCVAR(consRescvarBinpack)
 #endif
 
 
+/** variable rounding lock method of constraint handler */
+static
+DECL_CONSLOCK(consLockBinpack)
+{
+   errorMessage("method of binpack constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
+/** variable rounding unlock method of constraint handler */
+static
+DECL_CONSUNLOCK(consUnlockBinpack)
+{
+   errorMessage("method of binpack constraint handler not implemented yet");
+   abort();
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint activation notification method of constraint handler */
 #if 0
 static
@@ -361,7 +383,7 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
       CHECK_OKAY( SCIPcreateConsBinpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-                     SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+                     SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
 
    return SCIP_OKAY;
@@ -394,6 +416,7 @@ RETCODE SCIPincludeConsHdlrBinpack(
                   consDeleteBinpack, consTransBinpack, consInitlpBinpack,
                   consSepaBinpack, consEnfolpBinpack, consEnfopsBinpack, consCheckBinpack, 
                   consPropBinpack, consPresolBinpack, consRescvarBinpack,
+                  consLockBinpack, consUnlockBinpack,
                   consActiveBinpack, consDeactiveBinpack, 
                   consEnableBinpack, consDisableBinpack,
                   conshdlrdata) );
@@ -423,6 +446,7 @@ RETCODE SCIPcreateConsBinpack(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
@@ -447,7 +471,7 @@ RETCODE SCIPcreateConsBinpack(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-                  modifiable, removeable) );
+                  local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

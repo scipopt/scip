@@ -675,6 +675,7 @@ RETCODE SCIPsolveCIP(
    Bool solveagain;
    Bool propagain;
    Bool initiallpsolved;
+   Bool forceprintline;
    int h;
 
    assert(set != NULL);
@@ -935,17 +936,19 @@ RETCODE SCIPsolveCIP(
       }
 
       /* call primal heuristics */
+      forceprintline = (actnode->depth == 0) && infeasible;
       if( SCIPtreeGetNNodes(tree) > 0 )
       {
          for( h = 0; h < set->nheurs; ++h )
          {
             CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, actnode->depth, tree->actnodehaslp, &result) );
             assert(set->buffer->firstfree == 0);
+            forceprintline &= !(result == SCIP_FOUNDSOL);
          }
       }
       
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, (actnode->depth == 0) && infeasible) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, forceprintline) );
       assert(set->buffer->firstfree == 0);
       
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 

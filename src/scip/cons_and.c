@@ -15,6 +15,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#define DEBUG
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
  * @author Tobias Achterberg
@@ -305,7 +306,7 @@ DECL_CONSTRANS(consTransAnd)
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-                  SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
 }
@@ -386,6 +387,9 @@ DECL_CONSPRESOL(consPresolAnd)
       /* add all inactive constraints to the global problem */
       for( i = 0; i < consdata->nconss; ++i )
       {
+         /* make sure, the constraint is checked for feasibility */
+         CHECK_OKAY( SCIPsetConsChecked(scip, consdata->conss[i]) );
+
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
@@ -415,6 +419,46 @@ DECL_CONSPRESOL(consPresolAnd)
 
 /** conflict variable resolving method of constraint handler */
 #define consRescvarAnd NULL
+
+
+/** variable rounding lock method of constraint handler */
+static
+DECL_CONSLOCK(consLockAnd)
+{
+   CONSDATA* consdata;
+   int c;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* lock sub constraints */
+   for( c = 0; c < consdata->nconss; ++c )
+   {
+      CHECK_OKAY( SCIPlockConsVars(scip, consdata->conss[c], nlockspos, nlocksneg) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** variable rounding unlock method of constraint handler */
+static
+DECL_CONSUNLOCK(consUnlockAnd)
+{
+   CONSDATA* consdata;
+   int c;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* unlock sub constraints */
+   for( c = 0; c < consdata->nconss; ++c )
+   {
+      CHECK_OKAY( SCIPunlockConsVars(scip, consdata->conss[c], nunlockspos, nunlocksneg) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint activation notification method of constraint handler */
@@ -457,6 +501,7 @@ RETCODE SCIPincludeConsHdlrAnd(
                   consDeleteAnd, consTransAnd, consInitlpAnd,
                   consSepaAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
                   consPropAnd, consPresolAnd, consRescvarAnd,
+                  consLockAnd, consUnlockAnd,
                   consActiveAnd, consDeactiveAnd, 
                   consEnableAnd, consDisableAnd,
                   conshdlrdata) );
@@ -473,6 +518,7 @@ RETCODE SCIPcreateConsAnd(
    CONS**           andconss,           /**< initial constraint in concatenation */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
    )
 {
@@ -492,7 +538,7 @@ RETCODE SCIPcreateConsAnd(
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, enforce, check, FALSE,
-                  modifiable, FALSE) );
+                  local, modifiable, FALSE) );
 
    return SCIP_OKAY;
 }

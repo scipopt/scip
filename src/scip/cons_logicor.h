@@ -31,13 +31,13 @@
 
 /** creates the handler for logic or constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrLogicOr(
+RETCODE SCIPincludeConsHdlrLogicor(
    SCIP*            scip                /**< SCIP data structure */
    );
 
 /** creates and captures a logic or constraint */
 extern
-RETCODE SCIPcreateConsLogicOr(
+RETCODE SCIPcreateConsLogicor(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
@@ -48,6 +48,7 @@ RETCODE SCIPcreateConsLogicOr(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    );

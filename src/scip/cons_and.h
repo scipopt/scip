@@ -45,6 +45,7 @@ RETCODE SCIPcreateConsAnd(
    CONS**           andconss,           /**< initial constraint in concatenation */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
    );
 
