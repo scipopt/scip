@@ -14,10 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.h,v 1.1 2004/05/28 10:34:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.h,v 1.2 2004/06/01 16:53:26 bzfpfend Exp $"
 
 /**@file   sepa_cmir.h
- * @brief  cmir separator
+ * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
+ * @author Kati Wolter
  * @author Tobias Achterberg
  */
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.20 2004/05/24 17:46:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.21 2004/06/01 16:53:26 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -24,7 +24,6 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "branch_allfullstrong.h"
-#include "branch_conffullstrong.h"
 #include "branch_fullstrong.h"
 #include "branch_inference.h"
 #include "branch_mostinf.h"
@@ -94,7 +93,6 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
    CHECK_OKAY( SCIPincludeBranchruleAllfullstrong(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleConffullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleInference(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );

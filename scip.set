@@ -470,14 +470,6 @@ branching/allfullstrong/priority = -1000
 # [type: int, range: [-1,2147483647], default: -1]
 branching/allfullstrong/maxdepth = -1
 
-# priority of branching rule <conffullstrong>
-# [type: int, range: [-2147483648,2147483647], default: -100]
-branching/conffullstrong/priority = -100
-
-# maximal depth level, up to which branching rule <conffullstrong> should be used (-1 for no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-branching/conffullstrong/maxdepth = -1
-
 # priority of branching rule <fullstrong>
 # [type: int, range: [-2147483648,2147483647], default: 0]
 branching/fullstrong/priority = 0
@@ -739,8 +731,8 @@ heuristics/simplerounding/maxdepth = -1
 separating/cmir/priority = -1000
 
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-separating/cmir/freq = 10
+# [type: int, range: [-1,2147483647], default: 25]
+separating/cmir/freq = 25
 
 # maximal number of cmir separation rounds per node
 # [type: int, range: [0,2147483647], default: 5]

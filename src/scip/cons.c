@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.79 2004/05/24 17:46:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.80 2004/06/01 16:53:25 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1550,7 +1550,7 @@ RETCODE SCIPconshdlrSeparate(
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
-         conshdlr->nconssfound += stat->nactiveconss - oldnactiveconss;
+         conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
          conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
       }
    }
@@ -1678,7 +1678,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
-         conshdlr->nconssfound += stat->nactiveconss - oldnactiveconss;
+         conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
