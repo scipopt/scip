@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.80 2005/02/04 14:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.81 2005/02/08 17:15:33 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -30,9 +30,9 @@
 #include "def.h"
 #include "message.h"
 #include "memory.h"
+#include "buffer.h"
 #include "type_set.h"
 #include "type_stat.h"
-#include "buffer.h"
 #include "type_clock.h"
 #include "type_paramset.h"
 #include "type_event.h"
@@ -51,6 +51,11 @@
 #include "type_prop.h"
 
 #include "struct_set.h"
+
+#ifdef NDEBUG
+#include "pub_misc.h"
+#endif
+
 
 
 

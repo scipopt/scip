@@ -1,6 +1,6 @@
 $(OBJDIR)/branch.o: src/branch.c src/def.h src/type_retcode.h src/memory.h \
-  src/set.h src/message.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/message.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -19,16 +19,16 @@ $(OBJDIR)/branch.o: src/branch.c src/def.h src/type_retcode.h src/memory.h \
   src/pub_reader.h src/pub_relax.h src/pub_sepa.h src/pub_prop.h \
   src/pub_sol.h src/branch.h src/struct_branch.h
 $(OBJDIR)/buffer.o: src/buffer.c src/def.h src/type_retcode.h src/message.h \
-  src/memory.h src/set.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/set.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_relax.h \
   src/type_sepa.h src/type_prop.h src/struct_set.h src/struct_buffer.h
 $(OBJDIR)/clock.o: src/clock.c src/def.h src/type_retcode.h src/message.h \
-  src/memory.h src/set.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/set.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -36,8 +36,8 @@ $(OBJDIR)/clock.o: src/clock.c src/def.h src/type_retcode.h src/message.h \
   src/type_sepa.h src/type_prop.h src/struct_set.h src/clock.h \
   src/struct_clock.h
 $(OBJDIR)/conflict.o: src/conflict.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -56,8 +56,8 @@ $(OBJDIR)/conflict.o: src/conflict.c src/def.h src/type_retcode.h src/message.h 
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/conflict.h src/cons.h \
   src/type_sepastore.h src/struct_cons.h src/prop.h src/struct_conflict.h
 $(OBJDIR)/cons.o: src/cons.c src/def.h src/type_retcode.h src/set.h src/message.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -70,8 +70,8 @@ $(OBJDIR)/cons.o: src/cons.c src/def.h src/type_retcode.h src/set.h src/message.
   src/type_lpi.h src/sepastore.h src/type_sepastore.h src/cons.h \
   src/pub_cons.h src/struct_cons.h
 $(OBJDIR)/cutpool.o: src/cutpool.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -83,8 +83,8 @@ $(OBJDIR)/cutpool.o: src/cutpool.c src/def.h src/type_retcode.h src/message.h \
   src/struct_lp.h src/sepastore.h src/type_sepastore.h src/cutpool.h \
   src/type_cutpool.h src/pub_cutpool.h src/struct_cutpool.h
 $(OBJDIR)/dialog.o: src/dialog.c src/def.h src/type_retcode.h src/message.h \
-  src/memory.h src/set.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/set.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -92,8 +92,8 @@ $(OBJDIR)/dialog.o: src/dialog.c src/def.h src/type_retcode.h src/message.h \
   src/type_sepa.h src/type_prop.h src/struct_set.h src/dialog.h \
   src/type_dialog.h src/pub_dialog.h src/struct_dialog.h
 $(OBJDIR)/disp.o: src/disp.c src/def.h src/type_retcode.h src/message.h \
-  src/memory.h src/set.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/set.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -109,8 +109,8 @@ $(OBJDIR)/disp.o: src/disp.c src/def.h src/type_retcode.h src/message.h \
   src/pub_prop.h src/pub_sol.h src/pub_tree.h src/pub_var.h src/disp.h \
   src/struct_disp.h
 $(OBJDIR)/event.o: src/event.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -122,8 +122,8 @@ $(OBJDIR)/event.o: src/event.c src/def.h src/type_retcode.h src/message.h src/se
   src/struct_var.h src/primal.h src/struct_primal.h src/branch.h \
   src/type_sepastore.h src/pub_branch.h
 $(OBJDIR)/heur.o: src/heur.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -139,9 +139,9 @@ $(OBJDIR)/heur.o: src/heur.c src/def.h src/type_retcode.h src/message.h src/set.
   src/pub_prop.h src/pub_sol.h src/pub_tree.h src/pub_var.h \
   src/type_history.h src/heur.h src/struct_heur.h
 $(OBJDIR)/history.o: src/history.c src/def.h src/type_retcode.h src/set.h \
-  src/message.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
-  src/type_event.h src/type_branch.h src/type_result.h \
+  src/message.h src/memory.h src/buffer.h src/type_set.h \
+  src/type_buffer.h src/type_stat.h src/type_clock.h src/type_paramset.h \
+  src/type_scip.h src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_relax.h \
@@ -152,8 +152,8 @@ $(OBJDIR)/interrupt.o: src/interrupt.c src/def.h src/type_retcode.h src/memory.h
 $(OBJDIR)/intervalarith.o: src/intervalarith.c src/message.h src/intervalarith.h \
   src/def.h src/type_retcode.h
 $(OBJDIR)/lp.o: src/lp.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -169,8 +169,8 @@ $(OBJDIR)/mem.o: src/mem.c src/def.h src/type_retcode.h src/message.h src/mem.h 
 $(OBJDIR)/memory.o: src/memory.c src/memory.h
 $(OBJDIR)/message.o: src/message.c src/message.h
 $(OBJDIR)/misc.o: src/misc.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -178,8 +178,8 @@ $(OBJDIR)/misc.o: src/misc.c src/def.h src/type_retcode.h src/message.h src/set.
   src/type_sepa.h src/type_prop.h src/struct_set.h src/misc.h \
   src/type_misc.h src/pub_misc.h src/struct_misc.h
 $(OBJDIR)/nodesel.o: src/nodesel.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -196,8 +196,8 @@ $(OBJDIR)/nodesel.o: src/nodesel.c src/def.h src/type_retcode.h src/message.h \
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_var.h src/nodesel.h \
   src/struct_nodesel.h
 $(OBJDIR)/paramset.o: src/paramset.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -206,8 +206,8 @@ $(OBJDIR)/paramset.o: src/paramset.c src/def.h src/type_retcode.h src/message.h 
   src/type_misc.h src/pub_misc.h src/paramset.h src/pub_paramset.h \
   src/struct_paramset.h
 $(OBJDIR)/presol.o: src/presol.c src/def.h src/type_retcode.h src/memory.h \
-  src/set.h src/message.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/message.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -222,8 +222,8 @@ $(OBJDIR)/presol.o: src/presol.c src/def.h src/type_retcode.h src/memory.h \
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_tree.h \
   src/pub_var.h src/type_history.h src/presol.h src/struct_presol.h
 $(OBJDIR)/pricestore.o: src/pricestore.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -235,8 +235,8 @@ $(OBJDIR)/pricestore.o: src/pricestore.c src/def.h src/type_retcode.h src/messag
   src/struct_prob.h src/tree.h src/pub_tree.h src/struct_tree.h \
   src/pricestore.h src/type_pricestore.h src/struct_pricestore.h
 $(OBJDIR)/pricer.o: src/pricer.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -252,8 +252,8 @@ $(OBJDIR)/pricer.o: src/pricer.c src/def.h src/type_retcode.h src/message.h \
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_tree.h \
   src/pub_var.h src/type_history.h src/pricer.h src/struct_pricer.h
 $(OBJDIR)/primal.o: src/primal.c src/def.h src/type_retcode.h src/message.h \
-  src/set.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -267,8 +267,8 @@ $(OBJDIR)/primal.o: src/primal.c src/def.h src/type_retcode.h src/message.h \
   src/primal.h src/struct_primal.h src/tree.h src/pub_tree.h \
   src/struct_tree.h src/disp.h src/pub_disp.h
 $(OBJDIR)/prob.o: src/prob.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -282,8 +282,8 @@ $(OBJDIR)/prob.o: src/prob.c src/def.h src/type_retcode.h src/message.h src/set.
   src/branch.h src/type_sepastore.h src/pub_branch.h src/cons.h \
   src/type_mem.h src/pub_cons.h src/struct_cons.h
 $(OBJDIR)/prop.o: src/prop.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -300,8 +300,8 @@ $(OBJDIR)/prop.o: src/prop.c src/def.h src/type_retcode.h src/message.h src/set.
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_tree.h src/prop.h \
   src/struct_prop.h
 $(OBJDIR)/reader.o: src/reader.c src/def.h src/type_retcode.h src/memory.h \
-  src/set.h src/message.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/set.h src/message.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -310,8 +310,8 @@ $(OBJDIR)/reader.o: src/reader.c src/def.h src/type_retcode.h src/memory.h \
   src/type_misc.h src/pub_misc.h src/reader.h src/pub_reader.h \
   src/struct_reader.h
 $(OBJDIR)/relax.o: src/relax.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -328,9 +328,9 @@ $(OBJDIR)/relax.o: src/relax.c src/def.h src/type_retcode.h src/message.h src/se
   src/pub_tree.h src/pub_var.h src/relax.h src/struct_relax.h
 $(OBJDIR)/retcode.o: src/retcode.c src/retcode.h src/type_retcode.h
 $(OBJDIR)/scip.o: src/scip.c src/def.h src/type_retcode.h src/retcode.h src/set.h \
-  src/message.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
-  src/type_event.h src/type_branch.h src/type_result.h \
+  src/message.h src/memory.h src/buffer.h src/type_set.h \
+  src/type_buffer.h src/type_stat.h src/type_clock.h src/type_paramset.h \
+  src/type_scip.h src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_relax.h \
@@ -385,8 +385,8 @@ $(OBJDIR)/scipdefplugins.o: src/scipdefplugins.c src/branch_allfullstrong.h \
   src/sepa_gomory.h src/sepa_strongcg.h src/sepa_intobj.h \
   src/scipdefplugins.h
 $(OBJDIR)/sepa.o: src/sepa.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -403,9 +403,9 @@ $(OBJDIR)/sepa.o: src/sepa.c src/def.h src/type_retcode.h src/message.h src/set.
   src/pub_prop.h src/pub_sol.h src/pub_tree.h src/pub_var.h src/sepa.h \
   src/struct_sepa.h
 $(OBJDIR)/sepastore.o: src/sepastore.c src/def.h src/type_retcode.h src/set.h \
-  src/message.h src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
-  src/type_event.h src/type_branch.h src/type_result.h \
+  src/message.h src/memory.h src/buffer.h src/type_set.h \
+  src/type_buffer.h src/type_stat.h src/type_clock.h src/type_paramset.h \
+  src/type_scip.h src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_relax.h \
@@ -417,8 +417,8 @@ $(OBJDIR)/sepastore.o: src/sepastore.c src/def.h src/type_retcode.h src/set.h \
   src/struct_tree.h src/sepastore.h src/type_sepastore.h \
   src/struct_sepastore.h
 $(OBJDIR)/set.o: src/set.c src/def.h src/type_retcode.h src/set.h src/message.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -438,8 +438,8 @@ $(OBJDIR)/set.o: src/set.c src/def.h src/type_retcode.h src/set.h src/message.h 
   src/nodesel.h src/presol.h src/pricer.h src/reader.h src/relax.h \
   src/sepa.h src/prop.h
 $(OBJDIR)/sol.o: src/sol.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -454,8 +454,8 @@ $(OBJDIR)/sol.o: src/sol.c src/def.h src/type_retcode.h src/message.h src/set.h 
   src/struct_tree.h src/cons.h src/type_sepastore.h src/pub_cons.h \
   src/struct_cons.h src/struct_sol.h
 $(OBJDIR)/solve.o: src/solve.c src/def.h src/type_retcode.h src/set.h src/message.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -478,8 +478,8 @@ $(OBJDIR)/solve.o: src/solve.c src/def.h src/type_retcode.h src/set.h src/messag
   src/struct_cons.h src/disp.h src/heur.h src/nodesel.h src/pricer.h \
   src/relax.h src/sepa.h src/prop.h
 $(OBJDIR)/stat.o: src/stat.c src/def.h src/type_retcode.h src/memory.h src/set.h \
-  src/message.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/message.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -488,8 +488,8 @@ $(OBJDIR)/stat.o: src/stat.c src/def.h src/type_retcode.h src/memory.h src/set.h
   src/type_mem.h src/struct_stat.h src/type_vbc.h src/type_history.h \
   src/clock.h src/vbc.h src/mem.h src/struct_mem.h src/history.h
 $(OBJDIR)/tree.o: src/tree.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -505,8 +505,8 @@ $(OBJDIR)/tree.o: src/tree.c src/def.h src/type_retcode.h src/message.h src/set.
   src/cons.h src/pub_cons.h src/struct_cons.h src/nodesel.h \
   src/pub_nodesel.h
 $(OBJDIR)/var.o: src/var.c src/def.h src/type_retcode.h src/message.h src/set.h \
-  src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/memory.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
@@ -520,8 +520,8 @@ $(OBJDIR)/var.o: src/var.c src/def.h src/type_retcode.h src/message.h src/set.h 
   src/primal.h src/struct_primal.h src/cons.h src/type_sepastore.h \
   src/pub_cons.h src/struct_cons.h src/prop.h src/pub_prop.h
 $(OBJDIR)/vbc.o: src/vbc.c src/memory.h src/set.h src/def.h src/type_retcode.h \
-  src/message.h src/type_set.h src/type_stat.h src/buffer.h \
-  src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
+  src/message.h src/buffer.h src/type_set.h src/type_buffer.h \
+  src/type_stat.h src/type_clock.h src/type_paramset.h src/type_scip.h \
   src/type_event.h src/type_branch.h src/type_result.h \
   src/type_conflict.h src/type_var.h src/type_cons.h src/type_sol.h \
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
