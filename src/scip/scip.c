@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.199 2004/08/25 15:01:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.200 2004/08/31 14:42:31 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8502,6 +8502,16 @@ int SCIPgetNCutsFound(
    CHECK_ABORT( checkStage(scip, "SCIPgetNCutsFound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPsepastoreGetNCutsFound(scip->sepastore);
+}
+
+/** get number of cuts found so far in current separation round */
+int SCIPgetNCutsFoundRound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNCutsFoundRound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPsepastoreGetNCutsFoundRound(scip->sepastore);
 }
 
 /** get total number of cuts applied to the LPs */

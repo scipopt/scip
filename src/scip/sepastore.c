@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.21 2004/08/12 14:31:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.22 2004/08/31 14:42:32 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -113,6 +113,7 @@ RETCODE SCIPsepastoreCreate(
    (*sepastore)->ncuts = 0;
    (*sepastore)->nbdchgs = 0;
    (*sepastore)->ncutsfound = 0;
+   (*sepastore)->ncutsfoundround = 0;
    (*sepastore)->ncutsapplied = 0;
    (*sepastore)->initiallp = FALSE;
 
@@ -329,7 +330,10 @@ RETCODE SCIPsepastoreAddCut(
 
    /* update statistics of total number of found cuts */
    if( !sepastore->initiallp )
+   {
       sepastore->ncutsfound++;
+      sepastore->ncutsfoundround++;
+   }
 
    /* check, if the cut is a bound change (i.e. a row with only one variable) */
    if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
@@ -504,6 +508,7 @@ RETCODE SCIPsepastoreApplyCuts(
    /* clear the separation storage */
    sepastore->ncuts = 0;
    sepastore->nbdchgs = 0;
+   sepastore->ncutsfoundround = 0;
 
    return SCIP_OKAY;
 }
@@ -530,6 +535,7 @@ RETCODE SCIPsepastoreClearCuts(
 
    /* clear the separation storage */
    sepastore->ncuts = 0;
+   sepastore->ncutsfoundround = 0;
 
    return SCIP_OKAY;
 }
@@ -552,6 +558,16 @@ int SCIPsepastoreGetNCutsFound(
    assert(sepastore != NULL);
 
    return sepastore->ncutsfound;
+}
+
+/** get number of cuts found so far in current separation round */
+int SCIPsepastoreGetNCutsFoundRound(
+   SEPASTORE*            sepastore                /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+
+   return sepastore->ncutsfoundround;
 }
 
 /** get total number of cuts applied to the LPs */

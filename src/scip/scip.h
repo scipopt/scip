@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.158 2004/08/25 15:01:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.159 2004/08/31 14:42:31 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3534,6 +3534,12 @@ int SCIPgetNCuts(
 /** get total number of cuts found so far */
 extern
 int SCIPgetNCutsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get number of cuts found so far in current separation round */
+extern
+int SCIPgetNCutsFoundRound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

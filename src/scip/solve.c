@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.129 2004/08/25 14:56:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.130 2004/08/31 14:42:32 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -796,15 +796,17 @@ RETCODE priceAndCutLoop(
          assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
          mustsepar = FALSE;
-         enoughcuts = FALSE;
+         enoughcuts = (SCIPsetGetMaxsepacuts(set, root) == 0);
 
          /* global cut pool separation */
-         debugMessage("global cut pool separation\n");
-         assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-         CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepastore, root, &result) );
-         *cutoff = *cutoff || (result == SCIP_CUTOFF);
-         enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
-
+         if( !enoughcuts )
+         {
+            debugMessage("global cut pool separation\n");
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+            CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepastore, root, &result) );
+            *cutoff = *cutoff || (result == SCIP_CUTOFF);
+            enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsFoundRound(sepastore) >= 2*SCIPsetGetMaxsepacuts(set, root));
+         }
          assert(lp->solved);
          assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
@@ -813,7 +815,8 @@ RETCODE priceAndCutLoop(
 
          /* separate constraints and LP */
          separateagain = TRUE;
-         while( !(*cutoff) && !(*lperror) && separateagain && lp->solved && lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+         while( !(*cutoff) && !(*lperror) && !enoughcuts && separateagain
+            && lp->solved && lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
          {
             separateagain = FALSE;
 
@@ -827,7 +830,8 @@ RETCODE priceAndCutLoop(
                      SCIPnodeGetDepth(tree->actnode), &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
                separateagain = separateagain || (result == SCIP_CONSADDED);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               enoughcuts = enoughcuts
+                  || (SCIPsepastoreGetNCutsFoundRound(sepastore) >= 2*SCIPsetGetMaxsepacuts(set, root));
             }
 
             /* sort separators by priority */
@@ -839,7 +843,8 @@ RETCODE priceAndCutLoop(
                CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, SCIPnodeGetDepth(tree->actnode), &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
                separateagain = separateagain || (result == SCIP_CONSADDED);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               enoughcuts = enoughcuts
+                  || (SCIPsepastoreGetNCutsFoundRound(sepastore) >= 2*SCIPsetGetMaxsepacuts(set, root));
             }
 
             if( !(*cutoff) && !lp->solved )

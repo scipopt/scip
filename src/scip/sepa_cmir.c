@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.13 2004/08/24 11:58:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.14 2004/08/31 14:42:32 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -674,6 +674,10 @@ DECL_SEPAEXEC(sepaExecCmir)
 
    /* only call the cmir cut separator a given number of times at each node */
    if( (depth == 0 && ncalls >= sepadata->maxroundsroot) || (depth > 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* because the c-MIR cut separator is quite slow, we only want to call it, if no other cuts have been found before */
+   if( SCIPgetNCuts(scip) > 0 )
       return SCIP_OKAY;
 
    /* get all rows and number of columns */

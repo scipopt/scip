@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.12 2004/08/12 14:31:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.13 2004/08/31 14:42:32 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -112,6 +112,12 @@ int SCIPsepastoreGetNCuts(
 extern
 int SCIPsepastoreGetNCutsFound(
    SEPASTORE*       sepastore           /**< separation storage */
+   );
+
+/** get number of cuts found so far in current separation round */
+extern
+int SCIPsepastoreGetNCutsFoundRound(
+   SEPASTORE*            sepastore                /**< separation storage */
    );
 
 /** get total number of cuts applied to the LPs */

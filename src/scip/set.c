@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.106 2004/08/31 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.107 2004/08/31 14:42:32 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -458,13 +458,13 @@ RETCODE SCIPsetCreate(
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/maxsepacuts",
-         "maximal number of cuts separated per separation round",
-         &(*set)->maxsepacuts, SCIP_DEFAULT_MAXSEPACUTS, 1, INT_MAX,
+         "maximal number of cuts separated per separation round (0: disable local separation)",
+         &(*set)->maxsepacuts, SCIP_DEFAULT_MAXSEPACUTS, 0, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/maxsepacutsroot",
-         "maximal number of separated cuts at the root node",
-         &(*set)->maxsepacutsroot, SCIP_DEFAULT_MAXSEPACUTSROOT, 1, INT_MAX,
+         "maximal number of separated cuts at the root node (0: disable root node separation)",
+         &(*set)->maxsepacutsroot, SCIP_DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/cutagelimit",

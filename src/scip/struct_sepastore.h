@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.3 2004/02/04 17:27:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.4 2004/08/31 14:42:33 bzfpfend Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -49,6 +49,7 @@ struct SepaStore
    int              bdchgssize;         /**< size of bdchgvars, bdchgvals, and bdchgtypes arrays */
    int              nbdchgs;            /**< number of bound changes */
    int              ncutsfound;         /**< total number of cuts (and bound changes) found so far */
+   int              ncutsfoundround;    /**< number of cuts (and bound changes) found so far in this separation round */
    int              ncutsapplied;       /**< total number of cuts (and bound changes) applied to the LPs */
    Bool             initiallp;          /**< is the separation storage currently being filled with the initial LP rows? */
 };
