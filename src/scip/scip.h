@@ -684,6 +684,58 @@ int SCIPgetNContVars(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets variables of the original problem along with the numbers of different variable types; data may become invalid
+ *  after a call to SCIPchgVarType()
+ */
+extern
+RETCODE SCIPgetOrigVarsData(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
+   int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
+   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   );
+
+/** gets array with original problem variables; data may become invalid after
+ *  a call to SCIPchgVarType()
+ */
+extern
+VAR** SCIPgetOrigVars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of original problem variables */
+extern
+int SCIPgetNOrigVars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of binary original problem variables */
+extern
+int SCIPgetNOrigBinVars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of integer original problem variables */
+extern
+int SCIPgetNOrigIntVars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of implicit integer original problem variables */
+extern
+int SCIPgetNOrigImplVars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of continous original problem variables */
+extern
+int SCIPgetNOrigContVars(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** returns variable of given name in the problem, or NULL if not existing */
 extern
 VAR* SCIPfindVar(
@@ -937,7 +989,8 @@ RETCODE SCIPaggregateVar(
    VAR*             var,                /**< variable $x$ to aggregate */
    VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
 /** converts variable into multi-aggregated variable; this changes the vars array returned from
@@ -950,7 +1003,8 @@ RETCODE SCIPmultiaggregateVar(
    int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
 /**@} */

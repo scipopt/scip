@@ -864,6 +864,8 @@ RETCODE varFreeParents(
    int i;
    int v;
 
+   debugMessage("free parents of <%s>\n", (*var)->name);
+
    /* release the parent variables and remove the link from the parent variable to the child */
    for( i = 0; i < (*var)->nparentvars; ++i )
    {
@@ -1191,6 +1193,8 @@ int SCIPvarGetNLocksDown(
    assert(var != NULL);
    assert(var->nlocksdown >= 0);
 
+   debugMessage("get down locks of <%s>\n", var->name);
+
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1238,6 +1242,8 @@ int SCIPvarGetNLocksUp(
 
    assert(var != NULL);
    assert(var->nlocksup >= 0);
+
+   debugMessage("get up locks of <%s>\n", var->name);
 
    switch( var->varstatus )
    {
@@ -1302,6 +1308,8 @@ RETCODE SCIPvarColumn(
 {
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_LOOSE);
+
+   debugMessage("creating column for variable <%s>\n", var->name);
 
    var->varstatus = SCIP_VARSTATUS_COLUMN;
 
@@ -1407,7 +1415,8 @@ RETCODE SCIPvarAggregate(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
    Real varlb;
@@ -1424,8 +1433,11 @@ RETCODE SCIPvarAggregate(
    assert(aggvar->glbdom.lb == aggvar->actdom.lb);
    assert(aggvar->glbdom.ub == aggvar->actdom.ub);
    assert(!SCIPsetIsZero(set, scalar));
+   assert(infeasible != NULL);
 
    debugMessage("aggregate variable <%s> == %g*<%s> %+g\n", var->name, scalar, aggvar->name, constant);
+
+   *infeasible = FALSE;
 
    switch( var->varstatus )
    {
@@ -1436,7 +1448,7 @@ RETCODE SCIPvarAggregate(
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarAggregate(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     aggvar, scalar, constant) );
+                     aggvar, scalar, constant, infeasible) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -1497,19 +1509,36 @@ RETCODE SCIPvarAggregate(
       }
       SCIPvarAdjustLb(aggvar, set, &aggvarlb);
       SCIPvarAdjustUb(aggvar, set, &aggvarub);
-      if( SCIPsetIsGT(set, aggvarlb, aggvar->glbdom.lb) )
-      {
-         CHECK_OKAY( SCIPvarChgLbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarlb) );
-         CHECK_OKAY( SCIPvarChgLbGlobal(aggvar, set, aggvarlb) );
-      }
-      if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
-      {
-         CHECK_OKAY( SCIPvarChgUbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarub) );
-         CHECK_OKAY( SCIPvarChgUbGlobal(aggvar, set, aggvarub) );
-      }
+      aggvarlb = MAX(aggvarlb, aggvar->glbdom.lb);
+      aggvarub = MIN(aggvarub, aggvar->glbdom.ub);
 
-      /* update the hole list of the aggregation variable */
-      todoMessage("update hole list of aggregation variable");
+      /* check the new bounds */
+      if( SCIPsetIsGT(set, aggvarlb, aggvarub) )
+      {
+         /* the aggregation is infeasible */
+         *infeasible = TRUE;
+      }
+      else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
+      {
+         /* the aggregation variable is fixed */
+         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, aggvarlb) );
+      }
+      else
+      {
+         if( SCIPsetIsGT(set, aggvarlb, aggvar->glbdom.lb) )
+         {
+            CHECK_OKAY( SCIPvarChgLbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarlb) );
+            CHECK_OKAY( SCIPvarChgLbGlobal(aggvar, set, aggvarlb) );
+         }
+         if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
+         {
+            CHECK_OKAY( SCIPvarChgUbLocal(aggvar, memhdr, set, stat, tree, lp, branchcand, eventqueue, aggvarub) );
+            CHECK_OKAY( SCIPvarChgUbGlobal(aggvar, set, aggvarub) );
+         }
+
+         /* update the hole list of the aggregation variable */
+         todoMessage("update hole list of aggregation variable");
+      }
 
       /* update flags of aggregation variable */
       aggvar->removeable &= var->removeable;
@@ -1553,10 +1582,13 @@ RETCODE SCIPvarMultiaggregate(
    int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
-   Real aggvarobj;
+   Real obj;
+   int nlocksdown;
+   int nlocksup;
    int v;
 
    assert(var != NULL);
@@ -1564,13 +1596,18 @@ RETCODE SCIPvarMultiaggregate(
    assert(var->glbdom.ub == var->actdom.ub);
    assert(naggvars == 0 || aggvars != NULL);
    assert(naggvars == 0 || scalars != NULL);
+   assert(infeasible != NULL);
+
+   debugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+
+   *infeasible = FALSE;
 
    /* check, if we are in one of the simple cases */
    if( naggvars == 0 )
       return SCIPvarFix(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, constant);
    else if( naggvars == 1)
       return SCIPvarAggregate(var, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, 
-         aggvars[0], scalars[0], constant);
+         aggvars[0], scalars[0], constant, infeasible);
 
    switch( var->varstatus )
    {
@@ -1581,21 +1618,21 @@ RETCODE SCIPvarMultiaggregate(
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
-                     naggvars, aggvars, scalars, constant) );
+                     naggvars, aggvars, scalars, constant, infeasible) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
       assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
 
-      /* move the objective value to the aggregation variables and the problem's objective offset */
-      SCIPprobIncObjoffset(prob, set, var->obj * constant);
-      for( v = 0; v < naggvars; ++v )
-      {
-         assert(aggvars[v] != NULL);
-         aggvarobj = aggvars[v]->obj + scalars[v] * var->obj;
-         CHECK_OKAY( SCIPvarChgObj(aggvars[v], memhdr, set, tree, lp, branchcand, eventqueue, aggvarobj) );
-      }
+      /* set the aggregated variable's objective value to 0.0 */
+      obj = var->obj;
       CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, tree, lp, branchcand, eventqueue, 0.0) );
+
+      /* unlock all rounding locks */
+      nlocksdown = var->nlocksdown;
+      nlocksup = var->nlocksup;
+      var->nlocksdown = 0;
+      var->nlocksup = 0;
 
       /* convert variable into multi-aggregated variable */
       var->varstatus = SCIP_VARSTATUS_MULTAGGR;
@@ -1608,25 +1645,17 @@ RETCODE SCIPvarMultiaggregate(
       /* update the problem's vars array */
       CHECK_OKAY( SCIPprobVarFixed(prob, set, branchcand, var) );
 
-      for( v = 0; v < naggvars; ++v )
-      {
-         /* move the rounding locks to the aggregation variables */
-         if( scalars[v] > 0.0 )
-         {
-            aggvars[v]->nlocksdown += var->nlocksdown;
-            aggvars[v]->nlocksup += var->nlocksup;
-         }
-         else
-         {
-            aggvars[v]->nlocksdown += var->nlocksup;
-            aggvars[v]->nlocksup += var->nlocksdown;
-         }
+      /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
+       * variables and the problem's objective offset
+       */
+      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, prob, tree, lp, branchcand, eventqueue, obj) );
 
-         /* update flags of aggregation variables */
+      /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
+      varAddRoundLocks(var, nlocksdown, nlocksup);
+
+      /* update flags of aggregation variables */
+      for( v = 0; v < naggvars; ++v )
          aggvars[v]->removeable &= var->removeable;
-      }
-      var->nlocksup = 0;
-      var->nlocksdown = 0;
       break;
 
    case SCIP_VARSTATUS_COLUMN:
@@ -1660,6 +1689,8 @@ RETCODE SCIPvarChgType(
    )
 {
    assert(var != NULL);
+
+   debugMessage("change type of <%s> from %d to %d\n", var->name, var->vartype, vartype);
 
    if( var->probindex >= 0 )
    {
@@ -1777,6 +1808,7 @@ RETCODE SCIPvarAddObj(
    )
 {
    Real oldobj;
+   int i;
 
    assert(var != NULL);
 
@@ -1805,6 +1837,11 @@ RETCODE SCIPvarAddObj(
          CHECK_OKAY( varEventObjChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldobj, var->obj) );
          break;
 
+      case SCIP_VARSTATUS_FIXED:
+         assert(SCIPsetIsEQ(set, var->actdom.lb, var->actdom.ub));
+         SCIPprobIncObjoffset(prob, set, var->actdom.lb * addobj);
+         break;
+
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobIncObjoffset(prob, set, var->data.aggregate.constant * addobj);
@@ -1812,10 +1849,15 @@ RETCODE SCIPvarAddObj(
                         var->data.aggregate.scalar * addobj) );
          break;
 
-      case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("cannot add value to objective value of a fixed or multi aggregated variable");
-         return SCIP_INVALIDDATA;
+         /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
+         SCIPprobIncObjoffset(prob, set, var->data.multaggr.constant * addobj);
+         for( i = 0; i < var->data.multaggr.nvars; ++i )
+         {
+            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], memhdr, set, prob, tree, lp, branchcand, eventqueue,
+                           var->data.multaggr.scalars[i] * addobj) );
+         }
+         break;
 
       default:
          errorMessage("unknown variable status");
@@ -1889,7 +1931,7 @@ RETCODE varProcessChgLbGlobal(
          else
          {
             /* a < 0 -> change upper bound of y */
-            assert(SCIPsetIsNegative(set, var->data.aggregate.scalar));
+            assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
             CHECK_OKAY( varProcessChgUbGlobal(parentvar, set,
                            parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
@@ -2588,6 +2630,8 @@ void SCIPvarAdjustLb(
    assert(var != NULL);
    assert(lb != NULL);
 
+   debugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
+
    if( var->vartype != SCIP_VARTYPE_CONTINOUS )
    {
       /* adjust new bound to integral value */
@@ -2604,6 +2648,8 @@ void SCIPvarAdjustUb(
 {
    assert(var != NULL);
    assert(ub != NULL);
+
+   debugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
 
    if( var->vartype != SCIP_VARTYPE_CONTINOUS )
    {
@@ -2763,6 +2809,8 @@ RETCODE SCIPvarAddHoleGlobal(
 {
    assert(var != NULL);
 
+   debugMessage("adding global hole (%g,%g) to <%s>\n", left, right, var->name);
+
    CHECK_OKAY( domAddHole(&var->glbdom, memhdr, set, left, right) );
    CHECK_OKAY( domAddHole(&var->actdom, memhdr, set, left, right) );
 
@@ -2779,6 +2827,8 @@ RETCODE SCIPvarAddHoleLocal(
    )
 {
    assert(var != NULL);
+
+   debugMessage("adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
    CHECK_OKAY( domAddHole(&var->actdom, memhdr, set, left, right) );
 
@@ -2835,6 +2885,28 @@ int SCIPvarGetProbIndex(
    return var->probindex;
 }
 
+/** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
+ *  variable index; returns 0 if both indices are equal, which means both variables are equal
+ */
+int SCIPvarCmp(
+   VAR*             var1,               /**< first problem variable */
+   VAR*             var2                /**< second problem variable */
+   )
+{
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   if( var1->index < var2->index )
+      return -1;
+   else if( var1->index > var2->index )
+      return +1;
+   else
+   {
+      assert(var1 == var2);
+      return 0;
+   }
+}
+
 /** gets corresponding transformed variable of an original variable */
 VAR* SCIPvarGetTransformed(
    VAR*             var                 /**< problem variable */
@@ -2852,6 +2924,8 @@ VAR* SCIPvarGetProbvar(
    )
 {
    assert(var != NULL);
+
+   debugMessage("get problem variable of <%s>\n", var->name);
 
    switch( var->varstatus )
    {
@@ -2896,6 +2970,8 @@ RETCODE SCIPvarTransformBound(
    assert(bound != NULL);
    assert(boundtype != NULL);
 
+   debugMessage("transform bound %g of type %d of variable <%s>\n", *bound, *boundtype, (*var)->name);
+
    switch( (*var)->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -2920,8 +2996,8 @@ RETCODE SCIPvarTransformBound(
       assert((*var)->data.aggregate.var != NULL);
       assert((*var)->data.aggregate.scalar != 0.0);
       
-      *bound /= (*var)->data.aggregate.scalar;
-      *bound -= (*var)->data.aggregate.constant/(*var)->data.aggregate.scalar;
+      (*bound) /= (*var)->data.aggregate.scalar;
+      (*bound) -= (*var)->data.aggregate.constant/(*var)->data.aggregate.scalar;
       if( (*var)->data.aggregate.scalar < 0.0 )
       {
          if( *boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -3179,6 +3255,8 @@ Real SCIPvarGetLPSol(
 
    assert(var != NULL);
 
+   debugMessage("get LP solution of <%s>\n", var->name);
+
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -3227,6 +3305,8 @@ Real SCIPvarGetPseudoSol(
 
    assert(var != NULL);
 
+   debugMessage("get pseudo solution of <%s>\n", var->name);
+
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -3271,6 +3351,8 @@ Real SCIPvarGetSol(
 {
    assert(tree != NULL);
 
+   debugMessage("get solution of <%s>\n", var->name);
+
    if( tree->actnodehaslp )
       return SCIPvarGetLPSol(var);
    else
@@ -3293,6 +3375,8 @@ RETCODE SCIPvarAddToRow(
    assert(var != NULL);
    assert(row != NULL);
    assert(!SCIPsetIsInfinity(set, ABS(val)));
+
+   debugMessage("adding coefficient %g<%s> to row <%s>\n", val, var->name, row->name);
 
    switch( var->varstatus )
    {
@@ -3366,6 +3450,8 @@ RETCODE SCIPvarCatchEvent(
    assert(var->eventfilter != NULL);
    assert((eventtype & !SCIP_EVENTTYPE_VARCHANGED) == 0);
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
+
+   debugMessage("catch event %d of variable <%s>\n", eventtype, var->name);
 
    CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata) );
 

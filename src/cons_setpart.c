@@ -67,6 +67,7 @@ struct SetpartCons
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the constraint data belongs to the transformed problem? */
+   unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
 };
 typedef struct SetpartCons SETPARTCONS; /**< set partitioning constraint data */
 
@@ -398,6 +399,8 @@ RETCODE setpartconsDelCoefPos(
    setpartcons->vars[pos] = setpartcons->vars[setpartcons->nvars-1];
    setpartcons->nvars--;
 
+   setpartcons->changed = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -437,6 +440,7 @@ RETCODE setpartconsCreate(
    (*setpartcons)->modifiable = modifiable;
    (*setpartcons)->removeable = removeable;
    (*setpartcons)->transformed = FALSE;
+   (*setpartcons)->changed = TRUE;
 
    return SCIP_OKAY;
 }   
@@ -1620,6 +1624,7 @@ DECL_CONSPRESOL(consPresolSetpart)
    CONS* cons;
    CONSDATA* consdata;
    SETPARTCONS* setpartcons;
+   Bool infeasible;
    int c;
 
    assert(conshdlr != NULL);
@@ -1638,6 +1643,9 @@ DECL_CONSPRESOL(consPresolSetpart)
       assert(consdata != NULL);
       setpartcons = consdata->setpartcons;
       assert(setpartcons != NULL);
+
+      if( !setpartcons->changed )
+         continue;
 
       debugMessage("presolving set partitioning constraint <%s>\n", SCIPconsGetName(cons));
 
@@ -1745,7 +1753,14 @@ DECL_CONSPRESOL(consPresolSetpart)
             {
                debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
-               CHECK_OKAY( SCIPaggregateVar(scip, var1, var2, -1.0, 1.0) );
+               CHECK_OKAY( SCIPaggregateVar(scip, var1, var2, -1.0, 1.0, &infeasible) );
+               if( infeasible )
+               {
+                  debugMessage("set partitioning constraint <%s>: infeasible aggregation <%s> == 1 - <%s>\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*naggrvars)++;
                (*ndelconss)++;
@@ -1756,7 +1771,14 @@ DECL_CONSPRESOL(consPresolSetpart)
             {
                debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var2), SCIPvarGetName(var1));
-               CHECK_OKAY( SCIPaggregateVar(scip, var2, var1, -1.0, 1.0) );
+               CHECK_OKAY( SCIPaggregateVar(scip, var2, var1, -1.0, 1.0, &infeasible) );
+               if( infeasible )
+               {
+                  debugMessage("set partitioning constraint <%s>: infeasible aggregation <%s> == 1 - <%s>\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*naggrvars)++;
                (*ndelconss)++;
@@ -1765,6 +1787,8 @@ DECL_CONSPRESOL(consPresolSetpart)
             }
          }
       }
+
+      setpartcons->changed = FALSE;
    }
    
    return SCIP_OKAY;
@@ -1908,6 +1932,8 @@ DECL_EVENTEXEC(eventExecSetpart)
    }
    assert(0 <= setpartcons->nfixedzeros && setpartcons->nfixedzeros <= setpartcons->nvars);
    assert(0 <= setpartcons->nfixedones && setpartcons->nfixedones <= setpartcons->nvars);
+
+   setpartcons->changed = TRUE;
 
    debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
       setpartcons->nfixedzeros, setpartcons->nfixedones, setpartcons->nvars);

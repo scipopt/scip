@@ -37,6 +37,14 @@ typedef struct BoolArray BOOLARRAY;     /**< dynamic array for storing Bool valu
 
 
 
+/** compares two element indices
+ *  result:
+ *    < 0: ind1 comes before (is better than) ind2
+ *    = 0: both indices have the same value
+ *    > 0: ind2 comes after (is worse than) ind2
+ */
+#define DECL_SORTINDCOMP(x) int x (void* dataptr, int ind1, int ind2)
+
 /** compares two data element pointers
  *  result:
  *    < 0: elem1 comes before (is better than) elem2
@@ -355,11 +363,20 @@ RETCODE SCIPboolarraySetVal(
  * Sorting algorithms
  */
 
+/** bubble sort an indexed element set, resulting in a permutation index array */
+extern
+void SCIPbsort(
+   void*            dataptr,            /**< pointer to data field that is given to the external compare method */
+   int              len,                /**< number of elements to be sorted (valid index range) */
+   DECL_SORTINDCOMP((*indcmp)),         /**< data element comparator */
+   int*             indarray            /**< pointer to store the sorted index array */
+   );
+
 /** bubble sort of an array of pointers */
 extern
 void SCIPbsortPtr(
    void**           ptrarray,           /**< pointer array to be sorted */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of array */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
@@ -368,28 +385,28 @@ extern
 void SCIPbsortPtrDbl(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
-/** bubble sort of three joint arrays of pointers/Reals/Ints, sorted by first */
+/** bubble sort of three joint arrays of pointers/Reals/ints, sorted by first */
 extern
 void SCIPbsortPtrDblInt(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int*             intarray,           /**< int array to be permuted in the same way */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
-/** bubble sort of four joint arrays of pointers/Reals/Ints/Ints, sorted by first */
+/** bubble sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
 extern
 void SCIPbsortPtrDblIntInt(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int*             intarray1,          /**< first int array to be permuted in the same way */
    int*             intarray2,          /**< second int array to be permuted in the same way */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 

@@ -1477,6 +1477,98 @@ int SCIPgetNContVars(
    }
 }
 
+/** gets variables of the original problem along with the numbers of different variable types; data may become invalid
+ *  after a call to SCIPchgVarType()
+ */
+RETCODE SCIPgetOrigVarsData(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
+   int*             nvars,              /**< pointer to store number of variables or NULL if not needed */
+   int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
+   int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
+   int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetOrigVarsData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( vars != NULL )
+      *vars = scip->origprob->vars;
+   if( nvars != NULL )
+      *nvars = scip->origprob->nvars;
+   if( nbin != NULL )
+      *nbin = scip->origprob->nbin;
+   if( nint != NULL )
+      *nint = scip->origprob->nint;
+   if( nimpl != NULL )
+      *nimpl = scip->origprob->nimpl;
+   if( ncont != NULL )
+      *ncont = scip->origprob->ncont;
+   return SCIP_OKAY;
+}
+
+/** gets array with original problem variables; data may become invalid after
+ *  a call to SCIPchgVarType()
+ */
+VAR** SCIPgetOrigVars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetOrigVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->vars;
+}
+
+/** gets number of original problem variables */
+int SCIPgetNOrigVars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNOrigVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->nvars;
+}
+
+/** gets number of binary original problem variables */
+int SCIPgetNOrigBinVars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNOrigBinVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->nbin;
+}
+
+/** gets number of integer original problem variables */
+int SCIPgetNOrigIntVars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNOrigIntVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->nint;
+}
+
+/** gets number of implicit integer original problem variables */
+int SCIPgetNOrigImplVars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNOrigImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->nimpl;
+}
+
+/** gets number of continous original problem variables */
+int SCIPgetNOrigContVars(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNOrigContVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->ncont;
+}
+
 /** returns variable of given name in the problem, or NULL if not existing */
 VAR* SCIPfindVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2489,13 +2581,14 @@ RETCODE SCIPaggregateVar(
    VAR*             var,                /**< variable $x$ to aggregate */
    VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaggregateVar", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarAggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-                  scip->branchcand, scip->eventqueue, aggvar, scalar, constant) );
+                  scip->branchcand, scip->eventqueue, aggvar, scalar, constant, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -2509,13 +2602,14 @@ RETCODE SCIPmultiaggregateVar(
    int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPmultiaggregateVar", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
-                  scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant) );
+                  scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -4598,7 +4692,7 @@ void printPresolvingStatistics(
    assert(scip->set != NULL);
    assert(file != NULL);
 
-   fprintf(file, "Presolving         :   Fixed Vars   Aggr. Vars  Chg. Bounds  Added Holes    Del. Cons   Chg. Coefs   Chg. Sides\n");
+   fprintf(file, "Presolving         :   Fixed Vars   Aggr. Vars  Chg. Bounds  Added Holes    Del. Cons   Chg. Sides   Chg. Coefs\n");
 
    /* presolver statistics */
    for( i = 0; i < scip->set->npresols; ++i )
@@ -4613,8 +4707,8 @@ void printPresolvingStatistics(
          SCIPpresolGetNChgBds(presol),
          SCIPpresolGetNAddHoles(presol),
          SCIPpresolGetNDelConss(presol),
-         SCIPpresolGetNChgCoefs(presol),
-         SCIPpresolGetNChgSides(presol));
+         SCIPpresolGetNChgSides(presol),
+         SCIPpresolGetNChgCoefs(presol));
    }
 
    /* constraint handler presolving methods statistics */
@@ -4632,8 +4726,8 @@ void printPresolvingStatistics(
             || SCIPconshdlrGetNChgBds(conshdlr) > 0
             || SCIPconshdlrGetNAddHoles(conshdlr) > 0
             || SCIPconshdlrGetNDelConss(conshdlr) > 0
-            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0
-            || SCIPconshdlrGetNChgSides(conshdlr) > 0) )
+            || SCIPconshdlrGetNChgSides(conshdlr) > 0
+            || SCIPconshdlrGetNChgCoefs(conshdlr) > 0) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
          fprintf(file, " %12d %12d %12d %12d %12d %12d %12d\n",
@@ -4642,8 +4736,8 @@ void printPresolvingStatistics(
             SCIPconshdlrGetNChgBds(conshdlr),
             SCIPconshdlrGetNAddHoles(conshdlr),
             SCIPconshdlrGetNDelConss(conshdlr),
-            SCIPconshdlrGetNChgCoefs(conshdlr),
-            SCIPconshdlrGetNChgSides(conshdlr));
+            SCIPconshdlrGetNChgSides(conshdlr),
+            SCIPconshdlrGetNChgCoefs(conshdlr));
       }
    }
 }

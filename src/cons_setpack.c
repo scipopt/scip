@@ -67,6 +67,7 @@ struct SetpackCons
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the constraint data belongs to the transformed problem? */
+   unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
 };
 typedef struct SetpackCons SETPACKCONS; /**< set packing constraint data */
 
@@ -398,6 +399,8 @@ RETCODE setpackconsDelCoefPos(
    setpackcons->vars[pos] = setpackcons->vars[setpackcons->nvars-1];
    setpackcons->nvars--;
 
+   setpackcons->changed = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -437,6 +440,7 @@ RETCODE setpackconsCreate(
    (*setpackcons)->modifiable = modifiable;
    (*setpackcons)->removeable = removeable;
    (*setpackcons)->transformed = FALSE;
+   (*setpackcons)->changed = TRUE;
 
    return SCIP_OKAY;
 }   
@@ -1415,6 +1419,9 @@ DECL_CONSPRESOL(consPresolSetpack)
       setpackcons = consdata->setpackcons;
       assert(setpackcons != NULL);
 
+      if( !setpackcons->changed )
+         continue;
+
       debugMessage("presolving set packing constraint <%s>\n", SCIPconsGetName(cons));
 
       /* remove all variables that are fixed to zero */
@@ -1461,6 +1468,8 @@ DECL_CONSPRESOL(consPresolSetpack)
             continue;
          }
       }
+
+      setpackcons->changed = FALSE;
    }
    
    return SCIP_OKAY;
@@ -1604,6 +1613,8 @@ DECL_EVENTEXEC(eventExecSetpack)
    }
    assert(0 <= setpackcons->nfixedzeros && setpackcons->nfixedzeros <= setpackcons->nvars);
    assert(0 <= setpackcons->nfixedones && setpackcons->nfixedones <= setpackcons->nvars);
+
+   setpackcons->changed = TRUE;
 
    debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
       setpackcons->nfixedzeros, setpackcons->nfixedones, setpackcons->nvars);

@@ -2811,7 +2811,7 @@ RETCODE SCIProwGetSolActivity(
    {
       assert(row->cols[i] != NULL);
       CHECK_OKAY( SCIPsolGetVal(sol, set, stat, row->cols[i]->var, &solval) );
-      *solactivity += row->vals[i] * solval;
+      (*solactivity) += row->vals[i] * solval;
    }
 
    return SCIP_OKAY;
@@ -3125,7 +3125,7 @@ void SCIProwPrint(
    }
 
    /* print constant */
-   fprintf(file, "%+fs ", row->constant);
+   fprintf(file, "%+f ", row->constant);
 
    /* print right hand side */
    fprintf(file, "<= %+f\n", row->rhs);
@@ -4156,19 +4156,19 @@ RETCODE SCIPlpSumRows(
          {
             lhsinfinite |= SCIPsetIsInfinity(set, -row->lhs);
             if( !lhsinfinite )
-               *sumlhs += weights[r] * (row->lhs - row->constant);
+               (*sumlhs) += weights[r] * (row->lhs - row->constant);
             rhsinfinite |= SCIPsetIsInfinity(set, row->rhs);
             if( !rhsinfinite )
-               *sumrhs += weights[r] * (row->rhs - row->constant);
+               (*sumrhs) += weights[r] * (row->rhs - row->constant);
          }
          else
          {
             lhsinfinite |= SCIPsetIsInfinity(set, row->rhs);
             if( !lhsinfinite )
-               *sumlhs += weights[r] * (row->rhs - row->constant);
+               (*sumlhs) += weights[r] * (row->rhs - row->constant);
             rhsinfinite |= SCIPsetIsInfinity(set, -row->lhs);
             if( !rhsinfinite )
-               *sumrhs += weights[r] * (row->lhs - row->constant);
+               (*sumrhs) += weights[r] * (row->lhs - row->constant);
          }
       }
       else
@@ -4240,12 +4240,12 @@ void sumMIRRow(
             if( rowactivity < (row->lhs + row->rhs)/2.0 )
             {
                slacksign[r] = -1;
-               *mirrhs += weights[r] * (row->lhs - row->constant);
+               (*mirrhs) += weights[r] * (row->lhs - row->constant);
             }
             else
             {
                slacksign[r] = +1;
-               *mirrhs += weights[r] * (row->rhs - row->constant);
+               (*mirrhs) += weights[r] * (row->rhs - row->constant);
             }
 
             /* add the row coefficients to the sum */
@@ -4310,13 +4310,13 @@ void transformMIRRow(
          && var->data.col->primsol > (var->actdom.lb + var->actdom.ub)/2 )
       {
          varsign[idx] = -1;
-         *mirrhs -= mircoef[idx] * var->actdom.ub;
+         (*mirrhs) -= mircoef[idx] * var->actdom.ub;
       }
       else
       {
          varsign[idx] = +1;
          if( !SCIPsetIsInfinity(set, -var->actdom.lb) )
-            *mirrhs -= mircoef[idx] * var->actdom.lb;
+            (*mirrhs) -= mircoef[idx] * var->actdom.lb;
          else if( !SCIPsetIsZero(set, mircoef[idx]) )
          {
             /* we found a free variable in the row with non-zero coefficient
@@ -4412,12 +4412,12 @@ void roundMIRRow(
          if( varsign[idx] == +1 )
          {
             assert(!SCIPsetIsInfinity(set, -var->actdom.lb));
-            *mirrhs += cutaj * var->actdom.lb;
+            (*mirrhs) += cutaj * var->actdom.lb;
          }
          else
          {
             assert(!SCIPsetIsInfinity(set, var->actdom.ub));
-            *mirrhs += cutaj * var->actdom.ub;
+            (*mirrhs) += cutaj * var->actdom.ub;
          }
       }
    }
@@ -4485,9 +4485,9 @@ void substituteMIRRow(
                mircoef[idx] -= mul * row->vals[i];
             }
             if( slacksign[r] == +1 )
-               *mirrhs -= mul * (row->rhs - row->constant);
+               (*mirrhs) -= mul * (row->rhs - row->constant);
             else
-               *mirrhs -= mul * (row->lhs - row->constant);
+               (*mirrhs) -= mul * (row->lhs - row->constant);
          }
       }
    }

@@ -87,6 +87,8 @@ struct LinCons
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the linear constraint data belongs to the transformed problem? */
    unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
+   unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
+   unsigned int     sorted:1;           /**< are the constraint's variables sorted? */
 };
 
 /** constraint data for linear constraints */
@@ -346,6 +348,68 @@ RETCODE linconsDropEvent(
    return SCIP_OKAY;
 }
 
+/** locks the rounding locks associated to the given coefficient in the linear constraint */
+static
+void linconsForbidRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   assert(lincons != NULL);
+   assert(!SCIPisZero(scip, val));
+
+   if( !lincons->local )
+   {
+      if( SCIPisPositive(scip, val) )
+      {
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarForbidRoundDown(var);
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarForbidRoundUp(var);
+      }
+      else
+      {
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarForbidRoundDown(var);
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarForbidRoundUp(var);
+      }
+   }
+}
+
+/** unlocks the rounding locks associated to the given coefficient in the linear constraint */
+static
+void linconsAllowRounding(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   assert(lincons != NULL);
+   assert(!SCIPisZero(scip, val));
+
+   if( !lincons->local )
+   {
+      if( SCIPisPositive(scip, val) )
+      {
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarAllowRoundDown(var);
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarAllowRoundUp(var);
+      }
+      else
+      {
+         if( !SCIPisInfinity(scip, lincons->rhs) )
+            SCIPvarAllowRoundDown(var);
+         if( !SCIPisInfinity(scip, -lincons->lhs) )
+            SCIPvarAllowRoundUp(var);
+      }
+   }
+}
+
 /** catches bound change events and locks rounding for variable at given position in transformed linear constraint */
 static
 RETCODE linconsLockCoef(
@@ -355,17 +419,11 @@ RETCODE linconsLockCoef(
    int              pos                 /**< position of variable in linear constraint */
    )
 {
-   VAR* var;
-   Real val;
-      
    assert(scip != NULL);
    assert(lincons != NULL);
    assert(lincons->transformed);
    assert(0 <= pos && pos < lincons->nvars);
 
-   var = lincons->vars[pos];
-   val = lincons->vals[pos];
-   
    /*debugMessage("locking coefficient %g<%s> in linear constraint\n", val, SCIPvarGetName(var));*/
 
    if( eventhdlr == NULL )
@@ -380,26 +438,11 @@ RETCODE linconsLockCoef(
    }
 
    /* catch bound change events on variable */
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   assert(SCIPvarGetStatus(lincons->vars[pos]) != SCIP_VARSTATUS_ORIGINAL);
    CHECK_OKAY( linconsCatchEvent(scip, lincons, eventhdlr, pos) );
    
-   if( !lincons->local )
-   {
-      if( SCIPisPositive(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarForbidRoundDown(var);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarForbidRoundUp(var);
-      }
-      else if( SCIPisNegative(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarForbidRoundDown(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarForbidRoundUp(var);
-      }
-   }
+   /* forbid rounding of variable */
+   linconsForbidRounding(scip, lincons, lincons->vars[pos], lincons->vals[pos]);
 
    return SCIP_OKAY;
 }
@@ -413,16 +456,10 @@ RETCODE linconsUnlockCoef(
    int              pos                 /**< position of variable in linear constraint */
    )
 {
-   VAR* var;
-   Real val;
-
    assert(scip != NULL);
    assert(lincons != NULL);
    assert(lincons->transformed);
    assert(0 <= pos && pos < lincons->nvars);
-
-   var = lincons->vars[pos];
-   val = lincons->vals[pos];
 
    /*debugMessage("unlocking coefficient %g<%s> in linear constraint\n", val, SCIPvarGetName(var));*/
 
@@ -438,26 +475,11 @@ RETCODE linconsUnlockCoef(
    }
    
    /* drop bound change events on variable */
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   assert(SCIPvarGetStatus(lincons->vars[pos]) != SCIP_VARSTATUS_ORIGINAL);
    CHECK_OKAY( linconsDropEvent(scip, lincons, eventhdlr, pos) );
 
-   if( !lincons->local )
-   {
-      if( SCIPisPositive(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarAllowRoundDown(var);
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarAllowRoundUp(var);
-      }
-      else if( SCIPisNegative(scip, val) )
-      {
-         if( !SCIPisInfinity(scip, lincons->rhs) )
-            SCIPvarAllowRoundDown(var);
-         if( !SCIPisInfinity(scip, -lincons->lhs) )
-            SCIPvarAllowRoundUp(var);
-      }
-   }
+   /* allow rounding of variable */
+   linconsAllowRounding(scip, lincons, lincons->vars[pos], lincons->vals[pos]);
 
    return SCIP_OKAY;
 }
@@ -581,7 +603,9 @@ RETCODE linconsCreate(
    (*lincons)->removeable = removeable;
    (*lincons)->transformed = FALSE;
    (*lincons)->validactivities = FALSE;
-
+   (*lincons)->changed = TRUE;
+   (*lincons)->sorted = (nvars <= 1);
+   
    return SCIP_OKAY;
 }
 
@@ -861,6 +885,12 @@ RETCODE linconsAddCoef(
       linconsUpdateAddCoef(scip, lincons, var, val);
    }
 
+   lincons->changed = TRUE;
+   if( lincons->nvars == 1 )
+      lincons->sorted = TRUE;
+   else
+      lincons->sorted &= (SCIPvarCmp(lincons->vars[lincons->nvars-2], lincons->vars[lincons->nvars-1]) == -1);
+
    return SCIP_OKAY;
 }
 
@@ -876,7 +906,6 @@ RETCODE linconsDelCoefPos(
    Real val;
 
    assert(lincons != NULL);
-   assert(scip != NULL);
    assert(0 <= pos && pos < lincons->nvars);
 
    var = lincons->vars[pos];
@@ -902,8 +931,54 @@ RETCODE linconsDelCoefPos(
       lincons->eventdatas[pos] = lincons->eventdatas[lincons->nvars-1];
       assert(lincons->eventdatas[pos] != NULL);
       lincons->eventdatas[pos]->varpos = pos;
+      lincons->sorted = FALSE;
    }
    lincons->nvars--;
+
+   lincons->changed = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes coefficient value at given position of linear constraint object */
+static
+RETCODE linconsChgCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons,            /**< linear constraint object */
+   int              pos,                /**< position of coefficient to delete */
+   Real             newval              /**< new value of coefficient */
+   )
+{
+   VAR* var;
+   Real val;
+
+   assert(lincons != NULL);
+   assert(0 <= pos && pos < lincons->nvars);
+   assert(!SCIPisZero(scip, newval));
+
+   var = lincons->vars[pos];
+   val = lincons->vals[pos];
+   assert(var != NULL);
+   assert(lincons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+
+   if( lincons->transformed )
+   {
+      /* update minimum and maximum activities */
+      linconsUpdateDelCoef(scip, lincons, var, val);
+      linconsUpdateAddCoef(scip, lincons, var, newval);
+
+      /* update rounding locks */
+      if( newval * lincons->vals[pos] < 0.0 )
+      {
+         linconsAllowRounding(scip, lincons, var, val);
+         linconsForbidRounding(scip, lincons, var, newval);
+      }
+   }
+
+   /* change the value */
+   lincons->vals[pos] = newval;
+
+   lincons->changed = TRUE;
 
    return SCIP_OKAY;
 }
@@ -1462,6 +1537,7 @@ void linconsChgLhs(
 
    /* set new left hand side */
    lincons->lhs = lhs;
+   lincons->changed = TRUE;
 }
 
 /** sets right hand side of linear constraint */
@@ -1530,6 +1606,7 @@ void linconsChgRhs(
 
    /* set new right hand side */
    lincons->rhs = rhs;
+   lincons->changed = TRUE;
 }
 
 /** prints linear constraint to file stream */
@@ -1572,6 +1649,95 @@ void linconsPrint(
       fprintf(file, ">= %+g\n", lincons->lhs);
    else
       fprintf(file, " [free]\n");
+}
+
+/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
+static
+DECL_SORTINDCOMP(linconsCmpVar)
+{
+   LINCONS* lincons = (LINCONS*)dataptr;
+
+   assert(lincons != NULL);
+   assert(0 <= ind1 && ind1 < lincons->nvars);
+   assert(0 <= ind2 && ind2 < lincons->nvars);
+   
+   return SCIPvarCmp(lincons->vars[ind1], lincons->vars[ind2]);
+}
+
+/** sorts linear constraint's variables */
+static
+RETCODE linconsSort(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint object */
+   )
+{
+   assert(lincons != NULL);
+
+   if( lincons->nvars == 0 )
+      lincons->sorted = TRUE;
+   else if( !lincons->sorted )
+   {
+      VAR* varv;
+      EVENTDATA* eventdatav;
+      Real valv;
+      int* perm;
+      int v;
+      int i;
+      int nexti;
+
+      /* get temporary memory to store the sorted permutation */
+      CHECK_OKAY( SCIPcaptureBufferArray(scip, &perm, lincons->nvars) );
+
+      /* call bubble sort */
+      SCIPbsort((void*)lincons, lincons->nvars, linconsCmpVar, perm);
+
+      /* permute the variables in the linear constraint according to the resulting permutation */
+      for( v = 0; v < lincons->nvars; ++v )
+      {
+         if( perm[v] != v )
+         {
+            varv = lincons->vars[v];
+            valv = lincons->vals[v];
+            eventdatav = lincons->eventdatas[v];
+            i = v;
+            do
+            {
+               assert(0 <= perm[i] && perm[i] < lincons->nvars);
+               assert(perm[i] != i);
+               lincons->vars[i] = lincons->vars[perm[i]];
+               lincons->vals[i] = lincons->vals[perm[i]];
+               lincons->eventdatas[i] = lincons->eventdatas[perm[i]];
+               lincons->eventdatas[i]->varpos = i;
+               nexti = perm[i];
+               perm[i] = i;
+               i = nexti;
+            }
+            while( perm[i] != v );
+            lincons->vars[i] = varv;
+            lincons->vals[i] = valv;
+            lincons->eventdatas[i] = eventdatav;
+            lincons->eventdatas[i]->varpos = i;
+            perm[i] = i;
+         }
+      }
+      lincons->sorted = TRUE;
+
+#ifdef DEBUG
+      /* check sorting */
+      for( v = 0; v < lincons->nvars; ++v )
+      {
+         assert(v == lincons->nvars-1 || SCIPvarCmp(lincons->vars[v], lincons->vars[v+1]) <= 0);
+         assert(perm[v] == v);
+         assert(lincons->eventdatas[v]->varpos == v);
+      }
+#endif
+
+      /* free temporary memory */
+      CHECK_OKAY( SCIPreleaseBufferArray(scip, &perm) );
+   }
+   assert(lincons->sorted);
+
+   return SCIP_OKAY;
 }
 
 
@@ -1956,6 +2122,9 @@ DECL_CONSPROP(consPropLinear)
       lincons = consdata->lincons;
       assert(lincons != NULL);
 
+      if( !lincons->changed )
+         continue;
+
       /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
       if( !lincons->modifiable )
       {
@@ -1998,6 +2167,8 @@ DECL_CONSPROP(consPropLinear)
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
       }
+
+      lincons->changed = FALSE;
    }
    debugMessage("linear constraint propagator tightened %d bounds\n", nchgbds);
 
@@ -2011,6 +2182,54 @@ DECL_CONSPROP(consPropLinear)
  * Presolving
  */
 
+/** replaces multiple occurrences of a variable by a single coefficient */
+static
+RETCODE linconsMergeMultiples(
+   SCIP*            scip,               /**< SCIP data structure */
+   LINCONS*         lincons             /**< linear constraint object */
+   )
+{
+   VAR* var;
+   Real valsum;
+   int v;
+
+   /* sort the constraint */
+   CHECK_OKAY( linconsSort(scip, lincons) );
+   
+   /* go backwards through the constraint looking for multiple occurrences of the same variable;
+    * backward direction is necessary, since linconsDelCoefPos() modifies the given position and
+    * the subsequent ones
+    */
+   for( v = lincons->nvars-1; v >= 1; --v )
+   {
+      var = lincons->vars[v];
+      if( lincons->vars[v-1] == var )
+      {
+         valsum = lincons->vals[v];
+         do
+         {
+            CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
+            --v;
+            valsum += lincons->vals[v];
+         }
+         while( v >= 1 && lincons->vars[v-1] == var );
+
+         /* modify the last existing occurrence of the variable */
+         assert(lincons->vars[v] == var);
+         if( SCIPisZero(scip, valsum) )
+         {
+            CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
+         }
+         else
+         {
+            CHECK_OKAY( linconsChgCoefPos(scip, lincons, v, valsum) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** replaces all fixed and aggregated variables by their non-fixed counterparts */
 static
 RETCODE linconsApplyFixings(
@@ -2023,11 +2242,13 @@ RETCODE linconsApplyFixings(
    Real val;
    Real fixedval;
    Real aggrconst;
+   Bool cleanup;
    int v;
 
    assert(lincons != NULL);
    assert(conschanged != NULL);
 
+   cleanup = FALSE;
    v = 0;
    while( v < lincons->nvars )
    {
@@ -2062,6 +2283,7 @@ RETCODE linconsApplyFixings(
             linconsChgRhs(scip, lincons, lincons->rhs - val * aggrconst);
          CHECK_OKAY( linconsDelCoefPos(scip, lincons, v) );
          *conschanged = TRUE;
+         cleanup = TRUE;
          break;
 
       default:
@@ -2069,6 +2291,17 @@ RETCODE linconsApplyFixings(
          abort();
       }
    }
+
+   debugMessage("after fixings: ");
+   debug(linconsPrint(scip, lincons, NULL));
+
+   /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
+    * to clean up the constraint
+    */
+   CHECK_OKAY( linconsMergeMultiples(scip, lincons) );
+
+   debugMessage("after merging: ");
+   debug(linconsPrint(scip, lincons, NULL));
 
    return SCIP_OKAY;
 }
@@ -2140,6 +2373,7 @@ RETCODE linconsConvertEquality(
 {
    CONSDATA* consdata;
    LINCONS* lincons;
+   Bool infeasible;
 
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
@@ -2248,7 +2482,15 @@ RETCODE linconsConvertEquality(
             {
                debugMessage("linear constraint <%s>: aggregate <%s> == %g<%s>%+g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(vars[agg]), scalar, SCIPvarGetName(vars[1-agg]), constant);
-               CHECK_OKAY( SCIPaggregateVar(scip, vars[agg], vars[1-agg], scalar, constant) );
+               CHECK_OKAY( SCIPaggregateVar(scip, vars[agg], vars[1-agg], scalar, constant, &infeasible) );
+               if( infeasible )
+               {
+                  debugMessage("linear constraint <%s>: aggregation infeasible <%s> == %g<%s>%+g\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(vars[agg]), scalar, SCIPvarGetName(vars[1-agg]), constant);
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+
                CHECK_OKAY( SCIPdelCons(scip, cons) );
                (*naggrvars)++;
                (*ndelconss)++;
@@ -2329,8 +2571,12 @@ RETCODE linconsConvertEquality(
             CHECK_OKAY( SCIPcreateVar(scip, &aggvar, NULL, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                            SCIP_VARTYPE_INTEGER, TRUE) );
             CHECK_OKAY( SCIPaddVar(scip, aggvar) );
-            CHECK_OKAY( SCIPaggregateVar(scip, vars[0], aggvar, (Real)(-b), (Real)xsol) );
-            CHECK_OKAY( SCIPaggregateVar(scip, vars[1], aggvar, (Real)a, (Real)ysol) );
+            CHECK_OKAY( SCIPaggregateVar(scip, vars[0], aggvar, (Real)(-b), (Real)xsol, &infeasible) );
+            if( !infeasible )
+            {
+               CHECK_OKAY( SCIPaggregateVar(scip, vars[1], aggvar, (Real)a, (Real)ysol, &infeasible) );
+            }
+
             debugMessage("linear constraint <%s>: aggregate <%s> == %g<%s>%+g, <%s> == %g<%s>%+g, <%s>: [%g,%g], obj=%g\n",
                SCIPconsGetName(cons), SCIPvarGetName(vars[0]), (Real)(-b), SCIPvarGetName(aggvar), (Real)xsol,
                SCIPvarGetName(vars[1]), (Real)a, SCIPvarGetName(aggvar), (Real)ysol,
@@ -2338,6 +2584,14 @@ RETCODE linconsConvertEquality(
 
             /* release z */
             CHECK_OKAY( SCIPreleaseVar(scip, &aggvar) );
+
+            /* check for infeasible aggregation */
+            if( infeasible )
+            {
+               debugMessage("linear constraint <%s>: aggregation infeasible\n", SCIPconsGetName(cons));
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
 
             /* disable constraint */
             CHECK_OKAY( SCIPdelCons(scip, cons) );
@@ -2358,8 +2612,6 @@ RETCODE linconsConvertEquality(
          VARTYPE actslacktype;
          Real bestslackdomrng;
          Real actslackdomrng;
-         Real newlhs;
-         Real newrhs;
          Bool integral;
          int bestslackpos;
          int v;
@@ -2386,15 +2638,23 @@ RETCODE linconsConvertEquality(
             assert(SCIPvarGetNLocksUp(var) >= 1);
             if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 )
             {
-               /* variable is only locked in this equality */
-               actslackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
-               if( bestslackpos == -1
-                  || actslacktype > bestslacktype
-                  || (actslacktype == bestslacktype && actslackdomrng > bestslackdomrng) )
+               /* variable is only locked in this equality: if variable is continous or if the value is 1.0,
+                * it is a candidate for being a slack variable
+                */
+               if( actslacktype == SCIP_VARTYPE_CONTINOUS
+                  || actslacktype == SCIP_VARTYPE_IMPLINT
+                  || (integral && SCIPisEQ(scip, ABS(val), 1.0))
+                   )
                {
-                  bestslackpos = v;
-                  bestslacktype = actslacktype;
-                  bestslackdomrng = actslackdomrng;
+                  actslackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
+                  if( bestslackpos == -1
+                     || actslacktype > bestslacktype
+                     || (actslacktype == bestslacktype && actslackdomrng > bestslackdomrng) )
+                  {
+                     bestslackpos = v;
+                     bestslacktype = actslacktype;
+                     bestslackdomrng = actslackdomrng;
+                  }
                }
             }
          }
@@ -2413,51 +2673,26 @@ RETCODE linconsConvertEquality(
          if( bestslackpos >= 0 &&
             (bestslacktype == SCIP_VARTYPE_CONTINOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
          {
-            VAR** aggvars;
             VAR* slackvar;
             Real* scalars;
             Real slackcoef;
             Real slackvarlb;
             Real slackvarub;
+            Real aggrconst;
+            Real newlhs;
+            Real newrhs;
 
             /* we found a slack variable that only occurs in this equality:
              *   a_1*x_1 + ... + a_k*x_k + a'*s == rhs  ->  s == rhs - a_1/a'*x_1 - ... - a_k/a'*x_k
              */
 
-            /* allocate temporary memory */
-            CHECK_OKAY( SCIPcaptureBufferArray(scip, &aggvars, lincons->nvars-1) );
-            CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, lincons->nvars-1) );
-
-            /* set up the multi-aggregation */
-            debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
-               SCIPconsGetName(cons), SCIPvarGetName(vars[bestslackpos]));
-            slackvar = lincons->vars[bestslackpos];
-            slackcoef = lincons->vals[bestslackpos];
-            assert(!SCIPisZero(scip, slackcoef));
-            for( v = 0; v < bestslackpos; ++v )
-            {
-               aggvars[v] = lincons->vars[v];
-               scalars[v] = -lincons->vals[v]/slackcoef;
-               debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(aggvars[v])));
-            }
-            for( v = bestslackpos+1; v < lincons->nvars; ++v )
-            {
-               aggvars[v-1] = lincons->vars[v];
-               scalars[v-1] = -lincons->vals[v]/slackcoef;
-               debug(printf(" %+g<%s>", scalars[v-1], SCIPvarGetName(aggvars[v-1])));
-            }
-            debug(printf(" %+g\n", lincons->rhs/slackcoef));
-
-            /* perform the multi-aggregation */
-            CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, lincons->nvars-1, aggvars, scalars, lincons->rhs/slackcoef) );
-
-            /* free temporary memory */
-            CHECK_OKAY( SCIPreleaseBufferArray(scip, &scalars) );
-            CHECK_OKAY( SCIPreleaseBufferArray(scip, &aggvars) );
-
             /* convert equality into inequality by deleting the slack variable:
              *  x + a*s == b, l <= s <= u   ->  b - a*u <= x <= b - a*l
              */
+            slackvar = vars[bestslackpos];
+            slackcoef = vals[bestslackpos];
+            assert(!SCIPisZero(scip, slackcoef));
+            aggrconst = lincons->rhs/slackcoef;
             slackvarlb = SCIPvarGetLbGlobal(slackvar);
             slackvarub = SCIPvarGetUbGlobal(slackvar);
             if( slackcoef > 0.0 )
@@ -2486,6 +2721,35 @@ RETCODE linconsConvertEquality(
             linconsChgLhs(scip, lincons, newlhs);
             linconsChgRhs(scip, lincons, newrhs);
             CHECK_OKAY( linconsDelCoefPos(scip, lincons, bestslackpos) );
+
+            /* allocate temporary memory */
+            CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, lincons->nvars) );
+
+            /* set up the multi-aggregation */
+            debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
+               SCIPconsGetName(cons), SCIPvarGetName(slackvar));
+            for( v = 0; v < lincons->nvars; ++v )
+            {
+               scalars[v] = -lincons->vals[v]/slackcoef;
+               debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(lincons->vars[v])));
+            }
+            debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", 
+                         aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
+
+            /* perform the multi-aggregation */
+            CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, lincons->nvars, lincons->vars, scalars, aggrconst,
+                           &infeasible) );
+
+            /* free temporary memory */
+            CHECK_OKAY( SCIPreleaseBufferArray(scip, &scalars) );
+
+            /* check for infeasible aggregation */
+            if( infeasible )
+            {
+               debugMessage("linear constraint <%s>: infeasible multi-aggregation\n", SCIPconsGetName(cons));
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
 
             (*naggrvars)++;
             *result = SCIP_SUCCESS;
@@ -2553,6 +2817,550 @@ RETCODE linconsFixVariables(
    return SCIP_OKAY;
 }
 
+/* tries to aggregate two equalities in order to decrease the number of variables in the first equality:
+ *   cons0 := a * cons0 + b * cons1, 
+ * where a = val1[v] and b = -val0[v] for common variable v which removes most variables;
+ * for numerical stability, we will only accept integral a and b
+ */
+static 
+RETCODE linconsAggregateEqualities(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons0,              /**< constraint to modify */
+   CONS*            cons1,              /**< constraint to use for aggregation of cons0 */
+   int              nvarscommon,        /**< number of variables, that appear in both constraints */
+   int*             commonidx0,         /**< array with indices of variables in cons0, that appear also in cons1 */
+   int*             commonidx1,         /**< array with indices of variables in cons1, that appear also in cons0 */
+   int*             diffidx0minus1,     /**< array with indices of variables in cons0, that don't appear in cons1 */
+   int*             diffidx1minus0,     /**< array with indices of variables in cons1, that don't appear in cons0 */
+   int*             nchgcoefs,          /**< pointer to count number of changed coefficients */
+   RESULT*          result,             /**< pointer to store the result of the aggregation */
+   Bool*            aggregated          /**< pointer to store whether an aggregation was made */
+   )
+{
+   CONSDATA* consdata0;
+   CONSDATA* consdata1;
+   LINCONS* lincons0;
+   LINCONS* lincons1;
+   VAR* var;
+   Real a;
+   Real b;
+   Real aggrcoef;
+   Real actscalarsum;
+   Real bestscalarsum;
+   Bool betterscalarsum;
+   int actnvars;
+   int bestnvars;
+   int bestv;
+   int v;
+   int i;
+
+   assert(nvarscommon >= 1);
+   assert(commonidx0 != NULL);
+   assert(commonidx1 != NULL);
+   assert(diffidx0minus1 != NULL);
+   assert(diffidx1minus0 != NULL);
+   assert(nchgcoefs != NULL);
+   assert(result != NULL);
+   assert(aggregated != NULL);
+
+   assert(cons0 != NULL);
+   assert(SCIPconsIsActive(cons0));
+   consdata0 = SCIPconsGetData(cons0);
+   assert(consdata0 != NULL);
+   lincons0 = consdata0->lincons;
+   assert(lincons0 != NULL);
+   assert(lincons0->nvars >= 1);
+   assert(SCIPisEQ(scip, lincons0->lhs, lincons0->rhs));
+   
+   assert(cons1 != NULL);
+   assert(SCIPconsIsActive(cons1));
+   consdata1 = SCIPconsGetData(cons1);
+   assert(consdata1 != NULL);
+   lincons1 = consdata1->lincons;
+   assert(lincons1 != NULL);
+   assert(lincons1->nvars >= 1);
+   assert(SCIPisEQ(scip, lincons1->lhs, lincons1->rhs));
+
+   *aggregated = FALSE;
+
+   /* search for the best common variable such that
+    *  val1[var] * lincons0 - val0[var] * lincons1
+    * has least number of variables */
+   bestnvars = lincons0->nvars;
+   bestv = -1;
+   bestscalarsum = 0.0;
+   for( v = 0; v < nvarscommon; ++v )
+   {
+      assert(lincons0->vars[commonidx0[v]] == lincons1->vars[commonidx1[v]]);
+      var = lincons0->vars[commonidx0[v]];
+      a = lincons1->vals[commonidx1[v]];
+      b = -lincons0->vals[commonidx0[v]];
+
+      /* only try aggregation, if coefficients are integral (numerical stability) */
+      if( SCIPisIntegral(scip, a) && SCIPisIntegral(scip, b) )
+      {
+         /* count the number of variables in the potential new constraint  a * lincons0 + b * lincons1 */
+         actnvars = lincons0->nvars + lincons1->nvars - 2*nvarscommon;
+         actscalarsum = ABS(a) + ABS(b);
+         betterscalarsum = (actscalarsum < bestscalarsum);
+         for( i = 0; i < nvarscommon && (actnvars < bestnvars || (actnvars == bestnvars && betterscalarsum)); ++i )
+         {
+            aggrcoef = a * lincons0->vals[commonidx0[i]] + b * lincons1->vals[commonidx1[i]];
+            if( !SCIPisZero(scip, aggrcoef) )
+               actnvars++;
+         }
+         if( actnvars < bestnvars || (actnvars == bestnvars && betterscalarsum) )
+         {
+            bestv = v;
+            bestnvars = actnvars;
+            bestscalarsum = actscalarsum;
+         }
+      }
+   }
+
+   if( bestv != -1 )
+   {
+      CONS* newcons;
+      VAR** newvars;
+      Real* newvals;
+      Real newrhs;
+      int newnvars;
+
+      /* better aggregation was found: create new constraint and delete old one */
+      a = lincons1->vals[commonidx1[bestv]];
+      b = -lincons0->vals[commonidx0[bestv]];
+      assert(!SCIPisZero(scip, a));
+      assert(!SCIPisZero(scip, b));
+      debugMessage("aggregate equalities <%s> := %g*<%s> + %g*<%s>  ->  oldnvars=%d, newnvars=%d\n",
+         SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
+         lincons0->nvars, bestnvars);
+      debugMessage("<%s>: ", SCIPconsGetName(cons0));
+      debug(linconsPrint(scip, lincons0, NULL));
+      debugMessage("<%s>: ", SCIPconsGetName(cons1));
+      debug(linconsPrint(scip, lincons1, NULL));
+
+      /* get temporary memory for creating the new linear constraint */
+      CHECK_OKAY( SCIPcaptureBufferArray(scip, &newvars, bestnvars) );
+      CHECK_OKAY( SCIPcaptureBufferArray(scip, &newvals, bestnvars) );
+
+      /* calculate the common coefficients */
+      newnvars = 0;
+      for( i = 0; i < nvarscommon; ++i )
+      {
+         assert(0 <= commonidx0[i] && commonidx0[i] < lincons0->nvars);
+         assert(0 <= commonidx1[i] && commonidx1[i] < lincons1->nvars);
+
+         aggrcoef = a * lincons0->vals[commonidx0[i]] + b * lincons1->vals[commonidx1[i]];
+         if( !SCIPisZero(scip, aggrcoef) )
+         {
+            assert(newnvars < bestnvars);
+            newvars[newnvars] = lincons0->vars[commonidx0[i]];
+            newvals[newnvars] = aggrcoef;
+            newnvars++;
+         }
+      }
+
+      /* calculate the coefficients appearing in cons0 but not in cons1 */
+      for( i = 0; i < lincons0->nvars - nvarscommon; ++i )
+      {
+         assert(0 <= diffidx0minus1[i] && diffidx0minus1[i] < lincons0->nvars);
+
+         aggrcoef = a * lincons0->vals[diffidx0minus1[i]];
+         assert(!SCIPisZero(scip, aggrcoef));
+         assert(newnvars < bestnvars);
+         newvars[newnvars] = lincons0->vars[diffidx0minus1[i]];
+         newvals[newnvars] = aggrcoef;
+         newnvars++;
+      }
+
+      /* calculate the coefficients appearing in cons1 but not in cons0 */
+      for( i = 0; i < lincons1->nvars - nvarscommon; ++i )
+      {
+         assert(0 <= diffidx1minus0[i] && diffidx1minus0[i] < lincons1->nvars);
+
+         aggrcoef = b * lincons1->vals[diffidx1minus0[i]];
+         assert(!SCIPisZero(scip, aggrcoef));
+         assert(newnvars < bestnvars);
+         newvars[newnvars] = lincons1->vars[diffidx1minus0[i]];
+         newvals[newnvars] = aggrcoef;
+         newnvars++;
+      }
+      assert(newnvars == bestnvars);
+
+      todoMessage("don't aggregate equalities, if max{|coef|} is increased too much");
+
+      /* calculate the new right hand side of the equality */
+      newrhs = a * lincons0->rhs + b * lincons1->rhs;
+
+      /* create the new linear constraint */
+      CHECK_OKAY( SCIPcreateConsLinear(scip, &newcons, SCIPconsGetName(cons0), newnvars, newvars, newvals, newrhs, newrhs,
+                     SCIPconsIsSeparated(cons0), SCIPconsIsEnforced(cons0), 
+                     SCIPconsIsChecked(cons0), SCIPconsIsPropagated(cons0),
+                     lincons0->local, lincons0->modifiable, lincons0->removeable) );
+
+      /* update the statistics: we changed all coefficients of the old cons0 */
+      (*nchgcoefs) += lincons0->nvars;
+      *result = SCIP_SUCCESS;
+      *aggregated = TRUE;
+
+      /* delete the old constraint */
+      CHECK_OKAY( SCIPdelCons(scip, cons0) );
+      
+      /* add the new constraint */
+      CHECK_OKAY( SCIPaddCons(scip, newcons) );
+
+      /* release the new constraint */
+      CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
+
+      /* free temporary memory */
+      CHECK_OKAY( SCIPreleaseBufferArray(scip, &newvals) );
+      CHECK_OKAY( SCIPreleaseBufferArray(scip, &newvars) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks redundancy of constraint with given index against all prior constraints in the constraint set,
+ *  and removes or changes constraint accordingly
+ */
+static
+RETCODE linconsRemoveRedundancy(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           conss,              /**< constraint set */
+   int              startind,           /**< starting index of constraints to be checked */
+   int              chkind,             /**< index of constraint to check against all prior indices upto startind */
+   int*             nfixedvars,         /**< pointer to count number of fixed variables */
+   int*             naggrvars,          /**< pointer to count number of aggregated variables */
+   int*             ndelconss,          /**< pointer to count number of deleted constraints */
+   int*             nchgsides,          /**< pointer to count number of changed left/right hand sides */
+   int*             nchgcoefs,          /**< pointer to count number of changed coefficients */
+   RESULT*          result              /**< pointer to store result for successful conversions */
+   )
+{
+   CONS* cons0;
+   CONS* cons1;
+   CONSDATA* consdata0;
+   CONSDATA* consdata1;
+   LINCONS* lincons0;
+   LINCONS* lincons1;
+   VAR* var;
+   int* commonidx0;
+   int* commonidx1;
+   int* diffidx0minus1;
+   int* diffidx1minus0;
+   Real val0;
+   Real val1;
+   Bool cons0dominateslhs;
+   Bool cons1dominateslhs;
+   Bool cons0dominatesrhs;
+   Bool cons1dominatesrhs;
+   Bool cons0isequality;
+   Bool cons1isequality;
+   int diffidx1minus0size;
+   int nvarscommon;
+   int nvars0minus1;
+   int nvars1minus0;
+   int varcmp;
+   int c;
+   int v0;
+   int v1;
+
+   assert(conss != NULL);
+   assert(startind <= chkind);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgsides != NULL);
+   assert(result != NULL);
+
+   /* get the constraint to be checked for redundancy */
+   cons0 = conss[chkind];
+   assert(cons0 != NULL);
+   assert(SCIPconsIsActive(cons0));
+   consdata0 = SCIPconsGetData(cons0);
+   assert(consdata0 != NULL);
+   lincons0 = consdata0->lincons;
+   assert(lincons0 != NULL);
+   assert(lincons0->nvars >= 1);
+   cons0isequality = SCIPisEQ(scip, lincons0->lhs, lincons0->rhs);
+
+   /* sort the constraint */
+   CHECK_OKAY( linconsSort(scip, lincons0) );
+
+   /* get temporary memory for indices of common variables */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx0, lincons0->nvars) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx1, lincons0->nvars) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx0minus1, lincons0->nvars) );
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, lincons0->nvars) );
+   diffidx1minus0size = lincons0->nvars;
+
+   /* check constraint against all prior constraints */
+   for( c = startind; c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0); ++c )
+   {
+      cons1 = conss[c];
+      assert(cons1 != NULL);
+
+      if( !SCIPconsIsActive(cons1) )
+         continue;
+
+      consdata1 = SCIPconsGetData(cons1);
+      assert(consdata1 != NULL);
+      lincons1 = consdata1->lincons;
+      assert(lincons1 != NULL);
+      assert(lincons1->sorted);
+      assert(lincons1->nvars >= 1);
+      cons1isequality = SCIPisEQ(scip, lincons1->lhs, lincons1->rhs);
+      
+      /* make sure, we have enough memory for the index set of V_1 \ V_0 */
+      if( lincons1->nvars > diffidx1minus0size )
+      {
+         CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx1minus0) );
+         CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, lincons1->nvars) );
+         diffidx1minus0size = lincons1->nvars;
+      }
+
+      todoMessage("normalize constraints (at a different place, but it is important here)");
+      /* because both constraints are normalized, a <=-row and a >=-row cannot be redundant */
+      if( SCIPisInfinity(scip, -lincons0->lhs) != SCIPisInfinity(scip, -lincons1->lhs)
+         && SCIPisInfinity(scip, lincons0->rhs) != SCIPisInfinity(scip, lincons1->rhs) )
+         continue;
+
+      /* check lincons0 against lincons1:
+       * - if lhs0 >= lhs1 and for each variable v and each solution value x_v val0[v]*x_v <= val1[v]*x_v,
+       *   lincons0 dominates lincons1 w.r.t. left hand side
+       * - if rhs0 <= rhs1 and for each variable v and each solution value x_v val0[v]*x_v >= val1[v]*x_v,
+       *   lincons0 dominates lincons1 w.r.t. right hand side
+       * - if both constraints are equalities, count the number of common variables N_c and the number of variable in
+       *   the difference sets N_0 = |V_0 \ V_1|, N_1 = |V_1 \ V_0|
+       *   - if N_c > N_1, try to aggregate  lincons0 := a * lincons0 + b * lincons1  in order to decrease the number of
+       *     variables in lincons0, where a = val1[v] and b = -val0[v] for common v which removes most variables;
+       *     for numerical stability, we will only accept integral a and b
+       *   - if N_c > N_0, try to aggregate  lincons1 := a * lincons1 + b * lincons0  in order to decrease the number of
+       *     variables in lincons1, where a = val0[v] and b = -val1[v] for common v which removes most variables;
+       *     for numerical stability, we will only accept integral a and b
+       */
+
+      /* check lincons0 against lincons1 for redundancy */
+      cons0dominateslhs = SCIPisGE(scip, lincons0->lhs, lincons1->lhs);
+      cons1dominateslhs = SCIPisGE(scip, lincons1->lhs, lincons0->lhs);
+      cons0dominatesrhs = SCIPisLE(scip, lincons0->rhs, lincons1->rhs);
+      cons1dominatesrhs = SCIPisLE(scip, lincons1->rhs, lincons0->rhs);
+      nvarscommon = 0;
+      nvars0minus1 = 0;
+      nvars1minus0 = 0;
+      v0 = 0;
+      v1 = 0;
+      while( (v0 < lincons0->nvars || v1 < lincons1->nvars)
+         && (cons0dominateslhs || cons1dominateslhs || cons0dominatesrhs || cons1dominatesrhs
+            || (cons0isequality && cons1isequality)) )
+      {
+         /* test, if variable appears in only one or in both constraints */
+         if( v0 < lincons0->nvars && v1 < lincons1->nvars )
+            varcmp = SCIPvarCmp(lincons0->vars[v0], lincons1->vars[v1]);
+         else if( v0 < lincons0->nvars )
+            varcmp = -1;
+         else
+            varcmp = +1;
+
+         switch( varcmp )
+         {
+         case -1:
+            /* variable doesn't appear in lincons1 */
+            var = lincons0->vars[v0];
+            val0 = lincons0->vals[v0];
+            val1 = 0.0;
+            diffidx0minus1[nvars0minus1] = v0;
+            nvars0minus1++;
+            v0++;
+            break;
+
+         case +1:
+            /* variable doesn't appear in lincons0 */
+            var = lincons1->vars[v1];
+            val0 = 0.0;
+            val1 = lincons1->vals[v1];
+            diffidx1minus0[nvars1minus0] = v1;
+            nvars1minus0++;
+            v1++;
+            break;
+
+         case 0:
+            /* variable appears in both constraints */
+            assert(lincons0->vars[v0] == lincons1->vars[v1]);
+            var = lincons0->vars[v0];
+            val0 = lincons0->vals[v0];
+            val1 = lincons1->vals[v1];
+            commonidx0[nvarscommon] = v0;
+            commonidx1[nvarscommon] = v1;
+            nvarscommon++;
+            v0++;
+            v1++;
+            break;
+
+         default:
+            errorMessage("invalid comparison result");
+            abort();
+         }
+         assert(var != NULL);
+
+         /* update domination criteria w.r.t. the coefficient and the variable's bounds */
+         if( SCIPisGT(scip, val0, val1) )
+         {
+            if( SCIPisNegative(scip, SCIPvarGetLbGlobal(var)) )
+            {
+               cons0dominatesrhs = FALSE;
+               cons1dominateslhs = FALSE;
+            }
+            if( SCIPisPositive(scip, SCIPvarGetUbGlobal(var)) )
+            {
+               cons0dominateslhs = FALSE;
+               cons1dominatesrhs = FALSE;
+            }
+         }
+         else if( SCIPisLT(scip, val0, val1) )
+         {
+            if( SCIPisNegative(scip, SCIPvarGetLbGlobal(var)) )
+            {
+               cons0dominateslhs = FALSE;
+               cons1dominatesrhs = FALSE;
+            }
+            if( SCIPisPositive(scip, SCIPvarGetUbGlobal(var)) )
+            {
+               cons0dominatesrhs = FALSE;
+               cons1dominateslhs = FALSE;
+            }
+         }
+      }
+
+      /* check for domination */
+      if( cons1dominateslhs && !SCIPisInfinity(scip, -lincons0->lhs) )
+      {
+         /* left hand side is dominated by lincons1: delete left hand side of lincons0 */
+         debugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
+            SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+         debug(linconsPrint(scip, lincons0, NULL));
+         debug(linconsPrint(scip, lincons1, NULL));
+         /* check for infeasibility */
+         if( SCIPisGT(scip, lincons1->lhs, lincons0->rhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
+            *result = SCIP_CUTOFF;
+            continue;
+         }
+         linconsChgLhs(scip, lincons0, -SCIPinfinity(scip));
+         (*nchgsides)++;
+         *result = SCIP_SUCCESS;
+      }
+      else if( cons0dominateslhs && !SCIPisInfinity(scip, -lincons1->lhs) )
+      {
+         /* left hand side is dominated by lincons0: delete left hand side of lincons1 */
+         debugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
+            SCIPconsGetName(cons1), SCIPconsGetName(cons0));
+         debug(linconsPrint(scip, lincons1, NULL));
+         debug(linconsPrint(scip, lincons0, NULL));
+         /* check for infeasibility */
+         if( SCIPisGT(scip, lincons0->lhs, lincons1->rhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            *result = SCIP_CUTOFF;
+            continue;
+         }
+         linconsChgLhs(scip, lincons1, -SCIPinfinity(scip));
+         (*nchgsides)++;
+         *result = SCIP_SUCCESS;
+      }
+      if( cons1dominatesrhs && !SCIPisInfinity(scip, lincons0->rhs) )
+      {
+         /* right hand side is dominated by lincons1: delete right hand side of lincons0 */
+         debugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
+            SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+         debug(linconsPrint(scip, lincons0, NULL));
+         debug(linconsPrint(scip, lincons1, NULL));
+         /* check for infeasibility */
+         if( SCIPisLT(scip, lincons1->rhs, lincons0->lhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons0));
+            *result = SCIP_CUTOFF;
+            continue;
+         }
+         linconsChgRhs(scip, lincons0, SCIPinfinity(scip));
+         (*nchgsides)++;
+         *result = SCIP_SUCCESS;
+      }
+      else if( cons0dominatesrhs && !SCIPisInfinity(scip, lincons1->rhs) )
+      {
+         /* right hand side is dominated by lincons0: delete right hand side of lincons1 */
+         debugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
+            SCIPconsGetName(cons1), SCIPconsGetName(cons0));
+         debug(linconsPrint(scip, lincons1, NULL));
+         debug(linconsPrint(scip, lincons0, NULL));
+         /* check for infeasibility */
+         if( SCIPisLT(scip, lincons0->rhs, lincons1->lhs) )
+         {
+            debugMessage("linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            *result = SCIP_CUTOFF;
+            continue;
+         }
+         linconsChgRhs(scip, lincons1, SCIPinfinity(scip));
+         (*nchgsides)++;
+         *result = SCIP_SUCCESS;
+      }
+
+      /* check for now redundant constraints */
+      if( SCIPisInfinity(scip, -lincons0->lhs) && SCIPisInfinity(scip, lincons0->rhs) )
+      {
+         /* lincons0 became redundant */
+         debugMessage("linear constraint <%s> is redundant\n", SCIPconsGetName(cons0));
+         CHECK_OKAY( SCIPdelCons(scip, cons0) );
+         (*ndelconss)++;
+         *result = SCIP_SUCCESS;
+         continue;
+      }
+      if( SCIPisInfinity(scip, -lincons1->lhs) && SCIPisInfinity(scip, lincons1->rhs) )
+      {
+         /* lincons1 became redundant */
+         debugMessage("linear constraint <%s> is redundant\n", SCIPconsGetName(cons1));
+         CHECK_OKAY( SCIPdelCons(scip, cons1) );
+         (*ndelconss)++;
+         *result = SCIP_SUCCESS;
+         continue;
+      }
+
+      /* check, if we want to aggregate equalities:
+       *   lincons0 := a * lincons0 + b * lincons1  or  lincons1 := a * lincons1 + b * lincons0
+       */
+      if( cons0isequality && cons1isequality )
+      {
+         Bool aggregated;
+
+         assert(lincons0->nvars == nvarscommon + nvars0minus1);
+         assert(lincons1->nvars == nvarscommon + nvars1minus0);
+
+         aggregated = FALSE;
+         if( nvarscommon > nvars1minus0 )
+         {
+            /* N_c > N_1: try to aggregate  lincons0 := a * lincons0 + b * lincons1 */
+            CHECK_OKAY( linconsAggregateEqualities(scip, cons0, cons1, nvarscommon, commonidx0, commonidx1,
+                           diffidx0minus1, diffidx1minus0, nchgcoefs, result, &aggregated) );
+         }
+         if( !aggregated && nvarscommon > nvars0minus1 )
+         {
+            /* N_c > N_0: try to aggregate  lincons1 := a * lincons1 + b * lincons0 */
+            CHECK_OKAY( linconsAggregateEqualities(scip, cons1, cons0, nvarscommon, commonidx1, commonidx0,
+                           diffidx1minus0, diffidx0minus1, nchgcoefs, result, &aggregated) );
+         }
+      }
+   }
+
+   /* free temporary memory */
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx1minus0) );
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx0minus1) );
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &commonidx1) );
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &commonidx0) );
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_CONSPRESOL(consPresolLinear)
 {
@@ -2567,6 +3375,7 @@ DECL_CONSPRESOL(consPresolLinear)
    Bool conschanged;
    int oldnfixedvars;
    int oldnaggrvars;
+   int firstchange;
    int c;
 
    assert(conshdlr != NULL);
@@ -2581,6 +3390,7 @@ DECL_CONSPRESOL(consPresolLinear)
    /* process constraints */
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
+   firstchange = -1;
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
@@ -2590,8 +3400,15 @@ DECL_CONSPRESOL(consPresolLinear)
       lincons = consdata->lincons;
       assert(lincons != NULL);
 
+      if( !lincons->changed )
+         continue;
+
       debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
       debug(linconsPrint(scip, lincons, NULL));
+
+      /* remember the first constraint that has been changed (needed for redundancy checking) */
+      if( firstchange == -1 )
+         firstchange = c;
 
       consdeleted = FALSE;
       conschanged = FALSE;
@@ -2600,9 +3417,6 @@ DECL_CONSPRESOL(consPresolLinear)
       if( nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
       {
          CHECK_OKAY( linconsApplyFixings(scip, lincons, &conschanged) );
-
-         debugMessage("after fixings <%s>: ", SCIPconsGetName(cons));
-         debug(linconsPrint(scip, lincons, NULL));
       }
 
       /* we can only presolve linear constraints, that are not modifiable */
@@ -2703,7 +3517,23 @@ DECL_CONSPRESOL(consPresolLinear)
                CHECK_OKAY( SCIPaddCons(scip, upgdcons) );
                CHECK_OKAY( SCIPreleaseCons(scip, &upgdcons) );
                (*nupgdconss)++;
+               continue;
             }
+         }
+      }
+
+      lincons->changed = FALSE;
+   }
+
+   /* redundancy checking */
+   if( *result != SCIP_CUTOFF && firstchange != -1 )
+   {
+      for( c = firstchange; c < nconss; ++c )
+      {
+         if( SCIPconsIsActive(conss[c]) )
+         {
+            CHECK_OKAY( linconsRemoveRedundancy(scip, conss, firstchange, c,
+                           nfixedvars, naggrvars, ndelconss, nchgsides, nchgcoefs, result) );
          }
       }
    }
@@ -2762,6 +3592,8 @@ DECL_EVENTEXEC(eventExecLinear)
       assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
       linconsUpdateChgUb(scip, lincons, var, oldbound, newbound, lincons->vals[varpos]);
    }
+
+   lincons->changed = TRUE;
 
    /*debug(printf(" -> [%g,%g]\n", linconsdata->minactivity, linconsdata->maxactivity));*/
 

@@ -1612,10 +1612,84 @@ RETCODE SCIPboolarraySetVal(
  * Sorting algorithms
  */
 
+/** bubble sort an indexed element set, resulting in a permutation index array */
+void SCIPbsort(
+   void*            dataptr,            /**< pointer to data field that is given to the external compare method */
+   int              len,                /**< number of elements to be sorted (valid index range) */
+   DECL_SORTINDCOMP((*indcmp)),         /**< data element comparator */
+   int*             indarray            /**< pointer to store the sorted index array */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+   int tmpind;
+
+   assert(indcmp != NULL);
+   assert(len == 0 || indarray != NULL);
+
+   /* create identity permutation */
+   for( actpos = 0; actpos < len; ++actpos )
+      indarray[actpos] = actpos;
+
+   /* bubble sort index array */
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && indcmp(dataptr, indarray[actpos], indarray[actpos+1]) <= 0 )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert( indcmp(dataptr, indarray[actpos], indarray[actpos+1]) > 0 );
+         tmpind = indarray[actpos];
+         do
+         {
+            indarray[actpos] = indarray[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && indcmp(dataptr, tmpind, indarray[actpos+1]) > 0 );
+         indarray[actpos] = tmpind;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && indcmp(dataptr, indarray[actpos-1], indarray[actpos]) <= 0 )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert( indcmp(dataptr, indarray[actpos-1], indarray[actpos]) > 0 );
+         tmpind = indarray[actpos];
+         do
+         {
+            indarray[actpos] = indarray[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && indcmp(dataptr, indarray[actpos-1], tmpind) > 0 );
+         indarray[actpos] = tmpind;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
 /** bubble sort of an array of pointers */
 void SCIPbsortPtr(
    void**           ptrarray,           /**< pointer array to be sorted */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of array */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    )
 {
@@ -1626,6 +1700,7 @@ void SCIPbsortPtr(
    void* tmpptr;
 
    assert(len == 0 || ptrarray != NULL);
+   assert(ptrcmp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -1683,7 +1758,7 @@ void SCIPbsortPtr(
 void SCIPbsortPtrDbl(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    )
 {
@@ -1696,6 +1771,7 @@ void SCIPbsortPtrDbl(
 
    assert(len == 0 || ptrarray != NULL);
    assert(len == 0 || dblarray != NULL);
+   assert(ptrcmp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -1755,12 +1831,12 @@ void SCIPbsortPtrDbl(
    }
 }
 
-/** bubble sort of three joint arrays of pointers/Reals/Ints, sorted by first */
+/** bubble sort of three joint arrays of pointers/Reals/ints, sorted by first */
 void SCIPbsortPtrDblInt(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int*             intarray,           /**< int array to be permuted in the same way */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    )
 {
@@ -1775,6 +1851,7 @@ void SCIPbsortPtrDblInt(
    assert(len == 0 || ptrarray != NULL);
    assert(len == 0 || dblarray != NULL);
    assert(len == 0 || intarray != NULL);
+   assert(ptrcmp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -1840,13 +1917,13 @@ void SCIPbsortPtrDblInt(
    }
 }
 
-/** bubble sort of four joint arrays of pointers/Reals/Ints/Ints, sorted by first */
+/** bubble sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
 void SCIPbsortPtrDblIntInt(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int*             intarray1,          /**< first int array to be permuted in the same way */
    int*             intarray2,          /**< second int array to be permuted in the same way */
-   int              len,                /**< length of both arrays */
+   int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    )
 {
@@ -1863,6 +1940,7 @@ void SCIPbsortPtrDblIntInt(
    assert(len == 0 || dblarray != NULL);
    assert(len == 0 || intarray1 != NULL);
    assert(len == 0 || intarray2 != NULL);
+   assert(ptrcmp != NULL);
 
    firstpos = 0;
    lastpos = len-1;

@@ -3039,6 +3039,16 @@ CONSDATA* SCIPconsGetData(
    return cons->consdata;
 }
 
+/** returns TRUE iff constraint is active in the current node */
+Bool SCIPconsIsActive(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updateactivate || (cons->active && !cons->updatedeactivate);
+}
+
 /** returns TRUE iff constraint should be separated during LP processing */
 Bool SCIPconsIsSeparated(
    CONS*            cons                /**< constraint */

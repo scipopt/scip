@@ -513,6 +513,7 @@ void convertSides(
    int*             rngcount            /**< pointer to store the number of range rows */
    )
 {
+   int oldnrows;
    int i;
 
    assert(lpi != NULL);
@@ -521,6 +522,10 @@ void convertSides(
    assert(rhs != NULL);
    assert(rngcount != NULL);
 
+   /* get current number of rows */
+   oldnrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
+
+   /* convert lhs/rhs into sen/rhs/rng */
    *rngcount = 0;
    for( i = 0; i < nrows; ++i )
    {
@@ -561,7 +566,7 @@ void convertSides(
          lpi->senarray[i] = 'R';
          lpi->rhsarray[i] = lhs[i];
          lpi->rngarray[*rngcount] = rhs[i] - lhs[i];
-         lpi->rngindarray[*rngcount] = i;
+         lpi->rngindarray[*rngcount] = i + oldnrows;
          (*rngcount)++;
       }
    }
@@ -895,7 +900,6 @@ RETCODE SCIPlpiAddRows(
    )
 {
    int rngcount;
-   int i;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
@@ -911,7 +915,10 @@ RETCODE SCIPlpiAddRows(
    /* add rows to LP */
    CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
                   rownames) );
-   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
+   if( rngcount > 0 )
+   {
+      CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
+   }
 
    return SCIP_OKAY;
 }
@@ -986,7 +993,6 @@ RETCODE SCIPlpiChgSides(
    )
 {
    int rngcount;
-   int i;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
@@ -1586,7 +1592,7 @@ Bool SCIPlpiIsPrimalUnbounded(
 
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
-   return (lpi->solstat == CPX_STAT_UNBOUNDED && primalfeasible);
+   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
 }
 
 /** returns TRUE iff LP is primal infeasible */
@@ -1603,9 +1609,7 @@ Bool SCIPlpiIsPrimalInfeasible(
 
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE
-      || (lpi->solstat == CPX_STAT_UNBOUNDED && !primalfeasible)
-      || lpi->solstat == CPX_STAT_INForUNBD);
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && !primalfeasible));
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -1622,7 +1626,7 @@ Bool SCIPlpiIsDualUnbounded(
 
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return ((lpi->solstat == CPX_STAT_INFEASIBLE && dualfeasible) || lpi->solstat == CPX_STAT_INForUNBD);
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
 }
 
 /** returns TRUE iff LP is dual infeasible */
@@ -1639,7 +1643,7 @@ Bool SCIPlpiIsDualInfeasible(
 
    CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible));
+   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && !dualfeasible));
 }
 
 /** returns TRUE iff LP was solved to optimality */

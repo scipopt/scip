@@ -539,8 +539,8 @@ RETCODE SCIPsolGetVal(
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.aggregate.var, solval) );
-      *solval *= var->data.aggregate.scalar;
-      *solval += var->data.aggregate.constant;
+      (*solval) *= var->data.aggregate.scalar;
+      (*solval) += var->data.aggregate.constant;
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -548,7 +548,7 @@ RETCODE SCIPsolGetVal(
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.multaggr.vars[i], &val) );
-         *solval += var->data.multaggr.scalars[i] * val;
+         (*solval) += var->data.multaggr.scalars[i] * val;
       }
       return SCIP_OKAY;
 

@@ -66,6 +66,7 @@ struct SetcoverCons
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the constraint data belongs to the transformed problem? */
+   unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
 };
 typedef struct SetcoverCons SETCOVERCONS; /**< set covering constraint data */
 
@@ -405,6 +406,8 @@ RETCODE setcoverconsDelCoefPos(
    setcovercons->vars[pos] = setcovercons->vars[setcovercons->nvars-1];
    setcovercons->nvars--;
 
+   setcovercons->changed = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -444,6 +447,7 @@ RETCODE setcoverconsCreate(
    (*setcovercons)->modifiable = modifiable;
    (*setcovercons)->removeable = removeable;
    (*setcovercons)->transformed = FALSE;
+   (*setcovercons)->changed = TRUE;
 
    return SCIP_OKAY;
 }   
@@ -1399,6 +1403,9 @@ DECL_CONSPRESOL(consPresolSetcover)
       setcovercons = consdata->setcovercons;
       assert(setcovercons != NULL);
 
+      if( !setcovercons->changed )
+         continue;
+
       debugMessage("presolving set covering constraint <%s>\n", SCIPconsGetName(cons));
 
       /* remove all variables that are fixed to zero */
@@ -1448,6 +1455,8 @@ DECL_CONSPRESOL(consPresolSetcover)
             continue;
          }
       }
+
+      setcovercons->changed = FALSE;
    }
    
    return SCIP_OKAY;
@@ -1591,6 +1600,8 @@ DECL_EVENTEXEC(eventExecSetcover)
    }
    assert(0 <= setcovercons->nfixedzeros && setcovercons->nfixedzeros <= setcovercons->nvars);
    assert(0 <= setcovercons->nfixedones && setcovercons->nfixedones <= setcovercons->nvars);
+
+   setcovercons->changed = TRUE;
 
    debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
       setcovercons->nfixedzeros, setcovercons->nfixedones, setcovercons->nvars);

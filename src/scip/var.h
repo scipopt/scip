@@ -411,7 +411,8 @@ RETCODE SCIPvarAggregate(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
 /** converts variable into multi-aggregated variable */
@@ -429,7 +430,8 @@ RETCODE SCIPvarMultiaggregate(
    int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
-   Real             constant            /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -616,6 +618,15 @@ int SCIPvarGetIndex(
 extern
 int SCIPvarGetProbIndex(
    VAR*             var                 /**< problem variable */
+   );
+
+/** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
+ *  variable index; returns 0 if both indices are equal, which means both variables are equal
+ */
+extern
+int SCIPvarCmp(
+   VAR*             var1,               /**< first problem variable */
+   VAR*             var2                /**< second problem variable */
    );
 
 /** gets corresponding transformed variable of an original variable */
