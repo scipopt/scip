@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.144 2004/10/29 13:27:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.145 2004/11/12 13:03:45 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1115,7 +1115,7 @@ RETCODE solveNodeLP(
    stat->nnodelps += stat->nlps - nlps;
    stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
 
-#if 1 /**@todo check if this is valid and useful (faster (but not so well?) strong branching -> see 10teams.mps) */
+#if 0 /**@todo check if this is valid and useful (faster (but not so well?) strong branching -> see 10teams.mps) */
    /*???????????????????????????????*/
    if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {

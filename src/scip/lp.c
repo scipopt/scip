@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.161 2004/11/03 13:26:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.162 2004/11/12 13:03:44 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9165,9 +9165,12 @@ RETCODE SCIPlpSolveAndEval(
    assert(lp != NULL);
    assert(prob != NULL);
    assert(prob->nvars >= lp->ncols);
+   assert(lperror != NULL);
 
    debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d, diving=%d, cutoff=%g\n", 
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->cutoffbound);
+
+   *lperror = FALSE;
 
    /* flush changes to the LP solver */
    CHECK_OKAY( SCIPlpFlush(lp, memhdr, set) );

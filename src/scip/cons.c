@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.99 2004/10/29 10:38:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.100 2004/11/12 13:03:44 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3936,6 +3936,8 @@ RETCODE SCIPconsResetAge(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(!cons->updateactivate);
+
+   debugMessage("resetting age %g of constraint <%s> of handler <%s>\n", cons->age, cons->name, cons->conshdlr->name);
 
    cons->age = 0.0;
 

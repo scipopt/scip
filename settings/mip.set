@@ -115,12 +115,12 @@ lp/solvefreq = 1
 lp/solvedepth = -1
 
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
-# [type: int, range: [-1,2147483647], default: -1]
-lp/colagelimit = -1
+# [type: int, range: [-1,2147483647], default: 10]
+lp/colagelimit = 10
 
 # maximum age a dynamic row can reach before it is deleted from the LP (-1: don't delete rows due to aging)
-# [type: int, range: [-1,2147483647], default: -1]
-lp/rowagelimit = -1
+# [type: int, range: [-1,2147483647], default: 10]
+lp/rowagelimit = 10
 
 # should new non-basic columns be removed after LP solving?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

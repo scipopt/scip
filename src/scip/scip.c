@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.224 2004/11/02 17:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.225 2004/11/12 13:03:45 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6228,7 +6228,9 @@ RETCODE SCIPprintVar(
  * conflict analysis methods
  */
 
-/** initializes the conflict analysis by clearing the conflict candidate queue */
+/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
+ *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), or SCIPaddConflictBinvar();
+ */
 RETCODE SCIPinitConflictAnalysis(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -6313,9 +6315,9 @@ RETCODE SCIPaddConflictBinvar(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
- *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
- *  resulting conflict set;
+/** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
+ *  SCIPconflictAddLb(), SCIPconflictAddUb(), or SCIPaddConflictBinvar();
+ *  on success, calls the conflict handlers to create a conflict constraint out of the resulting conflict set;
  *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
  *  SCIPaddConflictUb() and SCIPaddConflictBinvar() is valid for the whole subtree; if the conflict was found by a
  *  violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct
@@ -7903,8 +7905,18 @@ RETCODE SCIPsolveDiveLP(
       return SCIP_INVALIDCALL;
    }
 
+   /* solve diving LP */
    CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
          itlim, FALSE, lperror) );
+
+   /* analyze an infeasible LP (not necessary in the root node) */
+   if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
+      && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
+         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
+   {
+      CHECK_OKAY( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+            scip->tree, scip->lp, NULL) );
+   }
 
    return SCIP_OKAY;
 }

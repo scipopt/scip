@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.62 2004/11/02 11:27:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.63 2004/11/12 13:03:44 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -54,7 +54,8 @@
 
 
 /**@todo make this a parameter setting */
-#define AGEFACTOR 0.2 /*?????????????????????*/
+#define AGEINCREASE(n) (1.0 + 0.2*n)
+
 
 /** constraint handler data */
 struct ConshdlrData
@@ -629,6 +630,9 @@ RETCODE processWatchedVars(
 
       /* disable propagation of constraint until a watched variable gets fixed */
       CHECK_OKAY( SCIPdisableConsPropagation(scip, cons) );
+
+      /* increase aging counter */
+      CHECK_OKAY( SCIPaddConsAge(scip, cons, AGEINCREASE(consdata->nvars)) );
    }
 
    return SCIP_OKAY;
@@ -802,12 +806,6 @@ RETCODE separateCons(
       {
          CHECK_OKAY( checkCons(scip, cons, NULL, &addcut) );
       }
-
-      if( !addcut )
-      {
-         /* constraint was feasible -> increase age */
-         CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
-      }
    }
 
    if( addcut )
@@ -868,15 +866,6 @@ RETCODE enforcePseudo(
          /* constraint was infeasible -> reset age */
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          *infeasible = TRUE;
-      }
-      else
-      {
-         CONSDATA* consdata;
-
-         /* constraint was feasible -> increase age */
-         consdata = SCIPconsGetData(cons);
-         assert(consdata != NULL);
-         CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
       }
    }
    else if( addcut )
@@ -1199,14 +1188,8 @@ DECL_CONSCHECK(consCheckLogicor)
          if( violated )
          {
             /* constraint is violated */
-            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
             return SCIP_OKAY;
-         }
-         else
-         {
-            /* constraint was feasible -> increase age */
-            CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
          }
       }
    }
@@ -1389,9 +1372,6 @@ DECL_CONSRESPROP(consRespropLogicor)
       }
    }
    assert(infervarfound);
-
-   /* reduce the age of the constraint, because it was responsible for the conflict */
-   CHECK_OKAY( SCIPaddConsAge(scip, cons, -SCIPconsGetAge(cons)/2.0) );
 
    *result = SCIP_SUCCESS;
 

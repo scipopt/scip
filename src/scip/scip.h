@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.179 2004/11/02 17:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.180 2004/11/12 13:03:45 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2190,7 +2190,9 @@ RETCODE SCIPprintVar(
 /**@name Conflict Analysis Methods */
 /**@{ */
 
-/** initializes the conflict analysis by clearing the conflict candidate queue */
+/** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
+ *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), or SCIPaddConflictBinvar();
+ */
 extern
 RETCODE SCIPinitConflictAnalysis(
    SCIP*            scip                /**< SCIP data structure */
@@ -2239,9 +2241,9 @@ RETCODE SCIPaddConflictBinvar(
    VAR*             var                 /**< binary variable whose changed bound should be added to conflict queue */
    );
 
-/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
- *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
- *  resulting conflict set;
+/** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
+ *  SCIPconflictAddLb(), SCIPconflictAddUb(), or SCIPaddConflictBinvar();
+ *  on success, calls the conflict handlers to create a conflict constraint out of the resulting conflict set;
  *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
  *  SCIPaddConflictUb() and SCIPaddConflictBinvar() is valid for the whole subtree; if the conflict was found by a
  *  violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct

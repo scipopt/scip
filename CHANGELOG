@@ -65,7 +65,11 @@ interface:
 
 parameters:
 - lp/colagelimit and lp/rowagelimit may now be set to -1 to disable deletion of columns/rows due to aging
-- default setting for lp/colagelimit and lp/rowagelimit is now -1
+
+features:
+- infeasible LPs in diving now produce conflict clauses (if LP conflict analysis is enabled)
+- conflict analysis was slightly modified
+- slightly changed aging strategy of logic or constraint handler
 
 fixed bugs:
 - removed bug in conflict analysis that appears if the conflict is only active at the current depth level

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.119 2004/11/01 13:48:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.120 2004/11/12 13:03:45 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -111,9 +111,9 @@
 
 #define SCIP_DEFAULT_LP_SOLVEFREQ             1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LP_SOLVEDEPTH           -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_LP_COLAGELIMIT          -1 /**< maximum age a dynamic column can reach before it is deleted from LP
+#define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from LP
                                                  *   (-1: don't delete columns due to aging) */
-#define SCIP_DEFAULT_LP_ROWAGELIMIT          -1 /**< maximum age a dynamic row can reach before it is deleted from LP
+#define SCIP_DEFAULT_LP_ROWAGELIMIT          10 /**< maximum age a dynamic row can reach before it is deleted from LP
                                                  *   (-1: don't delete rows due to aging) */
 #define SCIP_DEFAULT_LP_CLEANUPCOLS       FALSE /**< should new non-basic columns be removed after LP solving? */
 #define SCIP_DEFAULT_LP_CLEANUPROWS        TRUE /**< should new basic rows be removed after LP solving? */
