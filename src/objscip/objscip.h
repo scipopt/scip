@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objscip.h,v 1.4 2004/02/04 17:27:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objscip.h,v 1.5 2004/05/03 13:37:43 bzfpfend Exp $"
 
 /**@file   objscip.h
  * @brief  C++ wrapper classes for SCIP
@@ -36,6 +36,7 @@
 #include "objprobdata.h"
 #include "objreader.h"
 #include "objsepa.h"
+#include "objvardata.h"
 
 
 #endif
