@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.70 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.71 2004/11/30 17:41:00 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -764,6 +764,10 @@ RETCODE analyzeConflictZero(
    CONSDATA* consdata;
    int v;
 
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
@@ -794,6 +798,10 @@ RETCODE analyzeConflictOne(
    CONSDATA* consdata;
    int v;
    int n;
+
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.65 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.66 2004/11/30 17:41:00 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -454,6 +454,10 @@ RETCODE analyzeConflict(
 {
    CONSDATA* consdata;
    int v;
+
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

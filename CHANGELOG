@@ -41,6 +41,7 @@ fixed bugs:
 - removed bug with aborted solving in root node (e.g. due to time limit) that is tagged to be restarted
 - changed numerics for integrality check of coefficients (fixed bug with accumulated errors in rows s.t. the
   row's activity is no longer integral although the row is marked being integer)
+- fixed bugs in constraint handlers (and, logicor, or, setppc, xor) with calling conflict analysis during presolving
 
 
 SCIP version 0.77

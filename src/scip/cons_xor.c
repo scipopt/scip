@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.14 2004/11/29 12:17:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.15 2004/11/30 17:41:00 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -645,6 +645,10 @@ RETCODE analyzeConflict(
 {
    CONSDATA* consdata;
    int v;
+
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

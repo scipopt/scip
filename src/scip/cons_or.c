@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.25 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.26 2004/11/30 17:41:00 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -820,6 +820,10 @@ RETCODE analyzeConflictZero(
    CONSDATA* consdata;
    int v;
 
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
@@ -848,6 +852,10 @@ RETCODE analyzeConflictOne(
    int v;
 
    assert(!SCIPconsIsModifiable(cons));
+
+   /* conflict analysis can only be applied in solving stage */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
