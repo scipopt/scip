@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer.h
- * @brief  datastructures and methods for variable pricers
+ * @brief  methods and datastructures for variable pricers
  * @author Tobias Achterberg
  */
 

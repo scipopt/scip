@@ -34,7 +34,7 @@ enum BitarithType
    SCIP_BITARITHTYPE_SUB    = 1,        /**< truncated subtraction: z  =  (x - y) % len(z)     */
    SCIP_BITARITHTYPE_SHL    = 2,        /**< truncated shift left:  z  =  (x << y) % len(z)    */
    SCIP_BITARITHTYPE_EQ     = 3,        /**< equality operator:     z <-> (x == y)             */
-   SCIP_BITARITHTYPE_NOT    = 4         /**< bitwise not operator:  z  =  ~x                   */
+   SCIP_BITARITHTYPE_NOT    = 4         /**< bit not operator:      z  =  ~x                   */
 };
 typedef enum BitarithType BITARITHTYPE;
 

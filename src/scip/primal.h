@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.h
- * @brief  datastructures and methods for collecting primal CIP solutions and primal informations
+ * @brief  methods and datastructures for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
 

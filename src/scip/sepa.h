@@ -95,8 +95,8 @@ RETCODE SCIPsepaCreate(
    int              priority,           /**< priority of separator */
    int              freq,               /**< frequency for calling separator */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
-   DECL_SEPAINIT    ((*sepainit)),      /**< initialise separator */
-   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialise separator */
+   DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
+   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
    DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
    SEPADATA*        sepadata            /**< separator data */
    );

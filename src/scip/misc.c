@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.c
- * @brief  miscellaneous datastructures and methods
+ * @brief  miscellaneous methods and datastructures
  * @author Tobias Achterberg
  */
 

@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol.h
- * @brief  datastructures and methods for presolvers
+ * @brief  methods and datastructures for presolvers
  * @author Tobias Achterberg
  */
 
@@ -115,8 +115,8 @@ RETCODE SCIPpresolCreate(
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialise presolver */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialise presolver */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
    DECL_PRESOLEXEC  ((*presolexec)),    /**< presolving execution method */
    PRESOLDATA*      presoldata          /**< presolver data */
    );

@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel.c
- * @brief  datastructures and methods for node selectors
+ * @brief  methods and datastructures for node selectors
  * @author Tobias Achterberg
  */
 
@@ -51,8 +51,8 @@ struct Nodesel
    char*            name;               /**< name of node selector */
    char*            desc;               /**< description of node selector */
    DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
-   DECL_NODESELINIT ((*nodeselinit));   /**< initialise node selector */
-   DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialise node selector */
+   DECL_NODESELINIT ((*nodeselinit));   /**< initialize node selector */
+   DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
    NODESELDATA*     nodeseldata;        /**< node selector data */
@@ -657,8 +657,8 @@ RETCODE SCIPnodeselCreate(
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
-   DECL_NODESELINIT ((*nodeselinit)),   /**< initialise node selector */
-   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialise node selector */
+   DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
+   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */

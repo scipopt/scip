@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.h
- * @brief  LP management datastructures and methods
+ * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:

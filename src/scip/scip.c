@@ -736,8 +736,8 @@ RETCODE SCIPincludeConsHdlr(
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
-   DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
-   DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
+   DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
    DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
@@ -792,8 +792,8 @@ RETCODE SCIPincludePresol(
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialise presolver */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialise presolver */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
    DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    PRESOLDATA*      presoldata          /**< presolver data */
    )
@@ -830,8 +830,8 @@ RETCODE SCIPincludeSepa(
    int              priority,           /**< priority of the separator */
    int              freq,               /**< frequency for calling separator */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
-   DECL_SEPAINIT    ((*sepainit)),      /**< initialise separator */
-   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialise separator */
+   DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
+   DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
    DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
    SEPADATA*        sepadata            /**< separator data */
    )
@@ -871,8 +871,8 @@ RETCODE SCIPincludeHeur(
    int              freq,               /**< frequency for calling primal heuristic */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
-   DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
-   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
+   DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
+   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
    DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    )
@@ -908,8 +908,8 @@ RETCODE SCIPincludeEventhdlr(
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
    DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
-   DECL_EVENTINIT   ((*eventinit)),     /**< initialise event handler */
-   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialise event handler */
+   DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
+   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
    DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
@@ -946,8 +946,8 @@ RETCODE SCIPincludeNodesel(
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
    DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
-   DECL_NODESELINIT ((*nodeselinit)),   /**< initialise node selector */
-   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialise node selector */
+   DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
+   DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
    DECL_NODESELSELECT((*nodeselselect)),/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp)),   /**< node comparison method */
    NODESELDATA*     nodeseldata,        /**< node selector data */
@@ -1023,8 +1023,8 @@ RETCODE SCIPincludeBranchrule(
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
-   DECL_BRANCHINIT  ((*branchinit)),    /**< initialise branching rule */
-   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialise branching rule */
+   DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
+   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
    DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
@@ -1076,8 +1076,8 @@ RETCODE SCIPincludeDisp(
    const char*      header,             /**< head line of display column */
    DISPSTATUS       dispstatus,         /**< display activation status of display column */
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
-   DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
-   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
+   DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
+   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
    DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */

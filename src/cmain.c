@@ -148,43 +148,9 @@ RETCODE runSCIP(
       return SCIP_OKAY;
    }
 
-#if 1
    printf("\nread problem <%s>\n", argv[1]);
    printf("============\n\n");
    CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
-#else /*?????????????????????*/
-   {
-      CONS* bitvar1;
-      CONS* bitvar2;
-      CONS* bitvar3;
-      CONS* cons;
-
-      CHECK_OKAY( SCIPcreateProb(scip, "testprob", NULL, NULL, NULL) );
-      
-      CHECK_OKAY( SCIPcreateConsBitconstString(scip, &bitvar1, "bitvar1", 1, 0.0, "b1") );
-
-      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar2, "bitvar2", 1024, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
-      CHECK_OKAY( SCIPaddCons(scip, bitvar2) );
-      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar3, "bitvar3", 1024, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
-      CHECK_OKAY( SCIPaddCons(scip, bitvar3) );
-
-      CHECK_OKAY( SCIPcreateConsBitarith(scip, &cons, "bitarith", SCIP_BITARITHTYPE_ADD, bitvar1, bitvar2, bitvar3,
-                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCons(scip, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-
-      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "linear", 0, NULL, NULL, 1.0, SCIPinfinity(scip),
-                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCoefLinear(scip, cons, SCIPgetWordBitvar(bitvar2, SCIPgetNWordsBitvar(bitvar2)-1), +1.0) );
-      CHECK_OKAY( SCIPaddCoefLinear(scip, cons, SCIPgetWordBitvar(bitvar3, SCIPgetNWordsBitvar(bitvar3)-1), -1.0) );
-      CHECK_OKAY( SCIPaddCons(scip, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-
-      CHECK_OKAY( SCIPreleaseCons(scip, &bitvar1) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &bitvar2) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &bitvar3) );
-   }
-#endif
 
 
    /*******************

@@ -57,6 +57,7 @@ struct ConsData
    VAR**            bits;               /**< binaries representing bits of the bitvar, least significant first */
    VAR**            words;              /**< integers representing words of the bitvar, least significant first */
    ROW**            rows;               /**< LP rows storing equalities for each word */
+   CONS*            equalvar;           /**< bitvar that was found to be equal to the bitvar, or NULL */
    int              nbits;              /**< number of bits */
    int              nwords;             /**< number of words: nwords = ceil(nbits/WORDSIZE) */
    unsigned int     constant:1;         /**< was bitvar created as a constant? */
@@ -162,6 +163,7 @@ RETCODE consdataCreate(
    CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->bits, (*consdata)->nbits) );
    CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->words, (*consdata)->nwords) );
    (*consdata)->rows = NULL;
+   (*consdata)->equalvar = NULL;
    (*consdata)->constant = FALSE;
    (*consdata)->propagated = FALSE;
 
@@ -954,6 +956,36 @@ RETCODE parseBitString(
    return SCIP_OKAY;
 }
 
+/** parses a string into an array of bits, storing the bits with least significant bit first
+ */
+static
+RETCODE parseStringConst(
+   const char*      s,                  /**< string to parse into bit array */
+   int              nbits,              /**< number of bits to parse */
+   Bool*            bitarray            /**< array to store the parsed bits in (must have length nbits) */
+   )
+{
+   assert(s != NULL);
+
+   switch( s[0] )
+   {
+   case 'b':
+   case 'B':
+      CHECK_OKAY( parseBitString(s+1, nbits, bitarray) );
+      break;
+
+   default:
+      {
+         char msg[MAXSTRLEN];
+         sprintf(msg, "invalid base character <%c> in bit constant string", s[0]);
+         errorMessage(msg);
+         return SCIP_PARSEERROR;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1555,7 +1587,6 @@ RETCODE SCIPcreateConsBitconstString(
    )
 {
    Bool* fixedbits;
-   char msg[MAXSTRLEN];
 
    assert(cstring != NULL);
 
@@ -1563,18 +1594,7 @@ RETCODE SCIPcreateConsBitconstString(
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &fixedbits, nbits) );
 
    /* parse the string in a bit array */
-   switch( *cstring )
-   {
-   case 'b':
-   case 'B':
-      CHECK_OKAY( parseBitString(cstring+1, nbits, fixedbits) );
-      break;
-
-   default:
-      sprintf(msg, "invalid base character <%c> in bit constant string", *cstring);
-      errorMessage(msg);
-      return SCIP_PARSEERROR;
-   }
+   CHECK_OKAY( parseStringConst(cstring, nbits, fixedbits) );
 
    /* create the bitvar constant */
    CHECK_OKAY( SCIPcreateConsBitconst(scip, cons, name, nbits, obj, fixedbits) );
@@ -1744,4 +1764,278 @@ Bool SCIPisConstBitvar(
    assert(consdata != NULL);
 
    return consdata->constant;
+}
+
+/** gets active problem bit variable, resolving formerly assigned bit variable equalities */
+CONS* SCIPgetActiveBitvar(
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* follow the path of equal variables to the active problem bit variable */
+   while( consdata->equalvar != NULL )
+   {
+      cons = consdata->equalvar;
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+   }
+
+   return cons;
+}
+
+/** fixes a bitvar to the constant value given as string */
+RETCODE SCIPfixBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   const char*      cstring,            /**< constant given as a string */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables, or NULL */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   )
+{
+   CONSDATA* consdata;
+   Bool* fixedbits;
+   int b;
+
+   assert(cstring != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get memory for constant as bit array */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &fixedbits, consdata->nbits) );
+
+   /* parse the string in a bit array */
+   CHECK_OKAY( parseStringConst(cstring, consdata->nbits, fixedbits) );
+
+   /* fix all bits in the bit variable to the given values */
+   for( b = 0; b < consdata->nbits && !(*infeasible); ++b )
+   {
+      if( (fixedbits[b] == TRUE && SCIPvarGetLbLocal(consdata->bits[b]) < 0.5)
+         || (fixedbits[b] == FALSE && SCIPvarGetUbLocal(consdata->bits[b]) > 0.5) )
+      {
+         CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], (Real)(fixedbits[b]), infeasible) );
+         if( nfixedvars != NULL )
+            (*nfixedvars)++;
+      }
+   }
+
+   /* release memory buffer */
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &fixedbits) );
+
+   return SCIP_OKAY;
+}
+
+/** informs two bitvars that they are equal, aggregates the corresponding variables (if not already done), and
+ *  deletes one of the corresponding bitvar constraints
+ */
+RETCODE SCIPequalizeBitvars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons1,              /**< first bitvar constraint */
+   CONS*            cons2,              /**< second bitvar constraint */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables */
+   int*             naggrvars,          /**< pointer to add up the number of aggregated variables */
+   int*             ndelconss,          /**< pointer to add up the number of deleted constraints */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   )
+{
+   CONSDATA* consdata1;
+   CONSDATA* consdata2;
+   Bool redundant;
+   Bool aggregated;
+   int nbits;
+   int nwords;
+   int b;
+   int w;
+   
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* find the active problem bit variable for each constraint */
+   cons1 = SCIPgetActiveBitvar(cons1);
+   cons2 = SCIPgetActiveBitvar(cons2);
+   consdata1 = SCIPconsGetData(cons1);
+   consdata2 = SCIPconsGetData(cons2);
+   assert(consdata1 != NULL);
+   assert(consdata2 != NULL);
+   assert((cons1 == cons2) == (consdata1 == consdata2));
+
+   /* check, if constraints are already equalized */
+   if( cons1 == cons2 )
+      return SCIP_OKAY;
+
+   /* aggregate the bit variables of the constraints */
+   nbits = MAX(consdata1->nbits, consdata2->nbits);
+   for( b = 0; b < nbits && !(*infeasible); ++b )
+   {
+      if( b < consdata1->nbits && b < consdata2->nbits )
+      {
+         CHECK_OKAY( SCIPaggregateVars(scip, consdata1->bits[b], consdata2->bits[b], 1.0, -1.0, 0.0,
+                        infeasible, &redundant, &aggregated) );
+         assert(redundant);
+         if( aggregated )
+            (*naggrvars)++;
+      }
+      else if( b < consdata1->nbits )
+      {
+         if( SCIPvarGetUbLocal(consdata1->bits[b]) > 0.5 )
+         {
+            CHECK_OKAY( SCIPfixVar(scip, consdata1->bits[b], 0.0, infeasible) );
+            (*nfixedvars)++;
+         }
+      }
+      else
+      {
+         if( SCIPvarGetUbLocal(consdata2->bits[b]) > 0.5 )
+         {
+            CHECK_OKAY( SCIPfixVar(scip, consdata2->bits[b], 0.0, infeasible) );
+            (*nfixedvars)++;
+         }
+      }
+   }
+
+   /* aggregate the word variables of the constraints */
+   nwords = MAX(consdata1->nwords, consdata2->nwords);
+   for( w = 0; w < nwords && !(*infeasible); ++w )
+   {
+      if( w < consdata1->nwords && w < consdata2->nwords )
+      {
+         CHECK_OKAY( SCIPaggregateVars(scip, consdata1->words[w], consdata2->words[w], 1.0, -1.0, 0.0,
+                        infeasible, &redundant, &aggregated) );
+         assert(redundant);
+         if( aggregated )
+            (*naggrvars)++;
+      }
+      else if( w < consdata1->nwords )
+      {
+         if( SCIPvarGetUbLocal(consdata1->words[w]) > 0.5 )
+         {
+            CHECK_OKAY( SCIPfixVar(scip, consdata1->words[w], 0.0, infeasible) );
+            (*nfixedvars)++;
+         }
+      }
+      else
+      {
+         if( SCIPvarGetUbLocal(consdata2->words[w]) > 0.5 )
+         {
+            CHECK_OKAY( SCIPfixVar(scip, consdata2->words[w], 0.0, infeasible) );
+            (*nfixedvars)++;
+         }
+      }
+   }
+
+   /* we can only associate bit variables with equal length */
+   if( consdata1->nbits != consdata2->nbits )
+      return SCIP_OKAY;
+
+   /* prefer using constants as active problem bit variables */
+   if( consdata1->constant )
+   {
+      consdata2->equalvar = cons1;
+      if( SCIPconsIsActive(cons2) )
+      {
+         CHECK_OKAY( SCIPdelCons(scip, cons2) );
+         (*ndelconss)++;
+      }
+   }
+   else
+   {
+      consdata1->equalvar = cons2;
+      if( SCIPconsIsActive(cons1) )
+      {
+         CHECK_OKAY( SCIPdelCons(scip, cons1) );
+         (*ndelconss)++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** catches an objective value or domain change event on the associated problem variables of the given bitvar constraint */
+RETCODE SCIPcatchBitvarEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   Bool             bitevents,          /**< should the events on the associated binary bit variables be catched? */
+   Bool             wordevents          /**< should the events on the associated integer word variables be catched? */
+   )
+{
+   CONSDATA* consdata;
+   int i;
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* catch event on bits */
+   if( bitevents )
+   {
+      for( i = 0; i < consdata->nbits; ++i )
+      {
+         CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->bits[i], eventtype, eventhdlr, eventdata) );
+      }
+   }
+
+   /* catch event on words */
+   if( wordevents )
+   {
+      for( i = 0; i < consdata->nwords; ++i )
+      {
+         CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->words[i], eventtype, eventhdlr, eventdata) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drops an objective value or domain change event on the associated problem variables of the given bitvar constraint */
+RETCODE SCIPdropBitvarEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to drop */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   Bool             bitevents,          /**< should the events on the associated binary bit variables be dropped? */
+   Bool             wordevents          /**< should the events on the associated integer word variables be dropped? */
+   )
+{
+   CONSDATA* consdata;
+   int i;
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* drop event on bits */
+   if( bitevents )
+   {
+      for( i = 0; i < consdata->nbits; ++i )
+      {
+         CHECK_OKAY( SCIPdropVarEvent(scip, consdata->bits[i], eventtype, eventhdlr, eventdata) );
+      }
+   }
+
+   /* drop event on words */
+   if( wordevents )
+   {
+      for( i = 0; i < consdata->nwords; ++i )
+      {
+         CHECK_OKAY( SCIPdropVarEvent(scip, consdata->words[i], eventtype, eventhdlr, eventdata) );
+      }
+   }
+
+   return SCIP_OKAY;
 }

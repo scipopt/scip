@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event.h
- * @brief  datastructures and methods for managing events
+ * @brief  methods and datastructures for managing events
  * @author Tobias Achterberg
  */
 
@@ -204,8 +204,8 @@ RETCODE SCIPeventhdlrCreate(
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
    DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
-   DECL_EVENTINIT   ((*eventinit)),     /**< initialise event handler */
-   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialise event handler */
+   DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
+   DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
    DECL_EVENTDELETE ((*eventdelete)),   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec)),     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */

@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def.h
- * @brief  comon defines and data types used in all packages of SCIP
+ * @brief  common defines and data types used in all packages of SCIP
  * @author Tobias Achterberg
  */
 

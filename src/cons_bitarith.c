@@ -173,11 +173,6 @@ RETCODE validateArith(
          errorMessage("resultant must be a single bit in bit-eq constraint");
          return SCIP_INVALIDDATA;
       }
-      if( SCIPgetNBitsBitvar(operand1) != SCIPgetNBitsBitvar(operand2) )
-      {
-         errorMessage("operands must be of same length in bit-eq constraint");
-         return SCIP_INVALIDDATA;
-      }
       break;
 
    case SCIP_BITARITHTYPE_NOT:
@@ -236,38 +231,23 @@ RETCODE consdataCatchEvents(
    EVENTHDLR*       eventhdlr           /**< event handler for bound change events */
    )
 {
-   VAR** bits;
-   int nbits;
-   int b;
    int v;
 
    /* catch bound tighten events on all bit variables in operands and resultant */
    if( consdata->operand1 != NULL )
    {
-      bits = SCIPgetBitsBitvar(consdata->operand1);
-      nbits = SCIPgetNBitsBitvar(consdata->operand1);
-      for( b = 0; b < nbits; ++b )
-      {
-         CHECK_OKAY( SCIPcatchVarEvent(scip, bits[b], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-      }
+      CHECK_OKAY( SCIPcatchBitvarEvent(scip, consdata->operand1, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                     (EVENTDATA*)consdata, TRUE, FALSE) );
    }
    if( consdata->operand2 != NULL )
    {
-      bits = SCIPgetBitsBitvar(consdata->operand2);
-      nbits = SCIPgetNBitsBitvar(consdata->operand2);
-      for( b = 0; b < nbits; ++b )
-      {
-         CHECK_OKAY( SCIPcatchVarEvent(scip, bits[b], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-      }
+      CHECK_OKAY( SCIPcatchBitvarEvent(scip, consdata->operand2, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                     (EVENTDATA*)consdata, TRUE, FALSE) );
    }
    if( consdata->resultant != NULL )
    {
-      bits = SCIPgetBitsBitvar(consdata->resultant);
-      nbits = SCIPgetNBitsBitvar(consdata->resultant);
-      for( b = 0; b < nbits; ++b )
-      {
-         CHECK_OKAY( SCIPcatchVarEvent(scip, bits[b], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-      }
+      CHECK_OKAY( SCIPcatchBitvarEvent(scip, consdata->resultant, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                     (EVENTDATA*)consdata, TRUE, FALSE) );
    }
 
    /* catch bound tighten events on internal variables */
@@ -288,38 +268,23 @@ RETCODE consdataDropEvents(
    EVENTHDLR*       eventhdlr           /**< event handler for bound change events */
    )
 {
-   VAR** bits;
-   int nbits;
-   int b;
    int v;
 
    /* drop bound tighten events on all bit variables in operands and resultant */
    if( consdata->operand1 != NULL )
    {
-      bits = SCIPgetBitsBitvar(consdata->operand1);
-      nbits = SCIPgetNBitsBitvar(consdata->operand1);
-      for( b = 0; b < nbits; ++b )
-      {
-         CHECK_OKAY( SCIPdropVarEvent(scip, bits[b], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-      }
+      CHECK_OKAY( SCIPdropBitvarEvent(scip, consdata->operand1, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                     (EVENTDATA*)consdata, TRUE, FALSE) );
    }
    if( consdata->operand2 != NULL )
    {
-      bits = SCIPgetBitsBitvar(consdata->operand2);
-      nbits = SCIPgetNBitsBitvar(consdata->operand2);
-      for( b = 0; b < nbits; ++b )
-      {
-         CHECK_OKAY( SCIPdropVarEvent(scip, bits[b], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-      }
+      CHECK_OKAY( SCIPdropBitvarEvent(scip, consdata->operand2, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                     (EVENTDATA*)consdata, TRUE, FALSE) );
    }
    if( consdata->resultant != NULL )
    {
-      bits = SCIPgetBitsBitvar(consdata->resultant);
-      nbits = SCIPgetNBitsBitvar(consdata->resultant);
-      for( b = 0; b < nbits; ++b )
-      {
-         CHECK_OKAY( SCIPdropVarEvent(scip, bits[b], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-      }
+      CHECK_OKAY( SCIPdropBitvarEvent(scip, consdata->resultant, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                     (EVENTDATA*)consdata, TRUE, FALSE) );
    }
 
    /* drop bound tighten events on internal variables */
@@ -1412,7 +1377,9 @@ RETCODE aggregateAdd(
    VAR**            op1vars,            /**< binary variables representing operand1 */
    VAR**            op2vars,            /**< binary variables representing operand2 */
    VAR**            resvars,            /**< binary variables representing resultant */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables */
    int*             naggrvars,          /**< pointer to add up the number of aggregated variables */
+   int*             ndelconss,          /**< pointer to add up the number of deleted constraints */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
@@ -1422,6 +1389,8 @@ RETCODE aggregateAdd(
    Bool ovrfixed;
    Bool resfixed;
    Bool redundant;
+   Bool op1iszero;
+   Bool op2iszero;
    int nresbits;
    int word;
    int wordbitstart;
@@ -1436,6 +1405,7 @@ RETCODE aggregateAdd(
    assert(op1vars != NULL);
    assert(op2vars != NULL);
    assert(resvars != NULL);
+   assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(infeasible != NULL);
 
@@ -1472,6 +1442,8 @@ RETCODE aggregateAdd(
    word = 0;
    wordbitstart = 0;
    nextwordbitstart = SCIPgetWordSizeBitvar(consdata->resultant, 0);
+   op1iszero = TRUE;
+   op2iszero = TRUE;
    for( b = 0; b < nresbits && !(*infeasible); ++b )
    {
       /* check, if we are in the next word */
@@ -1484,6 +1456,10 @@ RETCODE aggregateAdd(
       assert(wordbitstart < nextwordbitstart);
       assert(nextwordbitstart <= nresbits);
       assert(wordbitstart <= b && b < nextwordbitstart);
+
+      /* update the zero flags */
+      op1iszero &= (op1state[b] == FIXEDZERO);
+      op2iszero &= (op2state[b] == FIXEDZERO);
 
       /* check for possible aggregations */
       op1fixed = (op1state[b] != UNFIXED);
@@ -1638,6 +1614,35 @@ RETCODE aggregateAdd(
             }
          }
       }
+   }
+
+   /* check, if at least one operand in addition is zero */
+   if( b == nresbits && (op1iszero || op2iszero) )
+   {
+      if( op1iszero )
+      {
+         debugMessage("bitarith constraint <%s>: operand1 <%s> is zero: equalizing <%s> == <%s>\n",
+            SCIPconsGetName(cons), SCIPconsGetName(consdata->operand1),
+            SCIPconsGetName(consdata->resultant), SCIPconsGetName(consdata->operand2));
+
+         /* operand1 is zero: set resultant == operand2 */
+         CHECK_OKAY( SCIPequalizeBitvars(scip, consdata->resultant, consdata->operand2, 
+                        nfixedvars, naggrvars, ndelconss, infeasible) );
+      }
+      if( op2iszero )
+      {
+         debugMessage("bitarith constraint <%s>: operand2 <%s> is zero: equalizing <%s> == <%s>\n",
+            SCIPconsGetName(cons), SCIPconsGetName(consdata->operand2),
+            SCIPconsGetName(consdata->resultant), SCIPconsGetName(consdata->operand1));
+
+         /* operand2 is zero: set resultant == operand1 */
+         CHECK_OKAY( SCIPequalizeBitvars(scip, consdata->resultant, consdata->operand1, 
+                        nfixedvars, naggrvars, ndelconss, infeasible) );
+      }
+
+      /* delete redundant constraint */
+      CHECK_OKAY( SCIPdelCons(scip, cons) );
+      (*ndelconss)++;
    }
 
    return SCIP_OKAY;
@@ -2071,15 +2076,6 @@ RETCODE propagateAdd(
          {}
          if( b == nop2bits )
          {
-            /* both operands are fixed -> all variables are fixed */
-#ifdef DEBUG
-            for( b = 0; b < nresbits; ++b )
-            {
-               assert(ovrstate[b] != UNFIXED);
-               assert(resstate[b] != UNFIXED);
-            }
-            assert(ovrstate[nresbits] != UNFIXED);
-#endif
             /* disable the constraint */
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
             if( ndelconss != NULL )
@@ -2091,7 +2087,7 @@ RETCODE propagateAdd(
       if( SCIPstage(scip) == SCIP_STAGE_PRESOLVING )
       {
          CHECK_OKAY( aggregateAdd(scip, cons, op1state, op2state, ovrstate, resstate, op1vars, op2vars, resvars,
-                        naggrvars, infeasible) );
+                        nfixedvars, naggrvars, ndelconss, infeasible) );
       }
    }
 
@@ -2161,36 +2157,40 @@ RETCODE propagateEq(
    if( resstate == FIXEDONE )
    {
       removeable = TRUE;
-      for( b = 0; b < nbits; ++b )
+      if( SCIPstage(scip) == SCIP_STAGE_PRESOLVING )
       {
-         /* check, if bit in operands are fixed */
-         op1state = (b >= nop1bits ? FIXEDZERO : getBitstate(op1bits[b]));
-         op2state = (b >= nop2bits ? FIXEDZERO : getBitstate(op2bits[b]));
+         debugMessage("bitarith constraint <%s>: resultant <%s> is TRUE: equalizing <%s> == <%s>\n",
+            SCIPconsGetName(cons), SCIPconsGetName(consdata->resultant),
+            SCIPconsGetName(consdata->operand1),  SCIPconsGetName(consdata->operand2));
 
-         /* if the fixing states are different, we can do something */
-         if( op1state != op2state )
+         /* equalize bit variables operand1 == operand2 */
+         CHECK_OKAY( SCIPequalizeBitvars(scip, consdata->operand1, consdata->operand2, 
+                        nfixedvars, naggrvars, ndelconss, infeasible) );
+      }
+      else
+      {
+         /* in every bit pair with one fixed variable, fix the other variable to the same value */
+         for( b = 0; b < nbits; ++b )
          {
-            if( op1state == UNFIXED )
-            {
-               CHECK_OKAY( deduceBinVar(scip, cons, op1bits[b], (Real)((op2state+1)/2), nfixedvars, infeasible) );
-            }
-            else if( op2state == UNFIXED )
-            {
-               CHECK_OKAY( deduceBinVar(scip, cons, op2bits[b], (Real)((op1state+1)/2), nfixedvars, infeasible) );
-            }
-            else
-               *infeasible = TRUE;
-         }
-         else if( op1state == UNFIXED )
-         {
-            if( SCIPstage(scip) == SCIP_STAGE_PRESOLVING )
-            {
-               Bool redundant;
+            /* check, if bit in operands are fixed */
+            op1state = (b >= nop1bits ? FIXEDZERO : getBitstate(op1bits[b]));
+            op2state = (b >= nop2bits ? FIXEDZERO : getBitstate(op2bits[b]));
 
-               /* both variables are unfixed, and we are in presolving stage: aggregate the variables */
-               CHECK_OKAY( aggregateBinVarsPos(scip, cons, op1bits[b], op2bits[b], naggrvars, infeasible, &redundant) );
+            /* if the fixing states are different, we can do something */
+            if( op1state != op2state )
+            {
+               if( op1state == UNFIXED )
+               {
+                  CHECK_OKAY( deduceBinVar(scip, cons, op1bits[b], (Real)((op2state+1)/2), nfixedvars, infeasible) );
+               }
+               else if( op2state == UNFIXED )
+               {
+                  CHECK_OKAY( deduceBinVar(scip, cons, op2bits[b], (Real)((op1state+1)/2), nfixedvars, infeasible) );
+               }
+               else
+                  *infeasible = TRUE;
             }
-            else
+            else if( op1state == UNFIXED )
                removeable = FALSE;
          }
       }
@@ -2433,6 +2433,192 @@ RETCODE propagateCons(
    default:
       errorMessage("invalid bit arithmetic type");
       return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** makes sure, that the active problem bit variable is used as resultant or operand instead of equivalent equalized
+ *  bit variables
+ */
+static
+RETCODE applyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitarith constraint */
+   EVENTHDLR*       eventhdlr           /**< event handler for bound change events */
+   )
+{
+   CONSDATA* consdata;
+   CONS* activecons;
+   int nlocks;
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   nlocks = SCIPconsIsLockedPos(cons) + SCIPconsIsLockedNeg(cons);
+
+   /* use active problem variable in resultant */
+   if( consdata->resultant != NULL )
+   {
+      activecons = SCIPgetActiveBitvar(consdata->resultant);
+      assert(activecons != NULL);
+      if( activecons != consdata->resultant )
+      {
+         CHECK_OKAY( SCIPcaptureCons(scip, activecons) );
+         CHECK_OKAY( SCIPcatchBitvarEvent(scip, activecons, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)consdata, TRUE, FALSE) );
+         CHECK_OKAY( SCIPlockConsVars(scip, activecons, nlocks, nlocks) );
+         CHECK_OKAY( SCIPunlockConsVars(scip, consdata->resultant, nlocks, nlocks) );
+         CHECK_OKAY( SCIPdropBitvarEvent(scip, consdata->resultant, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)consdata, TRUE, FALSE) );
+         CHECK_OKAY( SCIPreleaseCons(scip, &consdata->resultant) );
+         consdata->resultant = activecons;
+      }
+   }
+
+   /* use active problem variable in operand1 */
+   if( consdata->operand1 != NULL )
+   {
+      activecons = SCIPgetActiveBitvar(consdata->operand1);
+      assert(activecons != NULL);
+      if( activecons != consdata->operand1 )
+      {
+         CHECK_OKAY( SCIPcaptureCons(scip, activecons) );
+         CHECK_OKAY( SCIPcatchBitvarEvent(scip, activecons, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)consdata, TRUE, FALSE) );
+         CHECK_OKAY( SCIPlockConsVars(scip, activecons, nlocks, nlocks) );
+         CHECK_OKAY( SCIPunlockConsVars(scip, consdata->operand1, nlocks, nlocks) );
+         CHECK_OKAY( SCIPdropBitvarEvent(scip, consdata->operand1, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)consdata, TRUE, FALSE) );
+         CHECK_OKAY( SCIPreleaseCons(scip, &consdata->operand1) );
+         consdata->operand1 = activecons;
+      }
+   }
+
+   /* use active problem variable in operand2 */
+   if( consdata->operand2 != NULL )
+   {
+      activecons = SCIPgetActiveBitvar(consdata->operand2);
+      assert(activecons != NULL);
+      if( activecons != consdata->operand2 )
+      {
+         CHECK_OKAY( SCIPcaptureCons(scip, activecons) );
+         CHECK_OKAY( SCIPcatchBitvarEvent(scip, activecons, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)consdata, TRUE, FALSE) );
+         CHECK_OKAY( SCIPlockConsVars(scip, activecons, nlocks, nlocks) );
+         CHECK_OKAY( SCIPunlockConsVars(scip, consdata->operand2, nlocks, nlocks) );
+         CHECK_OKAY( SCIPdropBitvarEvent(scip, consdata->operand2, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)consdata, TRUE, FALSE) );
+         CHECK_OKAY( SCIPreleaseCons(scip, &consdata->operand2) );
+         consdata->operand2 = activecons;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** detects simple preprocessing possibilities due to equality of operands and/or resultant */
+static
+RETCODE presolveEqualBitvars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitarith constraint */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables */
+   int*             naggrvars,          /**< pointer to add up the number of aggregated variables */
+   int*             ndelconss,          /**< pointer to add up the number of deleted constraints */
+   Bool*            infeasible          /**< pointer to store whether the constraint is infeasible in current bounds */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   switch( consdata->bitarithtype )
+   {
+   case SCIP_BITARITHTYPE_ADD:
+      /* if resultant is equal to one of the operands, the other operand must be zero, and the constraint is redundant */
+      if( consdata->resultant == consdata->operand1 )
+      {
+         debugMessage("bitarith constraint <%s>: fixing operand2 <%s> == 0\n", 
+            SCIPconsGetName(cons), SCIPconsGetName(consdata->operand2));
+         CHECK_OKAY( SCIPfixBitvar(scip, consdata->operand2, "b0", nfixedvars, infeasible) );
+         CHECK_OKAY( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+      }
+      if( consdata->resultant == consdata->operand2 )
+      {
+         debugMessage("bitarith constraint <%s>: fixing operand1 <%s> == 0\n", 
+            SCIPconsGetName(cons), SCIPconsGetName(consdata->operand1));
+         CHECK_OKAY( SCIPfixBitvar(scip, consdata->operand1, "b0", nfixedvars, infeasible) );
+         CHECK_OKAY( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+      }
+      break;
+
+   case SCIP_BITARITHTYPE_SUB:
+      errorMessage("bit-sub constraint should have been converted into bit-add constraint");
+      abort();
+
+   case SCIP_BITARITHTYPE_SHL:
+      errorMessage("not implemented yet");
+      abort();
+
+   case SCIP_BITARITHTYPE_EQ:
+      /* if operands are equal, the resultant is always true, and the constraint is redundant */
+      if( consdata->operand1 == consdata->operand2 )
+      {
+         debugMessage("bitarith constraint <%s>: fixing resultant <%s> == 1\n", 
+            SCIPconsGetName(cons), SCIPconsGetName(consdata->resultant));
+         CHECK_OKAY( SCIPfixBitvar(scip, consdata->resultant, "b1", nfixedvars, infeasible) );
+         CHECK_OKAY( SCIPdelCons(scip, cons) );
+         (*ndelconss)++;
+      }
+      break;
+
+   case SCIP_BITARITHTYPE_NOT:
+      errorMessage("not implemented yet");
+      abort();
+
+   default:
+      errorMessage("invalid bit arithmetic type");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** presolves bitarith constraint */
+static
+RETCODE presolveCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitarith constraint */
+   EVENTHDLR*       eventhdlr,          /**< event handler for bound change events */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables, or NULL */
+   int*             naggrvars,          /**< pointer to add up the number of aggregated variables, or NULL */
+   int*             nchgbds,            /**< pointer to add up the number of changed bounds, or NULL */
+   int*             ndelconss,          /**< pointer to add up the number of deleted constraints, or NULL */
+   Bool*            infeasible          /**< pointer to store whether the constraint is infeasible in current bounds */
+   )
+{
+   /* replace bitvars by their active problem bit variable counterparts */
+   CHECK_OKAY( applyFixings(scip, cons, eventhdlr) );
+
+   /* detect simple preprocessing possibilities due to equality of operands and/or resultant */
+   CHECK_OKAY( presolveEqualBitvars(scip, cons, nfixedvars, naggrvars, ndelconss, infeasible) );
+
+   /* propagate domains in bit variables */
+   if( SCIPconsIsActive(cons) )
+   {
+      CHECK_OKAY( propagateCons(scip, cons, nfixedvars, naggrvars, nchgbds, ndelconss, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -2732,6 +2918,7 @@ DECL_CONSPROP(consPropBitarith)
 static
 DECL_CONSPRESOL(consPresolBitarith)
 {
+   CONSHDLRDATA* conshdlrdata;
    Bool infeasible;
    int nactfixedvars;
    int nactaggrvars;
@@ -2745,14 +2932,20 @@ DECL_CONSPRESOL(consPresolBitarith)
 
    *result = SCIP_DIDNOTFIND;
 
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* propagate all bitarith constraints */
    nactfixedvars = 0;
+   nactaggrvars = 0;
    nactchgbds = 0;
    nactdelconss = 0;
    infeasible = FALSE;
    for( c = 0; c < nconss && !infeasible; ++c )
    {
-      CHECK_OKAY( propagateCons(scip, conss[c], &nactfixedvars, &nactaggrvars, &nactchgbds, &nactdelconss, &infeasible) );
+      CHECK_OKAY( presolveCons(scip, conss[c], conshdlrdata->eventhdlr,
+                     &nactfixedvars, &nactaggrvars, &nactchgbds, &nactdelconss, &infeasible) );
    }
 
    /* adjust the result */
@@ -2797,7 +2990,10 @@ DECL_CONSLOCK(consLockBitarith)
    assert(consdata != NULL);
 
    /* bitarith constraints are equalities: lock all bit variable constraints in both directions */
-   CHECK_OKAY( SCIPlockConsVars(scip, consdata->resultant, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   if( consdata->resultant != NULL )
+   {
+      CHECK_OKAY( SCIPlockConsVars(scip, consdata->resultant, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+   }
    if( consdata->operand1 != NULL )
    {
       CHECK_OKAY( SCIPlockConsVars(scip, consdata->operand1, nlockspos + nlocksneg, nlockspos + nlocksneg) );
@@ -2828,7 +3024,10 @@ DECL_CONSUNLOCK(consUnlockBitarith)
    assert(consdata != NULL);
 
    /* bitarith constraints are equalities: unlock all bit variable constraints in both directions */
-   CHECK_OKAY( SCIPunlockConsVars(scip, consdata->resultant, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg) );
+   if( consdata->resultant != NULL )
+   {
+      CHECK_OKAY( SCIPunlockConsVars(scip, consdata->resultant, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg) );
+   }
    if( consdata->operand1 != NULL )
    {
       CHECK_OKAY( SCIPunlockConsVars(scip, consdata->operand1, nunlockspos + nunlocksneg, nunlockspos + nunlocksneg) );

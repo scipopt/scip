@@ -377,7 +377,7 @@ Bool mpsinputReadLine(
       mpsi->f0  = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
       is_marker = FALSE;
    
-      // Read until we have a not comment line.
+      /* Read until we have a not comment line */
       do
       {
          if (NULL == fgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
@@ -386,8 +386,7 @@ Bool mpsinputReadLine(
       } 
       while(*mpsi->buf == '*');
 
-      /* Normalize line
-       */
+      /* Normalize line */
       len = strlen(mpsi->buf);
 
       for(i = 0; i < len; i++)
@@ -399,8 +398,7 @@ Bool mpsinputReadLine(
 
       assert(strlen(mpsi->buf) >= 80);
 
-      /* Look for new section
-       */
+      /* Look for new section */
       if (*mpsi->buf != BLANK)
       {
          mpsi->f0 = strtok(&mpsi->buf[0], " ");
@@ -412,15 +410,13 @@ Bool mpsinputReadLine(
          return TRUE;
       }
 
-      /* Test for fixed format comments
-       */
+      /* Test for fixed format comments */
       if ((mpsi->buf[14] == '$') && (mpsi->buf[13] == ' '))
          clearFrom(mpsi->buf, 14);
       else if ((mpsi->buf[39] == '$') && (mpsi->buf[38] == ' '))
          clearFrom(mpsi->buf, 39);
 
-      /* Test for fixed format
-       */
+      /* Test for fixed format */
       space = mpsi->buf[12] | mpsi->buf[13] 
          | mpsi->buf[22] | mpsi->buf[23] 
          | mpsi->buf[36] | mpsi->buf[37] | mpsi->buf[38]
@@ -429,8 +425,7 @@ Bool mpsinputReadLine(
       
       if (space == BLANK)
       {
-         /* We assume fixed format, so we patch possible embedded spaces.
-          */
+         /* We assume fixed format, so we patch possible embedded spaces. */
          patchField(mpsi->buf,  4, 12);
          patchField(mpsi->buf, 14, 22);
          patchField(mpsi->buf, 39, 47);

@@ -142,7 +142,7 @@ RETCODE SCIPincludeNodeselRestartdfs(
 {
    NODESELDATA* nodeseldata;
 
-   /* allocate and initialise node selector data; this has to be freed in the destructor */
+   /* allocate and initialize node selector data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->selectbestfreq = SELECTBESTFREQ;
 

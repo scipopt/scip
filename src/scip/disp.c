@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp.c
- * @brief  datastructures and methods for displaying runtime statistics
+ * @brief  methods and datastructures for displaying runtime statistics
  * @author Tobias Achterberg
  */
 
@@ -36,8 +36,8 @@ struct Disp
    char*            desc;               /**< description of display column */
    char*            header;             /**< head line of display column */
    DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
-   DECL_DISPINIT    ((*dispinit));      /**< initialise display column */
-   DECL_DISPEXIT    ((*dispexit));      /**< deinitialise display column */
+   DECL_DISPINIT    ((*dispinit));      /**< initialize display column */
+   DECL_DISPEXIT    ((*dispexit));      /**< deinitialize display column */
    DECL_DISPOUTPUT  ((*dispoutput));    /**< output method */
    DISPDATA*        dispdata;           /**< display column data */
    int              width;              /**< width of display column (no. of chars used) */
@@ -63,8 +63,8 @@ RETCODE SCIPdispCreate(
    const char*      header,             /**< head line of display column */
    DISPSTATUS       dispstatus,         /**< display activation status of display column */
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
-   DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
-   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
+   DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
+   DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
    DECL_DISPOUTPUT  ((*dispoutput)),    /**< output method */
    DISPDATA*        dispdata,           /**< display column data */
    int              width,              /**< width of display column (no. of chars used) */

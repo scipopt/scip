@@ -38,8 +38,8 @@ struct Heur
    int              priority;           /**< priority of the primal heuristic */
    int              freq;               /**< frequency for calling primal heuristic */
    DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
-   DECL_HEURINIT    ((*heurinit));      /**< initialise primal heuristic */
-   DECL_HEUREXIT    ((*heurexit));      /**< deinitialise primal heuristic */
+   DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
+   DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
    CLOCK*           clock;              /**< heuristic execution time */
@@ -63,8 +63,8 @@ RETCODE SCIPheurCreate(
    int              freq,               /**< frequency for calling primal heuristic */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
-   DECL_HEURINIT    ((*heurinit)),      /**< initialise primal heuristic */
-   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialise primal heuristic */
+   DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
+   DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
    DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    )

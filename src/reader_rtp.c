@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_rtp.c
- * @brief  RTP file reader
+ * @brief  Rtp file reader
  * @author Tobias Achterberg
  */
 

@@ -146,4 +146,58 @@ Bool SCIPisConstBitvar(
    CONS*            cons                /**< bitvar constraint */
    );
 
+/** gets active problem bit variable, resolving formerly assigned bit variable equalities */
+extern
+CONS* SCIPgetActiveBitvar(
+   CONS*            cons                /**< bitvar constraint */
+   );
+
+/** fixes a bitvar to the constant value given as string */
+extern
+RETCODE SCIPfixBitvar(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   const char*      cstring,            /**< constant given as a string */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables, or NULL */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   );
+
+/** informs two bitvars that they are equal, aggregates the corresponding variables (if not already done), and
+ *  deletes one of the corresponding bitvar constraints
+ */
+extern
+RETCODE SCIPequalizeBitvars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons1,              /**< first bitvar constraint */
+   CONS*            cons2,              /**< second bitvar constraint */
+   int*             nfixedvars,         /**< pointer to add up the number of fixed variables */
+   int*             naggrvars,          /**< pointer to add up the number of aggregated variables */
+   int*             ndelconss,          /**< pointer to add up the number of deleted constraints */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   );
+
+/** catches an objective value or domain change event on the associated problem variables of the given bitvar constraint */
+extern
+RETCODE SCIPcatchBitvarEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   Bool             bitevents,          /**< should the events on the associated binary bit variables be catched? */
+   Bool             wordevents          /**< should the events on the associated integer word variables be catched? */
+   );
+
+/** drops an objective value or domain change event on the associated problem variables of the given bitvar constraint */
+extern
+RETCODE SCIPdropBitvarEvent(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   EVENTTYPE        eventtype,          /**< event type mask to select events to drop */
+   EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   Bool             bitevents,          /**< should the events on the associated binary bit variables be dropped? */
+   Bool             wordevents          /**< should the events on the associated integer word variables be dropped? */
+   );
+
 #endif

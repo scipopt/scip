@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons.h
- * @brief  datastructures and methods for managing constraints
+ * @brief  methods and datastructures for managing constraints
  * @author Tobias Achterberg
  */
 
@@ -602,8 +602,8 @@ RETCODE SCIPconshdlrCreate(
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
-   DECL_CONSINIT    ((*consinit)),      /**< initialise constraint handler */
-   DECL_CONSEXIT    ((*consexit)),      /**< deinitialise constraint handler */
+   DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
+   DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
    DECL_CONSSOLSTART((*conssolstart)),  /**< solving start notification method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */

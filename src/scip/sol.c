@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.c
- * @brief  datastructures and methods for storing primal CIP solutions
+ * @brief  methods and datastructures for storing primal CIP solutions
  * @author Tobias Achterberg
  */
 

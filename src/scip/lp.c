@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.c
- * @brief  LP management datastructures and methods
+ * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
  *
  *  In LP management, we have to differ between the actual LP and the LP

@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch.h
- * @brief  datastructures and methods for branching methods
+ * @brief  methods and datastructures for branching methods
  * @author Tobias Achterberg
  */
 
@@ -160,8 +160,8 @@ RETCODE SCIPbranchruleCreate(
    const char*      desc,               /**< description of branching rule */
    int              priority,           /**< priority of the branching rule */
    DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
-   DECL_BRANCHINIT  ((*branchinit)),    /**< initialise branching rule */
-   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialise branching rule */
+   DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
+   DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
    DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
