@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.18 2004/09/09 13:59:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.19 2004/09/13 15:11:39 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -34,10 +34,10 @@
 #define SEPA_PRIORITY             -1000
 #define SEPA_FREQ                    25
 
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        20 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          25 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXAGGRS              4 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per round in the root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -216,6 +216,26 @@ void updateNConts(
       (*nactiveconts) += delta;
 }
 
+/** decreases the score of a row in order to not aggregate it again too soon */
+static
+void decreaseRowScore(
+   SCIP*            scip,               /**< SCIP data structure */ 
+   Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
+   Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
+   int              rowidx              /**< index of row to decrease score for */
+   )
+{
+   assert(rowlhsscores != NULL);
+   assert(rowrhsscores != NULL);
+   assert(rowlhsscores[rowidx] < 0.0);
+   assert(rowrhsscores[rowidx] < 0.0);
+
+   if( !SCIPisInfinity(scip, -rowlhsscores[rowidx]) )
+      rowlhsscores[rowidx] *= 1.1;
+   if( !SCIPisInfinity(scip, -rowrhsscores[rowidx]) )
+      rowrhsscores[rowidx] *= 1.1;
+}
+
 /** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
 static
 RETCODE aggregation(
@@ -288,6 +308,9 @@ RETCODE aggregation(
       rowweights[startrow] = -1.0;
    else 
       rowweights[startrow] = 1.0;
+
+   /* decrease score of startrow in order to not aggregate it again too soon */
+   decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
 
    /* get nonzero columns and coefficients of startrow */
    startnonzcols =  SCIProwGetCols(rows[startrow]);
@@ -401,7 +424,7 @@ RETCODE aggregation(
          CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, delta, 
                cutcoefs, &cutrhs, &cutact, &success) );
          debugMessage("delta = %g -> success: %d\n", delta, success);
-         
+
          /* delta generates cut which is more violated */
          if( success )
          {
@@ -442,6 +465,7 @@ RETCODE aggregation(
             /* create a MIR cut out of the weighted LP rows */
             CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, delta, 
                   cutcoefs, &cutrhs, &cutact, &success) );
+            debugMessage("delta = %g -> success: %d\n", delta, success);
             if( success )
             {
                violation = cutact - cutrhs;
@@ -593,6 +617,9 @@ RETCODE aggregation(
       /* change row's aggregation weight */
       rowweights[SCIProwGetLPPos(bestrow)] = aggrfact;
                
+      /* decrease score of aggregation row in order to not aggregate it again too soon */
+      decreaseRowScore(scip, rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));
+
       /* change coefficients of aggregation and update the number of continuous variables */
       bestrownonzcols = SCIProwGetCols(bestrow);
       bestrownonzcoefs = SCIProwGetVals(bestrow);
@@ -800,7 +827,7 @@ DECL_SEPAEXEC(sepaExecCmir)
  
    /* start aggregation heuristic for each row in the LP */
    ncuts = 0;
-   for( r = 0; r < nrows && ncuts < maxsepacuts && !SCIPisInfinity(scip, rowscores[roworder[r]]); r++ )
+   for( r = 0; r < nrows && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]); r++ )
    {
       CHECK_OKAY( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], maxaggrs, &ncuts) );
    }

@@ -232,7 +232,7 @@ lp/redcostfreq = 1
 
 # should LP solutions be checked, resolving LP when numerical troubles occur?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/checklpfeas = FALSE
+lp/checklpfeas = TRUE
 
 # should FASTMIP setting of LP solver be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -987,20 +987,20 @@ separating/cmir/priority = -1000
 separating/cmir/freq = 0
 
 # maximal number of cmir separation rounds per node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 5]
-separating/cmir/maxrounds = 5
+# [type: int, range: [-1,2147483647], default: 3]
+separating/cmir/maxrounds = 3
 
 # maximal number of cmir separation rounds in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 20]
+# [type: int, range: [-1,2147483647], default: -1]
 separating/cmir/maxroundsroot = -1
 
 # maximal number of cmir cuts separated per separation round
-# [type: int, range: [0,2147483647], default: 25]
-separating/cmir/maxsepacuts = 25
+# [type: int, range: [0,2147483647], default: 50]
+separating/cmir/maxsepacuts = 50
 
 # maximal number of cmir cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 100]
-separating/cmir/maxsepacutsroot = 100
+# [type: int, range: [0,2147483647], default: 500]
+separating/cmir/maxsepacutsroot = 500
 
 # maximal number of aggregations for each row per separation round
 # [type: int, range: [0,2147483647], default: 4]
@@ -1047,20 +1047,20 @@ separating/gomory/priority = 0
 separating/gomory/freq = 0
 
 # maximal number of gomory separation rounds per node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 3]
-separating/gomory/maxrounds = 3
+# [type: int, range: [-1,2147483647], default: 5]
+separating/gomory/maxrounds = 5
 
 # maximal number of gomory separation rounds in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 6]
+# [type: int, range: [-1,2147483647], default: -1]
 separating/gomory/maxroundsroot = -1
 
 # maximal number of gomory cuts separated per separation round
-# [type: int, range: [0,2147483647], default: 25]
-separating/gomory/maxsepacuts = 25
+# [type: int, range: [0,2147483647], default: 50]
+separating/gomory/maxsepacuts = 50
 
 # maximal number of gomory cuts separated per separation round in the root node
-# [type: int, range: [0,2147483647], default: 100]
-separating/gomory/maxsepacutsroot = 100
+# [type: int, range: [0,2147483647], default: 500]
+separating/gomory/maxsepacutsroot = 500
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]

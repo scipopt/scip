@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.207 2004/09/07 18:22:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.208 2004/09/13 15:11:39 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6363,7 +6363,7 @@ RETCODE SCIPsumLPRows(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsumLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPlpSumRows(scip->lp, scip->set, scip->transprob->nvars, weights, sumcoef, sumlhs, sumrhs) );
+   CHECK_OKAY( SCIPlpSumRows(scip->lp, scip->set, scip->transprob, weights, sumcoef, sumlhs, sumrhs) );
 
    return SCIP_OKAY;
 }
@@ -6386,8 +6386,7 @@ RETCODE SCIPcalcMIR(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob->nvars,
-         scip->transprob->nvars - scip->transprob->ncontvars, scip->transprob->vars,
+   CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
          boundswitch, usevbds, minfrac, weights, scale, mircoef, mirrhs, cutactivity, success) );
 
    return SCIP_OKAY;
@@ -9485,6 +9484,8 @@ void printTreeStatistics(
    fprintf(file, "  nodes (total)    : %10lld\n", scip->stat->ntotalnodes);
    fprintf(file, "  max depth        : %10d\n", scip->stat->maxdepth);
    fprintf(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
+   fprintf(file, "  backtracks       : %10lld (%.1f%%)\n", scip->stat->nbacktracks, 
+      scip->stat->nnodes > 0 ? 100.0 * (Real)scip->stat->nbacktracks / (Real)scip->stat->nnodes : 0.0);
    fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 

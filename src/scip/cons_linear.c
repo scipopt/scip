@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.116 2004/09/07 18:22:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.117 2004/09/13 15:11:38 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -52,7 +52,7 @@
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
-#define CONSHDLR_SEPAPRIORITY  +1000000
+#define CONSHDLR_SEPAPRIORITY   +100000
 #define CONSHDLR_ENFOPRIORITY  -1000000
 #define CONSHDLR_CHECKPRIORITY -1000000
 #define CONSHDLR_SEPAFREQ             5

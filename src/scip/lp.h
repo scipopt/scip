@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.86 2004/09/07 18:22:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.87 2004/09/13 15:11:39 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -630,7 +630,7 @@ extern
 RETCODE SCIPlpSumRows(
    LP*              lp,                 /**< LP data */
    SET*             set,                /**< global SCIP settings */
-   int              nvars,              /**< number of active variables in the problem */
+   PROB*            prob,               /**< problem data */
    Real*            weights,            /**< row weights in row summation */
    REALARRAY*       sumcoef,            /**< array to store sum coefficients indexed by variables' probindex */
    Real*            sumlhs,             /**< pointer to store the left hand side of the row summation */
@@ -645,9 +645,7 @@ RETCODE SCIPlpCalcMIR(
    LP*              lp,                 /**< LP data */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   int              nvars,              /**< number of active variables in the problem */
-   int              nintvars,           /**< number of active binary/integer variables in the problem */
-   VAR**            vars,               /**< active variables in the problem */
+   PROB*            prob,               /**< problem data */
    Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */

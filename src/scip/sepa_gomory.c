@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.30 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.31 2004/09/13 15:11:39 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -37,10 +37,10 @@
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 
-#define DEFAULT_MAXROUNDS             3 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          25 /**< maximal number of gomory cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of gomory cuts separated per separation round in root node */
+#define DEFAULT_MAXROUNDS             5 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of gomory cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 #define BOUNDSWITCH              0.9999
