@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.h,v 1.7 2004/02/04 17:27:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.h,v 1.8 2004/07/06 17:04:12 bzfpfend Exp $"
 
 /**@file   cons_invarknapsack.h
  * @brief  constraint handler for invarknapsack constraints
@@ -47,7 +47,8 @@ RETCODE SCIPcreateConsInvarknapsack(
    Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */

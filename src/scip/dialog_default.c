@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.22 2004/06/24 15:34:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.23 2004/07/06 17:04:14 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -212,17 +212,18 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
 
    /* display list of constraint handlers */
    printf("\n");
-   printf(" constraint handler   chckprio enfoprio sepaprio sepaf propf eager  description\n");
-   printf(" ------------------   -------- -------- -------- ----- ----- -----  -----------\n");
+   printf(" constraint handler   chckprio enfoprio sepaprio relaf sepaf propf eager  description\n");
+   printf(" ------------------   -------- -------- -------- ----- ----- ----- -----  -----------\n");
    for( i = 0; i < nconshdlrs; ++i )
    {
       printf(" %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
       if( strlen(SCIPconshdlrGetName(conshdlrs[i])) > 20 )
          printf("\n %20s ", "-->");
-      printf("%8d %8d %8d %5d %5d %5d  ",
+      printf("%8d %8d %8d %5d %5d %5d %5d  ",
          SCIPconshdlrGetCheckPriority(conshdlrs[i]),
          SCIPconshdlrGetEnfoPriority(conshdlrs[i]),
          SCIPconshdlrGetSepaPriority(conshdlrs[i]),
+         SCIPconshdlrGetRelaxFreq(conshdlrs[i]),
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.46 2004/07/01 10:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.47 2004/07/06 17:04:13 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -36,7 +36,8 @@
 #define CONSHDLR_SEPAPRIORITY   +800000
 #define CONSHDLR_ENFOPRIORITY   +800000
 #define CONSHDLR_CHECKPRIORITY  -800000
-#define CONSHDLR_SEPAFREQ             5
+#define CONSHDLR_RELAXFREQ            5
+#define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1
@@ -885,7 +886,7 @@ RETCODE createRow(
 
 /** adds logic or constraint as cut to the LP */
 static
-RETCODE addCut(
+RETCODE addRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< logic or constraint */
    Real             violation           /**< absolute violation of the constraint */
@@ -912,7 +913,7 @@ RETCODE addCut(
 
 /** checks constraint for violation, and adds it as a cut if possible */
 static
-RETCODE separateCons(
+RETCODE relaxCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< logic or constraint to be separated */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -969,7 +970,7 @@ RETCODE separateCons(
    if( addcut )
    {
       /* insert LP row as cut */
-      CHECK_OKAY( addCut(scip, cons, 1.0) );
+      CHECK_OKAY( addRelaxation(scip, cons, 1.0) );
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -1154,8 +1155,8 @@ DECL_CONSTRANS(consTransLogicor)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsInitial(sourcecons), SCIPconsIsRelaxed(sourcecons), SCIPconsIsSeparated(sourcecons),
+         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
@@ -1172,7 +1173,7 @@ DECL_CONSINITLP(consInitlpLogicor)
    {
       if( SCIPconsIsInitial(conss[c]) )
       {
-         CHECK_OKAY( addCut(scip, conss[c], 0.0) );
+         CHECK_OKAY( addRelaxation(scip, conss[c], 0.0) );
       }
    }
 
@@ -1180,9 +1181,9 @@ DECL_CONSINITLP(consInitlpLogicor)
 }
 
 
-/** separation method of constraint handler */
+/** LP relaxation method of constraint handler */
 static
-DECL_CONSSEPA(consSepaLogicor)
+DECL_CONSRELAXLP(consRelaxlpLogicor)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    Bool cutoff;
@@ -1195,7 +1196,7 @@ DECL_CONSSEPA(consSepaLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   debugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
+   debugMessage("relaxing %d/%d logic or constraints\n", nusefulconss, nconss);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1207,11 +1208,8 @@ DECL_CONSSEPA(consSepaLogicor)
    /* check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( relaxCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
-
-   /* combine logic or constraints to get more cuts */
-   /**@todo further cuts of logic or constraints */
 
    /* return the correct result */
    if( cutoff )
@@ -1225,6 +1223,12 @@ DECL_CONSSEPA(consSepaLogicor)
 
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler */
+#define consSepaLogicor NULL
+/**@todo further cuts of logic or constraints */
+
 
 #ifdef BRANCHLP
 /** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) >= 0 */
@@ -1565,13 +1569,13 @@ DECL_CONSENFOLP(consEnfolpLogicor)
    /* check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( relaxCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
    /* check all obsolete logic or constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( relaxCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
 #ifdef BRANCHLP
@@ -1994,7 +1998,8 @@ RETCODE createNormalizedLogicor(
    Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
    int              mult,               /**< multiplier on the coefficients(+1 or -1) */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -2027,7 +2032,7 @@ RETCODE createNormalizedLogicor(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsLogicor(scip, cons, name, nvars, transvars,
-         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, relax, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* free temporary memory */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
@@ -2065,7 +2070,7 @@ DECL_LINCONSUPGD(linconsUpgdLogicor)
       /* create the logic or constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( createNormalizedLogicor(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsRelaxed(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
@@ -2128,7 +2133,7 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
-         FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+         FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
@@ -2168,12 +2173,12 @@ RETCODE SCIPincludeConshdlrLogicor(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ,
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeLogicor, consInitLogicor, consExitLogicor, 
          consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
-         consDeleteLogicor, consTransLogicor, 
-         consInitlpLogicor, consSepaLogicor, 
-         consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
+         consDeleteLogicor, consTransLogicor, consInitlpLogicor, consRelaxlpLogicor,
+         consSepaLogicor, consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 
          consPropLogicor, consPresolLogicor, consRescvarLogicor,
          consLockLogicor, consUnlockLogicor,
          consActiveLogicor, consDeactiveLogicor,
@@ -2210,7 +2215,8 @@ RETCODE SCIPcreateConsLogicor(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -2236,7 +2242,7 @@ RETCODE SCIPcreateConsLogicor(
    CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, relax, separate, enforce, check, propagate,
          local, modifiable, removeable) );
 
    return SCIP_OKAY;

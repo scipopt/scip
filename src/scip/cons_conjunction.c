@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.6 2004/07/01 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.7 2004/07/06 17:04:12 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -36,6 +36,7 @@
 #define CONSHDLR_SEPAPRIORITY   +000000
 #define CONSHDLR_ENFOPRIORITY   +900000
 #define CONSHDLR_CHECKPRIORITY  -900000
+#define CONSHDLR_RELAXFREQ           -1
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_EAGERFREQ          100
@@ -317,8 +318,8 @@ DECL_CONSTRANS(consTransConjunction)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsInitial(sourcecons), SCIPconsIsRelaxed(sourcecons), SCIPconsIsSeparated(sourcecons), 
+         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
@@ -327,6 +328,21 @@ DECL_CONSTRANS(consTransConjunction)
 
 /** LP initialization method of constraint handler */
 #define consInitlpConjunction NULL
+
+
+/** LP relaxation method of constraint handler */
+#if 0
+static
+DECL_CONSRELAXLP(consRelaxlpConjunction)
+{  /*lint --e{715}*/
+   errorMessage("method of conjunction constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consRelaxlpConjunction NULL
+#endif
 
 
 /** separation method of constraint handler */
@@ -531,10 +547,11 @@ RETCODE SCIPincludeConshdlrConjunction(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeConjunction, consInitConjunction, consExitConjunction, 
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
-         consDeleteConjunction, consTransConjunction, consInitlpConjunction,
+         consDeleteConjunction, consTransConjunction, consInitlpConjunction, consRelaxlpConjunction,
          consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
          consPropConjunction, consPresolConjunction, consRescvarConjunction,
          consLockConjunction, consUnlockConjunction,
@@ -574,7 +591,7 @@ RETCODE SCIPcreateConsConjunction(
    CHECK_OKAY( consdataCreate(scip, &consdata, conss, nconss) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, enforce, check, FALSE,
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, FALSE, enforce, check, FALSE,
          local, modifiable, FALSE) );
 
    return SCIP_OKAY;

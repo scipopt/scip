@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.26 2004/07/01 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.27 2004/07/06 17:04:11 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -34,7 +34,8 @@
 #define CONSHDLR_SEPAPRIORITY   +850000
 #define CONSHDLR_ENFOPRIORITY   -850000
 #define CONSHDLR_CHECKPRIORITY  -850000
-#define CONSHDLR_SEPAFREQ             1
+#define CONSHDLR_RELAXFREQ            1
+#define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1
@@ -738,9 +739,9 @@ RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/** separates current LP solution */
+/** separates LP relaxation for current LP solution */
 static
-RETCODE separateCons(
+RETCODE relaxCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint to check */
    Bool*            separated           /**< pointer to store whether a cut was found */
@@ -1171,8 +1172,8 @@ DECL_CONSTRANS(consTransAnd)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsInitial(sourcecons), SCIPconsIsRelaxed(sourcecons), SCIPconsIsSeparated(sourcecons), 
+         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
@@ -1197,9 +1198,9 @@ DECL_CONSINITLP(consInitlpAnd)
 }
 
 
-/** separation method of constraint handler */
+/** LP relaxation method of constraint handler */
 static
-DECL_CONSSEPA(consSepaAnd)
+DECL_CONSRELAXLP(consRelaxlpAnd)
 {  /*lint --e{715}*/
    Bool separated;
    int c;
@@ -1209,16 +1210,18 @@ DECL_CONSSEPA(consSepaAnd)
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      CHECK_OKAY( separateCons(scip, conss[c], &separated) );
+      CHECK_OKAY( relaxCons(scip, conss[c], &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    } 
 
-   /* combine constraints to get more cuts */
-   /**@todo combine constraints to get further cuts */
-
    return SCIP_OKAY;
 }
+
+
+/** separation method of constraint handler */
+#define consSepaAnd NULL
+/**@todo combine and constraints to get further cuts in the separation call */
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -1236,7 +1239,7 @@ DECL_CONSENFOLP(consEnfolpAnd)
       {
          Bool separated;
 
-         CHECK_OKAY( separateCons(scip, conss[i], &separated) );
+         CHECK_OKAY( relaxCons(scip, conss[i], &separated) );
          assert(separated); /* because the solution is integral, the separation always finds a cut */
          *result = SCIP_SEPARATED;
          return SCIP_OKAY;
@@ -1515,10 +1518,11 @@ RETCODE SCIPincludeConshdlrAnd(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeAnd, consInitAnd, consExitAnd, 
          consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
-         consDeleteAnd, consTransAnd, consInitlpAnd,
+         consDeleteAnd, consTransAnd, consInitlpAnd, consRelaxlpAnd,
          consSepaAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
          consPropAnd, consPresolAnd, consRescvarAnd,
          consLockAnd, consUnlockAnd,
@@ -1539,7 +1543,8 @@ RETCODE SCIPcreateConsAnd(
    int              nvars,              /**< number of operator variables in the constraint */
    VAR**            vars,               /**< array with operator variables of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -1567,7 +1572,7 @@ RETCODE SCIPcreateConsAnd(
    CHECK_OKAY( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, relax, separate, enforce, check, propagate,
          local, modifiable, removeable) );
 
    return SCIP_OKAY;

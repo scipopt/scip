@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.h,v 1.7 2004/03/08 18:05:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.h,v 1.8 2004/07/06 17:04:14 bzfpfend Exp $"
 
 /**@file   cons_xxx.h
  * @brief  constraint handler for xxx constraints
@@ -48,7 +48,8 @@ RETCODE SCIPcreateConsXxx(
    Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */

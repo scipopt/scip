@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.17 2004/05/03 13:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.18 2004/07/06 17:04:15 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -195,7 +195,7 @@ RETCODE readCnf(
    {
       sprintf(varname, "x%d", v+1);
       CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
-                     NULL, NULL, NULL, NULL) );
+            NULL, NULL, NULL, NULL) );
       CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }
@@ -233,7 +233,7 @@ RETCODE readCnf(
                clausenum++;
                sprintf(s, "c%d", clausenum);
                CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
-                              !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+                     !dynamicrows, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
                CHECK_OKAY( SCIPaddCons(scip, cons) );
                CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
                clauselen = 0;
@@ -369,15 +369,15 @@ RETCODE SCIPincludeReaderCnf(
 
    /* include cnf reader */
    CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-                  readerFreeCnf, readerReadCnf, readerdata) );
+         readerFreeCnf, readerReadCnf, readerdata) );
 
    /* add cnf reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-                  NULL, FALSE, NULL, NULL) );
+         "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
+         NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-                  NULL, FALSE, NULL, NULL) );
+         "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
+         NULL, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

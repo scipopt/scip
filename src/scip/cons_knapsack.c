@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.51 2004/07/01 10:35:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.52 2004/07/06 17:04:12 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -38,6 +38,7 @@
 #define CONSHDLR_SEPAPRIORITY   +600000
 #define CONSHDLR_ENFOPRIORITY   +600000
 #define CONSHDLR_CHECKPRIORITY  -850000
+#define CONSHDLR_RELAXFREQ            5
 #define CONSHDLR_SEPAFREQ            10
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
@@ -888,7 +889,39 @@ RETCODE SCIPseparateKnapsackCardinality(
    return SCIP_OKAY;
 }
 
-/** separates given knapsack constraint */
+/** separates LP relaxation of given knapsack constraint */
+static
+RETCODE relaxCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   int*             ncuts               /**< pointer to add up the number of found cuts */
+   )
+{
+   CONSDATA* consdata;
+   Real feasibility;
+   Bool violated;
+
+   assert(ncuts != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   debugMessage("relaxing knapsack constraint <%s>\n", SCIPconsGetName(cons));
+
+   /* check knapsack constraint itself for feasibility */
+   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violated) );
+
+   if( violated )
+   {
+      /* add knapsack constraint as LP row to the LP */
+      CHECK_OKAY( addRelaxation(scip, cons) );
+      (*ncuts)++;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** separates additional cuts for given knapsack constraint */
 static
 RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -907,21 +940,9 @@ RETCODE separateCons(
 
    debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
 
-   /* check knapsack constraint itself for feasibility */
-   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violated) );
-
-   if( violated )
-   {
-      /* add knapsack constraint as LP row to the LP */
-      CHECK_OKAY( addRelaxation(scip, cons) );
-      (*ncuts)++;
-   }
-   else
-   {
-      /* knapsack constraint itself was feasible: separate lifted cardinality inequalities */
-      CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, consdata->nvars, consdata->vars, 
-            consdata->weights, consdata->capacity, ncuts) );
-   }
+   /* separate lifted cardinality inequalities */
+   CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, consdata->nvars, consdata->vars, 
+         consdata->weights, consdata->capacity, ncuts) );
 
    return SCIP_OKAY;
 }
@@ -1332,8 +1353,8 @@ DECL_CONSTRANS(consTransKnapsack)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsInitial(sourcecons), SCIPconsIsRelaxed(sourcecons), SCIPconsIsSeparated(sourcecons), 
+         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
@@ -1354,6 +1375,33 @@ DECL_CONSINITLP(consInitlpKnapsack)
       }
    }
 
+   return SCIP_OKAY;
+}
+
+
+/** LP relaxation method of constraint handler */
+static
+DECL_CONSRELAXLP(consRelaxlpKnapsack)
+{  /*lint --e{715}*/
+   Bool separated;
+   int ncuts;
+   int i;
+
+   debugMessage("knapsack relaxation of %d/%d constraints\n", nusefulconss, nconss);
+
+   *result = SCIP_DIDNOTFIND;
+   ncuts = 0;
+
+   /* relax useful constraints */
+   for( i = 0; i < nusefulconss; i++ )
+   {
+      CHECK_OKAY( relaxCons(scip, conss[i], &ncuts) );
+   }
+   
+   /* adjust return value */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+   
    return SCIP_OKAY;
 }
 
@@ -1720,7 +1768,8 @@ RETCODE createNormalizedKnapsack(
    Real             lhs,                /**< left hand side of inequality */
    Real             rhs,                /**< right hand side of inequality */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -1778,7 +1827,7 @@ RETCODE createNormalizedKnapsack(
 
    /* create the constraint */
    CHECK_OKAY( SCIPcreateConsKnapsack(scip, cons, name, nvars, transvars, weights, capacity,
-         initial, separate, enforce, check, propagate, local, modifiable, removeable) );
+         initial, relax, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* free temporary memory */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
@@ -1811,7 +1860,7 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
       /* create the knapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( createNormalizedKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsRelaxed(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
@@ -1871,10 +1920,11 @@ RETCODE SCIPincludeConshdlrKnapsack(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ,
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
          consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
-         consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,
+         consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack, consRelaxlpKnapsack,
          consSepaKnapsack, consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, 
          consPropKnapsack, consPresolKnapsack, consRescvarKnapsack,
          consLockKnapsack, consUnlockKnapsack,
@@ -1923,7 +1973,8 @@ RETCODE SCIPcreateConsKnapsack(
    Longint*         weights,            /**< array with item weights */
    Longint          capacity,           /**< capacity of knapsack */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -1947,7 +1998,7 @@ RETCODE SCIPcreateConsKnapsack(
    CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, weights, capacity) );
         
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, relax, separate, enforce, check, propagate,
          local, modifiable, removeable) );
 
    return SCIP_OKAY;

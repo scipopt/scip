@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.19 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.20 2004/07/06 17:04:14 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -34,6 +34,7 @@
 #define CONSHDLR_SEPAPRIORITY         0
 #define CONSHDLR_ENFOPRIORITY         0
 #define CONSHDLR_CHECKPRIORITY        0
+#define CONSHDLR_RELAXFREQ           -1
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_EAGERFREQ          100
@@ -231,6 +232,21 @@ DECL_CONSINITLP(consInitlpXxx)
 }
 #else
 #define consInitlpXxx NULL
+#endif
+
+
+/** LP relaxation method of constraint handler */
+#if 0
+static
+DECL_CONSRELAXLP(consRelaxlpXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consRelaxlpXxx NULL
 #endif
 
 
@@ -449,7 +465,7 @@ DECL_LINCONSUPGD(linconsUpgdXxx)
       /* create the bin Xxx constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsRelaxed(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
@@ -479,10 +495,11 @@ RETCODE SCIPincludeConshdlrXxx(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeXxx, consInitXxx, consExitXxx, 
          consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
-         consDeleteXxx, consTransXxx, consInitlpXxx,
+         consDeleteXxx, consTransXxx, consInitlpXxx, consRelaxlpXxx,
          consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
          consPropXxx, consPresolXxx, consRescvarXxx,
          consLockXxx, consUnlockXxx,
@@ -513,7 +530,8 @@ RETCODE SCIPcreateConsXxx(
    Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -543,7 +561,7 @@ RETCODE SCIPcreateConsXxx(
    /* TODO: create and store constraint specific data here */
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, relax, separate, enforce, check, propagate,
          local, modifiable, removeable) );
 
    return SCIP_OKAY;

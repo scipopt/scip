@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.69 2004/07/01 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.70 2004/07/06 17:04:11 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -61,13 +61,15 @@ RETCODE SCIPconshdlrCreate(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
-   int              sepapriority,       /**< priority of the constraint handler for separation */
+   int              sepapriority,       /**< priority of the constraint handler for relaxation and separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              checkpriority,      /**< priority of the constraint handler for checking infeasibility */
-   int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
+   int              relaxfreq,          /**< frequency for separating relaxation cuts; zero means to separate only in the root node */
+   int              sepafreq,           /**< frequency for separating additional cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
-   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
-                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in relaxation,
+                                         *   separation, propagation and enforcement (-1 for no eager evaluations,
+                                         *   0 for first only) */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
@@ -80,7 +82,8 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
+   DECL_CONSRELAXLP ((*consrelaxlp)),   /**< separate LP relaxations */
+   DECL_CONSSEPA    ((*conssepa)),      /**< separate additional cutting planes */
    DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -148,7 +151,7 @@ RETCODE SCIPconshdlrExitsol(
    SCIP*            scip                /**< SCIP data structure */   
    );
 
-/** calls LP initialization method of constraint handler to separate all initial constraints */
+/** calls LP initialization method of constraint handler to add LP relaxations of all initial constraints */
 extern
 RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -156,6 +159,21 @@ RETCODE SCIPconshdlrInitLP(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob                /**< problem data */
+   );
+
+/** calls relaxation method of constraint handler to separate LP relaxations of constraints added after last
+ *  conshdlrResetRelax() call
+ */
+extern
+RETCODE SCIPconshdlrRelax(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< problem data */
+   SEPASTORE*       sepastore,          /**< separation storage */
+   int              depth,              /**< depth of current node */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** calls separator method of constraint handler to separate all constraints added after last conshdlrReset() call */
@@ -248,6 +266,12 @@ RETCODE SCIPconshdlrPresolve(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** resets relaxation to start with first constraint in the next call */
+extern
+void SCIPconshdlrResetRelax(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** resets separation to start with first constraint in the next call */
 extern
 void SCIPconshdlrResetSepa(
@@ -336,7 +360,8 @@ RETCODE SCIPconsCreate(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
+   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -431,7 +456,9 @@ RETCODE SCIPconsDeactivate(
    STAT*            stat                /**< dynamic problem statistics */
    );
 
-/** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
+/** enables constraint's relaxation, separation, enforcing, and propagation capabilities or marks them to be enabled
+ *  in next update
+ */
 extern
 RETCODE SCIPconsEnable(
    CONS*            cons,               /**< constraint */
@@ -439,7 +466,9 @@ RETCODE SCIPconsEnable(
    STAT*            stat                /**< dynamic problem statistics */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
+/** disables constraint's relaxation, separation, enforcing, and propagation capabilities or marks them to be disabled
+ *  in next update
+ */
 extern
 RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
@@ -449,6 +478,7 @@ RETCODE SCIPconsDisable(
 
 /** adds given value to age of constraint, but age can never become negative;
  *  should be called
+ *   - in constraint relaxation, if relaxation of this constraint is not already included in LP and if it is not violated,
  *   - in constraint separation, if no cut was found for this constraint,
  *   - in constraint enforcing, if constraint was feasible, and
  *   - in constraint propagation, if no domain reduction was deduced;
@@ -467,6 +497,7 @@ RETCODE SCIPconsAddAge(
 
 /** increases age of constraint by 1.0;
  *  should be called
+ *   - in constraint relaxation, if relaxation of this constraint is not already included in LP and if it is not violated,
  *   - in constraint separation, if no cut was found for this constraint,
  *   - in constraint enforcing, if constraint was feasible, and
  *   - in constraint propagation, if no domain reduction was deduced;
@@ -484,6 +515,7 @@ RETCODE SCIPconsIncAge(
 
 /** resets age of constraint to zero;
  *  should be called
+ *   - in constraint relaxation, if a violated relaxation of this constraint was found,
  *   - in constraint separation, if a cut was found for this constraint,
  *   - in constraint enforcing, if the constraint was violated, and
  *   - in constraint propagation, if a domain reduction was deduced;
