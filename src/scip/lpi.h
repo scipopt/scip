@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.39 2004/08/10 14:19:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.40 2004/09/28 11:09:17 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -114,9 +114,9 @@ RETCODE SCIPlpiAddCols(
    const Real*      ub,                 /**< upper bounds of new columns */
    char**           colnames,           /**< column names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*       beg,                /**< start index of each column in ind- and val-array */
-   const int*       ind,                /**< row indices of constraint matrix entries */
-   const Real*      val                 /**< values of constraint matrix entries */
+   const int*       beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
+   const int*       ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    );
 
 /** deletes all columns in the given range from LP */
@@ -145,9 +145,9 @@ RETCODE SCIPlpiAddRows(
    const Real*      rhs,                /**< right hand sides of new rows */
    char**           rownames,           /**< row names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*       beg,                /**< start index of each row in ind- and val-array */
-   const int*       ind,                /**< column indices of constraint matrix entries */
-   const Real*      val                 /**< values of constraint matrix entries */
+   const int*       beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*       ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    );
 
 /** deletes all rows in the given range from LP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.69 2004/09/07 18:22:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.70 2004/09/28 11:09:17 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1038,9 +1038,9 @@ RETCODE SCIPlpiAddCols(
    const Real*      ub,                 /**< upper bounds of new columns */
    char**           colnames,           /**< column names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*       beg,                /**< start index of each column in ind- and val-array */
-   const int*       ind,                /**< row indices of constraint matrix entries */
-   const Real*      val                 /**< values of constraint matrix entries */
+   const int*       beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
+   const int*       ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    assert(cpxenv != NULL);
@@ -1051,7 +1051,14 @@ RETCODE SCIPlpiAddCols(
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( CPXaddcols(cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
+   if( nnonz > 0 )
+   {
+      CHECK_ZERO( CPXaddcols(cpxenv, lpi->cpxlp, ncols, nnonz, obj, beg, ind, val, lb, ub, colnames) );
+   }
+   else
+   {
+      CHECK_ZERO( CPXnewcols(cpxenv, lpi->cpxlp, ncols, obj, lb, ub, NULL, colnames) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1106,9 +1113,9 @@ RETCODE SCIPlpiAddRows(
    const Real*      rhs,                /**< right hand sides of new rows */
    char**           rownames,           /**< row names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*       beg,                /**< start index of each row in ind- and val-array */
-   const int*       ind,                /**< column indices of constraint matrix entries */
-   const Real*      val                 /**< values of constraint matrix entries */
+   const int*       beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*       ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    int rngcount;
@@ -1127,8 +1134,15 @@ RETCODE SCIPlpiAddRows(
    convertSides(lpi, nrows, lhs, rhs, CPXgetnumrows(cpxenv, lpi->cpxlp), &rngcount);
 
    /* add rows to LP */
-   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
-                  rownames) );
+   if( nnonz > 0 )
+   {
+      CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrows, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL,
+            rownames) );
+   }
+   else
+   {
+      CHECK_ZERO( CPXnewrows(cpxenv, lpi->cpxlp, nrows, lpi->rhsarray, lpi->senarray, NULL, rownames) );
+   }
    if( rngcount > 0 )
    {
       CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.6 2004/08/10 14:19:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.7 2004/09/28 11:09:17 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -579,9 +579,9 @@ RETCODE SCIPlpiAddCols(
    const Real*      ub,                 /**< upper bounds of new columns */
    char**           /*colnames*/,       /**< column names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*       beg,                /**< start index of each column in ind- and val-array */
-   const int*       ind,                /**< row indices of constraint matrix entries */
-   const Real*      val                 /**< values of constraint matrix entries */
+   const int*       beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
+   const int*       ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    debugMessage("calling SCIPlpiAddCols()\n");
@@ -591,9 +591,9 @@ RETCODE SCIPlpiAddCols(
    assert(obj != NULL);
    assert(lb != NULL);
    assert(ub != NULL);
-   assert(beg != NULL);
-   assert(ind != NULL);
-   assert(val != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SPxSCIP* spx = lpi->spx;
    LPColSet cols(ncols);
@@ -606,11 +606,12 @@ RETCODE SCIPlpiAddCols(
    for( i = 0; i < ncols; ++i )
    {
       colVector.clear();
-      
-      last = (i == ncols-1 ? nnonz : beg[i+1]);
-      for( j = beg[i]; j < last; ++j )
-         colVector.add(ind[j], val[j]);
-      
+      if( nnonz > 0 )
+      {
+         last = (i == ncols-1 ? nnonz : beg[i+1]);
+         for( j = beg[i]; j < last; ++j )
+            colVector.add(ind[j], val[j]);
+      }
       cols.add(obj[i], lb[i], colVector, ub[i]);
    }
    spx->addCols(cols);
@@ -671,9 +672,9 @@ RETCODE SCIPlpiAddRows(
    const Real*      rhs,                /**< right hand sides of new rows */
    char**           /*rownames*/,       /**< row names, or NULL */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
-   const int*       beg,                /**< start index of each row in ind- and val-array */
-   const int*       ind,                /**< column indices of constraint matrix entries */
-   const Real*      val                 /**< values of constraint matrix entries */
+   const int*       beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*       ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
+   const Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    debugMessage("calling SCIPlpiAddRows()\n");
@@ -682,9 +683,9 @@ RETCODE SCIPlpiAddRows(
    assert(lpi->spx != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
-   assert(beg != NULL);
-   assert(ind != NULL);
-   assert(val != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SPxSCIP* spx = lpi->spx;
    LPRowSet rows(nrows);
@@ -697,11 +698,12 @@ RETCODE SCIPlpiAddRows(
    for( i = 0; i < nrows; ++i )
    {
       rowVector.clear();
-      
-      last = (i == nrows-1 ? nnonz : beg[i+1]);
-      for( j = beg[i]; j < last; ++j )
-         rowVector.add(ind[j], val[j]);
-      
+      if( nnonz > 0 )
+      {
+         last = (i == nrows-1 ? nnonz : beg[i+1]);
+         for( j = beg[i]; j < last; ++j )
+            rowVector.add(ind[j], val[j]);
+      }
       rows.add(lhs[i], rowVector, rhs[i]);
    }
    spx->addRows(rows);
