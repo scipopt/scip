@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.141 2005/02/04 12:51:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.142 2005/02/04 12:58:53 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1542,7 +1542,6 @@ RETCODE implicsSearchVar(
 
    /* searches for y */
    middle = (left + right) / 2;
-
    while( left <= right && (*implics)->implvars[varfixing][middle] != implvar)
    {
       if( implvar < (*implics)->implvars[varfixing][middle] ) 
@@ -1556,6 +1555,7 @@ RETCODE implicsSearchVar(
    {
       /* y was not found */
       assert(right == -1 || (*implics)->implvars[varfixing][right] < implvar);
+      assert(left >= (*implics)->nimpls[varfixing] || (*implics)->implvars[varfixing][left] != implvar);
       *poslower = INT_MAX;
       *posupper = INT_MAX;
       *posadd = left;
@@ -1570,7 +1570,7 @@ RETCODE implicsSearchVar(
       {
          /* y was found as y_lower (on position middle) */
          *poslower = middle;
-         if( (*implics)->implvars[varfixing][middle+1] == implvar )
+         if( middle + 1 < (*implics)->nimpls[varfixing] && (*implics)->implvars[varfixing][middle+1] == implvar )
          {  
             assert((*implics)->impltypes[varfixing][middle+1] == SCIP_BOUNDTYPE_UPPER);
             *posupper = middle + 1;
@@ -1582,7 +1582,7 @@ RETCODE implicsSearchVar(
       {
          /* y was found as y_upper (on position middle) */
          *posupper = middle;
-         if( (*implics)->implvars[varfixing][middle-1] == implvar )
+         if( middle - 1 >= 0 && (*implics)->implvars[varfixing][middle-1] == implvar )
          {  
             assert((*implics)->impltypes[varfixing][middle-1] == SCIP_BOUNDTYPE_LOWER);
             *poslower = middle - 1;
