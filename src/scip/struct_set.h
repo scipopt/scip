@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.24 2004/08/24 12:50:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.25 2004/08/31 13:09:49 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -127,6 +127,7 @@ struct Set
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
    int              minmaxconfvars;     /**< minimal absolute maximum of variables involved in a conflict clause */
+   int              maxconflploops;     /**< maximal number of LP resolving loops during conflict analysis */
    int              colagelimit;        /**< maximum age a column can reach before it is deleted from the LP */
    int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
    int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */

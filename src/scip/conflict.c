@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.55 2004/08/26 08:32:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.56 2004/08/31 13:09:49 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2931,7 +2931,7 @@ RETCODE conflictAnalyzeLP(
          assert(!resolve || valid);
          assert(!resolve || nbdchgs > lastnbdchgs);
       }
-      while( resolve && nloops < 100 );
+      while( resolve && nloops < set->maxconflploops );
       debugMessage("finished undoing bound changes after %d loops (valid=%d)\n", nloops, valid);
 
       /* reset variables to local bounds */

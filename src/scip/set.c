@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.105 2004/08/24 12:50:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.106 2004/08/31 13:09:49 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -140,6 +140,7 @@
 #define SCIP_DEFAULT_USEPSEUDOCONFLICT TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
 #define SCIP_DEFAULT_MINMAXCONFVARS      30 /**< minimal absolute maximum of variables involved in a conflict clause */
+#define SCIP_DEFAULT_MAXCONFLPLOOPS     100 /**< maximal number of LP resolving loops during conflict analysis */
 
 
 /* Primal Solutions */
@@ -509,6 +510,11 @@ RETCODE SCIPsetCreate(
          "conflict/minmaxconfvars",
          "minimal absolute maximum of variables involved in a conflict clause",
          &(*set)->minmaxconfvars, SCIP_DEFAULT_MINMAXCONFVARS, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+         "conflict/maxconflploops",
+         "maximal number of LP resolving loops during conflict analysis",
+         &(*set)->maxconflploops, SCIP_DEFAULT_MAXCONFLPLOOPS, 1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
          "limits/nodelimit",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.5 2004/08/24 15:19:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.6 2004/08/31 13:09:49 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -34,7 +34,7 @@
 #define CONSHDLR_SEPAPRIORITY   +850200
 #define CONSHDLR_ENFOPRIORITY   -850200
 #define CONSHDLR_CHECKPRIORITY  -850200
-#define CONSHDLR_SEPAFREQ            -1
+#define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1

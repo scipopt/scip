@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.67 2004/08/12 14:31:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.68 2004/08/31 13:09:49 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -631,7 +631,7 @@ void convertSides(
       else
       {
          /* CPLEX defines a ranged row to be within rhs and rhs+rng.
-          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rng,
+          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rhs,
           *    but there seems to be a bug in CPLEX's presolve with negative range values:
           *    the ranged row
           *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
