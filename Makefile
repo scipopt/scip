@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.100 2005/02/24 16:26:36 bzfpfend Exp $
+# $Id: Makefile,v 1.101 2005/03/09 12:40:26 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -292,16 +292,17 @@ MAINNAME	=	scip
 ifeq ($(LINKER),C)
 MAINOBJ		=	cmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
+MAINDEP		=	src/depend.cmain.$(OPT)
 endif
 ifeq ($(LINKER),CPP)
 MAINOBJ		=	cppmain.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
+MAINDEP		=	src/depend.cppmain.$(OPT)
 endif
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)
 MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
-MAINDEP		=	src/depend.main.$(OPT)
 
 
 #-----------------------------------------------------------------------------

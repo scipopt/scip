@@ -1,4 +1,4 @@
-$(OBJDIR)/lpi_spx.o: src/scip/lpi_spx.cpp lib/spxinc/spxsolver.h \
+$(OBJDIR)/scip/lpi_spx.o: src/scip/lpi_spx.cpp lib/spxinc/spxsolver.h \
   lib/spxinc/spxdefines.h lib/spxinc/timer.h lib/spxinc/spxlp.h \
   lib/spxinc/datakey.h lib/spxinc/spxid.h lib/spxinc/dvector.h \
   lib/spxinc/vector.h lib/spxinc/svector.h lib/spxinc/svset.h \
@@ -15,6 +15,6 @@ $(OBJDIR)/lpi_spx.o: src/scip/lpi_spx.cpp lib/spxinc/spxsolver.h \
   lib/spxinc/spxratiotester.h src/scip/lpi.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/memory.h src/scip/type_lpi.h \
   src/scip/bitencode.h src/scip/message.h
-$(OBJDIR)/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
+$(OBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/bitencode.h
-$(OBJDIR)/memory.o: src/scip/memory.c src/scip/memory.h
+$(OBJDIR)/scip/memory.o: src/scip/memory.c src/scip/memory.h

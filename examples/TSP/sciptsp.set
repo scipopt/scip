@@ -122,6 +122,10 @@ lp/initalgorithm = s
 # [type: char, range: {sbc}, default: s]
 lp/resolvealgorithm = s
 
+# LP pricing strategy ('a'uto, 'f'ull pricing, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)
+# [type: char, range: {afsqd}, default: a]
+lp/pricing = a
+
 # maximum age a dynamic column can reach before it is deleted from the LP (-1: don't delete columns due to aging)
 # [type: int, range: [-1,2147483647], default: 10]
 lp/colagelimit = 10

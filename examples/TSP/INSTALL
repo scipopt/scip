@@ -70,7 +70,7 @@ running:
    - other compilers are available (see make/ directory)
 
 3. To run the program enter "bin/example.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
-   (e.g. "bin/example.linux.x86.gnu.dbg.cpx")
+   (e.g. "bin/sciptsp.linux.x86.gnu.dbg.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"

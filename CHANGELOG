@@ -89,6 +89,7 @@ features:
 - it is now possible to interrupt and continue presolving
 - bounds of variables are included in the feasibility checks for solutions
 - support for barrier algorithm
+- added TSP example in examples/TSP
 
 fixed bugs:
 - fixed bug in MPS file reader
