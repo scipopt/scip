@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.21 2004/03/12 10:31:12 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.22 2004/03/12 10:39:28 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -188,10 +188,10 @@ Bool checkCons(
 #define IDX(j,d) ((j)*(capacity+1)+(d))
 
 /** solves knapsack problem with dynamic programming;
- *  the solution in covervars consists of all items that are NOT selected
+ *  if needed, one can provide arrays to store all selected items and all not selected items
  */
 static
-RETCODE dynProgKnapsack(
+RETCODE solveKnapsack(
    SCIP*            scip,               /**< SCIP data structure */
    int              nitems,             /**< number of available items */
    int*             weights,            /**< item weights */
@@ -218,7 +218,7 @@ RETCODE dynProgKnapsack(
    CHECK_OKAY( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(capacity+1)) );
    
    /* fill dynamic programming table with optimal values */
-   for( d = 0; d <= capacity; d++)
+   for( d = 0; d <= capacity; d++ )
       optvalues[IDX(0,d)] = 0.0;
    for( j = 1; j <= nitems; j++ )
    {
@@ -282,9 +282,9 @@ RETCODE liftCover(
    int              nnoncovervars       /**< number of non-cover elements */
    )
 {
+   CONSDATA* consdata;
    int* minweight;
    int* weights;
-   CONSDATA* consdata;
    int weight;
    int rescapacity;
    int beta;
@@ -306,7 +306,7 @@ RETCODE liftCover(
    CHECK_OKAY( SCIPallocBufferArray(scip, &weights, ncovervars) );
   
    /* sort weights of covervars */
-   for( i = 0; i < ncovervars; i++)
+   for( i = 0; i < ncovervars; i++ )
    {
       weight = consdata->weights[covervars[i]];
       for( j = i; j > 0 && weight < weights[j-1]; j--)
@@ -318,7 +318,7 @@ RETCODE liftCover(
     * minweight[z] := minimal sum of weights s.t. activity of cut inequality equals z
     */
    minweight[0] = 0;
-   for( z = 1; z < ncovervars; z++)
+   for( z = 1; z < ncovervars; z++ )
       minweight[z] = minweight[z-1] + weights[z-1];
 
    /* calculate lifting coefficients beta for noncovervars:
@@ -327,7 +327,7 @@ RETCODE liftCover(
     * 2. add x_i with lifting coefficient beta_i = ncovervars - 1 - z_max to cut inequality
     * 3. update minweight table: calculate minimal sum of weights s.t. activity of current cut inequality equals z
     */
-   for( i = 0; i < nnoncovervars; i++)
+   for( i = 0; i < nnoncovervars; i++ )
    {
       /* binary search in sorted minweight array for the largest entry that is not greater then capacity - weight_i */
       weight = consdata->weights[noncovervars[i]];
@@ -362,49 +362,6 @@ RETCODE liftCover(
    CHECK_OKAY( SCIPfreeBufferArray(scip, &minweight) );
 
    return SCIP_OKAY;
-
-#if 0
-   int* weights;
-   Real* profits;
-   CONSDATA* consdata;
-   int capacity;
-   Real solval;
-   Real beta;
-   int weighti;
-   int i;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   capacity = consdata->capacity;
-   
-   CHECK_OKAY( SCIPallocBufferArray(scip, &profits, nnoncovervars + ncovervars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &weights, nnoncovervars + ncovervars) );
-
-   for( i = 0; i < ncovervars; i++ )
-   {
-      profits[i] = 1.0;
-      weights[i] = consdata->weights[covervars[i]];
-   }
-
-   for( i = 0; i < nnoncovervars; i++ )
-   {
-      weighti = consdata->weights[noncovervars[i]];
-      CHECK_OKAY( dynProgKnapsack(scip, ncovervars+i, weights, profits, capacity - weighti, 
-                     NULL, NULL, NULL, NULL, NULL, &solval) ); 
-      beta = ncovervars - 1 - solval;
-      CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[noncovervars[i]], beta) );
-      if( i != nnoncovervars - 1 )
-      {
-         profits[ncovervars+i] = beta;
-         weights[ncovervars+i] = weighti; 
-      }
-   }
-
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
-
-   return SCIP_OKAY;
-#endif
 }
        
 /** separates cover inequalities for given knapsack constraint */
@@ -498,7 +455,7 @@ RETCODE separateCovers(
       /* solve separation knapsack with dynamic programming */
       CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, consdata->nvars) );
       CHECK_OKAY( SCIPallocBufferArray(scip, &noncovervars, consdata->nvars) );
-      CHECK_OKAY( dynProgKnapsack(scip, nitems, weights, profits, capacity, 
+      CHECK_OKAY( solveKnapsack(scip, nitems, weights, profits, capacity, 
                      items, noncovervars, covervars, &nnoncovervars, &ncovervars, &transsol) ); 
       
       /* generate cutting plane */
