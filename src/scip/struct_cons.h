@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.17 2004/08/10 14:19:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.18 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -40,7 +40,8 @@ struct Cons
    char*            name;               /**< name of the constraint */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
-   CONS*            transcons;          /**< transformed constraint (for original constraints), or NULL */
+   CONS*            transorigcons;      /**< for original constraints: associated transformed constraint or NULL,
+                                         *   for transformed constraints: associated original constraint or NULL */
    CONSSETCHG*      addconssetchg;      /**< constraint change that added constraint to current subproblem, or NULL if
                                          *   constraint is from global problem */
    int              addarraypos;        /**< position of constraint in the conssetchg's/prob's addedconss/conss array */

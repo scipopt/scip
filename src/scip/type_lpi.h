@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.5 2004/04/06 13:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.6 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -43,7 +43,7 @@ enum LPParam
    SCIP_LPPAR_SCALING     =  2,         /**< solver should use scaling */
    SCIP_LPPAR_PRICING     =  3,         /**< pricing strategy */
    SCIP_LPPAR_LPINFO      =  4,         /**< should LP solver output information to the screen? */
-   SCIP_LPPAR_FEASTOL     =  5,         /**< feasibility tolerance for primal variables and slacks bounds */
+   SCIP_LPPAR_FEASTOL     =  5,         /**< feasibility tolerance for primal variables and slacks */
    SCIP_LPPAR_DUALFEASTOL =  6,         /**< feasibility tolerance for dual variables and reduced costs */
    SCIP_LPPAR_LOBJLIM     =  7,         /**< lower objective limit */
    SCIP_LPPAR_UOBJLIM     =  8,         /**< upper objective limit */

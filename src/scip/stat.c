@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.45 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.46 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -54,6 +54,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -87,6 +88,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
+   SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->redcoststrtime);
@@ -136,6 +138,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->duallptime);
    SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
+   SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->redcoststrtime);
@@ -153,6 +156,7 @@ void SCIPstatReset(
    stat->nnodelpiterations = 0;
    stat->ndivinglpiterations = 0;
    stat->nsblpiterations = 0;
+   stat->nconflictlpiterations = 0;
    stat->lpcount = 0;
    stat->nlps = 0;
    stat->nprimallps = 0;
@@ -160,6 +164,7 @@ void SCIPstatReset(
    stat->nnodelps = 0;
    stat->ndivinglps = 0;
    stat->nstrongbranchs = 0;
+   stat->nconflictlps = 0;
    stat->nredcoststrcalls = 0;
    stat->nredcoststrfound = 0;
    stat->ntotalnodes = 0;

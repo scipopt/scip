@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.11 2004/04/29 15:20:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.12 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -72,6 +72,7 @@ RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */

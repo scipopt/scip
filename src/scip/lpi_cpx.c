@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.66 2004/08/10 14:19:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.67 2004/08/12 14:31:27 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -885,8 +885,10 @@ RETCODE SCIPlpiCreate(
       cpxenv = CPXopenCPLEX(&restat);
       CHECK_ZERO( restat );
 
-      /* turn presolve off, s.t. for an infeasible problem, a ray is always available ???????????????????????? */
+#if 1 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
+      /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+#endif
 
       /* get default parameter values */
       getParameterValues(&defparam);
@@ -1991,6 +1993,8 @@ RETCODE SCIPlpiStrongbranch(
    assert(lpi->cpxlp != NULL);
 
    debugMessage("calling CPLEX strongbranching on variable %d (%d iterations)\n", col, itlim);
+
+   CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
    /* if the solution value is integral, we have to apply strong branching manually; otherwise, the CPLEX
     * method CPXstrongbranch() is applicable

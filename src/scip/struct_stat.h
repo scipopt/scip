@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.18 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.19 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -43,6 +43,7 @@ struct Stat
    Longint          nnodelpiterations;  /**< number of iterations for solving node relaxations */
    Longint          ndivinglpiterations;/**< number of iterations in diving */
    Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
+   Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
    Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
    Longint          nnodes;             /**< number of nodes processed in current run (including active node) */
@@ -63,6 +64,7 @@ struct Stat
    CLOCK*           duallptime;         /**< dual LP solution time */
    CLOCK*           divinglptime;       /**< diving LP solution time (primal + dual) */
    CLOCK*           strongbranchtime;   /**< strong branching time */
+   CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
@@ -87,6 +89,7 @@ struct Stat
    int              nnodelps;           /**< number of LPs solved for node relaxations */
    int              ndivinglps;         /**< number of LPs solved during diving */
    int              nstrongbranchs;     /**< number of strong branching calls */
+   int              nconflictlps;       /**< number of LPs solved during conflict analysis */
    int              npricerounds;       /**< number of pricing rounds performed in current node */
    int              nseparounds;        /**< number of separation rounds performed in current node */
    int              ndisplines;         /**< number of displayed information lines */

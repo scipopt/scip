@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.73 2004/08/10 14:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.74 2004/08/12 14:31:27 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -400,7 +400,9 @@ RETCODE SCIPconsTransform(
    CONS**           transcons           /**< pointer to store the transformed constraint */
    );
 
-/** gets transformed constraint of an original constraint */
+/** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
+ *  exists
+ */
 extern
 CONS* SCIPconsGetTransformed(
    CONS*            cons                /**< constraint */

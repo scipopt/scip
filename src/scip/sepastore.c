@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.20 2004/08/10 14:19:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.21 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -160,6 +160,44 @@ void SCIPsepastoreEndInitialLP(
    sepastore->initiallp = FALSE;
 }
 
+/** checks cut for redundancy with other cuts */
+static
+Bool sepastoreIsCutRedundant(
+   SEPASTORE*       sepastore,          /**< separation storage */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   ROW*             cut                 /**< separated cut */
+   )
+{
+   Real minactivity;
+   Real maxactivity;
+   Real lhs;
+   Real rhs;
+
+   assert(sepastore != NULL);
+   assert(cut != NULL);
+
+   /* modifiable cuts cannot be declared redundant, since we don't know all coefficients */
+   if( SCIProwIsModifiable(cut) )
+      return FALSE;
+
+   /* check for activity redundancy */
+   lhs = SCIProwGetLhs(cut);
+   rhs = SCIProwGetRhs(cut);
+   minactivity = SCIProwGetMinActivity(cut, set, stat);
+   maxactivity = SCIProwGetMaxActivity(cut, set, stat);
+   if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
+   {
+      debugMessage("ignoring activity redundant cut <%s>\n", SCIProwGetName(cut));
+      debug(SCIProwPrint(cut, NULL));
+      return TRUE;
+   }
+
+   /**@todo enhance redundancy detection in separation storage */
+
+   return FALSE;
+}
+
 /** adds cut stored as LP row to separation storage and captures it;
  *  if the cut should be forced to enter the LP, an infinite score has to be used
  */
@@ -168,6 +206,7 @@ RETCODE sepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
@@ -184,7 +223,9 @@ RETCODE sepastoreAddCut(
    assert(!SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
-   /**@todo don't add redundant cuts to the separation store */
+   /* check cut for redundancy */
+   if( sepastoreIsCutRedundant(sepastore, set, stat, cut) )
+      return SCIP_OKAY;
 
    /* get maximum of separated cuts at this node:
     *  - for root LP, use all cuts
@@ -274,6 +315,7 @@ RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
@@ -360,7 +402,7 @@ RETCODE SCIPsepastoreAddCut(
    else
    {
       /* add LP row cut to separation storage */
-      CHECK_OKAY( sepastoreAddCut(sepastore, memhdr, set, lp, cut, score, root) );
+      CHECK_OKAY( sepastoreAddCut(sepastore, memhdr, set, stat, lp, cut, score, root) );
    }
 
    return SCIP_OKAY;

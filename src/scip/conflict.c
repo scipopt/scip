@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.48 2004/08/10 14:18:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.49 2004/08/12 14:31:26 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1531,6 +1531,10 @@ RETCODE unfixBinariesDualfarkas(
          farkascoef = ABS(farkascoefs[v]);
          score = 1.0 - farkascoef/(farkaslhs - farkasact);
          score = MAX(score, 0.0) + 1e-6;
+#if 0 /*????????????????????*/
+         if( SCIPvarGetInferCons(var) == 0 ) /* prefer unfixing variables that cannot be resolved */
+            score += 1e+6;
+#endif
          score *= SCIPvarGetFixDepth(var);
 
          /* insert fixed variable in candidate list */
@@ -1914,6 +1918,10 @@ RETCODE unfixBinariesDualsol(
          redcost = ABS(varredcosts[v]);
          score = 1.0 - redcost/(duallhs - dualact);
          score = MAX(score, 0.0) + 1e-6;
+#if 0 /*????????????????????*/
+         if( SCIPvarGetInferCons(var) == 0 ) /* prefer unfixing variables that cannot be resolved */
+            score += 1e+6;
+#endif
          score *= SCIPvarGetFixDepth(var);
 
          /* insert fixed variable in candidate list */
@@ -2035,6 +2043,7 @@ RETCODE conflictAnalyzeLP(
 
    assert(set != NULL);
    assert(set->nactivepricers == 0); /* conflict analysis is not possible with unknown variables */
+   assert(stat != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
@@ -2260,9 +2269,15 @@ RETCODE conflictAnalyzeLP(
          resolve = FALSE;
          lastnbdchgs = nbdchgs;
 
+         /* start LP timer */
+         SCIPclockStart(stat->conflictlptime, set);
+
          /* resolve LP */
          CHECK_OKAY( SCIPlpiSolveDual(lpi) );
-      
+
+         /* stop LP timer */
+         SCIPclockStop(stat->conflictlptime, set);
+
          /* evaluate result */
          if( SCIPlpiIsOptimal(lpi) )
          {
@@ -2275,6 +2290,8 @@ RETCODE conflictAnalyzeLP(
          /* count number of LP iterations */
          CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &iter) );
          (*iterations) += iter;
+         stat->nconflictlps++;
+         stat->nconflictlpiterations += iter;
 
          if( valid )
          {
@@ -2492,8 +2509,9 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    Real newlb;
    Real newub;
    Bool found;
-   int iterations;
+   int iter;
 
+   assert(stat != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
@@ -2545,16 +2563,28 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          col->ub = newub;
          CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, 1, &col->lpipos, &col->lb, &col->ub) );
 
+         /* start LP timer */
+         SCIPclockStart(stat->conflictlptime, set);
+
          /* resolve the LP */
          CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
             
+         /* stop LP timer */
+         SCIPclockStop(stat->conflictlptime, set);
+
+         /* count number of LP iterations */
+         CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITER, &iter) );
+         stat->nconflictlps++;
+         stat->nconflictlpiterations += iter;
+         conflict->nsbiterations += iter;
+
          /* fake the fixdepth of the variable in order to get the conflict analysis running */
          assert(var->fixdepth == -1);
          var->fixdepth = tree->actnode->depth+1;
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iterations, &found) );
-         conflict->nsbiterations += iterations;
+         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iter, &found) );
+         conflict->nsbiterations += iter;
          if( found )
          {
             conflict->nsbconflicts++;
@@ -2584,16 +2614,28 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          col->lb = newlb;
          CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, 1, &col->lpipos, &col->lb, &col->ub) );
             
+         /* start LP timer */
+         SCIPclockStart(stat->conflictlptime, set);
+
          /* resolve the LP */
          CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
             
+         /* stop LP timer */
+         SCIPclockStop(stat->conflictlptime, set);
+
+         /* count number of LP iterations */
+         CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITER, &iter) );
+         stat->nconflictlps++;
+         stat->nconflictlpiterations += iter;
+         conflict->nsbiterations += iter;
+
          /* fake the fixdepth of the variable in order to get the conflict analysis running */
          assert(var->fixdepth == -1);
          var->fixdepth = tree->actnode->depth+1;
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iterations, &found) );
-         conflict->nsbiterations += iterations;
+         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iter, &found) );
+         conflict->nsbiterations += iter;
          if( found )
          {
             conflict->nsbconflicts++;

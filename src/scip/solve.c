@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.125 2004/08/03 16:14:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.126 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -169,6 +169,7 @@ RETCODE redcostStrengthening(
    int ncols;
    int c;
 
+   assert(set != NULL);
    assert(tree != NULL);
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
@@ -864,7 +865,12 @@ RETCODE priceAndCutLoop(
             /* apply reduced cost bound strengthening */
             if( lp->solved )
             {
-               CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue) );
+               /* check, if we want to apply reduced cost fixing at current node */
+               if( (set->redcostfreq == 0 && tree->actnode->depth == 0)
+                  || (set->redcostfreq > 0 && tree->actnode->depth % set->redcostfreq == 0) )
+               {
+                  CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue) );
+               }
             }
         
             /* apply found cuts */

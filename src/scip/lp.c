@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.136 2004/08/10 14:19:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.137 2004/08/12 14:31:27 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9441,6 +9441,25 @@ RETCODE SCIPlpWrite(
    assert(fname != NULL);
 
    CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, fname) );
+
+#if 0 /*???????????????????????????*/
+   {
+      FILE* f;
+      int c;
+
+      printf("storing integrality conditions in <%s>\n", fname);
+      f = fopen(fname, "a");
+      fprintf(f, "General\n");
+      for( c = 0; c < lp->ncols; ++c )
+      {
+         assert(lp->cols[c] == lp->lpicols[c]);
+         if( SCIPvarGetType(SCIPcolGetVar(lp->cols[c])) != SCIP_VARTYPE_CONTINUOUS )
+            fprintf(f, "%s\n", SCIPvarGetName(SCIPcolGetVar(lp->cols[c])));
+      }
+      fprintf(f, "End\n");
+      fclose(f);
+   }
+#endif
 
    return SCIP_OKAY;
 }

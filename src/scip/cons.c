@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.89 2004/08/10 14:18:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.90 2004/08/12 14:31:26 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3127,7 +3127,7 @@ RETCODE SCIPconsCreate(
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*cons)->name, name, strlen(name)+1) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
-   (*cons)->transcons = NULL;
+   (*cons)->transorigcons = NULL;
    (*cons)->addconssetchg = NULL;
    (*cons)->addarraypos = -1;
    (*cons)->consspos = -1;
@@ -3210,12 +3210,23 @@ RETCODE SCIPconsFree(
    assert((*cons)->nuses == 0);
    assert((*cons)->conshdlr != NULL);
    assert(!(*cons)->update);
+   assert(!(*cons)->original || (*cons)->transorigcons == NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
 
    /* free constraint data */
    CHECK_OKAY( SCIPconsFreeData(*cons, memhdr, set) );
    assert((*cons)->consdata == NULL);
+
+   /* unlink transformed and original constraint */
+   if( (*cons)->transorigcons != NULL )
+   {
+      assert(!(*cons)->original);
+      assert((*cons)->transorigcons->original);
+      assert((*cons)->transorigcons->transorigcons == *cons);
+
+      (*cons)->transorigcons->transorigcons = NULL;
+   }
 
    /* free constraint */
    freeBlockMemoryArray(memhdr, &(*cons)->name, strlen((*cons)->name)+1);
@@ -3337,7 +3348,7 @@ RETCODE SCIPconsDelete(
    return SCIP_OKAY;
 }
 
-/** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
+/** gets and captures transformed constraint of a given original constraint; if the constraint is not yet transformed,
  *  a new transformed constraint for this constraint is created
  */
 RETCODE SCIPconsTransform(
@@ -3353,9 +3364,9 @@ RETCODE SCIPconsTransform(
    assert(transcons != NULL);
 
    /* check, if the constraint is already transformed */
-   if( origcons->transcons != NULL )
+   if( origcons->transorigcons != NULL )
    {
-      *transcons = origcons->transcons;
+      *transcons = origcons->transorigcons;
       SCIPconsCapture(*transcons);
    }
    else
@@ -3375,21 +3386,24 @@ RETCODE SCIPconsTransform(
       }
 
       /* link original and transformed constraint */
-      origcons->transcons = *transcons;
+      origcons->transorigcons = *transcons;
+      (*transcons)->transorigcons = origcons;
    }
    assert(*transcons != NULL);
 
    return SCIP_OKAY;
 }
 
-/** gets transformed constraint of an original constraint */
+/** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
+ *  exists
+ */
 CONS* SCIPconsGetTransformed(
    CONS*            cons                /**< constraint */
    )
 {
    assert(cons->original);
 
-   return cons->transcons;
+   return cons->transorigcons;
 }
 
 /** activates constraint or marks constraint to be activated in next update */

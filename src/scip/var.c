@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.105 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.106 2004/08/12 14:31:28 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2572,8 +2572,13 @@ RETCODE SCIPvarAggregate(
    assert(var != NULL);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
    assert(infeasible != NULL);
+
+   /* get active problem variable of aggregation variable */
+   CHECK_OKAY( SCIPvarGetProbvarSum(&aggvar, &scalar, &constant) );
+   assert((aggvar == NULL) == SCIPsetIsZero(set, scalar));
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
@@ -2582,14 +2587,25 @@ RETCODE SCIPvarAggregate(
    assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
+   assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
 
    debugMessage("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
       scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
 
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
-
    *infeasible = FALSE;
+
+   /* if variable and aggregation variable are equal, the variable can be fixed: x == a*x + c  =>  x == c/(1-a) */
+   if( var == aggvar )
+   {
+      if( SCIPsetIsEQ(set, scalar, 1.0) )
+         *infeasible = !SCIPsetIsZero(set, constant);
+      else
+      {
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
+               constant/(1.0-scalar), infeasible) );
+      }
+      return SCIP_OKAY;
+   }
 
    /* tighten the bounds of aggregated and aggregation variable */
    CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,

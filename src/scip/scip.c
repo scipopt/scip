@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.193 2004/08/10 14:19:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.194 2004/08/12 14:31:27 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3573,13 +3573,17 @@ RETCODE SCIPsolve(
             scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
       else
          printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
-      printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
-      printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
-      printf("Gap                : ");
-      if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
-         printf("infinite\n");
-      else
-         printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
+      if( scip->stage >= SCIP_STAGE_TRANSFORMED && scip->stage <= SCIP_STAGE_FREESOLVE )
+         printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+      if( scip->stage >= SCIP_STAGE_SOLVING && scip->stage <= SCIP_STAGE_SOLVED )
+      {
+         printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
+         printf("Gap                : ");
+         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
+            printf("infinite\n");
+         else
+            printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
+      }
    }
 
    return SCIP_OKAY;
@@ -5058,6 +5062,10 @@ RETCODE SCIPaggregateVars(
    *redundant = FALSE;
    *aggregated = FALSE;
 
+   /* we cannot aggregate multiaggregated variables */
+   if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
    /* get the corresponding equality in active problem variable space:
     * transform both expressions "a*x + 0" and "b*y + 0" into problem variable space
     */
@@ -5787,7 +5795,7 @@ RETCODE SCIPaddConsAge(
    Real             deltaage            /**< value to add to the constraint's age */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsAge", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsAddAge(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, deltaage) );
 
@@ -5805,7 +5813,7 @@ RETCODE SCIPincConsAge(
    CONS*            cons                /**< constraint */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsIncAge(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
 
@@ -5823,7 +5831,7 @@ RETCODE SCIPresetConsAge(
    CONS*            cons                /**< constraint */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsResetAge(cons, scip->set) );
 
@@ -6824,7 +6832,7 @@ RETCODE SCIPaddCut(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->lp,
+   CHECK_OKAY( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
          cut, score, (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
    
    return SCIP_OKAY;
@@ -8448,7 +8456,7 @@ Real SCIPgetPrimalbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetPrimalbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetPrimalbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPprobExternObjval(scip->origprob, scip->set, 
       SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound));
@@ -8459,7 +8467,7 @@ Real SCIPgetUpperbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->upperbound;
 }
@@ -8472,7 +8480,7 @@ Real SCIPgetCutoffbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetCutoffbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetCutoffbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->cutoffbound;
 }
@@ -8492,6 +8500,7 @@ Real SCIPgetGap(
 
    primalbound = SCIPgetPrimalbound(scip);
    dualbound = SCIPgetDualbound(scip);
+
    if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
       return scip->set->infinity;
    else
@@ -8991,6 +9000,17 @@ void printLPStatistics(
       fprintf(file, " %10.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
       fprintf(file, "          -\n");
+
+   fprintf(file, "  conflict analysis: %10.2f %10d %10lld %10.2f",
+      SCIPclockGetTime(scip->stat->conflictlptime),
+      scip->stat->nconflictlps, 
+      scip->stat->nconflictlpiterations,
+      scip->stat->nconflictlps > 0 ? (Real)scip->stat->nconflictlpiterations/(Real)scip->stat->nconflictlps : 0.0);
+   if( SCIPclockGetTime(scip->stat->conflictlptime) >= 0.01 )
+      fprintf(file, " %10.2f\n", (Real)scip->stat->nconflictlpiterations/SCIPclockGetTime(scip->stat->conflictlptime));
+   else
+      fprintf(file, "          -\n");
+
 }
 
 static
