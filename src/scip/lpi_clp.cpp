@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.8 2004/12/09 17:31:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.9 2004/12/09 18:43:32 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -275,6 +275,8 @@ RETCODE SCIPlpiCreate(
 {
    assert(lpi != 0);
 
+   debugMessage("calling SCIPlpiCreate()\n");
+
    // create lpi object
    ALLOC_OKAY( allocMemory(lpi) );
    (*lpi)->clp = new ClpSimplex();
@@ -325,6 +327,8 @@ RETCODE SCIPlpiFree(
    assert(lpi != 0);
    assert(*lpi != 0);
    assert((*lpi)->clp != 0);
+
+   debugMessage("calling SCIPlpiFree()\n");
 
    /* free LP */
    delete (*lpi)->clp;
@@ -2079,8 +2083,6 @@ RETCODE SCIPlpiSetBase(
       }
    }
    
-   //clp->factorize();  // ???????????????????????????????????
-   //lpi->validFactorization = false;
    clp->setWhatsChanged(clp->whatsChanged() & (~512));   // tell Clp that basis has changed
 
    return SCIP_OKAY;
@@ -2397,7 +2399,6 @@ RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
-      lpi->validFactorization = false; // ???????????????????????
       break;
    case SCIP_LPPAR_PRICING:
       abort();
