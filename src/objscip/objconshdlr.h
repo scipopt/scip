@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.32 2005/02/14 13:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.33 2005/02/16 13:32:57 bzfberth Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -547,7 +547,7 @@ public:
     *    (positive) constraint infeasible and rounding up is potentially rendering the negation of the constraint
     *    infeasible.
     *  - If the constraint may get violated by increasing the value of a variable, it should call
-    *    SCIPaddVarLocks(scip, var, nlocksneg, nlockspos), saying that rounding down is potentially rendering the
+    *    SCIPaddVarLocks(scip, var, nlocksneg, nlockspos), saying that rounding up is potentially rendering the
     *    constraint's negation infeasible and rounding up is potentially rendering the constraint itself
     *    infeasible.
     *  - If the constraint may get violated by changing the variable in any direction, it should call
