@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.1 2005/01/31 15:21:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.2 2005/01/31 15:41:33 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -28,13 +28,13 @@
 #include "heur_objfeaspump.h"
 
 
-#define HEUR_NAME         "objfeaspump"
-#define HEUR_DESC         "variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account"
-#define HEUR_DISPCHAR     'O'
-#define HEUR_PRIORITY     -1003000
-#define HEUR_FREQ         10
-#define HEUR_FREQOFS       8
-#define HEUR_MAXDEPTH     -1
+#define HEUR_NAME             "objfeaspump"
+#define HEUR_DESC             "variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account"
+#define HEUR_DISPCHAR         'O'
+#define HEUR_PRIORITY         -1008000
+#define HEUR_FREQ             10
+#define HEUR_FREQOFS          8
+#define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /** call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE     /** call heuristic during plunging? (should be FALSE for diving heuristics!) */
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.13 2005/01/31 15:28:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.14 2005/01/31 15:41:33 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -33,7 +33,7 @@
 #define HEUR_NAME             "feaspump"
 #define HEUR_DESC             "feasibility pump heuristic by Fischetti, Glover and Lodi"
 #define HEUR_DISPCHAR         'F'
-#define HEUR_PRIORITY         -1008000 
+#define HEUR_PRIORITY         -1000000
 #define HEUR_FREQ             10         
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1

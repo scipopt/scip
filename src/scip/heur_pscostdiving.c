@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.15 2005/01/21 09:16:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.16 2005/01/31 15:41:34 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -32,7 +32,7 @@
 #define HEUR_NAME             "pscostdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the pseudo cost values"
 #define HEUR_DISPCHAR         'p'
-#define HEUR_PRIORITY         -1000000
+#define HEUR_PRIORITY         -1002000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          2
 #define HEUR_MAXDEPTH         -1
