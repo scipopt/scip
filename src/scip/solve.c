@@ -667,14 +667,13 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
             /* found a feasible solution */
             if( tree->actnodehaslp )
             {
-               CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, lp) );
+               CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, stat, lp, NULL) );
             }
             else
             {
-               CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, set, stat, prob) );
+               CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, stat, tree, NULL) );
             }
-            CHECK_OKAY( SCIPprimalAddSol(primal, memhdr, set, stat, tree, lp, &sol) );
-            CHECK_OKAY( SCIPsolRelease(&sol, memhdr, set, lp) );
+            CHECK_OKAY( SCIPprimalAddSolMove(primal, memhdr, set, stat, prob, tree, lp, &sol) );
          }
       }
 

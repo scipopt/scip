@@ -335,35 +335,45 @@ RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be
    );
 
 extern
-RETCODE SCIPvarForbidRoundDown(         /**< increases lock number for rounding down; tells variable, that rounding its
+void SCIPvarForbidRoundDown(            /**< increases lock number for rounding down; tells variable, that rounding its
                                          *   value down will make the solution infeasible */
    VAR*             var                 /**< problem variable */
    );
 
 extern
-RETCODE SCIPvarForbidRoundUp(           /**< increases lock number for rounding up; tells variable, that rounding its
+void SCIPvarForbidRoundUp(              /**< increases lock number for rounding up; tells variable, that rounding its
                                          *   value up will make the solution infeasible */
    VAR*             var                 /**< problem variable */
    );
 
 extern
-RETCODE SCIPvarForbidRound(             /**< increases lock number for rounding down and up; tells variable, that rounding
+void SCIPvarForbidRound(                /**< increases lock number for rounding down and up; tells variable, that rounding
                                          *   value in either direction will make the solution infeasible */
    VAR*             var                 /**< problem variable */
    );
 
 extern
-RETCODE SCIPvarAllowRoundDown(          /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
+void SCIPvarAllowRoundDown(             /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
    VAR*             var                 /**< problem variable */
    );
 
 extern
-RETCODE SCIPvarAllowRoundUp(            /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
+void SCIPvarAllowRoundUp(               /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
    VAR*             var                 /**< problem variable */
    );
 
 extern
-RETCODE SCIPvarAllowRound(              /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
+void SCIPvarAllowRound(                 /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+int SCIPvarGetNLocksDown(               /**< gets number of locks for rounding down */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+int SCIPvarGetNLocksUp(                 /**< gets number of locks for rounding up */
    VAR*             var                 /**< problem variable */
    );
 
@@ -453,7 +463,27 @@ VARTYPE SCIPvarGetType(                 /**< gets type of variable */
    );
 
 extern
+int SCIPvarGetIndex(                    /**< gets unique index of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+int SCIPvarGetProbIndex(                /**< gets position of variable in problem, or -1 if variable is not active */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
 VAR* SCIPvarGetTransformed(             /**< gets corresponding transformed variable of an original variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+COL* SCIPvarGetCol(                     /**< gets column of COLUMN variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Real SCIPvarGetObj(                     /**< gets objective function value of variable */
    VAR*             var                 /**< problem variable */
    );
 

@@ -116,19 +116,17 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
 
 RETCODE SCIPprimalFree(                 /**< frees primal data */
    PRIMAL**         primal,             /**< pointer to primal data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    int s;
 
    assert(primal != NULL);
 
-   /* release primal CIP solutions */
+   /* free primal CIP solutions */
    for( s = 0; s < (*primal)->nsols; ++s )
    {
-      CHECK_OKAY( SCIPsolRelease(&(*primal)->sols[s], memhdr, set, lp) );
+      CHECK_OKAY( SCIPsolFree(&(*primal)->sols[s], memhdr) );
    }
    freeMemoryArrayNull((*primal)->sols);
    freeMemory(*primal);
@@ -136,27 +134,81 @@ RETCODE SCIPprimalFree(                 /**< frees primal data */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprimalAddSol(               /**< adds solution to primal solution storage */
+static
+RETCODE primalAddSol(                   /**< adds primal solution to solution storage at given position */
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
-   SOL**            sol                 /**< pointer to primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   int              insertpos           /**< position in solution storage to add solution to */
    )
 {
-   int insertpos;
    int pos;
 
    assert(primal != NULL);
    assert(sol != NULL);
+   assert(0 <= insertpos && insertpos < set->maxsol);
+
+   debugMessage("insert primal solution at position %d:", insertpos);
+   debug( SCIPsolPrint(sol, memhdr, set, stat, prob, NULL) );
+
+   /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
+   CHECK_OKAY( SCIPsolUnlink(sol, memhdr, set, prob) );
+
+   /* allocate memory for solution storage */
+   CHECK_OKAY( ensureSolsSize(primal, set, set->maxsol) );
+   
+   /* if the solution storage is full, free the last solution(s)
+    * more than one solution may be freed, if set->maxsol was decreased in the meantime
+    */
+   for( pos = set->maxsol-1; pos < primal->nsols; ++pos )
+   {
+      CHECK_OKAY( SCIPsolFree(&primal->sols[pos], memhdr) );
+   }
+
+   /* insert solution at correct position */
+   primal->nsols = MIN(primal->nsols+1, set->maxsol);
+   for( pos = primal->nsols-1; pos > insertpos; --pos )
+      primal->sols[pos] = primal->sols[pos-1];
+
+   primal->sols[insertpos] = sol;
+   primal->nsolsfound++;
+   debugMessage(" -> stored at position %d of %d solutions, found %d solutions\n", 
+      insertpos, primal->nsols, primal->nsolsfound);
+   
+   /* check, if the global upper bound has to be updated */
+   if( sol->obj < primal->upperbound )
+   {
+      /* update the upper bound */
+      CHECK_OKAY( primalSetUpperbound(primal, memhdr, set, tree, lp, sol->obj) );
+      
+      /* display node information line */
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution storage by moving it */
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   )
+{
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
    assert(*sol != NULL);
-
-   debugMessage("added primal solution:");
-   debug( SCIPsolPrint(*sol, set, NULL) );
-
-   SCIPsolCapture(*sol);
 
    /* search the position to insert solution in storage */
    for( insertpos = 0; insertpos < primal->nsols && (*sol)->obj >= primal->sols[insertpos]->obj; ++insertpos )
@@ -165,33 +217,54 @@ RETCODE SCIPprimalAddSol(               /**< adds solution to primal solution st
 
    if( insertpos < set->maxsol )
    {
-      CHECK_OKAY( ensureSolsSize(primal, set, set->maxsol) );
-      
-      /* insert solution at correct position */
-      primal->nsols = MIN(primal->nsols+1, set->maxsol);
-      for( pos = primal->nsols-1; pos > insertpos; --pos )
-         primal->sols[pos] = primal->sols[pos-1];
+      /* insert solution into solution storage */
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, *sol, insertpos) );
 
-      primal->sols[insertpos] = *sol;
-      primal->nsolsfound++;
-      debugMessage(" -> stored at position %d of %d solutions, found %d solutions\n", 
-         insertpos, primal->nsols, primal->nsolsfound);
-
-      /* check, if the global upper bound has to be updated */
-      if( (*sol)->obj < primal->upperbound )
-      {
-         /* update the upper bound */
-         CHECK_OKAY( primalSetUpperbound(primal, memhdr, set, tree, lp, (*sol)->obj) );
-         
-         /* display node information line */
-         CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
-      }
+      /* clear the pointer, such that the user cannot access the solution anymore */
+      *sol = NULL;
    }
    else
    {
-      /* we don't need the solution -> release it */
-      CHECK_OKAY( SCIPsolRelease(sol, memhdr, set, lp) );
+      /* the solution is too bad -> free it immediately */
+      CHECK_OKAY( SCIPsolFree(sol, memhdr) );
+   }
+   assert(*sol == NULL);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution storage by copying it */
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+
+   /* search the position to insert solution in storage */
+   for( insertpos = 0; insertpos < primal->nsols && sol->obj >= primal->sols[insertpos]->obj; ++insertpos )
+   {
+   }
+
+   if( insertpos < set->maxsol )
+   {
+      SOL* solcopy;
+
+      /* create a copy of the solution */
+      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
+      
+      /* insert copied solution into solution storage */
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, solcopy, insertpos) );
    }
 
    return SCIP_OKAY;
 }
+

@@ -91,6 +91,7 @@ typedef struct Lp LP;                   /**< actual LP data */
 #include "stat.h"
 #include "lpi.h"
 #include "var.h"
+#include "cons.h"
 
 
 
@@ -125,6 +126,7 @@ struct Col
 struct Row
 {
    char*            name;               /**< name of the row */
+   CONS*            cons;               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
    Real*            val;                /**< coefficients of row entries */
    int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
@@ -358,6 +360,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
+   CONS*            cons,               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
@@ -403,13 +406,13 @@ void SCIProwSort(                       /**< sorts row entries by column index *
    );
 
 extern
-RETCODE SCIProwForbidRounding(          /**< forbids roundings of variables in row that may violate row */
+void SCIProwForbidRounding(             /**< forbids roundings of variables in row that may violate row */
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
 
 extern
-RETCODE SCIProwAllowRounding(           /**< allows roundings of variables in row that may violate row */
+void SCIProwAllowRounding(              /**< allows roundings of variables in row that may violate row */
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
@@ -488,6 +491,21 @@ Real SCIProwGetRhs(                     /**< returns the right hand side of the 
 
 extern
 const char* SCIProwGetName(             /**< returns the name of the row */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+CONS* SCIProwGetCons(                   /**< gets constraint this row belongs to, or NULL if it's a cut */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+int SCIProwGetIndex(                    /**< gets unique index of row */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+Bool SCIProwIsModel(                    /**< returns TRUE iff row belongs to a model constraint */
    ROW*             row                 /**< LP row */
    );
 

@@ -254,7 +254,7 @@ DECL_DISPOUTP(SCIPdispOutpActcols)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCOLS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetActNCols(scip, &actcols) );
+   CHECK_OKAY( SCIPgetLPCols(scip, NULL, &actcols) );
    SCIPdispDecimal(file, actcols, DISP_WIDT_ACTCOLS);
 
    return SCIP_OKAY;
@@ -269,7 +269,7 @@ DECL_DISPOUTP(SCIPdispOutpActrows)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTROWS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetActNRows(scip, &actrows) );
+   CHECK_OKAY( SCIPgetLPRows(scip, NULL, &actrows) );
    SCIPdispDecimal(file, actrows, DISP_WIDT_ACTROWS);
 
    return SCIP_OKAY;

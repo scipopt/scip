@@ -81,13 +81,13 @@
 /* Tree */
 
 /*#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX*/ /**< maximal number of nodes to create */
-#define SCIP_DEFAULT_NODELIMIT        5000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT       10000 /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ          100 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -718,7 +718,7 @@ Bool SCIPsetIsEQ(                       /**< checks, if values are in range of e
 {
    assert(set != NULL);
 
-   return (ABS(val1-val2) <= set->epsilon);
+   return EPSEQ(val1, val2, set->epsilon);
 }
 
 Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsilon) lower than val2 */
@@ -729,7 +729,7 @@ Bool SCIPsetIsL(                        /**< checks, if val1 is (more than epsil
 {
    assert(set != NULL);
 
-   return (val1 - val2 < -set->epsilon);
+   return EPSL(val1, val2, set->epsilon);
 }
 
 Bool SCIPsetIsLE(                       /**< checks, if val1 is not (more than epsilon) greater than val2 */
@@ -740,7 +740,7 @@ Bool SCIPsetIsLE(                       /**< checks, if val1 is not (more than e
 {
    assert(set != NULL);
 
-   return (val1 - val2 <= set->epsilon);
+   return EPSLE(val1, val2, set->epsilon);
 }
 
 Bool SCIPsetIsG(                        /**< checks, if val1 is (more than epsilon) greater than val2 */
@@ -751,7 +751,7 @@ Bool SCIPsetIsG(                        /**< checks, if val1 is (more than epsil
 {
    assert(set != NULL);
 
-   return (val1 - val2 > set->epsilon);
+   return EPSG(val1, val2, set->epsilon);
 }
 
 Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than epsilon) lower than val2 */
@@ -762,7 +762,7 @@ Bool SCIPsetIsGE(                       /**< checks, if val1 is not (more than e
 {
    assert(set != NULL);
 
-   return (val1 - val2 >= -set->epsilon);
+   return EPSGE(val1, val2, set->epsilon);
 }
 
 Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilon of 0.0 */
@@ -772,7 +772,7 @@ Bool SCIPsetIsZero(                     /**< checks, if value is in range epsilo
 {
    assert(set != NULL);
 
-   return (ABS(val) <= set->epsilon);
+   return EPSZ(val, set->epsilon);
 }
 
 Bool SCIPsetIsPos(                      /**< checks, if value is greater than epsilon */
@@ -782,7 +782,7 @@ Bool SCIPsetIsPos(                      /**< checks, if value is greater than ep
 {
    assert(set != NULL);
 
-   return (val > set->epsilon);
+   return EPSP(val, set->epsilon);
 }
 
 Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -epsilon */
@@ -792,7 +792,7 @@ Bool SCIPsetIsNeg(                      /**< checks, if value is lower than -eps
 {
    assert(set != NULL);
 
-   return (val < -set->epsilon);
+   return EPSN(val, set->epsilon);
 }
 
 Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of sumepsilon */
@@ -803,7 +803,7 @@ Bool SCIPsetIsSumEQ(                    /**< checks, if values are in range of s
 {
    assert(set != NULL);
 
-   return (ABS(val1-val2) <= set->sumepsilon);
+   return EPSEQ(val1, val2, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumepsilon) lower than val2 */
@@ -814,7 +814,7 @@ Bool SCIPsetIsSumL(                     /**< checks, if val1 is (more than sumep
 {
    assert(set != NULL);
 
-   return (val1 - val2 < -set->sumepsilon);
+   return EPSL(val1, val2, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than sumepsilon) greater than val2 */
@@ -825,7 +825,7 @@ Bool SCIPsetIsSumLE(                    /**< checks, if val1 is not (more than s
 {
    assert(set != NULL);
 
-   return (val1 - val2 <= set->sumepsilon);
+   return EPSLE(val1, val2, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumepsilon) greater than val2 */
@@ -836,7 +836,7 @@ Bool SCIPsetIsSumG(                     /**< checks, if val1 is (more than sumep
 {
    assert(set != NULL);
 
-   return (val1 - val2 > set->sumepsilon);
+   return EPSG(val1, val2, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than sumepsilon) lower than val2 */
@@ -847,7 +847,7 @@ Bool SCIPsetIsSumGE(                    /**< checks, if val1 is not (more than s
 {
    assert(set != NULL);
 
-   return (val1 - val2 >= -set->sumepsilon);
+   return EPSGE(val1, val2, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumepsilon of 0.0 */
@@ -857,7 +857,7 @@ Bool SCIPsetIsSumZero(                  /**< checks, if value is in range sumeps
 {
    assert(set != NULL);
 
-   return (ABS(val) <= set->sumepsilon);
+   return EPSZ(val, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than sumepsilon */
@@ -867,7 +867,7 @@ Bool SCIPsetIsSumPos(                   /**< checks, if value is greater than su
 {
    assert(set != NULL);
 
-   return (val > set->sumepsilon);
+   return EPSP(val, set->sumepsilon);
 }
 
 Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sumepsilon */
@@ -877,7 +877,7 @@ Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sum
 {
    assert(set != NULL);
 
-   return (val < -set->sumepsilon);
+   return EPSN(val, set->sumepsilon);
 }
 
 Bool SCIPsetIsRelEQ(                    /**< checks, if relative difference of values is in range of epsilon */
@@ -886,7 +886,13 @@ Bool SCIPsetIsRelEQ(                    /**< checks, if relative difference of v
    Real             val2                /**< second value to be compared */
    )
 {
-   return (ABS(SCIPsetRelDiff(set, val1, val2)) <= set->epsilon);
+   Real diff;
+
+   assert(set != NULL);
+
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSZ(diff, set->epsilon);
 }
 
 Bool SCIPsetIsRelL(                     /**< checks, if relative difference of val1 and val2 is lower than epsilon */
@@ -895,9 +901,13 @@ Bool SCIPsetIsRelL(                     /**< checks, if relative difference of v
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return (SCIPsetRelDiff(set, val1, val2) < -set->epsilon);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSN(diff, set->epsilon);
 }
 
 Bool SCIPsetIsRelLE(                    /**< checks, if relative difference of val1 and val2 is not greater than epsilon */
@@ -906,9 +916,13 @@ Bool SCIPsetIsRelLE(                    /**< checks, if relative difference of v
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return (SCIPsetRelDiff(set, val1, val2) <= set->epsilon);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return !EPSP(diff, set->epsilon);
 }
 
 Bool SCIPsetIsRelG(                     /**< checks, if relative difference of val1 and val2 is greater than epsilon */
@@ -917,9 +931,13 @@ Bool SCIPsetIsRelG(                     /**< checks, if relative difference of v
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return (SCIPsetRelDiff(set, val1, val2) > set->epsilon);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSP(diff, set->epsilon);
 }
 
 Bool SCIPsetIsRelGE(                    /**< checks, if relative difference of val1 and val2 is not lower than -epsilon */
@@ -928,9 +946,88 @@ Bool SCIPsetIsRelGE(                    /**< checks, if relative difference of v
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return (SCIPsetRelDiff(set, val1, val2) >= -set->epsilon);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return !EPSN(diff, set->epsilon);
+}
+
+Bool SCIPsetIsSumRelEQ(                 /**< checks, if relative difference of values is in range of sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real diff;
+
+   assert(set != NULL);
+
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSZ(diff, set->sumepsilon);
+}
+
+Bool SCIPsetIsSumRelL(                  /**< checks, if relative difference of val1 and val2 is lower than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real diff;
+
+   assert(set != NULL);
+
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSN(diff, set->sumepsilon);
+}
+
+Bool SCIPsetIsSumRelLE(                 /**< checks, if relative difference of val1 and val2 is not greater than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real diff;
+
+   assert(set != NULL);
+
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return !EPSP(diff, set->sumepsilon);
+}
+
+Bool SCIPsetIsSumRelG(                  /**< checks, if relative difference of val1 and val2 is greater than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real diff;
+
+   assert(set != NULL);
+
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSP(diff, set->sumepsilon);
+}
+
+Bool SCIPsetIsSumRelGE(                 /**< checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real diff;
+
+   assert(set != NULL);
+
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return !EPSN(diff, set->sumepsilon);
 }
 
 Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */

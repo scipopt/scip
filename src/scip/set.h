@@ -388,6 +388,41 @@ Bool SCIPsetIsRelGE(                    /**< checks, if relative difference of v
    );
 
 extern
+Bool SCIPsetIsSumRelEQ(                 /**< checks, if relative difference of values is in range of sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumRelL(                  /**< checks, if relative difference of val1 and val2 is lower than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumRelLE(                 /**< checks, if relative difference of val1 and val2 is not greater than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumRelG(                  /**< checks, if relative difference of val1 and val2 is greater than sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsSumRelGE(                 /**< checks, if relative difference of val1 and val2 is not lower than -sumepsilon */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
 Bool SCIPsetIsInfinity(                 /**< checks, if value is (positive) infinite */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against infinity */
@@ -442,38 +477,44 @@ Bool SCIPsetIsFixed(                    /**< checks, if the given integer bounds
  * speed up the algorithms.
  */
 
-#define SCIPsetIsEQ(set, val1, val2)    ( ABS((val1)-(val2)) <= (set)->epsilon )
-#define SCIPsetIsL(set, val1, val2)     ( (val1) - (val2) < -(set)->epsilon )
-#define SCIPsetIsLE(set, val1, val2)    ( (val1) - (val2) <= (set)->epsilon )
-#define SCIPsetIsG(set, val1, val2)     ( (val1) - (val2) > (set)->epsilon )
-#define SCIPsetIsGE(set, val1, val2)    ( (val1) - (val2) >= -(set)->epsilon )
-#define SCIPsetIsZero(set, val)         ( ABS(val) <= (set)->epsilon )
-#define SCIPsetIsPos(set, val)          ( (val) > (set)->epsilon )
-#define SCIPsetIsNeg(set, val)          ( (val) < -(set)->epsilon )
+#define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->epsilon) )
+#define SCIPsetIsL(set, val1, val2)        ( EPSL(val1, val2, (set)->epsilon) )
+#define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->epsilon) )
+#define SCIPsetIsG(set, val1, val2)        ( EPSG(val1, val2, (set)->epsilon) )
+#define SCIPsetIsGE(set, val1, val2)       ( EPSGE(val1, val2, (set)->epsilon) )
+#define SCIPsetIsZero(set, val)            ( EPSZ(val, (set)->epsilon) )
+#define SCIPsetIsPos(set, val)             ( EPSP(val, (set)->epsilon) )
+#define SCIPsetIsNeg(set, val)             ( EPSN(val, (set)->epsilon) )
 
-#define SCIPsetIsSumEQ(set, val1, val2) ( ABS((val1)-(val2)) <= (set)->sumepsilon )
-#define SCIPsetIsSumL(set, val1, val2)  ( (val1) - (val2) < -(set)->sumepsilon )
-#define SCIPsetIsSumLE(set, val1, val2) ( (val1) - (val2) <= (set)->sumepsilon )
-#define SCIPsetIsSumG(set, val1, val2)  ( (val1) - (val2) > (set)->sumepsilon )
-#define SCIPsetIsSumGE(set, val1, val2) ( (val1) - (val2) >= -(set)->sumepsilon )
-#define SCIPsetIsSumZero(set, val)      ( ABS(val) <= (set)->sumepsilon )
-#define SCIPsetIsSumPos(set, val)       ( (val) > (set)->sumepsilon )
-#define SCIPsetIsSumNeg(set, val)       ( (val) < -(set)->sumepsilon )
+#define SCIPsetIsSumEQ(set, val1, val2)    ( EPSEQ(val1, val2, (set)->sumepsilon) )
+#define SCIPsetIsSumL(set, val1, val2)     ( EPSL(val1, val2, (set)->sumepsilon) )
+#define SCIPsetIsSumLE(set, val1, val2)    ( EPSLE(val1, val2, (set)->sumepsilon) )
+#define SCIPsetIsSumG(set, val1, val2)     ( EPSG(val1, val2, (set)->sumepsilon) )
+#define SCIPsetIsSumGE(set, val1, val2)    ( EPSGE(val1, val2, (set)->sumepsilon) )
+#define SCIPsetIsSumZero(set, val)         ( EPSZ(val, (set)->sumepsilon) )
+#define SCIPsetIsSumPos(set, val)          ( EPSP(val, (set)->sumepsilon) )
+#define SCIPsetIsSumNeg(set, val)          ( EPSN(val, (set)->sumepsilon) )
 
-#define SCIPsetIsRelEQ(set, val1, val2) ( ABS(SCIPsetRelDiff(set, val1, val2)) <= set->epsilon )
-#define SCIPsetIsRelL(set, val1, val2)  ( SCIPsetRelDiff(set, val1, val2) < -set->epsilon )
-#define SCIPsetIsRelLE(set, val1, val2) ( SCIPsetRelDiff(set, val1, val2) <= set->epsilon )
-#define SCIPsetIsRelG(set, val1, val2)  ( SCIPsetRelDiff(set, val1, val2) > set->epsilon )
-#define SCIPsetIsRelGE(set, val1, val2) ( SCIPsetRelDiff(set, val1, val2) >= -set->epsilon )
+#define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
+#define SCIPsetIsRelL(set, val1, val2)     ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
+#define SCIPsetIsRelLE(set, val1, val2)    ( !EPSP(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
+#define SCIPsetIsRelG(set, val1, val2)     ( EPSP(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
+#define SCIPsetIsRelGE(set, val1, val2)    ( !EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 
-#define SCIPsetIsInfinity(set, val)     ( (val) >= (set)->infinity )
-#define SCIPsetIsFeasible(set, val)     ( (val) >= -(set)->feastol )
-#define SCIPsetFloor(set, val)          ( floor((val) + (set)->feastol) )
-#define SCIPsetCeil(set, val)           ( ceil((val) - (set)->feastol) )
-#define SCIPsetFrac(set, val)           ( (val) - SCIPsetFloor(set, val) )
-#define SCIPsetIsIntegral(set, val)     ( SCIPsetCeil(set, val) - (val) <= (set)->feastol )
-#define SCIPsetIsFracIntegral(set, val) ( (val) <= (set)->feastol )
-#define SCIPsetIsFixed(set, lb, ub)     ( SCIPsetIsEQ(set, lb, ub) )
+#define SCIPsetIsSumRelEQ(set, val1, val2) ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->sumepsilon) )
+#define SCIPsetIsSumRelL(set, val1, val2)  ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->sumepsilon) )
+#define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPsetRelDiff(set, val1, val2), (set)->sumepsilon) )
+#define SCIPsetIsSumRelG(set, val1, val2)  ( EPSP(SCIPsetRelDiff(set, val1, val2), (set)->sumepsilon) )
+#define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPsetRelDiff(set, val1, val2), (set)->sumepsilon) )
+
+#define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->infinity )
+#define SCIPsetIsFeasible(set, val)        ( (val) >= -(set)->feastol )
+#define SCIPsetFloor(set, val)             ( floor((val) + (set)->feastol) )
+#define SCIPsetCeil(set, val)              ( ceil((val) - (set)->feastol) )
+#define SCIPsetFrac(set, val)              ( (val) - SCIPsetFloor(set, val) )
+#define SCIPsetIsIntegral(set, val)        ( EPSLE(SCIPsetCeil(set, val), val, (set)->feastol) )
+#define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->feastol) )
+#define SCIPsetIsFixed(set, lb, ub)        ( SCIPsetIsEQ(set, lb, ub) )
 
 #endif
 

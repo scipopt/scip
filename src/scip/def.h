@@ -71,6 +71,15 @@
 #define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
 #endif
 
+#define EPSEQ(x,y,eps) (ABS((x)-(y)) <= (eps))
+#define EPSL(x,y,eps)  ((x)-(y) < -(eps))
+#define EPSLE(x,y,eps) ((x)-(y) <= (eps))
+#define EPSG(x,y,eps)  ((x)-(y) > (eps))
+#define EPSGE(x,y,eps) ((x)-(y) >= -(eps))
+#define EPSZ(x,eps)    (ABS(x) <= (eps))
+#define EPSP(x,eps)    ((x) > (eps))
+#define EPSN(x,eps)    ((x) < -(eps))
+
 
 
 /*
@@ -109,7 +118,6 @@ typedef double Real;                    /**< type used for floating point values
 #define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
 #define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */
-
 
 
 /*

@@ -968,6 +968,10 @@ RETCODE SCIPvarTransform(               /**< copies original variable into loose
    origvar->data.transvar = *transvar;
    CHECK_OKAY( varAddParent(*transvar, memhdr, set, origvar) );
 
+   /* copy rounding locks */
+   (*transvar)->nlocksdown = origvar->nlocksdown;
+   (*transvar)->nlocksup = origvar->nlocksup;
+
    debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
 
    return SCIP_OKAY;
@@ -1058,6 +1062,8 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
    errorMessage("aggregation of variables not yet implemented");
    abort();
 
+   todoMessage("don't forget to move the rounding locks to the aggregation variable");
+
    return SCIP_OKAY;
 }
 
@@ -1079,95 +1085,323 @@ RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be
    return SCIP_OKAY;
 }
 
-RETCODE SCIPvarForbidRoundDown(         /**< increases lock number for rounding down; tells variable, that rounding its
+void SCIPvarForbidRoundDown(            /**< increases lock number for rounding down; tells variable, that rounding its
                                          *   value down will make the solution infeasible */
    VAR*             var                 /**< problem variable */
    )
 {
+   int i;
+
    assert(var != NULL);
    assert(var->nlocksdown >= 0);
 
-   var->nlocksdown++;
-   
-   return SCIP_OKAY;
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         SCIPvarForbidRoundDown(var->data.transvar);
+      else
+         var->nlocksdown++;
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      var->nlocksdown++;
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         SCIPvarForbidRoundDown(var->data.aggregate.var);
+      else
+         SCIPvarForbidRoundUp(var->data.aggregate.var);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            SCIPvarForbidRoundDown(var->data.multaggr.vars[i]);
+         else
+            SCIPvarForbidRoundUp(var->data.multaggr.vars[i]);
+      }
+      break;
+
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
 }
 
-RETCODE SCIPvarForbidRoundUp(           /**< increases lock number for rounding up; tells variable, that rounding its
+void SCIPvarForbidRoundUp(              /**< increases lock number for rounding up; tells variable, that rounding its
                                          *   value up will make the solution infeasible */
    VAR*             var                 /**< problem variable */
    )
 {
+   int i;
+
    assert(var != NULL);
    assert(var->nlocksup >= 0);
 
-   var->nlocksup++;
-   
-   return SCIP_OKAY;
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         SCIPvarForbidRoundUp(var->data.transvar);
+      else
+         var->nlocksup++;
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      var->nlocksup++;
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         SCIPvarForbidRoundUp(var->data.aggregate.var);
+      else
+         SCIPvarForbidRoundDown(var->data.aggregate.var);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            SCIPvarForbidRoundUp(var->data.multaggr.vars[i]);
+         else
+            SCIPvarForbidRoundDown(var->data.multaggr.vars[i]);
+      }
+      break;
+
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
 }
 
-RETCODE SCIPvarForbidRound(             /**< increases lock number for rounding down and up; tells variable, that rounding
+void SCIPvarForbidRound(                /**< increases lock number for rounding down and up; tells variable, that rounding
                                          *   value in either direction will make the solution infeasible */
    VAR*             var                 /**< problem variable */
    )
 {
-   CHECK_OKAY( SCIPvarForbidRoundDown(var) );
-   CHECK_OKAY( SCIPvarForbidRoundUp(var) );
-
-   return SCIP_OKAY;
+   SCIPvarForbidRoundDown(var);
+   SCIPvarForbidRoundUp(var);
 }
 
-RETCODE SCIPvarAllowRoundDown(          /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
+void SCIPvarAllowRoundDown(             /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
    VAR*             var                 /**< problem variable */
    )
 {
+   int i;
+
    assert(var != NULL);
-   assert(var->nlocksdown >= 1);
+   assert(var->nlocksdown >= 0);
 
-   var->nlocksdown--;
-   
-   return SCIP_OKAY;
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         SCIPvarAllowRoundDown(var->data.transvar);
+      else
+         var->nlocksdown--;
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      var->nlocksdown--;
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         SCIPvarAllowRoundDown(var->data.aggregate.var);
+      else
+         SCIPvarAllowRoundUp(var->data.aggregate.var);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            SCIPvarAllowRoundDown(var->data.multaggr.vars[i]);
+         else
+            SCIPvarAllowRoundUp(var->data.multaggr.vars[i]);
+      }
+      break;
+
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+
+   assert(var->nlocksdown >= 0);
 }
 
-RETCODE SCIPvarAllowRoundUp(            /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
+void SCIPvarAllowRoundUp(               /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
    VAR*             var                 /**< problem variable */
    )
 {
+   int i;
+
    assert(var != NULL);
-   assert(var->nlocksup >= 1);
+   assert(var->nlocksup >= 0);
 
-   var->nlocksup--;
-   
-   return SCIP_OKAY;
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         SCIPvarAllowRoundUp(var->data.transvar);
+      else
+         var->nlocksup--;
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      var->nlocksup--;
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         SCIPvarAllowRoundUp(var->data.aggregate.var);
+      else
+         SCIPvarAllowRoundDown(var->data.aggregate.var);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            SCIPvarAllowRoundUp(var->data.multaggr.vars[i]);
+         else
+            SCIPvarAllowRoundDown(var->data.multaggr.vars[i]);
+      }
+      break;
+
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+
+   assert(var->nlocksup >= 0);
 }
 
-RETCODE SCIPvarAllowRound(              /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
+void SCIPvarAllowRound(                 /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
    VAR*             var                 /**< problem variable */
    )
 {
-   CHECK_OKAY( SCIPvarAllowRoundDown(var) );
-   CHECK_OKAY( SCIPvarAllowRoundUp(var) );
+   SCIPvarAllowRoundDown(var);
+   SCIPvarAllowRoundUp(var);
+}
 
-   return SCIP_OKAY;
+int SCIPvarGetNLocksDown(               /**< gets number of locks for rounding down */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   int nlocks;
+   int i;
+
+   assert(var != NULL);
+   assert(var->nlocksdown >= 0);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         return SCIPvarGetNLocksDown(var->data.transvar);
+      else
+         return var->nlocksdown;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      return var->nlocksdown;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetNLocksDown(var->data.aggregate.var);
+      else
+         return SCIPvarGetNLocksUp(var->data.aggregate.var);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      nlocks = 0;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            nlocks += SCIPvarGetNLocksDown(var->data.multaggr.vars[i]);
+         else
+            nlocks += SCIPvarGetNLocksUp(var->data.multaggr.vars[i]);
+      }
+      return nlocks;
+
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
+}
+
+int SCIPvarGetNLocksUp(                 /**< gets number of locks for rounding up */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   int nlocks;
+   int i;
+
+   assert(var != NULL);
+   assert(var->nlocksup >= 0);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         return SCIPvarGetNLocksUp(var->data.transvar);
+      else
+         return var->nlocksup;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      return var->nlocksup;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetNLocksUp(var->data.aggregate.var);
+      else
+         return SCIPvarGetNLocksDown(var->data.aggregate.var);
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      nlocks = 0;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         if( var->data.multaggr.scalars[i] > 0.0 )
+            nlocks += SCIPvarGetNLocksUp(var->data.multaggr.vars[i]);
+         else
+            nlocks += SCIPvarGetNLocksDown(var->data.multaggr.vars[i]);
+      }
+      return nlocks;
+
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
 }
 
 Bool SCIPvarMayRoundDown(               /**< is it possible, to round variable down and stay feasible? */
    VAR*             var                 /**< problem variable */
    )
 {
-   assert(var != NULL);
-   assert(var->nlocksdown >= 0);
-
-   return (var->nlocksdown == 0);
+   return (SCIPvarGetNLocksDown(var) == 0);
 }
 
 Bool SCIPvarMayRoundUp(                 /**< is it possible, to round variable up and stay feasible? */
    VAR*             var                 /**< problem variable */
    )
 {
-   assert(var != NULL);
-   assert(var->nlocksup >= 0);
-
-   return (var->nlocksup == 0);
+   return (SCIPvarGetNLocksUp(var) == 0);
 }
 
 static
@@ -1697,6 +1931,24 @@ VARTYPE SCIPvarGetType(                 /**< gets type of variable */
    return var->vartype;
 }
 
+int SCIPvarGetIndex(                    /**< gets unique index of variable */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->index;
+}
+
+int SCIPvarGetProbIndex(                /**< gets position of variable in problem, or -1 if variable is not active */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->probindex;
+}
+
 VAR* SCIPvarGetTransformed(             /**< gets corresponding transformed variable of an original variable */
    VAR*             var                 /**< problem variable */
    )
@@ -1707,6 +1959,25 @@ VAR* SCIPvarGetTransformed(             /**< gets corresponding transformed vari
    return var->data.transvar;
 }
 
+COL* SCIPvarGetCol(                     /**< gets column of COLUMN variable */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+
+   return var->data.col;
+}
+
+Real SCIPvarGetObj(                     /**< gets objective function value of variable */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->obj;
+}
+   
 Real SCIPvarGetLb(                      /**< gets lower bound of variable */
    VAR*             var                 /**< problem variable */
    )
@@ -1724,104 +1995,6 @@ Real SCIPvarGetUb(                      /**< gets upper bound of variable */
 
    return var->dom.ub;
 }
-
-#if 0
-Real SCIPvarGetLb(                      /**< gets lower bound of variable */
-   VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(var != NULL);
-
-   if( var->validboundsbc != stat->nboundchange )
-   {
-      switch( var->varstatus )
-      {
-      case SCIP_VARSTATUS_ORIGINAL:
-         assert(var->data.transvar != NULL);
-         var->dom.lb = SCIPvarGetLb(var->data.transvar, set, stat);
-         break;
-         
-      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-         assert(var->data.aggregate.var != NULL);
-         if( SCIPsetIsPos(set, var->data.aggregate.scalar) )
-         {
-            /* a > 0 -> get lower bound of y */
-            var->dom.lb = var->data.aggregate.scalar * SCIPvarGetLb(var->data.aggregate.var, set, stat)
-               + var->data.aggregate.constant;
-         }
-         else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
-         {
-            /* a < 0 -> get upper bound of y */
-            var->dom.lb = var->data.aggregate.scalar * SCIPvarGetUb(var->data.aggregate.var, set, stat)
-               + var->data.aggregate.constant;
-         }
-         else
-         {
-            errorMessage("scalar is zero in aggregation");
-            return SCIP_INVALIDDATA;
-         }
-         break;
-
-      default:
-         errorMessage("all variables except transformed ORIGINAL and AGGREGATED should always have valid bounds");
-         abort();
-      }
-      var->validboundsbc = stat->nboundchange;
-   }
-
-   return var->dom.lb;
-}
-
-Real SCIPvarGetUb(                      /**< gets upper bound of variable */
-   VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(var != NULL);
-
-   if( var->validboundsbc != stat->nboundchange )
-   {
-      switch( var->varstatus )
-      {
-      case SCIP_VARSTATUS_ORIGINAL:
-         assert(var->data.transvar != NULL);
-         var->dom.ub = SCIPvarGetUb(var->data.transvar, set, stat);
-         break;
-         
-      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-         assert(var->data.aggregate.var != NULL);
-         if( SCIPsetIsPos(set, var->data.aggregate.scalar) )
-         {
-            /* a > 0 -> get upper bound of y */
-            var->dom.ub = var->data.aggregate.scalar * SCIPvarGetUb(var->data.aggregate.var, set, stat)
-               + var->data.aggregate.constant;
-         }
-         else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
-         {
-            /* a < 0 -> get lower bound of y */
-            var->dom.ub = var->data.aggregate.scalar * SCIPvarGetLb(var->data.aggregate.var, set, stat)
-               + var->data.aggregate.constant;
-         }
-         else
-         {
-            errorMessage("scalar is zero in aggregation");
-            return SCIP_INVALIDDATA;
-         }
-         break;
-
-      default:
-         errorMessage("all variables except transformed ORIGINAL and AGGREGATED should always have valid bounds");
-         abort();
-      }
-      var->validboundsbc = stat->nboundchange;
-   }
-
-   return var->dom.ub;
-}
-#endif
 
 static
 Real varGetBestBound(                   /**< gets best bound of variable with respect to the objective function */

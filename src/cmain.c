@@ -207,12 +207,6 @@ main(int argc, char **argv)
 
    printf("\nread problem <%s>\n", argv[1]);
    CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
-
-   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/egout.mps") );*/
-   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/markshare1.mps") );*/
-   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/rentacar.mps") );*/
-   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/dano3mip.mps") );*/
-
 #endif
 
 
@@ -233,6 +227,11 @@ main(int argc, char **argv)
    printf("\nsolve problem again\n");
    CHECK_SCIP( SCIPsolve(scip) );
 #endif
+
+   printf("\n");
+   printf("primal solution:\n");
+   printf("----------------\n");
+   CHECK_SCIP( SCIPprintBestSol(scip, NULL) );
 
 #ifndef NDEBUG
    /*SCIPdebugMemory(scip);*/

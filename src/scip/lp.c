@@ -1889,6 +1889,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    const char*      name,               /**< name of row */
+   CONS*            cons,               /**< constraint, this row belongs to, or NULL if the row was separated from LP */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
@@ -1924,6 +1925,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    }
    
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->name, name, strlen(name)+1) );
+   (*row)->cons = cons;
    (*row)->constant = 0.0;
    (*row)->lhs = lhs;
    (*row)->rhs = rhs;
@@ -2082,7 +2084,7 @@ RETCODE SCIProwUnlock(                  /**< unlocks a lock of a row; a row with
    return SCIP_OKAY;
 }
 
-RETCODE SCIProwForbidRounding(          /**< forbids roundings of variables in row that may violate row */
+void SCIProwForbidRounding(             /**< forbids roundings of variables in row that may violate row */
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -2110,32 +2112,22 @@ RETCODE SCIProwForbidRounding(          /**< forbids roundings of variables in r
       if( SCIPsetIsPos(set, vals[c]) )
       {
          if( lhsexists )
-         {
-            CHECK_OKAY( SCIPvarForbidRoundDown(cols[c]->var) );
-         }
+            SCIPvarForbidRoundDown(cols[c]->var);
          if( rhsexists )
-         {
-            CHECK_OKAY( SCIPvarForbidRoundUp(cols[c]->var) );
-         }
+            SCIPvarForbidRoundUp(cols[c]->var);
       }
       else
       {
          assert(SCIPsetIsNeg(set, vals[c]));
          if( lhsexists )
-         {
-            CHECK_OKAY( SCIPvarForbidRoundUp(cols[c]->var) );
-         }
+            SCIPvarForbidRoundUp(cols[c]->var);
          if( rhsexists )
-         {
-            CHECK_OKAY( SCIPvarForbidRoundDown(cols[c]->var) );
-         }
+            SCIPvarForbidRoundDown(cols[c]->var);
       }
    }
-
-   return SCIP_OKAY;
 }
 
-RETCODE SCIProwAllowRounding(           /**< allows roundings of variables in row that may violate row */
+void SCIProwAllowRounding(              /**< allows roundings of variables in row that may violate row */
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -2163,29 +2155,19 @@ RETCODE SCIProwAllowRounding(           /**< allows roundings of variables in ro
       if( SCIPsetIsPos(set, vals[c]) )
       {
          if( lhsexists )
-         {
-            CHECK_OKAY( SCIPvarAllowRoundDown(cols[c]->var) );
-         }
+            SCIPvarAllowRoundDown(cols[c]->var);
          if( rhsexists )
-         {
-            CHECK_OKAY( SCIPvarAllowRoundUp(cols[c]->var) );
-         }
+            SCIPvarAllowRoundUp(cols[c]->var);
       }
       else
       {
          assert(SCIPsetIsNeg(set, vals[c]));
          if( lhsexists )
-         {
-            CHECK_OKAY( SCIPvarAllowRoundUp(cols[c]->var) );
-         }
+            SCIPvarAllowRoundUp(cols[c]->var);
          if( rhsexists )
-         {
-            CHECK_OKAY( SCIPvarAllowRoundDown(cols[c]->var) );
-         }
+            SCIPvarAllowRoundDown(cols[c]->var);
       }
    }
-
-   return SCIP_OKAY;
 }
 
 RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
@@ -2878,6 +2860,33 @@ const char* SCIProwGetName(             /**< returns the name of the row */
    assert(row != NULL);
 
    return row->name;
+}
+
+CONS* SCIProwGetCons(                   /**< gets constraint this row belongs to, or NULL if it's a cut */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->cons;
+}
+
+int SCIProwGetIndex(                    /**< gets unique index of row */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->index;
+}
+
+Bool SCIProwIsModel(                    /**< returns TRUE iff row belongs to a model constraint */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return (row->cons != NULL && SCIPconsIsModel(row->cons));
 }
 
 Bool SCIProwIsInLP(                     /**< returns TRUE iff row is member of actual LP */

@@ -61,20 +61,31 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
 extern
 RETCODE SCIPprimalFree(                 /**< frees primal data */
    PRIMAL**         primal,             /**< pointer to primal data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   MEMHDR*          memhdr              /**< block memory */
    );
 
 extern
-RETCODE SCIPprimalAddSol(               /**< adds solution to primal solution storage */
+RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution storage by moving it */
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
-   SOL**            sol                 /**< pointer to primal CIP solution */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   );
+
+extern
+RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution storage by copying it */
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   SOL*             sol                 /**< primal CIP solution */
    );
 
 #endif

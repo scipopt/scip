@@ -32,11 +32,9 @@ typedef struct PQueue PQUEUE;           /**< priority queue */
 #endif
 
 typedef struct HashTable HASHTABLE;     /**< hash table */
-
-
-#include "def.h"
-#include "retcode.h"
-#include "memory.h"
+typedef struct RealArray REALARRAY;     /**< dynamic array for storing Real values */
+typedef struct IntArray INTARRAY;       /**< dynamic array for storing int values */
+typedef struct BoolArray BOOLARRAY;     /**< dynamic array for storing Bool values */
 
 
 
@@ -56,6 +54,14 @@ typedef struct HashTable HASHTABLE;     /**< hash table */
 
 /** returns the hash value of the key */
 #define DECL_HASHKEYVAL(x) unsigned int x (void* key)
+
+
+
+#include "def.h"
+#include "retcode.h"
+#include "memory.h"
+#include "set.h"
+
 
 
 #if 0 /* PRIORITY QUEUE NOT NEEDED */
@@ -139,6 +145,176 @@ DECL_HASHKEYEQ(SCIPhashKeyEqString);    /**< standard hash key comparator for st
 
 extern
 DECL_HASHKEYVAL(SCIPhashKeyValString);  /**< standard hashing function for string keys */
+
+
+
+/*
+ * Dynamic Arrays
+ */
+
+extern
+RETCODE SCIPrealarrayCreate(            /**< creates a dynamic array of real values */
+   REALARRAY**      realarray,          /**< pointer to store the real array */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPrealarrayCopy(              /**< creates a copy of a dynamic array of real values */
+   REALARRAY**      realarray,          /**< pointer to store the copied real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
+   );
+
+extern
+RETCODE SCIPrealarrayFree(              /**< frees a dynamic array of real values */
+   REALARRAY**      realarray,          /**< pointer to the real array */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPrealarrayExtend(            /**< extends dynamic array to be able to store indices from minidx to maxidx */
+   REALARRAY*       realarray,          /**< dynamic real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              minidx,             /**< smallest index to allocate storage for */
+   int              maxidx              /**< largest index to allocate storage for */
+   );
+
+extern
+void SCIPrealarrayClear(                /**< clears a dynamic real array */
+   REALARRAY*       realarray           /**< dynamic real array */
+   );
+
+extern
+Real SCIPrealarrayGet(                  /**< gets value of entry in dynamic array */
+   REALARRAY*       realarray,          /**< dynamic real array */
+   int              idx                 /**< array index to get value for */
+   );
+
+extern
+RETCODE SCIPrealarraySet(               /**< sets value of entry in dynamic array */
+   REALARRAY*       realarray,          /**< dynamic real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              idx,                /**< array index to set value for */
+   Real             val                 /**< value to set array index to */
+   );
+
+extern
+RETCODE SCIPrealarrayInc(               /**< increases value of entry in dynamic array */
+   REALARRAY*       realarray,          /**< dynamic real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              idx,                /**< array index to increase value for */
+   Real             incval              /**< value to increase array index */
+   );
+
+extern
+RETCODE SCIPintarrayCreate(             /**< creates a dynamic array of int values */
+   INTARRAY**       intarray,           /**< pointer to store the int array */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPintarrayCopy(               /**< creates a copy of a dynamic array of real values */
+   INTARRAY**       intarray,           /**< pointer to store the copied real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   INTARRAY*        sourceintarray      /**< dynamic real array to copy */
+   );
+
+extern
+RETCODE SCIPintarrayFree(               /**< frees a dynamic array of int values */
+   INTARRAY**       intarray,           /**< pointer to the int array */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPintarrayExtend(             /**< extends dynamic array to be able to store indices from minidx to maxidx */
+   INTARRAY*        intarray,           /**< dynamic int array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              minidx,             /**< smallest index to allocate storage for */
+   int              maxidx              /**< largest index to allocate storage for */
+   );
+
+extern
+void SCIPintarrayClear(                 /**< clears a dynamic int array */
+   INTARRAY*        intarray            /**< dynamic int array */
+   );
+
+extern
+int SCIPintarrayGet(                    /**< gets value of entry in dynamic array */
+   INTARRAY*        intarray,           /**< dynamic int array */
+   int              idx                 /**< array index to get value for */
+   );
+
+extern
+RETCODE SCIPintarraySet(                /**< sets value of entry in dynamic array */
+   INTARRAY*        intarray,           /**< dynamic int array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              idx,                /**< array index to set value for */
+   int              val                 /**< value to set array index to */
+   );
+
+extern
+RETCODE SCIPintarrayInc(                /**< increases value of entry in dynamic array */
+   INTARRAY*        intarray,           /**< dynamic int array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              idx,                /**< array index to increase value for */
+   int              incval              /**< value to increase array index */
+   );
+
+extern
+RETCODE SCIPboolarrayCreate(            /**< creates a dynamic array of bool values */
+   BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPboolarrayCopy(              /**< creates a copy of a dynamic array of real values */
+   BOOLARRAY**      boolarray,          /**< pointer to store the copied real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   BOOLARRAY*       sourceboolarray     /**< dynamic real array to copy */
+   );
+
+extern
+RETCODE SCIPboolarrayFree(              /**< frees a dynamic array of bool values */
+   BOOLARRAY**      boolarray,          /**< pointer to the bool array */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPboolarrayExtend(            /**< extends dynamic array to be able to store indices from minidx to maxidx */
+   BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              minidx,             /**< smallest index to allocate storage for */
+   int              maxidx              /**< largest index to allocate storage for */
+   );
+
+extern
+void SCIPboolarrayClear(                /**< clears a dynamic bool array */
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   );
+
+extern
+Bool SCIPboolarrayGet(                  /**< gets value of entry in dynamic array */
+   BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   int              idx                 /**< array index to get value for */
+   );
+
+extern
+RETCODE SCIPboolarraySet(               /**< sets value of entry in dynamic array */
+   BOOLARRAY*       boolarray,          /**< dynamic bool array */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              idx,                /**< array index to set value for */
+   Bool             val                 /**< value to set array index to */
+   );
+
+
 
 
 

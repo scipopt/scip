@@ -1126,43 +1126,43 @@ RETCODE readBounds(
                 */
                if (mpsinputField1(mpsi)[1] == 'I')
                {
-                  CHECK_OKAY( SCIPchgType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
 
-               CHECK_OKAY( SCIPchgLb(scip, var, val) );
+               CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
                break;
             case 'U':
                /* ILOG extension (Integer Upper Bound)
                 */
                if (mpsinputField1(mpsi)[1] == 'I')
                {
-                  CHECK_OKAY( SCIPchgType(scip, var, SCIP_VARTYPE_INTEGER) );
+                  CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER) );
                }
 
-               CHECK_OKAY( SCIPchgUb(scip, var, val) );               
+               CHECK_OKAY( SCIPchgVarUb(scip, var, val) );               
                break;
             case 'F':
                if (mpsinputField1(mpsi)[1] == 'X')
                {
-                  CHECK_OKAY( SCIPchgLb(scip, var, val) );
-                  CHECK_OKAY( SCIPchgUb(scip, var, val) );
+                  CHECK_OKAY( SCIPchgVarLb(scip, var, val) );
+                  CHECK_OKAY( SCIPchgVarUb(scip, var, val) );
                }
                else
                {
-                  CHECK_OKAY( SCIPchgLb(scip, var, -SCIPinfinity(scip)) );
-                  CHECK_OKAY( SCIPchgUb(scip, var, +SCIPinfinity(scip)) );
+                  CHECK_OKAY( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
+                  CHECK_OKAY( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
                }
                break;
             case 'M':
-               CHECK_OKAY( SCIPchgLb(scip, var, -SCIPinfinity(scip)) );
+               CHECK_OKAY( SCIPchgVarLb(scip, var, -SCIPinfinity(scip)) );
                break;
             case 'P':
-               CHECK_OKAY( SCIPchgUb(scip, var, +SCIPinfinity(scip)) );
+               CHECK_OKAY( SCIPchgVarUb(scip, var, +SCIPinfinity(scip)) );
                break;
             case 'B' : // Ilog extension (Binary)
-               CHECK_OKAY( SCIPchgLb(scip, var, 0.0) );
-               CHECK_OKAY( SCIPchgUb(scip, var, 1.0) );
-               CHECK_OKAY( SCIPchgType(scip, var, SCIP_VARTYPE_BINARY) );
+               CHECK_OKAY( SCIPchgVarLb(scip, var, 0.0) );
+               CHECK_OKAY( SCIPchgVarUb(scip, var, 1.0) );
+               CHECK_OKAY( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY) );
                break;
             default:
                mpsinputSyntaxerror(mpsi);
