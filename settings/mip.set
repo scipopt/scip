@@ -718,9 +718,21 @@ presolving/probing/maxrounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 presolving/probing/delay = TRUE
 
+# maximal number of runs, probing participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: 1]
+presolving/probing/maxruns = 1
+
 # maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/probing/proprounds = -1
+
+# maximal number of fixings found, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 10]
+presolving/probing/maxfixings = 10
+
+# maximal number of successive useless probings, until probing is aborted (0: don't abort)
+# [type: int, range: [0,2147483647], default: 2000]
+presolving/probing/maxuseless = 2000
 
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]

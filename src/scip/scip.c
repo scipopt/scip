@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.266 2005/02/11 09:57:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.267 2005/02/11 13:37:13 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11527,15 +11527,15 @@ RETCODE SCIPprintBranchingStatistics(
          depths[i] = depth;
       }
 
-      fprintf(file, "                                                  branchings        inferences         cutoffs               LP gain  \n");
-      fprintf(file, " variable        priority   factor    depth     down       up     down       up     down       up       down         up\n");
+      fprintf(file, "                                                  branchings        inferences         cutoffs               LP gain         locks \n");
+      fprintf(file, " variable        priority   factor    depth     down       up     down       up     down       up       down         up  down    up\n");
 
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            fprintf(file, " %-16s %7d %8.1f %8.1f %8lld %8lld %8.1f %8.1f %7.1f%% %7.1f%% %10.1f %10.1f\n",
+            fprintf(file, " %-16s %7d %8.1f %8.1f %8lld %8lld %8.1f %8.1f %7.1f%% %7.1f%% %10.1f %10.1f %6d %6d\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                SCIPvarGetBranchFactor(vars[v]),
@@ -11548,7 +11548,9 @@ RETCODE SCIPprintBranchingStatistics(
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetPseudocost(vars[v], scip->stat, -1.0),
-               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0));
+               SCIPvarGetPseudocost(vars[v], scip->stat, +1.0),
+               SCIPvarGetNLocksDown(vars[v]),
+               SCIPvarGetNLocksUp(vars[v]));
          }
       }
       SCIPfreeBufferArray(scip, &depths);
