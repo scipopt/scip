@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.5 2004/04/15 10:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_history.h,v 1.6 2004/05/24 17:46:15 bzfpfend Exp $"
 
 /**@file   struct_history.h
  * @brief  datastructures for branching and inference history
@@ -38,6 +38,7 @@ struct History
    Real             pscostsum[2];       /**< sum of (partial) pseudo cost values for down/upwards branching */
    Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */
    Longint          ninferences[2];     /**< nr of times, branching on the variable lead to inference of another bound */
+   Longint          ncutoffs[2];        /**< nr of times, branching on the variable lead to an infeasible sub problem */
    Longint          branchdepthsum[2];  /**< sum of depth levels, at which the branching bound changes took place */
 };
 

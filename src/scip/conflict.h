@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.16 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.17 2004/05/24 17:46:11 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -133,9 +133,6 @@ RETCODE SCIPconflictInit(
 extern
 RETCODE SCIPconflictAddVar(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    VAR*             var                 /**< problem variable */
    );
 
@@ -146,7 +143,9 @@ RETCODE SCIPconflictAddVar(
 extern
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.41 2004/05/21 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.42 2004/05/24 17:46:12 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -467,11 +467,11 @@ RETCODE delCoefPos(
    if( SCIPconsIsTransformed(cons) )
    {
       /* if the position is watched, drop bound tighten events and stop watching the position */
-      if( pos == consdata->watchedvar1 )
+      if( consdata->watchedvar1 == pos )
       {
          CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
       }
-      if( pos == consdata->watchedvar2 )
+      if( consdata->watchedvar2 == pos )
       {
          CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar1, -1) );
       }
@@ -488,6 +488,16 @@ RETCODE delCoefPos(
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
    consdata->nvars--;
+
+   /* if the last variable (that moved) was watched, update the watched position */
+   if( consdata->watchedvar1 == consdata->nvars )
+      consdata->watchedvar1 = pos;
+   if( consdata->watchedvar2 == consdata->nvars )
+      consdata->watchedvar2 = pos;
+   if( consdata->watchedfeasvar == consdata->nvars )
+      consdata->watchedfeasvar = pos;
+   if( consdata->watchedsolvar == consdata->nvars )
+      consdata->watchedsolvar = pos;
 
    consdata->propagated = FALSE;
 

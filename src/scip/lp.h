@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.78 2004/05/05 13:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.79 2004/05/24 17:46:13 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -573,6 +573,7 @@ RETCODE SCIPlpCalcMIR(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    int              nvars,              /**< number of active variables in the problem */
+   int              nintvars,           /**< number of active binary/integer variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */

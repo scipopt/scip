@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.23 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.24 2004/05/24 17:46:12 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -534,11 +534,11 @@ RETCODE delCoefPos(
    if( SCIPconsIsTransformed(cons) )
    {
       /* if the position is watched, drop bound tighten events and stop watching the position */
-      if( pos == consdata->watchedvar1 )
+      if( consdata->watchedvar1 == pos )
       {
          CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
       }
-      if( pos == consdata->watchedvar2 )
+      if( consdata->watchedvar2 == pos )
       {
          CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar1, -1) );
       }

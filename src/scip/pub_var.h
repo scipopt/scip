@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.17 2004/05/03 16:59:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.18 2004/05/24 17:46:13 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -226,6 +226,13 @@ Longint SCIPvarGetNBranchings(
 /** returns the number of inferences branching on this variable in given direction triggered */
 extern
 Longint SCIPvarGetNInferences(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the number of cutoffs branching on this variable in given direction produced */
+extern
+Longint SCIPvarGetNCutoffs(
    VAR*             var,                /**< problem variable */
    BRANCHDIR        dir                 /**< branching direction */
    );

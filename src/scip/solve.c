@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.110 2004/05/05 12:47:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.111 2004/05/24 17:46:14 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1667,6 +1667,12 @@ RETCODE SCIPsolveCIP(
          {
             /* issue NODEINFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+
+            /* increase the cutoff counter of the branching variable */
+            if( stat->lastbranchvar != NULL )
+            {
+               CHECK_OKAY( SCIPvarIncNCutoffs(stat->lastbranchvar, stat, stat->lastbranchdir) );
+            }
          }
          else
          {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.133 2004/05/21 20:03:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.134 2004/05/24 17:46:14 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1378,7 +1378,9 @@ RETCODE SCIPfreeTransform(
 /**@name Variable Methods */
 /**@{ */
 
-/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded */
+/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded; 
+ *  an integer variable with bounds zero and one is automatically converted into a binary variable
+ */
 extern
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1820,6 +1822,34 @@ extern
 Real SCIPgetVarAvgInferenceScore(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< problem variable */
+   );
+
+/** returns the average number of cutoffs found after branching on the variable in given direction;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
+ *  over all variables for branching in the given direction is returned
+ */
+extern
+Real SCIPgetVarAvgCutoffs(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the variable's average cutoff score value */
+extern
+Real SCIPgetVarAvgCutoffScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's average inference/cutoff score value, weighting the cutoffs of the variable with the given
+ *  factor
+ */
+extern
+Real SCIPgetVarAvgInferenceCutoffScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
    );
 
 /** gets user data for given variable */

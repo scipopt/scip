@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.168 2004/05/21 20:03:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.169 2004/05/24 17:46:13 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -38,6 +38,7 @@
 #include "lpi.h"
 #include "mem.h"
 #include "misc.h"
+#include "history.h"
 #include "event.h"
 #include "lp.h"
 #include "var.h"
@@ -3547,7 +3548,9 @@ RETCODE SCIPfreeTransform(
  * variable methods
  */
 
-/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded */
+/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded; 
+ *  an integer variable with bounds zero and one is automatically converted into a binary variable
+ */
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            var,                /**< pointer to variable object */
@@ -5057,6 +5060,69 @@ Real SCIPgetVarAvgInferenceScore(
    return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
 }
 
+/** returns the average number of cutoffs found after branching on the variable in given direction;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
+ *  over all variables for branching in the given direction is returned
+ */
+Real SCIPgetVarAvgCutoffs(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetAvgCutoffs(var, scip->stat, dir);
+}
+
+/** returns the variable's average cutoff score value */
+Real SCIPgetVarAvgCutoffScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real cutoffdown;
+   Real cutoffup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   cutoffdown = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   cutoffup = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, cutoffdown, cutoffup);
+}
+
+/** returns the variable's average inference/cutoff score value, weighting the cutoffs of the variable with the given
+ *  factor
+ */
+Real SCIPgetVarAvgInferenceCutoffScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
+   )
+{
+   Real avginferdown;
+   Real avginferup;
+   Real avginfer;
+   Real inferdown;
+   Real inferup;
+   Real cutoffdown;
+   Real cutoffup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceCutoffScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   avginferdown = SCIPhistoryGetAvgInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS);
+   avginferup = SCIPhistoryGetAvgInferences(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS);
+   avginfer = (avginferdown + avginferup)/2.0;
+   inferdown = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   inferup = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+   cutoffdown = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   cutoffup = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, 
+      inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
+}
+
 /** gets user data for given variable */
 VARDATA* SCIPgetVarData(
    SCIP*            scip,               /**< SCIP data structure */
@@ -5101,7 +5167,7 @@ RETCODE SCIPaddConflictVar(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddConflictVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAddVar(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, var) );
+   CHECK_OKAY( SCIPconflictAddVar(scip->conflict, var) );
 
    return SCIP_OKAY;
 }
@@ -5118,7 +5184,8 @@ RETCODE SCIPanalyzeConflict(
 {
    CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->set, scip->transprob, scip->tree, success) );
+   CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
+                  scip->transprob, scip->tree, success) );
    
    return SCIP_OKAY;
 }
@@ -5697,7 +5764,8 @@ RETCODE SCIPcalcMIR(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob->nvars, scip->transprob->vars,
+   CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob->nvars,
+                  scip->transprob->nvars - scip->transprob->ncontvars, scip->transprob->vars,
                   minfrac, weights, scale, mircoef, mirrhs, cutactivity, success) );
 
    return SCIP_OKAY;
@@ -8524,7 +8592,7 @@ RETCODE SCIPprintBranchingStatistics(
    int i;
 
    CHECK_OKAY( checkStage(scip, "SCIPprintBranchingHistory",
-                  TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+                  TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( file == NULL )
       file = stdout;
@@ -8533,10 +8601,11 @@ RETCODE SCIPprintBranchingStatistics(
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
-   case SCIP_STAGE_PRESOLVED:
       fprintf(file, "problem not yet solved. branching statistics not available.\n");
       return SCIP_OKAY;
 
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       CHECK_OKAY( SCIPallocBufferArray(scip, &vars, scip->transprob->nvars) );
@@ -8554,15 +8623,15 @@ RETCODE SCIPprintBranchingStatistics(
          depths[i] = depth;
       }
 
-      fprintf(file, "                                         branchings        inferences             LP gain  \n");
-      fprintf(file, " variable        priority    depth     down       up     down       up       down         up\n");
+      fprintf(file, "                                         branchings        inferences         cutoffs               LP gain  \n");
+      fprintf(file, " variable        priority    depth     down       up     down       up     down       up       down         up\n");
 
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            fprintf(file, " %-16s %7d %8.1f %8lld %8lld %8.1f %8.1f %10.1f %10.1f\n",
+            fprintf(file, " %-16s %7d %8.1f %8lld %8lld %8.1f %8.1f %7.1f%% %7.1f%% %10.1f %10.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
                (SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS)
@@ -8571,6 +8640,8 @@ RETCODE SCIPprintBranchingStatistics(
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
                SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
+               100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS),
+               100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS),
                SCIPvarGetPseudocost(vars[v], scip->stat, -1.0),
                SCIPvarGetPseudocost(vars[v], scip->stat, +1.0));
          }

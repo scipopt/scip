@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.72 2004/04/19 17:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.73 2004/05/24 17:46:11 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -202,6 +202,7 @@ main(
    /**@todo branching rule acting as a filter by temporary changing the branching priority of variables and returning 
     *       SCIP_DIDNOTFIND to let the next branching rule select the branching variable */
    /**@todo use aging in all constraint handlers */
+   /**@todo try to not use the first but the shortest constraint as reason for a deduction */
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.41 2004/05/04 19:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.42 2004/05/24 17:46:11 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -34,25 +34,24 @@
  *
  *  1. Put all the given variables to a priority queue, which is ordered,
  *     such that the variable that was fixed last due to branching or deduction
- *     is at the top of the queue. The variables in the queue are represented
- *     by themselves or their negation in order to have all variable's representants
- *     currently fixed to FALSE.
+ *     is at the top of the queue. The variables in the queue are always active
+ *     problem variables.
  *     Create an empty conflict set.
  *  2. Remove the top variable v from the priority queue.
  *  3. (a) If the remaining queue is non-empty, and variable w (the one that is now
  *         on the top of the queue) was fixed at the same depth level as v, and if
  *         the assignment to v was a deduction with known inference reason, and if
  *         the inference constraint is globally valid:
- *          - resolve variable v by asking the constraint that infered the
+ *          - Resolve variable v by asking the constraint that infered the
  *            assignment of v to put all the variables that when assigned to their
- *            current values lead to the deduction of v on the priority queue.
+ *            current values lead to the deduction of v's current value on the
+ *            priority queue.
  *            Note that these variables have at most the same inference depth
  *            level as variable v, and were deduced earlier than v.
- *            If the variable's current assignment is TRUE, it is automatically
- *            replaced by its negation in the priority queue.
  *     (b) Otherwise, the assignment to variable v was a branching decision or
  *         a deduction with missing inference reason.
- *          - Put v into the conflict set.
+ *          - Put v or the negation of v into the conflict set, depending on which
+ *            of the ones is currently fixed to FALSE.
  *            Note that if v was a branching variable, all deduced variables remaining
  *            in the priority queue have smaller inference depth level than v, since
  *            deductions are always applied after the branching decisions. However,
@@ -546,6 +545,8 @@ RETCODE SCIPconflictInit(
 {
    assert(conflict != NULL);
 
+   debugMessage("initializing conflict analysis\n");
+
    SCIPpqueueClear(conflict->varqueue);
    conflict->nconflictvars = 0;
 
@@ -555,41 +556,40 @@ RETCODE SCIPconflictInit(
 /** adds variable to conflict variable candidates */
 RETCODE SCIPconflictAddVar(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    VAR*             var                 /**< problem variable */
    )
 {
+   VAR* actvar;
+
    assert(conflict != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
+   assert(getLbLocal(var) > 0.5 || getUbLocal(var) < 0.5);
 
-   debugMessage("adding variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:%p, info:%d] to conflict candidates\n",
+   debugMessage(" -> adding variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>, info:%d] to conflict candidates\n",
       SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var),
-      SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), SCIPvarGetInferCons(var), SCIPvarGetInferInfo(var));
+      SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
+      SCIPvarGetInferCons(var) == NULL ? "null" : SCIPconsGetName(SCIPvarGetInferCons(var)), SCIPvarGetInferInfo(var));
 
    /* get active problem variable */
-   var = SCIPvarGetProbvar(var);
+   actvar = SCIPvarGetProbvar(var);
 
    /* we can ignore fixed variables */
-   if( var != NULL )
+   if( actvar != NULL )
    {
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
+      assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY);
+      assert(getLbLocal(actvar) > 0.5 || getUbLocal(actvar) < 0.5);
       
-      /* choose between variable or its negation, such that the literal is fixed to FALSE */
-      if( SCIPsetIsEQ(set, getLbLocal(var), 1.0) )
+#ifdef DEBUG
+      if( actvar != var )
       {
-         /* variable is fixed to TRUE -> use the negation */
-         CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
+         debugMessage("   -> active conflict candidate is <%s>[%g,%g] [status:%d]\n",
+            SCIPvarGetName(actvar), getLbLocal(actvar), getUbLocal(actvar), SCIPvarGetStatus(actvar));
       }
-      debugMessage(" -> active conflict candidate is <%s>[%g,%g] [status:%d]\n",
-         SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var));
-      
+#endif
+
       /* put candidate in priority queue */
-      CHECK_OKAY( SCIPpqueueInsert(conflict->varqueue, (void*)var) );
+      CHECK_OKAY( SCIPpqueueInsert(conflict->varqueue, (void*)actvar) );
    }
 
    return SCIP_OKAY;
@@ -601,7 +601,9 @@ RETCODE SCIPconflictAddVar(
 static
 RETCODE conflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    int              maxsize,            /**< maximal size of conflict set */
    Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
@@ -644,8 +646,15 @@ RETCODE conflictAnalyze(
    {
 #ifdef DEBUG
       {
+         CONS* infercons = SCIPvarGetInferCons(var);
          int v;
-         debugMessage("processing conflict var <%s>\n", SCIPvarGetName(var));
+
+         debugMessage("processing variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>(%s), info:%d]\n",
+            SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var),
+            SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
+            infercons == NULL ? "null" : SCIPconsGetName(infercons),
+            infercons == NULL ? "--" : (SCIPconsIsGlobal(infercons) ? "global" : "local"),
+            SCIPvarGetInferInfo(var));
          debugMessage(" - conflict set   :");
          for( v = 0; v < conflict->nconflictvars; ++v )
             printf(" <%s>", SCIPvarGetName(conflict->conflictvars[v]));
@@ -684,9 +693,11 @@ RETCODE conflictAnalyze(
             infervar = SCIPvarGetInferVar(var);
             assert(infervar != NULL);
             assert(SCIPsetIsEQ(set, getLbLocal(infervar), getUbLocal(infervar)));
-            debugMessage("resolving conflict var <%s>: constraint <%s> infered <%s> == %g at depth %d, num %d, info %d\n",
-               SCIPvarGetName(var), SCIPconsGetName(infercons), SCIPvarGetName(infervar), getLbLocal(infervar),
-               SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), SCIPvarGetInferInfo(var));
+            debugMessage("resolving variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>(%s), info:%d]\n",
+               SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var),
+               SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
+               SCIPconsGetName(infercons), SCIPconsIsGlobal(infercons) ? "global" : "local",
+               SCIPvarGetInferInfo(var));
             CHECK_OKAY( SCIPconsResolveConflictVar(infercons, set, SCIPvarGetInferVar(var), &result) );
             resolved = (result == SCIP_SUCCESS);
          }
@@ -696,6 +707,17 @@ RETCODE conflictAnalyze(
          else
          {
             assert(SCIPsetIsFeasEQ(set, getLbLocal(var), getUbLocal(var)));
+
+            /* mark the active problem variable to belong to the current conflict */
+            var->conflictsetcount = conflict->count;
+
+            /* choose between variable or its negation, such that the literal is fixed to FALSE */
+            if( SCIPsetIsEQ(set, getLbLocal(var), 1.0) )
+            {
+               /* variable is fixed to TRUE -> use the negation */
+               CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
+            }
+            assert(SCIPsetIsFeasEQ(set, getLbLocal(var), getUbLocal(var)));
             assert(SCIPsetIsFeasZero(set, getLbLocal(var)));
 
             debugMessage("putting variable <%s> to conflict set\n", SCIPvarGetName(var));
@@ -704,7 +726,6 @@ RETCODE conflictAnalyze(
             CHECK_OKAY( conflictEnsureConflictvarsMem(conflict, set, conflict->nconflictvars+1) );
             conflict->conflictvars[conflict->nconflictvars] = var;
             conflict->nconflictvars++;
-            var->conflictsetcount = conflict->count;
          }
       }
 
@@ -806,7 +827,9 @@ RETCODE conflictAnalyze(
  */
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
@@ -842,7 +865,7 @@ RETCODE SCIPconflictAnalyze(
    conflict->npropcalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, TRUE, &valid) );
+   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, TRUE, &valid) );
 
    /* check, if a conflict constraint was created */
    if( valid )
@@ -1255,7 +1278,7 @@ RETCODE conflictAnalyzeLPAltpoly(
                   if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
                   {
                      /* put binary variable into the conflict set */
-                     CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, col->var) );
+                     CHECK_OKAY( SCIPconflictAddVar(conflict, col->var) );
                      debugMessage(" -> adding <%s> to IIS\n", SCIPvarGetName(col->var));
                   }
                   else
@@ -1273,7 +1296,7 @@ RETCODE conflictAnalyzeLPAltpoly(
          if( valid )
          {
             /* analyze the conflict set, and create a conflict constraint on success */
-            CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
+            CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, FALSE, success) );
          }
       }
       
@@ -1331,6 +1354,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
 
    debugMessage("conflict analysis of farkas solution: cutoff=%g, depth=%d\n", lp->cutoffbound, SCIPgetDepth(set->scip));
 
+   /**@todo ???????????????????? something is wrong in here (shared_adder_12_7.rtp with wordsize == 1) */
    /* get LP solver interface */
    lpi = SCIPlpGetLPI(lp);
 
@@ -1512,7 +1536,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
                else
                {
                   /* we cannot unfix the variable: it has to be put in the conflict set */
-                  CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+                  CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
                   debugMessage("  -> moved to conflict set\n");
                }
             }
@@ -1534,7 +1558,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
                else
                {
                   /* we cannot unfix the variable: it has to be put in the conflict set */
-                  CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+                  CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
                   debugMessage("  -> moved to conflict set\n");
                }
             }
@@ -1545,7 +1569,7 @@ RETCODE conflictAnalyzeLPDualfarkas(
       debugMessage("farkas conflict analysis removed %d fixings\n", nremoved);
 
       /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
+      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, FALSE, success) );
 
       /* free the buffer for the sorted binary variables */
       SCIPsetFreeBufferArray(set, &binvarscores);
@@ -1913,14 +1937,14 @@ RETCODE conflictAnalyzeLPDualsol(
          else
          {
             /* we cannot unfix the variable: it has to be put in the conflict set */
-            CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+            CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
             debugMessage("  -> moved to conflict set\n");
          }
       }
       debugMessage("dual conflict analysis removed %d of %d fixings\n", nremoved, nfixings);
 
       /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, FALSE, success) );
+      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, FALSE, success) );
 
       /* free the buffer for the sorted binary variables */
       SCIPsetFreeBufferArray(set, &binvarscores);
@@ -2406,7 +2430,7 @@ RETCODE SCIPconflictAnalyzePseudo(
             {
                debugMessage("adding <%s>[%g,%g] (obj=%g) to conflict set\n", 
                   SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), obj);
-               CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+               CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
             }
          }
          else if( obj < 0.0 && SCIPvarGetUbLocal(var) < 0.5 )
@@ -2417,13 +2441,13 @@ RETCODE SCIPconflictAnalyzePseudo(
             {
                debugMessage("adding <%s>[%g,%g] (obj=%g) to conflict set\n", 
                   SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), obj);
-               CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+               CHECK_OKAY( SCIPconflictAddVar(conflict, var) );
             }
          }
       }
       
       /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, set, tree, maxsize, TRUE, &valid) );
+      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, TRUE, &valid) );
       
       /* check, if a valid conflict was found */
       if( valid )

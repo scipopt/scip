@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.9 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.10 2004/05/24 17:46:12 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -82,6 +82,8 @@ void SCIPhistoryReset(
    history->nbranchings[1] = 0;
    history->ninferences[0] = 0;
    history->ninferences[1] = 0;
+   history->ncutoffs[0] = 0;
+   history->ncutoffs[1] = 0;
    history->branchdepthsum[0] = 0;
    history->branchdepthsum[1] = 0;
 }
@@ -108,6 +110,8 @@ void SCIPhistoryUnite(
    history->nbranchings[1] += addhistory->nbranchings[1-d];
    history->ninferences[0] += addhistory->ninferences[d];
    history->ninferences[1] += addhistory->ninferences[1-d];
+   history->ncutoffs[0] += addhistory->ncutoffs[d];
+   history->ncutoffs[1] += addhistory->ncutoffs[1-d];
    history->branchdepthsum[0] += addhistory->branchdepthsum[d];
    history->branchdepthsum[1] += addhistory->branchdepthsum[1-d];
 }
@@ -251,6 +255,18 @@ void SCIPhistoryIncNInferences(
    history->ninferences[dir]++;
 }
 
+/** increases the number of cutoffs counter */
+void SCIPhistoryIncNCutoffs(
+   HISTORY*         history,            /**< branching and inference history */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(history != NULL);
+   assert(dir == 0 || dir == 1);
+
+   history->ncutoffs[dir]++;
+}
+
 /** get number of branchings counter */
 Longint SCIPhistoryGetNBranchings(
    HISTORY*         history,            /**< branching and inference history */
@@ -263,7 +279,7 @@ Longint SCIPhistoryGetNBranchings(
    return history->nbranchings[dir];
 }
 
-/** get number of branchings counter */
+/** get number of inferences counter */
 Longint SCIPhistoryGetNInferences(
    HISTORY*         history,            /**< branching and inference history */
    BRANCHDIR        dir                 /**< branching direction */
@@ -285,6 +301,30 @@ Real SCIPhistoryGetAvgInferences(
    assert(dir == 0 || dir == 1);
 
    return history->nbranchings[dir] > 0 ? (Real)history->ninferences[dir]/(Real)history->nbranchings[dir] : 0;
+}
+
+/** get number of cutoffs counter */
+Longint SCIPhistoryGetNCutoffs(
+   HISTORY*         history,            /**< branching and inference history */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(history != NULL);
+   assert(dir == 0 || dir == 1);
+
+   return history->ncutoffs[dir];
+}
+
+/** returns the average number of cutoffs per branching */
+Real SCIPhistoryGetAvgCutoffs(
+   HISTORY*         history,            /**< branching and inference history */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(history != NULL);
+   assert(dir == 0 || dir == 1);
+
+   return history->nbranchings[dir] > 0 ? (Real)history->ncutoffs[dir]/(Real)history->nbranchings[dir] : 0;
 }
 
 /** returns the average depth of bound changes due to branching */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.3 2004/05/03 11:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.4 2004/05/24 17:46:11 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -34,6 +34,53 @@
 #define BRANCHRULE_PRIORITY      1000
 #define BRANCHRULE_MAXDEPTH      -1
 
+#define DEFAULT_CUTOFFWEIGHT     1.0    /**< factor to weigh average number of cutoffs in branching score */
+
+
+/** branching rule data */
+struct BranchruleData
+{
+   Real             cutoffweight;       /**< factor to weigh average number of cutoffs in branching score */
+};
+
+
+
+/** selects a variable out of the given candidate array and performs the branching */
+static
+RETCODE performBranching(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR**            cands,              /**< candidate array */
+   int              ncands,             /**< number of candidates */
+   Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
+   )
+{
+   Real bestscore;
+   Real score;
+   int bestcand;
+   int c;
+
+   /* search for variable with best score w.r.t. average inferences per branching */
+   bestscore = 0.0;
+   bestcand = -1;
+   for( c = 0; c < ncands; ++c )
+   {
+      score = SCIPgetVarAvgInferenceCutoffScore(scip, cands[c], cutoffweight);
+      if( score > bestscore )
+      {
+         bestscore = score;
+         bestcand = c;
+      }
+   }
+   assert(0 <= bestcand && bestcand < ncands);
+
+   /* perform the branching */
+   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, score=%g)\n",
+      ncands, bestcand, SCIPvarGetName(cands[bestcand]), SCIPgetVarSol(scip, cands[bestcand]), bestscore);
+   CHECK_OKAY( SCIPbranchVar(scip, cands[bestcand]) );
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -42,7 +89,18 @@
  */
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
-#define branchFreeInference NULL
+static
+DECL_BRANCHFREE(branchFreeInference)
+{  /*lint --e{715}*/
+   BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
+
+   return SCIP_OKAY;
+}
 
 
 /** initialization method of branching rule (called after problem was transformed) */
@@ -54,44 +112,50 @@
 
 
 /** branching execution method for fractional LP solutions */
-#define branchExeclpInference NULL
+static
+DECL_BRANCHEXECLP(branchExeclpInference)
+{
+   BRANCHRULEDATA* branchruledata;
+   VAR** lpcands;
+   int nlpcands;
+
+   debugMessage("Execlp method of inference branching\n");
+   
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* get LP candidates (fractional integer variables) */
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, NULL, &nlpcands) );
+
+   /* perform the branching */
+   CHECK_OKAY( performBranching(scip, lpcands, nlpcands, branchruledata->cutoffweight) );
+
+   *result = SCIP_BRANCHED;
+   
+   return SCIP_OKAY;
+}
 
 
 /** branching execution method for not completely fixed pseudo solutions */
 static
 DECL_BRANCHEXECPS(branchExecpsInference)
 {
+   BRANCHRULEDATA* branchruledata;
    VAR** pseudocands;
-   Real bestscore;
-   Real score;
    int npseudocands;
-   int bestcand;
-   int c;
 
-   debugMessage("Execps method of relpscost branching\n");
+   debugMessage("Execps method of inference branching\n");
    
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
    /* get pseudo candidates (non-fixed integer variables) */
    CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
 
-   /* search for variable with best score w.r.t. average inferences per branching */
-   bestscore = 0.0;
-   bestcand = -1;
-   for( c = 0; c < npseudocands; ++c )
-   {
-      score = SCIPgetVarAvgInferenceScore(scip, pseudocands[c]);
-      if( score > bestscore )
-      {
-         bestscore = score;
-         bestcand = c;
-      }
-   }
-   assert(0 <= bestcand && bestcand < npseudocands);
-
    /* perform the branching */
-   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, score=%g)\n",
-      npseudocands, bestcand, SCIPvarGetName(pseudocands[bestcand]), 
-      SCIPvarGetPseudoSol(pseudocands[bestcand]), bestscore);
-   CHECK_OKAY( SCIPbranchVar(scip, pseudocands[bestcand]) );
+   CHECK_OKAY( performBranching(scip, pseudocands, npseudocands, branchruledata->cutoffweight) );
 
    *result = SCIP_BRANCHED;
    
@@ -113,13 +177,19 @@ RETCODE SCIPincludeBranchruleInference(
    BRANCHRULEDATA* branchruledata;
 
    /* create inference branching rule data */
-   branchruledata = NULL;
+   CHECK_OKAY( SCIPallocMemory(scip, &branchruledata) );
    
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
                   branchFreeInference, branchInitInference, branchExitInference, 
                   branchExeclpInference, branchExecpsInference,
                   branchruledata) );
+
+   /* inference branching rule parameters */
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "branching/inference/cutoffweight", 
+                  "factor to weigh average number of cutoffs in branching score",
+                  &branchruledata->cutoffweight, DEFAULT_CUTOFFWEIGHT, 0.0, REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

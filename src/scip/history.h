@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.8 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.9 2004/05/24 17:46:13 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -130,6 +130,13 @@ void SCIPhistoryIncNInferences(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** increases the number of cutoffs counter */
+extern
+void SCIPhistoryIncNCutoffs(
+   HISTORY*         history,            /**< branching and inference history */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** get number of branchings counter */
 extern
 Longint SCIPhistoryGetNBranchings(
@@ -137,7 +144,7 @@ Longint SCIPhistoryGetNBranchings(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
-/** get number of branchings counter */
+/** get number of inferences counter */
 extern
 Longint SCIPhistoryGetNInferences(
    HISTORY*         history,            /**< branching and inference history */
@@ -147,6 +154,20 @@ Longint SCIPhistoryGetNInferences(
 /** returns the average number of inferences per branching */
 extern
 Real SCIPhistoryGetAvgInferences(
+   HISTORY*         history,            /**< branching and inference history */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** get number of cutoffs counter */
+extern
+Longint SCIPhistoryGetNCutoffs(
+   HISTORY*         history,            /**< branching and inference history */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the average number of cutoffs per branching */
+extern
+Real SCIPhistoryGetAvgCutoffs(
    HISTORY*         history,            /**< branching and inference history */
    BRANCHDIR        dir                 /**< branching direction */
    );
@@ -176,10 +197,15 @@ Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryIncNBranchings(history,depth,dir) { (history)->nbranchings[dir]++; \
                                                        (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncNInferences(history,dir)     (history)->ninferences[dir]++;
+#define SCIPhistoryIncNCutoffs(history,dir)        (history)->ncutoffs[dir]++;
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
 #define SCIPhistoryGetNInferences(history,dir)     ((history)->ninferences[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \
                                                    ? (Real)(history)->ninferences[dir]/(Real)(history)->nbranchings[dir] \
+                                                   : 0)
+#define SCIPhistoryGetNCutoffs(history,dir)        ((history)->ncutoffs[dir])
+#define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \
+                                                   ? (Real)(history)->ncutoffs[dir]/(Real)(history)->nbranchings[dir] \
                                                    : 0)
 #define SCIPhistoryGetAvgBranchdepth(history,dir)  ((history)->nbranchings[dir] > 0 \
                                                    ? (Real)(history)->branchdepthsum[dir]/(Real)(history)->nbranchings[dir] \

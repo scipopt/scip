@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.66 2004/05/07 11:56:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.67 2004/05/24 17:46:15 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -158,7 +158,9 @@ RETCODE SCIPdomchgAddHolechg(
  * methods for variables 
  */
 
-/** creates and captures an original problem variable */
+/** creates and captures an original problem variable; an integer variable with bounds
+ *  zero and one is automatically converted into a binary variable
+ */
 extern
 RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
@@ -178,7 +180,9 @@ RETCODE SCIPvarCreateOriginal(
    VARDATA*         vardata             /**< user data for this specific variable */
    );
 
-/** creates and captures a loose variable belonging to the transformed problem */
+/** creates and captures a loose variable belonging to the transformed problem; an integer variable with bounds
+ *  zero and one is automatically converted into a binary variable
+ */
 extern
 RETCODE SCIPvarCreateTransformed(
    VAR**            var,                /**< pointer to variable data */
@@ -703,9 +707,25 @@ RETCODE SCIPvarIncNInferences(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** increases the number of cutoffs counter of the variable */
+extern
+RETCODE SCIPvarIncNCutoffs(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** returns the average number of inferences found after branching on the variable in given direction */
 extern
 Real SCIPvarGetAvgInferences(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the average number of cutoffs found after branching on the variable in given direction */
+extern
+Real SCIPvarGetAvgCutoffs(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    BRANCHDIR        dir                 /**< branching direction */
