@@ -185,6 +185,7 @@ fixed bugs:
 - fixed bug in CPLEX LP interface with dual norms
 - heuristic's display character is now only shown the first time, the new solution was found
 - fixed bug that SCIPreadProb() doesn't discard the transformed problem
+- fixed bug in cmir separator with empty rows
 
 
 SCIP version 0.78

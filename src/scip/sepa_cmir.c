@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.32 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.33 2005/04/01 10:43:38 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -952,39 +952,51 @@ DECL_SEPAEXEC(sepaExecCmir)
    /* calculate aggregation scores for both sides of all rows, and sort rows by nonincreasing maximal score */
    for( r = 0; r < nrows; r++ )
    {
-      Real activity;
-      Real lhs;
-      Real rhs;
-      Real rowdensity;
-      Real rownorm;
-      Real slack;
+      int nnonz;
       int i;
 
       assert(SCIProwGetLPPos(rows[r]) == r);
 
-      activity = SCIPgetRowLPActivity(scip, rows[r]);
-      lhs = SCIProwGetLhs(rows[r]);
-      rhs = SCIProwGetRhs(rows[r]);
-      rownorm = SCIProwGetNorm(rows[r]);
-      rownorm = MAX(rownorm, 0.1);
-      rowdensity = (Real)SCIProwGetNNonz(rows[r])/(Real)nvars;
-      assert(SCIPisPositive(scip, rownorm));
-
-      slack = (activity - lhs)/rownorm;
-      if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
-         && (ALLOWLOCAL || !SCIProwIsLocal(rows[r]))
-         && rowdensity <= sepadata->maxrowdensity )
-         rowlhsscores[r] = -rowdensity - sepadata->slackscore * slack;
-      else
+      nnonz = SCIProwGetNNonz(rows[r]);
+      if( nnonz == 0 )
+      {
+         /* ignore empty rows */
          rowlhsscores[r] = -SCIPinfinity(scip);
-
-      slack = (rhs - activity)/rownorm;
-      if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
-         && (ALLOWLOCAL || !SCIProwIsLocal(rows[r]))
-         && rowdensity <= sepadata->maxrowdensity )
-         rowrhsscores[r] = -rowdensity - sepadata->slackscore * slack;
-      else
          rowrhsscores[r] = -SCIPinfinity(scip);
+      }
+      else
+      {
+         Real activity;
+         Real lhs;
+         Real rhs;
+         Real rowdensity;
+         Real rownorm;
+         Real slack;
+
+         activity = SCIPgetRowLPActivity(scip, rows[r]);
+         lhs = SCIProwGetLhs(rows[r]);
+         rhs = SCIProwGetRhs(rows[r]);
+         rownorm = SCIProwGetNorm(rows[r]);
+         rownorm = MAX(rownorm, 0.1);
+         rowdensity = (Real)nnonz/(Real)nvars;
+         assert(SCIPisPositive(scip, rownorm));
+
+         slack = (activity - lhs)/rownorm;
+         if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
+            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r]))
+            && rowdensity <= sepadata->maxrowdensity )
+            rowlhsscores[r] = -rowdensity - sepadata->slackscore * slack;
+         else
+            rowlhsscores[r] = -SCIPinfinity(scip);
+
+         slack = (rhs - activity)/rownorm;
+         if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
+            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r]))
+            && rowdensity <= sepadata->maxrowdensity )
+            rowrhsscores[r] = -rowdensity - sepadata->slackscore * slack;
+         else
+            rowrhsscores[r] = -SCIPinfinity(scip);
+      }
 
       rowscores[r] = MAX(rowlhsscores[r], rowrhsscores[r]);
       for( i = r; i > 0 && rowscores[r] > rowscores[roworder[i-1]]; --i )
