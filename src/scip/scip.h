@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.204 2005/02/04 12:51:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.205 2005/02/04 14:27:22 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -722,6 +722,8 @@ RETCODE SCIPincludeSepa(
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
    DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
    SEPADATA*        sepadata            /**< separator data */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.256 2005/02/04 12:51:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.257 2005/02/04 14:27:21 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1496,6 +1496,8 @@ RETCODE SCIPincludeSepa(
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
    DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
    SEPADATA*        sepadata            /**< separator data */
    )
@@ -1506,7 +1508,7 @@ RETCODE SCIPincludeSepa(
 
    CHECK_OKAY( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
          name, desc, priority, freq,
-         sepafree, sepainit, sepaexit, sepaexec, sepadata) );
+         sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexec, sepadata) );
    CHECK_OKAY( SCIPsetIncludeSepa(scip->set, sepa) );
    
    return SCIP_OKAY;
@@ -3407,8 +3409,8 @@ RETCODE transformProb(
    }
    infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
-   /* init callback methods */
-   CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
+   /* call init methods of plugins */
+   CHECK_OKAY( SCIPsetInitPlugins(scip->set) );
 
    return SCIP_OKAY;
 }
@@ -3421,17 +3423,12 @@ RETCODE initPresolve(
    Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
-   RESULT result;
-   int i;
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->stage == SCIP_STAGE_TRANSFORMED);
-   assert(unbounded != NULL);
-   assert(infeasible != NULL);
 
    /* retransform all existing solutions to original problem space, because the transformed problem space may
     * get modified in presolving and the solutions may become invalid for the transformed problem
@@ -3451,42 +3448,8 @@ RETCODE initPresolve(
    CHECK_OKAY( SCIPtreeCreatePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
 
-   /* inform presolvers that the presolving is abound to begin */
-   for( i = 0; i < scip->set->npresols; ++i )
-   {
-      CHECK_OKAY( SCIPpresolInitpre(scip->set->presols[i], scip, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
-      }
-   }
-
-   /* inform constraint handlers that the presolving is abound to begin */
-   for( i = 0; i < scip->set->nconshdlrs; ++i )
-   {
-      CHECK_OKAY( SCIPconshdlrInitpre(scip->set->conshdlrs[i], scip, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
-            SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-      }
-   }
+   /* inform plugins that the presolving is abound to begin */
+   CHECK_OKAY( SCIPsetInitprePlugins(scip->set, unbounded, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -3499,54 +3462,15 @@ RETCODE exitPresolve(
    Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
    )
 {
-   RESULT result;
-   int i;
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->stage == SCIP_STAGE_PRESOLVING);
-   assert(unbounded != NULL);
-   assert(infeasible != NULL);
 
-   /* inform constraint handlers that the presolving is finished, and perform final modifications */
-   for( i = 0; i < scip->set->nconshdlrs; ++i )
-   {
-      CHECK_OKAY( SCIPconshdlrExitpre(scip->set->conshdlrs[i], scip, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "constraint handler <%s> detected unboundness (or infeasibility)\n",
-            SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-      }
-   }
-
-   /* inform presolvers that the presolving is finished, and perform final modifications */
-   for( i = 0; i < scip->set->npresols; ++i )
-   {
-      CHECK_OKAY( SCIPpresolExitpre(scip->set->presols[i], scip, &result) );
-      if( result == SCIP_CUTOFF )
-      {
-         *infeasible = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
-      }
-      else if( result == SCIP_UNBOUNDED )
-      {
-         *unbounded = TRUE;
-         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
-      }
-   }
+   /* inform plugins that the presolving is finished, and perform final modifications */
+   CHECK_OKAY( SCIPsetExitprePlugins(scip->set, unbounded, infeasible) );
 
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
@@ -3783,8 +3707,6 @@ RETCODE initSolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int i;
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -3816,23 +3738,8 @@ RETCODE initSolve(
    /* inform the transformed problem that the branch and bound process starts now */
    CHECK_OKAY( SCIPprobInitSolve(scip->transprob, scip->set) );
 
-   /* inform constraint handlers that the branch and bound process starts now */
-   for( i = 0; i < scip->set->nconshdlrs; ++i )
-   {
-      CHECK_OKAY( SCIPconshdlrInitsol(scip->set->conshdlrs[i], scip) );
-   }
-   
-   /* inform branching rules that the branch and bound process starts now */
-   for( i = 0; i < scip->set->nbranchrules; ++i )
-   {
-      CHECK_OKAY( SCIPbranchruleInitsol(scip->set->branchrules[i], scip) );
-   }
-   
-   /* inform primal heuristics that the branch and bound process starts now */
-   for( i = 0; i < scip->set->nheurs; ++i )
-   {
-      CHECK_OKAY( SCIPheurInitsol(scip->set->heurs[i], scip->set) );
-   }
+   /* inform plugins that the branch and bound process starts now */
+   CHECK_OKAY( SCIPsetInitsolPlugins(scip->set) );
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -3878,8 +3785,6 @@ RETCODE freeSolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int i;
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -3907,17 +3812,8 @@ RETCODE freeSolve(
    /* clear all row references in internal data structures */
    CHECK_OKAY( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
 
-   /* deinitialize constraint handlers */
-   for( i = 0; i < scip->set->nconshdlrs; ++i )
-   {
-      CHECK_OKAY( SCIPconshdlrExitsol(scip->set->conshdlrs[i], scip) );
-   }
-
-   /* deinitialize branching rules */
-   for( i = 0; i < scip->set->nbranchrules; ++i )
-   {
-      CHECK_OKAY( SCIPbranchruleExitsol(scip->set->branchrules[i], scip) );
-   }
+   /* inform plugins that the branch and bound process is finished */
+   CHECK_OKAY( SCIPsetExitsolPlugins(scip->set) );
 
    /* we have to clear the tree prior to the problem deinitialization, because the rows stored in the forks and
     * subroots have to be released
@@ -3955,8 +3851,8 @@ RETCODE freeTransform(
    assert(scip->stat != NULL);
    assert(scip->stage == SCIP_STAGE_TRANSFORMED || scip->stage == SCIP_STAGE_PRESOLVING);
 
-   /* exit callback methods */
-   CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
+   /* call exit methods of plugins */
+   CHECK_OKAY( SCIPsetExitPlugins(scip->set) );
 
    /* switch stage to FREETRANS */
    scip->stage = SCIP_STAGE_FREETRANS;

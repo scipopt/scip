@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.41 2005/01/21 09:17:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.42 2005/02/04 14:27:23 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -190,7 +190,7 @@ RETCODE storeCutInArrays(
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
-DECL_SEPAFREE(SCIPsepaFreeGomory)
+DECL_SEPAFREE(sepaFreeGomory)
 {  /*lint --e{715}*/
    SEPADATA* sepadata;
 
@@ -207,9 +207,25 @@ DECL_SEPAFREE(SCIPsepaFreeGomory)
    return SCIP_OKAY;
 }
 
+/** initialization method of separator (called when problem solving starts) */
+#define sepaInitGomory NULL
+
+
+/** deinitialization method of separator (called when problem solving exits) */
+#define sepaExitGomory NULL
+
+
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#define sepaInitsolGomory NULL
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#define sepaExitsolGomory NULL
+
+
 /** execution method of separator */
 static
-DECL_SEPAEXEC(SCIPsepaExecGomory)
+DECL_SEPAEXEC(sepaExecGomory)
 {  /*lint --e{715}*/
    SEPADATA* sepadata;
    VAR** vars;
@@ -471,7 +487,8 @@ RETCODE SCIPincludeSepaGomory(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-         SCIPsepaFreeGomory, NULL, NULL, SCIPsepaExecGomory,
+         sepaFreeGomory, sepaInitGomory, sepaExitGomory,
+         sepaInitsolGomory, sepaExitsolGomory, sepaExecGomory,
          sepadata) );
 
    /* add separator parameters */

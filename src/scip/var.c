@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.142 2005/02/04 12:58:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.143 2005/02/04 14:27:24 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8101,6 +8101,7 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetVubCoefs
 #undef SCIPvarGetVubConstants
 #undef SCIPvarGetNImpls
+#undef SCIPvarGetNBinImpls
 #undef SCIPvarGetImplVars
 #undef SCIPvarGetImplTypes
 #undef SCIPvarGetImplBounds

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.8 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.9 2005/02/04 14:27:21 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -107,6 +107,40 @@ DECL_SEPAEXIT(sepaExitObj)
 }
 
 
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+static
+DECL_SEPAINITSOL(sepaInitsolObj)
+{  /*lint --e{715}*/
+   SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->objsepa != NULL);
+
+   /* call virtual method of sepa object */
+   CHECK_OKAY( sepadata->objsepa->scip_initsol(scip, sepa) );
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+static
+DECL_SEPAEXITSOL(sepaExitsolObj)
+{  /*lint --e{715}*/
+   SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->objsepa != NULL);
+
+   /* call virtual method of sepa object */
+   CHECK_OKAY( sepadata->objsepa->scip_exitsol(scip, sepa) );
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of separator */
 static
 DECL_SEPAEXEC(sepaExecObj)
@@ -147,7 +181,7 @@ RETCODE SCIPincludeObjSepa(
    /* include cut separator */
    CHECK_OKAY( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
          objsepa->scip_priority_, objsepa->scip_freq_,
-         sepaFreeObj, sepaInitObj, sepaExitObj, sepaExecObj,
+         sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, sepaExecObj,
          sepadata) );
 
    return SCIP_OKAY;

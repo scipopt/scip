@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.79 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.80 2005/02/04 14:27:24 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -514,15 +514,43 @@ DISP* SCIPsetFindDisp(
    const char*      name                /**< name of event handler */
    );
 
-/** initializes all user callback functions */
+/** calls init methods of all plugins */
 extern
-RETCODE SCIPsetInitCallbacks(
+RETCODE SCIPsetInitPlugins(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** calls exit methods of all user callback functions */
+/** calls exit methods of all plugins */
 extern
-RETCODE SCIPsetExitCallbacks(
+RETCODE SCIPsetExitPlugins(
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** calls initpre methods of all plugins */
+extern
+RETCODE SCIPsetInitprePlugins(
+   SET*             set,                /**< global SCIP settings */
+   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   );
+
+/** calls exitpre methods of all plugins */
+extern
+RETCODE SCIPsetExitprePlugins(
+   SET*             set,                /**< global SCIP settings */
+   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   );
+
+/** calls initsol methods of all plugins */
+extern
+RETCODE SCIPsetInitsolPlugins(
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** calls exitsol methods of all plugins */
+extern
+RETCODE SCIPsetExitsolPlugins(
    SET*             set                 /**< global SCIP settings */
    );
 

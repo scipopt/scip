@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.29 2005/01/21 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.30 2005/02/04 14:27:22 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -849,6 +849,14 @@ DECL_SEPAFREE(sepaFreeCmir)
 #define sepaExitCmir NULL
 
 
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#define sepaInitsolCmir NULL
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#define sepaExitsolCmir NULL
+
+
 /** execution method of separator */
 static
 DECL_SEPAEXEC(sepaExecCmir)
@@ -1023,7 +1031,8 @@ RETCODE SCIPincludeSepaCmir(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-         sepaFreeCmir, sepaInitCmir, sepaExitCmir, sepaExecCmir,
+         sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
+         sepaInitsolCmir, sepaExitsolCmir, sepaExecCmir,
          sepadata) );
 
    /* add cmir separator parameters */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.8 2005/01/21 09:17:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.9 2005/02/04 14:27:24 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -55,6 +55,28 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - sepa            : the separator itself
  */
 #define DECL_SEPAEXIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
+
+/** solving process initialization method of separator (called when branch and bound process is about to begin)
+ *
+ *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+ *  The separator may use this call to initialize its branch and bound specific data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
+ */
+#define DECL_SEPAINITSOL(x) RETCODE x (SCIP* scip, SEPA* sepa)
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed)
+ *
+ *  This method is called before the branch and bound process is freed.
+ *  The separator should use this call to clean up its branch and bound data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - sepa            : the separator itself
+ */
+#define DECL_SEPAEXITSOL(x) RETCODE x (SCIP* scip, SEPA* sepa)
 
 /** execution method of separator
  *

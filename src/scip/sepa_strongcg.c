@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.6 2005/01/21 09:17:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.7 2005/02/04 14:27:23 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -188,7 +188,7 @@ RETCODE storeCutInArrays(
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
-DECL_SEPAFREE(SCIPsepaFreeStrongcg)
+DECL_SEPAFREE(sepaFreeStrongcg)
 {  /*lint --e{715}*/
    SEPADATA* sepadata;
 
@@ -205,9 +205,25 @@ DECL_SEPAFREE(SCIPsepaFreeStrongcg)
    return SCIP_OKAY;
 }
 
+/** initialization method of separator (called when problem solving starts) */
+#define sepaInitStrongcg NULL
+
+
+/** deinitialization method of separator (called when problem solving exits) */
+#define sepaExitStrongcg NULL
+
+
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#define sepaInitsolStrongcg NULL
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#define sepaExitsolStrongcg NULL
+
+
 /** execution method of separator */
 static
-DECL_SEPAEXEC(SCIPsepaExecStrongcg)
+DECL_SEPAEXEC(sepaExecStrongcg)
 {  /*lint --e{715}*/
    SEPADATA* sepadata;
    VAR** vars;
@@ -470,7 +486,8 @@ RETCODE SCIPincludeSepaStrongcg(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-         SCIPsepaFreeStrongcg, NULL, NULL, SCIPsepaExecStrongcg,
+         sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
+         sepaInitsolStrongcg, sepaExitsolStrongcg, sepaExecStrongcg,
          sepadata) );
 
    /* add separator parameters */

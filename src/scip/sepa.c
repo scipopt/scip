@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.42 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.43 2005/02/04 14:27:22 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -73,6 +73,8 @@ RETCODE SCIPsepaCreate(
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
    DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
    SEPADATA*        sepadata            /**< separator data */
    )
@@ -94,6 +96,8 @@ RETCODE SCIPsepaCreate(
    (*sepa)->sepafree = sepafree;
    (*sepa)->sepainit = sepainit;
    (*sepa)->sepaexit = sepaexit;
+   (*sepa)->sepainitsol = sepainitsol;
+   (*sepa)->sepaexitsol = sepaexitsol;
    (*sepa)->sepaexec = sepaexec;
    (*sepa)->sepadata = sepadata;
    CHECK_OKAY( SCIPclockCreate(&(*sepa)->clock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -195,6 +199,40 @@ RETCODE SCIPsepaExit(
       CHECK_OKAY( sepa->sepaexit(scip, sepa) );
    }
    sepa->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs separator that the branch and bound process is being started */
+RETCODE SCIPsepaInitsol(
+   SEPA*            sepa,               /**< separator */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(sepa != NULL);
+
+   /* call solving process initialization method of separator */
+   if( sepa->sepainitsol != NULL )
+   {
+      CHECK_OKAY( sepa->sepainitsol(scip, sepa) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs separator that the branch and bound process data is being freed */
+RETCODE SCIPsepaExitsol(
+   SEPA*            sepa,               /**< separator */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(sepa != NULL);
+
+   /* call solving process deinitialization method of separator */
+   if( sepa->sepaexitsol != NULL )
+   {
+      CHECK_OKAY( sepa->sepaexitsol(scip, sepa) );
+   }
 
    return SCIP_OKAY;
 }

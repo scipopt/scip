@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.32 2005/01/31 12:21:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.33 2005/02/04 14:27:22 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -53,6 +53,8 @@ RETCODE SCIPsepaCreate(
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
+   DECL_SEPAINITSOL ((*sepainitsol)),   /**< solving process initialization method of separator */
+   DECL_SEPAEXITSOL ((*sepaexitsol)),   /**< solving process deinitialization method of separator */
    DECL_SEPAEXEC    ((*sepaexec)),      /**< execution method of separator */
    SEPADATA*        sepadata            /**< separator data */
    );
@@ -74,6 +76,20 @@ RETCODE SCIPsepaInit(
 /** calls exit method of separator */
 extern
 RETCODE SCIPsepaExit(
+   SEPA*            sepa,               /**< separator */
+   SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** informs separator that the branch and bound process is being started */
+extern
+RETCODE SCIPsepaInitsol(
+   SEPA*            sepa,               /**< separator */
+   SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** informs separator that the branch and bound process data is being freed */
+extern
+RETCODE SCIPsepaExitsol(
    SEPA*            sepa,               /**< separator */
    SCIP*            scip                /**< SCIP data structure */   
    );

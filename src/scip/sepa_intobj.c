@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.11 2005/01/21 09:17:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.12 2005/02/04 14:27:23 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -202,6 +202,14 @@ DECL_SEPAEXIT(sepaExitIntobj)
 }
 
 
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#define sepaInitsolIntobj NULL
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#define sepaExitsolIntobj NULL
+
+
 /** execution method of separator */
 static
 DECL_SEPAEXEC(sepaExecIntobj)
@@ -348,8 +356,9 @@ RETCODE SCIPincludeSepaIntobj(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-                  sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, sepaExecIntobj,
-                  sepadata) );
+         sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
+         sepaInitsolIntobj, sepaExitsolIntobj, sepaExecIntobj,
+         sepadata) );
 
    /* include event handler for objective change events */
    eventhdlrdata = (EVENTHDLRDATA*)sepadata;

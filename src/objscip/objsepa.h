@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.10 2005/01/21 09:16:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.11 2005/02/04 14:27:21 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -91,6 +91,32 @@ public:
    
    /** deinitialization method of cut separator (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
+      SCIP*         scip,               /**< SCIP data structure */
+      SEPA*         sepa                /**< the cut separator itself */
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** solving process initialization method of separator (called when branch and bound process is about to begin)
+    *
+    *  This method is called when the presolving was finished and the branch and bound process is about to begin.
+    *  The separator may use this call to initialize its branch and bound specific data.
+    */
+   virtual RETCODE scip_initsol(
+      SCIP*         scip,               /**< SCIP data structure */
+      SEPA*         sepa                /**< the cut separator itself */
+      )
+   {
+      return SCIP_OKAY;
+   }
+   
+   /** solving process deinitialization method of separator (called before branch and bound process data is freed)
+    *
+    *  This method is called before the branch and bound process is freed.
+    *  The separator should use this call to clean up its branch and bound data.
+    */
+   virtual RETCODE scip_exitsol(
       SCIP*         scip,               /**< SCIP data structure */
       SEPA*         sepa                /**< the cut separator itself */
       )

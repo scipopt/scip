@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.7 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.8 2005/02/04 14:27:24 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -43,6 +43,8 @@ struct Sepa
    DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
+   DECL_SEPAINITSOL ((*sepainitsol));   /**< solving process initialization method of separator */
+   DECL_SEPAEXITSOL ((*sepaexitsol));   /**< solving process deinitialization method of separator */
    DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
    SEPADATA*        sepadata;           /**< separators local data */
    CLOCK*           clock;              /**< separation time */

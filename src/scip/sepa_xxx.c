@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.8 2005/01/21 09:17:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.9 2005/02/04 14:27:24 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -110,6 +110,36 @@ DECL_SEPAEXIT(sepaExitXxx)
 #endif
 
 
+/** solving process initialization method of separator (called when branch and bound process is about to begin) */
+#if 0
+static
+DECL_SEPAINITSOL(sepaInitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx separator not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define sepaInitsolXxx NULL
+#endif
+
+
+/** solving process deinitialization method of separator (called before branch and bound process data is freed) */
+#if 0
+static
+DECL_SEPAEXITSOL(sepaExitsolXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx separator not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define sepaExitsolXxx NULL
+#endif
+
+
 /** execution method of separator */
 static
 DECL_SEPAEXEC(sepaExecXxx)
@@ -141,7 +171,8 @@ RETCODE SCIPincludeSepaXxx(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-         sepaFreeXxx, sepaInitXxx, sepaExitXxx, sepaExecXxx,
+         sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
+         sepaInitsolXxx, sepaExitsolXxx, sepaExecXxx,
          sepadata) );
 
    /* add xxx separator parameters */

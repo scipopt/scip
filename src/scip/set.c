@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.134 2005/02/03 17:50:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.135 2005/02/04 14:27:24 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1987,8 +1987,8 @@ DISP* SCIPsetFindDisp(
    return NULL;
 }
 
-/** initializes all user callback functions */
-RETCODE SCIPsetInitCallbacks(
+/** calls init methods of all plugins */
+RETCODE SCIPsetInitPlugins(
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -2073,8 +2073,8 @@ RETCODE SCIPsetInitCallbacks(
    return SCIP_OKAY;
 }
 
-/** calls exit methods of all user callback functions */
-RETCODE SCIPsetExitCallbacks(
+/** calls exit methods of all plugins */
+RETCODE SCIPsetExitPlugins(
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -2143,7 +2143,7 @@ RETCODE SCIPsetExitCallbacks(
       CHECK_OKAY( SCIPnodeselExit(set->nodesels[i], set->scip) );
    }
 
-   /* branchruleing rules */
+   /* branching rules */
    for( i = 0; i < set->nbranchrules; ++i )
    {
       CHECK_OKAY( SCIPbranchruleExit(set->branchrules[i], set->scip) );
@@ -2155,6 +2155,188 @@ RETCODE SCIPsetExitCallbacks(
       CHECK_OKAY( SCIPdispExit(set->disps[i], set->scip) );
    }
 
+   return SCIP_OKAY;
+}
+
+/** calls initpre methods of all plugins */
+RETCODE SCIPsetInitprePlugins(
+   SET*             set,                /**< global SCIP settings */
+   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   )
+{
+   RESULT result;
+   int i;
+
+   assert(set != NULL);
+   assert(unbounded != NULL);
+   assert(infeasible != NULL);
+
+   /* inform presolvers that the presolving is abound to begin */
+   for( i = 0; i < set->npresols; ++i )
+   {
+      CHECK_OKAY( SCIPpresolInitpre(set->presols[i], set->scip, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(set->presols[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+      }
+   }
+
+   /* inform constraint handlers that the presolving is abound to begin */
+   for( i = 0; i < set->nconshdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconshdlrInitpre(set->conshdlrs[i], set->scip, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(set->conshdlrs[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            SCIPconshdlrGetName(set->conshdlrs[i]));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls exitpre methods of all plugins */
+RETCODE SCIPsetExitprePlugins(
+   SET*             set,                /**< global SCIP settings */
+   Bool*            unbounded,          /**< pointer to store TRUE, if presolving detected unboundness */
+   Bool*            infeasible          /**< pointer to store TRUE, if presolving detected infeasibility */
+   )
+{
+   RESULT result;
+   int i;
+
+   assert(set != NULL);
+   assert(unbounded != NULL);
+   assert(infeasible != NULL);
+
+   /* inform presolvers that the presolving is abound to begin */
+   for( i = 0; i < set->npresols; ++i )
+   {
+      CHECK_OKAY( SCIPpresolExitpre(set->presols[i], set->scip, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(set->presols[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(set->presols[i]));
+      }
+   }
+
+   /* inform constraint handlers that the presolving is abound to begin */
+   for( i = 0; i < set->nconshdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconshdlrExitpre(set->conshdlrs[i], set->scip, &result) );
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(set->conshdlrs[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            SCIPconshdlrGetName(set->conshdlrs[i]));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls initsol methods of all plugins */
+RETCODE SCIPsetInitsolPlugins(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+
+   /* constraint handlers */
+   for( i = 0; i < set->nconshdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconshdlrInitsol(set->conshdlrs[i], set->scip) );
+   }
+   
+   /* separators */
+   for( i = 0; i < set->nsepas; ++i )
+   {
+      CHECK_OKAY( SCIPsepaInitsol(set->sepas[i], set->scip) );
+   }
+
+   /* primal heuristics */
+   for( i = 0; i < set->nheurs; ++i )
+   {
+      CHECK_OKAY( SCIPheurInitsol(set->heurs[i], set) );
+   }
+
+   /* branching rules */
+   for( i = 0; i < set->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleInitsol(set->branchrules[i], set->scip) );
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** calls exitsol methods of all plugins */
+RETCODE SCIPsetExitsolPlugins(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+
+   /* constraint handlers */
+   for( i = 0; i < set->nconshdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconshdlrExitsol(set->conshdlrs[i], set->scip) );
+   }
+   
+   /* separators */
+   for( i = 0; i < set->nsepas; ++i )
+   {
+      CHECK_OKAY( SCIPsepaExitsol(set->sepas[i], set->scip) );
+   }
+
+#if 0
+   /* primal heuristics */
+   for( i = 0; i < set->nheurs; ++i )
+   {
+      CHECK_OKAY( SCIPheurExitsol(set->heurs[i], set) );
+   }
+#endif
+
+   /* branching rules */
+   for( i = 0; i < set->nbranchrules; ++i )
+   {
+      CHECK_OKAY( SCIPbranchruleExitsol(set->branchrules[i], set->scip) );
+   }
+   
    return SCIP_OKAY;
 }
 
