@@ -1322,6 +1322,22 @@ DECL_CONSCHECK(consCheckSetpack)
 }
 
 static
+DECL_CONSPRESOL(consPresolSetpack)
+{
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   /* process constraints */
+   *result = SCIP_DIDNOTFIND;
+
+   todoMessage("set packing presolving");
+   
+   return SCIP_OKAY;
+}
+
+static
 DECL_CONSENABLE(consEnableSetpack)
 {
    CONSHDLRDATA* conshdlrdata;
@@ -1390,7 +1406,6 @@ static
 DECL_LINCONSUPGD(linconsUpgdSetpack)
 {
    assert(upgdcons != NULL);
-   assert(upgraded != NULL);
 
    /* check, if linear constraint can be upgraded to set packing constraint
     * -> a set packing constraint consists only of binary variables with a coefficient of +1.0,
@@ -1404,10 +1419,7 @@ DECL_LINCONSUPGD(linconsUpgdSetpack)
       CHECK_OKAY( SCIPcreateConsSetpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      local, FALSE, removeable) );
-      *upgraded = TRUE;
    }
-   else
-      *upgraded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1493,7 +1505,7 @@ RETCODE SCIPincludeConsHdlrSetpack(
                   CONSHDLR_NEEDSCONS,
                   consFreeSetpack, NULL, NULL,
                   consDeleteSetpack, consTransSetpack, 
-                  consSepaSetpack, consEnfolpSetpack, consEnfopsSetpack, consCheckSetpack, NULL,
+                  consSepaSetpack, consEnfolpSetpack, consEnfopsSetpack, consCheckSetpack, NULL, consPresolSetpack,
                   consEnableSetpack, consDisableSetpack,
                   conshdlrdata) );
 

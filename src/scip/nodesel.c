@@ -385,24 +385,27 @@ Real SCIPnodepqGetLowerbound(
    assert(set != NULL);
    assert(set->nodesel != NULL);
 
-   if( set->nodesel->lowestboundfirst )
+   /* if the cached lower bound is invalid, calculate it */
+   if( !nodepq->validlowerbound )
    {
-      /* the node selector's compare method sorts the minimal lower bound to the front */
-      if( nodepq->len > 0 )
+      assert(nodepq->nlowerbounds == 0);
+
+      nodepq->validlowerbound = TRUE;
+
+      if( set->nodesel->lowestboundfirst )
       {
-         assert(nodepq->slots[0] != NULL);
-         nodepq->lowerbound = nodepq->slots[0]->lowerbound;
+         /* the node selector's compare method sorts the minimal lower bound to the front */
+         if( nodepq->len > 0 )
+         {
+            assert(nodepq->slots[0] != NULL);
+            nodepq->lowerbound = nodepq->slots[0]->lowerbound;
+         }
+         else
+            nodepq->lowerbound = set->infinity;
       }
       else
-         nodepq->lowerbound = set->infinity;
-   }
-   else
-   {
-      /* if we don't know the minimal lower bound, compare all nodes */
-      if( !nodepq->validlowerbound )
       {
-         assert(nodepq->nlowerbounds == 0);
-         nodepq->validlowerbound = TRUE;
+         /* if we don't know the minimal lower bound, compare all nodes */
          nodepq->lowerbound = set->infinity;
          nodepq->nlowerbounds = 0;
          for( i = 0; i < nodepq->len; ++i )

@@ -259,8 +259,8 @@ RETCODE forkCreate(
    FORK**           fork,               /**< pointer to fork data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(fork != NULL);
@@ -346,8 +346,8 @@ RETCODE subrootCreate(
    SUBROOT**        subroot,            /**< pointer to subroot data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
    )
 {
    int i;
@@ -732,8 +732,8 @@ RETCODE nodeDeactivate(
    NODE**           node,               /**< node to deactivate */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp                  /**< actual LP data */
    )
 {
    Bool hasChildren = TRUE;
@@ -910,8 +910,8 @@ RETCODE SCIPnodeAddBoundchg(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
@@ -923,10 +923,18 @@ RETCODE SCIPnodeAddBoundchg(
 
    assert(node != NULL);
    assert(var != NULL);
-   
+
    debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
       node->depth, var->name, var->actdom.lb, var->actdom.ub, 
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
+
+   CHECK_OKAY( SCIPvarTransformBound(&var, &newbound, &boundtype) );
+
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
+   
+   debugMessage("                           transformed to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
+      var->name, var->actdom.lb, var->actdom.ub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
@@ -960,7 +968,7 @@ RETCODE SCIPnodeAddBoundchg(
    {
    case SCIP_NODETYPE_ACTNODE:
       assert(tree->actnode == node);
-      CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, lp, tree, branchcand, eventqueue, newbound, boundtype) );
+      CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, newbound, boundtype) );
       if( node->depth == 0 )
       {
          /* changed bound in root node: update the global bound */
@@ -1191,7 +1199,7 @@ RETCODE treeShrinkPath(
    {
       assert(tree->path[i] != NULL);
       assert((int)(tree->path[i]->depth) == i);
-      CHECK_OKAY( nodeDeactivate(&(tree->path[i]), memhdr, set, lp, tree) );
+      CHECK_OKAY( nodeDeactivate(&(tree->path[i]), memhdr, set, tree, lp) );
    }
    tree->pathlen = lastdepth+1;
 
@@ -1324,7 +1332,7 @@ RETCODE treeSwitchPath(
    for( i = tree->pathlen-1; i > commonforkdepth; --i )
    {
       debugMessage("switch path: undo domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
       debugMessage("switch path: undo constraint set changed in depth %d\n", i);
       CHECK_OKAY( SCIPconssetchgUndo(tree->path[i]->conssetchg, set) );
    }
@@ -1353,7 +1361,7 @@ RETCODE treeSwitchPath(
       debugMessage("switch path: apply constraint set changed in depth %d\n", i);
       CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
    }
 
    /* remember LP defining fork and subroot */
@@ -1781,7 +1789,7 @@ RETCODE actnodeToFork(
    CHECK_OKAY( SCIPconssetchgdynDetach(tree->actnodeconssetchg, memhdr, set) );
    CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
 
-   CHECK_OKAY( forkCreate(&fork, memhdr, set, lp, tree) );
+   CHECK_OKAY( forkCreate(&fork, memhdr, set, tree, lp) );
    
    tree->actnode->nodetype = SCIP_NODETYPE_FORK;
    tree->actnode->data.fork = fork;
@@ -1852,7 +1860,7 @@ RETCODE actnodeToSubroot(
    CHECK_OKAY( SCIPconssetchgdynDetach(tree->actnodeconssetchg, memhdr, set) );
    CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
 
-   CHECK_OKAY( subrootCreate(&subroot, memhdr, set, lp, tree) );
+   CHECK_OKAY( subrootCreate(&subroot, memhdr, set, tree, lp) );
 
    tree->actnode->nodetype = SCIP_NODETYPE_SUBROOT;
    tree->actnode->data.subroot = subroot;
@@ -2161,10 +2169,7 @@ RETCODE SCIPnodeActivate(
 RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   LP*              lp,                 /**< actual LP data */
-   PROB*            prob                /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    VAR* var;
@@ -2173,8 +2178,6 @@ RETCODE SCIPtreeCreate(
 
    assert(tree != NULL);
    assert(set != NULL);
-   assert(lp != NULL);
-   assert(prob != NULL);
 
    ALLOC_OKAY( allocMemory(tree) );
 
@@ -2197,22 +2200,8 @@ RETCODE SCIPtreeCreate(
    (*tree)->childrendomchg = NULL;
    (*tree)->siblingsdomchg = NULL;
 
-   /* calculate root pseudo solution value */
    (*tree)->actpseudoobjval = 0.0;
    (*tree)->actpseudoobjvalinf = 0;
-   for( v = 0; v < prob->nvars; ++v )
-   {
-      var = prob->vars[v];
-      if( !SCIPsetIsZero(set, var->obj) )
-      {
-         pseudosol = SCIPvarGetPseudoSol(var);
-         if( SCIPsetIsInfinity(set, ABS(pseudosol)) )
-            (*tree)->actpseudoobjvalinf++;
-         else
-            (*tree)->actpseudoobjval += pseudosol * var->obj;
-      }
-   }
-   
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
    (*tree)->pathlen = 0;
@@ -2364,13 +2353,19 @@ RETCODE SCIPtreeBranchVar(
    Real solval;
 
    assert(var != NULL);
+
+   /* get the corresponding active problem variable */
+   var = SCIPvarGetProbvar(var);
+
+   assert(var != NULL);
+   assert(var->probindex >= 0);
    assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(var->vartype == SCIP_VARTYPE_BINARY
       || var->vartype == SCIP_VARTYPE_INTEGER
       || var->vartype == SCIP_VARTYPE_IMPLINT);
    assert(SCIPsetIsIntegral(set, var->actdom.lb));
    assert(SCIPsetIsIntegral(set, var->actdom.ub));
-   assert(!SCIPsetIsFixed(set, var->actdom.lb, var->actdom.ub));
+   assert(SCIPsetIsLT(set, var->actdom.lb, var->actdom.ub));
 
    solval = SCIPvarGetSol(var, tree);
    assert(SCIPsetIsGE(set, solval, var->actdom.lb));
@@ -2391,12 +2386,12 @@ RETCODE SCIPtreeBranchVar(
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
       if( !SCIPsetIsEQ(set, var->actdom.lb, fixval) )
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval,
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, fixval,
                         SCIP_BOUNDTYPE_LOWER) );
       }
       if( !SCIPsetIsEQ(set, var->actdom.ub, fixval) )
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval,
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, fixval,
                         SCIP_BOUNDTYPE_UPPER) );
       }
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -2406,7 +2401,7 @@ RETCODE SCIPtreeBranchVar(
       {
          debugMessage(" -> creating child: <%s> <= %g\n", var->name, fixval-1);
          CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval-1,
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, fixval-1,
                         SCIP_BOUNDTYPE_UPPER) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       }
@@ -2416,7 +2411,7 @@ RETCODE SCIPtreeBranchVar(
       {
          debugMessage(" -> creating child: <%s> >= %g\n", var->name, fixval+1);
          CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var, fixval+1,
+         CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, fixval+1,
                         SCIP_BOUNDTYPE_LOWER) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       }
@@ -2428,14 +2423,14 @@ RETCODE SCIPtreeBranchVar(
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", var->name, SCIPsetFloor(set, solval));
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var,
+      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var,
                      SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", var->name, SCIPsetCeil(set, solval));
       CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
-      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, branchcand, eventqueue, var,
+      CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var,
                      SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
    }
@@ -2443,63 +2438,127 @@ RETCODE SCIPtreeBranchVar(
    return SCIP_OKAY;
 }
 
-/** notifies tree, that a bound of a variable changed */
-RETCODE SCIPtreeBoundChanged(
+/** updates actual pseudo objective value for a change in a variable's objective value or bounds */
+RETCODE SCIPtreeUpdateVar(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
-   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   Real             oldbound,           /**< old bound value */
-   Real             newbound            /**< new bound value */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             oldlb,              /**< old objective value of variable */
+   Real             oldub,              /**< old objective value of variable */
+   Real             newobj,             /**< new objective value of variable */
+   Real             newlb,              /**< new objective value of variable */
+   Real             newub               /**< new objective value of variable */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->actpseudoobjvalinf >= 0);
+   assert(!SCIPsetIsInfinity(set, ABS(oldobj)));
+   assert(!SCIPsetIsInfinity(set, oldlb));
+   assert(!SCIPsetIsInfinity(set, -oldub));
+   assert(!SCIPsetIsInfinity(set, ABS(newobj)));
+   assert(!SCIPsetIsInfinity(set, newlb));
+   assert(!SCIPsetIsInfinity(set, -newub));
+   assert(var != NULL);
+
+   if( var->varstatus != SCIP_VARSTATUS_LOOSE && var->varstatus != SCIP_VARSTATUS_COLUMN )
+   {
+      errorMessage("tree was informed of an objective change of a non-mutable variable");
+      return SCIP_INVALIDDATA;
+   }
+
+   assert(var->probindex >= 0);
+
+   /* subtract old pseudo objective value */
+   if( SCIPsetIsPositive(set, oldobj) )
+   {
+      if( SCIPsetIsInfinity(set, -oldlb) )
+         tree->actpseudoobjvalinf--;
+      else
+         tree->actpseudoobjval -= oldlb * oldobj;
+   }
+   else if( SCIPsetIsNegative(set, oldobj) )
+   {
+      if( SCIPsetIsInfinity(set, oldub) )
+         tree->actpseudoobjvalinf--;
+      else
+         tree->actpseudoobjval -= oldub * oldobj;
+   }
+   assert(tree->actpseudoobjvalinf >= 0);
+
+   /* add new pseudo objective value */
+   if( SCIPsetIsPositive(set, newobj) )
+   {
+      if( SCIPsetIsInfinity(set, -newlb) )
+         tree->actpseudoobjvalinf++;
+      else
+         tree->actpseudoobjval += newlb * newobj;
+   }
+   else if( SCIPsetIsNegative(set, newobj) )
+   {
+      if( SCIPsetIsInfinity(set, newub) )
+         tree->actpseudoobjvalinf++;
+      else
+         tree->actpseudoobjval += newub * newobj;
+   }
+   assert(tree->actpseudoobjvalinf >= 0);
+
+   return SCIP_OKAY;
+}
+
+/** updates actual pseudo objective value for a change in a variable's objective value */
+RETCODE SCIPtreeUpdateVarObj(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             newobj              /**< new objective value of variable */
    )
 {
    assert(var != NULL);
 
-   switch( var->varstatus )
+   if( !SCIPsetIsEQ(set, oldobj, newobj) )
    {
-   case SCIP_VARSTATUS_LOOSE:
-   case SCIP_VARSTATUS_COLUMN:
-      assert(tree != NULL);
-      assert(tree->actpseudoobjvalinf >= 0);
-      if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsPositive(set, var->obj) )
-      {
-         assert(!SCIPsetIsInfinity(set, oldbound));
-         assert(!SCIPsetIsInfinity(set, newbound));
-         if( SCIPsetIsInfinity(set, -oldbound) )
-            tree->actpseudoobjvalinf--;
-         else
-            tree->actpseudoobjval -= oldbound * var->obj;
-         assert(tree->actpseudoobjvalinf >= 0);
-         if( SCIPsetIsInfinity(set, -newbound) )
-            tree->actpseudoobjvalinf++;
-         else
-            tree->actpseudoobjval += newbound * var->obj;
-      }
-      else if( boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsNegative(set, var->obj) )
-      {
-         assert(!SCIPsetIsInfinity(set, -oldbound));
-         assert(!SCIPsetIsInfinity(set, -newbound));
-         if( SCIPsetIsInfinity(set, oldbound) )
-            tree->actpseudoobjvalinf--;
-         else
-            tree->actpseudoobjval -= oldbound * var->obj;
-         assert(tree->actpseudoobjvalinf >= 0);
-         if( SCIPsetIsInfinity(set, newbound) )
-            tree->actpseudoobjvalinf++;
-         else
-            tree->actpseudoobjval += newbound * var->obj;
-      }
-      break;
+      CHECK_OKAY( SCIPtreeUpdateVar( tree, set, var, oldobj, var->actdom.lb, var->actdom.ub,
+                     newobj, var->actdom.lb, var->actdom.ub) );
+   }
 
-   case SCIP_VARSTATUS_ORIGINAL:
-   case SCIP_VARSTATUS_FIXED:
-   case SCIP_VARSTATUS_AGGREGATED:
-   case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("tree was informed of a bound change of a non-mutable variable");
-      return SCIP_INVALIDDATA;
-   default:
-      errorMessage("unknown variable status");
-      abort();
+   return SCIP_OKAY;
+}
+
+/** updates actual pseudo objective value for a change in a variable's lower bound */
+RETCODE SCIPtreeUpdateVarLb(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldlb,              /**< old lower bound of variable */
+   Real             newlb               /**< new lower bound of variable */
+   )
+{
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, var->obj) )
+   {
+      CHECK_OKAY( SCIPtreeUpdateVar( tree, set, var, var->obj, oldlb, var->actdom.ub, var->obj, newlb, var->actdom.ub) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** updates actual pseudo objective value for a change in a variable's upper bound */
+RETCODE SCIPtreeUpdateVarUb(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldub,              /**< old upper bound of variable */
+   Real             newub               /**< new upper bound of variable */
+   )
+{
+   assert(var != NULL);
+
+   if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, var->obj) )
+   {
+      CHECK_OKAY( SCIPtreeUpdateVar( tree, set, var, var->obj, var->actdom.lb, oldub, var->obj, var->actdom.lb, newub) );
    }
 
    return SCIP_OKAY;

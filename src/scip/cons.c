@@ -48,6 +48,7 @@ struct ConsHdlr
    DECL_CONSENFOPS  ((*consenfops));    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop));      /**< propagate variable domains */
+   DECL_CONSPRESOL  ((*conspresol));    /**< presolving method */
    DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
@@ -80,6 +81,24 @@ struct ConsHdlr
    int              ncutsfound;         /**< total number of cuts found by this constraint handler */
    Longint          nbranchings;        /**< number of times, the constraint handler performed a branching */
    int              maxnactiveconss;    /**< maximal number of active constraints existing at the same time */
+   int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
+   int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
+   int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
+   int              lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
+   int              lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
+   int              lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
+   int              lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
+   int              lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
+   int              lastnchgsides;      /**< number of changed left or right hand sides before the last call */
+   int              nfixedvars;         /**< total number of variables fixed by this presolver */
+   int              naggrvars;          /**< total number of variables aggregated by this presolver */
+   int              nchgvartypes;       /**< total number of variable type changes by this presolver */
+   int              nchgbds;            /**< total number of variable bounds tightend by this presolver */
+   int              naddholes;          /**< total number of domain holes added by this presolver */
+   int              ndelconss;          /**< total number of deleted constraints by this presolver */
+   int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
+   int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
+   int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
    unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
    unsigned int     initialized:1;      /**< is constraint handler initialized? */
    unsigned int     delayupdates:1;     /**< must the updates of the constraint arrays be delayed until processUpdate()? */
@@ -252,6 +271,10 @@ RETCODE conshdlrMarkConsObsolete(
    if( !cons->check )
    {
       /* constraint is not needed for feasibility -> it should be deleted completely */
+      if( cons->active )
+      {
+         CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+      }
       CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, prob) );
    }
    else
@@ -965,6 +988,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -994,6 +1018,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consenfops = consenfops;
    (*conshdlr)->conscheck = conscheck;
    (*conshdlr)->consprop = consprop;
+   (*conshdlr)->conspresol = conspresol;
    (*conshdlr)->consenable = consenable;
    (*conshdlr)->consdisable = consdisable;
    (*conshdlr)->conshdlrdata = conshdlrdata;
@@ -1088,6 +1113,24 @@ RETCODE SCIPconshdlrInit(
       conshdlr->nenfopscalls = 0;
       conshdlr->ncutsfound = 0;
       conshdlr->maxnactiveconss = conshdlr->nactiveconss;
+      conshdlr->lastnfixedvars = 0;
+      conshdlr->lastnaggrvars = 0;
+      conshdlr->lastnchgvartypes = 0;
+      conshdlr->lastnchgbds = 0;
+      conshdlr->lastnaddholes = 0;
+      conshdlr->lastndelconss = 0;
+      conshdlr->lastnupgdconss = 0;
+      conshdlr->lastnchgcoefs = 0;
+      conshdlr->lastnchgsides = 0;
+      conshdlr->nfixedvars = 0;
+      conshdlr->naggrvars = 0;
+      conshdlr->nchgvartypes = 0;
+      conshdlr->nchgbds = 0;
+      conshdlr->naddholes = 0;
+      conshdlr->ndelconss = 0;
+      conshdlr->nupgdconss = 0;
+      conshdlr->nchgcoefs = 0;
+      conshdlr->nchgsides = 0;
    }
    conshdlr->initialized = TRUE;
 
@@ -1513,7 +1556,7 @@ RETCODE SCIPconshdlrPropagate(
    {
       debugMessage("propagating %d constraints of handler <%s>\n", conshdlr->npropconss, conshdlr->name);
 
-      /* because the during constraint processing, constraints of this handler may be activated, deactivated,
+      /* because during constraint processing, constraints of this handler may be activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
        * external method; to avoid this, these changes will be buffered and processed after the method call
        */
@@ -1527,6 +1570,7 @@ RETCODE SCIPconshdlrPropagate(
       /* perform the cached constraint updates */
       CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
 
+      /* check result code of callback method */
       if( *result != SCIP_CUTOFF
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_DIDNOTFIND
@@ -1534,6 +1578,127 @@ RETCODE SCIPconshdlrPropagate(
       {
          char s[MAXSTRLEN];
          sprintf(s, "propagation method of constraint handler <%s> returned invalid result <%d>", 
+            conshdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls presolving method of constraint handler */
+RETCODE SCIPconshdlrPresolve(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   int              nrounds,            /**< number of presolving rounds already done */
+   int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*             nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*             nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*             naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
+   assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
+   assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
+   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(nchgvartypes != NULL);
+   assert(nchgbds != NULL);
+   assert(naddholes != NULL);
+   assert(ndelconss != NULL);
+   assert(nupgdconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( conshdlr->conspresol != NULL
+      && (!conshdlr->needscons || conshdlr->npropconss > 0) )
+   {
+      int nnewfixedvars;
+      int nnewaggrvars;
+      int nnewchgvartypes;
+      int nnewchgbds;
+      int nnewholes;
+      int nnewdelconss;
+      int nnewupgdconss;
+      int nnewchgcoefs;
+      int nnewchgsides;
+
+      debugMessage("presolving %d constraints of handler <%s>\n", conshdlr->npropconss, conshdlr->name);
+
+      /* because during constraint processing, constraints of this handler may be activated, deactivated,
+       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+       * external method; to avoid this, these changes will be buffered and processed after the method call
+       */
+      conshdlrDelayUpdates(conshdlr);
+
+      /* calculate the number of changes since last call */
+      nnewfixedvars = *nfixedvars - conshdlr->lastnfixedvars;
+      nnewaggrvars = *naggrvars - conshdlr->lastnaggrvars;
+      nnewchgvartypes = *nchgvartypes - conshdlr->lastnchgvartypes;
+      nnewchgbds = *nchgbds - conshdlr->lastnchgbds;
+      nnewholes = *naddholes - conshdlr->lastnaddholes;
+      nnewdelconss = *ndelconss - conshdlr->lastndelconss;
+      nnewupgdconss = *nupgdconss - conshdlr->lastnupgdconss;
+      nnewchgcoefs = *nchgcoefs - conshdlr->lastnchgcoefs;
+      nnewchgsides = *nchgsides - conshdlr->lastnchgsides;
+      
+      /* remember the old number of changes */
+      conshdlr->lastnfixedvars = *nfixedvars;
+      conshdlr->lastnaggrvars = *naggrvars;
+      conshdlr->lastnchgvartypes = *nchgvartypes;
+      conshdlr->lastnchgbds = *nchgbds;
+      conshdlr->lastnaddholes = *naddholes;
+      conshdlr->lastndelconss = *ndelconss;
+      conshdlr->lastnupgdconss = *nupgdconss;
+      conshdlr->lastnchgcoefs = *nchgcoefs;
+      conshdlr->lastnchgsides = *nchgsides;
+
+      /* call external method */
+      CHECK_OKAY( conshdlr->conspresol(set->scip, conshdlr, conshdlr->propconss, conshdlr->npropconss, nrounds,
+                     nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+                     nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+                     nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+                     ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+      
+      /* count the new changes */
+      conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
+      conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
+      conshdlr->nchgvartypes += *nchgvartypes - conshdlr->lastnchgvartypes;
+      conshdlr->nchgbds += *nchgbds - conshdlr->lastnchgbds;
+      conshdlr->naddholes += *naddholes - conshdlr->lastnaddholes;
+      conshdlr->ndelconss += *ndelconss - conshdlr->lastndelconss;
+      conshdlr->nupgdconss += *nupgdconss - conshdlr->lastnupgdconss;
+      conshdlr->nchgcoefs += *nchgcoefs - conshdlr->lastnchgcoefs;
+      conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
+
+      /* perform the cached constraint updates */
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
+
+      /* check result code of callback method */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_SUCCESS
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "presolving method of constraint handler <%s> returned invalid result <%d>", 
             conshdlr->name, *result);
          errorMessage(s);
          return SCIP_INVALIDRESULT;
@@ -1674,6 +1839,106 @@ int SCIPconshdlrGetMaxNActiveConss(
    return conshdlr->maxnactiveconss;
 }
 
+/** resets maximum number of active constraints to current number of active constraints */
+void SCIPconshdlrResetNMaxNActiveConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->maxnactiveconss = conshdlr->nactiveconss;
+}
+
+/** gets number of variables fixed in presolving method of constraint handler */
+int SCIPconshdlrGetNFixedVars(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nfixedvars;
+}
+
+/** gets number of variables aggregated in presolving method of constraint handler */
+int SCIPconshdlrGetNAggrVars(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->naggrvars;
+}
+
+/** gets number of variable types changed in presolving method of constraint handler */
+int SCIPconshdlrGetNVarTypes(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nchgvartypes;
+}
+
+/** gets number of bounds changed in presolving method of constraint handler */
+int SCIPconshdlrGetNChgBds(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nchgbds;
+}
+
+/** gets number of holes added to domains of variables in presolving method of constraint handler */
+int SCIPconshdlrGetNAddHoles(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->naddholes;
+}
+
+/** gets number of constraints deleted in presolving method of constraint handler */
+int SCIPconshdlrGetNDelConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->ndelconss;
+}
+
+/** gets number of constraints upgraded in presolving method of constraint handler */
+int SCIPconshdlrGetNUpgdConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nupgdconss;
+}
+
+/** gets number of coefficients changed in presolving method of constraint handler */
+int SCIPconshdlrGetNChgCoefs(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nchgcoefs;
+}
+
+/** gets number of constraint sides changed in presolving method of constraint handler */
+int SCIPconshdlrGetNChgSides(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nchgsides;
+}
+
 /** gets checking priority of constraint handler */
 int SCIPconshdlrGetCheckPriority(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -1712,6 +1977,16 @@ Bool SCIPconshdlrNeedsCons(
    assert(conshdlr != NULL);
 
    return conshdlr->needscons;
+}
+
+/** does the constraint handler perform presolving? */
+Bool SCIPconshdlrDoesPresolve(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return (conshdlr->conspresol != NULL);
 }
 
 /** is constraint handler initialized? */
@@ -1879,7 +2154,6 @@ RETCODE SCIPconsRelease(
 
 /** globally removes constraint from all subproblems; removes constraint from the addedconss array of the node, where it
  *  was created, or from the problem, if it was a problem constraint;
- *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
  *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
  */
 RETCODE SCIPconsDelete(
@@ -1890,7 +2164,8 @@ RETCODE SCIPconsDelete(
    )
 {
    assert(cons != NULL);
-   assert(!cons->check);
+   assert(!cons->active || cons->updatedeactivate);
+   assert(!cons->enabled || cons->updatedeactivate);
 
    debugMessage("globally deleting constraint <%s>\n", cons->name);
 

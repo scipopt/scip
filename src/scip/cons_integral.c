@@ -111,7 +111,7 @@ RETCODE SCIPincludeConsHdlrIntegral(
                   CONSHDLR_NEEDSCONS,
                   NULL, NULL, NULL, 
                   NULL, NULL, 
-                  NULL, consEnfolpIntegral, NULL, consCheckIntegral, NULL,
+                  NULL, consEnfolpIntegral, NULL, consCheckIntegral, NULL, NULL,
                   NULL, NULL,
                   NULL) );
 

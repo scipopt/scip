@@ -1306,6 +1306,22 @@ DECL_CONSCHECK(consCheckSetcover)
 }
 
 static
+DECL_CONSPRESOL(consPresolSetcover)
+{
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   /* process constraints */
+   *result = SCIP_DIDNOTFIND;
+
+   todoMessage("set covering presolving");
+   
+   return SCIP_OKAY;
+}
+
+static
 DECL_CONSENABLE(consEnableSetcover)
 {
    CONSHDLRDATA* conshdlrdata;
@@ -1374,7 +1390,6 @@ static
 DECL_LINCONSUPGD(linconsUpgdSetcover)
 {
    assert(upgdcons != NULL);
-   assert(upgraded != NULL);
 
    /* check, if linear constraint can be upgraded to set covering constraint
     * -> a set covering constraint consists only of binary variables with a coefficient of +1.0,
@@ -1388,10 +1403,7 @@ DECL_LINCONSUPGD(linconsUpgdSetcover)
       CHECK_OKAY( SCIPcreateConsSetcover(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      local, FALSE, removeable) );
-      *upgraded = TRUE;
    }
-   else
-      *upgraded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1477,7 +1489,7 @@ RETCODE SCIPincludeConsHdlrSetcover(
                   CONSHDLR_NEEDSCONS,
                   consFreeSetcover, NULL, NULL,
                   consDeleteSetcover, consTransSetcover, 
-                  consSepaSetcover, consEnfolpSetcover, consEnfopsSetcover, consCheckSetcover, NULL,
+                  consSepaSetcover, consEnfolpSetcover, consEnfopsSetcover, consCheckSetcover, NULL, consPresolSetcover,
                   consEnableSetcover, consDisableSetcover,
                   conshdlrdata) );
 

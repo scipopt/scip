@@ -121,15 +121,10 @@ RETCODE ensurePseudocandsSize(
 
 /** creates a branching candidate storage */
 RETCODE SCIPbranchcandCreate(
-   BRANCHCAND**     branchcand,         /**< pointer to store branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
-   PROB*            prob                /**< problem data */
+   BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
    )
 {
-   int v;
-
    assert(branchcand != NULL);
-   assert(prob != NULL);
 
    ALLOC_OKAY( allocMemory(branchcand) );
    (*branchcand)->lpcands = NULL;
@@ -141,13 +136,6 @@ RETCODE SCIPbranchcandCreate(
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
    (*branchcand)->validlpcandslp = -1;
-
-   /* init pseudo branching candidate list */
-   CHECK_OKAY( ensurePseudocandsSize(*branchcand, set, prob->nbin + prob->nint + prob->nimpl) );
-   for( v = 0; v < prob->nbin + prob->nint + prob->nimpl; ++v )
-   {
-      CHECK_OKAY( SCIPbranchcandUpdateVar(*branchcand, set, prob->vars[v]) );
-   }
    
    return SCIP_OKAY;
 }
@@ -285,8 +273,9 @@ RETCODE SCIPbranchcandGetPseudoCands(
             || var->vartype == SCIP_VARTYPE_IMPLINT);
          assert(SCIPsetIsIntegral(set, var->actdom.lb));
          assert(SCIPsetIsIntegral(set, var->actdom.ub));
-         
-         if( !SCIPsetIsFixed(set, var->actdom.lb, var->actdom.ub) )
+         assert(SCIPsetIsLE(set, var->actdom.lb, var->actdom.ub));
+
+         if( SCIPsetIsLT(set, var->actdom.lb, var->actdom.ub) )
          {
             assert(0 <= var->pseudocandindex && var->pseudocandindex < branchcand->npseudocands);
             assert(branchcand->pseudocands[var->pseudocandindex] == var);
@@ -319,34 +308,37 @@ RETCODE SCIPbranchcandUpdateVar(
 {
    assert(branchcand != NULL);
    assert(var != NULL);
+   assert(SCIPsetIsLE(set, var->actdom.lb, var->actdom.ub));
 
-   if( var->vartype == SCIP_VARTYPE_BINARY
-      || var->vartype == SCIP_VARTYPE_INTEGER
-      || var->vartype == SCIP_VARTYPE_IMPLINT )
+   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL
+      || var->varstatus == SCIP_VARSTATUS_FIXED
+      || var->varstatus == SCIP_VARSTATUS_AGGREGATED
+      || var->varstatus == SCIP_VARSTATUS_MULTAGGR
+      || var->vartype == SCIP_VARTYPE_CONTINOUS
+      || SCIPsetIsEQ(set, var->actdom.lb, var->actdom.ub) )
    {
-      if( SCIPsetIsFixed(set, var->actdom.lb, var->actdom.ub) )
+      /* variable is continous or fixed: make sure it is not member of the pseudo branching candidate list */
+      if( var->pseudocandindex >= 0 )
       {
-         /* variable is fixed: make sure it is not member of the pseudo branching candidate list */
-         if( var->pseudocandindex >= 0 )
-         {
-            assert(var->pseudocandindex < branchcand->npseudocands);
-            assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
-            branchcand->pseudocands[var->pseudocandindex] = branchcand->pseudocands[branchcand->npseudocands-1];
-            branchcand->pseudocands[var->pseudocandindex]->pseudocandindex = var->pseudocandindex;
-            branchcand->npseudocands--;
-            var->pseudocandindex = -1;
-         }
+         assert(var->pseudocandindex < branchcand->npseudocands);
+         assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
+         branchcand->pseudocands[var->pseudocandindex] = branchcand->pseudocands[branchcand->npseudocands-1];
+         branchcand->pseudocands[var->pseudocandindex]->pseudocandindex = var->pseudocandindex;
+         branchcand->npseudocands--;
+         var->pseudocandindex = -1;
       }
-      else
+   }
+   else
+   {
+      assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
+
+      /* variable is not fixed: make sure it is member of the pseudo branching candidate list */
+      if( var->pseudocandindex == -1 )
       {
-         /* variable is not fixed: make sure it is member of the pseudo branching candidate list */
-         if( var->pseudocandindex == -1 )
-         {
-            CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
-            branchcand->pseudocands[branchcand->npseudocands] = var;
-            var->pseudocandindex = branchcand->npseudocands;
-            branchcand->npseudocands++;
-         }
+         CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
+         branchcand->pseudocands[branchcand->npseudocands] = var;
+         var->pseudocandindex = branchcand->npseudocands;
+         branchcand->npseudocands++;
       }
    }
 

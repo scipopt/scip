@@ -686,24 +686,27 @@ RETCODE readRows(
       else
       {
          CONS* cons;
-   
+         Bool dynamicconss;
+
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons != NULL )
             break;
+
+         CHECK_OKAY( SCIPgetBoolParam(scip, "reader_MPS_DynamicConss", &dynamicconss) );
 
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+                           0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss) );
             break;
          case 'E' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+                           0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss) );
             break;
          case 'L' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
-                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
@@ -756,6 +759,8 @@ RETCODE readCols(
       /* new column? */
       if (strcmp(colname, mpsinputField1(mpsi)))
       {
+         Bool dynamicvars;
+
          /* add the last variable to the problem */
          if( var != NULL )
          {
@@ -766,15 +771,18 @@ RETCODE readCols(
 
          strcpy(colname, mpsinputField1(mpsi));
 
+         CHECK_OKAY( SCIPgetBoolParam(scip, "reader_MPS_DynamicVars", &dynamicvars) );
+
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER, TRUE) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER, dynamicvars) );
          }
          else
          {
             /* for continous variables, default bounds are 0 <= x, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS, TRUE) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS, 
+                           dynamicvars) );
          }
       }
       assert(var != NULL);
@@ -783,7 +791,7 @@ RETCODE readCols(
 
       if (!strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)))
       {
-         CHECK_OKAY( SCIPvarChgObj(var, val) );
+         CHECK_OKAY( SCIPchgVarObj(scip, var, val) );
       }
       else 
       {
@@ -803,7 +811,7 @@ RETCODE readCols(
 
          if (!strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)))
          {
-            CHECK_OKAY( SCIPvarChgObj(var, val) );
+            CHECK_OKAY( SCIPchgVarObj(scip, var, val) );
          }
          else 
          {
@@ -1091,6 +1099,7 @@ RETCODE readBounds(
       if (  (!strcmp(mpsinputField1(mpsi), "LO"))
          || (!strcmp(mpsinputField1(mpsi), "UP"))
          || (!strcmp(mpsinputField1(mpsi), "FX"))
+         || (!strcmp(mpsinputField1(mpsi), "LI"))
          || (!strcmp(mpsinputField1(mpsi), "UI")))
       {
          if (mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL)
@@ -1306,6 +1315,15 @@ RETCODE SCIPincludeReaderMPS(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   /* add MPS reader parameters */
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+                  "reader_MPS_DynamicVars", "should variables be added and removed dynamically to the problem?",
+                  NULL, TRUE, NULL, NULL) );
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+                  "reader_MPS_DynamicConss", "should constraints be added and removed dynamically to the problem?",
+                  NULL, TRUE, NULL, NULL) );
+   
+   /* include MPS reader */
    CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
                   NULL, SCIPreaderReadMPS, NULL) );
 

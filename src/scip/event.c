@@ -235,6 +235,29 @@ Bool SCIPeventhdlrIsInitialized(
  * Event methods
  */
 
+/** creates an event for a change in the objective value of a variable */
+RETCODE SCIPeventCreateObjChanged(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var,                /**< variable whose objective value changed */
+   Real             oldobj,             /**< old objective value before value changed */
+   Real             newobj              /**< new objective value after value changed */
+   )
+{
+   assert(event != NULL);
+   assert(memhdr != NULL);
+   assert(oldobj != newobj);
+
+   /* create event data */
+   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_OBJCHANGED;
+   (*event)->data.eventobjchg.var = var;
+   (*event)->data.eventobjchg.oldobj = oldobj;
+   (*event)->data.eventobjchg.newobj = newobj;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for a change in the lower bound of a variable */
 RETCODE SCIPeventCreateLbChanged(
    EVENT**          event,              /**< pointer to store the event */
@@ -246,6 +269,7 @@ RETCODE SCIPeventCreateLbChanged(
 {
    assert(event != NULL);
    assert(memhdr != NULL);
+   assert(oldbound != newbound);
 
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
@@ -271,6 +295,7 @@ RETCODE SCIPeventCreateUbChanged(
 {
    assert(event != NULL);
    assert(memhdr != NULL);
+   assert(oldbound != newbound);
 
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
@@ -333,7 +358,7 @@ RETCODE SCIPeventChgType(
    return SCIP_OKAY;
 }
 
-/** gets variable for a domain change event */
+/** gets variable for a variable change event (objective value or domain change) */
 VAR* SCIPeventGetVar(
    EVENT*           event               /**< event */
    )
@@ -348,6 +373,10 @@ VAR* SCIPeventGetVar(
    case SCIP_EVENTTYPE_VARFIXED:
       errorMessage("VARFIXED event not implemented yet");
       abort();
+
+   case SCIP_EVENTTYPE_OBJCHANGED:
+      assert(event->data.eventobjchg.var != NULL);
+      return event->data.eventobjchg.var;
 
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
@@ -368,6 +397,38 @@ VAR* SCIPeventGetVar(
       errorMessage("event does not belong to a variable");
       return NULL;
    }
+}
+
+/** gets old objective value for an objective value change event */
+Real SCIPeventGetOldobj(
+   EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_OBJCHANGED )
+   {
+      errorMessage("event is not an objective value change event");
+      return SCIP_INVALID;
+   }
+
+   return event->data.eventobjchg.oldobj;
+}
+
+/** gets new objective value for an objective value change event */
+Real SCIPeventGetNewobj(
+   EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_OBJCHANGED )
+   {
+      errorMessage("event is not an objective value change event");
+      return SCIP_INVALID;
+   }
+
+   return event->data.eventobjchg.newobj;
 }
 
 /** gets old bound for a bound change event */
@@ -412,7 +473,7 @@ Real SCIPeventGetNewbound(
    }
 }
 
-/** gets node for a node event */
+/** gets node for a node or LP event */
 NODE* SCIPeventGetNode(
    EVENT*           event               /**< event */
    )
@@ -428,7 +489,7 @@ NODE* SCIPeventGetNode(
    return event->data.node;
 }
 
-/** sets node for a node event */
+/** sets node for a node or LP event */
 RETCODE SCIPeventChgNode(
    EVENT*           event,              /**< event */
    NODE*            node                /**< new node */
@@ -454,7 +515,7 @@ SOL* SCIPeventGetSol(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & (SCIP_EVENTTYPE_SOLEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_SOLEVENT) == 0 )
    {
       errorMessage("event is not a primal solution event");
       return NULL;
@@ -515,6 +576,21 @@ RETCODE SCIPeventProcess(
       CHECK_OKAY( SCIPeventfilterProcess(eventfilter, set, event) );
       break;
 
+   case SCIP_EVENTTYPE_OBJCHANGED:
+      var = event->data.eventobjchg.var;
+      assert(var != NULL);
+      assert(var->eventqueueindexobj == -1);
+
+      /* inform tree about the objective change to update the pseudo solution objective value */
+      if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
+      {
+         CHECK_OKAY( SCIPtreeUpdateVarObj(tree, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
+      }
+
+      /* process variable's event filter */
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
+
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
       var = event->data.eventbdchg.var;
@@ -524,16 +600,13 @@ RETCODE SCIPeventProcess(
       /* inform LP and tree about bound change */
       if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
       {
+         assert(var->probindex >= 0);
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, event->data.eventbdchg.newbound) );
-#if 0
-            CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, SCIP_BOUNDTYPE_LOWER,
-                           event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
-#endif
          }
-         CHECK_OKAY( SCIPtreeBoundChanged(tree, set, var, SCIP_BOUNDTYPE_LOWER,
-                        event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
+         CHECK_OKAY( SCIPtreeUpdateVarLb(tree, set, var, event->data.eventbdchg.oldbound,
+                        event->data.eventbdchg.newbound) );
          CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -550,16 +623,13 @@ RETCODE SCIPeventProcess(
       /* inform LP and tree about bound change */
       if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
       {
+         assert(var->probindex >= 0);
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, event->data.eventbdchg.newbound) );
-#if 0
-            CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, SCIP_BOUNDTYPE_UPPER,
-                           event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
-#endif
          }
-         CHECK_OKAY( SCIPtreeBoundChanged(tree, set, var, SCIP_BOUNDTYPE_UPPER,
-                        event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
+         CHECK_OKAY( SCIPtreeUpdateVarUb(tree, set, var, event->data.eventbdchg.oldbound, 
+                        event->data.eventbdchg.newbound) );
          CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -1006,6 +1076,47 @@ RETCODE SCIPeventqueueAdd(
          CHECK_OKAY( eventqueueAppend(eventqueue, set, event) );
          break;
 
+      case SCIP_EVENTTYPE_OBJCHANGED:
+         /* changes in objective value may be merged with older changes in objective value */
+         var = (*event)->data.eventobjchg.var;
+         assert(var != NULL);
+         pos = var->eventqueueindexobj;
+         if( pos >= 0 )
+         {
+            /* the objective value change event already exists -> modifiy it accordingly */
+            assert(pos < eventqueue->nevents);
+            qevent = eventqueue->events[pos];
+            assert(qevent != NULL);
+            assert(qevent->eventtype == SCIP_EVENTTYPE_OBJCHANGED);
+            assert(qevent->data.eventobjchg.var == var);
+            assert(SCIPsetIsEQ(set, (*event)->data.eventobjchg.oldobj, qevent->data.eventobjchg.newobj));
+
+            debugMessage(" -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
+               (*event)->data.eventobjchg.var->name, (*event)->data.eventobjchg.oldobj,
+               (*event)->data.eventobjchg.newobj,
+               pos, qevent->data.eventobjchg.var->name, qevent->data.eventobjchg.oldobj, 
+               qevent->data.eventobjchg.newobj);
+
+            qevent->data.eventobjchg.newobj = (*event)->data.eventobjchg.newobj;
+            if( SCIPsetIsEQ(set, qevent->data.eventobjchg.newobj, qevent->data.eventobjchg.oldobj) )
+            {
+               /* the queued objective value change was reversed -> disable the event in the queue */
+               eventDisable(qevent);
+               var->eventqueueindexobj = -1;
+               debugMessage(" -> event disabled\n");
+            }
+
+            /* free the event that is of no use any longer */
+            CHECK_OKAY( SCIPeventFree(event, memhdr) );
+         }
+         else
+         {
+            /* the objective value change event doesn't exist -> add it to the queue, and remember the array index */
+            var->eventqueueindexobj = eventqueue->nevents;
+            CHECK_OKAY( eventqueueAppend(eventqueue, set, event) );
+         }
+         break;
+
       case SCIP_EVENTTYPE_LBTIGHTENED:
       case SCIP_EVENTTYPE_LBRELAXED:
          /* changes in lower bound may be merged with older changes in lower bound */
@@ -1169,8 +1280,13 @@ RETCODE SCIPeventqueueProcess(
 
       debugMessage("processing event %d of %d events in queue: eventtype=0x%x\n", i, eventqueue->nevents, event->eventtype);
 
-      /* unmark the event queue index of a variable with changed bounds */
-      if( (event->eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+      /* unmark the event queue index of a variable with changed objective value or bounds */
+      if( (event->eventtype & SCIP_EVENTTYPE_OBJCHANGED) != 0 )
+      {
+         assert(event->data.eventobjchg.var->eventqueueindexobj == i);
+         event->data.eventobjchg.var->eventqueueindexobj = -1;
+      }
+      else if( (event->eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
       {
          assert(event->data.eventbdchg.var->eventqueueindexlb == i);
          event->data.eventbdchg.var->eventqueueindexlb = -1;
@@ -1194,4 +1310,14 @@ RETCODE SCIPeventqueueProcess(
    eventqueue->delayevents = FALSE;
 
    return SCIP_OKAY;
+}
+
+/** returns TRUE iff events of the queue are delayed until the next SCIPeventqueueProcess() call */
+Bool SCIPeventqueueIsDelayed(
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   assert(eventqueue != NULL);
+
+   return eventqueue->delayevents;
 }

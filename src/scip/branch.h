@@ -101,9 +101,7 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
 /** creates a branching candidate storage */
 extern
 RETCODE SCIPbranchcandCreate(
-   BRANCHCAND**     branchcand,         /**< pointer to store branching candidate storage */
-   const SET*       set,                /**< global SCIP settings */
-   PROB*            prob                /**< problem data */
+   BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
    );
 
 /** frees branching candidate storage */

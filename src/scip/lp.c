@@ -2873,7 +2873,7 @@ RETCODE SCIProwMakeRational(
             val = row->vals[c];
             rational = SCIPsetRealToRational(set, val, maxdnom, &nominator, &denominator);
             if( rational )
-               scm *= denominator / SCIPsetGreComDiv(set, scm, denominator);
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
             rational &= (scm <= maxdnom);
          }
 
@@ -2882,14 +2882,14 @@ RETCODE SCIProwMakeRational(
          {
             rational = SCIPsetRealToRational(set, row->lhs, maxdnom, &nominator, &denominator);
             if( rational )
-               scm *= denominator / SCIPsetGreComDiv(set, scm, denominator);
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
             rational &= (scm <= maxdnom);
          }
          if( rational && !SCIPsetIsInfinity(set, row->rhs) )
          {
             rational = SCIPsetRealToRational(set, row->rhs, maxdnom, &nominator, &denominator);
             if( rational )
-               scm *= denominator / SCIPsetGreComDiv(set, scm, denominator);
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
             rational &= (scm <= maxdnom);
          }
 

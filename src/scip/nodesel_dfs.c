@@ -39,7 +39,7 @@
  */
 
 static
-DECL_NODESELSELECT(SCIPnodeselSelectDfs)
+DECL_NODESELSELECT(nodeselSelectDfs)
 {
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -52,7 +52,7 @@ DECL_NODESELSELECT(SCIPnodeselSelectDfs)
 }
 
 static
-DECL_NODESELCOMP(SCIPnodeselCompDfs)
+DECL_NODESELCOMP(nodeselCompDfs)
 {
    int depth1;
    int depth2;
@@ -97,7 +97,7 @@ RETCODE SCIPincludeNodeselDfs(
    )
 {
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
-                  NULL, NULL, NULL, SCIPnodeselSelectDfs, SCIPnodeselCompDfs,
+                  NULL, NULL, NULL, nodeselSelectDfs, nodeselCompDfs,
                   NULL, FALSE) );
 
    return SCIP_OKAY;

@@ -56,6 +56,9 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
 
 /** presolving execution method
  *
+ *  The presolver should go through the variables and constraints and tighten the domains or
+ *  constraints. Each tightening should increase the given total numbers of changes.
+ *
  *  input:
  *    scip            : SCIP main data structure
  *    presol          : the presolver itself
@@ -80,12 +83,22 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  *    nupgdconss      : pointer to total number of upgraded constraints of all presolvers
  *    nchgcoefs       : pointer to total number of changed coefficients of all presolvers
  *    nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
+ *
+ *  output:
+ *    result          : pointer to store the result of the presolving call
+ *
+ *  possible return values for *result:
+ *    SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *    SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *    SCIP_SUCCESS    : the presolver found a reduction
+ *    SCIP_DIDNOTFIND : the presolver searched, but didn't found a presolving change
+ *    SCIP_DIDNOTRUN  : the presolver was skipped
  */
 #define DECL_PRESOLEXEC(x) RETCODE x (SCIP* scip, PRESOL* presol, int nrounds,              \
    int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
    int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides,                 \
    int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
-   int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides)
+   int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, RESULT* result)
 
 
 
@@ -143,7 +156,8 @@ RETCODE SCIPpresolExec(
    int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
    int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
-   int*             nchgsides           /**< pointer to total number of changed left/right hand sides of all presolvers */
+   int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** gets name of presolver */
@@ -174,6 +188,60 @@ void SCIPpresolSetData(
 /** is presolver initialized? */
 extern
 Bool SCIPpresolIsInitialized(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of variables fixed in presolver */
+extern
+int SCIPpresolGetNFixedVars(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of variables aggregated in presolver */
+extern
+int SCIPpresolGetNAggrVars(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of variable types changed in presolver */
+extern
+int SCIPpresolGetNVarTypes(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of bounds changed in presolver */
+extern
+int SCIPpresolGetNChgBds(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of holes added to domains of variables in presolver */
+extern
+int SCIPpresolGetNAddHoles(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of constraints deleted in presolver */
+extern
+int SCIPpresolGetNDelConss(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of constraints upgraded in presolver */
+extern
+int SCIPpresolGetNUpgdConss(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of coefficients changed in presolver */
+extern
+int SCIPpresolGetNChgCoefs(
+   PRESOL*          presol              /**< presolver */
+   );
+
+/** gets number of constraint sides changed in presolver */
+extern
+int SCIPpresolGetNChgSides(
    PRESOL*          presol              /**< presolver */
    );
 

@@ -205,7 +205,8 @@ RETCODE SCIPpresolExec(
    int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
    int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
    int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
-   int*             nchgsides           /**< pointer to total number of changed left/right hand sides of all presolvers */
+   int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    int nnewfixedvars;
@@ -230,7 +231,11 @@ RETCODE SCIPpresolExec(
    assert(nupgdconss != NULL);
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
+   assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   /* calculate the number of changes since last call */
    nnewfixedvars = *nfixedvars - presol->lastnfixedvars;
    nnewaggrvars = *naggrvars - presol->lastnaggrvars;
    nnewchgvartypes = *nchgvartypes - presol->lastnchgvartypes;
@@ -241,6 +246,7 @@ RETCODE SCIPpresolExec(
    nnewchgcoefs = *nchgcoefs - presol->lastnchgcoefs;
    nnewchgsides = *nchgsides - presol->lastnchgsides;
 
+   /* remember the old number of changes */
    presol->lastnfixedvars = *nfixedvars;
    presol->lastnaggrvars = *naggrvars;
    presol->lastnchgvartypes = *nchgvartypes;
@@ -251,12 +257,14 @@ RETCODE SCIPpresolExec(
    presol->lastnchgcoefs = *nchgcoefs;
    presol->lastnchgsides = *nchgsides;
 
+   /* call external method */
    CHECK_OKAY( presol->presolexec(scip, presol, nrounds,
                   nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
                   nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
                   nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-                  ndelconss, nupgdconss, nchgcoefs, nchgsides) );
+                  ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
+   /* count the new changes */
    presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;
    presol->naggrvars += *naggrvars - presol->lastnaggrvars;
    presol->nchgvartypes += *nchgvartypes - presol->lastnchgvartypes;
@@ -266,6 +274,19 @@ RETCODE SCIPpresolExec(
    presol->nupgdconss += *nupgdconss - presol->lastnupgdconss;
    presol->nchgcoefs += *nchgcoefs - presol->lastnchgcoefs;
    presol->nchgsides += *nchgsides - presol->lastnchgsides;
+
+   /* check result code of callback method */
+   if( *result != SCIP_CUTOFF
+      && *result != SCIP_UNBOUNDED
+      && *result != SCIP_SUCCESS
+      && *result != SCIP_DIDNOTFIND
+      && *result != SCIP_DIDNOTRUN )
+   {
+      char s[MAXSTRLEN];
+      sprintf(s, "presolver <%s> returned invalid result <%d>", presol->name, *result);
+      errorMessage(s);
+      return SCIP_INVALIDRESULT;
+   }
 
    return SCIP_OKAY;
 }
@@ -319,5 +340,95 @@ Bool SCIPpresolIsInitialized(
    assert(presol != NULL);
 
    return presol->initialized;
+}
+
+/** gets number of variables fixed in presolver */
+int SCIPpresolGetNFixedVars(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->nfixedvars;
+}
+
+/** gets number of variables aggregated in presolver */
+int SCIPpresolGetNAggrVars(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->naggrvars;
+}
+
+/** gets number of variable types changed in presolver */
+int SCIPpresolGetNVarTypes(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->nchgvartypes;
+}
+
+/** gets number of bounds changed in presolver */
+int SCIPpresolGetNChgBds(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->nchgbds;
+}
+
+/** gets number of holes added to domains of variables in presolver */
+int SCIPpresolGetNAddHoles(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->naddholes;
+}
+
+/** gets number of constraints deleted in presolver */
+int SCIPpresolGetNDelConss(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->ndelconss;
+}
+
+/** gets number of constraints upgraded in presolver */
+int SCIPpresolGetNUpgdConss(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->nupgdconss;
+}
+
+/** gets number of coefficients changed in presolver */
+int SCIPpresolGetNChgCoefs(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->nchgcoefs;
+}
+
+/** gets number of constraint sides changed in presolver */
+int SCIPpresolGetNChgSides(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->nchgsides;
 }
 

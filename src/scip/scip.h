@@ -226,6 +226,7 @@ RETCODE SCIPaddStringParam(
    );
 
 /** gets the value of an existing Bool parameter */
+extern
 RETCODE SCIPgetBoolParam(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of the parameter */
@@ -379,6 +380,7 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -582,6 +584,13 @@ RETCODE SCIPsetObjsense(
    OBJSENSE         objsense            /**< new objective sense */
    );
 
+/** sets limit on objective function, such that only solutions better than this limit are accepted */
+extern
+RETCODE SCIPsetObjlimit(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             objlimit            /**< new primal objective limit */
+   );
+
 /** adds variable to the problem */
 extern
 RETCODE SCIPaddVar(
@@ -661,7 +670,6 @@ RETCODE SCIPaddCons(
 
 /** globally removes constraint from all subproblems; removes constraint from the subproblem of the node, where it
  *  was created, or from the global problem, if it was a globally valid problem constraint;
- *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
  *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
  */
 extern
@@ -769,7 +777,7 @@ extern
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            var,                /**< pointer to variable object */
-   const char*      name,               /**< name of column */
+   const char*      name,               /**< name of variable, or NULL for automatic name creation */
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
@@ -808,22 +816,12 @@ RETCODE SCIPgetVarStrongbranch(
    Real*            up                  /**< stores dual bound after branching column up */
    );
 
-/** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes variable's objective value */
 extern
-RETCODE SCIPchgVarLbNode(
+RETCODE SCIPchgVarObj(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   );
-
-/** changes upper bound of variable in the given node; if possible, adjust bound to integral value */
-extern
-RETCODE SCIPchgVarUbNode(
-   SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             newobj              /**< new objective value */
    );
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
@@ -846,12 +844,59 @@ RETCODE SCIPchgVarUb(
    Real             newbound            /**< new value for bound */
    );
 
+/** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
+extern
+RETCODE SCIPchgVarLbNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** changes upper bound of variable in the given node; if possible, adjust bound to integral value */
+extern
+RETCODE SCIPchgVarUbNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
 /** changes type of variable in the problem */
 extern
 RETCODE SCIPchgVarType(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    VARTYPE          vartype             /**< new type of variable */
+   );
+
+/** converts variable into fixed variable, changes bounds respectively */
+extern
+RETCODE SCIPfixVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to fix */
+   Real             fixedval            /**< value to fix variable at */
+   );
+
+/** converts variable into aggregated variable */
+extern
+RETCODE SCIPaggregateVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable $x$ to aggregate */
+   VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
+   Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
+   Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   );
+
+/** converts variable into multi-aggregated variable */
+extern
+RETCODE SCIPmultiaggregateVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable $x$ to aggregate */
+   int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real             constant            /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    );
 
 /**@} */
@@ -1526,6 +1571,13 @@ Real SCIPgetSolTransObj(
    SOL*             sol                 /**< primal solution, or NULL for actual LP/pseudo objective value */
    );
 
+/** maps original space objective value into transformed objective value */
+extern
+Real SCIPtransformObj(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             obj                 /**< original space objective value to transform */
+   );
+
 /** maps transformed objective value into original space */
 extern
 Real SCIPretransformObj(
@@ -1572,6 +1624,13 @@ SOL* SCIPgetBestSol(
 /** outputs best feasible primal solution found so far to file stream */
 extern
 RETCODE SCIPprintBestSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** outputs best feasible primal solution found so far in transformed variables to file stream */
+extern
+RETCODE SCIPprintBestTransSol(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
@@ -1639,7 +1698,7 @@ RETCODE SCIPdropEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );
 
-/** catches a domain change event on the given variable */
+/** catches an objective value or domain change event on the given variable */
 extern
 RETCODE SCIPcatchVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1649,7 +1708,7 @@ RETCODE SCIPcatchVarEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );
 
-/** drops a domain change event (stops to track event) on the given variable */
+/** drops an objective value or domain change event (stops to track event) on the given variable */
 extern
 RETCODE SCIPdropVarEvent(
    SCIP*            scip,               /**< SCIP data structure */

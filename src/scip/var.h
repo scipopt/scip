@@ -104,6 +104,7 @@ struct Multaggr
    Real*            scalars;            /**< multipliers $a$ in multiple aggregation */
    Real             constant;           /**< constant shift $c$ in multiple aggregation */
    int              nvars;              /**< number of variables in aggregation */
+   int              varssize;           /**< size of vars and scalars arrays */
 };
 
 /** variable of the problem */
@@ -127,6 +128,7 @@ struct Var
    int              parentvarssize;     /**< available slots in parentvars array */
    int              nparentvars;        /**< number of parent variables in aggregation tree (used slots of parentvars) */
    int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
+   int              eventqueueindexobj; /**< array position in event queue of objective change event, or -1 */
    int              eventqueueindexlb;  /**< array position in event queue of lower bound change event, or -1 */
    int              eventqueueindexub;  /**< array position in event queue of upper bound change event, or -1 */
    int              nuses;              /**< number of times, this variable is referenced */
@@ -157,8 +159,8 @@ RETCODE SCIPdomchgApply(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -170,8 +172,8 @@ RETCODE SCIPdomchgUndo(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -336,28 +338,54 @@ RETCODE SCIPvarColumn(
    STAT*            stat                /**< problem statistics */
    );
 
-/** converts variable into fixed variable, updates LP respectively */
+/** converts variable into fixed variable */
 extern
 RETCODE SCIPvarFix(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             fixedval            /**< value to fix variable at */
    );
 
-/** converts variable into aggregated variable, updates LP respectively */
+/** converts variable into aggregated variable */
 extern
 RETCODE SCIPvarAggregate(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< variable $y$ in aggregation $x = a*y + c$ */
    Real             scalar,             /**< multiplier $a$ in aggregation $x = a*y + c$ */
    Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
+   );
+
+/** converts variable into multi-aggregated variable */
+extern
+RETCODE SCIPvarMultiaggregate(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   int              naggvars,           /**< number $n$ of variables in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   VAR**            aggvars,            /**< variables $y_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
+   Real             constant            /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    );
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -434,7 +462,13 @@ Bool SCIPvarMayRoundUp(
 /** changes objective value of variable */
 extern
 RETCODE SCIPvarChgObj(
-   VAR*             var,                /**< variable to change, must not be member of the problem */
+   VAR*             var,                /**< variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newobj              /**< new objective value for variable */
    );
 
@@ -470,8 +504,8 @@ RETCODE SCIPvarChgLbLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound            /**< new bound for variable */
@@ -484,8 +518,8 @@ RETCODE SCIPvarChgUbLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound            /**< new bound for variable */
@@ -498,8 +532,8 @@ RETCODE SCIPvarChgBdLocal(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
@@ -576,9 +610,41 @@ VAR* SCIPvarGetTransformed(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets corresponding active problem variable of a variable */
+extern
+VAR* SCIPvarGetProbvar(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** transforms given variable, boundtype and bound to the corresponding active variable values */
+extern
+RETCODE SCIPvarTransformBound(
+   VAR**            var,                /**< pointer to problem variable */
+   Real*            bound,              /**< pointer to bound value to transform */
+   BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
+   );
+
 /** gets column of COLUMN variable */
 extern
 COL* SCIPvarGetCol(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets aggregation variable $y$ of an aggregated variable $x = a*y + c$ */
+extern
+VAR* SCIPvarGetAggrVar(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets aggregation scalar $a$ of an aggregated variable $x = a*y + c$ */
+extern
+Real SCIPvarGetAggrScalar(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets aggregation constant $c$ of an aggregated variable $x = a*y + c$ */
+extern
+Real SCIPvarGetAggrConstant(
    VAR*             var                 /**< problem variable */
    );
 
@@ -665,8 +731,8 @@ RETCODE SCIPvarAddToRow(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
    );

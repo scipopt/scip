@@ -563,14 +563,6 @@ Bool SCIPsetRealToRational(
    Longint*         denominator         /**< pointer to store the denominator of the rational number */
    );
 
-/** calculates the greatest common divisor of the two given values */
-extern
-Longint SCIPsetGreComDiv(
-   const SET*       set,                /**< global SCIP settings */
-   Longint          val1,               /**< first value of greatest common devisor calculation */
-   Longint          val2                /**< second value of greatest common devisor calculation */
-   );
-
 
 #ifndef NDEBUG
 
@@ -898,14 +890,6 @@ extern
 Bool SCIPsetIsFracIntegral(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
-   );
-
-/** checks, if the given integer bounds correspond to a fixed interval */
-extern
-Bool SCIPsetIsFixed(
-   const SET*       set,                /**< global SCIP settings */
-   Real             lb,                 /**< lower integer bound */
-   Real             ub                  /**< upper integer bound */
    );
 
 #else

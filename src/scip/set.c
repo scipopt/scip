@@ -1536,48 +1536,7 @@ Bool SCIPsetRealToRational(
    return TRUE;
 }
 
-/** calculates the greatest common divisor of the two given values */
-Longint SCIPsetGreComDiv(
-   const SET*       set,                /**< global SCIP settings */
-   Longint          val1,               /**< first value of greatest common devisor calculation */
-   Longint          val2                /**< second value of greatest common devisor calculation */
-   )
-{
-   Longint t;
-   Longint gcd;
-
-   assert(val1 >= 0);
-   assert(val2 >= 0);
-
-   /* extract all prime factors 2 */
-   gcd = 1;
-   while( !(val1 & 1) && !(val2 & 1) )
-   {
-      val1 /= 2;
-      val2 /= 2;
-      gcd *= 2;
-   }
-
-   t = val1 & 1 ? -val2 : val1;
-   do
-   {
-      while( !(t & 1) )
-	 t /= 2;
-
-      if( t > 0 )
-	 val1 = t;
-      else
-	 val2 = -t;
-
-      t = val1 - val2;
-   }
-   while( t != 0 );
-   gcd *= val1;
-
-   return gcd;
-}
-
-
+   
 
 #ifndef NDEBUG
 
@@ -2135,20 +2094,6 @@ Bool SCIPsetIsFracIntegral(
    assert(val < 1.0);
 
    return (val <= set->feastol);
-}
-
-/** checks, if the given integer bounds correspond to a fixed interval */
-Bool SCIPsetIsFixed(
-   const SET*       set,                /**< global SCIP settings */
-   Real             lb,                 /**< lower integer bound */
-   Real             ub                  /**< upper integer bound */
-   )
-{
-   assert(set != NULL);
-   assert(SCIPsetIsIntegral(set, lb));
-   assert(SCIPsetIsIntegral(set, ub));
-
-   return SCIPsetIsEQ(set, lb, ub);
 }
 
 

@@ -46,6 +46,12 @@ global_DispFreq = 1000
 # frequency for displaying header lines (every n'th node information line)
 global_DispHeaderFreq = 15
 
+# maximal number of presolving rounds (-1: unlimited)
+global_MaxPresolRounds = -1
+
+# abort presolve, if less than this fraction of the problem was changed in last presolve round
+global_PresolAbortFac = 1.000000000000000e-04
+
 # maximal number of variables priced in per pricing round
 global_MaxPriceVars = 128
 
@@ -90,4 +96,13 @@ global_CleanupCols = FALSE
 
 # should new basic rows be removed after LP solving?
 global_CleanupRows = TRUE
+
+# should variables be added and removed dynamically to the problem?
+reader_MPS_DynamicVars = TRUE
+
+# should constraints be added and removed dynamically to the problem?
+reader_MPS_DynamicConss = TRUE
+
+# multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
+conshdlr_linear_TightenBoundsFreq = 5
 

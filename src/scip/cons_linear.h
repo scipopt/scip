@@ -69,7 +69,7 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
             Bool local, Bool removeable, \
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
             int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
-            Bool integral, CONS** upgdcons, Bool* upgraded)
+            Bool integral, CONS** upgdcons)
 
 
 #include "scip.h"
@@ -159,7 +159,8 @@ RETCODE SCIPchgRhsConsLinear(
 extern
 RETCODE SCIPupgradeConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons                /**< pointer to constraint to convert */
+   CONS*            cons,               /**< source constraint to try to convert */
+   CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
 #endif

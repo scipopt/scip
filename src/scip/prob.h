@@ -60,9 +60,11 @@ typedef struct ProbData PROBDATA;       /**< user problem data set by the reader
 #include "memory.h"
 #include "retcode.h"
 #include "cons.h"
+#include "tree.h"
 #include "lp.h"
 #include "var.h"
 #include "stat.h"
+#include "branch.h"
 
 
 /** main problem to solve */
@@ -79,7 +81,7 @@ struct Prob
    HASHTABLE*       consnames;          /**< hash table storing constraints' names */
    OBJSENSE         objsense;           /**< objective sense */
    Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
-   Real             objlim;             /**< objective limit for non-fixed variables */
+   Real             objlim;             /**< objective limit as external value */
    int              fixedvarssize;      /**< available slots in fixedvars array */
    int              nfixedvars;         /**< number of fixed and aggregated variables in the problem */
    int              varssize;           /**< available slots in vars array */
@@ -124,6 +126,8 @@ RETCODE SCIPprobTransform(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PROB**           target              /**< pointer to target problem data structure */
    );
 
@@ -161,6 +165,8 @@ RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var                 /**< variable to add */
    );
 
@@ -168,8 +174,19 @@ RETCODE SCIPprobAddVar(
 extern
 RETCODE SCIPprobChgVarType(
    PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var,                /**< variable to add */
    VARTYPE          vartype             /**< new type of variable */
+   );
+
+/** informs problem, that the given variable was fixed */
+extern
+RETCODE SCIPprobVarFixed(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   VAR*             var                 /**< variable to add */
    );
 
 /** adds constraint to the problem and captures it */
@@ -192,6 +209,12 @@ RETCODE SCIPprobDelCons(
    CONS*            cons                /**< constraint to remove */
    );
 
+/** resets maximum number of constraints to current number of constraints */
+extern
+void SCIPprobResetMaxNConss(
+   PROB*            prob                /**< problem data */
+   );
+
 /** sets objective sense: minimization or maximization */
 extern
 void SCIPprobSetObjsense(
@@ -199,19 +222,30 @@ void SCIPprobSetObjsense(
    OBJSENSE         objsense            /**< new objective sense */
    );
 
-/** sets limit on objective function, such that only solutions better than this limit are accepted */
+/** increases objective offset */
 extern
-void SCIPprobSetObjlim(
+void SCIPprobIncObjoffset(
    PROB*            prob,               /**< problem data */
-   Real             objlim              /**< objective limit */
+   const SET*       set,                /**< global SCIP settings */
+   Real             incval              /**< value to add to objective offset */
    );
 
-/** returns the external value of the given internal objective value */
+/** sets limit on objective function, such that only solutions better than this limit are accepted */
 extern
-Real SCIPprobExternObjval(
+void SCIPprobSetExternObjlim(
    PROB*            prob,               /**< problem data */
-   Real             objval              /**< internal objective value */
+   Real             objlim              /**< external objective limit */
    );
+
+/** sets limit on objective function as transformed internal objective value */
+extern
+void SCIPprobSetInternObjlim(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   Real             objlim              /**< transformed internal objective limit */
+   );
+
+
 
 
 /*
@@ -228,6 +262,35 @@ const char* SCIPprobGetName(
 extern
 PROBDATA* SCIPprobGetData(
    PROB*            prob                /**< problem */
+   );
+
+/** returns the external value of the given internal objective value */
+extern
+Real SCIPprobExternObjval(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   Real             objval              /**< internal objective value */
+   );
+
+/** returns the internal value of the given external objective value */
+extern
+Real SCIPprobInternObjval(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   Real             objval              /**< external objective value */
+   );
+
+/** gets limit on objective function in external space */
+extern
+Real SCIPprobGetExternObjlim(
+   PROB*            prob                /**< problem data */
+   );
+
+/** gets limit on objective function as transformed internal objective value */
+extern
+Real SCIPprobGetInternObjlim(
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** returns variable of the problem with given name */

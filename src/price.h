@@ -64,8 +64,8 @@ RETCODE SCIPpriceAddBdviolvar(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable, where zero violates the bounds */
@@ -79,8 +79,8 @@ RETCODE SCIPpriceVars(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -92,8 +92,8 @@ RETCODE SCIPpriceResetBounds(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );

@@ -68,6 +68,17 @@ RETCODE SCIPprimalFree(
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** sets upper bound in primal data and in LP solver */
+extern
+RETCODE SCIPprimalSetUpperbound(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   Real             upperbound          /**< new upper bound */
+   );
+
 /** adds primal solution to solution storage by copying it */
 extern
 RETCODE SCIPprimalAddSol(

@@ -199,7 +199,9 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    assert(scip != NULL);
 
    sol = SCIPgetBestSol(scip);
-   if( sol != NULL && SCIPsolGetNodenum(sol) == SCIPgetNodenum(scip) )
+   if( sol != NULL
+      && SCIPsolGetNodenum(sol) == SCIPgetNodenum(scip)
+      && SCIPisEQ(scip, SCIPsolGetObj(sol), SCIPgetTransUpperBound(scip)) )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPsolGetHeur(sol)));
    }
@@ -417,7 +419,6 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
       fprintf(file, "      --      ");
    else
       fprintf(file, "%13.6e ", primalbound);
-
    return SCIP_OKAY;
 }
 

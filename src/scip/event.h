@@ -32,26 +32,27 @@ enum Eventtype
    /* variable events */
    SCIP_EVENTTYPE_VARCREATED     = 0x00000001, /**< ??? TODO: a variable has been created */
    SCIP_EVENTTYPE_VARFIXED       = 0x00000002, /**< ??? TODO: a variable has been fixed, aggregated, or multiaggregated */
-   SCIP_EVENTTYPE_LBTIGHTENED    = 0x00000004, /**< the lower bound of a variable has been increased */
-   SCIP_EVENTTYPE_LBRELAXED      = 0x00000008, /**< the lower bound of a variable has been decreased */
-   SCIP_EVENTTYPE_UBTIGHTENED    = 0x00000010, /**< the upper bound of a variable has been decreased */
-   SCIP_EVENTTYPE_UBRELAXED      = 0x00000020, /**< the upper bound of a variable has been increased */
-   SCIP_EVENTTYPE_HOLEADDED      = 0x00000040, /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
-   SCIP_EVENTTYPE_HOLEREMOVED    = 0x00000080, /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
+   SCIP_EVENTTYPE_OBJCHANGED     = 0x00000004, /**< the objective value of a variable has been changed */
+   SCIP_EVENTTYPE_LBTIGHTENED    = 0x00000008, /**< the lower bound of a variable has been increased */
+   SCIP_EVENTTYPE_LBRELAXED      = 0x00000010, /**< the lower bound of a variable has been decreased */
+   SCIP_EVENTTYPE_UBTIGHTENED    = 0x00000020, /**< the upper bound of a variable has been decreased */
+   SCIP_EVENTTYPE_UBRELAXED      = 0x00000040, /**< the upper bound of a variable has been increased */
+   SCIP_EVENTTYPE_HOLEADDED      = 0x00000080, /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
+   SCIP_EVENTTYPE_HOLEREMOVED    = 0x00000100, /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
 
    /* node events */
-   SCIP_EVENTTYPE_NODEACTIVATED  = 0x00000100, /**< a node has been activated and is now the current active node */
-   SCIP_EVENTTYPE_NODEFEASIBLE   = 0x00000200, /**< the LP/pseudo solution of the node was feasible */
-   SCIP_EVENTTYPE_NODEINFEASIBLE = 0x00000400, /**< the active node has been proven to be infeasible or was bounded */
-   SCIP_EVENTTYPE_NODEBRANCHED   = 0x00000800, /**< the active node has been solved by branching */
+   SCIP_EVENTTYPE_NODEACTIVATED  = 0x00000200, /**< a node has been activated and is now the current active node */
+   SCIP_EVENTTYPE_NODEFEASIBLE   = 0x00000400, /**< the LP/pseudo solution of the node was feasible */
+   SCIP_EVENTTYPE_NODEINFEASIBLE = 0x00000800, /**< the active node has been proven to be infeasible or was bounded */
+   SCIP_EVENTTYPE_NODEBRANCHED   = 0x00001000, /**< the active node has been solved by branching */
 
    /* LP events */
-   SCIP_EVENTTYPE_FIRSTLPSOLVED  = 0x00001000, /**< the node's initial LP was solved */
-   SCIP_EVENTTYPE_LPSOLVED       = 0x00002000, /**< the node's LP was completely solved with cut & price */
+   SCIP_EVENTTYPE_FIRSTLPSOLVED  = 0x00002000, /**< the node's initial LP was solved */
+   SCIP_EVENTTYPE_LPSOLVED       = 0x00004000, /**< the node's LP was completely solved with cut & price */
 
    /* primal solution events */
-   SCIP_EVENTTYPE_POORSOLFOUND   = 0x00004000, /**< a good enough primal feasible (but not new best) solution was found */
-   SCIP_EVENTTYPE_BESTSOLFOUND   = 0x00008000, /**< a new best primal feasible solution was found */
+   SCIP_EVENTTYPE_POORSOLFOUND   = 0x00008000, /**< a good enough primal feasible (but not new best) solution was found */
+   SCIP_EVENTTYPE_BESTSOLFOUND   = 0x00010000, /**< a new best primal feasible solution was found */
 
    /* event masks for variable events */
    SCIP_EVENTTYPE_LBCHANGED      = SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
@@ -59,7 +60,8 @@ enum Eventtype
    SCIP_EVENTTYPE_BOUNDCHANGED   = SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED,
    SCIP_EVENTTYPE_HOLECHANGED    = SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED,
    SCIP_EVENTTYPE_DOMCHANGED     = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED,
-   SCIP_EVENTTYPE_VAREVENT       = SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_DOMCHANGED,
+   SCIP_EVENTTYPE_VARCHANGED     = SCIP_EVENTTYPE_OBJCHANGED | SCIP_EVENTTYPE_DOMCHANGED,
+   SCIP_EVENTTYPE_VAREVENT       = SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARCHANGED,
    
    /* event masks for node events */
    SCIP_EVENTTYPE_NODESOLVED     = SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE |SCIP_EVENTTYPE_NODEBRANCHED,
@@ -77,6 +79,7 @@ typedef enum Eventtype EVENTTYPE;       /**< type of event (bit field) */
 typedef struct EventHdlr EVENTHDLR;     /**< event handler for a specific events */
 typedef struct EventHdlrData EVENTHDLRDATA; /**< event handler data */
 typedef struct Event EVENT;             /**< event data structure */
+typedef struct EventObjChg EVENTOBJCHG; /**< data for objective value change events */
 typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */
 typedef struct EventData EVENTDATA;     /**< locally defined event specific data */
 typedef struct EventFilter EVENTFILTER; /**< event filter to select events to be processed by an event handler */
@@ -145,6 +148,14 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
 
 
 
+/** data for objective value change events */
+struct EventObjChg
+{
+   VAR*             var;                /**< variable whose objective value changed */
+   Real             oldobj;             /**< old objective value before value changed */
+   Real             newobj;             /**< new objective value after value changed */
+};
+
 /** data for bound change events */
 struct EventBdChg
 {
@@ -158,6 +169,7 @@ struct Event
 {
    union
    {
+      EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */
       EVENTBDCHG    eventbdchg;         /**< data for bound change events */
       NODE*         node;               /**< data for node and LP events */
       SOL*          sol;                /**< data for primal solution events */
@@ -257,6 +269,16 @@ Bool SCIPeventhdlrIsInitialized(
  * Event methods
  */
 
+/** creates an event for a change in the objective value of a variable */
+extern
+RETCODE SCIPeventCreateObjChanged(
+   EVENT**          event,              /**< pointer to store the event */
+   MEMHDR*          memhdr,             /**< block memory */
+   VAR*             var,                /**< variable whose objective value changed */
+   Real             oldobj,             /**< old objective value before value changed */
+   Real             newobj              /**< new objective value after value changed */
+   );
+
 /** creates an event for a change in the lower bound of a variable */
 extern
 RETCODE SCIPeventCreateLbChanged(
@@ -297,9 +319,21 @@ RETCODE SCIPeventChgType(
    EVENTTYPE        eventtype           /**< new event type */
    );
 
-/** gets variable for a domain change event */
+/** gets variable for a variable change event (objective value or domain change) */
 extern
 VAR* SCIPeventGetVar(
+   EVENT*           event               /**< event */
+   );
+
+/** gets old objective value for an objective value change event */
+extern
+Real SCIPeventGetOldobj(
+   EVENT*           event               /**< event */
+   );
+
+/** gets new objective value for an objective value change event */
+extern
+Real SCIPeventGetNewobj(
    EVENT*           event               /**< event */
    );
 
@@ -315,13 +349,13 @@ Real SCIPeventGetNewbound(
    EVENT*           event               /**< event */
    );
 
-/** gets node for a node event */
+/** gets node for a node or LP event */
 extern
 NODE* SCIPeventGetNode(
    EVENT*           event               /**< event */
    );
 
-/** sets node for a node event */
+/** sets node for a node or LP event */
 extern
 RETCODE SCIPeventChgNode(
    EVENT*           event,              /**< event */
@@ -451,5 +485,10 @@ RETCODE SCIPeventqueueProcess(
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    );
 
+/** returns TRUE iff events of the queue are delayed until the next SCIPeventqueueProcess() call */
+extern
+Bool SCIPeventqueueIsDelayed(
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   );
 
 #endif

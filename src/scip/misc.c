@@ -1966,6 +1966,63 @@ Real SCIPcalcMachineEpsilon(
    return lasteps;
 }
 
+/** calculates the greatest common divisor of the two given values */
+Longint SCIPcalcGreComDiv(
+   Longint          val1,               /**< first value of greatest common devisor calculation */
+   Longint          val2                /**< second value of greatest common devisor calculation */
+   )
+{
+   Longint t;
+   Longint gcd;
+
+   assert(val1 >= 0);
+   assert(val2 >= 0);
+
+   /* extract all prime factors 2 */
+   gcd = 1;
+   while( !(val1 & 1) && !(val2 & 1) )
+   {
+      val1 /= 2;
+      val2 /= 2;
+      gcd *= 2;
+   }
+
+   t = val1 & 1 ? -val2 : val1;
+   do
+   {
+      while( !(t & 1) )
+	 t /= 2;
+
+      if( t > 0 )
+	 val1 = t;
+      else
+	 val2 = -t;
+
+      t = val1 - val2;
+   }
+   while( t != 0 );
+   gcd *= val1;
+
+   return gcd;
+}
+
+/** calculates the smallest common multiple of the two given values */
+Longint SCIPcalcSmaComMul(
+   Longint          val1,               /**< first value of greatest common devisor calculation */
+   Longint          val2                /**< second value of greatest common devisor calculation */
+   )
+{
+   Longint gcd;
+
+   assert(val1 >= 0);
+   assert(val2 >= 0);
+
+   gcd = SCIPcalcGreComDiv(val1, val2);
+   
+   return val1/gcd * val2;
+}
+
+
 
 
 /*

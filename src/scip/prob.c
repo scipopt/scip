@@ -34,6 +34,30 @@
  * dymanic memory arrays
  */
 
+/** resizes fixedvars array to be able to store at least num entries */
+static
+RETCODE probEnsureFixedvarsMem(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimal number of slots in array */
+   )
+{
+   assert(prob != NULL);
+   assert(set != NULL);
+
+   if( num > prob->fixedvarssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&prob->fixedvars, newsize) );
+      prob->fixedvarssize = newsize;
+   }
+   assert(num <= prob->fixedvarssize);
+
+   return SCIP_OKAY;
+}
+
 /** resizes vars array to be able to store at least num entries */
 static
 RETCODE probEnsureVarsMem(
@@ -169,6 +193,14 @@ RETCODE SCIPprobFree(
    }
    freeMemoryArrayNull(&(*prob)->vars);
 
+   /* release fixed problem variables */
+   for( v = 0; v < (*prob)->nfixedvars; ++v )
+   {
+      assert((*prob)->fixedvars[v]->probindex == -1);
+      CHECK_OKAY( SCIPvarRelease(&(*prob)->fixedvars[v], memhdr, set, lp) );
+   }
+   freeMemoryArrayNull(&(*prob)->fixedvars);
+
    /* free hash tables for names */
    SCIPhashtableFree(&(*prob)->varnames, memhdr);
    SCIPhashtableFree(&(*prob)->consnames, memhdr);
@@ -184,6 +216,8 @@ RETCODE SCIPprobTransform(
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -204,12 +238,16 @@ RETCODE SCIPprobTransform(
    sprintf(transname, "t_%s", source->name);
    CHECK_OKAY( SCIPprobCreate(target, transname, source->probdelete, NULL, NULL) );
 
+   /* transform objective limit */
+   if( source->objlim < SCIP_INVALID )
+      SCIPprobSetExternObjlim(*target, SCIPprobInternObjval(source, set, source->objlim));
+
    /* transform and copy all variables to target problem */
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
    {
       CHECK_OKAY( SCIPvarTransform(&targetvar, memhdr, set, stat, source->objsense, source->vars[v]) );
-      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, targetvar) );
+      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, tree, branchcand, targetvar) );
       CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
    }
    assert((*target)->nvars == source->nvars);
@@ -456,6 +494,8 @@ RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
+   TREE*            tree,               /**< branch-and-bound tree */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var                 /**< variable to add */
    )
 {
@@ -476,6 +516,13 @@ RETCODE SCIPprobAddVar(
    /* add variable's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->varnames, memhdr, (void*)var) );
 
+   /* update branching candidates and pseudo objective value in the tree */
+   if( var->varstatus != SCIP_VARSTATUS_ORIGINAL )
+   {
+      CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
+      CHECK_OKAY( SCIPtreeUpdateVar(tree, set, var, 0.0, 0.0, 0.0, var->obj, var->actdom.lb, var->actdom.ub) );
+   }
+
    debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continous)\n",
       var->name, prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
 
@@ -485,6 +532,8 @@ RETCODE SCIPprobAddVar(
 /** changes the type of a variable in the problem */
 RETCODE SCIPprobChgVarType(
    PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    VAR*             var,                /**< variable to add */
    VARTYPE          vartype             /**< new type of variable */
    )
@@ -504,6 +553,44 @@ RETCODE SCIPprobChgVarType(
 
    /* reinsert variable into problem */
    probInsertVar(prob, var);
+
+   /* update branching candidates */
+   assert(branchcand != NULL || var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+   if( branchcand != NULL )
+   {
+      CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs problem, that the given variable was fixed */
+RETCODE SCIPprobVarFixed(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   VAR*             var                 /**< variable to add */
+   )
+{
+   assert(prob != NULL);
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_FIXED
+      || var->varstatus == SCIP_VARSTATUS_AGGREGATED
+      || var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   if( var->probindex == -1 )
+      return SCIP_OKAY;
+
+   /* remove variable from problem */
+   probRemoveVar(prob, var);
+
+   /* insert variable in fixedvars array */
+   CHECK_OKAY( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );
+   prob->fixedvars[prob->nfixedvars] = var;
+   prob->nfixedvars++;
+
+   /* update branching candidates */
+   CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
 
    return SCIP_OKAY;
 }
@@ -558,16 +645,10 @@ RETCODE SCIPprobDelCons(
    assert(cons != NULL);
    assert(cons->node == NULL);
    assert(0 <= cons->arraypos && cons->arraypos < prob->nconss);
-   assert(prob->conss != NULL);
-   assert(prob->conss[cons->arraypos] == cons);
-
-   /* if constraint is active, deactivate it */
-   if( cons->active )
-   {
-      CHECK_OKAY( SCIPconsDeactivate(cons, set) );
-   }
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
+   assert(prob->conss != NULL);
+   assert(prob->conss[cons->arraypos] == cons);
 
    /* remove constraint's name from the namespace */
    CHECK_OKAY( SCIPhashtableRemove(prob->consnames, memhdr, (void*)cons) );
@@ -592,6 +673,16 @@ RETCODE SCIPprobDelCons(
    return SCIP_OKAY;
 }
 
+/** resets maximum number of constraints to current number of constraints */
+void SCIPprobResetMaxNConss(
+   PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->maxnconss = prob->nconss;
+}
+
 /** sets objective sense: minimization or maximization */
 void SCIPprobSetObjsense(
    PROB*            prob,               /**< problem data */
@@ -602,15 +693,25 @@ void SCIPprobSetObjsense(
    assert(prob->objsense == SCIP_OBJSENSE_MAXIMIZE || prob->objsense == SCIP_OBJSENSE_MINIMIZE);
    assert(objsense == SCIP_OBJSENSE_MAXIMIZE || objsense == SCIP_OBJSENSE_MINIMIZE);
 
-   if( prob->objlim < SCIP_INVALID && objsense != prob->objsense )
-      prob->objlim *= -1;
    prob->objsense = objsense;
 }
 
-/** sets limit on objective function, such that only solutions better than this limit are accepted */
-void SCIPprobSetObjlim(
+/** increases objective offset */
+void SCIPprobIncObjoffset(
    PROB*            prob,               /**< problem data */
-   Real             objlim              /**< objective limit */
+   const SET*       set,                /**< global SCIP settings */
+   Real             incval              /**< value to add to objective offset */
+   )
+{
+   assert(prob != NULL);
+
+   prob->objoffset += incval;
+}
+
+/** sets limit on objective function, such that only solutions better than this limit are accepted */
+void SCIPprobSetExternObjlim(
+   PROB*            prob,               /**< problem data */
+   Real             objlim              /**< external objective limit */
    )
 {
    assert(prob != NULL);
@@ -618,16 +719,19 @@ void SCIPprobSetObjlim(
    prob->objlim = objlim;
 }
 
-/** returns the external value of the given internal objective value */
-Real SCIPprobExternObjval(
+/** sets limit on objective function as transformed internal objective value */
+void SCIPprobSetInternObjlim(
    PROB*            prob,               /**< problem data */
-   Real             objval              /**< internal objective value */
+   const SET*       set,                /**< global SCIP settings */
+   Real             objlim              /**< transformed internal objective limit */
    )
 {
    assert(prob != NULL);
 
-   return prob->objsense * (objval + prob->objoffset);
+   prob->objlim = SCIPprobExternObjval(prob, set, objlim);
 }
+
+
 
 
 /*
@@ -651,6 +755,61 @@ PROBDATA* SCIPprobGetData(
    assert(prob != NULL);
 
    return prob->probdata;
+}
+
+/** returns the external value of the given internal objective value */
+Real SCIPprobExternObjval(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   Real             objval              /**< internal objective value */
+   )
+{
+   assert(prob != NULL);
+
+   if( SCIPsetIsInfinity(set, objval) )
+      return prob->objsense * set->infinity;
+   else if( SCIPsetIsInfinity(set, -objval) )
+      return -prob->objsense * set->infinity;
+   else
+      return prob->objsense * (objval + prob->objoffset);
+}
+
+/** returns the internal value of the given external objective value */
+Real SCIPprobInternObjval(
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   Real             objval              /**< external objective value */
+   )
+{
+   assert(prob != NULL);
+
+   if( SCIPsetIsInfinity(set, objval) )
+      return prob->objsense * set->infinity;
+   else if( SCIPsetIsInfinity(set, -objval) )
+      return -prob->objsense * set->infinity;
+   else
+      return prob->objsense * objval - prob->objoffset;
+}
+
+/** gets limit on objective function in external space */
+Real SCIPprobGetExternObjlim(
+   PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->objlim;
+}
+
+/** gets limit on objective function as transformed internal objective value */
+Real SCIPprobGetInternObjlim(
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(prob != NULL);
+
+   return SCIPprobInternObjval(prob, set, prob->objlim);
 }
 
 /** returns variable of the problem with given name */

@@ -1552,6 +1552,22 @@ DECL_CONSCHECK(consCheckSetpart)
 }
 
 static
+DECL_CONSPRESOL(consPresolSetpart)
+{
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   /* process constraints */
+   *result = SCIP_DIDNOTFIND;
+
+   todoMessage("set partitioning presolving");
+   
+   return SCIP_OKAY;
+}
+
+static
 DECL_CONSENABLE(consEnableSetpart)
 {
    CONSHDLRDATA* conshdlrdata;
@@ -1620,7 +1636,6 @@ static
 DECL_LINCONSUPGD(linconsUpgdSetpart)
 {
    assert(upgdcons != NULL);
-   assert(upgraded != NULL);
 
    /* check, if linear constraint can be upgraded to set partitioning constraint
     * -> a set partitioning constraint consists only of binary variables with a coefficient of +1.0,
@@ -1634,10 +1649,7 @@ DECL_LINCONSUPGD(linconsUpgdSetpart)
       CHECK_OKAY( SCIPcreateConsSetpart(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      local, FALSE, removeable) );
-      *upgraded = TRUE;
    }
-   else
-      *upgraded = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1723,7 +1735,7 @@ RETCODE SCIPincludeConsHdlrSetpart(
                   CONSHDLR_NEEDSCONS,
                   consFreeSetpart, NULL, NULL,
                   consDeleteSetpart, consTransSetpart, 
-                  consSepaSetpart, consEnfolpSetpart, consEnfopsSetpart, consCheckSetpart, NULL,
+                  consSepaSetpart, consEnfolpSetpart, consEnfopsSetpart, consCheckSetpart, NULL, consPresolSetpart,
                   consEnableSetpart, consDisableSetpart,
                   conshdlrdata) );
 

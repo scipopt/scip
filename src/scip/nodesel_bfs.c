@@ -59,7 +59,7 @@ struct NodeselData
  */
 
 static
-DECL_NODESELFREE(SCIPnodeselFreeBfs)
+DECL_NODESELFREE(nodeselFreeBfs)
 {
    NODESELDATA* nodeseldata;
 
@@ -77,7 +77,7 @@ DECL_NODESELFREE(SCIPnodeselFreeBfs)
 }
 
 static
-DECL_NODESELSELECT(SCIPnodeselSelectBfs)
+DECL_NODESELSELECT(nodeselSelectBfs)
 {
    NODESELDATA* nodeseldata;
    Real actlowerbound;
@@ -127,7 +127,7 @@ DECL_NODESELSELECT(SCIPnodeselSelectBfs)
 }
 
 static
-DECL_NODESELCOMP(SCIPnodeselCompBfs)
+DECL_NODESELCOMP(nodeselCompBfs)
 {
    Real lowerbound1;
    Real lowerbound2;
@@ -197,8 +197,8 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,
-                  SCIPnodeselFreeBfs, NULL, NULL, SCIPnodeselSelectBfs, SCIPnodeselCompBfs,
-                  nodeseldata, FALSE) );
+                  nodeselFreeBfs, NULL, NULL, nodeselSelectBfs, nodeselCompBfs,
+                  nodeseldata, TRUE) );
 
    return SCIP_OKAY;
 }

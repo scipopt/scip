@@ -246,6 +246,55 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 #define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
                                     RESULT* result)
 
+/** presolving method of constraint handler
+ *
+ *  The presolver should go through the variables and constraints and tighten the domains or
+ *  constraints. Each tightening should increase the given total numbers of changes.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    conshdlr        : the constraint handler itself
+ *    conss           : array of constraints to process
+ *    nconss          : number of constraints to process
+ *    nrounds         : number of presolving rounds already done
+ *    nnewfixedvars   : number of variables fixed since the last call to the presolving method
+ *    nnewaggrvars    : number of variables aggregated since the last call to the presolving method
+ *    nnewchgvartypes : number of variable type changes since the last call to the presolving method
+ *    nnewchgbds      : number of variable bounds tightend since the last call to the presolving method
+ *    nnewholes       : number of domain holes added since the last call to the presolving method
+ *    nnewdelconss    : number of deleted constraints since the last call to the presolving method
+ *    nnewupgdconss   : number of upgraded constraints since the last call to the presolving method
+ *    nnewchgcoefs    : number of changed coefficients since the last call to the presolving method
+ *    nnewchgsides    : number of changed left or right hand sides since the last call to the presolving method
+ *
+ *  input/output:
+ *    nfixedvars      : pointer to total number of variables fixed of all presolvers
+ *    naggrvars       : pointer to total number of variables aggregated of all presolvers
+ *    nchgvartypes    : pointer to total number of variable type changes of all presolvers
+ *    nchgbds         : pointer to total number of variable bounds tightend of all presolvers
+ *    naddholes       : pointer to total number of domain holes added of all presolvers
+ *    ndelconss       : pointer to total number of deleted constraints of all presolvers
+ *    nupgdconss      : pointer to total number of upgraded constraints of all presolvers
+ *    nchgcoefs       : pointer to total number of changed coefficients of all presolvers
+ *    nchgsides       : pointer to total number of changed left/right hand sides of all presolvers
+ *
+ *  output:
+ *    result          : pointer to store the result of the presolving call
+ *
+ *  possible return values for *result:
+ *    SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *    SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *    SCIP_SUCCESS    : the presolver found a reduction
+ *    SCIP_DIDNOTFIND : the presolver searched, but didn't found a presolving change
+ *    SCIP_DIDNOTRUN  : the presolver was skipped
+ */
+#define DECL_CONSPRESOL(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nrounds, \
+   int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
+   int nnewdelconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides,                 \
+   int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
+   int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, RESULT* result)
+
+
 /** constraint enabling notification method of constraint handler
  *
  *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
@@ -369,6 +418,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
+   DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -456,6 +506,26 @@ RETCODE SCIPconshdlrPropagate(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** calls presolving method of constraint handler */
+extern
+RETCODE SCIPconshdlrPresolve(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   int              nrounds,            /**< number of presolving rounds already done */
+   int*             nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
+   int*             naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
+   int*             nchgvartypes,       /**< pointer to total number of variable type changes of all presolvers */
+   int*             nchgbds,            /**< pointer to total number of variable bounds tightend of all presolvers */
+   int*             naddholes,          /**< pointer to total number of domain holes added of all presolvers */
+   int*             ndelconss,          /**< pointer to total number of deleted constraints of all presolvers */
+   int*             nupgdconss,         /**< pointer to total number of upgraded constraints of all presolvers */
+   int*             nchgcoefs,          /**< pointer to total number of changed coefficients of all presolvers */
+   int*             nchgsides,          /**< pointer to total number of changed left/right hand sides of all presolvers */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** resets separation to start with first constraint in the next call */
 extern
 void SCIPconshdlrResetSepa(
@@ -535,6 +605,66 @@ int SCIPconshdlrGetMaxNActiveConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** resets maximum number of active constraints to current number of active constraints */
+extern
+void SCIPconshdlrResetNMaxNActiveConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of variables fixed in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNFixedVars(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of variables aggregated in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNAggrVars(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of variable types changed in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNVarTypes(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of bounds changed in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNChgBds(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of holes added to domains of variables in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNAddHoles(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of constraints deleted in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNDelConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of constraints upgraded in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNUpgdConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of coefficients changed in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNChgCoefs(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of constraint sides changed in presolving method of constraint handler */
+extern
+int SCIPconshdlrGetNChgSides(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets checking priority of constraint handler */
 extern
 int SCIPconshdlrGetCheckPriority(
@@ -556,6 +686,12 @@ int SCIPconshdlrGetPropFreq(
 /** needs constraint handler a constraint to be called? */
 extern
 Bool SCIPconshdlrNeedsCons(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** does the constraint handler perform presolving? */
+extern
+Bool SCIPconshdlrDoesPresolve(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -623,7 +759,6 @@ RETCODE SCIPconsRelease(
 
 /** globally removes constraint from all subproblems; removes constraint from the addedconss array of the node, where it
  *  was created, or from the problem, if it was a problem constraint;
- *  the method must not be called for local check-constraint (i.e. constraints, that locally ensure feasibility);
  *  the constraint data is freed, and if the constraint is no longer used, it is freed completely
  */
 extern

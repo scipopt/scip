@@ -59,9 +59,56 @@ RETCODE ensureSolsSize(
 
 
 
+/** creates primal data */
+RETCODE SCIPprimalCreate(
+   PRIMAL**         primal,             /**< pointer to primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< problem data */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   Real objlim;
+
+   assert(primal != NULL);
+
+   ALLOC_OKAY( allocMemory(primal) );
+   (*primal)->sols = NULL;
+   (*primal)->solssize = 0;
+   (*primal)->nsols = 0;
+   (*primal)->nsolsfound = 0;
+   (*primal)->upperbound = SCIP_INVALID;
+
+   objlim = SCIPprobGetInternObjlim(prob, set);
+   objlim = MIN(objlim, set->infinity);
+   CHECK_OKAY( SCIPprimalSetUpperbound(*primal, memhdr, set, NULL, lp, objlim) );
+
+   return SCIP_OKAY;
+}
+
+/** frees primal data */
+RETCODE SCIPprimalFree(
+   PRIMAL**         primal,             /**< pointer to primal data */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   int s;
+
+   assert(primal != NULL);
+
+   /* free primal CIP solutions */
+   for( s = 0; s < (*primal)->nsols; ++s )
+   {
+      CHECK_OKAY( SCIPsolFree(&(*primal)->sols[s], memhdr) );
+   }
+   freeMemoryArrayNull(&(*primal)->sols);
+   freeMemory(primal);
+
+   return SCIP_OKAY;
+}
+
 /** sets upper bound in primal data and in LP solver */
-static
-RETCODE primalSetUpperbound(
+RETCODE SCIPprimalSetUpperbound(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -89,50 +136,6 @@ RETCODE primalSetUpperbound(
       errorMessage("Invalid increase in upper bound");
       return SCIP_INVALIDDATA;
    }
-
-   return SCIP_OKAY;
-}
-
-/** creates primal data */
-RETCODE SCIPprimalCreate(
-   PRIMAL**         primal,             /**< pointer to primal data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   PROB*            prob,               /**< problem data */
-   LP*              lp                  /**< actual LP data */
-   )
-{
-   assert(primal != NULL);
-
-   ALLOC_OKAY( allocMemory(primal) );
-   (*primal)->sols = NULL;
-   (*primal)->solssize = 0;
-   (*primal)->nsols = 0;
-   (*primal)->nsolsfound = 0;
-   (*primal)->upperbound = SCIP_INVALID;
-
-   CHECK_OKAY( primalSetUpperbound(*primal, memhdr, set, NULL, lp, MIN(prob->objlim, set->infinity)) );
-
-   return SCIP_OKAY;
-}
-
-/** frees primal data */
-RETCODE SCIPprimalFree(
-   PRIMAL**         primal,             /**< pointer to primal data */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   int s;
-
-   assert(primal != NULL);
-
-   /* free primal CIP solutions */
-   for( s = 0; s < (*primal)->nsols; ++s )
-   {
-      CHECK_OKAY( SCIPsolFree(&(*primal)->sols[s], memhdr) );
-   }
-   freeMemoryArrayNull(&(*primal)->sols);
-   freeMemory(primal);
 
    return SCIP_OKAY;
 }
@@ -204,7 +207,7 @@ RETCODE primalAddSol(
    if( SCIPsolGetObj(sol) < primal->upperbound )
    {
       /* update the upper bound */
-      CHECK_OKAY( primalSetUpperbound(primal, memhdr, set, tree, lp, SCIPsolGetObj(sol)) );
+      CHECK_OKAY( SCIPprimalSetUpperbound(primal, memhdr, set, tree, lp, SCIPsolGetObj(sol)) );
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );

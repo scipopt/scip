@@ -195,7 +195,7 @@ RETCODE solveNodeLP(
          assert(lp->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDED);
 
          debugMessage("pricing:\n");
-         CHECK_OKAY( SCIPpriceVars(price, memhdr, set, stat, prob, lp, tree, branchcand, eventqueue) );
+         CHECK_OKAY( SCIPpriceVars(price, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
          mustprice = !lp->solved;
          mustsepar |= !lp->solved;
          
@@ -208,7 +208,7 @@ RETCODE solveNodeLP(
 
          /* reset bounds temporarily set by pricer to their original values */
          debugMessage("reset bounds\n");
-         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
+         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
          mustprice |= !lp->solved;
          mustsepar |= !lp->solved;
 

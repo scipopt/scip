@@ -249,8 +249,8 @@ RETCODE SCIPnodeAddBoundchg(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
@@ -313,10 +313,7 @@ extern
 RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   LP*              lp,                 /**< actual LP data */
-   PROB*            prob                /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** frees tree data structure */
@@ -363,15 +360,48 @@ RETCODE SCIPtreeBranchVar(
    VAR*             var                 /**< variable to branch on */
    );
 
-/** notifies tree, that a bound of a variable changed */
+/** updates actual pseudo objective value for a change in a variable's objective value or bounds */
 extern
-RETCODE SCIPtreeBoundChanged(
+RETCODE SCIPtreeUpdateVar(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
-   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   Real             oldbound,           /**< old bound value */
-   Real             newbound            /**< new bound value */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             oldlb,              /**< old objective value of variable */
+   Real             oldub,              /**< old objective value of variable */
+   Real             newobj,             /**< new objective value of variable */
+   Real             newlb,              /**< new objective value of variable */
+   Real             newub               /**< new objective value of variable */
+   );
+
+/** updates actual pseudo objective value for a change in a variable's objective value */
+extern
+RETCODE SCIPtreeUpdateVarObj(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldobj,             /**< old objective value of variable */
+   Real             newobj              /**< new objective value of variable */
+   );
+
+/** updates actual pseudo objective value for a change in a variable's lower bound */
+extern
+RETCODE SCIPtreeUpdateVarLb(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldlb,              /**< old lower bound of variable */
+   Real             newlb               /**< new lower bound of variable */
+   );
+
+/** updates actual pseudo objective value for a change in a variable's upper bound */
+extern
+RETCODE SCIPtreeUpdateVarUb(
+   TREE*            tree,               /**< branch-and-bound tree */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   Real             oldub,              /**< old upper bound of variable */
+   Real             newub               /**< new upper bound of variable */
    );
 
 /** gets number of leaves */
