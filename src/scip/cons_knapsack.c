@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.67 2004/10/26 18:24:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.68 2004/11/17 13:09:46 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -970,17 +970,20 @@ RETCODE propagateCons(
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
 
-      /* start conflict analysis with the fixed-to-one variables */
-      CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-      for( i = 0; i < consdata->nvars; i++ )
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+         /* start conflict analysis with the fixed-to-one variables */
+         CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+         for( i = 0; i < consdata->nvars; i++ )
          {
-            CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+            {
+               CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+            }
          }
-      }
          
-      CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+         CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+      }
 
       return SCIP_OKAY;
    }
@@ -1009,6 +1012,32 @@ RETCODE propagateCons(
       }
       else
          break;
+   }
+
+   /* check again, if weights of fixed variables already exceeds knapsack capacity
+    * (fixings to zero can trigger fixings to one due to aggregated variables)
+    */
+   if( consdata->capacity < consdata->onesweightsum )
+   {
+      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      *cutoff = TRUE;
+
+      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      {
+         /* start conflict analysis with the fixed-to-one variables */
+         CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+         for( i = 0; i < consdata->nvars; i++ )
+         {
+            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+            {
+               CHECK_OKAY( SCIPaddConflictBinvar(scip, consdata->vars[i]) );
+            }
+         }
+         
+         CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+      }
+
+      return SCIP_OKAY;
    }
 
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
@@ -1092,6 +1121,7 @@ RETCODE applyFixings(
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
 
+   /**@todo apply aggregations: x == y  or  x == 1-y  with both variables in knapsack -> replace with single weight */
    v = 0;
    while( v < consdata->nvars )
    {
@@ -1621,7 +1651,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
          continue;
       }
 
-      if( !SCIPconsIsModifiable(conss[i]) )
+      if( !cutoff && !SCIPconsIsModifiable(conss[i]) )
       {
          /* divide weights by their greatest common divisor */
          normalizeWeights(scip, conss[i], nchgcoefs, nchgsides);

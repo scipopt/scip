@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.225 2004/11/12 13:03:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.226 2004/11/17 13:09:47 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -65,6 +65,7 @@
 #include "reader.h"
 #include "presol.h"
 #include "pricer.h"
+#include "relax.h"
 #include "sepa.h"
 #include "prop.h"
 
@@ -1387,6 +1388,81 @@ RETCODE SCIPsetPresolPriority(
    return SCIP_OKAY;
 }
 
+/** creates a relaxator and includes it in SCIP */
+RETCODE SCIPincludeRelax(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of relaxator */
+   const char*      desc,               /**< description of relaxator */
+   int              priority,           /**< priority of the relaxator */
+   int              freq,               /**< frequency for calling relaxator */
+   DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
+   DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
+   DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
+   RELAXDATA*       relaxdata           /**< relaxator data */
+   )
+{
+   RELAX* relax;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludeRelax", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPrelaxCreate(&relax, scip->set, scip->mem->setmem,
+         name, desc, priority, freq,
+         relaxfree, relaxinit, relaxexit, relaxexec, relaxdata) );
+   CHECK_OKAY( SCIPsetIncludeRelax(scip->set, relax) );
+   
+   return SCIP_OKAY;
+}
+
+/** returns the relaxator of the given name, or NULL if not existing */
+RELAX* SCIPfindRelax(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of relaxator */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindRelax", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindRelax(scip->set, name);
+}
+
+/** returns the array of currently available relaxators */
+RELAX** SCIPgetRelaxs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetRelaxs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetSortRelaxs(scip->set);
+
+   return scip->set->relaxs;
+}
+
+/** returns the number of currently available relaxators */
+int SCIPgetNRelaxs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNRelaxs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nrelaxs;
+}
+
+/** sets the priority of a relaxator */
+RETCODE SCIPsetRelaxPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   RELAX*           relax,              /**< primal relaxistic */
+   int              priority            /**< new priority of the relaxator */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetRelaxPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPrelaxSetPriority(relax, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
 /** creates a separator and includes it in SCIP */
 RETCODE SCIPincludeSepa(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2241,6 +2317,16 @@ RETCODE SCIPsetProbData(
       errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }  /*lint !e788*/
+}
+
+/** gets objective sense of original problem */
+OBJSENSE SCIPgetObjsense(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetObjsense", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->origprob->objsense;
 }
 
 /** sets objective sense of problem */
@@ -4288,12 +4374,18 @@ RETCODE SCIPgetVarStrongbranch(
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
-      errorMessage("cannot get strong branching information on non-COLUMN variable\n");
+      errorMessage("cannot get strong branching information on non-COLUMN variable <%s>\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
 
    col = SCIPvarGetCol(var);
    assert(col != NULL);
+
+   if( !SCIPcolIsInLP(col) )
+   {
+      errorMessage("cannot get strong branching information on variable <%s> not in current LP\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
 
    /* call strong branching for column */
    CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, down, up, lperror) );
@@ -6770,7 +6862,7 @@ LPSOLSTAT SCIPgetLPSolstat(
    return SCIPlpGetSolstat(scip->lp);
 }
 
-/** gets objective value of current LP */
+/** gets objective value of current LP (which is the sum of column and loose objective value) */
 Real SCIPgetLPObjval(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -6778,6 +6870,26 @@ Real SCIPgetLPObjval(
    CHECK_ABORT( checkStage(scip, "SCIPgetLPObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPlpGetObjval(scip->lp, scip->set);
+}
+
+/** gets part of objective value of current LP that results from COLUMN variables only */
+Real SCIPgetLPColumnObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLPColumnObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetColumnObjval(scip->lp);
+}
+
+/** gets part of objective value of current LP that results from LOOSE variables only */
+Real SCIPgetLPLooseObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLPLooseObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetLooseObjval(scip->lp, scip->set);
 }
 
 /** gets pseudo objective value of the current LP */
@@ -10371,6 +10483,30 @@ void printLPStatistics(
 }
 
 static
+void printRelaxatorStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(file != NULL);
+
+   if( scip->set->nrelaxs == 0 )
+      return;
+
+   fprintf(file, "Relaxators         :       Time      Calls\n");
+
+   for( i = 0; i < scip->set->nrelaxs; ++i )
+      fprintf(file, "  %-17.17s: %10.2f %10lld\n",
+         SCIPrelaxGetName(scip->set->relaxs[i]),
+         SCIPrelaxGetTime(scip->set->relaxs[i]),
+         SCIPrelaxGetNCalls(scip->set->relaxs[i]));
+}
+
+static
 void printTreeStatistics(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file */
@@ -10524,6 +10660,7 @@ RETCODE SCIPprintStatistics(
       printBranchruleStatistics(scip, file);
       printHeuristicStatistics(scip, file);
       printLPStatistics(scip, file);
+      printRelaxatorStatistics(scip, file);
       printTreeStatistics(scip, file);
       printSolutionStatistics(scip, file);
       

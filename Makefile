@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.91 2004/11/01 13:48:06 bzfpfend Exp $
+# $Id: Makefile,v 1.92 2004/11/17 13:09:46 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -187,6 +187,7 @@ SCIPLIBOBJ	=	branch.o \
 			prob.o \
 			prop.o \
 			reader.o \
+			relax.o \
 			retcode.o \
 			scip.o \
 			scipdefplugins.o \
@@ -265,6 +266,7 @@ OBJSCIPLIBOBJ	=	objbranchrule.o \
 			objpricer.o \
 			objprobdata.o \
 			objreader.o \
+			objrelax.o \
 			objsepa.o \
 			objvardata.o
 

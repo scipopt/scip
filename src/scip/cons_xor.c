@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.10 2004/10/26 18:24:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.11 2004/11/17 13:09:46 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -520,6 +520,7 @@ RETCODE createRelaxation(
    }
 
    /* create LP row (resultant variable is also stored in vars array) */
+   /**@todo change LP relaxation! */
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 0.0, 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->intvar, -2.0) );

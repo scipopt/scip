@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.120 2004/10/29 10:39:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.121 2004/11/17 13:09:48 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6068,6 +6068,16 @@ COL* SCIPvarGetCol(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    return var->data.col;
+}
+
+/** returns whether the variable is a COLUMN variable that is member of the current LP */
+Bool SCIPvarIsInLP(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(var->data.col));
 }
 
 /** gets aggregation variable y of an aggregated variable x = a*y + c */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.180 2004/11/12 13:03:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.181 2004/11/17 13:09:47 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -57,6 +57,7 @@
 #include "type_presol.h"
 #include "type_pricer.h"
 #include "type_reader.h"
+#include "type_relax.h"
 #include "type_sepa.h"
 #include "type_prop.h"
 
@@ -76,6 +77,7 @@
 #include "pub_presol.h"
 #include "pub_pricer.h"
 #include "pub_reader.h"
+#include "pub_relax.h"
 #include "pub_sepa.h"
 #include "pub_prop.h"
 #include "pub_sol.h"
@@ -668,6 +670,48 @@ RETCODE SCIPsetPresolPriority(
    int              priority            /**< new priority of the presolver */
    );
 
+/** creates a relaxator and includes it in SCIP */
+extern
+RETCODE SCIPincludeRelax(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of relaxator */
+   const char*      desc,               /**< description of relaxator */
+   int              priority,           /**< priority of the relaxator */
+   int              freq,               /**< frequency for calling relaxator */
+   DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
+   DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
+   DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
+   DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxator */
+   RELAXDATA*       relaxdata           /**< relaxator data */
+   );
+
+/** returns the relaxator of the given name, or NULL if not existing */
+extern
+RELAX* SCIPfindRelax(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of relaxator */
+   );
+
+/** returns the array of currently available relaxators */
+extern
+RELAX** SCIPgetRelaxs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available relaxators */
+extern
+int SCIPgetNRelaxs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a relaxator */
+extern
+RETCODE SCIPsetRelaxPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   RELAX*           relax,              /**< primal relaxistic */
+   int              priority            /**< new priority of the relaxator */
+   );
+
 /** creates a separator and includes it in SCIP */
 extern
 RETCODE SCIPincludeSepa(
@@ -1115,6 +1159,12 @@ extern
 RETCODE SCIPsetProbData(
    SCIP*            scip,               /**< SCIP data structure */
    PROBDATA*        probdata            /**< user problem data to use */
+   );
+
+/** gets objective sense of original problem */
+extern
+OBJSENSE SCIPgetObjsense(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** sets objective sense of problem */
@@ -2485,9 +2535,21 @@ LPSOLSTAT SCIPgetLPSolstat(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets objective value of current LP */
+/** gets objective value of current LP (which is the sum of column and loose objective value) */
 extern
 Real SCIPgetLPObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets part of objective value of current LP that results from COLUMN variables only */
+extern
+Real SCIPgetLPColumnObjval(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets part of objective value of current LP that results from LOOSE variables only */
+extern
+Real SCIPgetLPLooseObjval(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.70 2004/10/28 14:30:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.71 2004/11/17 13:09:48 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -46,6 +46,7 @@
 #include "type_presol.h"
 #include "type_pricer.h"
 #include "type_reader.h"
+#include "type_relax.h"
 #include "type_sepa.h"
 #include "type_prop.h"
 
@@ -361,6 +362,26 @@ PRESOL* SCIPsetFindPresol(
 /** sorts presolvers by priorities */
 extern
 void SCIPsetSortPresols(
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts relaxator in relaxator list */
+extern
+RETCODE SCIPsetIncludeRelax(
+   SET*             set,                /**< global SCIP settings */
+   RELAX*           relax               /**< relaxator */
+   );
+
+/** returns the relaxator of the given name, or NULL if not existing */
+extern
+RELAX* SCIPsetFindRelax(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name                /**< name of relaxator */
+   );
+
+/** sorts relaxators by priorities */
+extern
+void SCIPsetSortRelaxs(
    SET*             set                 /**< global SCIP settings */
    );
 

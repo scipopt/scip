@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.36 2004/11/01 13:48:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.37 2004/11/17 13:09:48 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -44,6 +44,7 @@
 #include "type_presol.h"
 #include "type_pricer.h"
 #include "type_reader.h"
+#include "type_relax.h"
 #include "type_sepa.h"
 #include "type_prop.h"
 
@@ -59,6 +60,7 @@ struct Set
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
    PRESOL**         presols;            /**< presolvers */
+   RELAX**          relaxs;             /**< relaxators */
    SEPA**           sepas;              /**< separators */
    PROP**           props;              /**< propagators */
    HEUR**           heurs;              /**< primal heuristics */
@@ -78,6 +80,8 @@ struct Set
    int              conflicthdlrssize;  /**< size of conflicthdlrs array */
    int              npresols;           /**< number of presolvers */
    int              presolssize;        /**< size of presols array */
+   int              nrelaxs;            /**< number of relaxators */
+   int              relaxssize;         /**< size of relaxs array */
    int              nsepas;             /**< number of separators */
    int              sepassize;          /**< size of sepas array */
    int              nprops;             /**< number of propagators */
@@ -95,6 +99,7 @@ struct Set
    Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    Bool             presolssorted;      /**< are the presolvers sorted by priority? */
+   Bool             relaxssorted;       /**< are the relaxators sorted by priority? */
    Bool             sepassorted;        /**< are the separators sorted by priority? */
    Bool             propssorted;        /**< are the propagators sorted by priority? */
    Bool             heurssorted;        /**< are the heuristics sorted by priority? */

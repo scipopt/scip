@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.145 2004/11/12 13:03:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.146 2004/11/17 13:09:48 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1559,6 +1559,21 @@ RETCODE solveNode(
       assert(branched == (tree->nchildren > 0));
       *infeasible = *infeasible || enfoinf;
 
+      /* check, if the path was cutoff */
+      if( tree->cutoffdepth <= actdepth )
+      {
+         debugMessage("node on path in depth %d was cut off - cut off active node in depth %d\n", 
+            tree->cutoffdepth, actdepth);
+         *cutoff = TRUE;
+      }
+
+      /* check, if the focus node should be repropagated */
+      if( SCIPnodeIsPropagatedAgain(focusnode) )
+      {
+         debugMessage("focus node in depth %d was marked to be repropagated\n", actdepth);
+         propagateagain = TRUE;
+      }
+
       /* if the node is infeasible, but no constraint handler could resolve the infeasibility
        * -> branch on LP or the pseudo solution
        * -> e.g. select non-fixed binary or integer variable x with value x', create three
@@ -1566,6 +1581,8 @@ RETCODE solveNode(
        *    In the left and right branch, the current solution is cut off. In the middle
        *    branch, the constraints can hopefully reduce domains of other variables to cut
        *    off the current solution.
+       * In LP branching, we cannot allow adding constraints, because this does not necessary change the LP and can
+       * therefore lead to an infinite loop.
        */
       if( *infeasible && !(*cutoff) && !(*unbounded) && !solvelpagain && !propagateagain && !branched )
       {
@@ -1585,7 +1602,7 @@ RETCODE solveNode(
             debugMessage("infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
                SCIPnodeGetDepth(focusnode), nlpcands);
             CHECK_OKAY( SCIPbranchExecLP(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
-                  primal->upperbound, TRUE, &result) );
+                  primal->upperbound, FALSE, &result) );
             assert(result != SCIP_DIDNOTRUN);
          }
          else
@@ -1616,6 +1633,16 @@ RETCODE solveNode(
             assert(tree->nchildren == 0);
             solvelpagain = TRUE;
             break;
+         case SCIP_CONSADDED:
+            assert(tree->nchildren == 0);
+            if( nlpcands > 0 )
+            {
+               errorMessage("LP branching rule added constraint, which was not allowed this time\n");
+               return SCIP_INVALIDRESULT;
+            }
+            solvelpagain = TRUE;
+            propagateagain = TRUE;
+            break;
          case SCIP_DIDNOTRUN:
             /* all integer variables in the infeasible solution are fixed,
              * - if no continuous variables exist and all variables are known, the infeasible pseudo solution is completely
@@ -1639,7 +1666,7 @@ RETCODE solveNode(
             break;
          default:
             errorMessage("invalid result code <%d> from SCIPbranchLP() or SCIPbranchPseudo()\n", result);
-            abort();
+            return SCIP_INVALIDRESULT;
          }  /*lint !e788*/
          assert(*cutoff || solvelpagain || propagateagain || branched); /* something must have been done */
          assert(!(*cutoff) || (!solvelpagain && !propagateagain && !branched));
@@ -1647,15 +1674,35 @@ RETCODE solveNode(
          assert(!propagateagain || (!(*cutoff) && !branched));
          assert(!branched || (!solvelpagain && !propagateagain));
          assert(branched == (tree->nchildren > 0));
+
+         /* check again, if the path was cutoff */
+         if( tree->cutoffdepth <= actdepth )
+         {
+            debugMessage("node on path in depth %d was cut off - cut off active node in depth %d\n", 
+               tree->cutoffdepth, actdepth);
+            *cutoff = TRUE;
+         }
+
+         /* check again, if the focus node should be repropagated */
+         if( SCIPnodeIsPropagatedAgain(focusnode) )
+         {
+            debugMessage("focus node in depth %d was marked to be repropagated\n", actdepth);
+            propagateagain = TRUE;
+         }
+
+         /* check, if the path was cutoff */
+         if( tree->cutoffdepth <= actdepth )
+            *cutoff = TRUE;
+         
+         /* check, if a node on the path should be repropagated */
+         if( tree->repropdepth <= actdepth )
+            propagateagain = TRUE;
       }
       
       /* check for immediate restart */
       if( actdepth == 0 && !(*cutoff)
          && set->presol_restartbdchgs > 0 && stat->nrootboundchgsrun >= set->presol_restartbdchgs )
          *restart = TRUE;
-
-      /* check if current node is marked to be propagated again */
-      propagateagain = propagateagain || SCIPnodeIsPropagatedAgain(focusnode);
 
       debugMessage("node solving iteration finished: cutoff=%d, propagateagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",
          *cutoff, propagateagain, solvelpagain, nlperrors, *restart);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.120 2004/11/12 13:03:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.121 2004/11/17 13:09:47 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -44,6 +44,7 @@
 #include "presol.h"
 #include "pricer.h"
 #include "reader.h"
+#include "relax.h"
 #include "sepa.h"
 #include "prop.h"
 
@@ -295,6 +296,10 @@ RETCODE SCIPsetCreate(
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
    (*set)->presolssorted = FALSE;
+   (*set)->relaxs = NULL;
+   (*set)->nrelaxs = 0;
+   (*set)->relaxssize = 0;
+   (*set)->relaxssorted = FALSE;
    (*set)->sepas = NULL;
    (*set)->nsepas = 0;
    (*set)->sepassize = 0;
@@ -824,6 +829,13 @@ RETCODE SCIPsetFree(
       CHECK_OKAY( SCIPpresolFree(&(*set)->presols[i], (*set)->scip) );
    }
    freeMemoryArrayNull(&(*set)->presols);
+
+   /* free relaxators */
+   for( i = 0; i < (*set)->nrelaxs; ++i )
+   {
+      CHECK_OKAY( SCIPrelaxFree(&(*set)->relaxs[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull(&(*set)->relaxs);
 
    /* free separators */
    for( i = 0; i < (*set)->nsepas; ++i )
@@ -1486,6 +1498,64 @@ void SCIPsetSortPresols(
    }
 }
 
+/** inserts relaxator in relaxator list */
+RETCODE SCIPsetIncludeRelax(
+   SET*             set,                /**< global SCIP settings */
+   RELAX*           relax               /**< relaxator */
+   )
+{
+   assert(set != NULL);
+   assert(relax != NULL);
+   assert(!SCIPrelaxIsInitialized(relax));
+
+   if( set->nrelaxs >= set->relaxssize )
+   {
+      set->relaxssize = SCIPsetCalcMemGrowSize(set, set->nrelaxs+1);
+      ALLOC_OKAY( reallocMemoryArray(&set->relaxs, set->relaxssize) );
+   }
+   assert(set->nrelaxs < set->relaxssize);
+   
+   set->relaxs[set->nrelaxs] = relax;
+   set->nrelaxs++;
+   set->relaxssorted = FALSE;
+
+   return SCIP_OKAY;
+}   
+
+/** returns the relaxator of the given name, or NULL if not existing */
+RELAX* SCIPsetFindRelax(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name                /**< name of relaxator */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nrelaxs; ++i )
+   {
+      if( strcmp(SCIPrelaxGetName(set->relaxs[i]), name) == 0 )
+         return set->relaxs[i];
+   }
+
+   return NULL;
+}
+
+/** sorts relaxators by priorities */
+void SCIPsetSortRelaxs(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->relaxssorted )
+   {
+      SCIPbsortPtr((void**)set->relaxs, set->nrelaxs, SCIPrelaxComp);
+      set->relaxssorted = TRUE;
+   }
+}
+
 /** inserts separator in separator list */
 RETCODE SCIPsetIncludeSepa(
    SET*             set,                /**< global SCIP settings */
@@ -1932,6 +2002,12 @@ RETCODE SCIPsetInitCallbacks(
       CHECK_OKAY( SCIPpresolInit(set->presols[i], set->scip) );
    }
 
+   /* relaxators */
+   for( i = 0; i < set->nrelaxs; ++i )
+   {
+      CHECK_OKAY( SCIPrelaxInit(set->relaxs[i], set->scip) );
+   }
+
    /* separators */
    for( i = 0; i < set->nsepas; ++i )
    {
@@ -2010,6 +2086,12 @@ RETCODE SCIPsetExitCallbacks(
    for( i = 0; i < set->npresols; ++i )
    {
       CHECK_OKAY( SCIPpresolExit(set->presols[i], set->scip) );
+   }
+
+   /* relaxators */
+   for( i = 0; i < set->nrelaxs; ++i )
+   {
+      CHECK_OKAY( SCIPrelaxExit(set->relaxs[i], set->scip) );
    }
 
    /* separators */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.44 2004/10/05 11:01:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.45 2004/11/17 13:09:48 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -567,8 +567,14 @@ RETCODE SCIPsolSetVal(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot set solution value for fixed variable\n");
-      return SCIP_INVALIDDATA;
+      oldval = SCIPvarGetLbGlobal(var);
+      if( !SCIPsetIsEQ(set, val, oldval) )
+      {
+         errorMessage("cannot set solution value for variable <%s> fixed to %g to different value %g\n",
+            SCIPvarGetName(var), oldval, val);
+         return SCIP_INVALIDDATA;
+      }
+      return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
       assert(!SCIPsetIsZero(set, SCIPvarGetAggrScalar(var)));
