@@ -53,20 +53,20 @@ Here is what you have to do to get SCIP running:
        - ln -s <file libcplex.a> lib/libcplex.$(OSTYPE).$(ARCH).a
          for each operation system and architecture to use
          (e.g. "ln -s /cplex/libcplex.a lib/libcplex.linux.x86.a")
-   (b) to use SOPLEX (not yet implemented!)
+   (b) to use SOPLEX
        - ln -s <path to SOPLEX' *.h files> lib/spxinc
        - ln -s <file libsoplex.[...].a> lib/libsoplex.$(OSTYPE).$(ARCH).a
          for each operating system and architecture to use
          (e.g. "ln -s /soplex/libsoplex.linux.x86.gnu.dbg.a lib/libsoplex.linux.x86.a")
 
 2. Compile the library and the solver program:
-   In your SCIP main directory, enter "gmake OPT=<...> LPS=<...> COMP=<...>" with
+   In your SCIP main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
    the following options:
    - "OPT=dbg"  to use debug compilation mode (default)
    - "OPT=opt"  to use optimized compilation mode
    - "OPT=prf"  to use performance analysis compilation mode
    - "LPS=cpx"  to use CPLEX as LP solver (default)
-   - "LPS=spx"  to use SOPLEX as LP solver (not yet implemented!)
+   - "LPS=spx"  to use SOPLEX as LP solver
    - "COMP=gnu" to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
@@ -74,8 +74,9 @@ Here is what you have to do to get SCIP running:
    (e.g. "bin/scip.linux.x86.gnu.dbg.cpx")
 
 4. To generate the documentation, you need to have doxygen installed, and
-   enter "gmake doc"
+   enter "make doc"
 
 5. To check the code with lint, you need to have flexelint installed, and
-   enter "gmake lint"
+   enter "make lint"
 
+On some machines, you should use gmake instead of make.
