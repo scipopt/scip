@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.12 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.13 2004/05/03 08:28:29 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -131,7 +131,7 @@ struct Dom
    HOLELIST*        holelist;           /**< list of holes */
 };
 
-/** variable bounds of a variable x in the form x <= c*y or x >= c*y */
+/** variable bounds of a variable x in the form x <= b*z + d  or  x >= b*z + d */
 struct VBounds
 {
    VAR**            vars;               /**< variables z    in variable bounds x <= b*z + d  or  x >= b*z + d */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.14 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.15 2004/05/03 08:28:29 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -473,6 +473,54 @@ int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
+extern
+int SCIPvarGetNVlbs(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+extern
+VAR** SCIPvarGetVlbVars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+extern
+Real* SCIPvarGetVlbCoefs(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounding constants d_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+extern
+Real* SCIPvarGetVlbConstants(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets number of variable upper bounds x <= b_i*z_i + d_i of given variable x */
+extern
+int SCIPvarGetNVubs(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+extern
+VAR** SCIPvarGetVubVars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+extern
+Real* SCIPvarGetVubCoefs(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets array with bounding constants d_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+extern
+Real* SCIPvarGetVubConstants(
+   VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -522,6 +570,14 @@ int SCIPvarGetBranchPriority(
 #define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
+#define SCIPvarGetNVlbs(var)            ((var)->vlbs != NULL ? (var)->vlbs->len : 0)
+#define SCIPvarGetVlbVars(var)          ((var)->vlbs != NULL ? (var)->vlbs->vars : NULL)
+#define SCIPvarGetVlbCoefs(var)         ((var)->vlbs != NULL ? (var)->vlbs->coefs : NULL)
+#define SCIPvarGetVlbConstants(var)     ((var)->vlbs != NULL ? (var)->vlbs->constants : NULL)
+#define SCIPvarGetNVubs(var)            ((var)->vubs != NULL ? (var)->vubs->len : 0)
+#define SCIPvarGetVubVars(var)          ((var)->vubs != NULL ? (var)->vubs->vars : NULL)
+#define SCIPvarGetVubCoefs(var)         ((var)->vubs != NULL ? (var)->vubs->coefs : NULL)
+#define SCIPvarGetVubConstants(var)     ((var)->vubs != NULL ? (var)->vubs->constants : NULL)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.87 2004/04/30 11:16:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.88 2004/05/03 08:28:29 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5104,6 +5104,86 @@ int SCIPvarGetBranchPriority(
    assert(var != NULL);
 
    return var->branchpriority;
+}
+
+/** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
+int SCIPvarGetNVlbs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->len : 0;
+}
+
+/** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+VAR** SCIPvarGetVlbVars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->vars : NULL;
+}
+
+/** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVlbCoefs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->coefs : NULL;
+}
+
+/** gets array with bounding constants d_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVlbConstants(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->constants : NULL;
+}
+
+/** gets number of variable upper bounds x <= b_i*z_i + d_i of given variable x */
+int SCIPvarGetNVubs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->len : 0;
+}
+
+/** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+VAR** SCIPvarGetVubVars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->vars : NULL;
+}
+
+/** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVubCoefs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->coefs : NULL;
+}
+
+/** gets array with bounding constants d_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVubConstants(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->constants : NULL;
 }
 
 #endif
