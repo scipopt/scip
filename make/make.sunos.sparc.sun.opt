@@ -1,0 +1,9 @@
+#--- $Id: make.sunos.sparc.sun.opt,v 1.1 2004/02/06 12:54:10 bzfpfend Exp $
+CC		=	cc
+CXX		=	CC
+FLAGS		+=	-DWITH_READLINE -DNDEBUG -I/client/include
+CFLAGS		+=	-fast -xprefetch=auto -xipo=2
+CXXFLAGS	+=	-fast -xprefetch=auto -xipo=2
+AR		=	CC
+ARFLAGS		=	$(FLAGS) $(CXXFLAGS) -xar -o
+LDFLAGS		+=	-L/client/lib -lreadline -lncurses -lsocket -lnsl

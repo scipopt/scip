@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.40 2004/02/04 17:27:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.41 2004/02/06 12:53:44 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -548,36 +548,37 @@ RETCODE readName(
 {
    assert(mpsi != NULL);
 
-   do
+   /* This has to be the Line with the NAME section.
+    */
+   if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME"))
    {
-      /* This has to be the Line with the NAME section.
-       */
-      if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME"))
-         break;
-
-      // Sometimes the name is omitted.
-      mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
-
-      /*printf("Problem name   : %s\n", mpsinputProbname(mpsi));*/
- 
-      // This hat to be a new section
-      if (!mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL))
-         break;
-
-      if (!strcmp(mpsinputField0(mpsi), "ROWS"))
-         mpsinputSetSection(mpsi, MPS_ROWS);
-      else if (!strcmp(mpsinputField0(mpsi), "OBJSEN"))
-         mpsinputSetSection(mpsi, MPS_OBJSEN);
-      else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
-         mpsinputSetSection(mpsi, MPS_OBJNAME);
-      else
-         break;
-
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   while(FALSE); /*lint !e717*/
 
-   mpsinputSyntaxerror(mpsi);
+   /* Sometimes the name is omitted. */
+   mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
+   
+   /*printf("Problem name   : %s\n", mpsinputProbname(mpsi));*/
+   
+   /* This hat to be a new section */
+   if (!mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL))
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
+
+   if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+      mpsinputSetSection(mpsi, MPS_ROWS);
+   else if (!strcmp(mpsinputField0(mpsi), "OBJSEN"))
+      mpsinputSetSection(mpsi, MPS_OBJSEN);
+   else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
+      mpsinputSetSection(mpsi, MPS_OBJNAME);
+   else
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
 
    return SCIP_OKAY;
 }
@@ -591,35 +592,39 @@ RETCODE readObjsen(
 {
    assert(mpsi != NULL);
 
-   do
+   /* This has to be the Line with MIN or MAX. */
+   if (!mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL))
    {
-      /* This has to be the Line with MIN or MAX. */
-      if (!mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL))
-         break;
-
-      if (strcmp(mpsinputField1(mpsi), "MIN"))
-         mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MINIMIZE);
-      else if (strcmp(mpsinputField1(mpsi), "MAX"))
-         mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MAXIMIZE);
-      else
-         break;
-
-      /* Look for ROWS or OBJNAME Section */
-      if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
-         break;
-
-      if (!strcmp(mpsinputField0(mpsi), "ROWS"))
-         mpsinputSetSection(mpsi, MPS_ROWS);
-      else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
-         mpsinputSetSection(mpsi, MPS_OBJNAME);
-      else
-         break;
-
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   while(FALSE); /*lint !e717*/
 
-   mpsinputSyntaxerror(mpsi);
+   if (strcmp(mpsinputField1(mpsi), "MIN"))
+      mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MINIMIZE);
+   else if (strcmp(mpsinputField1(mpsi), "MAX"))
+      mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MAXIMIZE);
+   else
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
+
+   /* Look for ROWS or OBJNAME Section */
+   if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
+
+   if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+      mpsinputSetSection(mpsi, MPS_ROWS);
+   else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
+      mpsinputSetSection(mpsi, MPS_OBJNAME);
+   else
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
 
    return SCIP_OKAY;
 }
@@ -632,28 +637,29 @@ RETCODE readObjname(
    )
 {
    assert(mpsi != NULL);
-
-   do
+   
+   /* This has to be the Line with the name. */
+   if (!mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL)
    {
-      // This has to be the Line with the name.
-      if (!mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL)
-         break;
-
-      mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
-
-      // Look for ROWS Section
-      if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
-         break;
-
-      if (strcmp(mpsinputField0(mpsi), "ROWS"))
-         break;
-
-      mpsinputSetSection(mpsi, MPS_ROWS);
+      mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   while(FALSE); /*lint !e717*/
 
-   mpsinputSyntaxerror(mpsi);
+   mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
+   
+   /* Look for ROWS Section */
+   if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
+   if (strcmp(mpsinputField0(mpsi), "ROWS"))
+   {
+      mpsinputSyntaxerror(mpsi);
+      return SCIP_OKAY;
+   }
+
+   mpsinputSetSection(mpsi, MPS_ROWS);
 
    return SCIP_OKAY;
 }
@@ -1096,7 +1102,7 @@ RETCODE readBounds(
          mpsinputSetSection(mpsi, MPS_ENDATA);
          return SCIP_OKAY;
       }
-      // Is the value field used ?
+      /* Is the value field used ? */
       if (  (!strcmp(mpsinputField1(mpsi), "LO"))
          || (!strcmp(mpsinputField1(mpsi), "UP"))
          || (!strcmp(mpsinputField1(mpsi), "FX"))

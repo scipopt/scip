@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.62 2004/01/26 15:10:15 bzfpfend Exp $
+# $Id: Makefile,v 1.63 2004/02/06 12:53:43 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -319,12 +319,12 @@ endif
 
 $(MAINFILE):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
 ifeq ($(LINKER),C)
-		$(CC) $(FLAGS) $(CFLAGS) $(MAINXXX) \
+		$(CC) $(MAINXXX) \
 		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) \
 		$(LDFLAGS) -o $@
 endif
 ifeq ($(LINKER),CPP)
-		$(CXX) $(FLAGS) $(CXXFLAGS) $(MAINXXX) \
+		$(CXX) $(MAINXXX) \
 		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) \
 		$(LDFLAGS) -o $@
 endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.99 2004/02/05 14:12:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.100 2004/02/06 12:53:43 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5200,10 +5200,10 @@ RETCODE lpSetFromscratch(
 
 #ifndef NDEBUG
    {
-      Bool oldfromscratch;
+      int oldfromscratch;
       
       CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, &oldfromscratch) );
-      assert(oldfromscratch == lp->lpifromscratch);
+      assert(oldfromscratch == (int)(lp->lpifromscratch));
    }
 #endif
 
@@ -5227,10 +5227,10 @@ RETCODE lpSetFastmip(
 
 #ifndef NDEBUG
    {
-      Bool oldfastmip;
+      int oldfastmip;
       
       CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, &oldfastmip) );
-      assert(oldfastmip == lp->lpifastmip);
+      assert(oldfastmip == (int)(lp->lpifastmip));
    }
 #endif
 
@@ -5254,10 +5254,10 @@ RETCODE lpSetScaling(
 
 #ifndef NDEBUG
    {
-      Bool oldscaling;
+      int oldscaling;
       
       CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_SCALING, &oldscaling) );
-      assert(oldscaling == lp->lpiscaling);
+      assert(oldscaling == (int)(lp->lpiscaling));
    }
 #endif
 
