@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.189 2004/08/02 09:40:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.190 2004/08/02 14:17:43 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7390,7 +7390,7 @@ HEUR* SCIPgetSolHeur(
    return SCIPsolGetHeur(sol);
 }
 
-/** outputs non-zero original variables of solution to file stream */
+/** outputs non-zero variables of solution in original problem space to file stream */
 RETCODE SCIPprintSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
@@ -7407,13 +7407,12 @@ RETCODE SCIPprintSol(
                     SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol))), file);
    fprintf(file, "\n");
 
-   /**@todo transformed variables without original counterpart (e.g. priced variables) must also be displayed */
-   CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, file) );
+   CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file) );
 
    return SCIP_OKAY;
 }
 
-/** outputs non-zero transformed variables of solution to file stream */
+/** outputs non-zero variables of solution in transformed problem space to file stream */
 RETCODE SCIPprintTransSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
@@ -7429,7 +7428,7 @@ RETCODE SCIPprintTransSol(
    SCIPprintReal(scip, SCIPsolGetObj(sol), file);
    fprintf(file, "\n");
 
-   CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, file) );
+   CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->transprob, NULL, file) );
    
    return SCIP_OKAY;
 }

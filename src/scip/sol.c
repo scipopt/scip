@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.37 2004/07/09 08:11:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.38 2004/08/02 14:17:44 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -807,7 +807,8 @@ RETCODE SCIPsolPrint(
    SOL*             sol,                /**< primal CIP solution */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data */
+   PROB*            prob,               /**< problem data (original or transformed) */
+   PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
@@ -816,10 +817,12 @@ RETCODE SCIPsolPrint(
 
    assert(sol != NULL);
    assert(prob != NULL);
+   assert(prob->transformed || transprob != NULL);
 
    if( file == NULL )
       file = stdout;
 
+   /* display variables of problem data */
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
@@ -832,6 +835,26 @@ RETCODE SCIPsolPrint(
             fprintf(file, "%-32s -infinity\n", SCIPvarGetName(prob->vars[v]));
          else
             fprintf(file, "%-32s %f \t(obj:%g)\n", SCIPvarGetName(prob->vars[v]), solval, SCIPvarGetObj(prob->vars[v]));
+      }
+   }
+
+   /* display additional priced variables (if given problem data is original problem) */
+   if( !prob->transformed )
+   {
+      for( v = transprob->startnvars; v < transprob->nvars; ++v )
+      {
+         assert(transprob->vars[v] != NULL);
+         solval = SCIPsolGetVal(sol, stat, transprob->vars[v]);
+         if( !SCIPsetIsZero(set, solval) )
+         {
+            if( SCIPsetIsInfinity(set, solval) )
+               fprintf(file, "%-32s +infinity\n", SCIPvarGetName(transprob->vars[v]));
+            else if( SCIPsetIsInfinity(set, -solval) )
+               fprintf(file, "%-32s -infinity\n", SCIPvarGetName(transprob->vars[v]));
+            else
+               fprintf(file, "%-32s %f \t(obj:%g)\n", 
+                  SCIPvarGetName(transprob->vars[v]), solval, SCIPvarGetObj(transprob->vars[v]));
+         }
       }
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.131 2004/07/29 09:01:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.132 2004/08/02 14:17:43 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -970,6 +970,7 @@ void checkLinks(
       ASSERT(!lp->flushed || col->lppos >= 0 || col->primsol == 0.0);
       ASSERT(!lp->flushed || col->lppos >= 0 || col->farkas == 0.0);
       ASSERT(col->nlprows <= col->len);
+      ASSERT(col->lppos == -1 || col->lppos >= lp->lpifirstchgcol || col->nunlinked == 0);
 
       for( j = 0; j < col->len; ++j )
       {
@@ -989,6 +990,7 @@ void checkLinks(
       ASSERT(!lp->flushed || row->lppos >= 0 || row->dualsol == 0.0);
       ASSERT(!lp->flushed || row->lppos >= 0 || row->dualfarkas == 0.0);
       ASSERT(row->nlpcols <= row->len);
+      ASSERT(row->lppos == -1 || row->lppos >= lp->lpifirstchgrow || row->nunlinked == 0);
       
       for( j = 0; j < row->len; ++j )
       {
@@ -1067,10 +1069,21 @@ void coefChanged(
 
 
 
-
 /*
  * local column changing methods
  */
+
+/* forward declaration for colAddCoef() */
+static
+RETCODE rowAddCoef(
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data */
+   COL*             col,                /**< LP column */
+   Real             val,                /**< value of coefficient */
+   int              linkpos             /**< position of row in the column's row array, or -1 */
+   );
 
 /** adds a previously non existing coefficient to an LP column */
 static
@@ -1121,7 +1134,29 @@ RETCODE colAddCoef(
    col->vals[pos] = val;
    col->linkpos[pos] = linkpos;
    if( linkpos == -1 )
+   {
       col->nunlinked++;
+
+      /* if the column is in current LP, we have to link it to the row, because otherwise, the primal information
+       * of the row is not complete
+       */
+      if( col->lppos >= 0 )
+      {
+         /* this call might swap the current row with the first non-LP/not linked row, s.t. insertion position
+          * has to be updated
+          */
+         CHECK_OKAY( rowAddCoef(row, memhdr, set, lp, col, val, pos) );
+         if( row->lppos >= 0 )
+            pos = col->nlprows-1;
+         linkpos = col->linkpos[pos];
+
+         assert(0 <= linkpos && linkpos < row->len);
+         assert(row->cols[linkpos] == col);
+         assert(col->rows[pos] == row);
+         assert(col->rows[pos]->cols[col->linkpos[pos]] == col);
+         assert(col->rows[pos]->linkpos[col->linkpos[pos]] == pos);
+      }
+   }
    else
    {
       assert(row->linkpos[linkpos] == -1);
@@ -1142,11 +1177,15 @@ RETCODE colAddCoef(
    /* update the sorted flags */
    if( row->lppos >= 0 && linkpos >= 0 )
    {
+      assert(col->nlprows >= 1);
+      assert(col->rows[col->nlprows-1] == row);
       if( col->nlprows > 1 )
          col->lprowssorted = col->lprowssorted && (col->rows[col->nlprows-2]->index < row->index);
    }
    else
    {
+      assert(col->len - col->nlprows >= 1);
+      assert(col->rows[col->len-1] == row);
       if( col->len - col->nlprows > 1 )
          col->nonlprowssorted = col->nonlprowssorted && (col->rows[col->len-2]->index < row->index);
    }
@@ -1403,7 +1442,29 @@ RETCODE rowAddCoef(
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( linkpos == -1 )
+   {
       row->nunlinked++;
+
+      /* if the row is in current LP, we have to link it to the column, because otherwise, the dual information
+       * of the column is not complete
+       */
+      if( row->lppos >= 0 )
+      {
+         /* this call might swap the current column with the first non-LP/not linked column, s.t. insertion position
+          * has to be updated
+          */
+         CHECK_OKAY( colAddCoef(col, memhdr, set, lp, row, val, pos) );
+         if( col->lppos >= 0 )
+            pos = row->nlpcols-1;
+         linkpos = row->linkpos[pos];
+
+         assert(0 <= linkpos && linkpos < col->len);
+         assert(col->rows[linkpos] == row);
+         assert(row->cols[pos] == col);
+         assert(row->cols[pos]->rows[row->linkpos[pos]] == row);
+         assert(row->cols[pos]->linkpos[row->linkpos[pos]] == pos);
+      }
+   }
    else
    {
       assert(col->linkpos[linkpos] == -1);
@@ -1424,11 +1485,15 @@ RETCODE rowAddCoef(
    /* update the sorted flags */
    if( col->lppos >= 0 && linkpos >= 0 )
    {
+      assert(row->nlpcols >= 1);
+      assert(row->cols[row->nlpcols-1] == col);
       if( row->nlpcols > 1 )
          row->lpcolssorted = row->lpcolssorted && (row->cols[row->nlpcols-2]->index < col->index);
    }
    else
    {
+      assert(row->len - row->nlpcols >= 1);
+      assert(row->cols[row->len-1] == col);
       if( row->len - row->nlpcols > 1 )
          row->nonlpcolssorted = row->nonlpcolssorted && (row->cols[row->len-2]->index < col->index);
    }
@@ -2876,7 +2941,7 @@ void SCIPcolPrint(
       file = stdout;
 
    /* print bounds */
-   fprintf(file, "[%f,%f], ", col->lb, col->ub);
+   fprintf(file, "(obj: %g) [%g,%g], ", col->obj, col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
@@ -2885,7 +2950,7 @@ void SCIPcolPrint(
    {
       assert(col->rows[r] != NULL);
       assert(col->rows[r]->name != NULL);
-      fprintf(file, "%+f%s ", col->vals[r], col->rows[r]->name);
+      fprintf(file, "%+g<%s> ", col->vals[r], col->rows[r]->name);
    }
    fprintf(file, "\n");
 }
@@ -4386,7 +4451,7 @@ void SCIProwPrint(
       assert(row->cols[i]->var != NULL);
       assert(SCIPvarGetName(row->cols[i]->var) != NULL);
       assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      fprintf(file, "%+g%s ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+      fprintf(file, "%+g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
    }
 
    /* print constant */
@@ -4719,8 +4784,8 @@ RETCODE lpFlushAddCols(
       assert(col->lppos == c);
       assert(nnonz + col->nlprows <= naddcoefs);
 
-      /*debugMessage("flushing added column <%s>:", SCIPvarGetName(col->var));*/
-      /*debug( SCIPcolPrint(col, NULL) );*/
+      debugMessage("flushing added column <%s>: ", SCIPvarGetName(col->var));
+      debug( SCIPcolPrint(col, NULL) );
 
       /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
@@ -4918,7 +4983,7 @@ RETCODE lpFlushAddRows(
       assert(row->lppos == r);
       assert(nnonz + row->nlpcols <= naddcoefs);
 
-      debugMessage("flushing added row:");
+      debugMessage("flushing added row <%s>: ", row->name);
       debug( SCIProwPrint(row, NULL) );
 
       /* Because the row becomes a member of the LP solver, its dual variable now can take values
@@ -5483,6 +5548,16 @@ RETCODE SCIPlpAddCol(
    assert(SCIPvarIsIntegral(col->var) == col->integral);
    
    debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
+#ifdef DEBUG
+   {
+      int i;
+      printf("  (obj: %g) [%g,%g]", col->obj, col->lb, col->ub);
+      for( i = 0; i < col->len; ++i )
+         printf(" %+g<%s>", col->vals[i], col->rows[i]->name);
+      printf("\n");
+   }
+#endif
+
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
@@ -5522,6 +5597,18 @@ RETCODE SCIPlpAddRow(
    SCIProwCapture(row);
 
    debugMessage("adding row <%s> to LP (%d rows, %d cols)\n", row->name, lp->nrows, lp->ncols);
+#ifdef DEBUG
+   {
+      int i;
+      printf("  %g <=", row->lhs);
+      for( i = 0; i < row->len; ++i )
+         printf(" %+g<%s>", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+      if( !SCIPsetIsZero(set, row->constant) )
+         printf(" %+g", row->constant);
+      printf(" <= %g\n", row->rhs);
+   }
+#endif
+
    CHECK_OKAY( ensureRowsSize(lp, set, lp->nrows+1) );
    lp->rows[lp->nrows] = row;
    row->lppos = lp->nrows;
@@ -7022,6 +7109,8 @@ RETCODE lpSolve(
    assert(set != NULL);
    assert(stat != NULL);
 
+   checkLinks(lp);
+
    /* call simplex */
    CHECK_OKAY( lpSolveStable(lp, set, stat, fastmip, fromscratch, useprimal, lperror) );
 
@@ -8092,11 +8181,11 @@ RETCODE SCIPlpGetSol(
          if( SCIPsetIsLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
       }
-      /*debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%d/%d, dfeas=%d\n",
-        SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
-        SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
-        SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
-        !SCIPsetIsFeasNegative(set, lpicols[c]->redcost));*/
+      debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%d/%d, dfeas=%d\n",
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+         SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
+         SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
+         !SCIPsetIsFeasNegative(set, lpicols[c]->redcost));
    }
 
    /* copy dual solution and activities into rows */
@@ -8116,13 +8205,12 @@ RETCODE SCIPlpGetSol(
          if( SCIPsetIsInfinity(set, lpirows[r]->rhs) )
             *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
       }
-      /*debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f, pfeas=%d/%d, dfeas=%d/%d\n", 
-        lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity,
-        SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
-        SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
-        SCIPsetIsInfinity(set, -lpirows[r]->lhs) ? !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol) : TRUE,
-        SCIPsetIsInfinity(set, lpirows[r]->rhs) ? !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol) : TRUE);
-      */
+      debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f, pfeas=%d/%d, dfeas=%d/%d\n", 
+         lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity,
+         SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
+         SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+         SCIPsetIsInfinity(set, -lpirows[r]->lhs) ? !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol) : TRUE,
+         SCIPsetIsInfinity(set, lpirows[r]->rhs) ? !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol) : TRUE);
    }
 
    /* free temporary memory */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.53 2004/08/02 09:40:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.54 2004/08/02 14:17:42 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -597,6 +597,12 @@ RETCODE addCoef(
 
       /* catch bound change events of variable */
       CHECK_OKAY( consdataCatchEvent(scip, consdata, conshdlrdata->eventhdlr, consdata->nvars-1) );
+
+      /* if the constraint is currently active, increase the variable usage counter */
+      if( SCIPconsIsActive(cons) )
+      {
+         CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, var) );
+      }
    }
 
    /* if necessary, update the rounding locks of variable */

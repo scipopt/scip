@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.27 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.28 2004/08/02 14:17:44 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -233,7 +233,8 @@ RETCODE SCIPsolPrint(
    SOL*             sol,                /**< primal CIP solution */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data */
+   PROB*            prob,               /**< problem data (original or transformed) */
+   PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 

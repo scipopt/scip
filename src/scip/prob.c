@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.51 2004/06/24 15:34:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.52 2004/08/02 14:17:43 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -169,6 +169,7 @@ RETCODE SCIPprobCreate(
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
+   (*prob)->startnvars = 0;
    (*prob)->startnconss = 0;
    (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
    (*prob)->objoffset = 0.0;
@@ -779,6 +780,7 @@ void SCIPprobMarkNConss(
 
    /* remember number of constraints for statistic */
    prob->maxnconss = prob->nconss;
+   prob->startnvars = prob->nvars;
    prob->startnconss = prob->nconss;
 }
 

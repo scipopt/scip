@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.9 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.10 2004/08/02 14:17:44 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -63,6 +63,7 @@ struct Prob
    int              consssize;          /**< available slots in conss array */
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int              maxnconss;          /**< maximum number of constraints existing at the same time */
+   int              startnvars;         /**< number of variables existing when problem solving started */
    int              startnconss;        /**< number of constraints existing when problem solving started */
    OBJSENSE         objsense;           /**< objective sense */
    Bool             objisintegral;      /**< is objective value always integral for feasible solutions? */

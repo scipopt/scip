@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.150 2004/07/19 15:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.151 2004/08/02 14:17:43 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2995,7 +2995,7 @@ HEUR* SCIPgetSolHeur(
    SOL*             sol                 /**< primal solution */
    );
 
-/** outputs non-zero original variables of solution to file stream */
+/** outputs non-zero variables of solution in original problem space to file stream */
 extern
 RETCODE SCIPprintSol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -3003,7 +3003,7 @@ RETCODE SCIPprintSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
-/** outputs non-zero transformed variables of solution to file stream */
+/** outputs non-zero variables of solution in transformed problem space to file stream */
 extern
 RETCODE SCIPprintTransSol(
    SCIP*            scip,               /**< SCIP data structure */
