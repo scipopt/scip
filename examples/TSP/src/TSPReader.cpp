@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPReader.cpp,v 1.1 2005/03/03 16:43:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: TSPReader.cpp,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
 
 /**@file   TSPReader.cpp
  * @brief  C++ file reader for TSP data files
@@ -254,7 +254,9 @@ RETCODE TSPReader::scip_read(
                edgeforw->length =  ABS(x) + ABS(y);
 
             // in TSP community, it is common practice to round lengths to next integer
-            edgeforw->length = SCIPfloor(scip, edgeforw->length+0.5);
+            if( round_lengths_ )
+               edgeforw->length = SCIPfloor(scip, edgeforw->length+0.5);
+            
             edgebackw->length = edgeforw->length;
          
             // insert one of the halfedges into the implicit edge list of the node

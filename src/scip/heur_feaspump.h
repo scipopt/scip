@@ -14,11 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.h,v 1.7 2005/02/14 13:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.h,v 1.8 2005/03/16 10:46:12 bzfberth Exp $"
 
 /**@file   heur_feaspump.h
  * @brief  feaspump primal heuristic
- * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

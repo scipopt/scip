@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPReader.h,v 1.1 2005/03/03 16:43:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: TSPReader.h,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
 
 /**@file   TSPReader.h
  * @brief  C++ file reader for TSP data files
@@ -40,11 +40,16 @@ class TSPReader : public scip::ObjReader
 {
 public:
 
+   Bool round_lengths_;
   
    /** default constructor */
-   TSPReader()
+   TSPReader(SCIP* scip)
       : scip::ObjReader("tspreader", "file reader for TSP files", "tsp")
    {
+      /* add TSP reader parameters */
+    SCIPaddBoolParam(scip,
+                  "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?", 
+                  &round_lengths_, TRUE, NULL, NULL);
    }
 
    /** destructor */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.1 2005/03/03 16:43:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
 
 /**@file   EventhdlrNewSol.cpp
  * @brief  event handler for new solutions in TSP
@@ -52,6 +52,33 @@ RETCODE EventhdlrNewSol::scip_init(
    EVENTHDLR*    eventhdlr           /**< the event handler itself */
    )
 {
+
+   int lockwaits = 0;
+   while( SCIPfileExists("temp.tour.lock") && lockwaits < 10 )
+   {
+      /* wait one second and try again */
+      sleep(1);
+      lockwaits++;
+   }
+   if( SCIPfileExists("temp.tour.lock") )
+   {
+      warningMessage("cannot reset, because lockfile <temp.tour.lock> is still existing\n");
+      return SCIP_OKAY;
+   }
+
+   /* create lock file */
+   ofstream lockfile("temp.tour.lock");
+   lockfile << "lock" << endl;
+   lockfile.close();
+
+   // create output file which can be read by TSPViewer 
+   ofstream filedata("temp.tour");
+   filedata << "RESET" << endl;
+   filedata.close();
+
+   /* delete lock file */
+   unlink("temp.tour.lock");
+   sleep(1);
    return SCIP_OKAY;
 }
    
@@ -146,6 +173,14 @@ RETCODE EventhdlrNewSol::scip_exec(
    // create output file which can be read by TSPViewer 
    ofstream filedata("temp.tour");
    filedata << graph->nnodes << endl;
+   
+   HEUR* heur = SCIPgetSolHeur(scip, sol);
+   if ( heur == NULL)
+      filedata << "relaxation" << endl;
+   else
+      filedata << SCIPheurGetName(heur) << endl;
+
+   filedata << SCIPgetSolOrigObj(scip,sol) << endl;
    do
    {
       // output the number of nodes

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.1 2005/03/03 16:43:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthestinsert  heuristic
@@ -166,7 +166,7 @@ RETCODE HeurFarthestInsert::scip_exec(
 {   
    int nnodes = graph_->nnodes;
 
-   if( nnodes < 3 )
+   if( nnodes < 3 || SCIPgetNRuns(scip) > 1 )
       *result = SCIP_DIDNOTRUN;
    else
    {   

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2005/03/03 16:43:30 bzfberth Exp $
+# $Id: Makefile,v 1.2 2005/03/16 10:46:11 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -109,7 +109,8 @@ MAINOBJ		=	cppmain.o \
 			TSPReader.o \
 			gminucut.o \
 			EventhdlrNewSol.o \
-			HeurFarthestInsert.o
+			HeurFarthestInsert.o \
+			Heur2opt.o
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)
 MAINFILE	=	$(BINDIR)/$(MAIN)
