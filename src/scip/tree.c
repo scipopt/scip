@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.78 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.79 2004/02/06 13:43:32 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -2084,7 +2084,7 @@ RETCODE SCIPnodeActivate(
          break;
 
       default:
-         errorMessage("Selected node is neither sibling, child, nor leaf\n");
+         errorMessage("Selected node is neither sibling, child, nor leaf (nodetype=%d)\n", SCIPnodeGetType(node));
          return SCIP_INVALIDDATA;
       }  /*lint !e788*/
 
