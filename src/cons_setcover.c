@@ -513,7 +513,7 @@ RETCODE separate(
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
             solval = SCIPgetSolVal(scip, NULL, vars[v]);
-            assert(SCIPisGE(scip, solval, 0.0) || SCIPisLE(scip, solval, 1.0));
+            assert(SCIPisFeasGE(scip, solval, 0.0) || SCIPisFeasLE(scip, solval, 1.0));
             sum += solval;
          }
          
@@ -646,82 +646,82 @@ RETCODE branchLP(
    }
    assert(nsortcands <= nlpcands);
 
-   if( nsortcands == 0 )
+   /* if none of the fractional variables is member of a set covering constraint,
+    * we are not responsible for doing the branching
+    */
+   if( nsortcands > 0 )
    {
-      /* none of the fractional variables is member of a set covering constraint
-       * -> we are not responsible for doing the branching
-       */
-      return SCIP_OKAY;
-   }
-
 #if 0
-   /* select the first variables from the sorted candidate list, until MINBRANCHWEIGHT is reached */
-   branchweight = 0.0;
-   for( nselcands = 0; nselcands < nsortcands && branchweight < MINBRANCHWEIGHT; ++nselcands )
-   {
-      CHECK_OKAY( SCIPgetVarSol(scip, sortcands[nselcands], &solval) );
-      assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-      branchweight += solval;
-   }
+      /* select the first variables from the sorted candidate list, until MINBRANCHWEIGHT is reached */
+      branchweight = 0.0;
+      for( nselcands = 0; nselcands < nsortcands && branchweight < MINBRANCHWEIGHT; ++nselcands )
+      {
+         CHECK_OKAY( SCIPgetVarSol(scip, sortcands[nselcands], &solval) );
+         assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
+         branchweight += solval;
+      }
 #else
-   /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached; then choose one less */
-   branchweight = 0.0;
-   for( nselcands = 0; nselcands < nsortcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
-   {
-      solval = SCIPgetVarSol(scip, sortcands[nselcands]);
-      assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-      branchweight += solval;
-   }
-   assert(nselcands > 0);
-   nselcands--;
-   branchweight -= solval;
+      /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
+       * then choose one less
+       */
+      branchweight = 0.0;
+      for( nselcands = 0; nselcands < nsortcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
+      {
+         solval = SCIPgetVarSol(scip, sortcands[nselcands]);
+         assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
+         branchweight += solval;
+      }
+      assert(nselcands > 0);
+      nselcands--;
+      branchweight -= solval;
 #endif
 
-   /* check, if we accumulated at most MAXBRANCHWEIGHT weight */
-   if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
-   {
-      NODE* node;
+      /* check, if we accumulated at most MAXBRANCHWEIGHT weight */
+      if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
+      {
+         NODE* node;
 
-      /* perform the set covering branching on the selected variables */
-      assert(nselcands <= nlpcands);
+         /* perform the set covering branching on the selected variables */
+         assert(nselcands <= nlpcands);
          
-      /* create left child, fix x_i = 0 for all i \in S */
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
-      for( i = 0; i < nselcands; ++i )
-      {
-         CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
-      }
+         /* create left child, fix x_i = 0 for all i \in S */
+         CHECK_OKAY( SCIPcreateChild(scip, &node) );
+         for( i = 0; i < nselcands; ++i )
+         {
+            CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
+         }
 
-      /* create right child: add constraint x(S) >= 1 */
-      CHECK_OKAY( SCIPcreateChild(scip, &node) );
-      if( nselcands == 1 )
-      {
-         /* only one candidate selected: fix it to 1.0 */
-         debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(sortcands[0]));
-         CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[0], 1.0) );
-      }
-      else
-      {
-         CONS* newcons;
-         char name[255];
+         /* create right child: add constraint x(S) >= 1 */
+         CHECK_OKAY( SCIPcreateChild(scip, &node) );
+         if( nselcands == 1 )
+         {
+            /* only one candidate selected: fix it to 1.0 */
+            debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(sortcands[0]));
+            CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[0], 1.0) );
+         }
+         else
+         {
+            CONS* newcons;
+            char name[255];
          
-         /* add constraint x(S) >= 1 */
-         sprintf(name, "SCB%lld", SCIPgetNodenum(scip));
+            /* add constraint x(S) >= 1 */
+            sprintf(name, "SCB%lld", SCIPgetNodenum(scip));
 
-         CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                        TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
-         CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
-         CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
-      }
+            CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
+                           TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
+            CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
+            CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
+         }
       
-      *result = SCIP_BRANCHED;
+         *result = SCIP_BRANCHED;
          
 #ifdef DEBUG
-      debugMessage("set covering branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
-      for( i = 0; i < nselcands; ++i )
-         printf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
-      printf(" }\n");
+         debugMessage("set covering branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
+         for( i = 0; i < nselcands; ++i )
+            printf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
+         printf(" }\n");
 #endif
+      }
    }
 
    /* free temporary memory */
@@ -964,8 +964,8 @@ DECL_CONSENFOPS(consEnfopsSetcover)
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
             solval = SCIPgetSolVal(scip, NULL, vars[v]);
-            assert(SCIPisEQ(scip, solval, 0.0) || SCIPisEQ(scip, solval, 1.0));
-            found = SCIPisEQ(scip, solval, 1.0);
+            assert(SCIPisFeasEQ(scip, solval, 0.0) || SCIPisFeasEQ(scip, solval, 1.0));
+            found = SCIPisFeasEQ(scip, solval, 1.0);
          }
          if( !found )
          {
@@ -1023,8 +1023,8 @@ DECL_CONSCHECK(consCheckSetcover)
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
             solval = SCIPgetSolVal(scip, sol, vars[v]);
-            assert(SCIPisEQ(scip, solval, 0.0) || SCIPisEQ(scip, solval, 1.0));
-            found = SCIPisEQ(scip, solval, 1.0);
+            assert(SCIPisFeasEQ(scip, solval, 0.0) || SCIPisFeasEQ(scip, solval, 1.0));
+            found = SCIPisFeasEQ(scip, solval, 1.0);
          }
          if( !found )
          {

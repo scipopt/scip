@@ -420,7 +420,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPsolve(scip) );
 #endif
 
-#if 0
+#if 1
    printf("\nprimal solution:\n");
    printf("================\n\n");
    CHECK_OKAY( SCIPprintBestSol(scip, NULL) );

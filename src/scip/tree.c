@@ -1300,8 +1300,8 @@ RETCODE treeSwitchPath(
    else
    {
       /* we are in a different subtree: the LP is completely incorrect */
-      assert(tree->actsubroot != NULL);
-      assert(subroot == NULL || !subroot->active || (int)(tree->actsubroot->depth) > subrootdepth);
+      assert(subroot == NULL || !subroot->active
+         || (tree->actsubroot != NULL && (int)(tree->actsubroot->depth) > subrootdepth));
       tree->correctlpdepth = -1;
    }
    debugMessage("switch path: new correctlpdepth=%d\n", tree->correctlpdepth);
@@ -1813,11 +1813,13 @@ RETCODE actnodeToSubroot(
    debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
 
    /* clean up whole LP to keep only necessary columns and rows */
+#if 0
    if( tree->actnode->depth == 0 )
    {
       CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
    }
    else /* ???????????? */
+#endif
    {
       CHECK_OKAY( SCIPlpRemoveAllObsoletes(lp, memhdr, set, stat) );
    }
@@ -2727,7 +2729,7 @@ Real SCIPtreeGetActPseudoobjval(
       if( tree->actpseudoobjvalinf > 0 )
          return -set->infinity;
       else
-         return tree->actnode->lowerbound;
+         return tree->actpseudoobjval;
    }
    else
       return SCIP_INVALID;

@@ -1421,6 +1421,8 @@ blockMemoryDiagnostic(MEMHDR *mem)
 
    printf(" ElSize #Chk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
 
+   assert(mem != NULL);
+
    for( i = 0; i < BLOCKHASH_SIZE; ++i )
    {
       blk = mem->blockhash[i];
@@ -1485,6 +1487,66 @@ blockMemoryDiagnostic(MEMHDR *mem)
    if( allocedMem > 0 )
       printf(" (%.1f%%)", 100.0 * (double) freeMem / (double) allocedMem);
    printf("\n");
+}
+
+void
+blockMemoryCheckEmpty(MEMHDR *mem)
+{
+   BLKHDR *blk;
+   long    allocedMem = 0;
+   long    freeMem = 0;
+   int     i;
+   int     c;
+
+   assert(mem != NULL);
+
+   for( i = 0; i < BLOCKHASH_SIZE; ++i )
+   {
+      blk = mem->blockhash[i];
+      while( blk != NULL )
+      {
+	 CHKHDR *chk;
+	 int     numChunks = 0;
+	 int     numElems = 0;
+	 int     numEagerChunks = 0;
+	 int     numEagerElems = 0;
+
+         for( c = 0; c < blk->numChunks; ++c )
+         {
+            chk = blk->chunkarray[c];
+            assert(chk != NULL);
+	    assert(chk->elemSize == blk->elemSize);
+	    assert(chk->block == blk);
+	    numChunks++;
+	    numElems += chk->storeSize;
+	    if( chk->eagerFree != NULL )
+	    {
+	       numEagerChunks++;
+	       numEagerElems += chk->eagerFreeSize;
+	    }
+	 }
+
+	 assert(numChunks == blk->numChunks);
+	 assert(numElems == blk->storeSize);
+	 assert(numEagerElems == blk->eagerFreeSize);
+
+	 if( numElems > 0 )
+	 {
+	    allocedMem += blk->elemSize * numElems;
+	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
+
+            if( numElems != numEagerElems + blk->lazyFreeSize )
+               printf("%ld bytes (%d elements of size %ld) not freed. First Allocator: %s:%d\n",
+                  (numElems - numEagerElems - blk->lazyFreeSize) * (long) (blk->elemSize),
+                  numElems - numEagerElems - blk->lazyFreeSize, (long) (blk->elemSize),
+                  blk->filename, blk->line);
+	 }
+	 blk = blk->next;
+      }
+   }
+
+   if( allocedMem != freeMem )
+      printf("%ld bytes not freed in total.\n", allocedMem - freeMem);
 }
 
 #endif

@@ -1500,6 +1500,10 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
 
+      /* free the solve block memory */
+#ifndef NDEBUG
+      blockMemoryCheckEmpty(scip->mem->solvemem);
+#endif
       clearBlockMemoryNull(scip->mem->solvemem);
 
       /* reset statistics to the point before solving started */

@@ -172,6 +172,7 @@ typedef struct memory_header MEMHDR;
 #ifndef NDEBUG
 size_t blockMemorySize(MEMHDR *mem, void *ptr);
 void   blockMemoryDiagnostic(MEMHDR *mem);
+void   blockMemoryCheckEmpty(MEMHDR *mem);
 #endif
 
 void   alignMemsize(size_t* size);
@@ -258,6 +259,7 @@ long long getBlockMemoryUsed(MEMHDR *mem);
 #ifndef NDEBUG
 #define blockMemorySize(mem,ptr)             0
 #define blockMemoryDiagnostic(mem)           /**/
+#define blockMemoryCheckEmpty(mem)           /**/
 #endif
 
 

@@ -113,7 +113,7 @@ struct Set
    int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process */
-   int              lpsolvefreq;        /**< frequency for solving LP at the nodes */
+   int              lpsolvefreq;        /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes */
    unsigned int     usepricing:1;       /**< use pricing of variables */
    unsigned int     cleanupcols:1;      /**< should new non-basic columns be removed after LP solving? */

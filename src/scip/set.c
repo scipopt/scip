@@ -58,7 +58,7 @@
 
 /* LP Solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
 #define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
 #define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */
@@ -66,7 +66,7 @@
 
 /* Pricing */
 
-#define SCIP_DEFAULT_USEPRICING      FALSE /**< activate pricing of variables */
+#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS      128 /**< maximal number of variables priced in per pricing round */
 #define SCIP_DEFAULT_MAXPRICEVARSROOT 2048 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
@@ -75,8 +75,8 @@
 
 /* Cut Separation */
 
-#define SCIP_DEFAULT_MAXSEPACUTS       256 /**< maximal number of cuts separated per separation round */
-#define SCIP_DEFAULT_MAXSEPACUTSROOT  4092 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_MAXSEPACUTS       128 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_MAXSEPACUTSROOT  2048 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_CUTAGELIMIT       128 /**< maximum age a cut can reach before it is deleted from global cut pool */
 #define SCIP_DEFAULT_CLEANUPROWS      TRUE /**< should new basic rows be removed after LP solving? */
 

@@ -498,6 +498,7 @@ RETCODE linconsFree(
    }
    assert((*lincons)->eventdatas == NULL);
 
+   SCIPfreeBlockMemoryArray(scip, &(*lincons)->name, strlen((*lincons)->name)+1);
    SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vars, (*lincons)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vals, (*lincons)->varssize);
    SCIPfreeBlockMemory(scip, lincons);
