@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.152 2005/02/16 17:46:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.153 2005/03/09 14:10:04 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2256,7 +2256,7 @@ RETCODE analyzeConflict(
    return SCIP_OKAY;
 }
 
-#define BOUNDSCALETOL 1e-5
+#define BOUNDSCALETOL (1.0/(65536.0))  /* use value that can be represented exactly in powers of 2 */
 /** tightens bounds of a single variable due to activity bounds */
 static
 RETCODE tightenVarBounds(
@@ -2312,11 +2312,13 @@ RETCODE tightenVarBounds(
          Real newub;
 
          newub = (rhs - minresactivity)/val;
+         printf("A rhs: %.9f, minresact: %.9f, val: %.9f -> newub: %.9f\n", rhs, minresactivity, val, newub); /*????????????????*/
          newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+         printf("B rhs: %.9f, minresact: %.9f, val: %.9f -> newub: %.9f\n", rhs, minresactivity, val, newub); /*????????????????*/
          if( SCIPisUbBetter(scip, newub, ub) )
          {
             /* tighten upper bound */
-            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%g\n",
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
             CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
@@ -2349,7 +2351,7 @@ RETCODE tightenVarBounds(
          if( SCIPisLbBetter(scip, newlb, lb) )
          {
             /* tighten lower bound */
-            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
             CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
@@ -2386,7 +2388,7 @@ RETCODE tightenVarBounds(
          if( SCIPisLbBetter(scip, newlb, lb) )
          {
             /* tighten lower bound */
-            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%g\n",
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
             CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
@@ -2419,7 +2421,7 @@ RETCODE tightenVarBounds(
          if( SCIPisUbBetter(scip, newub, ub) )
          {
             /* tighten upper bound */
-            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%g\n",
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
             CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
@@ -4927,7 +4929,7 @@ DECL_CONSPRESOL(consPresolLinear)
             cutoff = TRUE;
             break;
          }
-         else if( SCIPisGE(scip, minactivity, consdata->lhs) && SCIPisLE(scip, maxactivity, consdata->rhs) )
+         else if( SCIPisFeasGE(scip, minactivity, consdata->lhs) && SCIPisFeasLE(scip, maxactivity, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -4937,7 +4939,7 @@ DECL_CONSPRESOL(consPresolLinear)
                (*ndelconss)++;
             break;
          }
-         else if( SCIPisGE(scip, minactivity, consdata->lhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+         else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasGE(scip, minactivity, consdata->lhs) )
          {
             debugMessage("linear constraint <%s> left hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
@@ -4945,7 +4947,7 @@ DECL_CONSPRESOL(consPresolLinear)
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
-         else if( SCIPisLE(scip, maxactivity, consdata->rhs) && !SCIPisInfinity(scip, consdata->rhs) )
+         else if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasLE(scip, maxactivity, consdata->rhs) )
          {
             debugMessage("linear constraint <%s> right hand side is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
