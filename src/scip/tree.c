@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.95 2004/06/01 16:40:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.96 2004/06/02 13:48:58 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2719,6 +2719,7 @@ NODE* SCIPtreeGetLowerboundNode(
 {
    NODE* lowerboundnode;
    Real lowerbound;
+   Real bestprio;
    int i;
 
    assert(tree != NULL);
@@ -2727,15 +2728,20 @@ NODE* SCIPtreeGetLowerboundNode(
    /* get the lower bound from the queue */
    lowerboundnode = SCIPnodepqGetLowerboundNode(tree->leaves, set);
    lowerbound = lowerboundnode != NULL ? lowerboundnode->lowerbound : set->infinity;
+   bestprio = -set->infinity;
 
    /* compare lower bound with children */
    for( i = 0; i < tree->nchildren; ++i )
    {
       assert(tree->children[i] != NULL);
-      if( tree->children[i]->lowerbound < lowerbound )
+      if( SCIPsetIsLE(set, tree->children[i]->lowerbound, lowerbound) )
       {
-         lowerboundnode = tree->children[i]; 
-         lowerbound = lowerboundnode->lowerbound; 
+         if( SCIPsetIsLT(set, tree->children[i]->lowerbound, lowerbound) || tree->childrenprio[i] < bestprio )
+         {
+            lowerboundnode = tree->children[i]; 
+            lowerbound = lowerboundnode->lowerbound; 
+            bestprio = tree->childrenprio[i];
+         }
       }
    }
 
@@ -2743,10 +2749,14 @@ NODE* SCIPtreeGetLowerboundNode(
    for( i = 0; i < tree->nsiblings; ++i )
    {
       assert(tree->siblings[i] != NULL);
-      if( tree->siblings[i]->lowerbound < lowerbound )
+      if( SCIPsetIsLE(set, tree->siblings[i]->lowerbound, lowerbound) )
       {
-         lowerboundnode = tree->siblings[i]; 
-         lowerbound = lowerboundnode->lowerbound; 
+         if( SCIPsetIsLT(set, tree->siblings[i]->lowerbound, lowerbound) || tree->siblingsprio[i] < bestprio )
+         {
+            lowerboundnode = tree->siblings[i]; 
+            lowerbound = lowerboundnode->lowerbound; 
+            bestprio = tree->siblingsprio[i];
+         }
       }
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.95 2004/06/02 08:45:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.96 2004/06/02 13:48:58 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1020,13 +1020,15 @@ RETCODE varCreate(
    assert(memhdr != NULL);
    assert(stat != NULL);
 
-   /* convert [0,1]-integers into binary variables */
-   if( vartype == SCIP_VARTYPE_INTEGER && SCIPsetIsEQ(set, lb, 0.0) && SCIPsetIsEQ(set, ub, 1.0) )
-      vartype = SCIP_VARTYPE_BINARY;
-
    /* adjust bounds of variable */
    lb = adjustedLb(set, vartype, lb);
    ub = adjustedUb(set, vartype, ub);
+
+   /* convert [0,1]-integers into binary variables */
+   if( vartype == SCIP_VARTYPE_INTEGER
+      && (SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0))
+      && (SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0)) )
+      vartype = SCIP_VARTYPE_BINARY;
 
    ALLOC_OKAY( allocBlockMemory(memhdr, var) );
 
@@ -1069,7 +1071,7 @@ RETCODE varCreate(
    (*var)->nuses = 0;
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
-   (*var)->fixdepth = -1;
+   (*var)->fixdepth = SCIPsetIsEQ(set, lb, ub) ? 0 : -1;
    (*var)->fixindex = -1;
    (*var)->conflictsetcount = 0;
    (*var)->boundchgtype = SCIP_BOUNDCHGTYPE_BRANCHING;
@@ -1793,7 +1795,6 @@ RETCODE SCIPvarTransform(
    )
 {
    char name[MAXSTRLEN];
-   VARTYPE vartype;
 
    assert(origvar != NULL);
    assert(SCIPvarGetStatus(origvar) == SCIP_VARSTATUS_ORIGINAL);
@@ -1811,17 +1812,11 @@ RETCODE SCIPvarTransform(
    }
    else
    {
-      /* convert 0/1 integer variables into binary variables */
-      vartype = SCIPvarGetType(origvar);
-      if( vartype == SCIP_VARTYPE_INTEGER
-         && SCIPsetIsEQ(set, origvar->glbdom.lb, 0.0) && SCIPsetIsEQ(set, origvar->glbdom.ub, 1.0) )
-         vartype = SCIP_VARTYPE_BINARY;
-      
       /* create transformed variable */
       sprintf(name, "t_%s", origvar->name);
       CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat, name,
                      origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
-                     vartype, origvar->initial, origvar->removeable,
+                     origvar->vartype, origvar->initial, origvar->removeable,
                      NULL, NULL, origvar->vardeltrans, origvar->vardata) );
       
       /* copy the branch factor and priority */
@@ -5166,16 +5161,20 @@ int SCIPvarGetFixDepth(
    )
 {
    assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_FIXED || (var->fixdepth == 0 && var->fixindex == -1));
 
    return var->fixdepth;
 }
 
-/** gets fixing index of the variable in the depth level, where the binary variable was fixed, or -1 if unfixed */
+/** gets fixing index of the variable in the depth level, where the binary variable was fixed, or -1 if unfixed or
+ *  fixed during preprocessing
+ */
 int SCIPvarGetFixIndex(
    VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_FIXED || (var->fixdepth == 0 && var->fixindex == -1));
 
    return var->fixindex;
 }
@@ -5188,6 +5187,8 @@ Bool SCIPvarWasFixedEarlier(
 {
    assert(var1 != NULL);
    assert(var2 != NULL);
+   assert(var1->varstatus != SCIP_VARSTATUS_FIXED || (var1->fixdepth == 0 && var1->fixindex == -1));
+   assert(var2->varstatus != SCIP_VARSTATUS_FIXED || (var2->fixdepth == 0 && var2->fixindex == -1));
 
    return (var1->fixdepth >= 0
       && (var2->fixdepth == -1
