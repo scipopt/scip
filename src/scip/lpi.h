@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.41 2004/09/29 19:17:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.42 2004/10/05 09:00:54 bzfpfets Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -369,7 +369,8 @@ RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 extern 
 RETCODE SCIPlpiSolveBarrier(
-   LPI*             lpi                 /**< LP interface structure */
+   LPI*             lpi,                 /**< LP interface structure */
+   Bool             crossover            /**< perform crossover */
    );
 
 /** performs strong branching iterations on all candidates */
