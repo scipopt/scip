@@ -87,7 +87,8 @@ struct LinCons
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the linear constraint data belongs to the transformed problem? */
    unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
-   unsigned int     changed:1;          /**< was constraint changed since last preprocess/propagate call? */
+   unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
+   unsigned int     redchecked:1;       /**< is constraint already checked for redundancy with other constraints? */
    unsigned int     sorted:1;           /**< are the constraint's variables sorted? */
 };
 
@@ -603,7 +604,8 @@ RETCODE linconsCreate(
    (*lincons)->removeable = removeable;
    (*lincons)->transformed = FALSE;
    (*lincons)->validactivities = FALSE;
-   (*lincons)->changed = TRUE;
+   (*lincons)->propagated = FALSE;
+   (*lincons)->redchecked = FALSE;
    (*lincons)->sorted = (nvars <= 1);
    
    return SCIP_OKAY;
@@ -885,7 +887,8 @@ RETCODE linconsAddCoef(
       linconsUpdateAddCoef(scip, lincons, var, val);
    }
 
-   lincons->changed = TRUE;
+   lincons->propagated = FALSE;
+   lincons->redchecked = FALSE;
    if( lincons->nvars == 1 )
       lincons->sorted = TRUE;
    else
@@ -935,7 +938,8 @@ RETCODE linconsDelCoefPos(
    }
    lincons->nvars--;
 
-   lincons->changed = TRUE;
+   lincons->propagated = FALSE;
+   lincons->redchecked = FALSE;
 
    return SCIP_OKAY;
 }
@@ -978,7 +982,8 @@ RETCODE linconsChgCoefPos(
    /* change the value */
    lincons->vals[pos] = newval;
 
-   lincons->changed = TRUE;
+   lincons->propagated = FALSE;
+   lincons->redchecked = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1537,7 +1542,8 @@ void linconsChgLhs(
 
    /* set new left hand side */
    lincons->lhs = lhs;
-   lincons->changed = TRUE;
+   lincons->propagated = FALSE;
+   lincons->redchecked = FALSE;
 }
 
 /** sets right hand side of linear constraint */
@@ -1606,7 +1612,8 @@ void linconsChgRhs(
 
    /* set new right hand side */
    lincons->rhs = rhs;
-   lincons->changed = TRUE;
+   lincons->propagated = FALSE;
+   lincons->redchecked = FALSE;
 }
 
 /** prints linear constraint to file stream */
@@ -1746,6 +1753,22 @@ RETCODE linconsSort(
 /*
  * local linear constraint handler methods
  */
+
+/* gets linear constraint data from constraint object */
+static
+LINCONS* consGetLincons(
+   CONS*            cons                /**< linear constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->lincons != NULL);
+
+   return consdata->lincons;
+}
 
 /** checks linear constraint for feasibility of given solution or actual pseudo solution */
 static
@@ -2084,7 +2107,6 @@ DECL_CONSPROP(consPropLinear)
 {
    CONSHDLRDATA* conshdlrdata;
    CONS* cons;
-   CONSDATA* consdata;
    LINCONS* lincons;
    Real minactivity;
    Real maxactivity;
@@ -2116,13 +2138,9 @@ DECL_CONSPROP(consPropLinear)
    for( c = 0; c < nusefulconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
-      assert(cons != NULL);
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-      lincons = consdata->lincons;
-      assert(lincons != NULL);
+      lincons = consGetLincons(cons);
 
-      if( !lincons->changed )
+      if( lincons->propagated )
          continue;
 
       /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
@@ -2168,7 +2186,7 @@ DECL_CONSPROP(consPropLinear)
          }
       }
 
-      lincons->changed = FALSE;
+      lincons->propagated = TRUE;
    }
    debugMessage("linear constraint propagator tightened %d bounds\n", nchgbds);
 
@@ -2315,7 +2333,6 @@ RETCODE linconsPresolTightenSides(
    Bool*            conschanged         /**< pointer to store TRUE, if changes were made to the constraint */
    )
 {
-   CONSDATA* consdata;
    LINCONS* lincons;
    Bool integral;
    int i;
@@ -2323,10 +2340,7 @@ RETCODE linconsPresolTightenSides(
    assert(nchgsides != NULL);
    assert(conschanged != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   lincons = consdata->lincons;
-   assert(lincons != NULL);
+   lincons = consGetLincons(cons);
 
    if( !SCIPisIntegral(scip, lincons->lhs) || !SCIPisIntegral(scip, lincons->rhs) )
    {
@@ -2381,10 +2395,7 @@ RETCODE linconsConvertEquality(
    assert(conschanged != NULL);
    assert(consdeleted != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   lincons = consdata->lincons;
-   assert(lincons != NULL);
+   lincons = consGetLincons(cons);
 
    if( SCIPisEQ(scip, lincons->lhs, lincons->rhs) )
    {
@@ -2837,8 +2848,6 @@ RETCODE linconsAggregateEqualities(
    Bool*            aggregated          /**< pointer to store whether an aggregation was made */
    )
 {
-   CONSDATA* consdata0;
-   CONSDATA* consdata1;
    LINCONS* lincons0;
    LINCONS* lincons1;
    VAR* var;
@@ -2863,21 +2872,14 @@ RETCODE linconsAggregateEqualities(
    assert(result != NULL);
    assert(aggregated != NULL);
 
-   assert(cons0 != NULL);
    assert(SCIPconsIsActive(cons0));
-   consdata0 = SCIPconsGetData(cons0);
-   assert(consdata0 != NULL);
-   lincons0 = consdata0->lincons;
-   assert(lincons0 != NULL);
+   assert(SCIPconsIsActive(cons1));
+
+   lincons0 = consGetLincons(cons0);
    assert(lincons0->nvars >= 1);
    assert(SCIPisEQ(scip, lincons0->lhs, lincons0->rhs));
    
-   assert(cons1 != NULL);
-   assert(SCIPconsIsActive(cons1));
-   consdata1 = SCIPconsGetData(cons1);
-   assert(consdata1 != NULL);
-   lincons1 = consdata1->lincons;
-   assert(lincons1 != NULL);
+   lincons1 = consGetLincons(cons1);
    assert(lincons1->nvars >= 1);
    assert(SCIPisEQ(scip, lincons1->lhs, lincons1->rhs));
 
@@ -3027,7 +3029,7 @@ static
 RETCODE linconsRemoveRedundancy(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< constraint set */
-   int              startind,           /**< starting index of constraints to be checked */
+   int              firstredcheck,      /**< first constraint that changed since last redundancy check */
    int              chkind,             /**< index of constraint to check against all prior indices upto startind */
    int*             nfixedvars,         /**< pointer to count number of fixed variables */
    int*             naggrvars,          /**< pointer to count number of aggregated variables */
@@ -3039,8 +3041,6 @@ RETCODE linconsRemoveRedundancy(
 {
    CONS* cons0;
    CONS* cons1;
-   CONSDATA* consdata0;
-   CONSDATA* consdata1;
    LINCONS* lincons0;
    LINCONS* lincons1;
    VAR* var;
@@ -3066,7 +3066,7 @@ RETCODE linconsRemoveRedundancy(
    int v1;
 
    assert(conss != NULL);
-   assert(startind <= chkind);
+   assert(firstredcheck <= chkind);
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(ndelconss != NULL);
@@ -3075,12 +3075,9 @@ RETCODE linconsRemoveRedundancy(
 
    /* get the constraint to be checked for redundancy */
    cons0 = conss[chkind];
-   assert(cons0 != NULL);
    assert(SCIPconsIsActive(cons0));
-   consdata0 = SCIPconsGetData(cons0);
-   assert(consdata0 != NULL);
-   lincons0 = consdata0->lincons;
-   assert(lincons0 != NULL);
+
+   lincons0 = consGetLincons(cons0);
    assert(lincons0->nvars >= 1);
    cons0isequality = SCIPisEQ(scip, lincons0->lhs, lincons0->rhs);
 
@@ -3095,20 +3092,24 @@ RETCODE linconsRemoveRedundancy(
    diffidx1minus0size = lincons0->nvars;
 
    /* check constraint against all prior constraints */
-   for( c = startind; c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0); ++c )
+   for( c = (lincons0->redchecked ? firstredcheck : 0); c < chkind && *result != SCIP_CUTOFF && SCIPconsIsActive(cons0);
+        ++c )
    {
       cons1 = conss[c];
       assert(cons1 != NULL);
 
+      /* ignore inactive constraints */
       if( !SCIPconsIsActive(cons1) )
          continue;
 
-      consdata1 = SCIPconsGetData(cons1);
-      assert(consdata1 != NULL);
-      lincons1 = consdata1->lincons;
-      assert(lincons1 != NULL);
+      lincons1 = consGetLincons(cons1);
       assert(lincons1->sorted);
       assert(lincons1->nvars >= 1);
+
+      /* if both constraints didn't change since last redundancy check, we can ignore the pair */
+      if( lincons0->redchecked && lincons1->redchecked )
+         continue;
+
       cons1isequality = SCIPisEQ(scip, lincons1->lhs, lincons1->rhs);
       
       /* make sure, we have enough memory for the index set of V_1 \ V_0 */
@@ -3366,7 +3367,6 @@ DECL_CONSPRESOL(consPresolLinear)
 {
    CONS* cons;
    CONS* upgdcons;
-   CONSDATA* consdata;
    LINCONS* lincons;
    Real minactivity;
    Real maxactivity;
@@ -3375,7 +3375,7 @@ DECL_CONSPRESOL(consPresolLinear)
    Bool conschanged;
    int oldnfixedvars;
    int oldnaggrvars;
-   int firstchange;
+   int firstredcheck;
    int c;
 
    assert(conshdlr != NULL);
@@ -3390,25 +3390,21 @@ DECL_CONSPRESOL(consPresolLinear)
    /* process constraints */
    oldnfixedvars = *nfixedvars;
    oldnaggrvars = *naggrvars;
-   firstchange = -1;
+   firstredcheck = -1;
    for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
    {
       cons = conss[c];
-      assert(cons != NULL);
-      consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-      lincons = consdata->lincons;
-      assert(lincons != NULL);
+      lincons = consGetLincons(cons);
 
-      if( !lincons->changed )
+      /* remember the first constraint that must be checked for redundancy */
+      if( firstredcheck == -1 && !lincons->redchecked )
+         firstredcheck = c;
+
+      if( lincons->propagated )
          continue;
 
       debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
       debug(linconsPrint(scip, lincons, NULL));
-
-      /* remember the first constraint that has been changed (needed for redundancy checking) */
-      if( firstchange == -1 )
-         firstchange = c;
 
       consdeleted = FALSE;
       conschanged = FALSE;
@@ -3522,23 +3518,28 @@ DECL_CONSPRESOL(consPresolLinear)
          }
       }
 
-      lincons->changed = FALSE;
+      lincons->propagated = TRUE;
    }
 
    /* redundancy checking */
-   if( *result != SCIP_CUTOFF && firstchange != -1 )
+   if( *result != SCIP_CUTOFF && firstredcheck != -1 )
    {
-      for( c = firstchange; c < nconss; ++c )
+      for( c = firstredcheck; c < nconss; ++c )
       {
          if( SCIPconsIsActive(conss[c]) )
          {
-            CHECK_OKAY( linconsRemoveRedundancy(scip, conss, firstchange, c,
+            CHECK_OKAY( linconsRemoveRedundancy(scip, conss, firstredcheck, c,
                            nfixedvars, naggrvars, ndelconss, nchgsides, nchgcoefs, result) );
          }
       }
+      for( c = firstredcheck; c < nconss; ++c )
+      {
+         lincons = consGetLincons(conss[c]);
+         lincons->redchecked = TRUE;
+      }
    }
 
-   /* modifiy the result code */
+   /* modify the result code */
    if( *result == SCIP_REDUCEDDOM )
       *result = SCIP_SUCCESS;
 
@@ -3593,7 +3594,7 @@ DECL_EVENTEXEC(eventExecLinear)
       linconsUpdateChgUb(scip, lincons, var, oldbound, newbound, lincons->vals[varpos]);
    }
 
-   lincons->changed = TRUE;
+   lincons->propagated = FALSE;
 
    /*debug(printf(" -> [%g,%g]\n", linconsdata->minactivity, linconsdata->maxactivity));*/
 
