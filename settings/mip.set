@@ -19,35 +19,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
+# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
+# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -256,7 +256,7 @@ constraints/linear/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
-constraints/linear/propfreq = 1
+constraints/linear/propfreq = 10
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -339,7 +339,7 @@ constraints/integral/eagerfreq = -1
 constraints/integral/maxprerounds = -1
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
+# [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
@@ -353,6 +353,10 @@ constraints/knapsack/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/knapsack/maxprerounds = -1
+
+# multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/knapsack/sepacardfreq = 10
 
 # maximal number of separation rounds per node
 # [type: int, range: [0,2147483647], default: 5]
@@ -448,7 +452,7 @@ constraints/varbound/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-constraints/varbound/propfreq = 1
+constraints/varbound/propfreq = 10
 
 # frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -636,7 +640,7 @@ heuristics/coefdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
 # [type: real, range: [0,1], default: 0.02]
-heuristics/coefdiving/maxlpiterquot = 0.2
+heuristics/coefdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -716,7 +720,7 @@ heuristics/fracdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
 # [type: real, range: [0,1], default: 0.02]
-heuristics/fracdiving/maxlpiterquot = 0.2
+heuristics/fracdiving/maxlpiterquot = 0.02
 
 # maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
 # [type: real, range: [0,1], default: 0.8]
@@ -760,7 +764,7 @@ heuristics/objpscostdiving/maxreldepth = 1
 
 # maximal fraction of diving LP iterations compared to total iteration number
 # [type: real, range: [0,1], default: 0.01]
-heuristics/objpscostdiving/maxlpiterquot = 0.02
+heuristics/objpscostdiving/maxlpiterquot = 0.01
 
 # maximal diving depth: number of binary/integer variables times depthfac
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
