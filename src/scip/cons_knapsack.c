@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.55 2004/07/08 10:27:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.56 2004/07/08 13:01:53 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1407,6 +1407,7 @@ DECL_CONSSEPA(consSepaKnapsack)
    int depth;
    int nrounds;
    int sepafreq;
+   int sepacardfreq;
    int ncuts;
    int maxsepacuts;
    int i;
@@ -1429,8 +1430,9 @@ DECL_CONSSEPA(consSepaKnapsack)
 
    /* check, if we should additionally separate cardinality cuts */
    sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
-   sepacardinality = (conshdlrdata->sepacardfreq == 0 && depth == 0)
-      || (conshdlrdata->sepacardfreq >= 1 && (depth % (sepafreq * conshdlrdata->sepacardfreq) == 0));
+   sepacardfreq = sepafreq * conshdlrdata->sepacardfreq;
+   sepacardinality = (conshdlrdata->sepacardfreq >= 0)
+      && ((sepacardfreq == 0 && depth == 0) || (sepacardfreq >= 1 && (depth % sepacardfreq == 0)));
 
    /* get the maximal number of cuts allowed in a separation round */
    maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);

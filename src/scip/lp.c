@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.126 2004/07/07 18:06:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.127 2004/07/08 13:01:54 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7016,11 +7016,12 @@ RETCODE SCIPlpSolve(
    )
 {
    assert(lp != NULL);
+   assert(lperror != NULL);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( SCIPlpFlush(lp, memhdr, set) );
    fastmip = fastmip && !lp->flushaddedcols && !lp->flushdeletedcols; /* turn off FASTMIP if columns were changed */
-
+   
    /* select simplex method */
    if( lp->dualfeasible || !lp->primalfeasible )
    {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.109 2004/07/07 11:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.110 2004/07/08 13:01:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -99,6 +99,7 @@ struct ConsData
    unsigned int     validmaxabsval:1;   /**< is the maximum absolute value valid? */
    unsigned int     validactivities:1;  /**< are the pseudo activity and activity bounds valid? */
    unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
+   unsigned int     boundstightened:1;  /**< is constraint already preprocessed/propagated with bound tightening? */
    unsigned int     changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
    unsigned int     normalized:1;       /**< is the constraint in normalized form? */
    unsigned int     upgraded:1;         /**< is the constraint upgraded and will it be removed after preprocessing? */
@@ -598,6 +599,7 @@ RETCODE consdataCreate(
    (*consdata)->validmaxabsval = FALSE;
    (*consdata)->validactivities = FALSE;
    (*consdata)->propagated = FALSE;
+   (*consdata)->boundstightened = FALSE;
    (*consdata)->changed = TRUE;
    (*consdata)->normalized = FALSE;
    (*consdata)->upgraded = FALSE;
@@ -1536,6 +1538,7 @@ RETCODE chgLhs(
    /* set new left hand side */
    consdata->lhs = lhs;
    consdata->propagated = FALSE;
+   consdata->boundstightened = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
 
@@ -1617,6 +1620,7 @@ RETCODE chgRhs(
    /* set new right hand side */
    consdata->rhs = rhs;
    consdata->propagated = FALSE;
+   consdata->boundstightened = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
 
@@ -1693,6 +1697,7 @@ RETCODE addCoef(
    }
 
    consdata->propagated = FALSE;
+   consdata->boundstightened = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    if( consdata->nvars == 1 )
@@ -1777,6 +1782,7 @@ RETCODE delCoefPos(
    consdata->nvars--;
 
    consdata->propagated = FALSE;
+   consdata->boundstightened = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
 
@@ -1826,6 +1832,7 @@ RETCODE chgCoefPos(
    consdata->vals[pos] = newval;
 
    consdata->propagated = FALSE;
+   consdata->boundstightened = FALSE;
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
 
@@ -2715,7 +2722,7 @@ RETCODE propagateCons(
    *cutoff = FALSE;
 
    /* check, if constraint is already propagated */
-   if( consdata->propagated )
+   if( consdata->propagated && (!tightenbounds || consdata->boundstightened) )
       return SCIP_OKAY;
 
    /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
@@ -2735,6 +2742,7 @@ RETCODE propagateCons(
          {
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          }            
+         consdata->boundstightened = TRUE;
       }
       
       /* check constraint for infeasibility and redundancy */
@@ -3118,6 +3126,7 @@ DECL_CONSPROP(consPropLinear)
    Bool cutoff;
    int nchgbds;
    int propfreq;
+   int tightenboundsfreq;
    int depth;
    int c;
 
@@ -3130,10 +3139,11 @@ DECL_CONSPROP(consPropLinear)
    /* check, if we want to tighten variable's bounds */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-   propfreq = SCIPconshdlrGetPropFreq(conshdlr);
    depth = SCIPgetDepth(scip);
-   tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && depth == 0)
-      || (conshdlrdata->tightenboundsfreq >= 1 && (depth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
+   propfreq = SCIPconshdlrGetPropFreq(conshdlr);
+   tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
+   tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
+      && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
 
    cutoff = FALSE;
    nchgbds = 0;
@@ -4530,6 +4540,7 @@ DECL_CONSPRESOL(consPresolLinear)
       {
          /* mark constraint being propagated/preprocessed */
          consdata->propagated = TRUE;
+         consdata->boundstightened = TRUE;
 
          /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving round
           * to help detecting redundancy of other linear constraints, but we want to keep equalities until the end of
@@ -4820,6 +4831,7 @@ DECL_EVENTEXEC(eventExecLinear)
    }
 
    consdata->propagated = FALSE;
+   consdata->boundstightened = FALSE;
 
    /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
 
