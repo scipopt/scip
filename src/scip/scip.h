@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.187 2004/11/30 16:23:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.188 2004/12/06 14:11:23 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4391,49 +4391,57 @@ Bool SCIPisInfinity(
 extern
 Bool SCIPisZero(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is greater than epsilon */
 extern
 Bool SCIPisPositive(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is lower than -epsilon */
 extern
 Bool SCIPisNegative(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is integral within epsilon */
 extern
 Bool SCIPisIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
+   );
+
+/** checks whether the product val * scalar is integral in epsilon scaled by scalar */
+extern
+Bool SCIPisScalingIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val,                /**< unscaled value to check for scaled integrality */
+   Real             scalar              /**< value to scale val with for checking for integrality */
    );
 
 /** checks, if given fractional part is smaller than epsilon */
 extern
 Bool SCIPisFracIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** rounds value + epsilon down to the next integer */
 extern
 Real SCIPfloor(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** rounds value - epsilon up to the next integer */
 extern
 Real SCIPceil(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
@@ -4487,21 +4495,21 @@ Bool SCIPisSumGE(
 extern
 Bool SCIPisSumZero(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is greater than sumepsilon */
 extern
 Bool SCIPisSumPositive(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is lower than -sumepsilon */
 extern
 Bool SCIPisSumNegative(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if values are in range of feasibility tolerance */
@@ -4548,56 +4556,56 @@ Bool SCIPisFeasGE(
 extern
 Bool SCIPisFeasZero(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is greater than feasibility tolerance */
 extern
 Bool SCIPisFeasPositive(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is lower than -feasibility tolerance */
 extern
 Bool SCIPisFeasNegative(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if value is integral within the LP feasibility bounds */
 extern
 Bool SCIPisFeasIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if given fractional part is smaller than feastol */
 extern
 Bool SCIPisFeasFracIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** rounds value + feasibility tolerance down to the next integer */
 extern
 Real SCIPfeasFloor(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** rounds value - feasibility tolerance up to the next integer */
 extern
 Real SCIPfeasCeil(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    );
 
 /** returns fractional part of value, i.e. x - floor(x) */
 extern
 Real SCIPfeasFrac(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to return fractional part for */
+   Real             val                 /**< value to process */
    );
 
 /** checks, if the first given lower bound is tighter (w.r.t. bound strengthening epsilon) than the second one */
@@ -4702,59 +4710,60 @@ Bool SCIPisSumRelGE(
  * speed up the algorithms.
  */
 
-#define SCIPisInfinity(scip, val)        SCIPsetIsInfinity((scip)->set, val)        
-#define SCIPisEQ(scip, val1, val2)       SCIPsetIsEQ((scip)->set, val1, val2)       
-#define SCIPisLT(scip, val1, val2)       SCIPsetIsLT((scip)->set, val1, val2)       
-#define SCIPisLE(scip, val1, val2)       SCIPsetIsLE((scip)->set, val1, val2)       
-#define SCIPisGT(scip, val1, val2)       SCIPsetIsGT((scip)->set, val1, val2)       
-#define SCIPisGE(scip, val1, val2)       SCIPsetIsGE((scip)->set, val1, val2)       
-#define SCIPisZero(scip, val)            SCIPsetIsZero((scip)->set, val)            
-#define SCIPisPositive(scip, val)        SCIPsetIsPositive((scip)->set, val)        
-#define SCIPisNegative(scip, val)        SCIPsetIsNegative((scip)->set, val)        
-#define SCIPisIntegral(scip, val)        SCIPsetIsIntegral((scip)->set, val)
-#define SCIPisFracIntegral(scip, val)    SCIPsetIsFracIntegral((scip)->set, val)
-#define SCIPfloor(scip, val)             SCIPsetFloor((scip)->set, val)
-#define SCIPceil(scip, val)              SCIPsetCeil((scip)->set, val)
-#define SCIPfrac(scip, val)              SCIPsetFrac((scip)->set, val)
+#define SCIPisInfinity(scip, val)                 SCIPsetIsInfinity((scip)->set, val)        
+#define SCIPisEQ(scip, val1, val2)                SCIPsetIsEQ((scip)->set, val1, val2)       
+#define SCIPisLT(scip, val1, val2)                SCIPsetIsLT((scip)->set, val1, val2)       
+#define SCIPisLE(scip, val1, val2)                SCIPsetIsLE((scip)->set, val1, val2)       
+#define SCIPisGT(scip, val1, val2)                SCIPsetIsGT((scip)->set, val1, val2)       
+#define SCIPisGE(scip, val1, val2)                SCIPsetIsGE((scip)->set, val1, val2)       
+#define SCIPisZero(scip, val)                     SCIPsetIsZero((scip)->set, val)            
+#define SCIPisPositive(scip, val)                 SCIPsetIsPositive((scip)->set, val)        
+#define SCIPisNegative(scip, val)                 SCIPsetIsNegative((scip)->set, val)        
+#define SCIPisIntegral(scip, val)                 SCIPsetIsIntegral((scip)->set, val)
+#define SCIPisScalingIntegral(scip, val, scalar)  SCIPsetIsScalingIntegral((scip)->set, val, scalar)
+#define SCIPisFracIntegral(scip, val)             SCIPsetIsFracIntegral((scip)->set, val)
+#define SCIPfloor(scip, val)                      SCIPsetFloor((scip)->set, val)
+#define SCIPceil(scip, val)                       SCIPsetCeil((scip)->set, val)
+#define SCIPfrac(scip, val)                       SCIPsetFrac((scip)->set, val)
                                                                            
-#define SCIPisSumEQ(scip, val1, val2)    SCIPsetIsSumEQ((scip)->set, val1, val2)    
-#define SCIPisSumLT(scip, val1, val2)    SCIPsetIsSumLT((scip)->set, val1, val2)    
-#define SCIPisSumLE(scip, val1, val2)    SCIPsetIsSumLE((scip)->set, val1, val2)    
-#define SCIPisSumGT(scip, val1, val2)    SCIPsetIsSumGT((scip)->set, val1, val2)    
-#define SCIPisSumGE(scip, val1, val2)    SCIPsetIsSumGE((scip)->set, val1, val2)    
-#define SCIPisSumZero(scip, val)         SCIPsetIsSumZero((scip)->set, val)         
-#define SCIPisSumPositive(scip, val)     SCIPsetIsSumPositive((scip)->set, val)     
-#define SCIPisSumNegative(scip, val)     SCIPsetIsSumNegative((scip)->set, val)     
+#define SCIPisSumEQ(scip, val1, val2)             SCIPsetIsSumEQ((scip)->set, val1, val2)    
+#define SCIPisSumLT(scip, val1, val2)             SCIPsetIsSumLT((scip)->set, val1, val2)    
+#define SCIPisSumLE(scip, val1, val2)             SCIPsetIsSumLE((scip)->set, val1, val2)    
+#define SCIPisSumGT(scip, val1, val2)             SCIPsetIsSumGT((scip)->set, val1, val2)    
+#define SCIPisSumGE(scip, val1, val2)             SCIPsetIsSumGE((scip)->set, val1, val2)    
+#define SCIPisSumZero(scip, val)                  SCIPsetIsSumZero((scip)->set, val)         
+#define SCIPisSumPositive(scip, val)              SCIPsetIsSumPositive((scip)->set, val)     
+#define SCIPisSumNegative(scip, val)              SCIPsetIsSumNegative((scip)->set, val)     
                                                                            
-#define SCIPisFeasEQ(scip, val1, val2)   SCIPsetIsFeasEQ((scip)->set, val1, val2)   
-#define SCIPisFeasLT(scip, val1, val2)   SCIPsetIsFeasLT((scip)->set, val1, val2)   
-#define SCIPisFeasLE(scip, val1, val2)   SCIPsetIsFeasLE((scip)->set, val1, val2)   
-#define SCIPisFeasGT(scip, val1, val2)   SCIPsetIsFeasGT((scip)->set, val1, val2)   
-#define SCIPisFeasGE(scip, val1, val2)   SCIPsetIsFeasGE((scip)->set, val1, val2)   
-#define SCIPisFeasZero(scip, val)        SCIPsetIsFeasZero((scip)->set, val)        
-#define SCIPisFeasPositive(scip, val)    SCIPsetIsFeasPositive((scip)->set, val)    
-#define SCIPisFeasNegative(scip, val)    SCIPsetIsFeasNegative((scip)->set, val)    
-#define SCIPisFeasIntegral(scip, val)    SCIPsetIsFeasIntegral((scip)->set, val)
-#define SCIPisFeasFracIntegral(scip, val) SCIPsetIsFeasFracIntegral((scip)->set, val)
-#define SCIPfeasFloor(scip, val)         SCIPsetFeasFloor((scip)->set, val)
-#define SCIPfeasCeil(scip, val)          SCIPsetFeasCeil((scip)->set, val)
-#define SCIPfeasFrac(scip, val)          SCIPsetFeasFrac((scip)->set, val)
+#define SCIPisFeasEQ(scip, val1, val2)            SCIPsetIsFeasEQ((scip)->set, val1, val2)   
+#define SCIPisFeasLT(scip, val1, val2)            SCIPsetIsFeasLT((scip)->set, val1, val2)   
+#define SCIPisFeasLE(scip, val1, val2)            SCIPsetIsFeasLE((scip)->set, val1, val2)   
+#define SCIPisFeasGT(scip, val1, val2)            SCIPsetIsFeasGT((scip)->set, val1, val2)   
+#define SCIPisFeasGE(scip, val1, val2)            SCIPsetIsFeasGE((scip)->set, val1, val2)   
+#define SCIPisFeasZero(scip, val)                 SCIPsetIsFeasZero((scip)->set, val)        
+#define SCIPisFeasPositive(scip, val)             SCIPsetIsFeasPositive((scip)->set, val)    
+#define SCIPisFeasNegative(scip, val)             SCIPsetIsFeasNegative((scip)->set, val)    
+#define SCIPisFeasIntegral(scip, val)             SCIPsetIsFeasIntegral((scip)->set, val)
+#define SCIPisFeasFracIntegral(scip, val)         SCIPsetIsFeasFracIntegral((scip)->set, val)
+#define SCIPfeasFloor(scip, val)                  SCIPsetFeasFloor((scip)->set, val)
+#define SCIPfeasCeil(scip, val)                   SCIPsetFeasCeil((scip)->set, val)
+#define SCIPfeasFrac(scip, val)                   SCIPsetFeasFrac((scip)->set, val)
 
                                                                            
-#define SCIPisLbBetter(scip, lb1, lb2)   SCIPsetIsLbBetter(scip->set, lb1, lb2)
-#define SCIPisUbBetter(scip, ub1, ub2)   SCIPsetIsUbBetter(scip->set, ub1, ub2)
+#define SCIPisLbBetter(scip, lb1, lb2)            SCIPsetIsLbBetter(scip->set, lb1, lb2)
+#define SCIPisUbBetter(scip, ub1, ub2)            SCIPsetIsUbBetter(scip->set, ub1, ub2)
                                                                            
-#define SCIPisRelEQ(scip, val1, val2)    SCIPsetIsRelEQ((scip)->set, val1, val2)    
-#define SCIPisRelLT(scip, val1, val2)    SCIPsetIsRelLT((scip)->set, val1, val2)    
-#define SCIPisRelLE(scip, val1, val2)    SCIPsetIsRelLE((scip)->set, val1, val2)    
-#define SCIPisRelGT(scip, val1, val2)    SCIPsetIsRelGT((scip)->set, val1, val2)    
-#define SCIPisRelGE(scip, val1, val2)    SCIPsetIsRelGE((scip)->set, val1, val2)    
+#define SCIPisRelEQ(scip, val1, val2)             SCIPsetIsRelEQ((scip)->set, val1, val2)    
+#define SCIPisRelLT(scip, val1, val2)             SCIPsetIsRelLT((scip)->set, val1, val2)    
+#define SCIPisRelLE(scip, val1, val2)             SCIPsetIsRelLE((scip)->set, val1, val2)    
+#define SCIPisRelGT(scip, val1, val2)             SCIPsetIsRelGT((scip)->set, val1, val2)    
+#define SCIPisRelGE(scip, val1, val2)             SCIPsetIsRelGE((scip)->set, val1, val2)    
                                                                            
-#define SCIPisSumRelEQ(scip, val1, val2) SCIPsetIsSumRelEQ((scip)->set, val1, val2) 
-#define SCIPisSumRelLT(scip, val1, val2) SCIPsetIsSumRelLT((scip)->set, val1, val2) 
-#define SCIPisSumRelLE(scip, val1, val2) SCIPsetIsSumRelLE((scip)->set, val1, val2) 
-#define SCIPisSumRelGT(scip, val1, val2) SCIPsetIsSumRelGT((scip)->set, val1, val2) 
-#define SCIPisSumRelGE(scip, val1, val2) SCIPsetIsSumRelGE((scip)->set, val1, val2) 
+#define SCIPisSumRelEQ(scip, val1, val2)          SCIPsetIsSumRelEQ((scip)->set, val1, val2) 
+#define SCIPisSumRelLT(scip, val1, val2)          SCIPsetIsSumRelLT((scip)->set, val1, val2) 
+#define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2) 
+#define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2) 
+#define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2) 
                                                                            
 #endif
 

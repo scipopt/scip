@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.124 2004/11/29 12:17:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.125 2004/12/06 14:11:23 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2391,7 +2391,7 @@ Real SCIPsetInfinity(
 /** checks, if value is in range epsilon of 0.0 */
 Bool SCIPsetIsZero(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2402,7 +2402,7 @@ Bool SCIPsetIsZero(
 /** checks, if value is greater than epsilon */
 Bool SCIPsetIsPositive(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2413,7 +2413,7 @@ Bool SCIPsetIsPositive(
 /** checks, if value is lower than -epsilon */
 Bool SCIPsetIsNegative(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2424,7 +2424,7 @@ Bool SCIPsetIsNegative(
 /** checks, if value is integral within epsilon */
 Bool SCIPsetIsIntegral(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2432,10 +2432,28 @@ Bool SCIPsetIsIntegral(
    return EPSISINT(val, set->num_epsilon);
 }
 
+/** checks whether the product val * scalar is integral in epsilon scaled by scalar */
+Bool SCIPsetIsScalingIntegral(
+   SET*             set,                /**< global SCIP settings */
+   Real             val,                /**< unscaled value to check for scaled integrality */
+   Real             scalar              /**< value to scale val with for checking for integrality */
+   )
+{
+   Real scaledeps;
+   
+   assert(set != NULL);
+   
+   scaledeps = REALABS(scalar);
+   scaledeps = MIN(scaledeps, 1.0);
+   scaledeps *= set->num_epsilon;
+
+   return EPSISINT(scalar*val, scaledeps);
+}
+
 /** checks, if given fractional part is smaller than epsilon */
 Bool SCIPsetIsFracIntegral(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2448,7 +2466,7 @@ Bool SCIPsetIsFracIntegral(
 /** rounds value + feasibility tolerance down to the next integer in epsilon tolerance */
 Real SCIPsetFloor(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2459,7 +2477,7 @@ Real SCIPsetFloor(
 /** rounds value - feasibility tolerance up to the next integer in epsilon tolerance */
 Real SCIPsetCeil(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2541,7 +2559,7 @@ Bool SCIPsetIsSumGE(
 /** checks, if value is in range sumepsilon of 0.0 */
 Bool SCIPsetIsSumZero(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2552,7 +2570,7 @@ Bool SCIPsetIsSumZero(
 /** checks, if value is greater than sumepsilon */
 Bool SCIPsetIsSumPositive(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2563,7 +2581,7 @@ Bool SCIPsetIsSumPositive(
 /** checks, if value is lower than -sumepsilon */
 Bool SCIPsetIsSumNegative(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2654,7 +2672,7 @@ Bool SCIPsetIsFeasGE(
 /** checks, if value is in range feasibility tolerance of 0.0 */
 Bool SCIPsetIsFeasZero(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2665,7 +2683,7 @@ Bool SCIPsetIsFeasZero(
 /** checks, if value is greater than feasibility tolerance */
 Bool SCIPsetIsFeasPositive(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2676,7 +2694,7 @@ Bool SCIPsetIsFeasPositive(
 /** checks, if value is lower than -feasibility tolerance */
 Bool SCIPsetIsFeasNegative(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2687,7 +2705,7 @@ Bool SCIPsetIsFeasNegative(
 /** checks, if value is integral within the LP feasibility bounds */
 Bool SCIPsetIsFeasIntegral(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2698,7 +2716,7 @@ Bool SCIPsetIsFeasIntegral(
 /** checks, if given fractional part is smaller than feastol */
 Bool SCIPsetIsFeasFracIntegral(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2711,7 +2729,7 @@ Bool SCIPsetIsFeasFracIntegral(
 /** rounds value + feasibility tolerance down to the next integer in feasibility tolerance */
 Real SCIPsetFeasFloor(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2722,7 +2740,7 @@ Real SCIPsetFeasFloor(
 /** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
 Real SCIPsetFeasCeil(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);
@@ -2733,7 +2751,7 @@ Real SCIPsetFeasCeil(
 /** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */
 Real SCIPsetFeasFrac(
    SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to return fractional part for */
+   Real             val                 /**< value to process */
    )
 {
    assert(set != NULL);

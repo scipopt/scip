@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.233 2004/11/30 16:23:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.234 2004/12/06 14:11:23 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11138,7 +11138,7 @@ Bool SCIPisInfinity(
 /** checks, if value is in range epsilon of 0.0 */
 Bool SCIPisZero(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11150,7 +11150,7 @@ Bool SCIPisZero(
 /** checks, if value is greater than epsilon */
 Bool SCIPisPositive(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11162,7 +11162,7 @@ Bool SCIPisPositive(
 /** checks, if value is lower than -epsilon */
 Bool SCIPisNegative(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11174,37 +11174,44 @@ Bool SCIPisNegative(
 /** checks, if value is integral within epsilon */
 Bool SCIPisIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   if( scip->set->misc_exactsolve )
-      return (val == SCIPsetFloor(scip->set, val));
-   else
-      return SCIPsetIsIntegral(scip->set, val);
+   return SCIPsetIsIntegral(scip->set, val);
+}
+
+/** checks whether the product val * scalar is integral in epsilon scaled by scalar */
+Bool SCIPisScalingIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val,                /**< unscaled value to check for scaled integrality */
+   Real             scalar              /**< value to scale val with for checking for integrality */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   
+   return SCIPsetIsScalingIntegral(scip->set, val, scalar);
 }
 
 /** checks, if given fractional part is smaller than epsilon */
 Bool SCIPisFracIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   if( scip->set->misc_exactsolve )
-      return (val == 0.0);
-   else
-      return SCIPsetIsFracIntegral(scip->set, val);
+   return SCIPsetIsFracIntegral(scip->set, val);
 }
 
 /** rounds value + epsilon down to the next integer */
 Real SCIPfloor(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11216,7 +11223,7 @@ Real SCIPfloor(
 /** rounds value - epsilon up to the next integer */
 Real SCIPceil(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11305,7 +11312,7 @@ Bool SCIPisSumGE(
 /** checks, if value is in range sumepsilon of 0.0 */
 Bool SCIPisSumZero(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11317,7 +11324,7 @@ Bool SCIPisSumZero(
 /** checks, if value is greater than sumepsilon */
 Bool SCIPisSumPositive(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11329,7 +11336,7 @@ Bool SCIPisSumPositive(
 /** checks, if value is lower than -sumepsilon */
 Bool SCIPisSumNegative(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11406,7 +11413,7 @@ Bool SCIPisFeasGE(
 /** checks, if value is in range feasibility tolerance of 0.0 */
 Bool SCIPisFeasZero(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11418,7 +11425,7 @@ Bool SCIPisFeasZero(
 /** checks, if value is greater than feasibility tolerance */
 Bool SCIPisFeasPositive(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11430,7 +11437,7 @@ Bool SCIPisFeasPositive(
 /** checks, if value is lower than -feasibility tolerance */
 Bool SCIPisFeasNegative(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11442,37 +11449,31 @@ Bool SCIPisFeasNegative(
 /** checks, if value is integral within the LP feasibility bounds */
 Bool SCIPisFeasIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   if( scip->set->misc_exactsolve )
-      return (val == SCIPsetFeasFloor(scip->set, val));
-   else
-      return SCIPsetIsFeasIntegral(scip->set, val);
+   return SCIPsetIsFeasIntegral(scip->set, val);
 }
 
 /** checks, if given fractional part is smaller than feastol */
 Bool SCIPisFeasFracIntegral(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   if( scip->set->misc_exactsolve )
-      return (val == 0.0);
-   else
-      return SCIPsetIsFeasFracIntegral(scip->set, val);
+   return SCIPsetIsFeasFracIntegral(scip->set, val);
 }
 
 /** rounds value + feasibility tolerance down to the next integer */
 Real SCIPfeasFloor(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11484,7 +11485,7 @@ Real SCIPfeasFloor(
 /** rounds value - feasibility tolerance up to the next integer */
 Real SCIPfeasCeil(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against zero */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);
@@ -11496,7 +11497,7 @@ Real SCIPfeasCeil(
 /** returns fractional part of value, i.e. x - floor(x) */
 Real SCIPfeasFrac(
    SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to return fractional part for */
+   Real             val                 /**< value to process */
    )
 {
    assert(scip != NULL);

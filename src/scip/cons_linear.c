@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.135 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.136 2004/12/06 14:11:22 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1737,6 +1737,8 @@ RETCODE scaleCons(
    )
 {
    CONSDATA* consdata;
+   Real newval;
+   Real absscalar;
    int i;
 
    consdata = SCIPconsGetData(cons);
@@ -1746,41 +1748,45 @@ RETCODE scaleCons(
    /* scale the coefficients */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      Real oldval;
-      
-      oldval = consdata->vals[i];
-      consdata->vals[i] *= scalar;
-      if( SCIPisIntegral(scip, consdata->vals[i]) )
-         consdata->vals[i] = SCIPfloor(scip, consdata->vals[i]);
-      if( SCIPisZero(scip, consdata->vals[i]) )
+      newval = scalar * consdata->vals[i];
+      if( SCIPisScalingIntegral(scip, consdata->vals[i], scalar) )
+         newval = SCIPfeasFloor(scip, newval);
+      if( SCIPisZero(scip, newval) )
       {
-         warningMessage("coefficient of variable <%s> in linear constraint <%s> scaled to zero (scale: %g)\n", 
-            SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons), scalar);
-         consdata->vals[i] = oldval;
+         warningMessage("coefficient %g of variable <%s> in linear constraint <%s> scaled to zero (scalar: %g)\n",
+            consdata->vals[i], SCIPvarGetName(consdata->vars[i]), SCIPconsGetName(cons), scalar);
          CHECK_OKAY( delCoefPos(scip, cons, i) );
          --i;
       }
+      else
+         consdata->vals[i] = newval;
    }
 
    /* scale the sides */
    if( scalar < 0.0 )
    {
       Real lhs;
+
       lhs = consdata->lhs;
       consdata->lhs = -consdata->rhs;
       consdata->rhs = -lhs;
    }
+   absscalar = REALABS(scalar);
    if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      consdata->lhs *= REALABS(scalar);
-      if( SCIPisIntegral(scip, consdata->lhs) )
-         consdata->lhs = SCIPfeasFloor(scip, consdata->lhs);
+      newval = absscalar * consdata->lhs;
+      if( SCIPisScalingIntegral(scip, consdata->lhs, absscalar) )
+         consdata->lhs = SCIPfeasFloor(scip, newval);
+      else
+         consdata->lhs = newval;
    }
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      consdata->rhs *= REALABS(scalar);
-      if( SCIPisIntegral(scip, consdata->rhs) )
-         consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
+      newval = absscalar * consdata->rhs;
+      if( SCIPisScalingIntegral(scip, consdata->rhs, absscalar) )
+         consdata->rhs = SCIPfeasCeil(scip, newval);
+      else
+         consdata->rhs = newval;
    }
 
    consdataInvalidateActivities(consdata);

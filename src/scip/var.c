@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.125 2004/11/29 12:17:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.126 2004/12/06 14:11:24 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1832,12 +1832,15 @@ RETCODE varCreate(
    /* adjust bounds of variable */
    lb = adjustedLb(set, vartype, lb);
    ub = adjustedUb(set, vartype, ub);
-
+   
    /* convert [0,1]-integers into binary variables */
    if( vartype == SCIP_VARTYPE_INTEGER
       && (SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0))
       && (SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0)) )
       vartype = SCIP_VARTYPE_BINARY;
+
+   assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
+   assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
 
    ALLOC_OKAY( allocBlockMemory(memhdr, var) );
 

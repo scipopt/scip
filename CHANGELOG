@@ -14,9 +14,11 @@ interface:
   feasibility tolerance anymore (default: 1e-06); instead, they are using epsilon (default: 1e-09);
   instead, for handling integrality of a variable "in feasibility tolerances", new methods SCIPisFeasIntegral(),
   SCIPisFeasFracIntegral(), SCIPfeasFloor(), SCIPfeasCeil(), and SCIPfeasFrac() should be used
+- new method SCIPisScalingIntegral() to check, whether the scaling of a value would lead to an integral value,
+  measured against epsilon which is also scaled by the same scalar
 - new methods SCIPgetRealarrayMinIdx(), SCIPgetRealarrayMaxIdx(), SCIPgetIntarrayMinIdx(), SCIPgetIntarrayMaxIdx(),
   SCIPgetBoolarrayMinIdx(), SCIPgetBoolarrayMaxIdx(), SCIPgetPtrarrayMinIdx(), and SCIPgetPtrarrayMaxIdx()
-- new method SCIPbsortPtrInt()
+- new methods SCIPbsortPtrInt(), and SCIPbsortPtrIntInt()
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
@@ -42,6 +44,9 @@ fixed bugs:
 - changed numerics for integrality check of coefficients (fixed bug with accumulated errors in rows s.t. the
   row's activity is no longer integral although the row is marked being integer)
 - fixed bugs in constraint handlers (and, logicor, or, setppc, xor) with calling conflict analysis during presolving
+- slightly changed numerics in linear constraint handler presolving to fix a bug with coefficients detected to be
+  scaled to an integral value, that are not integral after scaling due to a large scalar that increased the integrality
+  gap to a value larger than epsilon
 
 
 SCIP version 0.77

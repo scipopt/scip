@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.31 2004/11/30 16:23:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.32 2004/12/06 14:11:23 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2638,6 +2638,92 @@ void SCIPbsortPtrInt(
          while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
          intarray[pos] = tmpint;
+         sortpos = pos;
+         pos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
+/** bubble sort of three joint arrays of pointers/ints/ints, sorted by first array */
+void SCIPbsortPtrIntInt(
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int*             intarray1,          /**< first int array to be permuted in the same way */
+   int*             intarray2,          /**< second int array to be permuted in the same way */
+   int              len,                /**< length of arrays */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int pos;
+   int sortpos;
+   void* tmpptr;
+   int tmpint1;
+   int tmpint2;
+
+   assert(len == 0 || ptrarray != NULL);
+   assert(len == 0 || intarray1 != NULL);
+   assert(len == 0 || intarray2 != NULL);
+   assert(ptrcomp != NULL);
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      pos = firstpos;
+      sortpos = firstpos;
+      while( pos < lastpos )
+      {
+         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
+            break;
+         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpint1 = intarray1[pos];
+         tmpint2 = intarray2[pos];
+         do
+         {
+            ptrarray[pos] = ptrarray[pos+1];
+            intarray1[pos] = intarray1[pos+1];
+            intarray2[pos] = intarray2[pos+1];
+            pos++;
+         }
+         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
+         ptrarray[pos] = tmpptr;
+         intarray1[pos] = tmpint1;
+         intarray2[pos] = tmpint2;
+         sortpos = pos;
+         pos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      pos = lastpos;
+      sortpos = lastpos;
+      while( pos > firstpos )
+      {
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
+            break;
+         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpint1 = intarray1[pos];
+         tmpint2 = intarray2[pos];
+         do
+         {
+            ptrarray[pos] = ptrarray[pos-1];
+            intarray1[pos] = intarray1[pos-1];
+            intarray2[pos] = intarray2[pos-1];
+            pos--;
+         }
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
+         ptrarray[pos] = tmpptr;
+         intarray1[pos] = tmpint1;
+         intarray2[pos] = tmpint2;
          sortpos = pos;
          pos--;
       }

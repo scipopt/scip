@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.74 2004/11/29 12:17:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.75 2004/12/06 14:11:23 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -707,6 +707,14 @@ Bool SCIPsetIsIntegral(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** checks whether the product val * scalar is integral in epsilon scaled by scalar */
+extern
+Bool SCIPsetIsScalingIntegral(
+   SET*             set,                /**< global SCIP settings */
+   Real             val,                /**< unscaled value to check for scaled integrality */
+   Real             scalar              /**< value to scale val with for checking for integrality */
+   );
+
 /** checks, if given fractional part is smaller than epsilon */
 extern
 Bool SCIPsetIsFracIntegral(
@@ -1019,6 +1027,8 @@ Bool SCIPsetIsSumRelGE(
 #define SCIPsetIsPositive(set, val)        ( EPSP(val, (set)->num_epsilon) )
 #define SCIPsetIsNegative(set, val)        ( EPSN(val, (set)->num_epsilon) )
 #define SCIPsetIsIntegral(set, val)        ( EPSISINT(val, (set)->num_epsilon) )
+#define SCIPsetIsScalingIntegral(set, val, scalar)                      \
+   ( EPSISINT((scalar)*(val), MIN(REALABS(scalar), 1.0)*(set)->num_epsilon) )
 #define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->num_epsilon) )
 #define SCIPsetFloor(set, val)             ( EPSFLOOR(val, (set)->num_epsilon) )
 #define SCIPsetCeil(set, val)              ( EPSCEIL(val, (set)->num_epsilon) )
