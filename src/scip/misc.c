@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.36 2005/01/21 09:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.37 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -224,17 +224,17 @@ void** SCIPpqueueElems(
 static
 RETCODE hashtablelistAppend(
    HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    void*            element             /**< element to append to the list */
    )
 {
    HASHTABLELIST* newlist;
 
    assert(hashtablelist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(element != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, &newlist) );
    newlist->element = element;
    newlist->next = *hashtablelist;
    *hashtablelist = newlist;
@@ -246,20 +246,20 @@ RETCODE hashtablelistAppend(
 static
 void hashtablelistFree(
    HASHTABLELIST**  hashtablelist,      /**< pointer to hash list to free */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    HASHTABLELIST* list;
    HASHTABLELIST* nextlist;
 
    assert(hashtablelist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    
    list = *hashtablelist;
    while( list != NULL )
    {
       nextlist = list->next;
-      freeBlockMemory(memhdr, &list);
+      freeBlockMemory(blkmem, &list);
       list = nextlist;
    }
 
@@ -322,14 +322,14 @@ void* hashtablelistRetrieve(
 static
 RETCODE hashtablelistRemove(
    HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    void*            element             /**< element to remove from the list */
    )
 {
    HASHTABLELIST* nextlist;
 
    assert(hashtablelist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(element != NULL);
 
    while( *hashtablelist != NULL && (*hashtablelist)->element != element )
@@ -339,7 +339,7 @@ RETCODE hashtablelistRemove(
    if( *hashtablelist != NULL )
    {
       nextlist = (*hashtablelist)->next;
-      freeBlockMemory(memhdr, hashtablelist);
+      freeBlockMemory(blkmem, hashtablelist);
       *hashtablelist = nextlist;
    }
    else
@@ -355,7 +355,7 @@ RETCODE hashtablelistRemove(
 /** creates a hash table */
 RETCODE SCIPhashtableCreate(
    HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
-   MEMHDR*          memhdr,             /**< block memory used to store hash table entries */
+   BLKMEM*          blkmem,             /**< block memory used to store hash table entries */
    int              tablesize,          /**< size of the hash table */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -372,7 +372,7 @@ RETCODE SCIPhashtableCreate(
 
    ALLOC_OKAY( allocMemory(hashtable) );
    ALLOC_OKAY( allocMemoryArray(&(*hashtable)->lists, tablesize) );
-   (*hashtable)->memhdr = memhdr;
+   (*hashtable)->blkmem = blkmem;
    (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
@@ -397,7 +397,7 @@ void SCIPhashtableFree(
 
    /* free hash lists */
    for( i = 0; i < (*hashtable)->nlists; ++i )
-      hashtablelistFree(&(*hashtable)->lists[i], (*hashtable)->memhdr);
+      hashtablelistFree(&(*hashtable)->lists[i], (*hashtable)->blkmem);
 
    /* free main hast table data structure */
    freeMemoryArray(&(*hashtable)->lists);
@@ -428,7 +428,7 @@ RETCODE SCIPhashtableInsert(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
-   CHECK_OKAY( hashtablelistAppend(&hashtable->lists[hashval], hashtable->memhdr, element) );
+   CHECK_OKAY( hashtablelistAppend(&hashtable->lists[hashval], hashtable->blkmem, element) );
    
    return SCIP_OKAY;
 }
@@ -501,7 +501,7 @@ RETCODE SCIPhashtableRemove(
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
-   CHECK_OKAY( hashtablelistRemove(&hashtable->lists[hashval], hashtable->memhdr, element) );
+   CHECK_OKAY( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
    
    return SCIP_OKAY;
 }
@@ -600,7 +600,7 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
 static
 RETCODE hashmaplistAppend(
    HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    void*            origin,             /**< origin of the mapping origin -> image */
    void*            image               /**< image of the mapping origin -> image */
    )
@@ -608,10 +608,10 @@ RETCODE hashmaplistAppend(
    HASHMAPLIST* newlist;
 
    assert(hashmaplist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(origin != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, &newlist) );
    newlist->origin = origin;
    newlist->image = image;
    newlist->next = *hashmaplist;
@@ -624,20 +624,20 @@ RETCODE hashmaplistAppend(
 static
 void hashmaplistFree(
    HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    HASHMAPLIST* list;
    HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    
    list = *hashmaplist;
    while( list != NULL )
    {
       nextlist = list->next;
-      freeBlockMemory(memhdr, &list);
+      freeBlockMemory(blkmem, &list);
       list = nextlist;
    }
 
@@ -688,7 +688,7 @@ void* hashmaplistGetImage(
 static
 RETCODE hashmaplistSetImage(
    HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    void*            origin,             /**< origin to set image for */
    void*            image               /**< new image for origin */
    )
@@ -703,7 +703,7 @@ RETCODE hashmaplistSetImage(
       h->image = image;
    else
    {
-      CHECK_OKAY( hashmaplistAppend(hashmaplist, memhdr, origin, image) );
+      CHECK_OKAY( hashmaplistAppend(hashmaplist, blkmem, origin, image) );
    }
 
    return SCIP_OKAY;
@@ -713,14 +713,14 @@ RETCODE hashmaplistSetImage(
 static
 RETCODE hashmaplistRemove(
    HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    void*            origin              /**< origin to remove from the list */
    )
 {
    HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(origin != NULL);
 
    while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
@@ -730,7 +730,7 @@ RETCODE hashmaplistRemove(
    if( *hashmaplist != NULL )
    {
       nextlist = (*hashmaplist)->next;
-      freeBlockMemory(memhdr, hashmaplist);
+      freeBlockMemory(blkmem, hashmaplist);
       *hashmaplist = nextlist;
    }
    else
@@ -746,7 +746,7 @@ RETCODE hashmaplistRemove(
 /** creates a hash map mapping pointers to pointers */
 RETCODE SCIPhashmapCreate(
    HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   MEMHDR*          memhdr,             /**< block memory used to store hash map entries */
+   BLKMEM*          blkmem,             /**< block memory used to store hash map entries */
    int              mapsize             /**< size of the hash map */
    )
 {
@@ -757,7 +757,7 @@ RETCODE SCIPhashmapCreate(
 
    ALLOC_OKAY( allocMemory(hashmap) );
    ALLOC_OKAY( allocMemoryArray(&(*hashmap)->lists, mapsize) );
-   (*hashmap)->memhdr = memhdr;
+   (*hashmap)->blkmem = blkmem;
    (*hashmap)->nlists = mapsize;
 
    /* initialize hash lists */
@@ -779,7 +779,7 @@ void SCIPhashmapFree(
 
    /* free hash lists */
    for( i = 0; i < (*hashmap)->nlists; ++i )
-      hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->memhdr);
+      hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->blkmem);
 
    /* free main hast map data structure */
    freeMemoryArray(&(*hashmap)->lists);
@@ -804,7 +804,7 @@ RETCODE SCIPhashmapInsert(
    hashval = (unsigned int)origin % hashmap->nlists;
 
    /* append origin->image pair to the list at the hash position */
-   CHECK_OKAY( hashmaplistAppend(&hashmap->lists[hashval], hashmap->memhdr, origin, image) );
+   CHECK_OKAY( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
    
    return SCIP_OKAY;
 }
@@ -849,7 +849,7 @@ RETCODE SCIPhashmapSetImage(
    hashval = (unsigned int)origin % hashmap->nlists;
 
    /* set image for origin in hash list */
-   CHECK_OKAY( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->memhdr, origin, image) );
+   CHECK_OKAY( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
    
    return SCIP_OKAY;
 }
@@ -871,7 +871,7 @@ RETCODE SCIPhashmapRemove(
    hashval = (unsigned int)origin % hashmap->nlists;
 
    /* append element to the list at the hash position */
-   CHECK_OKAY( hashmaplistRemove(&hashmap->lists[hashval], hashmap->memhdr, origin) );
+   CHECK_OKAY( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
    
    return SCIP_OKAY;
 }
@@ -927,14 +927,14 @@ void SCIPhashmapPrintStatistics(
 /** creates a dynamic array of real values */
 RETCODE SCIPrealarrayCreate(
    REALARRAY**      realarray,          /**< pointer to store the real array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(realarray != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, realarray) );
-   (*realarray)->memhdr = memhdr;
+   ALLOC_OKAY( allocBlockMemory(blkmem, realarray) );
+   (*realarray)->blkmem = blkmem;
    (*realarray)->vals = NULL;
    (*realarray)->valssize = 0;
    (*realarray)->firstidx = -1;
@@ -947,17 +947,17 @@ RETCODE SCIPrealarrayCreate(
 /** creates a copy of a dynamic array of real values */
 RETCODE SCIPrealarrayCopy(
    REALARRAY**      realarray,          /**< pointer to store the copied real array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
    )
 {
    assert(realarray != NULL);
    assert(sourcerealarray != NULL);
 
-   CHECK_OKAY( SCIPrealarrayCreate(realarray, memhdr) );
+   CHECK_OKAY( SCIPrealarrayCreate(realarray, blkmem) );
    if( sourcerealarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*realarray)->vals, sourcerealarray->vals,
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*realarray)->vals, sourcerealarray->vals,
                      sourcerealarray->valssize) );
    }
    (*realarray)->valssize = sourcerealarray->valssize;
@@ -976,8 +976,8 @@ RETCODE SCIPrealarrayFree(
    assert(realarray != NULL);
    assert(*realarray != NULL);
 
-   freeBlockMemoryArrayNull((*realarray)->memhdr, &(*realarray)->vals, (*realarray)->valssize);
-   freeBlockMemory((*realarray)->memhdr, realarray);
+   freeBlockMemoryArrayNull((*realarray)->blkmem, &(*realarray)->vals, (*realarray)->valssize);
+   freeBlockMemory((*realarray)->blkmem, realarray);
 
    return SCIP_OKAY;
 }
@@ -1020,7 +1020,7 @@ RETCODE SCIPrealarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(realarray->memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(realarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1045,7 +1045,7 @@ RETCODE SCIPrealarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(realarray->memhdr, &realarray->vals, realarray->valssize);
+      freeBlockMemoryArrayNull(realarray->blkmem, &realarray->vals, realarray->valssize);
       realarray->vals = newvals;
       realarray->valssize = newvalssize;
       realarray->firstidx = newfirstidx;
@@ -1287,14 +1287,14 @@ int SCIPrealarrayGetMaxIdx(
 /** creates a dynamic array of int values */
 RETCODE SCIPintarrayCreate(
    INTARRAY**       intarray,           /**< pointer to store the int array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(intarray != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, intarray) );
-   (*intarray)->memhdr = memhdr;
+   ALLOC_OKAY( allocBlockMemory(blkmem, intarray) );
+   (*intarray)->blkmem = blkmem;
    (*intarray)->vals = NULL;
    (*intarray)->valssize = 0;
    (*intarray)->firstidx = -1;
@@ -1307,17 +1307,17 @@ RETCODE SCIPintarrayCreate(
 /** creates a copy of a dynamic array of int values */
 RETCODE SCIPintarrayCopy(
    INTARRAY**       intarray,           /**< pointer to store the copied int array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    INTARRAY*        sourceintarray      /**< dynamic int array to copy */
    )
 {
    assert(intarray != NULL);
    assert(sourceintarray != NULL);
 
-   CHECK_OKAY( SCIPintarrayCreate(intarray, memhdr) );
+   CHECK_OKAY( SCIPintarrayCreate(intarray, blkmem) );
    if( sourceintarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
    }
    (*intarray)->valssize = sourceintarray->valssize;
    (*intarray)->firstidx = sourceintarray->firstidx;
@@ -1335,8 +1335,8 @@ RETCODE SCIPintarrayFree(
    assert(intarray != NULL);
    assert(*intarray != NULL);
 
-   freeBlockMemoryArrayNull((*intarray)->memhdr, &(*intarray)->vals, (*intarray)->valssize);
-   freeBlockMemory((*intarray)->memhdr, intarray);
+   freeBlockMemoryArrayNull((*intarray)->blkmem, &(*intarray)->vals, (*intarray)->valssize);
+   freeBlockMemory((*intarray)->blkmem, intarray);
 
    return SCIP_OKAY;
 }
@@ -1379,7 +1379,7 @@ RETCODE SCIPintarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(intarray->memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(intarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1404,7 +1404,7 @@ RETCODE SCIPintarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(intarray->memhdr, &intarray->vals, intarray->valssize);
+      freeBlockMemoryArrayNull(intarray->blkmem, &intarray->vals, intarray->valssize);
       intarray->vals = newvals;
       intarray->valssize = newvalssize;
       intarray->firstidx = newfirstidx;
@@ -1647,14 +1647,14 @@ int SCIPintarrayGetMaxIdx(
 /** creates a dynamic array of bool values */
 RETCODE SCIPboolarrayCreate(
    BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(boolarray != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, boolarray) );
-   (*boolarray)->memhdr = memhdr;
+   ALLOC_OKAY( allocBlockMemory(blkmem, boolarray) );
+   (*boolarray)->blkmem = blkmem;
    (*boolarray)->vals = NULL;
    (*boolarray)->valssize = 0;
    (*boolarray)->firstidx = -1;
@@ -1667,17 +1667,17 @@ RETCODE SCIPboolarrayCreate(
 /** creates a copy of a dynamic array of bool values */
 RETCODE SCIPboolarrayCopy(
    BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
    )
 {
    assert(boolarray != NULL);
    assert(sourceboolarray != NULL);
 
-   CHECK_OKAY( SCIPboolarrayCreate(boolarray, memhdr) );
+   CHECK_OKAY( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*boolarray)->vals, sourceboolarray->vals, 
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, 
                      sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
@@ -1696,8 +1696,8 @@ RETCODE SCIPboolarrayFree(
    assert(boolarray != NULL);
    assert(*boolarray != NULL);
 
-   freeBlockMemoryArrayNull((*boolarray)->memhdr, &(*boolarray)->vals, (*boolarray)->valssize);
-   freeBlockMemory((*boolarray)->memhdr, boolarray);
+   freeBlockMemoryArrayNull((*boolarray)->blkmem, &(*boolarray)->vals, (*boolarray)->valssize);
+   freeBlockMemory((*boolarray)->blkmem, boolarray);
 
    return SCIP_OKAY;
 }
@@ -1740,7 +1740,7 @@ RETCODE SCIPboolarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(boolarray->memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(boolarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -1765,7 +1765,7 @@ RETCODE SCIPboolarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(boolarray->memhdr, &boolarray->vals, boolarray->valssize);
+      freeBlockMemoryArrayNull(boolarray->blkmem, &boolarray->vals, boolarray->valssize);
       boolarray->vals = newvals;
       boolarray->valssize = newvalssize;
       boolarray->firstidx = newfirstidx;
@@ -1997,14 +1997,14 @@ int SCIPboolarrayGetMaxIdx(
 /** creates a dynamic array of pointer values */
 RETCODE SCIPptrarrayCreate(
    PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(ptrarray != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, ptrarray) );
-   (*ptrarray)->memhdr = memhdr;
+   ALLOC_OKAY( allocBlockMemory(blkmem, ptrarray) );
+   (*ptrarray)->blkmem = blkmem;
    (*ptrarray)->vals = NULL;
    (*ptrarray)->valssize = 0;
    (*ptrarray)->firstidx = -1;
@@ -2017,17 +2017,17 @@ RETCODE SCIPptrarrayCreate(
 /** creates a copy of a dynamic array of pointer values */
 RETCODE SCIPptrarrayCopy(
    PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
    )
 {
    assert(ptrarray != NULL);
    assert(sourceptrarray != NULL);
 
-   CHECK_OKAY( SCIPptrarrayCreate(ptrarray, memhdr) );
+   CHECK_OKAY( SCIPptrarrayCreate(ptrarray, blkmem) );
    if( sourceptrarray->valssize > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*ptrarray)->vals, sourceptrarray->vals, sourceptrarray->valssize) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*ptrarray)->vals, sourceptrarray->vals, sourceptrarray->valssize) );
    }
    (*ptrarray)->valssize = sourceptrarray->valssize;
    (*ptrarray)->firstidx = sourceptrarray->firstidx;
@@ -2045,8 +2045,8 @@ RETCODE SCIPptrarrayFree(
    assert(ptrarray != NULL);
    assert(*ptrarray != NULL);
 
-   freeBlockMemoryArrayNull((*ptrarray)->memhdr, &(*ptrarray)->vals, (*ptrarray)->valssize);
-   freeBlockMemory((*ptrarray)->memhdr, ptrarray);
+   freeBlockMemoryArrayNull((*ptrarray)->blkmem, &(*ptrarray)->vals, (*ptrarray)->valssize);
+   freeBlockMemory((*ptrarray)->blkmem, ptrarray);
 
    return SCIP_OKAY;
 }
@@ -2089,7 +2089,7 @@ RETCODE SCIPptrarrayExtend(
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(ptrarray->memhdr, &newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(ptrarray->blkmem, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       newfirstidx = MAX(newfirstidx, 0);
@@ -2114,7 +2114,7 @@ RETCODE SCIPptrarrayExtend(
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(ptrarray->memhdr, &ptrarray->vals, ptrarray->valssize);
+      freeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
       ptrarray->valssize = newvalssize;
       ptrarray->firstidx = newfirstidx;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.32 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.33 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -102,7 +102,7 @@ RETCODE SCIPeventhdlrExec(
 extern
 RETCODE SCIPeventCreateVarAdded(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var                 /**< variable that was added to the problem */
    );
 
@@ -110,7 +110,7 @@ RETCODE SCIPeventCreateVarAdded(
 extern
 RETCODE SCIPeventCreateVarFixed(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var                 /**< variable that was fixed */
    );
 
@@ -118,7 +118,7 @@ RETCODE SCIPeventCreateVarFixed(
 extern
 RETCODE SCIPeventCreateLocksChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var                 /**< variable that was fixed */
    );
 
@@ -126,7 +126,7 @@ RETCODE SCIPeventCreateLocksChanged(
 extern
 RETCODE SCIPeventCreateObjChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var,                /**< variable whose objective value changed */
    Real             oldobj,             /**< old objective value before value changed */
    Real             newobj              /**< new objective value after value changed */
@@ -136,7 +136,7 @@ RETCODE SCIPeventCreateObjChanged(
 extern
 RETCODE SCIPeventCreateLbChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
    Real             oldbound,           /**< old bound before bound changed */
    Real             newbound            /**< new bound after bound changed */
@@ -146,7 +146,7 @@ RETCODE SCIPeventCreateLbChanged(
 extern
 RETCODE SCIPeventCreateUbChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
    Real             oldbound,           /**< old bound before bound changed */
    Real             newbound            /**< new bound after bound changed */
@@ -156,7 +156,7 @@ RETCODE SCIPeventCreateUbChanged(
 extern
 RETCODE SCIPeventFree(
    EVENT**          event,              /**< event to free */
-   MEMHDR*          memhdr              /**< block memory buffer */
+   BLKMEM*          blkmem              /**< block memory buffer */
    );
 
 /** sets type of event */
@@ -201,14 +201,14 @@ RETCODE SCIPeventProcess(
 extern
 RETCODE SCIPeventfilterCreate(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
-   MEMHDR*          memhdr              /**< block memory buffer */
+   BLKMEM*          blkmem              /**< block memory buffer */
    );
 
 /** frees an event filter and the associated event data entries */
 extern
 RETCODE SCIPeventfilterFree(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -216,7 +216,7 @@ RETCODE SCIPeventfilterFree(
 extern
 RETCODE SCIPeventfilterAdd(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -228,7 +228,7 @@ RETCODE SCIPeventfilterAdd(
 extern
 RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -266,7 +266,7 @@ RETCODE SCIPeventqueueFree(
 extern
 RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
    LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
@@ -285,7 +285,7 @@ RETCODE SCIPeventqueueDelay(
 extern
 RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */

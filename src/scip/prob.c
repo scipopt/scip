@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.61 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.62 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -128,7 +128,7 @@ RETCODE probEnsureConssMem(
  */
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< problem name */
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
@@ -150,7 +150,7 @@ RETCODE SCIPprobCreate(
    (*prob)->probdeltrans = probdeltrans;
    (*prob)->probinitsol = probinitsol;
    (*prob)->probexitsol = probexitsol;
-   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, memhdr, SCIP_HASHSIZE_NAMES,
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, blkmem, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->fixedvars = NULL;
    (*prob)->fixedvarssize = 0;
@@ -163,7 +163,7 @@ RETCODE SCIPprobCreate(
    (*prob)->nimplvars = 0;
    (*prob)->ncontvars = 0;
    (*prob)->ncolvars = 0;
-   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, memhdr, SCIP_HASHSIZE_NAMES,
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, blkmem, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->conss = NULL;
    (*prob)->consssize = 0;
@@ -183,7 +183,7 @@ RETCODE SCIPprobCreate(
 /** frees problem data structure */
 RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
@@ -215,7 +215,7 @@ RETCODE SCIPprobFree(
    while( (*prob)->nconss > 0 )
    {
       assert((*prob)->conss != NULL);
-      CHECK_OKAY( SCIPprobDelCons(*prob, memhdr, set, stat, (*prob)->conss[0]) );
+      CHECK_OKAY( SCIPprobDelCons(*prob, blkmem, set, stat, (*prob)->conss[0]) );
    }
 
    freeMemoryArray(&(*prob)->name);
@@ -228,7 +228,7 @@ RETCODE SCIPprobFree(
    {
       assert((*prob)->vars[v]->probindex >= 0);
       SCIPvarSetProbindex((*prob)->vars[v], -1);
-      CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp) );
+      CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, lp) );
    }
    freeMemoryArrayNull(&(*prob)->vars);
 
@@ -236,7 +236,7 @@ RETCODE SCIPprobFree(
    for( v = 0; v < (*prob)->nfixedvars; ++v )
    {
       assert((*prob)->fixedvars[v]->probindex == -1);
-      CHECK_OKAY( SCIPvarRelease(&(*prob)->fixedvars[v], memhdr, set, lp) );
+      CHECK_OKAY( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, lp) );
    }
    freeMemoryArrayNull(&(*prob)->fixedvars);
 
@@ -252,7 +252,7 @@ RETCODE SCIPprobFree(
 /** transform problem data into normalized form */
 RETCODE SCIPprobTransform(
    PROB*            source,             /**< problem to transform */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -270,14 +270,14 @@ RETCODE SCIPprobTransform(
 
    assert(set != NULL);
    assert(source != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(target != NULL);
 
    debugMessage("transform problem: original has %d variables\n", source->nvars);
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    sprintf(transname, "t_%s", source->name);
-   CHECK_OKAY( SCIPprobCreate(target, memhdr, transname, NULL, NULL, source->probdeltrans, 
+   CHECK_OKAY( SCIPprobCreate(target, blkmem, transname, NULL, NULL, source->probdeltrans, 
                   source->probinitsol, source->probexitsol, NULL, TRUE) );
 
    /* transform objective limit */
@@ -288,18 +288,18 @@ RETCODE SCIPprobTransform(
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
    {
-      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
-      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
-      CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
+      CHECK_OKAY( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
+      CHECK_OKAY( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
+      CHECK_OKAY( SCIPvarRelease(&targetvar, blkmem, set, NULL) );
    }
    assert((*target)->nvars == source->nvars);
 
    /* transform and copy all constraints to target problem */
    for( c = 0; c < source->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsTransform(source->conss[c], memhdr, set, &targetcons) );
+      CHECK_OKAY( SCIPconsTransform(source->conss[c], blkmem, set, &targetcons) );
       CHECK_OKAY( SCIPprobAddCons(*target, set, stat, targetcons) );
-      CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
+      CHECK_OKAY( SCIPconsRelease(&targetcons, blkmem, set) );
    }
 
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
@@ -511,7 +511,7 @@ void probRemoveVar(
 /** adds variable to the problem and captures it */
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -555,8 +555,8 @@ RETCODE SCIPprobAddVar(
    if( prob->transformed )
    {
       /* issue VARADDED event */
-      CHECK_OKAY( SCIPeventCreateVarAdded(&event, memhdr, var) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, eventfilter, &event) );
+      CHECK_OKAY( SCIPeventCreateVarAdded(&event, blkmem, var) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
    }
 
    return SCIP_OKAY;
@@ -714,7 +714,7 @@ RETCODE SCIPprobAddCons(
  */
 RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to remove */
@@ -723,7 +723,7 @@ RETCODE SCIPprobDelCons(
    int arraypos;
 
    assert(prob != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(cons != NULL);
    assert(cons->addconssetchg == NULL);
    assert(0 <= cons->addarraypos && cons->addarraypos < prob->nconss);
@@ -763,7 +763,7 @@ RETCODE SCIPprobDelCons(
    cons->addarraypos = -1;
 
    /* release constraint */
-   CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );
+   CHECK_OKAY( SCIPconsRelease(&cons, blkmem, set) );
 
    return SCIP_OKAY;
 }
@@ -910,7 +910,7 @@ void SCIPprobStoreRootSol(
 /** informs problem, that the presolving process was finished, and updates all internal data structures */
 RETCODE SCIPprobExitPresolve(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -936,7 +936,7 @@ RETCODE SCIPprobExitPresolve(
    /* use active variables in implication graph */
    for( v = 0; v < prob->nbinvars; v++ )
    {
-      CHECK_OKAY( SCIPvarUseActiveImplics(prob->vars[v], memhdr, set, stat, lp, branchcand, eventqueue, infeasible) );
+      CHECK_OKAY( SCIPvarUseActiveImplics(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -977,7 +977,7 @@ RETCODE SCIPprobInitSolve(
 /** deinitializes problem after branch and bound process, and converts all COLUMN variables back into LOOSE variables */
 RETCODE SCIPprobExitSolve(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    )
@@ -1003,7 +1003,7 @@ RETCODE SCIPprobExitSolve(
          var = prob->vars[v];
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            CHECK_OKAY( SCIPvarLoose(var, memhdr, set, prob, lp) );
+            CHECK_OKAY( SCIPvarLoose(var, blkmem, set, prob, lp) );
          }
       }
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.11 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.12 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -102,7 +102,7 @@ void** SCIPpqueueElems(
 extern
 RETCODE SCIPhashtableCreate(
    HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
-   MEMHDR*          memhdr,             /**< block memory used to store hash table entries */
+   BLKMEM*          blkmem,             /**< block memory used to store hash table entries */
    int              tablesize,          /**< size of the hash table */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -168,7 +168,7 @@ DECL_HASHKEYVAL(SCIPhashKeyValString);
 extern
 RETCODE SCIPhashmapCreate(
    HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   MEMHDR*          memhdr,             /**< block memory used to store hash map entries */
+   BLKMEM*          blkmem,             /**< block memory used to store hash map entries */
    int              mapsize             /**< size of the hash map */
    );
 

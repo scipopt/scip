@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.37 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.38 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -57,7 +57,7 @@ DECL_PARAMCHGD(SCIPparamChgdDispActive)
 RETCODE SCIPdispCreate(
    DISP**           disp,               /**< pointer to store display column */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
@@ -103,7 +103,7 @@ RETCODE SCIPdispCreate(
    /* add parameters */
    sprintf(paramname, "display/%s/active", name);
    sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.5 2005/01/21 09:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.6 2005/01/31 12:21:03 bzfpfend Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -51,7 +51,7 @@ void SCIPvbcFree(
 extern
 RETCODE SCIPvbcInit(
    VBC*             vbc,                /**< VBC information */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.41 2005/01/21 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.42 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -65,7 +65,7 @@ DECL_PARAMCHGD(paramChgdSepaPriority)
 RETCODE SCIPsepaCreate(
    SEPA**           sepa,               /**< pointer to separator data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of separator */
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
@@ -107,12 +107,12 @@ RETCODE SCIPsepaCreate(
    /* add parameters */
    sprintf(paramname, "separating/%s/priority", name);
    sprintf(paramdesc, "priority of separator <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdSepaPriority, (PARAMDATA*)(*sepa)) ); /*lint !e740*/
    sprintf(paramname, "separating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

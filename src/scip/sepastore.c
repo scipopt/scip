@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.33 2005/01/21 09:17:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.34 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -220,7 +220,7 @@ Bool sepastoreIsCutRedundant(
 static
 RETCODE sepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
@@ -257,7 +257,7 @@ RETCODE sepastoreAddCut(
    if( sepastore->ncuts == 1 && sepastore->nbdchgs == 0
       && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
-      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[0], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts--;
    }
 
@@ -421,7 +421,7 @@ RETCODE sepastoreAddCut(
    if( sepastore->ncuts > maxsepacuts )
    {
       assert(sepastore->ncuts == maxsepacuts+1);
-      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], blkmem, set, lp) );
       sepastore->ncuts--;
    }
    assert(sepastore->ncuts <= maxsepacuts);
@@ -430,7 +430,7 @@ RETCODE sepastoreAddCut(
    while( sepastore->ncuts > 0 && sepastore->orthogonalities[sepastore->ncuts-1] < mincutorthogonality )
    {
       assert(SCIPsetIsInfinity(set, -sepastore->scores[sepastore->ncuts-1]));
-      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[sepastore->ncuts-1], blkmem, set, lp) );
       sepastore->ncuts--;
    }
 
@@ -444,7 +444,7 @@ RETCODE sepastoreAddCut(
 static
 RETCODE sepastoreAddBdchg(
    SEPASTORE*       sepastore,          /**< separation storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
@@ -462,7 +462,7 @@ RETCODE sepastoreAddBdchg(
    if( sepastore->ncuts == 1 && sepastore->nbdchgs == 0
       && sepastoreIsCutRedundant(sepastore, set, stat, sepastore->cuts[0]) )
    {
-      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[0], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[0], blkmem, set, lp) );
       sepastore->ncuts--;
    }
 
@@ -487,7 +487,7 @@ RETCODE sepastoreAddBdchg(
  */
 RETCODE SCIPsepastoreAddCut(
    SEPASTORE*       sepastore,          /**< separation storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
@@ -537,7 +537,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = lhs/vals[0];
             if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
             }
          }
          else
@@ -546,7 +546,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = lhs/vals[0];
             if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
             }
          }
       }
@@ -562,7 +562,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = rhs/vals[0];
             if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_UPPER) );
             }
          }
          else
@@ -571,7 +571,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = rhs/vals[0];
             if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, blkmem, set, stat, lp, var, bound, SCIP_BOUNDTYPE_LOWER) );
             }
          }
       }
@@ -579,7 +579,7 @@ RETCODE SCIPsepastoreAddCut(
    else
    {
       /* add LP row cut to separation storage */
-      CHECK_OKAY( sepastoreAddCut(sepastore, memhdr, set, stat, lp, cut, forcecut, root) );
+      CHECK_OKAY( sepastoreAddCut(sepastore, blkmem, set, stat, lp, cut, forcecut, root) );
    }
 
    return SCIP_OKAY;
@@ -588,7 +588,7 @@ RETCODE SCIPsepastoreAddCut(
 /** adds cuts to the LP and clears separation storage */
 RETCODE SCIPsepastoreApplyCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -630,7 +630,7 @@ RETCODE SCIPsepastoreApplyCuts(
 
             if( SCIPsetIsLE(set, val, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+               CHECK_OKAY( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
                      var, val, SCIP_BOUNDTYPE_LOWER, FALSE) );
             }
             else
@@ -649,7 +649,7 @@ RETCODE SCIPsepastoreApplyCuts(
 
             if( SCIPsetIsGE(set, val, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+               CHECK_OKAY( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
                      var, val, SCIP_BOUNDTYPE_UPPER, FALSE) );
             }
             else
@@ -677,7 +677,7 @@ RETCODE SCIPsepastoreApplyCuts(
          CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[i], SCIPnodeGetDepth(node)) );
          
          /* release the row */
-         CHECK_OKAY( SCIProwRelease(&sepastore->cuts[i], memhdr, set, lp) );
+         CHECK_OKAY( SCIProwRelease(&sepastore->cuts[i], blkmem, set, lp) );
          
          if( !sepastore->initiallp )
             sepastore->ncutsapplied++;
@@ -696,7 +696,7 @@ RETCODE SCIPsepastoreApplyCuts(
 /** clears the separation storage without adding the cuts to the LP */
 RETCODE SCIPsepastoreClearCuts(
    SEPASTORE*       sepastore,          /**< separation storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< LP data */
    )
@@ -710,7 +710,7 @@ RETCODE SCIPsepastoreClearCuts(
    for( c = 0; c < sepastore->ncuts; ++c )
    {
       /* release the row */
-      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[c], memhdr, set, lp) );
+      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[c], blkmem, set, lp) );
    }
 
    /* clear the separation storage */

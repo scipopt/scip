@@ -170,7 +170,7 @@ $(OBJDIR)/lp.o: src/lp.c src/def.h src/type_retcode.h src/message.h src/set.h \
   src/pub_lp.h src/struct_lp.h src/var.h src/type_primal.h src/pub_var.h \
   src/struct_var.h src/prob.h src/struct_prob.h src/sol.h src/pub_sol.h
 $(OBJDIR)/mem.o: src/mem.c src/def.h src/type_retcode.h src/message.h src/mem.h \
-  src/memory.h src/type_mem.h
+  src/type_mem.h src/struct_mem.h src/memory.h
 $(OBJDIR)/memory.o: src/memory.c src/memory.h
 $(OBJDIR)/message.o: src/message.c src/message.h
 $(OBJDIR)/misc.o: src/misc.c src/def.h src/type_retcode.h src/message.h src/set.h \
@@ -335,22 +335,22 @@ $(OBJDIR)/scip.o: src/scip.c src/def.h src/type_retcode.h src/retcode.h src/set.
   src/type_sepa.h src/type_prop.h src/struct_set.h src/stat.h \
   src/type_mem.h src/struct_stat.h src/type_vbc.h src/type_history.h \
   src/clock.h src/vbc.h src/interrupt.h src/type_interrupt.h src/lpi.h \
-  src/type_lpi.h src/mem.h src/misc.h src/type_misc.h src/pub_misc.h \
-  src/history.h src/event.h src/type_lp.h src/type_primal.h \
-  src/pub_event.h src/struct_event.h src/lp.h src/type_prob.h \
-  src/pub_lp.h src/struct_lp.h src/var.h src/pub_var.h src/struct_var.h \
-  src/prob.h src/struct_prob.h src/sol.h src/pub_sol.h src/primal.h \
-  src/struct_primal.h src/tree.h src/pub_tree.h src/struct_tree.h \
-  src/pricestore.h src/type_pricestore.h src/sepastore.h \
-  src/type_sepastore.h src/cutpool.h src/type_cutpool.h src/pub_cutpool.h \
-  src/solve.h src/scip.h src/type_dialog.h src/pub_branch.h \
-  src/pub_conflict.h src/pub_cons.h src/pub_dialog.h src/pub_disp.h \
-  src/pub_heur.h src/pub_nodesel.h src/pub_paramset.h src/pub_presol.h \
-  src/pub_pricer.h src/pub_reader.h src/pub_relax.h src/pub_sepa.h \
-  src/pub_prop.h src/branch.h src/conflict.h src/cons.h src/struct_cons.h \
-  src/dialog.h src/disp.h src/heur.h src/nodesel.h src/reader.h \
-  src/presol.h src/pricer.h src/relax.h src/sepa.h src/prop.h \
-  src/struct_scip.h
+  src/type_lpi.h src/mem.h src/struct_mem.h src/misc.h src/type_misc.h \
+  src/pub_misc.h src/history.h src/event.h src/type_lp.h \
+  src/type_primal.h src/pub_event.h src/struct_event.h src/lp.h \
+  src/type_prob.h src/pub_lp.h src/struct_lp.h src/var.h src/pub_var.h \
+  src/struct_var.h src/prob.h src/struct_prob.h src/sol.h src/pub_sol.h \
+  src/primal.h src/struct_primal.h src/tree.h src/pub_tree.h \
+  src/struct_tree.h src/pricestore.h src/type_pricestore.h \
+  src/sepastore.h src/type_sepastore.h src/cutpool.h src/type_cutpool.h \
+  src/pub_cutpool.h src/solve.h src/scip.h src/type_dialog.h \
+  src/pub_branch.h src/pub_conflict.h src/pub_cons.h src/pub_dialog.h \
+  src/pub_disp.h src/pub_heur.h src/pub_nodesel.h src/pub_paramset.h \
+  src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_relax.h \
+  src/pub_sepa.h src/pub_prop.h src/branch.h src/conflict.h src/cons.h \
+  src/struct_cons.h src/dialog.h src/disp.h src/heur.h src/nodesel.h \
+  src/reader.h src/presol.h src/pricer.h src/relax.h src/sepa.h \
+  src/prop.h src/struct_scip.h
 $(OBJDIR)/scipdefplugins.o: src/scipdefplugins.c src/branch_allfullstrong.h \
   src/scip.h src/def.h src/type_retcode.h src/message.h src/memory.h \
   src/type_result.h src/type_clock.h src/type_misc.h src/type_paramset.h \
@@ -377,10 +377,10 @@ $(OBJDIR)/scipdefplugins.o: src/scipdefplugins.c src/branch_allfullstrong.h \
   src/heur_linesearchdiving.h src/heur_objpscostdiving.h \
   src/heur_pscostdiving.h src/heur_rootsoldiving.h src/heur_rounding.h \
   src/heur_simplerounding.h src/nodesel_bfs.h src/nodesel_dfs.h \
-  src/nodesel_restartdfs.h src/presol_dualfix.h src/presol_trivial.h \
-  src/prop_pseudoobj.h src/reader_cnf.h src/reader_mps.h src/sepa_cmir.h \
-  src/sepa_gomory.h src/sepa_strongcg.h src/sepa_intobj.h \
-  src/scipdefplugins.h
+  src/nodesel_restartdfs.h src/presol_dualfix.h src/presol_probing.h \
+  src/presol_trivial.h src/prop_pseudoobj.h src/reader_cnf.h \
+  src/reader_mps.h src/sepa_cmir.h src/sepa_gomory.h src/sepa_strongcg.h \
+  src/sepa_intobj.h src/scipdefplugins.h
 $(OBJDIR)/sepa.o: src/sepa.c src/def.h src/type_retcode.h src/message.h src/set.h \
   src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
   src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
@@ -483,7 +483,7 @@ $(OBJDIR)/stat.o: src/stat.c src/def.h src/type_retcode.h src/memory.h src/set.h
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_relax.h \
   src/type_sepa.h src/type_prop.h src/struct_set.h src/stat.h \
   src/type_mem.h src/struct_stat.h src/type_vbc.h src/type_history.h \
-  src/clock.h src/vbc.h src/mem.h src/history.h
+  src/clock.h src/vbc.h src/mem.h src/struct_mem.h src/history.h
 $(OBJDIR)/tree.o: src/tree.c src/def.h src/type_retcode.h src/message.h src/set.h \
   src/memory.h src/type_set.h src/type_stat.h src/buffer.h \
   src/type_buffer.h src/type_clock.h src/type_paramset.h src/type_scip.h \
@@ -1075,6 +1075,21 @@ $(OBJDIR)/nodesel_restartdfs.o: src/nodesel_restartdfs.c src/nodesel_restartdfs.
   src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_tree.h \
   src/pub_var.h src/type_history.h
 $(OBJDIR)/presol_dualfix.o: src/presol_dualfix.c src/presol_dualfix.h src/scip.h \
+  src/def.h src/type_retcode.h src/message.h src/memory.h \
+  src/type_result.h src/type_clock.h src/type_misc.h src/type_paramset.h \
+  src/type_scip.h src/type_event.h src/type_lp.h src/type_var.h \
+  src/type_prob.h src/type_tree.h src/type_branch.h src/type_conflict.h \
+  src/type_cons.h src/type_sol.h src/type_dialog.h src/type_disp.h \
+  src/type_heur.h src/type_nodesel.h src/type_presol.h src/type_pricer.h \
+  src/type_reader.h src/type_relax.h src/type_sepa.h src/type_prop.h \
+  src/pub_branch.h src/pub_conflict.h src/pub_cons.h src/pub_cutpool.h \
+  src/type_cutpool.h src/pub_dialog.h src/pub_disp.h src/pub_event.h \
+  src/pub_heur.h src/pub_lp.h src/type_set.h src/type_stat.h \
+  src/type_lpi.h src/pub_misc.h src/pub_nodesel.h src/pub_paramset.h \
+  src/pub_presol.h src/pub_pricer.h src/pub_reader.h src/pub_relax.h \
+  src/pub_sepa.h src/pub_prop.h src/pub_sol.h src/pub_tree.h \
+  src/pub_var.h src/type_history.h
+$(OBJDIR)/presol_probing.o: src/presol_probing.c src/presol_probing.h src/scip.h \
   src/def.h src/type_retcode.h src/message.h src/memory.h \
   src/type_result.h src/type_clock.h src/type_misc.h src/type_paramset.h \
   src/type_scip.h src/type_event.h src/type_lp.h src/type_var.h \

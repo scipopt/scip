@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.5 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.6 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -64,7 +64,7 @@ DECL_PARAMCHGD(paramChgdPropPriority)
 RETCODE SCIPpropCreate(
    PROP**           prop,               /**< pointer to propagator data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of propagator */
    const char*      desc,               /**< description of propagator */
    int              priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
@@ -106,12 +106,12 @@ RETCODE SCIPpropCreate(
    /* add parameters */
    sprintf(paramname, "propagating/%s/priority", name);
    sprintf(paramdesc, "priority of propagator <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdPropPriority, (PARAMDATA*)(*prop)) ); /*lint !e740*/
    sprintf(paramname, "propagating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

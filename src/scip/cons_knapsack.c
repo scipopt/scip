@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.80 2005/01/25 09:59:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.81 2005/01/31 12:20:56 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -217,7 +217,8 @@ RETCODE catchEvents(
    for( i = 0; i < consdata->nvars; i++)
    {
       CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
-      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], 
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED,
             eventhdlr, consdata->eventdatas[i], NULL) );
    }
 
@@ -238,7 +239,8 @@ RETCODE dropEvents(
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i],
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED,
             eventhdlr, consdata->eventdatas[i], -1) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
@@ -1158,7 +1160,7 @@ RETCODE addCoef(
       /* install the rounding locks of variable */
       CHECK_OKAY( lockRounding(scip, cons, var) );
 
-      /* catch bound tighten events */
+      /* catch events */
       if( SCIPconsIsTransformed(cons) )
       {
          CONSHDLRDATA* conshdlrdata;
@@ -1166,7 +1168,8 @@ RETCODE addCoef(
          conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
          assert(conshdlrdata != NULL);
          CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
-         CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+         CHECK_OKAY( SCIPcatchVarEvent(scip, var,
+               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED,
                conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1], NULL) );
       }
 
@@ -1207,14 +1210,15 @@ RETCODE delCoefPos(
    /* remove the rounding locks of variable */
    CHECK_OKAY( unlockRounding(scip, cons, consdata->vars[pos]) );
 
-   /* drop bound tighten events */
+   /* drop events */
    if( SCIPconsIsTransformed(cons) )
    {
       CONSHDLRDATA* conshdlrdata;
       
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos],
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED,
             conshdlrdata->eventhdlr, consdata->eventdatas[pos], -1) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
@@ -2130,7 +2134,12 @@ DECL_EVENTEXEC(eventExecKnapsack)
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
       break;
+   case SCIP_EVENTTYPE_UBRELAXED:
+      /* if a variable fixed to 0 is unfixed, it is possible, that it can be fixed to 0 again */
+      eventdata->consdata->propagated = FALSE;
+      break;
    case SCIP_EVENTTYPE_VARFIXED:
+      /* the variable should be removed from the constraint in presolving */
       eventdata->consdata->propagated = FALSE;
       break;
    default:

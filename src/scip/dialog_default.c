@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.41 2005/01/25 12:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.42 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -740,6 +740,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPsolve(scip) );
@@ -750,7 +751,6 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       break;
 
    case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_FREESOLVE:
    case SCIP_STAGE_FREETRANS:
@@ -779,6 +779,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPpresolve(scip) );
       break;
 
@@ -792,7 +793,6 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
       break;
 
    case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_FREESOLVE:
    case SCIP_STAGE_FREETRANS:

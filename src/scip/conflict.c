@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.83 2005/01/21 09:16:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.84 2005/01/31 12:20:56 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -162,7 +162,7 @@ DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
 RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
    int              priority,           /**< priority of the conflict handler */
@@ -194,7 +194,7 @@ RETCODE SCIPconflicthdlrCreate(
    /* add parameters */
    sprintf(paramname, "conflict/%s/priority", name);
    sprintf(paramdesc, "priority of conflict handler <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*conflicthdlr)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdConflicthdlrPriority, (PARAMDATA*)(*conflicthdlr)) ); /*lint !e740*/
 
@@ -419,7 +419,7 @@ RETCODE conflictEnsureConflictvarsMem(
 static
 RETCODE conflictAddConflictVar(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable that should enter the conflict set */
@@ -449,7 +449,7 @@ RETCODE conflictAddConflictVar(
    if( (SCIPvarGetLbLP(var) > 0.5) != literalvalue )
    {
       /* variable is fixed to the opposite value -> use the negated variable as conflict literal */
-      CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
+      CHECK_OKAY( SCIPvarNegate(var, blkmem, set, stat, &var) );
    }
    assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
    assert((SCIPvarGetLbLP(var) > 0.5) == literalvalue);
@@ -840,7 +840,7 @@ BDCHGINFO* conflictFirstCand(
 static
 RETCODE conflictAddClause(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -881,7 +881,7 @@ RETCODE conflictAddClause(
    debugMessage("adding %d variables from the queue as temporary conflict variables\n", nbdchginfos);
    for( i = 0; i < nbdchginfos; ++i )
    {
-      CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, SCIPbdchginfoGetVar(bdchginfos[i]), FALSE, TRUE) );
+      CHECK_OKAY( conflictAddConflictVar(conflict, blkmem, set, stat, SCIPbdchginfoGetVar(bdchginfos[i]), FALSE, TRUE) );
    }
 
 #ifndef NDEBUG
@@ -1249,7 +1249,7 @@ RETCODE conflictResolveBound(
 static
 RETCODE conflictCreateReconvergenceClauses(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -1288,8 +1288,8 @@ RETCODE conflictCreateReconvergenceClauses(
       /* put the variable of first UIP into the conflict set, using the literal that is currently fixed to TRUE */
       var = SCIPbdchginfoGetVar(uip);
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
-      CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var, TRUE, FALSE) );
+      CHECK_OKAY( SCIPvarNegate(var, blkmem, set, stat, &var) );
+      CHECK_OKAY( conflictAddConflictVar(conflict, blkmem, set, stat, var, TRUE, FALSE) );
       
       /* put current UIP into priority queue */
       CHECK_OKAY( conflictAddBdchginfo(conflict, uip) );
@@ -1375,7 +1375,7 @@ RETCODE conflictCreateReconvergenceClauses(
                }
 
                /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
-               CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar, FALSE, FALSE) );
+               CHECK_OKAY( conflictAddConflictVar(conflict, blkmem, set, stat, actvar, FALSE, FALSE) );
                assert(conflict->nconflictvars >= 2);
             }
             else
@@ -1407,7 +1407,7 @@ RETCODE conflictCreateReconvergenceClauses(
             SCIPbdchginfoGetDepth(uip), conflict->nconflictvars, nresolutions);
 
          /* call the conflict handlers to create a conflict clause */
-         CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, maxsize, &success, &nlits) );
+         CHECK_OKAY( conflictAddClause(conflict, blkmem, set, stat, tree, validdepth, maxsize, &success, &nlits) );
          if( success )
          {
             (*nreconvclauses)++;
@@ -1427,7 +1427,7 @@ RETCODE conflictCreateReconvergenceClauses(
 static
 RETCODE conflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -1518,7 +1518,7 @@ RETCODE conflictAnalyze(
          /* call the conflict handlers to create a conflict clause */
          debugMessage("creating intermediate clause after %d resolutions up to depth %d (valid at depth %d): %d conflict vars, %d vars in queue\n",
             nresolutions, bdchgdepth, validdepth, conflict->nconflictvars, SCIPpqueueNElems(conflict->binbdchgqueue));
-         CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, maxsize, &success, &nlits) );
+         CHECK_OKAY( conflictAddClause(conflict, blkmem, set, stat, tree, validdepth, maxsize, &success, &nlits) );
          lastclausenresolutions = nresolutions;
          lastclauseresoldepth = bdchgdepth;
          if( success )
@@ -1598,7 +1598,7 @@ RETCODE conflictAnalyze(
                firstuip = bdchginfo;
 
             /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
-            CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar, FALSE, FALSE) );
+            CHECK_OKAY( conflictAddConflictVar(conflict, blkmem, set, stat, actvar, FALSE, FALSE) );
          }
       }
 
@@ -1619,7 +1619,7 @@ RETCODE conflictAnalyze(
       Bool success;
 
       /* call the conflict handlers to create a conflict clause */
-      CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, maxsize, &success, &nlits) );
+      CHECK_OKAY( conflictAddClause(conflict, blkmem, set, stat, tree, validdepth, maxsize, &success, &nlits) );
       if( success )
       {
          (*nclauses)++;
@@ -1630,7 +1630,7 @@ RETCODE conflictAnalyze(
    /* produce reconvergence clauses defined by succeeding UIP's of the last depth level */
    if( set->conf_reconvclauses && firstuip != NULL && SCIPbdchginfoHasInferenceReason(firstuip) )
    {
-      CHECK_OKAY( conflictCreateReconvergenceClauses(conflict, memhdr, set, stat, tree, validdepth, maxsize, firstuip,
+      CHECK_OKAY( conflictCreateReconvergenceClauses(conflict, blkmem, set, stat, tree, validdepth, maxsize, firstuip,
             nreconvclauses, nreconvliterals) );
    }
 
@@ -1643,7 +1643,7 @@ RETCODE conflictAnalyze(
  */
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -1687,7 +1687,7 @@ RETCODE SCIPconflictAnalyze(
    conflict->npropcalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, validdepth, maxsize, TRUE,
+   CHECK_OKAY( conflictAnalyze(conflict, blkmem, set, stat, tree, validdepth, maxsize, TRUE,
          &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
    conflict->npropconfclauses += nclauses;
    conflict->npropconfliterals += nliterals;
@@ -2030,7 +2030,7 @@ RETCODE generateAltLP(
 static
 RETCODE conflictAnalyzeLPAltpoly(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -2147,7 +2147,7 @@ RETCODE conflictAnalyzeLPAltpoly(
          if( valid )
          {
             /* analyze the conflict set, and create a conflict constraint on success */
-            CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
+            CHECK_OKAY( conflictAnalyze(conflict, blkmem, set, stat, tree, 0, maxsize, FALSE, success) );
          }
       }
       
@@ -3160,7 +3160,7 @@ RETCODE undoBdchgsDualsol(
 static
 RETCODE conflictAnalyzeRemainingBdchgs(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -3229,7 +3229,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
          /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
          debugMessage("   fixed: <%s> == %g [status: %d, type: %d, dive/strong]\n",
             SCIPvarGetName(var), SCIPvarGetLbLP(var), SCIPvarGetStatus(var), SCIPvarGetType(var));
-         CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var, FALSE, FALSE) );
+         CHECK_OKAY( conflictAddConflictVar(conflict, blkmem, set, stat, var, FALSE, FALSE) );
          nbdchgs++;
       }
       else
@@ -3263,7 +3263,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    if( v == nvars )
    {
       /* analyze the conflict set, and create conflict constraints on success */
-      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, 
+      CHECK_OKAY( conflictAnalyze(conflict, blkmem, set, stat, tree, 0, maxsize, FALSE, 
             nclauses, nliterals, nreconvclauses, nreconvliterals) );
    }
 
@@ -3274,7 +3274,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
 static
 RETCODE conflictAnalyzeLP(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -3789,7 +3789,7 @@ RETCODE conflictAnalyzeLP(
       /* analyze the conflict starting with remaining bound changes */
       if( valid )
       {
-         CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree,
+         CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree,
                maxsize, lbchginfoposs, ubchginfoposs, nclauses, nliterals, nreconvclauses, nreconvliterals) );
       }
 
@@ -3823,7 +3823,7 @@ RETCODE conflictAnalyzeLP(
  */
 RETCODE SCIPconflictAnalyzeLP(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -3862,7 +3862,7 @@ RETCODE SCIPconflictAnalyzeLP(
    conflict->nlpcalls++;
 
    /* perform conflict analysis */
-   CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, SCIPlpDiving(lp),
+   CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, SCIPlpDiving(lp),
          &iterations, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
    conflict->nlpiterations += iterations;
    conflict->nlpconfclauses += nclauses;
@@ -3958,7 +3958,7 @@ Longint SCIPconflictGetNLPIterations(
 /** analyses infeasible strong branching sub problems for conflicts */
 RETCODE SCIPconflictAnalyzeStrongbranch(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -4059,7 +4059,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          debugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, TRUE, 
+         CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE, 
                &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
          conflict->nsbiterations += iter;
          conflict->nsbconfclauses += nclauses;
@@ -4108,7 +4108,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          debugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, TRUE, 
+         CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE, 
                &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
          conflict->nsbiterations += iter;
          conflict->nsbconfclauses += nclauses;
@@ -4222,7 +4222,7 @@ Longint SCIPconflictGetNStrongbranchIterations(
  */
 RETCODE SCIPconflictAnalyzePseudo(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -4334,7 +4334,7 @@ RETCODE SCIPconflictAnalyzePseudo(
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* analyze conflict on remaining bound changes */
-      CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree,
+      CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, prob, tree,
             maxsize, lbchginfoposs, ubchginfoposs, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
       conflict->npseudoconfclauses += nclauses;
       conflict->npseudoconfliterals += nliterals;

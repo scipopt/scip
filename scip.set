@@ -582,6 +582,18 @@ presolving/dualfix/priority = 100000
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/dualfix/maxrounds = -1
 
+# priority of presolver <probing>
+# [type: int, range: [-2147483648,2147483647], default: -100000]
+presolving/probing/priority = -100000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/probing/maxrounds = -1
+
+# maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/probing/proprounds = -1
+
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
 presolving/trivial/priority = 9000000
@@ -845,6 +857,14 @@ heuristics/fixandinfer/freqofs = 0
 # maximal depth level to call primal heuristic <fixandinfer> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/fixandinfer/maxdepth = -1
+
+# maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/fixandinfer/proprounds = 0
+
+# minimal number of fixings to apply before dive may be aborted
+# [type: int, range: [0,2147483647], default: 100]
+heuristics/fixandinfer/minfixings = 100
 
 # priority of heuristic <fracdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1002000]

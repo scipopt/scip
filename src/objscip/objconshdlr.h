@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.27 2005/01/21 09:16:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.28 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -525,23 +525,23 @@ public:
     *  It should update the rounding locks of all associated variables with calls to SCIPaddVarLocks(),
     *  depending on the way, the variable is involved in the constraint:
     *  - If the constraint may get violated by decreasing the value of a variable, it should call
-    *    SCIPaddVarLocks(var, nlockspos, nlocksneg), saying that rounding down is potentially rendering the
+    *    SCIPaddVarLocks(scip, var, nlockspos, nlocksneg), saying that rounding down is potentially rendering the
     *    (positive) constraint infeasible and rounding up is potentially rendering the negation of the constraint
     *    infeasible.
     *  - If the constraint may get violated by increasing the value of a variable, it should call
-    *    SCIPaddVarLocks(var, nlocksneg, nlockspos), saying that rounding down is potentially rendering the
+    *    SCIPaddVarLocks(scip, var, nlocksneg, nlockspos), saying that rounding down is potentially rendering the
     *    constraint's negation infeasible and rounding up is potentially rendering the constraint itself
     *    infeasible.
     *  - If the constraint may get violated by changing the variable in any direction, it should call
-    *    SCIPaddVarLocks(var, nlockspos + nlocksneg, nlockspos + nlocksneg).
+    *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
     *
     *  Consider the linear constraint "3x -5y +2z <= 7" as an example. The variable rounding lock method of the
-    *  linear constraint handler should call SCIPaddVarLocks(x, nlocksneg, nlockspos), 
-    *  SCIPaddVarLocks(y, nlockspos, nlocksneg) and SCIPaddVarLocks(z, nlocksneg, nlockspos) to tell SCIP, that
-    *  rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
+    *  linear constraint handler should call SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), 
+    *  SCIPaddVarLocks(scip, y, nlockspos, nlocksneg) and SCIPaddVarLocks(scip, z, nlocksneg, nlockspos) to tell SCIP,
+    *  that rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
     *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation "3x -5y +2z > 7".
     *  A linear constraint "2 <= 3x -5y +2z <= 7" should call
-    *  SCIPaddVarLocks(..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
+    *  SCIPaddVarLocks(scip, ..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
     *  directions of each variable can destroy both the feasibility of the constraint and it's negation
     *  "3x -5y +2z < 2  or  3x -5y +2z > 7".
     *
@@ -564,7 +564,7 @@ public:
     *
     *  As a second example, consider the equivalence constraint "y <-> c(x)" with variable y and constraint c. The
     *  constraint demands, that y == 1 if and only if c(x) is satisfied. The variable lock method of the corresponding
-    *  constraint handler should call SCIPaddVarLocks(y, nlockspos + nlocksneg, nlockspos + nlocksneg) and
+    *  constraint handler should call SCIPaddVarLocks(scip, y, nlockspos + nlocksneg, nlockspos + nlocksneg) and
     *  SCIPaddConsLocks(scip, c, nlockspos + nlocksneg, nlockspos + nlocksneg), because any modification to the
     *  value of y or to the feasibility of c can alter the feasibility of the equivalence constraint.
     */

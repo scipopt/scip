@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.16 2005/01/21 09:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.17 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -74,7 +74,9 @@ DECL_PRESOLEXEC(presolExecDualfix)
    assert(presol != NULL);
    assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
    assert(result != NULL);
-   
+
+   *result = SCIP_DIDNOTFIND;
+
    /* get active problem variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);

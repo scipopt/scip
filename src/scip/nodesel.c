@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.42 2005/01/21 09:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.43 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -172,7 +172,7 @@ void SCIPnodepqDestroy(
 /** frees node priority queue and all nodes in the queue */
 RETCODE SCIPnodepqFree(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
@@ -182,7 +182,7 @@ RETCODE SCIPnodepqFree(
    assert(*nodepq != NULL);
 
    /* free the nodes of the queue */
-   CHECK_OKAY( SCIPnodepqClear(*nodepq, memhdr, set, tree, lp) );
+   CHECK_OKAY( SCIPnodepqClear(*nodepq, blkmem, set, tree, lp) );
    
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
@@ -193,7 +193,7 @@ RETCODE SCIPnodepqFree(
 /** deletes all nodes in the node priority queue */
 RETCODE SCIPnodepqClear(
    NODEPQ*          nodepq,             /**< node priority queue */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
@@ -208,7 +208,7 @@ RETCODE SCIPnodepqClear(
    {
       assert(nodepq->slots[i] != NULL);
       assert(SCIPnodeGetType(nodepq->slots[i]) == SCIP_NODETYPE_LEAF);
-      CHECK_OKAY( SCIPnodeFree(&nodepq->slots[i], memhdr, set, tree, lp) );
+      CHECK_OKAY( SCIPnodeFree(&nodepq->slots[i], blkmem, set, tree, lp) );
    }
 
    /* reset data */
@@ -615,7 +615,7 @@ Real SCIPnodepqGetLowerboundSum(
 /** free all nodes from the queue that are cut off by the given upper bound */
 RETCODE SCIPnodepqBound(
    NODEPQ*          nodepq,             /**< node priority queue */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -664,7 +664,7 @@ RETCODE SCIPnodepqBound(
          SCIPvbcCutoffNode(stat->vbc, stat, node);
 
          /* free memory of the node */
-         CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
+         CHECK_OKAY( SCIPnodeFree(&node, blkmem, set, tree, lp) );
       }
       else
          pos--;
@@ -715,7 +715,7 @@ DECL_PARAMCHGD(paramChgdNodeselMemsavePriority)
 RETCODE SCIPnodeselCreate(
    NODESEL**        nodesel,            /**< pointer to store node selector */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
    int              stdpriority,        /**< priority of the node selector in standard mode */
@@ -755,13 +755,13 @@ RETCODE SCIPnodeselCreate(
    /* add parameters */
    sprintf(paramname, "nodeselection/%s/stdpriority", name);
    sprintf(paramdesc, "priority of branching rule <%s> in standard mode", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->stdpriority, stdpriority, INT_MIN, INT_MAX, 
                   paramChgdNodeselStdPriority, (PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
    sprintf(paramname, "nodeselection/%s/memsavepriority", name);
    sprintf(paramdesc, "priority of branching rule <%s> in memory saving mode", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->memsavepriority, memsavepriority, INT_MIN, INT_MAX, 
                   paramChgdNodeselMemsavePriority, (PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 

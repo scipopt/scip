@@ -2,7 +2,7 @@
 # [type: real, range: [0,1], default: 0.167]
 branching/scorefac = 0.167
 
-# should branching on binary variables be prefered?
+# should branching on binary variables be preferred?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 branching/preferbinary = FALSE
 
@@ -126,9 +126,17 @@ lp/rowagelimit = 10
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 lp/cleanupcols = FALSE
 
+# should new non-basic columns be removed after root LP solving?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+lp/cleanupcolsroot = FALSE
+
 # should new basic rows be removed after LP solving?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 lp/cleanuprows = TRUE
+
+# should new basic rows be removed after root LP solving?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/cleanuprowsroot = TRUE
 
 # should LP solutions be checked, resolving LP when numerical troubles occur?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -214,7 +222,7 @@ numerics/pseudocostdelta = 0.0001
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/maxrounds = -1
 
-# abort presolve, if less than this fraction of the problem was changed in last presolve round
+# abort presolve, if at most this fraction of the problem was changed in last presolve round
 # [type: real, range: [0,1], default: 0.0001]
 presolving/abortfac = 0.0001
 
@@ -265,6 +273,10 @@ separating/minortho = 0.5
 # minimal orthogonality for a cut to enter the LP in the root node
 # [type: real, range: [0,1], default: 0.5]
 separating/minorthoroot = 0.5
+
+# factor to scale objective parallelism of cut in separation score calculation
+# [type: real, range: [0,1e+98], default: 0.2]
+separating/objparalfac = 0.2
 
 # factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)
 # [type: real, range: [0,1e+98], default: 1]
@@ -330,7 +342,7 @@ conflict/linear/priority = -1000000
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/propfreq = 5
 
@@ -374,7 +386,7 @@ constraints/linear/maxpresolaggrrounds = -1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/propfreq = 1
 
@@ -390,7 +402,7 @@ constraints/and/maxprerounds = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/propfreq = -1
 
@@ -406,7 +418,7 @@ constraints/conjunction/maxprerounds = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
@@ -422,7 +434,7 @@ constraints/integral/maxprerounds = -1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
 
@@ -462,7 +474,7 @@ conflict/logicor/priority = 800000
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/logicor/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/logicor/propfreq = 1
 
@@ -478,7 +490,7 @@ constraints/logicor/maxprerounds = -1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/propfreq = 1
 
@@ -498,7 +510,7 @@ conflict/setppc/priority = 700000
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/setppc/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/propfreq = 1
 
@@ -518,7 +530,7 @@ constraints/setppc/npseudobranches = 2
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/propfreq = 1
 
@@ -534,7 +546,7 @@ constraints/varbound/maxprerounds = -1
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/xor/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in presolving)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/xor/propfreq = 1
 
@@ -569,6 +581,18 @@ presolving/dualfix/priority = 100000
 # maximal number of presolving rounds the presolver participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 presolving/dualfix/maxrounds = -1
+
+# priority of presolver <probing>
+# [type: int, range: [-2147483648,2147483647], default: -100000]
+presolving/probing/priority = -100000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/probing/maxrounds = -1
+
+# maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/probing/proprounds = -1
 
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
@@ -823,7 +847,7 @@ heuristics/feaspump/depthfacnosol = 2
 heuristics/fixandinfer/priority = -500000
 
 # frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
+# [type: int, range: [-1,2147483647], default: -1]
 heuristics/fixandinfer/freq = 0
 
 # frequency offset for calling primal heuristic <fixandinfer>
@@ -833,6 +857,14 @@ heuristics/fixandinfer/freqofs = 0
 # maximal depth level to call primal heuristic <fixandinfer> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/fixandinfer/maxdepth = -1
+
+# maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/fixandinfer/proprounds = 0
+
+# minimal number of fixings to apply before dive may be aborted
+# [type: int, range: [0,2147483647], default: 100]
+heuristics/fixandinfer/minfixings = 100
 
 # priority of heuristic <fracdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1002000]

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.17 2005/01/21 09:16:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.18 2005/01/31 12:20:57 bzfpfend Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -44,7 +44,7 @@
 extern
 RETCODE SCIPcutpoolCreate(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
    );
 
@@ -52,7 +52,7 @@ RETCODE SCIPcutpoolCreate(
 extern
 RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -61,7 +61,7 @@ RETCODE SCIPcutpoolFree(
 extern
 RETCODE SCIPcutpoolClear(
    CUTPOOL*         cutpool,            /**< cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -70,7 +70,7 @@ RETCODE SCIPcutpoolClear(
 extern
 RETCODE SCIPcutpoolAddRow(
    CUTPOOL*         cutpool,            /**< cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    ROW*             row                 /**< cutting plane to add */
    );
@@ -79,7 +79,7 @@ RETCODE SCIPcutpoolAddRow(
 extern
 RETCODE SCIPcutpoolAddNewRow(
    CUTPOOL*         cutpool,            /**< cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    ROW*             row                 /**< cutting plane to add */
    );
@@ -88,7 +88,7 @@ RETCODE SCIPcutpoolAddNewRow(
 extern
 RETCODE SCIPcutpoolDelRow(
    CUTPOOL*         cutpool,            /**< cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */
@@ -99,7 +99,7 @@ RETCODE SCIPcutpoolDelRow(
 extern
 RETCODE SCIPcutpoolSeparate(
    CUTPOOL*         cutpool,            /**< cut pool */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.33 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.34 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -42,7 +42,7 @@
 extern
 RETCODE SCIPstatCreate(
    STAT**           stat,               /**< pointer to problem statistics data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -50,7 +50,7 @@ RETCODE SCIPstatCreate(
 extern
 RETCODE SCIPstatFree(
    STAT**           stat,               /**< pointer to problem statistics data */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** marks statistics to be able to reset them when solving process is freed */
@@ -62,6 +62,12 @@ void SCIPstatMark(
 /** reset statistics to the data before solving started */
 extern
 void SCIPstatReset(
+   STAT*            stat                /**< problem statistics data */
+   );
+
+/** reset presolving and current run specific statistics */
+extern
+void SCIPstatResetPresolving(
    STAT*            stat                /**< problem statistics data */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.11 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.12 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -193,19 +193,19 @@ void lpistateUnpack(
 static
 RETCODE lpistateCreate(
    LPISTATE**       lpistate,           /**< pointer to LPi state */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    int              ncols,              /**< number of columns to store */
    int              nrows               /**< number of rows to store */
    )
 {
    assert(lpistate != 0);
-   assert(memhdr != 0);
+   assert(blkmem != 0);
    assert(ncols >= 0);
    assert(nrows >= 0);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, lpistate) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->packcstat, colpacketNum(ncols)) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->packrstat, rowpacketNum(nrows)) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, lpistate) );
+   ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum(ncols)) );
+   ALLOC_OKAY( allocBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum(nrows)) );
 
    return SCIP_OKAY;
 }
@@ -214,16 +214,16 @@ RETCODE lpistateCreate(
 static
 void lpistateFree(
    LPISTATE**       lpistate,           /**< pointer to LPi state information (like basis information) */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
-   assert(memhdr != 0);
+   assert(blkmem != 0);
    assert(lpistate != 0);
    assert(*lpistate != 0);
 
-   freeBlockMemoryArray(memhdr, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
-   freeBlockMemoryArray(memhdr, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
-   freeBlockMemory(memhdr, lpistate);
+   freeBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
+   freeBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
+   freeBlockMemory(blkmem, lpistate);
 }
 
 
@@ -2179,13 +2179,13 @@ RETCODE SCIPlpiGetBInvARow(
 /** stores LPi state (like basis information) into lpistate object */
 RETCODE SCIPlpiGetState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
    debugMessage("calling SCIPlpiGetState()\n");
 
-   assert(memhdr != 0);
+   assert(blkmem != 0);
    assert(lpi != 0);
    assert(lpi->clp != 0);
    assert(lpistate != 0);
@@ -2196,7 +2196,7 @@ RETCODE SCIPlpiGetState(
    assert(nrows >= 0);
    
    /* allocate lpistate data */
-   CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncols, nrows) );
+   CHECK_OKAY( lpistateCreate(lpistate, blkmem, ncols, nrows) );
 
    /* allocate enough memory for storing uncompressed basis information */
    CHECK_OKAY( ensureCstatMem(lpi, ncols) );
@@ -2217,7 +2217,7 @@ RETCODE SCIPlpiGetState(
 /** loads LPi state (like basis information) into solver */
 RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          /*memhdr*/,         /**< block memory */
+   BLKMEM*          /*blkmem*/,         /**< block memory */
    LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
@@ -2246,7 +2246,7 @@ RETCODE SCIPlpiSetState(
 /** frees LPi state information */
 RETCODE SCIPlpiFreeState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
@@ -2254,7 +2254,7 @@ RETCODE SCIPlpiFreeState(
 
    assert(lpi != 0);
 
-   lpistateFree(lpistate, memhdr);
+   lpistateFree(lpistate, blkmem);
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.70 2005/01/21 09:16:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.71 2005/01/31 12:20:57 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -106,7 +106,7 @@
 #define LLONG_MIN	(-LLONG_MAX - 1LL)
 #endif
 
-#define Longint long long               /**< type used for long integer values */
+#define Longint long long                    /**< type used for long integer values */
 #define LONGINT_MAX          LLONG_MAX
 #define LONGINT_MIN          LLONG_MIN
 #define LONGINT_FORMAT          "%lld"
@@ -116,7 +116,7 @@
  * Floating point values
  */
 
-#define Real double                     /**< type used for floating point values */
+#define Real double                          /**< type used for floating point values */
 #define REAL_MAX         (Real)DBL_MAX
 #define REAL_MIN        -(Real)DBL_MAX
 #define REAL_FORMAT              "%lf"
@@ -127,8 +127,8 @@
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-09  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BOUNDSTREPS      1e-04  /**< default minimal improve for strengthening bounds */
-#define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01 /**< default minimal variable distance value to use for pseudo cost updates */
-#define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04 /**< default minimal objective distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
+#define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
 #define SCIP_INVALID                  1e+99  /**< floating point value is not valid */

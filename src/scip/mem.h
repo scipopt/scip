@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.h,v 1.15 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.h,v 1.16 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   mem.h
- * @brief  methods and datastructures for block memory pools and memory buffers
+ * @brief  methods for block memory pools and memory buffers
  * @author Tobias Achterberg
  */
 
@@ -28,19 +28,9 @@
 
 
 #include "def.h"
-#include "memory.h"
 #include "type_retcode.h"
 #include "type_mem.h"
-
-
-/** various block memory buffers */
-struct Mem
-{
-   MEMHDR*          setmem;             /**< memory blocks for parameter settings */
-   MEMHDR*          probmem;            /**< memory blocks for original problem */
-   MEMHDR*          solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
-};
-
+#include "struct_mem.h"
 
 
 /** creates block memory structures */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.23 2005/01/21 09:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.24 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -67,7 +67,7 @@ DECL_PARAMCHGD(paramChgdPresolPriority)
 RETCODE SCIPpresolCreate(
    PRESOL**         presol,             /**< pointer to store presolver */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
@@ -105,11 +105,11 @@ RETCODE SCIPpresolCreate(
    /* add parameters */
    sprintf(paramname, "presolving/%s/priority", name);
    sprintf(paramdesc, "priority of presolver <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*presol)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdPresolPriority, (PARAMDATA*)(*presol)) ); /*lint !e740*/
    sprintf(paramname, "presolving/%s/maxrounds", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
          &(*presol)->maxrounds, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 

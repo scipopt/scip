@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.40 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.41 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -83,7 +83,7 @@ DECL_PARAMCHGD(paramChgdHeurPriority)
 RETCODE SCIPheurCreate(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
    char             dispchar,           /**< display character of primal heuristic */
@@ -134,20 +134,20 @@ RETCODE SCIPheurCreate(
    /* add parameters */
    sprintf(paramname, "heuristics/%s/priority", name);
    sprintf(paramdesc, "priority of heuristic <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->priority, priority, INT_MIN, INT_MAX, 
                   paramChgdHeurPriority, (PARAMDATA*)(*heur)) ); /*lint !e740*/
    sprintf(paramname, "heuristics/%s/freq", name);
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
    sprintf(paramname, "heuristics/%s/freqofs", name);
    sprintf(paramdesc, "frequency offset for calling primal heuristic <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->freqofs, freqofs, 0, INT_MAX, NULL, NULL) );
    sprintf(paramname, "heuristics/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->maxdepth, maxdepth, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

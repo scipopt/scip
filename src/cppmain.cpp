@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.3 2005/01/21 09:16:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.4 2005/01/31 12:20:57 bzfpfend Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -180,9 +180,7 @@ RETCODE runSCIP(
     * Local Memory Deallocation *
     *****************************/
 
-#ifndef NDEBUG
-   memoryCheckEmpty();
-#endif
+   checkEmptyMemory();
 
    return SCIP_OKAY;
 }

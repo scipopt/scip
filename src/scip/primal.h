@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.27 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.28 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -54,14 +54,14 @@ RETCODE SCIPprimalCreate(
 extern
 RETCODE SCIPprimalFree(
    PRIMAL**         primal,             /**< pointer to primal data */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** sets upper bound in primal data and in LP solver */
 extern
 RETCODE SCIPprimalSetUpperbound(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -74,7 +74,7 @@ RETCODE SCIPprimalSetUpperbound(
 extern
 RETCODE SCIPprimalUpdateUpperbound(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -94,7 +94,7 @@ Bool SCIPprimalUpperboundIsSol(
 extern
 RETCODE SCIPprimalAddSol(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -109,7 +109,7 @@ RETCODE SCIPprimalAddSol(
 extern
 RETCODE SCIPprimalAddSolFree(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -124,7 +124,7 @@ RETCODE SCIPprimalAddSolFree(
 extern
 RETCODE SCIPprimalAddCurrentSol(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -139,7 +139,7 @@ RETCODE SCIPprimalAddCurrentSol(
 extern
 RETCODE SCIPprimalTrySol(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -156,7 +156,7 @@ RETCODE SCIPprimalTrySol(
 extern
 RETCODE SCIPprimalTrySolFree(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -173,7 +173,7 @@ RETCODE SCIPprimalTrySolFree(
 extern
 RETCODE SCIPprimalTryCurrentSol(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem after presolve */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.16 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.17 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -43,12 +43,12 @@
 /** creates an empty history entry */
 RETCODE SCIPhistoryCreate(
    HISTORY**        history,            /**< pointer to store branching and inference history */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(history != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, history) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, history) );
 
    SCIPhistoryReset(*history);
 
@@ -58,13 +58,13 @@ RETCODE SCIPhistoryCreate(
 /** frees a history entry */
 void SCIPhistoryFree(
    HISTORY**        history,            /**< pointer to branching and inference history */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(history != NULL);
    assert(*history != NULL);
 
-   freeBlockMemory(memhdr, history);
+   freeBlockMemory(blkmem, history);
 }
 
 /** resets history entry to zero */

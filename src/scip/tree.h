@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.72 2005/01/25 12:46:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.73 2005/01/31 12:21:03 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -55,7 +55,7 @@
 extern
 RETCODE SCIPnodeCreateChild(
    NODE**           node,               /**< pointer to node data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -66,7 +66,7 @@ RETCODE SCIPnodeCreateChild(
 extern
 RETCODE SCIPnodeFree(
    NODE**           node,               /**< node data */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
@@ -83,7 +83,7 @@ void SCIPnodeCaptureLPIState(
 extern
 RETCODE SCIPnodeReleaseLPIState(
    NODE*            node,               /**< fork/subroot node */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    LP*              lp                  /**< current LP data */
    );
 
@@ -92,7 +92,7 @@ extern
 RETCODE SCIPnodeFocus(
    NODE**           node,               /**< pointer to node to focus (or NULL to remove focus); the node
                                          *   is freed, if it was cut off due to a cut off subtree */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -136,7 +136,7 @@ void SCIPnodeMarkPropagated(
 extern
 RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -149,7 +149,7 @@ RETCODE SCIPnodeAddCons(
 extern
 RETCODE SCIPnodeDisableCons(
    NODE*            node,               /**< node to add constraint to */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -163,7 +163,7 @@ RETCODE SCIPnodeDisableCons(
 extern
 RETCODE SCIPnodeAddBoundinfer(
    NODE*            node,               /**< node to add bound change to */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -185,7 +185,7 @@ RETCODE SCIPnodeAddBoundinfer(
 extern
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -202,7 +202,7 @@ RETCODE SCIPnodeAddBoundchg(
 extern
 RETCODE SCIPnodeAddHolechg(
    NODE*            node,               /**< node to add bound change to */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    HOLELIST**       ptr,                /**< changed list pointer */
@@ -238,7 +238,7 @@ RETCODE SCIPtreeCreate(
 extern
 RETCODE SCIPtreeFree(
    TREE**           tree,               /**< pointer to tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -247,7 +247,7 @@ RETCODE SCIPtreeFree(
 extern
 RETCODE SCIPtreeClear(
    TREE*            tree,               /**< tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -256,7 +256,7 @@ RETCODE SCIPtreeClear(
 extern
 RETCODE SCIPtreeCreateRoot(
    TREE*            tree,               /**< tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp                  /**< current LP data */
@@ -266,7 +266,7 @@ RETCODE SCIPtreeCreateRoot(
 extern
 RETCODE SCIPtreeCreatePresolvingRoot(
    TREE*            tree,               /**< tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -281,7 +281,7 @@ RETCODE SCIPtreeCreatePresolvingRoot(
 extern
 RETCODE SCIPtreeFreePresolvingRoot(
    TREE*            tree,               /**< tree data structure */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -311,7 +311,7 @@ RETCODE SCIPtreeSetNodesel(
 extern
 RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -322,7 +322,7 @@ RETCODE SCIPtreeCutoff(
 extern
 RETCODE SCIPtreeLoadLP(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< current LP data */
@@ -335,7 +335,7 @@ RETCODE SCIPtreeLoadLP(
 extern
 RETCODE SCIPtreeBranchVar(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< current LP data */
@@ -348,7 +348,7 @@ RETCODE SCIPtreeBranchVar(
 extern
 RETCODE SCIPtreeStartProbing(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -357,7 +357,7 @@ RETCODE SCIPtreeStartProbing(
 extern
 RETCODE SCIPtreeCreateProbingNode(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -368,7 +368,7 @@ RETCODE SCIPtreeCreateProbingNode(
 extern
 RETCODE SCIPtreeBacktrackProbing(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -383,7 +383,7 @@ RETCODE SCIPtreeBacktrackProbing(
 extern
 RETCODE SCIPtreeEndProbing(
    TREE*            tree,               /**< branch and bound tree */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */

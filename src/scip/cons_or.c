@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.32 2005/01/21 09:16:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.33 2005/01/31 12:20:57 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -41,7 +41,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define EVENTHDLR_NAME         "or"
-#define EVENTHDLR_DESC         "bound tighten event handler for or constraints"
+#define EVENTHDLR_DESC         "event handler for or constraints"
 
 
 
@@ -70,7 +70,7 @@ struct ConsData
 /** constraint handler data */
 struct ConshdlrData
 {
-   EVENTHDLR*       eventhdlr;          /**< event handler for bound tighten events on watched variables */
+   EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
 };
 
 
@@ -138,7 +138,7 @@ RETCODE conshdlrdataCreate(
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for catching bound tighten events on watched variables */
+   /* get event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
@@ -175,95 +175,54 @@ int consdataGetNRows(
    return consdata->nvars + 1;
 }
 
-/** catches events for tightening lower bound of variable at given position */
+/** catches events for the watched variable at given position */
 static
-RETCODE consdataCatchLbEvent(
+RETCODE consdataCatchWatchedEvents(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< or constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              pos,                /**< array position of variable to catch bound change events for */
-   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
+   int*             filterpos           /**< pointer to store position of event filter entry */
    )
 {
    assert(consdata != NULL);
    assert(consdata->vars != NULL);
    assert(eventhdlr != NULL);
    assert(0 <= pos && pos < consdata->nvars);
+   assert(filterpos != NULL);
 
-   /* catch lower bound tighten events on variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED, eventhdlr,
-         (EVENTDATA*)consdata, filterpos) );
-   
+   /* catch tightening events for upper bound and relaxed events for lower bounds on watched variable */
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
+         eventhdlr, (EVENTDATA*)consdata, filterpos) );
+
    return SCIP_OKAY;
 }
 
-/** catches events for tightening upper bound of variable at given position */
+
+/** drops events for the watched variable at given position */
 static
-RETCODE consdataCatchUbEvent(
+RETCODE consdataDropWatchedEvents(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< or constraint data */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos,                /**< array position of variable to catch bound change events for */
-   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
+   int              pos,                /**< array position of watched variable to drop bound change events for */
+   int              filterpos           /**< position of event filter entry */
    )
 {
    assert(consdata != NULL);
    assert(consdata->vars != NULL);
    assert(eventhdlr != NULL);
    assert(0 <= pos && pos < consdata->nvars);
+   assert(filterpos >= 0);
 
-   /* catch upper bound tighten events on variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr,
-         (EVENTDATA*)consdata, filterpos) );
-   
-   return SCIP_OKAY;
-}
-
-/** drops events for tightening lower bound of variable at given position */
-static
-RETCODE consdataDropLbEvent(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< or constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos,                /**< array position of variable to catch bound change events for */
-   int              filterpos           /**< position of event filter entry, or -1 */
-   )
-{
-   assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < consdata->nvars);
-
-   /* drop lower bound events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBTIGHTENED, eventhdlr,
-         (EVENTDATA*)consdata, filterpos) );
+   /* drop tightening events for upper bound and relaxed events for lower bounds on watched variable */
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
+         eventhdlr, (EVENTDATA*)consdata, filterpos) );
 
    return SCIP_OKAY;
 }
 
-/** drops events for tightening upper bound of variable at given position */
-static
-RETCODE consdataDropUbEvent(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< or constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos,                /**< array position of variable to catch bound change events for */
-   int              filterpos           /**< position of event filter entry, or -1 */
-   )
-{
-   assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < consdata->nvars);
-
-   /* drop upper bound events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_UBTIGHTENED, eventhdlr,
-         (EVENTDATA*)consdata, filterpos) );
-
-   return SCIP_OKAY;
-}
-
-/** catches needed bound tightening events on all variables of constraint, except the special ones for watched variables */
+/** catches needed events on all variables of constraint, except the special ones for watched variables */
 static
 RETCODE consdataCatchEvents(
    SCIP*            scip,               /**< SCIP data structure */
@@ -275,20 +234,21 @@ RETCODE consdataCatchEvents(
 
    assert(consdata != NULL);
 
-   /* catch tightening events for both bounds on resultant variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-         (EVENTDATA*)consdata, NULL) );
+   /* catch bound change events for both bounds on resultant variable */
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+         eventhdlr, (EVENTDATA*)consdata, NULL) );
 
-   /* catch tightening events for lower bound on operator variables */
+   /* catch tightening events for lower bound and relaxed events for upper bounds on operator variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( consdataCatchLbEvent(scip, consdata, eventhdlr, i, NULL) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+            eventhdlr, (EVENTDATA*)consdata, NULL) );
    }
 
    return SCIP_OKAY;
 }
 
-/** drops needed bound tightening events on all variables of constraint, except the special ones for watched variables */
+/** drops events on all variables of constraint, except the special ones for watched variables */
 static
 RETCODE consdataDropEvents(
    SCIP*            scip,               /**< SCIP data structure */
@@ -300,14 +260,15 @@ RETCODE consdataDropEvents(
 
    assert(consdata != NULL);
 
-   /* drop tightening events for both bounds on resultant variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-         (EVENTDATA*)consdata, -1) );
+   /* drop bound change events for both bounds on resultant variable */
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
+         eventhdlr, (EVENTDATA*)consdata, -1) );
 
-   /* drop tightening events for lower bound on operator variables */
+   /* drop tightening events for lower bound and relaxed events for upper bounds on operator variables */
    for( i = 0; i < consdata->nvars; ++i )
    {
-      CHECK_OKAY( consdataDropLbEvent(scip, consdata, eventhdlr, i, -1) );
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
+            eventhdlr, (EVENTDATA*)consdata, -1) );
    }
 
    return SCIP_OKAY;
@@ -344,26 +305,26 @@ RETCODE consdataSwitchWatchedvars(
    assert(watchedvar1 == -1 || watchedvar1 != consdata->watchedvar2);
    assert(watchedvar2 == -1 || watchedvar2 != consdata->watchedvar1);
 
-   /* drop upper bound tighten events on old watched variables */
+   /* drop events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
    {
       assert(consdata->filterpos1 != -1);
-      CHECK_OKAY( consdataDropUbEvent(scip, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
+      CHECK_OKAY( consdataDropWatchedEvents(scip, consdata, eventhdlr, consdata->watchedvar1, consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
-      CHECK_OKAY( consdataDropUbEvent(scip, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
+      CHECK_OKAY( consdataDropWatchedEvents(scip, consdata, eventhdlr, consdata->watchedvar2, consdata->filterpos2) );
    }
 
-   /* catch upper bound tighten events on new watched variables */
+   /* catch events on new watched variables */
    if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
-      CHECK_OKAY( consdataCatchUbEvent(scip, consdata, eventhdlr, watchedvar1, &consdata->filterpos1) );
+      CHECK_OKAY( consdataCatchWatchedEvents(scip, consdata, eventhdlr, watchedvar1, &consdata->filterpos1) );
    }
    if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
-      CHECK_OKAY( consdataCatchUbEvent(scip, consdata, eventhdlr, watchedvar2, &consdata->filterpos2) );
+      CHECK_OKAY( consdataCatchWatchedEvents(scip, consdata, eventhdlr, watchedvar2, &consdata->filterpos2) );
    }
 
    /* set the new watched variables */
@@ -408,7 +369,7 @@ RETCODE consdataCreate(
       CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
       CHECK_OKAY( SCIPgetTransformedVar(scip, (*consdata)->resvar, &(*consdata)->resvar) );
 
-      /* catch needed bound tightening events on variables */
+      /* catch needed events on variables */
       CHECK_OKAY( consdataCatchEvents(scip, *consdata, eventhdlr) );
    }
 
@@ -451,10 +412,10 @@ RETCODE consdataFree(
 
    if( SCIPisTransformed(scip) )
    {
-      /* drop bound tighten events for watched variables */
+      /* drop events for watched variables */
       CHECK_OKAY( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
 
-      /* drop all other bound tightening events on variables */
+      /* drop all other events on variables */
       CHECK_OKAY( consdataDropEvents(scip, *consdata, eventhdlr) );
    }
    else
@@ -521,7 +482,7 @@ RETCODE delCoefPos(
 
    if( SCIPconsIsTransformed(cons) )
    {
-      /* if the position is watched, drop bound tighten events and stop watching the position */
+      /* if the position is watched, stop watching the position */
       if( consdata->watchedvar1 == pos )
       {
          CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
@@ -1595,7 +1556,7 @@ RETCODE SCIPincludeConshdlrOr(
 {
    CONSHDLRDATA* conshdlrdata;
 
-   /* create event handler for bound tighten events */
+   /* create event handler for events on variables */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL,
          NULL, eventExecOr,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.11 2005/01/21 09:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.12 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -40,21 +40,21 @@
 extern
 RETCODE SCIPparamsetCreate(
    PARAMSET**       paramset,           /**< pointer to store the parameter set */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** frees parameter set */
 extern
 void SCIPparamsetFree(
    PARAMSET**       paramset,           /**< pointer to the parameter set */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** creates a bool parameter, sets it to its default value, and adds it to the parameter set */
 extern
 RETCODE SCIPparamsetAddBool(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -67,7 +67,7 @@ RETCODE SCIPparamsetAddBool(
 extern
 RETCODE SCIPparamsetAddInt(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -82,7 +82,7 @@ RETCODE SCIPparamsetAddInt(
 extern
 RETCODE SCIPparamsetAddLongint(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -97,7 +97,7 @@ RETCODE SCIPparamsetAddLongint(
 extern
 RETCODE SCIPparamsetAddReal(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -112,7 +112,7 @@ RETCODE SCIPparamsetAddReal(
 extern
 RETCODE SCIPparamsetAddChar(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -126,7 +126,7 @@ RETCODE SCIPparamsetAddChar(
 extern
 RETCODE SCIPparamsetAddString(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */

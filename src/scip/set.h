@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.78 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.79 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -58,7 +58,7 @@
 extern
 RETCODE SCIPsetCreate(
    SET**            set,                /**< pointer to SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
@@ -66,14 +66,14 @@ RETCODE SCIPsetCreate(
 extern
 RETCODE SCIPsetFree(
    SET**            set,                /**< pointer to SCIP settings */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
 extern
 RETCODE SCIPsetAddBoolParam(
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -86,7 +86,7 @@ RETCODE SCIPsetAddBoolParam(
 extern
 RETCODE SCIPsetAddIntParam(
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -101,7 +101,7 @@ RETCODE SCIPsetAddIntParam(
 extern
 RETCODE SCIPsetAddLongintParam(
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -116,7 +116,7 @@ RETCODE SCIPsetAddLongintParam(
 extern
 RETCODE SCIPsetAddRealParam(
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -131,7 +131,7 @@ RETCODE SCIPsetAddRealParam(
 extern
 RETCODE SCIPsetAddCharParam(
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -145,7 +145,7 @@ RETCODE SCIPsetAddCharParam(
 extern
 RETCODE SCIPsetAddStringParam(
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */

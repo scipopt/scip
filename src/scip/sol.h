@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.35 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.36 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -50,7 +50,7 @@
 extern
 RETCODE SCIPsolCreate(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -62,7 +62,7 @@ RETCODE SCIPsolCreate(
 extern
 RETCODE SCIPsolCopy(
    SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    SOL*             sourcesol           /**< primal CIP solution to copy */
@@ -72,7 +72,7 @@ RETCODE SCIPsolCopy(
 extern
 RETCODE SCIPsolCreateLPSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -85,7 +85,7 @@ RETCODE SCIPsolCreateLPSol(
 extern
 RETCODE SCIPsolCreatePseudoSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -98,7 +98,7 @@ RETCODE SCIPsolCreatePseudoSol(
 extern
 RETCODE SCIPsolCreateCurrentSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -111,7 +111,7 @@ RETCODE SCIPsolCreateCurrentSol(
 extern
 RETCODE SCIPsolFree(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    PRIMAL*          primal              /**< primal data */
    );
 
@@ -211,7 +211,7 @@ void SCIPsolUpdateVarObj(
 extern
 RETCODE SCIPsolCheck(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */

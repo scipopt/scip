@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.41 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.42 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -55,7 +55,7 @@
 extern
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< problem name */
    DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
@@ -70,7 +70,7 @@ RETCODE SCIPprobCreate(
 extern
 RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
@@ -80,7 +80,7 @@ RETCODE SCIPprobFree(
 extern
 RETCODE SCIPprobTransform(
    PROB*            source,             /**< problem to transform */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -108,7 +108,7 @@ void SCIPprobSetData(
 extern
 RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -153,7 +153,7 @@ RETCODE SCIPprobAddCons(
 extern
 RETCODE SCIPprobDelCons(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons                /**< constraint to remove */
@@ -223,7 +223,7 @@ void SCIPprobStoreRootSol(
 extern
 RETCODE SCIPprobExitPresolve(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -243,7 +243,7 @@ RETCODE SCIPprobInitSolve(
 extern
 RETCODE SCIPprobExitSolve(
    PROB*            prob,               /**< problem data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );

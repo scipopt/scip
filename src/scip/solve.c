@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.161 2005/01/25 12:46:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.162 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -90,7 +90,7 @@ Bool SCIPsolveIsStopped(
 
 /** applies domain propagation on current node */
 RETCODE SCIPpropagateDomains(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -152,7 +152,7 @@ RETCODE SCIPpropagateDomains(
       /* propagate constraints */
       for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
       {
-         CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], memhdr, set, stat, prob, depth, &result) );
+         CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], blkmem, set, stat, prob, depth, &result) );
          propagain = propagain || (result == SCIP_REDUCEDDOM);
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
       }
@@ -179,7 +179,7 @@ RETCODE SCIPpropagateDomains(
 /** strengthens variable's bounds looking at reduced costs */
 static
 RETCODE redcostStrengthening(
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PRIMAL*          primal,             /**< primal data */
@@ -278,7 +278,7 @@ RETCODE redcostStrengthening(
                   /* strengthen upper bound */
                   debugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->cutoffbound, lpobjval, redcost);
-                  CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                  CHECK_OKAY( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
                         var, newbd, SCIP_BOUNDTYPE_UPPER, FALSE) );
                   stat->nredcoststrfound++;
                }
@@ -323,7 +323,7 @@ RETCODE redcostStrengthening(
                   /* strengthen lower bound */
                   debugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->cutoffbound, lpobjval, redcost);
-                  CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                  CHECK_OKAY( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
                         var, newbd, SCIP_BOUNDTYPE_LOWER, FALSE) );
                   stat->nredcoststrfound++;
                }
@@ -539,7 +539,7 @@ RETCODE nodeUpdateLowerboundLP(
 /** constructs the LP of the root node */
 static
 RETCODE initRootLP(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -578,19 +578,19 @@ RETCODE initRootLP(
 
       if( SCIPvarIsInitial(var) )
       {
-         CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var, 0.0, TRUE) );
+         CHECK_OKAY( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 0.0, TRUE) );
       }
    }
    assert(lp->nremoveablecols == 0);
-   CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp) );
+   CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
 
    /* add LP relaxations of all initial constraints to LP */
    debugMessage("init root LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, stat, prob) );
+      CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, prob) );
    }
-   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
+   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
    /* inform pricing and separation storage, that initial LP setup is now finished */
    SCIPpricestoreEndInitialLP(pricestore);
@@ -602,7 +602,7 @@ RETCODE initRootLP(
 /** load and solve the initial LP of a node */
 static
 RETCODE solveNodeInitialLP(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -635,19 +635,19 @@ RETCODE solveNodeInitialLP(
 
    /* load the LP into the solver and load the LP state */
    debugMessage("loading LP\n");
-   CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, stat, lp) );
+   CHECK_OKAY( SCIPtreeLoadLP(tree, blkmem, set, stat, lp) );
    
    /* init root node LP */
    if( SCIPnodeGetDepth(focusnode) == 0 )
    {
-      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
+      CHECK_OKAY( initRootLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
    }
 
    /* only the bounds and the constraint list may have been changed since the LP state node
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -668,7 +668,7 @@ RETCODE solveNodeInitialLP(
 /** solve the current LP of a node with a price-and-cut loop */
 static
 RETCODE priceAndCutLoop(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -708,7 +708,7 @@ RETCODE priceAndCutLoop(
    int s;
 
    assert(set != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(stat != NULL);
    assert(prob != NULL);
    assert(tree != NULL);
@@ -746,7 +746,7 @@ RETCODE priceAndCutLoop(
 
    /* solve initial LP of price-and-cut loop */
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved);
 
@@ -780,7 +780,7 @@ RETCODE priceAndCutLoop(
          debugMessage("problem variable pricing\n");
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
-         CHECK_OKAY( SCIPpricestoreAddProbVars(pricestore, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
+         CHECK_OKAY( SCIPpricestoreAddProbVars(pricestore, blkmem, set, stat, prob, tree, lp, branchcand, eventqueue) );
          npricedcolvars = prob->ncolvars;
 
          /* if no additional problem variables were found, call external pricers to create additional problem variables */
@@ -804,7 +804,7 @@ RETCODE priceAndCutLoop(
          }
 
          /* apply the priced variables to the LP */
-         CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, prob, tree, lp) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(!lp->flushed || lp->solved);
          mustprice = !lp->flushed || (prob->ncolvars != npricedcolvars);
@@ -814,13 +814,13 @@ RETCODE priceAndCutLoop(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
          assert(lp->flushed);
          assert(lp->solved || *lperror);
 
          /* reset bounds temporarily set by pricer to their original values */
          debugMessage("pricing: reset bounds\n");
-         CHECK_OKAY( SCIPpricestoreResetBounds(pricestore, memhdr, set, stat, lp, branchcand, eventqueue) );
+         CHECK_OKAY( SCIPpricestoreResetBounds(pricestore, blkmem, set, stat, lp, branchcand, eventqueue) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
          assert(!lp->flushed || lp->solved);
@@ -829,7 +829,7 @@ RETCODE priceAndCutLoop(
 
          /* solve LP again after resetting bounds (with dual simplex) */
          debugMessage("pricing: solve LP after resetting bounds\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, FALSE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, lperror) );
          assert(lp->flushed);
          assert(lp->solved || *lperror);
 
@@ -903,7 +903,7 @@ RETCODE priceAndCutLoop(
             {
                debugMessage("global cut pool separation\n");
                assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-               CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepastore, root, &result) );
+               CHECK_OKAY( SCIPcutpoolSeparate(cutpool, blkmem, set, stat, lp, sepastore, root, &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
                enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
             }
@@ -944,7 +944,7 @@ RETCODE priceAndCutLoop(
              */
             for( h = 0; h < set->nconshdlrs && !(*cutoff) && !enoughcuts && lp->flushed; ++h )
             {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, stat, prob, sepastore, actdepth,
+               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], blkmem, set, stat, prob, sepastore, actdepth,
                      &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
                separateagain = separateagain || (result == SCIP_CONSADDED);
@@ -967,7 +967,7 @@ RETCODE priceAndCutLoop(
             {
                /* solve LP (with dual simplex) */
                debugMessage("separation: solve LP\n");
-               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
+               CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
                assert(lp->flushed);
                assert(lp->solved || lperror);
                separateagain = TRUE;
@@ -984,7 +984,7 @@ RETCODE priceAndCutLoop(
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
          {
             /* the found cuts are of no use, because the node is infeasible anyway (or we have an error in the LP) */
-            CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
+            CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, blkmem, set, lp) );
          }
          else
          {
@@ -994,19 +994,19 @@ RETCODE priceAndCutLoop(
                if( (set->prop_redcostfreq == 0 && root)
                   || (set->prop_redcostfreq > 0 && actdepth % set->prop_redcostfreq == 0) )
                {
-                  CHECK_OKAY( redcostStrengthening(memhdr, set, stat, primal, tree, lp, branchcand, eventqueue) );
+                  CHECK_OKAY( redcostStrengthening(blkmem, set, stat, primal, tree, lp, branchcand, eventqueue) );
                }
             }
         
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
             if( !(*cutoff) )
             {
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
-                  CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, 
+                  CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, 
                         SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
                }
                
@@ -1019,7 +1019,7 @@ RETCODE priceAndCutLoop(
 
                   /* solve LP (with dual simplex) */
                   debugMessage("separation: solve LP\n");
-                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
+                  CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
                   assert(lp->flushed);
                   assert(lp->solved || lperror);
 
@@ -1059,7 +1059,7 @@ RETCODE priceAndCutLoop(
       if( !set->misc_exactsolve && !root
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT) )
       {
-         CHECK_OKAY( SCIPconflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
+         CHECK_OKAY( SCIPconflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
       }
 
       /* check for unboundness */
@@ -1078,7 +1078,7 @@ RETCODE priceAndCutLoop(
 /** solves the current node's LP in a price-and-cut loop */
 static
 RETCODE solveNodeLP(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -1120,7 +1120,7 @@ RETCODE solveNodeLP(
    if( !initiallpsolved )
    {
       /* load and solve the initial LP of the node */
-      CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, 
+      CHECK_OKAY( solveNodeInitialLP(blkmem, set, stat, prob, tree, lp, pricestore, sepastore, 
             branchcand, eventfilter, eventqueue, cutoff, lperror) );
       assert(*cutoff || *lperror || (lp->flushed && lp->solved));
       debugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n", 
@@ -1135,7 +1135,7 @@ RETCODE solveNodeLP(
    if( !(*cutoff) && !(*lperror) )
    {
       /* solve the LP with price-and-cut*/
-      CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool, 
+      CHECK_OKAY( priceAndCutLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool, 
             branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, initiallpsolved, cutoff, unbounded, lperror) );
    }
    assert(*cutoff || *lperror || (lp->flushed && lp->solved));
@@ -1149,13 +1149,13 @@ RETCODE solveNodeLP(
    if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
-      CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat, SCIPtreeGetFocusDepth(tree) == 0) );
+      CHECK_OKAY( SCIPlpCleanupNew(lp, blkmem, set, stat, SCIPtreeGetFocusDepth(tree) == 0) );
       
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
       {
          debugMessage("resolving LP after cleanup\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, TRUE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, TRUE, lperror) );
       }
    }
 #endif
@@ -1228,7 +1228,7 @@ RETCODE solveNodeRelax(
 /** enforces constraints by branching, separation, or domain reduction */
 static
 RETCODE enforceConstraints(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -1296,11 +1296,11 @@ RETCODE enforceConstraints(
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
-         CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, stat, prob, tree, sepastore, &result) );
+         CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], blkmem, set, stat, prob, tree, sepastore, &result) );
       }
       else
       {
-         CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, stat, prob, tree, objinfeasible, 
+         CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], blkmem, set, stat, prob, tree, objinfeasible, 
                &result) );
          if( SCIPsepastoreGetNCuts(sepastore) != 0 )
          {
@@ -1419,7 +1419,7 @@ RETCODE enforceConstraints(
 /** applies the cuts stored in the separation store, or clears the store if the node can be cut off */
 static
 RETCODE applyCuts(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -1440,14 +1440,14 @@ RETCODE applyCuts(
    if( *cutoff )
    {
       /* the found cuts are of no use, because the node is infeasible anyway (or we have an error in the LP) */
-      CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
+      CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, blkmem, set, lp) );
    }
    else if( SCIPsepastoreGetNCuts(sepastore) > 0 )
    {
       Longint olddomchgcount;
 
       olddomchgcount = stat->domchgcount;
-      CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
+      CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
       *propagateagain = *propagateagain || (stat->domchgcount != olddomchgcount);
       *solvelpagain = TRUE;
    }
@@ -1491,7 +1491,7 @@ void updateLoopStatus(
 /** solves the focus node */
 static
 RETCODE solveNode(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -1595,7 +1595,7 @@ RETCODE solveNode(
       if( propagateagain && !(*cutoff) )
       {
          propagateagain = FALSE;
-         CHECK_OKAY( SCIPpropagateDomains(memhdr, set, stat, prob, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+         CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
@@ -1622,7 +1622,7 @@ RETCODE solveNode(
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
          /* apply found cuts */
-         CHECK_OKAY( applyCuts(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
+         CHECK_OKAY( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
                cutoff, &propagateagain, &solvelpagain) );
       }
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -1634,7 +1634,7 @@ RETCODE solveNode(
          if( SCIPtreeHasFocusNodeLP(tree) )
          {
             /* solve the node's LP */
-            CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore,
+            CHECK_OKAY( solveNodeLP(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore,
                   cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
                   initiallpsolved, cutoff, unbounded, &lperror) );
             initiallpsolved = TRUE;
@@ -1692,7 +1692,7 @@ RETCODE solveNode(
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
 
          /* apply found cuts */
-         CHECK_OKAY( applyCuts(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
+         CHECK_OKAY( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
                cutoff, &propagateagain, &solvelpagain) );
       }
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -1717,7 +1717,7 @@ RETCODE solveNode(
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
          if( pseudoobjval >= primal->cutoffbound )
          {
-            CHECK_OKAY( SCIPconflictAnalyzePseudo(conflict, memhdr, set, stat, prob, tree, lp, NULL) );
+            CHECK_OKAY( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, prob, tree, lp, NULL) );
          }
       }
 
@@ -1740,7 +1740,7 @@ RETCODE solveNode(
          }
          
          /* call constraint enforcement */
-         CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, tree, lp, sepastore, conshdlrs_enfo,
+         CHECK_OKAY( enforceConstraints(blkmem, set, stat, prob, tree, lp, sepastore, conshdlrs_enfo,
                &branched, cutoff, infeasible, &propagateagain, &solvelpagain) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));
@@ -1750,7 +1750,7 @@ RETCODE solveNode(
          assert(!solvelpagain || (!branched && !(*cutoff) && *infeasible));
 
          /* apply found cuts */
-         CHECK_OKAY( applyCuts(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
+         CHECK_OKAY( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
                cutoff, &propagateagain, &solvelpagain) );
 
          /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
@@ -1785,7 +1785,7 @@ RETCODE solveNode(
             /* branch on LP solution */
             debugMessage("infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
                SCIPnodeGetDepth(focusnode), nlpcands);
-            CHECK_OKAY( SCIPbranchExecLP(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
+            CHECK_OKAY( SCIPbranchExecLP(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
                   primal->upperbound, FALSE, &result) );
             assert(result != SCIP_DIDNOTRUN);
          }
@@ -1794,7 +1794,7 @@ RETCODE solveNode(
             /* branch on pseudo solution */
             debugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
                SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
-            CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+            CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, 
                   primal->upperbound, TRUE, &result) );
          }
 
@@ -1863,7 +1863,7 @@ RETCODE solveNode(
          assert(branched == (tree->nchildren > 0));
 
          /* apply found cuts */
-         CHECK_OKAY( applyCuts(memhdr, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
+         CHECK_OKAY( applyCuts(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
                cutoff, &propagateagain, &solvelpagain) );
 
          /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */
@@ -1963,7 +1963,7 @@ RETCODE primalHeuristics(
 /** if feasible, adds current solution to the solution storage */
 static
 RETCODE addCurrentSolution(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -1983,16 +1983,16 @@ RETCODE addCurrentSolution(
       SCIPclockStart(stat->lpsoltime, set);
       
       /* add solution to storage */
-      CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, primal, tree, lp, NULL) );
+      CHECK_OKAY( SCIPsolCreateLPSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
       if( set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
-         CHECK_OKAY( SCIPprimalTrySolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol,
+         CHECK_OKAY( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol,
                TRUE, TRUE, &foundsol) );
       }
       else
       {
-         CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol, &foundsol) );
+         CHECK_OKAY( SCIPprimalAddSolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, &foundsol) );
       }
       if( foundsol )
          stat->nlpsolsfound++;
@@ -2006,16 +2006,16 @@ RETCODE addCurrentSolution(
       SCIPclockStart(stat->pseudosoltime, set);
 
       /* add solution to storage */
-      CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, set, stat, primal, tree, lp, NULL) );
+      CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
       if( set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
-         CHECK_OKAY( SCIPprimalTrySolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol,
+         CHECK_OKAY( SCIPprimalTrySolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol,
                TRUE, TRUE, &foundsol) );
       }
       else
       {
-         CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol, &foundsol) );
+         CHECK_OKAY( SCIPprimalAddSolFree(primal, blkmem, set, stat, prob, tree, lp, eventfilter, &sol, &foundsol) );
       }
 
       /* stop clock for pseudo solutions */
@@ -2030,7 +2030,7 @@ RETCODE addCurrentSolution(
 
 /** main solving loop */
 RETCODE SCIPsolveCIP(
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    MEM*             mem,                /**< block memory pools */
@@ -2062,7 +2062,7 @@ RETCODE SCIPsolveCIP(
    Bool foundsol;
 
    assert(set != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(stat != NULL);
    assert(prob != NULL);
    assert(tree != NULL);
@@ -2126,7 +2126,7 @@ RETCODE SCIPsolveCIP(
          SCIPclockStart(stat->nodeactivationtime, set);
          
          /* focus selected node */
-         CHECK_OKAY( SCIPnodeFocus(&focusnode, memhdr, set, stat, prob, primal, tree, lp, branchcand,
+         CHECK_OKAY( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand,
                eventfilter, eventqueue, &cutoff) );
          if( cutoff )
             stat->ndelayedcutoffs++;
@@ -2161,7 +2161,7 @@ RETCODE SCIPsolveCIP(
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
       /* solve focus node */
-      CHECK_OKAY( solveNode(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
+      CHECK_OKAY( solveNode(blkmem, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
             conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo,
             &cutoff, &unbounded, &infeasible, restart) );
       assert(!cutoff || infeasible);
@@ -2182,7 +2182,7 @@ RETCODE SCIPsolveCIP(
             assert(!cutoff);
 
             /* node solution is feasible: add it to the solution store */
-            CHECK_OKAY( addCurrentSolution(memhdr, set, stat, prob, primal, tree, lp, eventfilter) );
+            CHECK_OKAY( addCurrentSolution(blkmem, set, stat, prob, primal, tree, lp, eventfilter) );
 
             /* issue NODEFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
@@ -2240,7 +2240,7 @@ RETCODE SCIPsolveCIP(
                }
                else
                {
-                  CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                  CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, 
                         primal->upperbound, FALSE, &result) );
                   assert(result != SCIP_DIDNOTRUN);
                }
@@ -2288,7 +2288,7 @@ RETCODE SCIPsolveCIP(
       && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
    {
       focusnode = NULL;
-      CHECK_OKAY( SCIPnodeFocus(&focusnode, memhdr, set, stat, prob, primal, tree, lp, branchcand, 
+      CHECK_OKAY( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand, 
             eventfilter, eventqueue, &cutoff) );
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.9 2005/01/21 09:17:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.10 2005/01/31 12:21:03 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -124,7 +124,7 @@ void SCIPvbcFree(
 /** initializes VBC information and creates a file for VBC output */
 RETCODE SCIPvbcInit(
    VBC*             vbc,                /**< VBC information */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -152,7 +152,7 @@ RETCODE SCIPvbcInit(
    fprintf(vbc->file, "#INFORMATION: STANDARD\n");
    fprintf(vbc->file, "#NODE_NUMBER: NONE\n");
 
-   CHECK_OKAY( SCIPhashmapCreate(&vbc->nodenum, memhdr, SCIP_HASHSIZE_VBC) );
+   CHECK_OKAY( SCIPhashmapCreate(&vbc->nodenum, blkmem, SCIP_HASHSIZE_VBC) );
 
    return SCIP_OKAY;
 }

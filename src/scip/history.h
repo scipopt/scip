@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.13 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.14 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -43,14 +43,14 @@
 extern
 RETCODE SCIPhistoryCreate(
    HISTORY**        history,            /**< pointer to store branching and inference history */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** frees a history entry */
 extern
 void SCIPhistoryFree(
    HISTORY**        history,            /**< pointer to branching and inference history */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** resets history entry to zero */

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.34 2005/01/21 09:16:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.35 2005/01/31 12:20:56 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -136,7 +136,7 @@ RETCODE SCIPbranchcandUpdateVar(
 extern
 RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
@@ -267,7 +267,7 @@ Real SCIPbranchGetScoreMultiple(
  */
 extern
 RETCODE SCIPbranchExecLP(
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -283,7 +283,7 @@ RETCODE SCIPbranchExecLP(
 /** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
 extern
 RETCODE SCIPbranchExecPseudo(
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.11 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.12 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -44,7 +44,7 @@ extern
 RETCODE SCIPpricerCreate(
    PRICER**         pricer,             /**< pointer to variable pricer data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of variable pricer */
    const char*      desc,               /**< description of variable pricer */
    int              priority,           /**< priority of the variable pricer */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.134 2005/01/25 09:59:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.135 2005/01/31 12:21:03 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -51,17 +51,17 @@
 static
 RETCODE holelistCreate(
    HOLELIST**       holelist,           /**< pointer to holelist to create */
-   MEMHDR*          memhdr,             /**< block memory for target holelist */
+   BLKMEM*          blkmem,             /**< block memory for target holelist */
    SET*             set,                /**< global SCIP settings */
    Real             left,               /**< left bound of open interval in new hole */
    Real             right               /**< right bound of open interval in new hole */
    )
 {
    assert(holelist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(SCIPsetIsLT(set, left, right));
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, holelist) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, holelist) );
    (*holelist)->hole.left = left;
    (*holelist)->hole.right = right;
    (*holelist)->next = NULL;
@@ -73,18 +73,18 @@ RETCODE holelistCreate(
 static
 void holelistFree(
    HOLELIST**       holelist,           /**< pointer to holelist to free */
-   MEMHDR*          memhdr              /**< block memory for target holelist */
+   BLKMEM*          blkmem              /**< block memory for target holelist */
    )
 {
    assert(holelist != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
    while( *holelist != NULL )
    {
       HOLELIST* next;
 
       next = (*holelist)->next;
-      freeBlockMemory(memhdr, holelist);
+      freeBlockMemory(blkmem, holelist);
       *holelist = next;
    }
 }
@@ -93,7 +93,7 @@ void holelistFree(
 static
 RETCODE holelistDuplicate(
    HOLELIST**       target,             /**< pointer to target holelist */
-   MEMHDR*          memhdr,             /**< block memory for target holelist */
+   BLKMEM*          blkmem,             /**< block memory for target holelist */
    SET*             set,                /**< global SCIP settings */
    HOLELIST*        source              /**< holelist to duplicate */
    )
@@ -103,7 +103,7 @@ RETCODE holelistDuplicate(
    while( source != NULL )
    {
       assert(source->next == NULL || SCIPsetIsGE(set, source->next->hole.left, source->hole.right));
-      CHECK_OKAY( holelistCreate(target, memhdr, set, source->hole.left, source->hole.right) );
+      CHECK_OKAY( holelistCreate(target, blkmem, set, source->hole.left, source->hole.right) );
       source = source->next;
       target = &(*target)->next;
    }
@@ -115,7 +115,7 @@ RETCODE holelistDuplicate(
 static
 RETCODE domAddHole(
    DOM*             dom,                /**< domain to add hole to */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             left,               /**< left bound of open interval in new hole */
    Real             right               /**< right bound of open interval in new hole */
@@ -133,7 +133,7 @@ RETCODE domAddHole(
 
    nextholelist = *insertpos;
 
-   CHECK_OKAY( holelistCreate(insertpos, memhdr, set, left, right) );
+   CHECK_OKAY( holelistCreate(insertpos, blkmem, set, left, right) );
    (*insertpos)->next = nextholelist;
    
    return SCIP_OKAY;
@@ -144,7 +144,7 @@ RETCODE domAddHole(
 static
 RETCODE domMerge(
    DOM*             dom,                /**< domain to merge */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -164,14 +164,14 @@ RETCODE domMerge(
       if( SCIPsetIsGE(set, (*holelistptr)->hole.left, dom->ub) )
       {
          /* the remaining holes start behind the upper bound: kill them */
-         holelistFree(holelistptr, memhdr);
+         holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
       }
       else if( SCIPsetIsGT(set, (*holelistptr)->hole.right, dom->ub) )
       {
          /* the hole overlaps the upper bound: decrease upper bound, kill this and all remaining holes */
          dom->ub = (*holelistptr)->hole.left;
-         holelistFree(holelistptr, memhdr);
+         holelistFree(holelistptr, blkmem);
          assert(*holelistptr == NULL);
       }
       else if( SCIPsetIsGT(set, *lastrightptr, (*holelistptr)->hole.left) )
@@ -184,7 +184,7 @@ RETCODE domMerge(
          *lastrightptr = MAX(*lastrightptr, (*holelistptr)->hole.right);
          next = (*holelistptr)->next;
          (*holelistptr)->next = NULL;
-         holelistFree(holelistptr, memhdr);
+         holelistFree(holelistptr, blkmem);
          *holelistptr = next;
       }
       else
@@ -210,7 +210,7 @@ RETCODE domMerge(
 static
 RETCODE varEnsureLbchginfosSize(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
@@ -223,7 +223,7 @@ RETCODE varEnsureLbchginfosSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &var->lbchginfos, var->lbchginfossize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &var->lbchginfos, var->lbchginfossize, newsize) );
       var->lbchginfossize = newsize;
    }
    assert(num <= var->lbchginfossize);
@@ -235,7 +235,7 @@ RETCODE varEnsureLbchginfosSize(
 static
 RETCODE varEnsureUbchginfosSize(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
@@ -248,7 +248,7 @@ RETCODE varEnsureUbchginfosSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &var->ubchginfos, var->ubchginfossize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &var->ubchginfos, var->ubchginfossize, newsize) );
       var->ubchginfossize = newsize;
    }
    assert(num <= var->ubchginfossize);
@@ -260,7 +260,7 @@ RETCODE varEnsureUbchginfosSize(
 static
 RETCODE varAddLbchginfo(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             oldbound,           /**< old value for bound */
    Real             newbound,           /**< new value for bound */
@@ -287,7 +287,7 @@ RETCODE varAddLbchginfo(
    debugMessage("adding lower bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, oldbound, newbound);
 
-   CHECK_OKAY( varEnsureLbchginfosSize(var, memhdr, set, var->nlbchginfos+1) );
+   CHECK_OKAY( varEnsureLbchginfosSize(var, blkmem, set, var->nlbchginfos+1) );
    var->lbchginfos[var->nlbchginfos].oldbound = oldbound;
    var->lbchginfos[var->nlbchginfos].newbound = newbound;
    var->lbchginfos[var->nlbchginfos].var = var;
@@ -328,7 +328,7 @@ RETCODE varAddLbchginfo(
 static
 RETCODE varAddUbchginfo(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             oldbound,           /**< old value for bound */
    Real             newbound,           /**< new value for bound */
@@ -355,7 +355,7 @@ RETCODE varAddUbchginfo(
    debugMessage("adding upper bound change info to var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
       SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, depth, pos, oldbound, newbound);
 
-   CHECK_OKAY( varEnsureUbchginfosSize(var, memhdr, set, var->nubchginfos+1) );
+   CHECK_OKAY( varEnsureUbchginfosSize(var, blkmem, set, var->nubchginfos+1) );
    var->ubchginfos[var->nubchginfos].oldbound = oldbound;
    var->ubchginfos[var->nubchginfos].newbound = newbound;
    var->ubchginfos[var->nubchginfos].var = var;
@@ -395,7 +395,7 @@ RETCODE varAddUbchginfo(
 /** applies single bound change */
 RETCODE SCIPboundchgApply(
    BOUNDCHG*        boundchg,           /**< bound change to apply */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -435,7 +435,7 @@ RETCODE SCIPboundchgApply(
             case SCIP_BOUNDCHGTYPE_BRANCHING:
                debugMessage(" -> branching: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-               CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
+               CHECK_OKAY( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_LOWER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_UPWARDS;
@@ -446,7 +446,7 @@ RETCODE SCIPboundchgApply(
                debugMessage(" -> constraint <%s> inference: new lower bound of <%s>[%g,%g]: %g\n",
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-               CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
+               CHECK_OKAY( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
                      boundchg->data.inferencedata.info,
                      (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
@@ -457,7 +457,7 @@ RETCODE SCIPboundchgApply(
                   boundchg->data.inferencedata.reason.prop != NULL
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-               CHECK_OKAY( varAddLbchginfo(var, memhdr, set, var->locdom.lb, boundchg->newbound, depth, pos,
+               CHECK_OKAY( varAddLbchginfo(var, blkmem, set, var->locdom.lb, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
                      boundchg->data.inferencedata.info,
                      (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
@@ -469,7 +469,7 @@ RETCODE SCIPboundchgApply(
             }
             
             /* change local bound of variable */
-            CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound) );
+            CHECK_OKAY( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, boundchg->newbound) );
          }
          else
          {
@@ -501,7 +501,7 @@ RETCODE SCIPboundchgApply(
             case SCIP_BOUNDCHGTYPE_BRANCHING:
                debugMessage(" -> branching: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-               CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
+               CHECK_OKAY( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      NULL, NULL, NULL, 0, SCIP_BOUNDTYPE_UPPER, SCIP_BOUNDCHGTYPE_BRANCHING) );
                stat->lastbranchvar = var;
                stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
@@ -512,7 +512,7 @@ RETCODE SCIPboundchgApply(
                debugMessage(" -> constraint <%s> inference: new upper bound of <%s>[%g,%g]: %g\n",
                   SCIPconsGetName(boundchg->data.inferencedata.reason.cons),
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-               CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
+               CHECK_OKAY( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, boundchg->data.inferencedata.reason.cons, NULL,
                      boundchg->data.inferencedata.info,
                      (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_CONSINFER) );
@@ -523,7 +523,7 @@ RETCODE SCIPboundchgApply(
                   boundchg->data.inferencedata.reason.prop != NULL
                   ? SCIPpropGetName(boundchg->data.inferencedata.reason.prop) : "-",
                   SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
-               CHECK_OKAY( varAddUbchginfo(var, memhdr, set, var->locdom.ub, boundchg->newbound, depth, pos,
+               CHECK_OKAY( varAddUbchginfo(var, blkmem, set, var->locdom.ub, boundchg->newbound, depth, pos,
                      boundchg->data.inferencedata.var, NULL, boundchg->data.inferencedata.reason.prop,
                      boundchg->data.inferencedata.info,
                      (BOUNDTYPE)(boundchg->inferboundtype), SCIP_BOUNDCHGTYPE_PROPINFER) );
@@ -535,7 +535,7 @@ RETCODE SCIPboundchgApply(
             }
 
             /* change local bound of variable */
-            CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, boundchg->newbound) );
+            CHECK_OKAY( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, boundchg->newbound) );
          }
          else
          {
@@ -566,7 +566,7 @@ RETCODE SCIPboundchgApply(
 /** undoes single bound change */
 RETCODE SCIPboundchgUndo(
    BOUNDCHG*        boundchg,           /**< bound change to remove */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -599,7 +599,7 @@ RETCODE SCIPboundchgUndo(
          var->lbchginfos[var->nlbchginfos].oldbound, var->lbchginfos[var->nlbchginfos].newbound);
 
       /* reinstall the previous local bound */
-      CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue,
+      CHECK_OKAY( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
             var->lbchginfos[var->nlbchginfos].oldbound) );
       break;
 
@@ -616,7 +616,7 @@ RETCODE SCIPboundchgUndo(
          var->ubchginfos[var->nubchginfos].oldbound, var->ubchginfos[var->nubchginfos].newbound);
 
       /* reinstall the previous local bound */
-      CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, memhdr, set, stat, lp, branchcand, eventqueue,
+      CHECK_OKAY( SCIPvarChgUbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
             var->ubchginfos[var->nubchginfos].oldbound) );
       break;
 
@@ -664,7 +664,7 @@ RETCODE boundchgCaptureData(
 static
 RETCODE boundchgReleaseData(
    BOUNDCHG*        boundchg,           /**< bound change to remove */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -679,7 +679,7 @@ RETCODE boundchgReleaseData(
    case SCIP_BOUNDCHGTYPE_CONSINFER:
       assert(boundchg->data.inferencedata.var != NULL);
       assert(boundchg->data.inferencedata.reason.cons != NULL);
-      CHECK_OKAY( SCIPconsRelease(&boundchg->data.inferencedata.reason.cons, memhdr, set) );
+      CHECK_OKAY( SCIPconsRelease(&boundchg->data.inferencedata.reason.cons, blkmem, set) );
       break;
       
    default:
@@ -694,13 +694,13 @@ RETCODE boundchgReleaseData(
 static
 RETCODE domchgCreate(
    DOMCHG**         domchg,             /**< pointer to domain change data */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(domchg != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN)) );
+   ALLOC_OKAY( allocBlockMemorySize(blkmem, domchg, sizeof(DOMCHGDYN)) );
    (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
    (*domchg)->domchgdyn.nboundchgs = 0;
    (*domchg)->domchgdyn.boundchgs = NULL;
@@ -715,12 +715,12 @@ RETCODE domchgCreate(
 /** frees domain change data */
 RETCODE SCIPdomchgFree(
    DOMCHG**         domchg,             /**< pointer to domain change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
    if( *domchg != NULL )
    {
@@ -729,25 +729,25 @@ RETCODE SCIPdomchgFree(
       /* release branching and inference data associated with the bound changes */
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
       {
-         CHECK_OKAY( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], memhdr, set) );
+         CHECK_OKAY( boundchgReleaseData(&(*domchg)->domchgbound.boundchgs[i], blkmem, set) );
       }
 
       /* free memory for bound and hole changes */
       switch( (*domchg)->domchgdyn.domchgtype )
       {
       case SCIP_DOMCHGTYPE_BOUND:
-         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgbound.boundchgs, (*domchg)->domchgbound.nboundchgs);
-         freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOUND));
+         freeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgbound.boundchgs, (*domchg)->domchgbound.nboundchgs);
+         freeBlockMemorySize(blkmem, domchg, sizeof(DOMCHGBOUND));
          break;
       case SCIP_DOMCHGTYPE_BOTH:
-         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgboth.boundchgs, (*domchg)->domchgboth.nboundchgs);
-         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgboth.holechgs, (*domchg)->domchgboth.nholechgs);
-         freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOTH));
+         freeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgboth.boundchgs, (*domchg)->domchgboth.nboundchgs);
+         freeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgboth.holechgs, (*domchg)->domchgboth.nholechgs);
+         freeBlockMemorySize(blkmem, domchg, sizeof(DOMCHGBOTH));
          break;
       case SCIP_DOMCHGTYPE_DYNAMIC:
-         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgdyn.boundchgs, (*domchg)->domchgdyn.boundchgssize);
-         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
-         freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN));
+         freeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.boundchgs, (*domchg)->domchgdyn.boundchgssize);
+         freeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
+         freeBlockMemorySize(blkmem, domchg, sizeof(DOMCHGDYN));
          break;
       default:
          errorMessage("invalid domain change type\n");
@@ -762,24 +762,24 @@ RETCODE SCIPdomchgFree(
 static
 RETCODE domchgMakeDynamic(
    DOMCHG**         domchg,             /**< pointer to domain change data */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(domchg != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
    debugMessage("making domain change data %p pointing to %p dynamic\n", domchg, *domchg);
 
    if( *domchg == NULL )
    {
-      CHECK_OKAY( domchgCreate(domchg, memhdr) );
+      CHECK_OKAY( domchgCreate(domchg, blkmem) );
    }
    else
    {
       switch( (*domchg)->domchgdyn.domchgtype )
       {
       case SCIP_DOMCHGTYPE_BOUND:
-         ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOUND), sizeof(DOMCHGDYN)) );
+         ALLOC_OKAY( reallocBlockMemorySize(blkmem, domchg, sizeof(DOMCHGBOUND), sizeof(DOMCHGDYN)) );
          (*domchg)->domchgdyn.nholechgs = 0;
          (*domchg)->domchgdyn.holechgs = NULL;
          (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
@@ -787,7 +787,7 @@ RETCODE domchgMakeDynamic(
          (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
          break;
       case SCIP_DOMCHGTYPE_BOTH:
-         ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOTH), sizeof(DOMCHGDYN)) );
+         ALLOC_OKAY( reallocBlockMemorySize(blkmem, domchg, sizeof(DOMCHGBOTH), sizeof(DOMCHGDYN)) );
          (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
          (*domchg)->domchgdyn.holechgssize = (*domchg)->domchgdyn.nholechgs;
          (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC; /*lint !e641*/
@@ -814,12 +814,12 @@ RETCODE domchgMakeDynamic(
 /** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
 RETCODE SCIPdomchgMakeStatic(
    DOMCHG**         domchg,             /**< pointer to domain change data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
    assert(domchg != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
    debugMessage("making domain change data %p pointing to %p static\n", domchg, *domchg);
 
@@ -830,7 +830,7 @@ RETCODE SCIPdomchgMakeStatic(
       case SCIP_DOMCHGTYPE_BOUND:
          if( (*domchg)->domchgbound.nboundchgs == 0 )
          {
-            CHECK_OKAY( SCIPdomchgFree(domchg, memhdr, set) );
+            CHECK_OKAY( SCIPdomchgFree(domchg, blkmem, set) );
          }
          break;
       case SCIP_DOMCHGTYPE_BOTH:
@@ -838,11 +838,11 @@ RETCODE SCIPdomchgMakeStatic(
          {
             if( (*domchg)->domchgbound.nboundchgs == 0 )
             {
-               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr, set) );
+               CHECK_OKAY( SCIPdomchgFree(domchg, blkmem, set) );
             }
             else
             {
-               ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOTH), sizeof(DOMCHGBOUND)) );
+               ALLOC_OKAY( reallocBlockMemorySize(blkmem, domchg, sizeof(DOMCHGBOTH), sizeof(DOMCHGBOUND)) );
                (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOUND; /*lint !e641*/
             }
          }
@@ -852,30 +852,30 @@ RETCODE SCIPdomchgMakeStatic(
          {
             if( (*domchg)->domchgbound.nboundchgs == 0 )
             {
-               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr, set) );
+               CHECK_OKAY( SCIPdomchgFree(domchg, blkmem, set) );
             }
             else
             {
                /* shrink dynamic size arrays to their minimal sizes */
-               ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->domchgdyn.boundchgs,
+               ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
                               (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
-               freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
+               freeBlockMemoryArrayNull(blkmem, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
             
                /* convert into static domain change */
-               ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN), sizeof(DOMCHGBOUND)) );
+               ALLOC_OKAY( reallocBlockMemorySize(blkmem, domchg, sizeof(DOMCHGDYN), sizeof(DOMCHGBOUND)) );
                (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOUND; /*lint !e641*/
             }
          }
          else
          {
             /* shrink dynamic size arrays to their minimal sizes */
-            ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->domchgdyn.boundchgs,
+            ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
                            (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
-            ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->domchgdyn.holechgs,
+            ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
                            (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
             /* convert into static domain change */
-            ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN), sizeof(DOMCHGBOTH)) );
+            ALLOC_OKAY( reallocBlockMemorySize(blkmem, domchg, sizeof(DOMCHGDYN), sizeof(DOMCHGBOTH)) );
             (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOTH; /*lint !e641*/
          }
          break;
@@ -901,7 +901,7 @@ RETCODE SCIPdomchgMakeStatic(
 static
 RETCODE domchgEnsureBoundchgsSize(
    DOMCHG*          domchg,             /**< domain change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
@@ -914,7 +914,7 @@ RETCODE domchgEnsureBoundchgsSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &domchg->domchgdyn.boundchgs, domchg->domchgdyn.boundchgssize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &domchg->domchgdyn.boundchgs, domchg->domchgdyn.boundchgssize, newsize) );
       domchg->domchgdyn.boundchgssize = newsize;
    }
    assert(num <= domchg->domchgdyn.boundchgssize);
@@ -926,7 +926,7 @@ RETCODE domchgEnsureBoundchgsSize(
 static
 RETCODE domchgEnsureHolechgsSize(
    DOMCHG*          domchg,             /**< domain change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of additional entries to store */
    )
@@ -939,7 +939,7 @@ RETCODE domchgEnsureHolechgsSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &domchg->domchgdyn.holechgs, domchg->domchgdyn.holechgssize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &domchg->domchgdyn.holechgs, domchg->domchgdyn.holechgssize, newsize) );
       domchg->domchgdyn.holechgssize = newsize;
    }
    assert(num <= domchg->domchgdyn.holechgssize);
@@ -951,7 +951,7 @@ RETCODE domchgEnsureHolechgsSize(
 static
 RETCODE domchgCleanupBdchgs(
    DOMCHG*          domchg,             /**< domain change to apply */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              firstremoved        /**< array position of first deactivated bound change */
    )
@@ -987,7 +987,7 @@ RETCODE domchgCleanupBdchgs(
 static
 RETCODE domchgShrinkBdchgs(
    DOMCHG*          domchg,             /**< domain change to apply */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    int              newnbdchgs          /**< new number of bound changes */
    )
 {
@@ -998,11 +998,11 @@ RETCODE domchgShrinkBdchgs(
    {
       if( newnbdchgs == 0 )
       {
-         freeBlockMemoryArray(memhdr, &domchg->domchgbound.boundchgs, domchg->domchgbound.nboundchgs);
+         freeBlockMemoryArray(blkmem, &domchg->domchgbound.boundchgs, domchg->domchgbound.nboundchgs);
       }
       else
       {
-         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &domchg->domchgbound.boundchgs, domchg->domchgbound.nboundchgs, 
+         ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &domchg->domchgbound.boundchgs, domchg->domchgbound.nboundchgs, 
                newnbdchgs) );
       }
    }
@@ -1014,7 +1014,7 @@ RETCODE domchgShrinkBdchgs(
 /** applies domain change */
 RETCODE SCIPdomchgApply(
    DOMCHG*          domchg,             /**< domain change to apply */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -1040,7 +1040,7 @@ RETCODE SCIPdomchgApply(
    for( i = 0; i < (int)domchg->domchgbound.nboundchgs; ++i )
    {
       assert(j <= i);
-      CHECK_OKAY( SCIPboundchgApply(&domchg->domchgbound.boundchgs[i], memhdr, set, stat, lp,
+      CHECK_OKAY( SCIPboundchgApply(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp,
             branchcand, eventqueue, depth, j, cutoff) );
       if( *cutoff )
          break;
@@ -1053,7 +1053,7 @@ RETCODE SCIPdomchgApply(
       else
       {
          /* release inference data of inactive bound change */
-         CHECK_OKAY( boundchgReleaseData(&domchg->domchgbound.boundchgs[i], memhdr, set) );
+         CHECK_OKAY( boundchgReleaseData(&domchg->domchgbound.boundchgs[i], blkmem, set) );
       }
    }
    debugMessage(" -> %d bound changes (%d active)\n", domchg->domchgbound.nboundchgs, j);
@@ -1062,13 +1062,13 @@ RETCODE SCIPdomchgApply(
    for( ; i < (int)domchg->domchgbound.nboundchgs; ++i )
    {
       assert(*cutoff);
-      CHECK_OKAY( boundchgReleaseData(&domchg->domchgbound.boundchgs[i], memhdr, set) );
+      CHECK_OKAY( boundchgReleaseData(&domchg->domchgbound.boundchgs[i], blkmem, set) );
    }
 
    /* clean up deactivated bound changes and all bound changes from the point on where a cutoff was detected */
    if( j < (int)domchg->domchgbound.nboundchgs )
    {
-      CHECK_OKAY( domchgShrinkBdchgs(domchg, memhdr, j) );
+      CHECK_OKAY( domchgShrinkBdchgs(domchg, blkmem, j) );
    }
    assert((int)domchg->domchgbound.nboundchgs == j);
 
@@ -1086,7 +1086,7 @@ RETCODE SCIPdomchgApply(
 /** undoes domain change */
 RETCODE SCIPdomchgUndo(
    DOMCHG*          domchg,             /**< domain change to remove */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -1111,7 +1111,7 @@ RETCODE SCIPdomchgUndo(
    /* undo bound changes */
    for( i = domchg->domchgbound.nboundchgs-1; i >= 0; --i )
    {
-      CHECK_OKAY( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], memhdr, set, stat, lp, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp, branchcand, eventqueue) );
    }
    debugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
 
@@ -1121,7 +1121,7 @@ RETCODE SCIPdomchgUndo(
 /** adds bound change to domain changes */
 RETCODE SCIPdomchgAddBoundchg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
@@ -1157,16 +1157,16 @@ RETCODE SCIPdomchgAddBoundchg(
     */
    if( *domchg == NULL )
    {
-      CHECK_OKAY( domchgCreate(domchg, memhdr) );
+      CHECK_OKAY( domchgCreate(domchg, blkmem) );
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      CHECK_OKAY( domchgMakeDynamic(domchg, memhdr) );
+      CHECK_OKAY( domchgMakeDynamic(domchg, blkmem) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
    /* get memory for additional bound change */
-   CHECK_OKAY( domchgEnsureBoundchgsSize(*domchg, memhdr, set, (*domchg)->domchgdyn.nboundchgs+1) );
+   CHECK_OKAY( domchgEnsureBoundchgsSize(*domchg, blkmem, set, (*domchg)->domchgdyn.nboundchgs+1) );
 
    /* fill in the bound change data */
    boundchg = &(*domchg)->domchgdyn.boundchgs[(*domchg)->domchgdyn.nboundchgs];
@@ -1216,7 +1216,7 @@ RETCODE SCIPdomchgAddBoundchg(
 /** adds hole change to domain changes */
 RETCODE SCIPdomchgAddHolechg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    HOLELIST**       ptr,                /**< changed list pointer */
    HOLELIST*        newlist,            /**< new value of list pointer */
@@ -1233,16 +1233,16 @@ RETCODE SCIPdomchgAddHolechg(
     */
    if( *domchg == NULL )
    {
-      CHECK_OKAY( domchgCreate(domchg, memhdr) );
+      CHECK_OKAY( domchgCreate(domchg, blkmem) );
    }
    else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC ) /*lint !e641*/
    {
-      CHECK_OKAY( domchgMakeDynamic(domchg, memhdr) );
+      CHECK_OKAY( domchgMakeDynamic(domchg, blkmem) );
    }
    assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
 
    /* get memory for additional hole change */
-   CHECK_OKAY( domchgEnsureHolechgsSize(*domchg, memhdr, set, (*domchg)->domchgdyn.nholechgs+1) );
+   CHECK_OKAY( domchgEnsureHolechgsSize(*domchg, blkmem, set, (*domchg)->domchgdyn.nholechgs+1) );
 
    /* fill in the hole change data */
    holechg = &(*domchg)->domchgdyn.holechgs[(*domchg)->domchgdyn.nholechgs];
@@ -1265,12 +1265,12 @@ RETCODE SCIPdomchgAddHolechg(
 static
 RETCODE vboundsCreate(
    VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(vbounds != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, vbounds) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, vbounds) );
    (*vbounds)->vars = NULL;
    (*vbounds)->coefs = NULL;
    (*vbounds)->constants = NULL;
@@ -1284,17 +1284,17 @@ RETCODE vboundsCreate(
 static
 void vboundsFree(
    VBOUNDS**        vbounds,            /**< pointer to store variable bounds data structure */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(vbounds != NULL);
 
    if( *vbounds != NULL )
    {
-      freeBlockMemoryArrayNull(memhdr, &(*vbounds)->vars, (*vbounds)->size);
-      freeBlockMemoryArrayNull(memhdr, &(*vbounds)->coefs, (*vbounds)->size);
-      freeBlockMemoryArrayNull(memhdr, &(*vbounds)->constants, (*vbounds)->size);
-      freeBlockMemory(memhdr, vbounds);
+      freeBlockMemoryArrayNull(blkmem, &(*vbounds)->vars, (*vbounds)->size);
+      freeBlockMemoryArrayNull(blkmem, &(*vbounds)->coefs, (*vbounds)->size);
+      freeBlockMemoryArrayNull(blkmem, &(*vbounds)->constants, (*vbounds)->size);
+      freeBlockMemory(blkmem, vbounds);
    }
 }
 
@@ -1302,7 +1302,7 @@ void vboundsFree(
 static
 RETCODE vboundsEnsureSize(
    VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
@@ -1312,7 +1312,7 @@ RETCODE vboundsEnsureSize(
    /* create variable bounds data structure, if not yet existing */
    if( *vbounds == NULL )
    {
-      CHECK_OKAY( vboundsCreate(vbounds, memhdr) );
+      CHECK_OKAY( vboundsCreate(vbounds, blkmem) );
    }
    assert(*vbounds != NULL);
    assert((*vbounds)->len <= (*vbounds)->size);
@@ -1322,9 +1322,9 @@ RETCODE vboundsEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*vbounds)->vars, (*vbounds)->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*vbounds)->coefs, (*vbounds)->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*vbounds)->constants, (*vbounds)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*vbounds)->vars, (*vbounds)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*vbounds)->coefs, (*vbounds)->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*vbounds)->constants, (*vbounds)->size, newsize) );
       (*vbounds)->size = newsize;
    }
    assert(num <= (*vbounds)->size);
@@ -1336,7 +1336,7 @@ RETCODE vboundsEnsureSize(
 static
 RETCODE vboundsAdd(
    VBOUNDS**        vbounds,            /**< pointer to variable bounds data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable z    in x <= b*z + d  or  x >= b*z + d */
    Real             coef,               /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
@@ -1349,7 +1349,7 @@ RETCODE vboundsAdd(
    assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
    assert(var->vartype != SCIP_VARTYPE_CONTINUOUS);
 
-   CHECK_OKAY( vboundsEnsureSize(vbounds, memhdr, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
+   CHECK_OKAY( vboundsEnsureSize(vbounds, blkmem, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
    assert(*vbounds != NULL);
 
    (*vbounds)->vars[(*vbounds)->len] = var;
@@ -1401,12 +1401,12 @@ RETCODE vboundsUseActiveVars(
 static
 RETCODE implicsCreate(
    IMPLICS**        implics,            /**< pointer to store implications data structure */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(implics != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, implics) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, implics) );
 
    (*implics)->implvars[0] = NULL;
    (*implics)->impltypes[0] = NULL;
@@ -1429,20 +1429,20 @@ RETCODE implicsCreate(
 static
 void implicsFree(
    IMPLICS**        implics,            /**< pointer of implications data structure to free */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(implics != NULL);
 
    if( *implics != NULL )
    {
-      freeBlockMemoryArrayNull(memhdr, &(*implics)->implbounds[1], (*implics)->implsize[1]);
-      freeBlockMemoryArrayNull(memhdr, &(*implics)->impltypes[1], (*implics)->implsize[1]);
-      freeBlockMemoryArrayNull(memhdr, &(*implics)->implvars[1], (*implics)->implsize[1]);
-      freeBlockMemoryArrayNull(memhdr, &(*implics)->implbounds[0], (*implics)->implsize[0]);
-      freeBlockMemoryArrayNull(memhdr, &(*implics)->impltypes[0], (*implics)->implsize[0]);
-      freeBlockMemoryArrayNull(memhdr, &(*implics)->implvars[0], (*implics)->implsize[0]);
-      freeBlockMemory(memhdr, implics);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implbounds[1], (*implics)->implsize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->impltypes[1], (*implics)->implsize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implvars[1], (*implics)->implsize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implbounds[0], (*implics)->implsize[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->impltypes[0], (*implics)->implsize[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implvars[0], (*implics)->implsize[0]);
+      freeBlockMemory(blkmem, implics);
    }
 }
 
@@ -1450,7 +1450,7 @@ void implicsFree(
 static
 RETCODE implicsEnsureSize(
    IMPLICS**        implics,            /**< pointer to implications data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Bool             i,                  /**< FALSE if size of arrays for x <= 0 has to be ensured, TRUE for x >= 1 */
    int              num                 /**< minimum number of entries to store */
@@ -1461,7 +1461,7 @@ RETCODE implicsEnsureSize(
    /* create implications data structure, if not yet existing */
    if( *implics == NULL )
    {
-      CHECK_OKAY( implicsCreate(implics, memhdr) );
+      CHECK_OKAY( implicsCreate(implics, blkmem) );
    }
    assert(*implics != NULL);
    assert((*implics)->nimpls[i] <= (*implics)->implsize[i]);
@@ -1471,9 +1471,9 @@ RETCODE implicsEnsureSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->implvars[i], (*implics)->implsize[i], newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->impltypes[i], (*implics)->implsize[i], newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*implics)->implbounds[i], (*implics)->implsize[i], newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->implvars[i], (*implics)->implsize[i], newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->impltypes[i], (*implics)->implsize[i], newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->implbounds[i], (*implics)->implsize[i], newsize) );
       (*implics)->implsize[i] = newsize;
    }
    assert(num <= (*implics)->implsize[i]);
@@ -1610,7 +1610,7 @@ RETCODE implicsSearchVar(
 static
 RETCODE implicsAdd(
    IMPLICS**        implics,            /**< pointer to implications data structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Bool             i,                  /**< FALSE if implication for x <= 0 has to be added, TRUE for x >= 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
@@ -1683,7 +1683,7 @@ RETCODE implicsAdd(
       /* adds y >= b by creating a new entry on posadd */
       assert(poslower == INT_MAX);
 
-      CHECK_OKAY( implicsEnsureSize(implics, memhdr, set, i, *implics != NULL ? (*implics)->nimpls[i]+1 : 1) );
+      CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, i, *implics != NULL ? (*implics)->nimpls[i]+1 : 1) );
       assert(*implics != NULL);
       
       for( k = (*implics)->nimpls[i]; k > posadd; k-- )
@@ -1729,7 +1729,7 @@ RETCODE implicsAdd(
       /* adds y <= b by creating a new entry on posadd */
       assert(posupper == INT_MAX);
 
-      CHECK_OKAY( implicsEnsureSize(implics, memhdr, set, i, *implics != NULL ? (*implics)->nimpls[i]+1 : 1) );
+      CHECK_OKAY( implicsEnsureSize(implics, blkmem, set, i, *implics != NULL ? (*implics)->nimpls[i]+1 : 1) );
       assert(*implics != NULL);
       
       for( k = (*implics)->nimpls[i]; k > posadd; k-- )
@@ -1799,7 +1799,7 @@ Real adjustedUb(
 static
 RETCODE varCreate(
    VAR**            var,                /**< pointer to variable data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable, or NULL for automatic name creation */
@@ -1816,7 +1816,7 @@ RETCODE varCreate(
    )
 {
    assert(var != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(stat != NULL);
 
    /* adjust bounds of variable */
@@ -1832,17 +1832,17 @@ RETCODE varCreate(
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, var) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, var) );
 
    if( name == NULL )
    {
       char s[MAXSTRLEN];
       sprintf(s, "_var%d_", stat->nvaridx);
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*var)->name, s, strlen(s)+1) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*var)->name, s, strlen(s)+1) );
    }
    else
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*var)->name, name, strlen(name)+1) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &(*var)->name, name, strlen(name)+1) );
    }
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
@@ -1890,8 +1890,8 @@ RETCODE varCreate(
    (*var)->pseudocostflag = FALSE;
 
    /* create branching and inference history entries */
-   CHECK_OKAY( SCIPhistoryCreate(&(*var)->history, memhdr) );
-   CHECK_OKAY( SCIPhistoryCreate(&(*var)->historycrun, memhdr) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*var)->history, blkmem) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*var)->historycrun, blkmem) );
 
    return SCIP_OKAY;
 }
@@ -1901,7 +1901,7 @@ RETCODE varCreate(
  */
 RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable, or NULL for automatic name creation */
@@ -1918,11 +1918,11 @@ RETCODE SCIPvarCreateOriginal(
    )
 {
    assert(var != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(stat != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable,
+   CHECK_OKAY( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
                   vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
@@ -1940,7 +1940,7 @@ RETCODE SCIPvarCreateOriginal(
  */
 RETCODE SCIPvarCreateTransformed(
    VAR**            var,                /**< pointer to variable data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable, or NULL for automatic name creation */
@@ -1957,17 +1957,17 @@ RETCODE SCIPvarCreateTransformed(
    )
 {
    assert(var != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable,
+   CHECK_OKAY( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removeable,
                   vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
 
    /* create event filter for transformed variable */
-   CHECK_OKAY( SCIPeventfilterCreate(&(*var)->eventfilter, memhdr) );
+   CHECK_OKAY( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
 
    /* capture variable */
    SCIPvarCapture(*var);
@@ -1979,7 +1979,7 @@ RETCODE SCIPvarCreateTransformed(
 static
 RETCODE varEnsureParentvarsSize(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
@@ -1991,7 +1991,7 @@ RETCODE varEnsureParentvarsSize(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &var->parentvars, var->parentvarssize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &var->parentvars, var->parentvarssize, newsize) );
       var->parentvarssize = newsize;
    }
    assert(num <= var->parentvarssize);
@@ -2003,7 +2003,7 @@ RETCODE varEnsureParentvarsSize(
 static
 RETCODE varAddParent(
    VAR*             var,                /**< variable to add parent to */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    VAR*             parentvar           /**< parent variable to add */
    )
@@ -2014,7 +2014,7 @@ RETCODE varAddParent(
    debugMessage("adding parent <%s>[%p] to variable <%s>[%p] in slot %d\n", 
       parentvar->name, parentvar, var->name, var, var->nparentvars);
 
-   CHECK_OKAY( varEnsureParentvarsSize(var, memhdr, set, var->nparentvars+1) );
+   CHECK_OKAY( varEnsureParentvarsSize(var, blkmem, set, var->nparentvars+1) );
 
    var->parentvars[var->nparentvars] = parentvar;
    var->nparentvars++;
@@ -2028,7 +2028,7 @@ RETCODE varAddParent(
 static
 RETCODE varFreeParents(
    VAR**            var,                /**< pointer to variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
@@ -2086,11 +2086,11 @@ RETCODE varFreeParents(
          return SCIP_INVALIDDATA;
       }  /*lint !e788*/
 
-      CHECK_OKAY( SCIPvarRelease(&(*var)->parentvars[i], memhdr, set, lp) );
+      CHECK_OKAY( SCIPvarRelease(&(*var)->parentvars[i], blkmem, set, lp) );
    }
 
    /* free parentvars array */
-   freeBlockMemoryArrayNull(memhdr, &(*var)->parentvars, (*var)->parentvarssize);
+   freeBlockMemoryArrayNull(blkmem, &(*var)->parentvars, (*var)->parentvarssize);
 
    return SCIP_OKAY;
 }
@@ -2099,12 +2099,12 @@ RETCODE varFreeParents(
 static
 RETCODE varFree(
    VAR**            var,                /**< pointer to variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data (may be NULL, if it's not a column variable) */
    )
 {
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(var != NULL);
    assert(*var != NULL);
    assert(SCIPvarGetStatus(*var) != SCIP_VARSTATUS_COLUMN || &(*var)->data.col->var != var);
@@ -2120,14 +2120,14 @@ RETCODE varFree(
    case SCIP_VARSTATUS_LOOSE:
       break;
    case SCIP_VARSTATUS_COLUMN:
-      CHECK_OKAY( SCIPcolFree(&(*var)->data.col, memhdr, set, lp) );  /* free corresponding LP column */
+      CHECK_OKAY( SCIPcolFree(&(*var)->data.col, blkmem, set, lp) );  /* free corresponding LP column */
       break;
    case SCIP_VARSTATUS_FIXED:
    case SCIP_VARSTATUS_AGGREGATED:
       break;
    case SCIP_VARSTATUS_MULTAGGR:
-      freeBlockMemoryArray(memhdr, &(*var)->data.multaggr.vars, (*var)->data.multaggr.varssize);
-      freeBlockMemoryArray(memhdr, &(*var)->data.multaggr.scalars, (*var)->data.multaggr.varssize);
+      freeBlockMemoryArray(blkmem, &(*var)->data.multaggr.vars, (*var)->data.multaggr.varssize);
+      freeBlockMemoryArray(blkmem, &(*var)->data.multaggr.scalars, (*var)->data.multaggr.varssize);
       break;
    case SCIP_VARSTATUS_NEGATED:
       break;
@@ -2137,7 +2137,7 @@ RETCODE varFree(
    }
 
    /* release all parent variables and free the parentvars array */
-   CHECK_OKAY( varFreeParents(var, memhdr, set, lp) );
+   CHECK_OKAY( varFreeParents(var, blkmem, set, lp) );
 
    /* free user data */
    if( (*var)->varstatus == SCIP_VARSTATUS_ORIGINAL )
@@ -2159,28 +2159,28 @@ RETCODE varFree(
    if( (*var)->eventfilter != NULL )
    {
       assert(SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL);
-      CHECK_OKAY( SCIPeventfilterFree(&(*var)->eventfilter, memhdr, set) );
+      CHECK_OKAY( SCIPeventfilterFree(&(*var)->eventfilter, blkmem, set) );
    }
    assert((*var)->eventfilter == NULL);
 
    /* free variable bounds data structures */
-   vboundsFree(&(*var)->vlbs, memhdr);
-   vboundsFree(&(*var)->vubs, memhdr);
+   vboundsFree(&(*var)->vlbs, blkmem);
+   vboundsFree(&(*var)->vubs, blkmem);
 
    /* free implications data structures */
-   implicsFree(&(*var)->implics, memhdr);
+   implicsFree(&(*var)->implics, blkmem);
 
    /* free bound change information arrays */
-   freeBlockMemoryArrayNull(memhdr, &(*var)->lbchginfos, (*var)->lbchginfossize);
-   freeBlockMemoryArrayNull(memhdr, &(*var)->ubchginfos, (*var)->ubchginfossize);
+   freeBlockMemoryArrayNull(blkmem, &(*var)->lbchginfos, (*var)->lbchginfossize);
+   freeBlockMemoryArrayNull(blkmem, &(*var)->ubchginfos, (*var)->ubchginfossize);
 
    /* free branching and inference history entries */
-   SCIPhistoryFree(&(*var)->history, memhdr);
-   SCIPhistoryFree(&(*var)->historycrun, memhdr);
+   SCIPhistoryFree(&(*var)->history, blkmem);
+   SCIPhistoryFree(&(*var)->historycrun, blkmem);
 
    /* free variable data structure */
-   freeBlockMemoryArray(memhdr, &(*var)->name, strlen((*var)->name)+1);
-   freeBlockMemory(memhdr, var);
+   freeBlockMemoryArray(blkmem, &(*var)->name, strlen((*var)->name)+1);
+   freeBlockMemory(blkmem, var);
 
    return SCIP_OKAY;
 }
@@ -2200,12 +2200,12 @@ void SCIPvarCapture(
 /** decreases usage counter of variable, and frees memory if necessary */
 RETCODE SCIPvarRelease(
    VAR**            var,                /**< pointer to variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data (or NULL, if it's an original variable) */
    )
 {
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(var != NULL);
    assert(*var != NULL);
    assert((*var)->nuses >= 1);
@@ -2214,7 +2214,7 @@ RETCODE SCIPvarRelease(
    (*var)->nuses--;
    if( (*var)->nuses == 0 )
    {
-      CHECK_OKAY( varFree(var, memhdr, set, lp) );
+      CHECK_OKAY( varFree(var, blkmem, set, lp) );
    }
 
    *var = NULL;
@@ -2334,7 +2334,7 @@ void SCIPvarPrint(
 static
 RETCODE varEventLocksChanged(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -2344,8 +2344,8 @@ RETCODE varEventLocksChanged(
    assert(var != NULL);
 
    /* issue LOCKSCHANGED event on variable */
-   CHECK_OKAY( SCIPeventCreateLocksChanged(&event, memhdr, var) );
-   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
+   CHECK_OKAY( SCIPeventCreateLocksChanged(&event, blkmem, var) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
    return SCIP_OKAY;
 }
@@ -2353,7 +2353,7 @@ RETCODE varEventLocksChanged(
 /** modifies lock numbers for rounding */
 RETCODE SCIPvarAddLocks(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              addnlocksdown,      /**< increase in number of rounding down locks */
@@ -2377,7 +2377,7 @@ RETCODE SCIPvarAddLocks(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarAddLocks(var->data.transvar, memhdr, set, eventqueue, addnlocksdown, addnlocksup) );
+         CHECK_OKAY( SCIPvarAddLocks(var->data.transvar, blkmem, set, eventqueue, addnlocksdown, addnlocksup) );
       }
       else
       {
@@ -2391,17 +2391,17 @@ RETCODE SCIPvarAddLocks(
    case SCIP_VARSTATUS_FIXED:
       var->nlocksdown += addnlocksdown;
       var->nlocksup += addnlocksup;
-      CHECK_OKAY( varEventLocksChanged(var, memhdr, set, eventqueue) );
+      CHECK_OKAY( varEventLocksChanged(var, blkmem, set, eventqueue) );
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       if( var->data.aggregate.scalar > 0.0 )
       {
-         CHECK_OKAY( SCIPvarAddLocks(var->data.aggregate.var, memhdr, set, eventqueue, addnlocksdown, addnlocksup) );
+         CHECK_OKAY( SCIPvarAddLocks(var->data.aggregate.var, blkmem, set, eventqueue, addnlocksdown, addnlocksup) );
       }
       else
       {
-         CHECK_OKAY( SCIPvarAddLocks(var->data.aggregate.var, memhdr, set, eventqueue, addnlocksup, addnlocksdown) );
+         CHECK_OKAY( SCIPvarAddLocks(var->data.aggregate.var, blkmem, set, eventqueue, addnlocksup, addnlocksdown) );
       }
       break;
 
@@ -2410,12 +2410,12 @@ RETCODE SCIPvarAddLocks(
       {
          if( var->data.multaggr.scalars[i] > 0.0 )
          {
-            CHECK_OKAY( SCIPvarAddLocks(var->data.multaggr.vars[i], memhdr, set, eventqueue, 
+            CHECK_OKAY( SCIPvarAddLocks(var->data.multaggr.vars[i], blkmem, set, eventqueue, 
                   addnlocksdown, addnlocksup) );
          }
          else
          {
-            CHECK_OKAY( SCIPvarAddLocks(var->data.multaggr.vars[i], memhdr, set, eventqueue, 
+            CHECK_OKAY( SCIPvarAddLocks(var->data.multaggr.vars[i], blkmem, set, eventqueue, 
                   addnlocksup, addnlocksdown) );
          }
       }
@@ -2425,7 +2425,7 @@ RETCODE SCIPvarAddLocks(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAddLocks(var->negatedvar, memhdr, set, eventqueue, addnlocksup, addnlocksdown) );
+      CHECK_OKAY( SCIPvarAddLocks(var->negatedvar, blkmem, set, eventqueue, addnlocksup, addnlocksdown) );
       break;
 
    default:
@@ -2566,7 +2566,7 @@ Bool SCIPvarMayRoundUp(
  */
 RETCODE SCIPvarTransform(
    VAR*             origvar,            /**< original problem variable */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
@@ -2593,7 +2593,7 @@ RETCODE SCIPvarTransform(
    {
       /* create transformed variable */
       sprintf(name, "t_%s", origvar->name);
-      CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat, name,
+      CHECK_OKAY( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
             (VARTYPE)(origvar->vartype), origvar->initial, origvar->removeable,
             NULL, NULL, origvar->vardeltrans, origvar->vardata) );
@@ -2604,12 +2604,12 @@ RETCODE SCIPvarTransform(
       (*transvar)->branchdirection = origvar->branchdirection;
 
       /* duplicate hole lists */
-      CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
-      CHECK_OKAY( holelistDuplicate(&(*transvar)->locdom.holelist, memhdr, set, origvar->locdom.holelist) );
+      CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, blkmem, set, origvar->glbdom.holelist) );
+      CHECK_OKAY( holelistDuplicate(&(*transvar)->locdom.holelist, blkmem, set, origvar->locdom.holelist) );
       
       /* link original and transformed variable */
       origvar->data.transvar = *transvar;
-      CHECK_OKAY( varAddParent(*transvar, memhdr, set, origvar) );
+      CHECK_OKAY( varAddParent(*transvar, blkmem, set, origvar) );
       
       /* copy rounding locks */
       (*transvar)->nlocksdown = origvar->nlocksdown;
@@ -2632,7 +2632,7 @@ RETCODE SCIPvarTransform(
 /** gets corresponding transformed variable of an original or negated original variable */
 RETCODE SCIPvarGetTransformed(
    VAR*             origvar,            /**< original problem variable */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR**            transvar            /**< pointer to store the transformed variable, or NULL if not existing yet */
@@ -2650,7 +2650,7 @@ RETCODE SCIPvarGetTransformed(
          *transvar = NULL;
       else
       {
-         CHECK_OKAY( SCIPvarNegate(origvar->negatedvar->data.transvar, memhdr, set, stat, transvar) );
+         CHECK_OKAY( SCIPvarNegate(origvar->negatedvar->data.transvar, blkmem, set, stat, transvar) );
       }
    }
    else
@@ -2662,7 +2662,7 @@ RETCODE SCIPvarGetTransformed(
 /** converts loose transformed variable into column variable, creates LP column */
 RETCODE SCIPvarColumn(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -2678,7 +2678,7 @@ RETCODE SCIPvarColumn(
    var->varstatus = SCIP_VARSTATUS_COLUMN; /*lint !e641*/
 
    /* create column of variable */
-   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, stat, var, 0, NULL, NULL, var->removeable) );
+   CHECK_OKAY( SCIPcolCreate(&var->data.col, blkmem, set, stat, var, 0, NULL, NULL, var->removeable) );
 
    if( var->probindex != -1 )
    {
@@ -2695,7 +2695,7 @@ RETCODE SCIPvarColumn(
 /** converts column transformed variable back into loose variable, frees LP column */
 RETCODE SCIPvarLoose(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    LP*              lp                  /**< current LP data */
@@ -2711,7 +2711,7 @@ RETCODE SCIPvarLoose(
    debugMessage("deleting column for variable <%s>\n", var->name);
 
    /* free column of variable */
-   CHECK_OKAY( SCIPcolFree(&var->data.col, memhdr, set, lp) );
+   CHECK_OKAY( SCIPcolFree(&var->data.col, blkmem, set, lp) );
 
    /* switch variable status */
    var->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
@@ -2735,7 +2735,7 @@ RETCODE SCIPvarLoose(
 static
 RETCODE varEventVarFixed(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -2746,15 +2746,15 @@ RETCODE varEventVarFixed(
    assert(var != NULL);
 
    /* issue VARFIXED event on variable */
-   CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
+   CHECK_OKAY( SCIPeventCreateVarFixed(&event, blkmem, var) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
    /* process all parents */
    for( i = 0; i < var->nparentvars; ++i )
    {
       if( var->parentvars[i]->varstatus != SCIP_VARSTATUS_ORIGINAL )
       {
-         CHECK_OKAY( varEventVarFixed(var->parentvars[i], memhdr, set, eventqueue) );
+         CHECK_OKAY( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue) );
       }
    }
 
@@ -2764,7 +2764,7 @@ RETCODE varEventVarFixed(
 /** converts variable into fixed variable */
 RETCODE SCIPvarFix(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -2774,7 +2774,8 @@ RETCODE SCIPvarFix(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             fixedval,           /**< value to fix variable at */
-   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    )
 {
    Real obj;
@@ -2785,8 +2786,12 @@ RETCODE SCIPvarFix(
    assert(SCIPsetIsLE(set, var->glbdom.lb, fixedval));
    assert(SCIPsetIsLE(set, fixedval, var->glbdom.ub));
    assert(infeasible != NULL);
-   
+   assert(fixed != NULL);
+
    debugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
+
+   *infeasible = FALSE;
+   *fixed = FALSE;
 
    if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
@@ -2804,8 +2809,6 @@ RETCODE SCIPvarFix(
       return SCIP_OKAY;
    }
 
-   *infeasible = FALSE;
-
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -2814,8 +2817,8 @@ RETCODE SCIPvarFix(
          errorMessage("cannot fix an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-                     fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var->data.transvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+            fixedval, infeasible, fixed) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -2823,15 +2826,15 @@ RETCODE SCIPvarFix(
 
       /* set the fixed variable's objective value to 0.0 */
       obj = var->obj;
-      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, primal, lp, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
 
       /* change variable's bounds to fixed value */
-      holelistFree(&var->glbdom.holelist, memhdr);
+      holelistFree(&var->glbdom.holelist, blkmem);
       CHECK_OKAY( SCIPvarChgLbGlobal(var, set, fixedval) );
       CHECK_OKAY( SCIPvarChgUbGlobal(var, set, fixedval) );
-      holelistFree(&var->locdom.holelist, memhdr);
-      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval) );
-      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval) );
+      holelistFree(&var->locdom.holelist, blkmem);
+      CHECK_OKAY( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, fixedval) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, fixedval) );
 
       /* explicitly set variable's bounds, even if the fixed value is in epsilon range of the old bound */
       var->glbdom.lb = fixedval;
@@ -2840,8 +2843,8 @@ RETCODE SCIPvarFix(
       var->locdom.ub = fixedval;
 
       /* delete variable bounds information */
-      vboundsFree(&var->vlbs, memhdr);
-      vboundsFree(&var->vubs, memhdr);
+      vboundsFree(&var->vlbs, blkmem);
+      vboundsFree(&var->vubs, blkmem);
 
       /* clear the history of the variable */
       SCIPhistoryReset(var->history);
@@ -2857,10 +2860,12 @@ RETCODE SCIPvarFix(
       }
 
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, tree, lp, eventqueue, obj) );
+      CHECK_OKAY( SCIPvarAddObj(var, blkmem, set, stat, prob, primal, tree, lp, eventqueue, obj) );
 
       /* issue VARFIXED event */
-      CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
+      CHECK_OKAY( varEventVarFixed(var, blkmem, set, eventqueue) );
+
+      *fixed = TRUE;
       break;
 
    case SCIP_VARSTATUS_COLUMN:
@@ -2875,8 +2880,8 @@ RETCODE SCIPvarFix(
       /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
       assert(SCIPsetIsZero(set, var->obj));
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
-                     (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
+            (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible, fixed) );
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -2889,8 +2894,8 @@ RETCODE SCIPvarFix(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarFix(var->negatedvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
-                     var->data.negate.constant - fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
+            var->data.negate.constant - fixedval, infeasible, fixed) );
       break;
 
    default:
@@ -2905,7 +2910,7 @@ RETCODE SCIPvarFix(
 static
 RETCODE varUpdateAggregationBounds(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -2978,13 +2983,15 @@ RETCODE varUpdateAggregationBounds(
       }
       else if( SCIPsetIsEQ(set, varlb, varub) )
       {
+         Bool fixed;
+
          /* the aggregated variable is fixed -> fix both variables */
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-               varlb, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+               varlb, infeasible, &fixed) );
          if( !(*infeasible) )
          {
-            CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-                  (varlb-constant)/scalar, infeasible) );
+            CHECK_OKAY( SCIPvarFix(aggvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+                  (varlb-constant)/scalar, infeasible, &fixed) );
          }
          return SCIP_OKAY;
       }
@@ -2992,12 +2999,12 @@ RETCODE varUpdateAggregationBounds(
       {
          if( SCIPsetIsGT(set, varlb, var->glbdom.lb) )
          {
-            CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, varlb) );
+            CHECK_OKAY( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, varlb) );
             CHECK_OKAY( SCIPvarChgLbGlobal(var, set, varlb) );
          }
          if( SCIPsetIsLT(set, varub, var->glbdom.ub) )
          {
-            CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, varub) );
+            CHECK_OKAY( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, varub) );
             CHECK_OKAY( SCIPvarChgUbGlobal(var, set, varub) );
          }
 
@@ -3042,13 +3049,15 @@ RETCODE varUpdateAggregationBounds(
       }
       else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
       {
+         Bool fixed;
+
          /* the aggregation variable is fixed -> fix both variables */
-         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, aggvarlb, 
-               infeasible) );
+         CHECK_OKAY( SCIPvarFix(aggvar, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, aggvarlb, 
+               infeasible, &fixed) );
          if( !(*infeasible) )
          {
-            CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-                  aggvarlb * scalar + constant, infeasible) );
+            CHECK_OKAY( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+                  aggvarlb * scalar + constant, infeasible, &fixed) );
          }
          return SCIP_OKAY;
       }
@@ -3056,13 +3065,13 @@ RETCODE varUpdateAggregationBounds(
       {
          if( SCIPsetIsGT(set, aggvarlb, aggvar->glbdom.lb) )
          {
-            CHECK_OKAY( SCIPvarChgLbLocal(aggvar, memhdr, set, stat, lp, branchcand, eventqueue, aggvarlb) );
+            CHECK_OKAY( SCIPvarChgLbLocal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarlb) );
             CHECK_OKAY( SCIPvarChgLbGlobal(aggvar, set, aggvarlb) );
             aggvarbdschanged = TRUE;
          }
          if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
          {
-            CHECK_OKAY( SCIPvarChgUbLocal(aggvar, memhdr, set, stat, lp, branchcand, eventqueue, aggvarub) );
+            CHECK_OKAY( SCIPvarChgUbLocal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
             CHECK_OKAY( SCIPvarChgUbGlobal(aggvar, set, aggvarub) );
             aggvarbdschanged = TRUE;
          }
@@ -3082,7 +3091,7 @@ RETCODE varUpdateAggregationBounds(
 /** converts loose variable into aggregated variable */
 RETCODE SCIPvarAggregate(
    VAR*             var,                /**< loose problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -3094,7 +3103,8 @@ RETCODE SCIPvarAggregate(
    VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
    Real             constant,           /**< constant shift c in aggregation x = a*y + c */
-   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
    BOUNDTYPE** impltypes;
@@ -3121,6 +3131,7 @@ RETCODE SCIPvarAggregate(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
    assert(infeasible != NULL);
+   assert(aggregated != NULL);
 
    /* get active problem variable of aggregation variable */
    CHECK_OKAY( SCIPvarGetProbvarSum(&aggvar, &scalar, &constant) );
@@ -3128,7 +3139,8 @@ RETCODE SCIPvarAggregate(
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
-      return SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, infeasible);
+      return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant,
+         infeasible, aggregated);
 
    assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
@@ -3139,6 +3151,7 @@ RETCODE SCIPvarAggregate(
       scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
 
    *infeasible = FALSE;
+   *aggregated = FALSE;
 
    /* if variable and aggregation variable are equal, the variable can be fixed: x == a*x + c  =>  x == c/(1-a) */
    if( var == aggvar )
@@ -3147,21 +3160,21 @@ RETCODE SCIPvarAggregate(
          *infeasible = !SCIPsetIsZero(set, constant);
       else
       {
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
-               constant/(1.0-scalar), infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
+               constant/(1.0-scalar), infeasible, aggregated) );
       }
       return SCIP_OKAY;
    }
 
    /* tighten the bounds of aggregated and aggregation variable */
-   CHECK_OKAY( varUpdateAggregationBounds(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
+   CHECK_OKAY( varUpdateAggregationBounds(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue,
          aggvar, scalar, constant, infeasible) );
    if( *infeasible )
       return SCIP_OKAY;
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
-   CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, primal, lp, eventqueue, 0.0) );
+   CHECK_OKAY( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
 
    /* unlock all rounding locks */
    nlocksdown = var->nlocksdown;
@@ -3190,10 +3203,10 @@ RETCODE SCIPvarAggregate(
    }
 
    /* make aggregated variable a parent of the aggregation variable */
-   CHECK_OKAY( varAddParent(aggvar, memhdr, set, var) );
+   CHECK_OKAY( varAddParent(aggvar, blkmem, set, var) );
 
    /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
-   CHECK_OKAY( SCIPvarAddLocks(var, memhdr, set, eventqueue, nlocksdown, nlocksup) );
+   CHECK_OKAY( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
 
    /* move the variable bounds to the aggregation variable:
     *  - add all variable bounds again to the variable, thus adding it to the aggregated variable
@@ -3207,7 +3220,7 @@ RETCODE SCIPvarAggregate(
       constants = var->vlbs->constants;
       for( i = 0; i < nvbds; ++i )
       {
-         CHECK_OKAY( SCIPvarAddVlb(var, memhdr, set, vars[i], coefs[i], constants[i]) );
+         CHECK_OKAY( SCIPvarAddVlb(var, blkmem, set, vars[i], coefs[i], constants[i]) );
       }
    }
    if( var->vubs != NULL )
@@ -3218,11 +3231,11 @@ RETCODE SCIPvarAggregate(
       constants = var->vubs->constants;
       for( i = 0; i < nvbds; ++i )
       {
-         CHECK_OKAY( SCIPvarAddVub(var, memhdr, set, vars[i], coefs[i], constants[i]) );
+         CHECK_OKAY( SCIPvarAddVub(var, blkmem, set, vars[i], coefs[i], constants[i]) );
       }
    }
-   vboundsFree(&var->vlbs, memhdr);
-   vboundsFree(&var->vubs, memhdr);
+   vboundsFree(&var->vlbs, blkmem);
+   vboundsFree(&var->vubs, blkmem);
 
 
    /* move the implications to the aggregation variable:
@@ -3243,13 +3256,13 @@ RETCODE SCIPvarAggregate(
       {
          for( j = 0; j < nimpls[i]; ++j )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var, memhdr, set, i, implvars[i][j], impltypes[i][j], implbounds[i][j],
+            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, i, implvars[i][j], impltypes[i][j], implbounds[i][j],
                   &conflict) );
             implconflict[i] = implconflict[i] || conflict;
          }
       }
    }
-   implicsFree(&var->implics, memhdr);
+   implicsFree(&var->implics, blkmem);
 
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
@@ -3297,10 +3310,10 @@ RETCODE SCIPvarAggregate(
    /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
     * variable and the problem's objective offset
     */
-   CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, tree, lp, eventqueue, obj) );
+   CHECK_OKAY( SCIPvarAddObj(var, blkmem, set, stat, prob, primal, tree, lp, eventqueue, obj) );
 
    /* issue VARFIXED event */
-   CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
+   CHECK_OKAY( varEventVarFixed(var, blkmem, set, eventqueue) );
 
    /* fix variable if the implications detected a conflict */
    if( !(*infeasible) )
@@ -3309,15 +3322,23 @@ RETCODE SCIPvarAggregate(
          *infeasible = TRUE;
       else if( implconflict[0] ) 
       {
+         Bool fixed;
+
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 1.0, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 1.0, 
+               infeasible, &fixed) );
       }
       else if( implconflict[1] ) 
       {
+         Bool fixed;
+
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 0.0, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 0.0, 
+               infeasible, &fixed) );
       }
    }
+
+   *aggregated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3325,7 +3346,7 @@ RETCODE SCIPvarAggregate(
 /** converts variable into multi-aggregated variable */
 RETCODE SCIPvarMultiaggregate(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -3338,7 +3359,8 @@ RETCODE SCIPvarMultiaggregate(
    VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
-   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
    EVENT* event;
@@ -3356,17 +3378,20 @@ RETCODE SCIPvarMultiaggregate(
    assert(naggvars == 0 || aggvars != NULL);
    assert(naggvars == 0 || scalars != NULL);
    assert(infeasible != NULL);
+   assert(aggregated != NULL);
+
+   /* check, if we are in one of the simple cases */
+   if( naggvars == 0 )
+      return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, 
+         infeasible, aggregated);
+   else if( naggvars == 1)
+      return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
+         aggvars[0], scalars[0], constant, infeasible, aggregated);
 
    debugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
    *infeasible = FALSE;
-
-   /* check, if we are in one of the simple cases */
-   if( naggvars == 0 )
-      return SCIPvarFix(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant, infeasible);
-   else if( naggvars == 1)
-      return SCIPvarAggregate(var, memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue, 
-         aggvars[0], scalars[0], constant, infeasible);
+   *aggregated = FALSE;
 
    switch( SCIPvarGetStatus(var) )
    {
@@ -3376,8 +3401,8 @@ RETCODE SCIPvarMultiaggregate(
          errorMessage("cannot multi-aggregate an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, primal, tree, lp,
-            branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
+      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, blkmem, set, stat, prob, primal, tree, lp,
+            branchcand, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
       break;
 
    case SCIP_VARSTATUS_LOOSE:
@@ -3385,7 +3410,7 @@ RETCODE SCIPvarMultiaggregate(
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
-      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, primal, lp, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
 
       /* unlock all rounding locks */
       nlocksdown = var->nlocksdown;
@@ -3395,21 +3420,21 @@ RETCODE SCIPvarMultiaggregate(
 
       /* convert variable into multi-aggregated variable */
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &var->data.multaggr.vars, aggvars, naggvars) );
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &var->data.multaggr.scalars, scalars, naggvars) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, aggvars, naggvars) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(blkmem, &var->data.multaggr.scalars, scalars, naggvars) );
       var->data.multaggr.constant = constant;
       var->data.multaggr.nvars = naggvars;
       var->data.multaggr.varssize = naggvars;
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
-      CHECK_OKAY( SCIPvarAddLocks(var, memhdr, set, eventqueue, nlocksdown, nlocksup) );
+      CHECK_OKAY( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
 
       /* free the variable bounds data structures */
-      vboundsFree(&var->vlbs, memhdr);
-      vboundsFree(&var->vubs, memhdr);
+      vboundsFree(&var->vlbs, blkmem);
+      vboundsFree(&var->vubs, blkmem);
 
       /* free the implications data structures */
-      implicsFree(&var->implics, memhdr);
+      implicsFree(&var->implics, blkmem);
 
       /* update flags and branching factors and priorities of aggregation variables;
        * update preferred branching direction of all aggregation variables that don't have a preferred direction yet
@@ -3446,14 +3471,15 @@ RETCODE SCIPvarMultiaggregate(
       }
 
       /* issue VARFIXED event */
-      CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
+      CHECK_OKAY( SCIPeventCreateVarFixed(&event, blkmem, var) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, NULL, &event) );
 
       /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
        * variables and the problem's objective offset
        */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, tree, lp, eventqueue, obj) );
+      CHECK_OKAY( SCIPvarAddObj(var, blkmem, set, stat, prob, primal, tree, lp, eventqueue, obj) );
 
+      *aggregated = TRUE;
       break;
 
    case SCIP_VARSTATUS_COLUMN:
@@ -3486,8 +3512,9 @@ RETCODE SCIPvarMultiaggregate(
          scalars[v] *= -1.0;
          
       /* perform the multi aggregation on the negation variable */
-      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, memhdr, set, stat, prob, primal, tree, lp,
-            branchcand, eventqueue, naggvars, aggvars, scalars, var->data.negate.constant - constant, infeasible) );
+      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp,
+            branchcand, eventqueue, naggvars, aggvars, scalars, var->data.negate.constant - constant, 
+            infeasible, aggregated) );
 
       /* switch the signs of the aggregation scalars again, to reset them to their original values */
       for( v = 0; v < naggvars; ++v )
@@ -3508,7 +3535,7 @@ RETCODE SCIPvarMultiaggregate(
  */
 RETCODE SCIPvarNegate(
    VAR*             var,                /**< problem variable to negate */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR**            negvar              /**< pointer to store the negated variable */
@@ -3536,7 +3563,7 @@ RETCODE SCIPvarNegate(
       sprintf(negvarname, "%s_neg", var->name);
 
       /* create negated variable */
-      CHECK_OKAY( varCreate(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
+      CHECK_OKAY( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
                      SCIPvarGetType(var), var->initial, var->removeable, NULL, NULL, NULL, NULL) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -3554,7 +3581,7 @@ RETCODE SCIPvarNegate(
       /* create event filter, if the negated variable belongs to the transformed problem */
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
       {
-         CHECK_OKAY( SCIPeventfilterCreate(&(*negvar)->eventfilter, memhdr) );
+         CHECK_OKAY( SCIPeventfilterCreate(&(*negvar)->eventfilter, blkmem) );
       }
 
       /* link the variables together */
@@ -3567,7 +3594,7 @@ RETCODE SCIPvarNegate(
       (*negvar)->branchdirection = SCIPbranchdirOpposite(var->branchdirection);
 
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
-      CHECK_OKAY( varAddParent(var, memhdr, set, *negvar) );
+      CHECK_OKAY( varAddParent(var, blkmem, set, *negvar) );
       assert((*negvar)->nuses == 1);
    }
    assert(var->negatedvar != NULL);
@@ -3624,7 +3651,7 @@ RETCODE SCIPvarChgType(
 static
 RETCODE varEventObjChanged(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
@@ -3641,8 +3668,8 @@ RETCODE varEventObjChanged(
    assert(var->eventfilter != NULL);
    assert(!SCIPsetIsEQ(set, oldobj, newobj));
 
-   CHECK_OKAY( SCIPeventCreateObjChanged(&event, memhdr, var, oldobj, newobj) );
-   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, primal, lp, NULL, NULL, &event) );
+   CHECK_OKAY( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
 
    return SCIP_OKAY;
 }
@@ -3650,7 +3677,7 @@ RETCODE varEventObjChanged(
 /** changes objective value of variable */
 RETCODE SCIPvarChgObj(
    VAR*             var,                /**< variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
@@ -3671,7 +3698,7 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarChgObj(var->data.transvar, memhdr, set, primal, lp, eventqueue, newobj) );
+            CHECK_OKAY( SCIPvarChgObj(var->data.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
          }
          else
          {
@@ -3684,7 +3711,7 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
-         CHECK_OKAY( varEventObjChanged(var, memhdr, set, primal, lp, eventqueue, oldobj, var->obj) );
+         CHECK_OKAY( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -3706,7 +3733,7 @@ RETCODE SCIPvarChgObj(
 /** adds value to objective value of variable */
 RETCODE SCIPvarAddObj(
    VAR*             var,                /**< variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -3733,7 +3760,7 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, memhdr, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
+            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
          }
          else
          {
@@ -3746,30 +3773,30 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj += addobj;
-         CHECK_OKAY( varEventObjChanged(var, memhdr, set, primal, lp, eventqueue, oldobj, var->obj) );
+         CHECK_OKAY( varEventObjChanged(var, blkmem, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPprobAddObjoffset(prob, var->locdom.lb * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(prob, var->data.aggregate.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
-         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, memhdr, set, stat, prob, primal, tree, lp, eventqueue,
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, blkmem, set, stat, prob, primal, tree, lp, eventqueue,
                         var->data.aggregate.scalar * addobj) );
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], memhdr, set, stat, prob, primal, tree, lp, 
+            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, prob, primal, tree, lp, 
                            eventqueue, var->data.multaggr.scalars[i] * addobj) );
          }
          break;
@@ -3780,8 +3807,8 @@ RETCODE SCIPvarAddObj(
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(prob, var->data.negate.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, tree, lp) );
-         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, memhdr, set, stat, prob, primal, tree, lp, eventqueue, -addobj) );
+         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, -addobj) );
          break;
 
       default:
@@ -4270,7 +4297,7 @@ RETCODE SCIPvarChgBdGlobal(
 static
 RETCODE varEventLbChanged(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -4295,8 +4322,8 @@ RETCODE varEventLbChanged(
 
       debugMessage("issue LBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
-      CHECK_OKAY( SCIPeventCreateLbChanged(&event, memhdr, var, oldbound, newbound) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, lp, branchcand, NULL, &event) );
+      CHECK_OKAY( SCIPeventCreateLbChanged(&event, blkmem, var, oldbound, newbound) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
 
    return SCIP_OKAY;
@@ -4306,7 +4333,7 @@ RETCODE varEventLbChanged(
 static
 RETCODE varEventUbChanged(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -4331,8 +4358,8 @@ RETCODE varEventUbChanged(
    
       debugMessage("issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
-      CHECK_OKAY( SCIPeventCreateUbChanged(&event, memhdr, var, oldbound, newbound) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, lp, branchcand, NULL, &event) );
+      CHECK_OKAY( SCIPeventCreateUbChanged(&event, blkmem, var, oldbound, newbound) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp, branchcand, NULL, &event) );
    }
 
    return SCIP_OKAY;
@@ -4344,7 +4371,7 @@ RETCODE varEventUbChanged(
 static            
 RETCODE varProcessChgUbLocal(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -4357,7 +4384,7 @@ RETCODE varProcessChgUbLocal(
 static            
 RETCODE varProcessChgLbLocal(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -4386,7 +4413,7 @@ RETCODE varProcessChgLbLocal(
    assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL) == (var->eventfilter == NULL));
    if( var->eventfilter != NULL )
    {
-      CHECK_OKAY( varEventLbChanged(var, memhdr, set, lp, branchcand, eventqueue, oldbound, newbound) );
+      CHECK_OKAY( varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
 
    /* process parent variables */
@@ -4416,7 +4443,7 @@ RETCODE varProcessChgLbLocal(
             assert((SCIPsetIsInfinity(set, -parentvar->locdom.lb) && SCIPsetIsInfinity(set, -oldbound))
                || SCIPsetIsEQ(set, parentvar->locdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
+            CHECK_OKAY( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, 
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          else 
@@ -4426,7 +4453,7 @@ RETCODE varProcessChgLbLocal(
             assert((SCIPsetIsInfinity(set, parentvar->locdom.ub) && SCIPsetIsInfinity(set, -oldbound))
                || SCIPsetIsEQ(set, parentvar->locdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
+            CHECK_OKAY( varProcessChgUbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, 
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          break;
@@ -4435,7 +4462,7 @@ RETCODE varProcessChgLbLocal(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue,
+         CHECK_OKAY( varProcessChgUbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                parentvar->data.negate.constant - newbound) );
          break;
 
@@ -4452,7 +4479,7 @@ RETCODE varProcessChgLbLocal(
 static            
 RETCODE varProcessChgUbLocal(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -4481,7 +4508,7 @@ RETCODE varProcessChgUbLocal(
    assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL) == (var->eventfilter == NULL));
    if( var->eventfilter != NULL )
    {
-      CHECK_OKAY( varEventUbChanged(var, memhdr, set, lp, branchcand, eventqueue, oldbound, newbound) );
+      CHECK_OKAY( varEventUbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
 
    /* process parent variables */
@@ -4511,7 +4538,7 @@ RETCODE varProcessChgUbLocal(
             assert((SCIPsetIsInfinity(set, parentvar->locdom.ub) && SCIPsetIsInfinity(set, oldbound))
                || SCIPsetIsEQ(set, parentvar->locdom.ub,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            CHECK_OKAY( varProcessChgUbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
+            CHECK_OKAY( varProcessChgUbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, 
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          else
@@ -4521,7 +4548,7 @@ RETCODE varProcessChgUbLocal(
             assert((SCIPsetIsInfinity(set, -parentvar->locdom.lb) && SCIPsetIsInfinity(set, oldbound))
                || SCIPsetIsEQ(set, parentvar->locdom.lb,
                   oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant));
-            CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue, 
+            CHECK_OKAY( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue, 
                   parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant) );
          }
          break;
@@ -4530,7 +4557,7 @@ RETCODE varProcessChgUbLocal(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         CHECK_OKAY( varProcessChgLbLocal(parentvar, memhdr, set, stat, lp, branchcand, eventqueue,
+         CHECK_OKAY( varProcessChgLbLocal(parentvar, blkmem, set, stat, lp, branchcand, eventqueue,
                parentvar->data.negate.constant - newbound) );
          break;
 
@@ -4548,7 +4575,7 @@ RETCODE varProcessChgUbLocal(
  */
 RETCODE SCIPvarChgLbLocal(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -4577,7 +4604,7 @@ RETCODE SCIPvarChgLbLocal(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarChgLbLocal(var->data.transvar, memhdr, set, stat, lp, branchcand, eventqueue, newbound) );
+         CHECK_OKAY( SCIPvarChgLbLocal(var->data.transvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       else
       {
@@ -4590,7 +4617,7 @@ RETCODE SCIPvarChgLbLocal(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       stat->domchgcount++;
-      CHECK_OKAY( varProcessChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound) );
+      CHECK_OKAY( varProcessChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -4605,7 +4632,7 @@ RETCODE SCIPvarChgLbLocal(
          assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
             || SCIPsetIsEQ(set, var->locdom.lb,
                var->data.aggregate.var->locdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
-         CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
                (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
@@ -4614,7 +4641,7 @@ RETCODE SCIPvarChgLbLocal(
          assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
             || SCIPsetIsEQ(set, var->locdom.lb,
                var->data.aggregate.var->locdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
-         CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
                (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else
@@ -4633,7 +4660,7 @@ RETCODE SCIPvarChgLbLocal(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarChgUbLocal(var->negatedvar, memhdr, set, stat, lp, branchcand, eventqueue, 
+      CHECK_OKAY( SCIPvarChgUbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue, 
             var->data.negate.constant - newbound) );
       break;
          
@@ -4650,7 +4677,7 @@ RETCODE SCIPvarChgLbLocal(
  */
 RETCODE SCIPvarChgUbLocal(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -4679,7 +4706,7 @@ RETCODE SCIPvarChgUbLocal(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar != NULL )
       {
-         CHECK_OKAY( SCIPvarChgUbLocal(var->data.transvar, memhdr, set, stat, lp, branchcand, eventqueue, newbound) );
+         CHECK_OKAY( SCIPvarChgUbLocal(var->data.transvar, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
       else
       {
@@ -4692,7 +4719,7 @@ RETCODE SCIPvarChgUbLocal(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       stat->domchgcount++;
-      CHECK_OKAY( varProcessChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound) );
+      CHECK_OKAY( varProcessChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       break;
 
    case SCIP_VARSTATUS_FIXED:
@@ -4707,7 +4734,7 @@ RETCODE SCIPvarChgUbLocal(
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
             || SCIPsetIsEQ(set, var->locdom.ub,
                var->data.aggregate.var->locdom.ub * var->data.aggregate.scalar + var->data.aggregate.constant));
-         CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPvarChgUbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
                (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
@@ -4716,7 +4743,7 @@ RETCODE SCIPvarChgUbLocal(
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
             || SCIPsetIsEQ(set, var->locdom.ub,
                var->data.aggregate.var->locdom.lb * var->data.aggregate.scalar + var->data.aggregate.constant));
-         CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, memhdr, set, stat, lp, branchcand, eventqueue, 
+         CHECK_OKAY( SCIPvarChgLbLocal(var->data.aggregate.var, blkmem, set, stat, lp, branchcand, eventqueue, 
                (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else
@@ -4735,7 +4762,7 @@ RETCODE SCIPvarChgUbLocal(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarChgLbLocal(var->negatedvar, memhdr, set, stat, lp, branchcand, eventqueue, 
+      CHECK_OKAY( SCIPvarChgLbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue, 
             var->data.negate.constant - newbound) );
       break;
          
@@ -4752,7 +4779,7 @@ RETCODE SCIPvarChgUbLocal(
  */
 RETCODE SCIPvarChgBdLocal(
    VAR*             var,                /**< problem variable to change */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -4766,9 +4793,9 @@ RETCODE SCIPvarChgBdLocal(
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-      return SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound);
+      return SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound);
    case SCIP_BOUNDTYPE_UPPER:
-      return SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound);
+      return SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound);
    default:
       errorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
@@ -4942,7 +4969,7 @@ RETCODE SCIPvarChgUbDive(
 /** adds a hole to the variable's global domain and to its current local domain */
 RETCODE SCIPvarAddHoleGlobal(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             left,               /**< left bound of open interval in new hole */
    Real             right               /**< right bound of open interval in new hole */
@@ -4952,8 +4979,8 @@ RETCODE SCIPvarAddHoleGlobal(
 
    debugMessage("adding global hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   CHECK_OKAY( domAddHole(&var->glbdom, memhdr, set, left, right) );
-   CHECK_OKAY( domAddHole(&var->locdom, memhdr, set, left, right) );
+   CHECK_OKAY( domAddHole(&var->glbdom, blkmem, set, left, right) );
+   CHECK_OKAY( domAddHole(&var->locdom, blkmem, set, left, right) );
 
    /**@todo add hole in parent and child variables (just like with bound changes) */
 
@@ -4963,7 +4990,7 @@ RETCODE SCIPvarAddHoleGlobal(
 /** adds a hole to the variable's current local domain */
 RETCODE SCIPvarAddHoleLocal(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             left,               /**< left bound of open interval in new hole */
    Real             right               /**< right bound of open interval in new hole */
@@ -4973,7 +5000,7 @@ RETCODE SCIPvarAddHoleLocal(
 
    debugMessage("adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   CHECK_OKAY( domAddHole(&var->locdom, memhdr, set, left, right) );
+   CHECK_OKAY( domAddHole(&var->locdom, blkmem, set, left, right) );
 
    /**@todo add hole in parent and child variables (just like with bound changes) */
 
@@ -4983,7 +5010,7 @@ RETCODE SCIPvarAddHoleLocal(
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
 RETCODE SCIPvarAddVlb(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
@@ -5000,7 +5027,7 @@ RETCODE SCIPvarAddVlb(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddVlb(var->data.transvar, memhdr, set, vlbvar, vlbcoef, vlbconstant) );
+      CHECK_OKAY( SCIPvarAddVlb(var->data.transvar, blkmem, set, vlbvar, vlbcoef, vlbconstant) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5013,7 +5040,7 @@ RETCODE SCIPvarAddVlb(
       if( vlbvar != NULL )
       {
          /* add variable bound to the variable bounds list */
-         CHECK_OKAY( vboundsAdd(&var->vlbs, memhdr, set, vlbvar, vlbcoef, vlbconstant) );
+         CHECK_OKAY( vboundsAdd(&var->vlbs, blkmem, set, vlbvar, vlbcoef, vlbconstant) );
       }
       break;
       
@@ -5029,14 +5056,14 @@ RETCODE SCIPvarAddVlb(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable lower bound */
-         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, memhdr, set, vlbvar,
+         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, vlbvar,
                         vlbcoef/var->data.aggregate.scalar,
                         (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable upper bound */
-         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, memhdr, set, vlbvar,
+         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, vlbvar,
                         vlbcoef/var->data.aggregate.scalar,
                         (vlbconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -5056,7 +5083,7 @@ RETCODE SCIPvarAddVlb(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAddVub(var->negatedvar, memhdr, set, vlbvar,
+      CHECK_OKAY( SCIPvarAddVub(var->negatedvar, blkmem, set, vlbvar,
                      -vlbcoef, var->data.negate.constant - vlbconstant) );
       break;
       
@@ -5071,7 +5098,7 @@ RETCODE SCIPvarAddVlb(
 /** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
 RETCODE SCIPvarAddVub(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
@@ -5088,7 +5115,7 @@ RETCODE SCIPvarAddVub(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddVub(var->data.transvar, memhdr, set, vubvar, vubcoef, vubconstant) );
+      CHECK_OKAY( SCIPvarAddVub(var->data.transvar, blkmem, set, vubvar, vubcoef, vubconstant) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5101,7 +5128,7 @@ RETCODE SCIPvarAddVub(
       if( vubvar != NULL )
       {
          /* add variable bound to the variable bounds list */
-         CHECK_OKAY( vboundsAdd(&var->vubs, memhdr, set, vubvar, vubcoef, vubconstant) );
+         CHECK_OKAY( vboundsAdd(&var->vubs, blkmem, set, vubvar, vubcoef, vubconstant) );
       }
       break;
       
@@ -5117,14 +5144,14 @@ RETCODE SCIPvarAddVub(
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable upper bound */
-         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, memhdr, set, vubvar,
+         CHECK_OKAY( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, vubvar,
                         vubcoef/var->data.aggregate.scalar,
                         (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> add variable lower bound */
-         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, memhdr, set, vubvar,
+         CHECK_OKAY( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, vubvar,
                         vubcoef/var->data.aggregate.scalar,
                         (vubconstant - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
@@ -5144,7 +5171,7 @@ RETCODE SCIPvarAddVub(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAddVlb(var->negatedvar, memhdr, set, vubvar,
+      CHECK_OKAY( SCIPvarAddVlb(var->negatedvar, blkmem, set, vubvar,
                      -vubcoef, var->data.negate.constant - vubconstant) );
       break;
       
@@ -5159,7 +5186,7 @@ RETCODE SCIPvarAddVub(
 /** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b */
 RETCODE SCIPvarAddImplic(
    VAR*             var,                /**< problem variable  */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Bool             i,                  /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
@@ -5178,7 +5205,7 @@ RETCODE SCIPvarAddImplic(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddImplic(var->data.transvar, memhdr, set, i, implvar, impltype, implbound, conflict) );
+      CHECK_OKAY( SCIPvarAddImplic(var->data.transvar, blkmem, set, i, implvar, impltype, implbound, conflict) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5192,7 +5219,7 @@ RETCODE SCIPvarAddImplic(
       else
       {
          assert(var != implvar);
-         CHECK_OKAY( implicsAdd(&var->implics, memhdr, set, i, implvar, impltype, implbound, conflict) );
+         CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, i, implvar, impltype, implbound, conflict) );
       }
 
       debugMessage("implication added: "); 
@@ -5225,12 +5252,12 @@ RETCODE SCIPvarAddImplic(
        
          if( var->data.aggregate.scalar > 0 )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, memhdr, set, i, implvar, impltype, implbound, 
+            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, i, implvar, impltype, implbound, 
                   conflict) );
          }
          else
          {
-            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, memhdr, set, !i, implvar, impltype, implbound,
+            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, !i, implvar, impltype, implbound,
                   conflict) );
          }
       }
@@ -5251,7 +5278,7 @@ RETCODE SCIPvarAddImplic(
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY);
 
-      CHECK_OKAY( SCIPvarAddImplic(var->negatedvar, memhdr, set, !i, implvar, impltype, implbound, conflict) );
+      CHECK_OKAY( SCIPvarAddImplic(var->negatedvar, blkmem, set, !i, implvar, impltype, implbound, conflict) );
       break;
       
    default:
@@ -5278,7 +5305,7 @@ RETCODE SCIPvarUseActiveVbds(
 /** replaces variables in implications of binary variable by their active problem variable counterparts */
 RETCODE SCIPvarUseActiveImplics(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
@@ -5303,14 +5330,14 @@ RETCODE SCIPvarUseActiveImplics(
 
    for( j = 0; j < oldimplics->nimpls[0]; ++j )
    {
-      CHECK_OKAY( SCIPvarAddImplic(var, memhdr, set, 0, oldimplics->implvars[0][j], oldimplics->impltypes[0][j],
+      CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, 0, oldimplics->implvars[0][j], oldimplics->impltypes[0][j],
             oldimplics->implbounds[0][j], &conflict) );
 
       if( conflict )
       {
          if( SCIPvarGetUbGlobal(var) > 0.5 )
          {
-            CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 1.0) );
+            CHECK_OKAY( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
             CHECK_OKAY( SCIPvarChgLbGlobal(var, set, 1.0) );
          }
          else
@@ -5320,14 +5347,14 @@ RETCODE SCIPvarUseActiveImplics(
      
    for( j = 0; j < oldimplics->nimpls[1]; ++j )
    {
-      CHECK_OKAY( SCIPvarAddImplic(var, memhdr, set, 1, oldimplics->implvars[1][j], oldimplics->impltypes[1][j],
+      CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, 1, oldimplics->implvars[1][j], oldimplics->impltypes[1][j],
             oldimplics->implbounds[1][j], &conflict) );
 
       if( conflict )
       {
          if( SCIPvarGetLbGlobal(var) < 0.5 )
          {
-            CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0) );
+            CHECK_OKAY( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
             CHECK_OKAY( SCIPvarChgUbGlobal(var, set, 0.0) );
          }
          else
@@ -5335,7 +5362,7 @@ RETCODE SCIPvarUseActiveImplics(
       }
    }
 
-   implicsFree(&oldimplics, memhdr);
+   implicsFree(&oldimplics, blkmem);
       
    return SCIP_OKAY;
 }
@@ -6407,7 +6434,7 @@ Real SCIPvarGetAvgSol(
 /** resolves variable to columns and adds them with the coefficient to the row */
 RETCODE SCIPvarAddToRow(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -6432,19 +6459,19 @@ RETCODE SCIPvarAddToRow(
          errorMessage("cannot add untransformed original variable <%s> to LP row <%s>\n", var->name, row->name);
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarAddToRow(var->data.transvar, memhdr, set, stat, prob, lp, row, val) );
+      CHECK_OKAY( SCIPvarAddToRow(var->data.transvar, blkmem, set, stat, prob, lp, row, val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
       /* convert loose variable into column */
-      CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat, prob, lp) );
+      CHECK_OKAY( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       /*lint -fallthrough*/
 
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
       assert(var->data.col->var == var);
-      CHECK_OKAY( SCIProwIncCoef(row, memhdr, set, lp, var->data.col, val) );
+      CHECK_OKAY( SCIProwIncCoef(row, blkmem, set, lp, var->data.col, val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -6457,7 +6484,7 @@ RETCODE SCIPvarAddToRow(
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      CHECK_OKAY( SCIPvarAddToRow(var->data.aggregate.var, memhdr, set, stat, prob, lp,
+      CHECK_OKAY( SCIPvarAddToRow(var->data.aggregate.var, blkmem, set, stat, prob, lp,
             row, var->data.aggregate.scalar * val) );
       CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.aggregate.constant * val) );
       return SCIP_OKAY;
@@ -6468,7 +6495,7 @@ RETCODE SCIPvarAddToRow(
       assert(var->data.multaggr.nvars >= 2);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
-         CHECK_OKAY( SCIPvarAddToRow(var->data.multaggr.vars[i], memhdr, set, stat, prob, lp,
+         CHECK_OKAY( SCIPvarAddToRow(var->data.multaggr.vars[i], blkmem, set, stat, prob, lp,
                row, var->data.multaggr.scalars[i] * val) );
       }
       CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.multaggr.constant * val) );
@@ -6478,7 +6505,7 @@ RETCODE SCIPvarAddToRow(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarAddToRow(var->negatedvar, memhdr, set, stat, prob, lp, row, -val) );
+      CHECK_OKAY( SCIPvarAddToRow(var->negatedvar, blkmem, set, stat, prob, lp, row, -val) );
       CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.negate.constant * val) );
       return SCIP_OKAY;
 
@@ -8414,7 +8441,7 @@ Real* SCIPvarGetImplbounds(
 /** includes event handler with given data in variable's event filter */
 RETCODE SCIPvarCatchEvent(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -8431,7 +8458,7 @@ RETCODE SCIPvarCatchEvent(
    debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
       eventtype, var->name, eventhdlr, eventdata);
 
-   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
+   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
    return SCIP_OKAY;
 }
@@ -8439,7 +8466,7 @@ RETCODE SCIPvarCatchEvent(
 /** deletes event handler with given data from variable's event filter */
 RETCODE SCIPvarDropEvent(
    VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -8453,7 +8480,7 @@ RETCODE SCIPvarDropEvent(
 
    debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
 
-   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
+   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
    return SCIP_OKAY;
 }

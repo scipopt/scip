@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.94 2005/01/18 14:34:27 bzfpfend Exp $
+# $Id: Makefile,v 1.95 2005/01/31 12:20:55 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -30,8 +30,8 @@ ARCH            :=      $(shell uname -m | \
 			-e s/IP../mips/ \
 			-e s/9000..../hppa/ \
 			-e s/00........../pwr4/)
-OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
-MACHINENAME	:=	$(shell uname -n | tr A-Z a-z)
+OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/irix../irix/ )
+MACHINENAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
 #-----------------------------------------------------------------------------
@@ -239,6 +239,7 @@ SCIPLIBOBJ	=	branch.o \
 			nodesel_dfs.o \
 			nodesel_restartdfs.o \
 			presol_dualfix.o \
+			presol_probing.o \
 			presol_trivial.o \
 			prop_pseudoobj.o \
 			reader_cnf.o \

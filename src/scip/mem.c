@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.16 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.17 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -40,9 +40,9 @@ RETCODE SCIPmemCreate(
 
    ALLOC_OKAY( allocMemory(mem) );
 
-   ALLOC_OKAY( (*mem)->setmem = createBlockMemory(1, TRUE, 10 ) );
-   ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10 ) );
-   ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
+   ALLOC_OKAY( (*mem)->setmem = createBlockMemory(1, 10) );
+   ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, 10) );
+   ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, 10) );
 
    debugMessage("created setmem   block memory at <%p>\n", (*mem)->setmem);
    debugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);

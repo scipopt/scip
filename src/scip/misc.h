@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.18 2005/01/21 09:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.19 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -44,14 +44,14 @@
 extern
 RETCODE SCIPrealarrayCreate(
    REALARRAY**      realarray,          /**< pointer to store the real array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of real values */
 extern
 RETCODE SCIPrealarrayCopy(
    REALARRAY**      realarray,          /**< pointer to store the copied real array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
    );
 
@@ -117,14 +117,14 @@ int SCIPrealarrayGetMaxIdx(
 extern
 RETCODE SCIPintarrayCreate(
    INTARRAY**       intarray,           /**< pointer to store the int array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of int values */
 extern
 RETCODE SCIPintarrayCopy(
    INTARRAY**       intarray,           /**< pointer to store the copied int array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    INTARRAY*        sourceintarray      /**< dynamic int array to copy */
    );
 
@@ -190,14 +190,14 @@ int SCIPintarrayGetMaxIdx(
 extern
 RETCODE SCIPboolarrayCreate(
    BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of bool values */
 extern
 RETCODE SCIPboolarrayCopy(
    BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
    );
 
@@ -254,14 +254,14 @@ int SCIPboolarrayGetMaxIdx(
 extern
 RETCODE SCIPptrarrayCreate(
    PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of pointer values */
 extern
 RETCODE SCIPptrarrayCopy(
    PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
    );
 

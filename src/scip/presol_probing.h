@@ -14,31 +14,26 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objscip.h,v 1.9 2005/01/31 12:21:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.h,v 1.1 2005/01/31 12:21:00 bzfpfend Exp $"
 
-/**@file   objscip.h
- * @brief  C++ wrapper classes for SCIP
+/**@file   presol_probing.h
+ * @brief  probing presolver
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __OBJSCIP_H__
-#define __OBJSCIP_H__
+#ifndef __PRESOL_PROBING_H__
+#define __PRESOL_PROBING_H__
 
 
-#include "objbranchrule.h"
-#include "objconshdlr.h"
-#include "objheur.h"
-#include "objnodesel.h"
-#include "objpresol.h"
-#include "objpricer.h"
-#include "objprobdata.h"
-#include "objprop.h"
-#include "objreader.h"
-#include "objrelax.h"
-#include "objsepa.h"
-#include "objvardata.h"
+#include "scip.h"
 
+
+/** creates the probing presolver and includes it in SCIP */
+extern
+RETCODE SCIPincludePresolProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 #endif

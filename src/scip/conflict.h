@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.25 2005/01/21 09:16:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.26 2005/01/31 12:20:56 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -51,7 +51,7 @@ extern
 RETCODE SCIPconflicthdlrCreate(
    CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
    int              priority,           /**< priority of the conflict handler */
@@ -147,7 +147,7 @@ RETCODE SCIPconflictAddBound(
 extern
 RETCODE SCIPconflictAnalyze(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -208,7 +208,7 @@ Longint SCIPconflictGetNPropReconvergenceLiterals(
 extern
 RETCODE SCIPconflictAnalyzeLP(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -270,7 +270,7 @@ Longint SCIPconflictGetNLPIterations(
 extern
 RETCODE SCIPconflictAnalyzeStrongbranch(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -341,7 +341,7 @@ Longint SCIPconflictGetNStrongbranchIterations(
 extern
 RETCODE SCIPconflictAnalyzePseudo(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */

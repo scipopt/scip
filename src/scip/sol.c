@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.52 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.53 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -218,7 +218,7 @@ void solStamp(
 /** creates primal CIP solution, initialized to zero */
 RETCODE SCIPsolCreate(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -227,12 +227,12 @@ RETCODE SCIPsolCreate(
    )
 {
    assert(sol != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(stat != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, sol) );   
-   CHECK_OKAY( SCIPrealarrayCreate(&(*sol)->vals, memhdr) );
-   CHECK_OKAY( SCIPboolarrayCreate(&(*sol)->valid, memhdr) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, sol) );   
+   CHECK_OKAY( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
+   CHECK_OKAY( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
    (*sol)->heur = heur;
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
    (*sol)->obj = 0.0;
@@ -247,7 +247,7 @@ RETCODE SCIPsolCreate(
 /** creates a copy of a primal CIP solution */
 RETCODE SCIPsolCopy(
    SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    SOL*             sourcesol           /**< primal CIP solution to copy */
@@ -256,9 +256,9 @@ RETCODE SCIPsolCopy(
    assert(sol != NULL);
    assert(sourcesol != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, sol) );   
-   CHECK_OKAY( SCIPrealarrayCopy(&(*sol)->vals, memhdr, sourcesol->vals) );
-   CHECK_OKAY( SCIPboolarrayCopy(&(*sol)->valid, memhdr, sourcesol->valid) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, sol) );   
+   CHECK_OKAY( SCIPrealarrayCopy(&(*sol)->vals, blkmem, sourcesol->vals) );
+   CHECK_OKAY( SCIPboolarrayCopy(&(*sol)->valid, blkmem, sourcesol->valid) );
    (*sol)->heur = sourcesol->heur;
    (*sol)->obj = sourcesol->obj;
    (*sol)->primalindex = -1;
@@ -276,7 +276,7 @@ RETCODE SCIPsolCopy(
 /** creates primal CIP solution, initialized to the current LP solution */
 RETCODE SCIPsolCreateLPSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -289,7 +289,7 @@ RETCODE SCIPsolCreateLPSol(
    assert(lp != NULL);
    assert(lp->solved);
 
-   CHECK_OKAY( SCIPsolCreate(sol, memhdr, set, stat, primal, tree, heur) );
+   CHECK_OKAY( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    CHECK_OKAY( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
 
    return SCIP_OKAY;
@@ -298,7 +298,7 @@ RETCODE SCIPsolCreateLPSol(
 /** creates primal CIP solution, initialized to the current pseudo solution */
 RETCODE SCIPsolCreatePseudoSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -309,7 +309,7 @@ RETCODE SCIPsolCreatePseudoSol(
 {
    assert(sol != NULL);
 
-   CHECK_OKAY( SCIPsolCreate(sol, memhdr, set, stat, primal, tree, heur) );
+   CHECK_OKAY( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
    CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, set, stat, tree, lp) );
 
    return SCIP_OKAY;
@@ -318,7 +318,7 @@ RETCODE SCIPsolCreatePseudoSol(
 /** creates primal CIP solution, initialized to the current solution */
 RETCODE SCIPsolCreateCurrentSol(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PRIMAL*          primal,             /**< primal data */
@@ -331,11 +331,11 @@ RETCODE SCIPsolCreateCurrentSol(
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      CHECK_OKAY( SCIPsolCreateLPSol(sol, memhdr, set, stat, primal, tree, lp, heur) );
+      CHECK_OKAY( SCIPsolCreateLPSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
    else
    {
-      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, memhdr, set, stat, primal, tree, lp, heur) );
+      CHECK_OKAY( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
@@ -344,7 +344,7 @@ RETCODE SCIPsolCreateCurrentSol(
 /** frees primal CIP solution */
 RETCODE SCIPsolFree(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    PRIMAL*          primal              /**< primal data */
    )
 {
@@ -356,7 +356,7 @@ RETCODE SCIPsolFree(
    CHECK_OKAY( solClearArrays(*sol) );
    CHECK_OKAY( SCIPrealarrayFree(&(*sol)->vals) );
    CHECK_OKAY( SCIPboolarrayFree(&(*sol)->valid) );
-   freeBlockMemory(memhdr, sol);
+   freeBlockMemory(blkmem, sol);
 
    return SCIP_OKAY;
 }
@@ -722,7 +722,7 @@ void SCIPsolUpdateVarObj(
 /** checks primal CIP solution for feasibility */
 RETCODE SCIPsolCheck(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -743,7 +743,7 @@ RETCODE SCIPsolCheck(
    *feasible = TRUE;
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, stat, prob, sol, 
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, prob, sol, 
             checkintegrality, checklprows, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
    }

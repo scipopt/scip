@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.10 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.11 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -70,7 +70,7 @@ void SCIPpricestoreEndInitialLP(
 extern
 RETCODE SCIPpricestoreAddVar(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
    VAR*             var,                /**< priced variable */
@@ -82,7 +82,7 @@ RETCODE SCIPpricestoreAddVar(
 extern
 RETCODE SCIPpricestoreAddBdviolvar(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
@@ -95,7 +95,7 @@ RETCODE SCIPpricestoreAddBdviolvar(
 extern
 RETCODE SCIPpricestoreAddProbVars(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -109,7 +109,7 @@ RETCODE SCIPpricestoreAddProbVars(
 extern
 RETCODE SCIPpricestoreApplyVars(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -121,7 +121,7 @@ RETCODE SCIPpricestoreApplyVars(
 extern
 RETCODE SCIPpricestoreResetBounds(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */

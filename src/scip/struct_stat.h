@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.29 2005/01/21 09:17:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.30 2005/01/31 12:21:03 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -113,6 +113,16 @@ struct Stat
    int              plungedepth;        /**< current plunging depth (successive times, a child was selected as next node) */
    int              nactiveconss;       /**< total number of currently active constraints */
    int              nenabledconss;      /**< total number of currently enabled constraints */
+   int              npresolrounds;      /**< number of presolving rounds in current run */
+   int              npresolfixedvars;   /**< number of presolving fixings in current run */
+   int              npresolaggrvars;    /**< number of presolving aggregations in current run */
+   int              npresolchgvartypes; /**< number of presolving variable type changes in current run */
+   int              npresolchgbds;      /**< number of presolving bound changes in current run */
+   int              npresoladdholes;    /**< number of presolving hole additions in current run */
+   int              npresoldelconss;    /**< number of presolving constraint deletions in current run */
+   int              npresolupgdconss;   /**< number of presolving constraint upgrades in current run */
+   int              npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
+   int              npresolchgsides;    /**< number of presolving side changes in current run */
    Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
 };
 

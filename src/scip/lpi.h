@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.47 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.48 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -616,7 +616,7 @@ RETCODE SCIPlpiGetBInvARow(
 extern
 RETCODE SCIPlpiGetState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
@@ -624,7 +624,7 @@ RETCODE SCIPlpiGetState(
 extern
 RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
@@ -632,7 +632,7 @@ RETCODE SCIPlpiSetState(
 extern
 RETCODE SCIPlpiFreeState(
    LPI*             lpi,                /**< LP interface structure */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 

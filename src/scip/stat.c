@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.56 2005/01/21 09:17:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.57 2005/01/31 12:21:02 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -39,7 +39,7 @@
 /** creates problem statistics data */
 RETCODE SCIPstatCreate(
    STAT**           stat,               /**< pointer to problem statistics data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -60,8 +60,8 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
-   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistory, memhdr) );
-   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistorycrun, memhdr) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
    CHECK_OKAY( SCIPvbcCreate(&(*stat)->vbc) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
@@ -77,7 +77,7 @@ RETCODE SCIPstatCreate(
 /** frees problem statistics data */
 RETCODE SCIPstatFree(
    STAT**           stat,               /**< pointer to problem statistics data */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(stat != NULL);
@@ -95,8 +95,8 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->redcoststrtime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
 
-   SCIPhistoryFree(&(*stat)->glbhistory, memhdr);
-   SCIPhistoryFree(&(*stat)->glbhistorycrun, memhdr);
+   SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
+   SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvbcFree(&(*stat)->vbc);
 
    freeMemory(stat);
@@ -192,6 +192,27 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
 
+   SCIPstatResetPresolving(stat);
+}
+
+/** reset presolving and current run specific statistics */
+void SCIPstatResetPresolving(
+   STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->npresolrounds = 0;
+   stat->npresolfixedvars = 0;
+   stat->npresolaggrvars = 0;
+   stat->npresolchgvartypes = 0;
+   stat->npresolchgbds = 0;
+   stat->npresoladdholes = 0;
+   stat->npresoldelconss = 0;
+   stat->npresolupgdconss = 0;
+   stat->npresolchgcoefs = 0;
+   stat->npresolchgsides = 0;
+
    SCIPstatResetCurrentRun(stat);
 }
 
@@ -212,6 +233,7 @@ void SCIPstatResetCurrentRun(
    stat->lastdivenode = 0;
    stat->rootlowerbound = REAL_MIN;
    stat->lastbranchvar = NULL;
+   stat->status = SCIP_STATUS_UNKNOWN;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
    stat->npricerounds = 0;

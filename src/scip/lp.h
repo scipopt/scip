@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.99 2005/01/21 09:16:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.100 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -53,7 +53,7 @@
 extern
 RETCODE SCIPcolCreate(
    COL**            col,                /**< pointer to column data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable, this column represents */
@@ -67,7 +67,7 @@ RETCODE SCIPcolCreate(
 extern
 RETCODE SCIPcolFree(
    COL**            col,                /**< pointer to LP column */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -83,7 +83,7 @@ void SCIPcolSort(
 extern
 RETCODE SCIPcolAddCoef(
    COL*             col,                /**< LP column */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
@@ -103,7 +103,7 @@ RETCODE SCIPcolDelCoef(
 extern
 RETCODE SCIPcolChgCoef(
    COL*             col,                /**< LP column */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
@@ -114,7 +114,7 @@ RETCODE SCIPcolChgCoef(
 extern
 RETCODE SCIPcolIncCoef(
    COL*             col,                /**< LP column */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    ROW*             row,                /**< LP row */
@@ -234,7 +234,7 @@ void SCIPcolGetStrongbranchLast(
 extern
 RETCODE SCIProwCreate(
    ROW**            row,                /**< pointer to LP row data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of row */
@@ -252,7 +252,7 @@ RETCODE SCIProwCreate(
 extern
 RETCODE SCIProwFree(
    ROW**            row,                /**< pointer to LP row */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -261,7 +261,7 @@ RETCODE SCIProwFree(
 extern
 RETCODE SCIProwEnsureSize(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    );
@@ -276,7 +276,7 @@ void SCIProwCapture(
 extern
 RETCODE SCIProwRelease(
    ROW**            row,                /**< pointer to LP row */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp                  /**< current LP data */
    );
@@ -306,7 +306,7 @@ void SCIProwForceSort(
 extern
 RETCODE SCIProwAddCoef(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
@@ -326,7 +326,7 @@ RETCODE SCIProwDelCoef(
 extern
 RETCODE SCIProwChgCoef(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
@@ -337,7 +337,7 @@ RETCODE SCIProwChgCoef(
 extern
 RETCODE SCIProwIncCoef(
    ROW*             row,                /**< LP row */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
    COL*             col,                /**< LP column */
@@ -553,7 +553,7 @@ RETCODE SCIPlpCreate(
 extern
 RETCODE SCIPlpFree(
    LP**             lp,                 /**< pointer to LP data object */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -586,7 +586,7 @@ RETCODE SCIPlpShrinkCols(
 extern
 RETCODE SCIPlpShrinkRows(
    LP*              lp,                 /**< LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    int              newnrows            /**< new number of rows in the LP */
    );
@@ -595,7 +595,7 @@ RETCODE SCIPlpShrinkRows(
 extern
 RETCODE SCIPlpClear(
    LP*              lp,                 /**< LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -701,7 +701,7 @@ RETCODE SCIPlpCalcStrongCG(
 extern
 RETCODE SCIPlpGetState(
    LP*              lp,                 /**< LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
@@ -709,7 +709,7 @@ RETCODE SCIPlpGetState(
 extern
 RETCODE SCIPlpSetState(
    LP*              lp,                 /**< LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
@@ -718,7 +718,7 @@ RETCODE SCIPlpSetState(
 extern
 RETCODE SCIPlpFreeState(
    LP*              lp,                 /**< LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
@@ -734,7 +734,7 @@ RETCODE SCIPlpSetCutoffbound(
 extern
 RETCODE SCIPlpFlush(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -749,7 +749,7 @@ RETCODE SCIPlpMarkFlushed(
 extern
 RETCODE SCIPlpSolveAndEval(
    LP*              lp,                 /**< LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
@@ -916,7 +916,7 @@ RETCODE SCIPlpUpdateAges(
 extern
 RETCODE SCIPlpRemoveNewObsoletes(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
@@ -925,7 +925,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
 extern
 RETCODE SCIPlpRemoveAllObsoletes(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
@@ -934,7 +934,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
 extern
 RETCODE SCIPlpCleanupNew(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool             root                /**< are we at the root node? */
@@ -944,7 +944,7 @@ RETCODE SCIPlpCleanupNew(
 extern
 RETCODE SCIPlpCleanupAll(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool             root                /**< are we at the root node? */
@@ -954,7 +954,7 @@ RETCODE SCIPlpCleanupAll(
 extern
 RETCODE SCIPlpStartDive(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
    );
 
@@ -962,7 +962,7 @@ RETCODE SCIPlpStartDive(
 extern
 RETCODE SCIPlpEndDive(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */

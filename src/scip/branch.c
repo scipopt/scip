@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.58 2005/01/21 09:16:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.59 2005/01/31 12:20:55 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -715,7 +715,7 @@ DECL_PARAMCHGD(paramChgdBranchrulePriority)
 /** creates a branching rule */
 RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
@@ -768,17 +768,17 @@ RETCODE SCIPbranchruleCreate(
    /* add parameters */
    sprintf(paramname, "branching/%s/priority", name);
    sprintf(paramdesc, "priority of branching rule <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) ); /*lint !e740*/
    sprintf(paramname, "branching/%s/maxdepth", name);
    sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->maxdepth, maxdepth, -1, INT_MAX, 
          NULL, NULL) ); /*lint !e740*/
    sprintf(paramname, "branching/%s/maxbounddist", name);
    sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
-   CHECK_OKAY( SCIPsetAddRealParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->maxbounddist, maxbounddist, 0.0, 1.0, 
          NULL, NULL) ); /*lint !e740*/
 
@@ -1343,7 +1343,7 @@ Real SCIPbranchGetScoreMultiple(
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
  */
 RETCODE SCIPbranchExecLP(
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -1380,7 +1380,7 @@ RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      CHECK_OKAY( SCIPbranchExecPseudo(memhdr, set, stat, tree, lp, branchcand, eventqueue, upperbound, allowaddcons,
+      CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, upperbound, allowaddcons,
             result) );
       assert(*result != SCIP_DIDNOTRUN);
       return SCIP_OKAY;
@@ -1428,7 +1428,7 @@ RETCODE SCIPbranchExecLP(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      CHECK_OKAY( SCIPtreeBranchVar(tree, memhdr, set, stat, lp, branchcand, eventqueue, var) );
+      CHECK_OKAY( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var) );
 
       *result = SCIP_BRANCHED;
    }
@@ -1438,7 +1438,7 @@ RETCODE SCIPbranchExecLP(
 
 /** calls branching rules to branch on a pseudo solution; if no unfixed variables exist, the result is SCIP_DIDNOTRUN */
 RETCODE SCIPbranchExecPseudo(
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -1504,7 +1504,7 @@ RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      CHECK_OKAY( SCIPtreeBranchVar(tree, memhdr, set, stat, lp, branchcand, eventqueue, var) );
+      CHECK_OKAY( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var) );
 
       *result = SCIP_BRANCHED;
    }

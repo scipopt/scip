@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.8 2005/01/21 09:17:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.9 2005/01/31 12:21:03 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -64,7 +64,7 @@ struct HashTable
    DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
    DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
-   MEMHDR*          memhdr;             /**< block memory used to store hash map entries */
+   BLKMEM*          blkmem;             /**< block memory used to store hash map entries */
    HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
    int              nlists;             /**< number of lists stored in the hash table */
 };
@@ -80,7 +80,7 @@ struct HashMapList
 /** hash map data structure to map pointers on pointers */
 struct HashMap
 {
-   MEMHDR*          memhdr;             /**< block memory used to store hash map entries */
+   BLKMEM*          blkmem;             /**< block memory used to store hash map entries */
    HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
    int              nlists;             /**< number of lists stored in the hash map */
 };
@@ -88,7 +88,7 @@ struct HashMap
 /** dynamic array for storing real values */
 struct RealArray
 {
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
+   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
    Real*            vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
@@ -99,7 +99,7 @@ struct RealArray
 /** dynamic array for storing int values */
 struct IntArray
 {
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
+   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
    int*             vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
@@ -110,7 +110,7 @@ struct IntArray
 /** dynamic array for storing bool values */
 struct BoolArray
 {
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
+   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
    Bool*            vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
@@ -121,7 +121,7 @@ struct BoolArray
 /** dynamic array for storing pointers */
 struct PtrArray
 {
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
+   BLKMEM*          blkmem;             /**< block memory that stores the vals array */
    void**           vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */

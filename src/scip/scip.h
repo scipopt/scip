@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.198 2005/01/25 12:46:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.199 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1391,7 +1391,9 @@ RETCODE SCIPaddConsLocal(
    CONS*            cons                /**< constraint to add */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
+/** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes);
+ *  if the method is called at the root node, the constraint is globally deleted from the problem
+ */
 extern
 RETCODE SCIPdisableConsNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1400,7 +1402,8 @@ RETCODE SCIPdisableConsNode(
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the current node (and all subnodes);
- *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
+ *  if the method is called during problem modification or at the root node, the constraint is globally deleted from
+ *  the problem
  */
 extern
 RETCODE SCIPdisableConsLocal(
@@ -2053,7 +2056,7 @@ RETCODE SCIPfixVar(
  *  The output flags have the following meaning:
  *  - infeasible: the problem is infeasible
  *  - redundant:  the equality can be deleted from the constraint set
- *  - aggregated: the aggregation was successfully performed (aggregated implies redundant)
+ *  - aggregated: the aggregation was successfully performed (the variables were not aggregated before)
  */
 extern
 RETCODE SCIPaggregateVars(
@@ -2072,6 +2075,10 @@ RETCODE SCIPaggregateVars(
  *  SCIPgetVars() and SCIPgetVarsData(); Warning! The integrality condition is not checked anymore on
  *  the multiaggregated variable. You must not multiaggregate an integer variable without being sure,
  *  that integrality on the aggregation variables implies integrality on the aggregated variable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - aggregated: the aggregation was successfully performed (the variables were not aggregated before)
  */
 extern
 RETCODE SCIPmultiaggregateVar(
@@ -2081,7 +2088,8 @@ RETCODE SCIPmultiaggregateVar(
    VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Real*            scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
-   Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
@@ -4884,35 +4892,35 @@ void SCIPprintReal(
 #define SCIPfreeMemorySize(scip,ptr)            freeMemorySize(ptr)
 #define SCIPfreeMemorySizeNull(scip,ptr)        freeMemorySizeNull(ptr)
 
-#define SCIPallocBlockMemory(scip,ptr)          ( (allocBlockMemory(SCIPmemhdr(scip), (ptr)) == NULL) \
+#define SCIPallocBlockMemory(scip,ptr)          ( (allocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPallocBlockMemoryArray(scip,ptr,num) ( (allocBlockMemoryArray(SCIPmemhdr(scip), (ptr), (num)) == NULL) \
+#define SCIPallocBlockMemoryArray(scip,ptr,num) ( (allocBlockMemoryArray(SCIPblkmem(scip), (ptr), (num)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPallocBlockMemorySize(scip,ptr,size) ( (allocBlockMemorySize(SCIPmemhdr(scip), (ptr), (size)) == NULL) \
+#define SCIPallocBlockMemorySize(scip,ptr,size) ( (allocBlockMemorySize(SCIPblkmem(scip), (ptr), (size)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPreallocBlockMemoryArray(scip,ptr,oldnum,newnum) \
-                                                ( (reallocBlockMemoryArray(SCIPmemhdr(scip), (ptr), (oldnum), (newnum)) \
+                                                ( (reallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (oldnum), (newnum)) \
                                                   == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPreallocBlockMemorySize(scip,ptr,oldsize,newsize) \
-                                                ( (reallocBlockMemorySize(SCIPmemhdr(scip), (ptr), (oldsize), (newsize)) \
+                                                ( (reallocBlockMemorySize(SCIPblkmem(scip), (ptr), (oldsize), (newsize)) \
                                                   == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPduplicateBlockMemory(scip, ptr, source) \
-                                                ( (duplicateBlockMemory(SCIPmemhdr(scip), (ptr), (source)) == NULL) \
+                                                ( (duplicateBlockMemory(SCIPblkmem(scip), (ptr), (source)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPduplicateBlockMemoryArray(scip, ptr, source, num) \
-                                                ( (duplicateBlockMemoryArray(SCIPmemhdr(scip), (ptr), (source), (num)) \
+                                                ( (duplicateBlockMemoryArray(SCIPblkmem(scip), (ptr), (source), (num)) \
                                                   == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPensureBlockMemoryArray(scip,ptr,arraysizeptr,minsize) \
                                                 ( (SCIPensureBlockMemoryArray_call((scip), (void**)(ptr), sizeof(**(ptr)), \
                                                    (arraysizeptr), (minsize))) )
-#define SCIPfreeBlockMemory(scip,ptr)           freeBlockMemory(SCIPmemhdr(scip), (ptr))
-#define SCIPfreeBlockMemoryNull(scip,ptr)       freeBlockMemoryNull(SCIPmemhdr(scip), (ptr))
-#define SCIPfreeBlockMemoryArray(scip,ptr,num)  freeBlockMemoryArray(SCIPmemhdr(scip), (ptr), (num))
+#define SCIPfreeBlockMemory(scip,ptr)           freeBlockMemory(SCIPblkmem(scip), (ptr))
+#define SCIPfreeBlockMemoryNull(scip,ptr)       freeBlockMemoryNull(SCIPblkmem(scip), (ptr))
+#define SCIPfreeBlockMemoryArray(scip,ptr,num)  freeBlockMemoryArray(SCIPblkmem(scip), (ptr), (num))
 #define SCIPfreeBlockMemoryArrayNull(scip,ptr,num) \
-                                                freeBlockMemoryArrayNull(SCIPmemhdr(scip), (ptr), (num))
-#define SCIPfreeBlockMemorySize(scip,ptr,size)  freeBlockMemorySize(SCIPmemhdr(scip), (ptr), (size))
+                                                freeBlockMemoryArrayNull(SCIPblkmem(scip), (ptr), (num))
+#define SCIPfreeBlockMemorySize(scip,ptr,size)  freeBlockMemorySize(SCIPblkmem(scip), (ptr), (size))
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
-                                                freeBlockMemorySizeNull(SCIPmemhdr(scip), (ptr), (size))
+                                                freeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
 
 #define SCIPallocBuffer(scip,ptr)               SCIPallocBufferSize(scip, (void**)(ptr), (int)sizeof(**(ptr)))
 #define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
@@ -4927,7 +4935,7 @@ void SCIPprintReal(
 
 /** returns block memory to use at the current time */
 extern
-MEMHDR* SCIPmemhdr(
+BLKMEM* SCIPblkmem(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -5281,7 +5289,7 @@ int SCIPgetPtrarrayMaxIdx(
  * speed up the algorithms.
  */
 
-#define SCIPcreateRealarray(scip, realarray)                    SCIPrealarrayCreate(realarray, SCIPmemhdr(scip))
+#define SCIPcreateRealarray(scip, realarray)                    SCIPrealarrayCreate(realarray, SCIPblkmem(scip))
 #define SCIPfreeRealarray(scip, realarray)                      SCIPrealarrayFree(realarray)
 #define SCIPextendRealarray(scip, realarray, minidx, maxidx)    SCIPrealarrayExtend(realarray, (scip)->set, minidx, maxidx)
 #define SCIPclearRealarray(scip, realarray)                     SCIPrealarrayClear(realarray)
@@ -5291,7 +5299,7 @@ int SCIPgetPtrarrayMaxIdx(
 #define SCIPgetRealarrayMinIdx(scip, realarray)                 SCIPrealarrayGetMinIdx(realarray)
 #define SCIPgetRealarrayMaxIdx(scip, realarray)                 SCIPrealarrayGetMaxIdx(realarray)
 
-#define SCIPcreateIntarray(scip, intarray)                      SCIPintarrayCreate(intarray, SCIPmemhdr(scip))
+#define SCIPcreateIntarray(scip, intarray)                      SCIPintarrayCreate(intarray, SCIPblkmem(scip))
 #define SCIPfreeIntarray(scip, intarray)                        SCIPintarrayFree(intarray)
 #define SCIPextendIntarray(scip, intarray, minidx, maxidx)      SCIPintarrayExtend(intarray, (scip)->set, minidx, maxidx)
 #define SCIPclearIntarray(scip, intarray)                       SCIPintarrayClear(intarray)
@@ -5301,7 +5309,7 @@ int SCIPgetPtrarrayMaxIdx(
 #define SCIPgetIntarrayMinIdx(scip, intarray)                   SCIPintarrayGetMinIdx(intarray)
 #define SCIPgetIntarrayMaxIdx(scip, intarray)                   SCIPintarrayGetMaxIdx(intarray)
 
-#define SCIPcreateBoolarray(scip, boolarray)                    SCIPboolarrayCreate(boolarray, SCIPmemhdr(scip))
+#define SCIPcreateBoolarray(scip, boolarray)                    SCIPboolarrayCreate(boolarray, SCIPblkmem(scip))
 #define SCIPfreeBoolarray(scip, boolarray)                      SCIPboolarrayFree(boolarray)
 #define SCIPextendBoolarray(scip, boolarray, minidx, maxidx)    SCIPboolarrayExtend(boolarray, (scip)->set, minidx, maxidx)
 #define SCIPclearBoolarray(scip, boolarray)                     SCIPboolarrayClear(boolarray)
@@ -5310,7 +5318,7 @@ int SCIPgetPtrarrayMaxIdx(
 #define SCIPgetBoolarrayMinIdx(scip, boolarray)                 SCIPboolarrayGetMinIdx(boolarray)
 #define SCIPgetBoolarrayMaxIdx(scip, boolarray)                 SCIPboolarrayGetMaxIdx(boolarray)
 
-#define SCIPcreatePtrarray(scip, ptrarray)                      SCIPptrarrayCreate(ptrarray, SCIPmemhdr(scip))
+#define SCIPcreatePtrarray(scip, ptrarray)                      SCIPptrarrayCreate(ptrarray, SCIPblkmem(scip))
 #define SCIPfreePtrarray(scip, ptrarray)                        SCIPptrarrayFree(ptrarray)
 #define SCIPextendPtrarray(scip, ptrarray, minidx, maxidx)      SCIPptrarrayExtend(ptrarray, (scip)->set, minidx, maxidx)
 #define SCIPclearPtrarray(scip, ptrarray)                       SCIPptrarrayClear(ptrarray)

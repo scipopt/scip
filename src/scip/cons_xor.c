@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.21 2005/01/21 09:16:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.22 2005/01/31 12:20:57 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -41,7 +41,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define EVENTHDLR_NAME         "xor"
-#define EVENTHDLR_DESC         "bound tighten event handler for xor constraints"
+#define EVENTHDLR_DESC         "event handler for xor constraints"
 
 
 
@@ -68,7 +68,7 @@ struct ConsData
 /** constraint handler data */
 struct ConshdlrData
 {
-   EVENTHDLR*       eventhdlr;          /**< event handler for bound tighten events on watched variables */
+   EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
 };
 
 
@@ -131,7 +131,7 @@ RETCODE conshdlrdataCreate(
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for catching bound tighten events on watched variables */
+   /* get event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
@@ -188,29 +188,29 @@ RETCODE consdataSwitchWatchedvars(
    assert(watchedvar1 == -1 || watchedvar1 != consdata->watchedvar2);
    assert(watchedvar2 == -1 || watchedvar2 != consdata->watchedvar1);
 
-   /* drop bound tighten events on old watched variables */
+   /* drop events on old watched variables */
    if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
    {
       assert(consdata->filterpos1 != -1);
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
             (EVENTDATA*)consdata, consdata->filterpos1) );
    }
    if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
    {
       assert(consdata->filterpos2 != -1);
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
             (EVENTDATA*)consdata, consdata->filterpos2) );
    }
 
-   /* catch bound tighten events on new watched variables */
+   /* catch events on new watched variables */
    if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
-      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar1], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar1], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
             (EVENTDATA*)consdata, &consdata->filterpos1) );
    }
    if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
-      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar2], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar2], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
             (EVENTDATA*)consdata, &consdata->filterpos2) );
    }
 
@@ -292,7 +292,7 @@ RETCODE consdataFree(
 
    if( SCIPisTransformed(scip) )
    {
-      /* drop bound tighten events for watched variables */
+      /* drop events for watched variables */
       CHECK_OKAY( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
    }
    else
@@ -366,7 +366,7 @@ RETCODE delCoefPos(
 
    if( SCIPconsIsTransformed(cons) )
    {
-      /* if the position is watched, drop bound tighten events and stop watching the position */
+      /* if the position is watched, stop watching the position */
       if( consdata->watchedvar1 == pos )
       {
          CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
@@ -1329,7 +1329,7 @@ RETCODE SCIPincludeConshdlrXor(
 {
    CONSHDLRDATA* conshdlrdata;
 
-   /* create event handler for bound tighten events */
+   /* create event handler for events on variables */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL, NULL, NULL,
          NULL, eventExecXor,

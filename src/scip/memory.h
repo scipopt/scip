@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.23 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.24 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -31,13 +31,13 @@
 
 
 
-/*
- * standard memory management
- */
-
-#ifndef NOSAFEMEM
-
-/* safe memory management with leakage detection in debug mode */
+/*************************************************************************************
+ * Standard Memory Management
+ *
+ * In debug mode, these methods extend malloc() and free() by logging all currently
+ * allocated memory elements in an allocation list. This can be used as a simple leak
+ * detection.
+ *************************************************************************************/
 
 #define allocMemory(ptr)                   (*(void**)(ptr) = allocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define allocMemoryArray(ptr,num)          (*(void**)(ptr) = allocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
@@ -69,72 +69,226 @@
                                              assert(*(ptr) == NULL); }
 #define freeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) freeMemoryArray( (ptr) ); }
 
-void*  allocMemory_call(size_t size, const char *filename, int line);
-void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
-void   clearMemory_call(void* ptr, size_t size);
-void   copyMemory_call(void* ptr, const void* source, size_t size);
-void*  duplicateMemory_call(const void* source, size_t size, const char *filename, int line);
-void   freeMemory_call(void** ptr, const char *filename, int line);
-
 #ifndef NDEBUG
-void   memoryDiagnostic(void);
-void   memoryCheckEmpty(void);
-size_t memorySize(void *ptr);
+#define getPointerSize(ptr)                getPointerSize_call(ptr)
+#define displayMemory()                    displayMemory_call()
+#define checkEmptyMemory()                 checkEmptyMemory_call()
+#else
+#define getPointerSize(ptr)                0
+#define displayMemory()                    /**/
+#define checkEmptyMemory()                 /**/
 #endif
 
+
+/** allocates memory; returns NULL if memory allocation failed */
+extern
+void* allocMemory_call(
+   size_t           size,               /**< size of memory element to allocate */
+   const char*      filename,           /**< source file where the allocation is performed */
+   int              line                /**< line number in source file where the allocation is performed */
+   );
+
+/** allocates memory; returns NULL if memory allocation failed */
+extern
+void* reallocMemory_call(
+   void*            ptr,                /**< pointer to memory to reallocate */
+   size_t           size,               /**< new size of memory element */
+   const char*      filename,           /**< source file where the reallocation is performed */
+   int              line                /**< line number in source file where the reallocation is performed */
+   );
+
+/** clears a memory element (i.e. fills it with zeros) */
+extern
+void clearMemory_call(
+   void*            ptr,                /**< pointer to memory element */
+   size_t           size                /**< size of memory element */
+   );
+
+/** copies the contents of one memory element into another memory element */
+extern
+void copyMemory_call(
+   void*            ptr,                /**< pointer to target memory element */
+   const void*      source,             /**< pointer to source memory element */
+   size_t           size                /**< size of memory element to copy */
+   );
+
+/** allocates memory and copies the contents of the given memory element into the new memory element */
+extern
+void* duplicateMemory_call(
+   const void*      source,             /**< pointer to source memory element */
+   size_t           size,               /**< size of memory element to copy */
+   const char*      filename,           /**< source file where the duplication is performed */
+   int              line                /**< line number in source file where the duplication is performed */
+   );
+
+/** frees an allocated memory element */
+extern
+void freeMemory_call(
+   void**           ptr,                /**< address of pointer to memory element */
+   const char*      filename,           /**< source file where the deallocation is performed */
+   int              line                /**< line number in source file where the deallocation is performed */
+   );
+
+/** returns the size of an allocated memory element */
+extern
+size_t getPointerSize_call(
+   const void*      ptr                 /**< pointer to allocated memory */
+   );
+
+/** outputs information about currently allocated memory to the screen */
+extern
+void displayMemory_call(
+   void
+   );
+
+/** displays a warning message on the screen, if allocated memory exists */
+extern
+void checkEmptyMemory_call(
+   void
+   );
+
+
+
+
+/********************************************************************
+ * Chunk Memory Management
+ *
+ * Efficient memory management for multiple objects of the same size
+ ********************************************************************/
+
+typedef struct ChkMem CHKMEM;           /**< collection of memory chunks of the same element size */
+
+
+#ifndef NOBLOCKMEM
+
+#define createChunkMemory(sz,isz,gbf)      createChunkMemory_call( (sz), (isz), (gbf), __FILE__, __LINE__ )
+#define clearChunkMemory(mem)              clearChunkMemory_call( (mem), __FILE__, __LINE__ )
+#define clearChunkMemoryNull(mem)          { if( (mem) != NULL ) clearChunkMemory( (mem) ); }
+#define destroyChunkMemory(mem)            destroyChunkMemory_call( (mem), __FILE__, __LINE__ )
+#define destroyChunkMemoryNull(mem)        { if( *(mem) != NULL ) destroyChunkMemory( (mem) ); }
+
+#define allocChunkMemory(mem,ptr)          (*(void**)(ptr) = allocChunkMemory_call((mem), sizeof(**(ptr)), \
+                                           __FILE__, __LINE__))
+#define duplicateChunkMemory(mem, ptr, source) \
+                                           (*(void**)(ptr) = duplicateChunkMemory_call((mem), (const void*)(source), \
+                                           sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define freeChunkMemory(mem,ptr)           { freeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
+                                             __FILE__, __LINE__ ); \
+                                             assert(*(ptr) == NULL); }
+#define freeChunkMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) freeChunkMemory( (mem), (ptr) ); }
+#define garbagecollectChunkMemory(mem)     garbagecollectChunkMemory_call(mem)
 
 #else
 
-/* standard memory management via malloc */
+/* block memory management mapped to standard memory management */
 
-#include <string.h>
-
-#define allocMemory(ptr)                   (*(void**)(ptr) = malloc( sizeof(**(ptr)) ))
-#define allocMemoryArray(ptr,num)          (*(void**)(ptr) = malloc( (num)*sizeof(**(ptr)) ))
-#define allocMemorySize(ptr,size)          (*(void**)(ptr) = malloc( (size_t)(size) ))
-#define reallocMemoryArray(ptr,num)        (*(void**)(ptr) = realloc( *(ptr), (num)*sizeof(**(ptr)) ))
-#define reallocMemorySize(ptr,size)        (*(void**)(ptr) = realloc( *(ptr), (size_t)(size) ))
-#define copyMemory(ptr, source)            memcpy( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
-#define copyMemoryArray(ptr, source, num)  memcpy( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
-#define copyMemorySize(ptr, source, size)  memcpy( (void*)(ptr), (const void*)(source), (size_t)(size) )
-#define duplicateMemory(ptr, source)       (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), sizeof(**(ptr))))
-#define duplicateMemoryArray(ptr, source, num) (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
-                                               (num)*sizeof(**(ptr))))
-#define duplicateMemorySize(ptr, source, size) (*(void**)(ptr) = duplicateMemory_call( (const void*)(source), \
-                                               (size_t)(size)))
-#define freeMemory(ptr)                    { free(*(ptr)); *(ptr) = NULL; }
-#define freeMemoryNull(ptr)                { if( *(ptr) != NULL ) freeMemory( (ptr) ); }
-#define freeMemoryArray(ptr)               freeMemory(ptr)
-#define freeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) freeMemoryArray( (ptr) ); }
-
-void *  duplicateMemory_call(const void* source, size_t size);
-
-#ifndef NDEBUG
-#define memoryDiagnostic()                 /**/
-#define memoryCheckEmpty()                 /**/
-#define memorySize(ptr)                    0
-#endif
-
+#define createChunkMemory(sz,isz,gbf)           (void*)(0x01) /* dummy to not return a NULL pointer */
+#define clearChunkMemory(mem)                   /**/
+#define clearChunkMemoryNull(mem)               /**/
+#define destroyChunkMemory(mem)                 /**/
+#define destroyChunkMemoryNull(mem)             /**/
+#define allocChunkMemory(mem,ptr)               allocMemory(ptr)
+#define duplicateChunkMemory(mem, ptr, source)  duplicateMemory(ptr,source)
+#define freeChunkMemory(mem,ptr)                freeMemory(ptr)
+#define freeChunkMemoryNull(mem,ptr)            freeMemoryNull(ptr)
+#define garbagecollectChunkMemory(mem)          /**/
 
 #endif
 
 
+/** aligns the given byte size corresponding to the minimal alignment for chunk and block memory */
+extern
+void alignMemsize(
+   size_t*          size                /**< pointer to the size to align */
+   );
+
+/** checks whether the given size meets the alignment conditions for chunk and block memory  */
+extern
+int isAligned(
+   size_t           size                /**< size to check for alignment */
+   );
+
+/** creates a new chunk block data structure */
+extern
+CHKMEM* createChunkMemory_call(
+   int              size,               /**< element size of the chunk block */
+   int              initchunksize,      /**< number of elements in the first chunk of the chunk block */
+   int              garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** clears a chunk block data structure */
+extern
+void clearChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** destroys and frees a chunk block data structure */
+extern
+void destroyChunkMemory_call(
+   CHKMEM**         chkmem,             /**< pointer to chunk block */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** allocates a memory element of the given chunk block */
+extern
+void* allocChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** duplicates a given memory element by allocating a new element of the same chunk block and copying the data */
+extern
+void* duplicateChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   const void*      source,             /**< source memory element */
+   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** frees a memory element of the given chunk block */
+extern
+void freeChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   void**           ptr,                /**< pointer to memory element to free */
+   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** calls garbage collection of chunk block and frees chunks without allocated memory elements */
+extern
+void garbagecollectChunkMemory_call(
+   CHKMEM*          chkmem              /**< chunk block */
+   );
 
 
-/*
- * block memory management
- */
 
-typedef struct memory_header MEMHDR;
+
+/***********************************************************
+ * Block Memory Management
+ *
+ * Efficient memory management for objects of varying sizes
+ ***********************************************************/
+
+typedef struct BlkMem BLKMEM;           /**< block memory: collection of chunk blocks */
 
 
 #ifndef NOBLOCKMEM
 
 /* block memory methods for faster memory access */
 
-#define createBlockMemory(csz,clr,gbf)     createBlockMemory_call( (csz), (clr), (gbf), __FILE__, __LINE__ )
-#define freeAllBlockMemory(mem)            freeAllBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define freeAllBlockMemoryNull(mem)        { if( (mem) != NULL ) freeAllBlockMemory( (mem) ); }
+#define createBlockMemory(csz,gbf)         createBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
+#define clearBlockMemory(mem)              clearBlockMemory_call( (mem), __FILE__, __LINE__ )
+#define clearBlockMemoryNull(mem)          { if( (mem) != NULL ) clearBlockMemory( (mem) ); }
 #define destroyBlockMemory(mem)            destroyBlockMemory_call( (mem), __FILE__, __LINE__ )
 #define destroyBlockMemoryNull(mem)        { if( *(mem) != NULL ) destroyBlockMemory( (mem) ); }
 
@@ -168,79 +322,21 @@ typedef struct memory_header MEMHDR;
                                              __FILE__, __LINE__ ); \
                                              assert(*(ptr) == NULL); }
 #define freeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) ); }
-
-
-void   alignMemsize(size_t* size);
-int    isAligned(size_t size);
-
-/* Create a block memory allocation structure.
- * Parameters:
- *    initChunkSize     : nr. of elements in the first chunk.
- *    clearUnusedBlocks : immedeately clear a block, if it is unused
- *    garbageFactor     : if at least garbageFactor * avg. chunksize elements
- *                        are free, call garbage collection,
- *                        a value of -1 disables garbage collection
- * Returns   :
- *    Pointer to memory header structure.
- */
-MEMHDR* createBlockMemory_call(int initChunkSize, int clearUnusedBlocks, int garbageFactor,
-   const char *filename, int line);
-
-/* Free all chunks in the memory allocation structure.
- * Parameters:
- *    mem : Pointer to memory header to clear.
- */
-void freeAllBlockMemory_call(MEMHDR* mem, const char *filename, int line);
-
-/* Delete a block allocation.
- * Parameters:
- *    mem : Pointer to memory header to destroy.
- */
-void destroyBlockMemory_call(MEMHDR** mem, const char *filename, int line);
-
-/* Get a new block of memory.
- * Parameters:
- *    mem  : Pointer to memory header.
- *    size : size of requested block in bytes.
- * Returns:
- *    Pointer to a new block of memory of size "size".
- */
-void* allocBlockMemory_call(MEMHDR* mem, size_t size, const char *filename, int line);
-
-void * reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line);
-
-void * duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const char *filename, int line);
-
-/* Free a block of memory.
- * Parameters:
- *    mem  : Pointer to memory header.
- *    ptr  : Pointer to memory to free.
- *    size : size of memory block.
- */
-void freeBlockMemory_call(MEMHDR* mem, void** ptr, size_t size, const char *filename, int line);
-
-/* get the number of used bytes in block memory */
-long long getBlockMemoryUsed(MEMHDR *mem);
-
-size_t blockMemorySize(MEMHDR *mem, void *ptr);
-void   blockMemoryDiagnostic(MEMHDR *mem);
-void   blockMemoryCheckEmpty(MEMHDR *mem);
-
-
-
+#define garbagecollectBlockMemory(mem)     garbagecollectBlockMemory_call(mem)
+#define getBlockMemoryUsed(mem)            getBlockMemoryUsed_call(mem)
+#define getBlockPointerSize(mem,ptr)       getBlockPointerSize_call((mem), (ptr))
+#define displayBlockMemory(mem)            displayBlockMemory_call(mem)
+#define blockMemoryCheckEmpty(mem)         checkEmptyBlockMemory_call(mem)
 
 #else
 
 /* block memory management mapped to standard memory management */
 
-#define createBlockMemory(csz,clr,gbf)       (void*)(0x01) /* dummy to not return a NULL pointer */
-#define clearBlockMemory(mem)                /**/
-#define clearBlockMemoryNull(mem)            /**/
-#define destroyBlockMemory(mem)              /**/
-#define destroyBlockMemoryNull(mem)          /**/
-#define freeAllBlockMemory(mem)              /**/
-#define freeAllBlockMemoryNull(mem)          /**/
-
+#define createBlockMemory(csz,gbf)                        (void*)(0x01) /* dummy to not return a NULL pointer */
+#define clearBlockMemory(mem)                             /**/
+#define clearBlockMemoryNull(mem)                         /**/
+#define destroyBlockMemory(mem)                           /**/
+#define destroyBlockMemoryNull(mem)                       /**/
 #define allocBlockMemory(mem,ptr)                         allocMemory(ptr)
 #define allocBlockMemoryArray(mem,ptr,num)                allocMemoryArray(ptr,num)
 #define allocBlockMemorySize(mem,ptr,size)                allocMemorySize(ptr,size)
@@ -254,16 +350,111 @@ void   blockMemoryCheckEmpty(MEMHDR *mem);
 #define freeBlockMemoryArrayNull(mem,ptr,num)             freeMemoryArrayNull(ptr)
 #define freeBlockMemorySize(mem,ptr,size)                 freeMemory(ptr)
 #define freeBlockMemorySizeNull(mem,ptr,size)             freeMemoryNull(ptr)
-
-#define getBlockMemoryUsed(mem)              0
-#define blockMemorySize(mem,ptr)             0
-#define blockMemoryDiagnostic(mem)           /**/
-#define blockMemoryCheckEmpty(mem)           /**/
-
+#define garbagecollectBlockMemory(mem)                    /**/
+#define getBlockMemoryUsed(mem)                           0
+#define getBlockPointerSize(mem,ptr)                      0
+#define displayBlockMemory(mem)                           /**/
+#define blockMemoryCheckEmpty(mem)                        /**/
 
 #endif
 
 
+/** creates a block memory allocation data structure */
+extern
+BLKMEM* createBlockMemory_call(
+   int              initchunksize,      /**< number of elements in the first chunk of each chunk block */
+   int              garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** frees all chunk blocks in the block memory */
+extern
+void clearBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** clears and deletes block memory */
+extern
+void destroyBlockMemory_call(
+   BLKMEM**         blkmem,             /**< pointer to block memory */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** allocates memory in the block memory pool */
+void* allocBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   size_t           size,               /**< size of memory element to allocate */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** resizes memory element in the block memory pool, and copies the data */
+extern
+void* reallocBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   void*            ptr,                /**< memory element to reallocated */
+   size_t           oldsize,            /**< old size of memory element */
+   size_t           newsize,            /**< new size of memory element */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** duplicates memory element in the block memory pool, and copies the data */
+extern
+void* duplicateBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   const void*      source,             /**< memory element to duplicate */
+   size_t           size,               /**< size of memory elements */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** frees memory element in the block memory pool */
+extern
+void freeBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   void**           ptr,                /**< pointer to memory element to free */
+   size_t           size,               /**< size of memory element */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   );
+
+/** calls garbage collection of block memory, frees chunks without allocated memory elements, and frees
+ *  chunk blocks without any chunks
+ */
+extern
+void garbagecollectBlockMemory_call(
+   BLKMEM*          blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated bytes in the block memory */
+long long getBlockMemoryUsed_call(
+   const BLKMEM*    blkmem              /**< block memory */
+   );
+
+/** returns the size of the given memory element; returns 0, if the element is not member of the block memory */
+extern
+size_t getBlockPointerSize_call(
+   const BLKMEM*    blkmem,             /**< block memory */
+   const void*      ptr                 /**< memory element */
+   );
+
+/** outputs allocation diagnostics of block memory */
+extern
+void displayBlockMemory_call(
+   const BLKMEM*    blkmem              /**< block memory */
+   );
+
+/** outputs warning messages, if there are allocated elements in the block memory */
+extern
+void checkEmptyBlockMemory_call(
+   const BLKMEM*    blkmem              /**< block memory */
+   );
 
 
 #endif

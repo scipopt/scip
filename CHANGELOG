@@ -10,6 +10,8 @@ interface:
   replaced by SCIPlockVarCons() and SCIPunlockVarCons() which return a RETCODE
 - methods SCIPlockConsVars() and SCIPunlockConsVars() replaced with method SCIPaddConsLocks()
 - additional parameter "maxproprounds" in SCIPpropagateProbing()
+- changed memory interface (see memory.h), MEMHDR is now called BLKMEM
+- additional parameter "aggregated" in SCIPmultiaggregateVars()
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -21,6 +23,10 @@ features:
   iterations
 - calling SCIPaddCut() with forcecut=TRUE will add the cut to the LP even if it is redundant
 - command line history in interactive shell now only stores "useful" commands
+- new plugin: Probing Presolver
+- probing is now also possible in presolving stage
+- it is now possible to create subnodes in probing and use backtracking to undo probing changes
+- it is now possible to interrupt and continue presolving
 
 fixed bugs:
 - fixed bug in MPS file reader
@@ -34,6 +40,10 @@ fixed bugs:
   variable appear in the constraint
 - fixed bug in SCIProwCalcIntegralScalar() with rows consisting of only continuous variables (appeared in
   gomory cut separator on miplib/dcmulti.mps)
+- fixed documentation of CONSLOCK-method (missing parameter "scip" in SCIPaddVarLocks())
+- included missing "objrelax.h" in includes of objscip.h
+- fixed bug that presolving time is not counted to solving time, if presolving is called explicitly with SCIPpresolve()
+- fixed bug where presolving fixings are counted even if the variable was already fixed
 
 known bugs:
 - after a resolve and further preprocessing, existing primal solutions may get corrupted due to aggregations or

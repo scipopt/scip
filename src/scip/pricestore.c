@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.23 2005/01/21 09:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.24 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -172,7 +172,7 @@ void SCIPpricestoreEndInitialLP(
 /** adds variable to pricing storage and capture it */
 RETCODE SCIPpricestoreAddVar(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
    VAR*             var,                /**< priced variable */
@@ -209,7 +209,7 @@ RETCODE SCIPpricestoreAddVar(
       /* if the array consists of "maxpricevars" variables, release the worst variables */
       if( pricestore->nvars == maxpricevars )
       {
-         CHECK_OKAY( SCIPvarRelease(&pricestore->vars[pricestore->nvars-1], memhdr, set, lp) );
+         CHECK_OKAY( SCIPvarRelease(&pricestore->vars[pricestore->nvars-1], blkmem, set, lp) );
          pricestore->nvars--;
       }
       assert(pricestore->nvars < maxpricevars);
@@ -235,7 +235,7 @@ RETCODE SCIPpricestoreAddVar(
 /** adds variable where zero violates the bounds to pricing storage, capture it */
 RETCODE SCIPpricestoreAddBdviolvar(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
@@ -277,11 +277,11 @@ RETCODE SCIPpricestoreAddBdviolvar(
     */
    if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) )
    {
-      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
    }
    else
    {
-      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -291,7 +291,7 @@ RETCODE SCIPpricestoreAddBdviolvar(
 static
 RETCODE addBoundViolated(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch and bound tree */
@@ -312,7 +312,7 @@ RETCODE addBoundViolated(
    {
       debugMessage(" -> zero violates bounds of <%s> [%g,%g]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-      CHECK_OKAY( SCIPpricestoreAddBdviolvar(pricestore, memhdr, set, stat, lp, branchcand, eventqueue, var) );
+      CHECK_OKAY( SCIPpricestoreAddBdviolvar(pricestore, blkmem, set, stat, lp, branchcand, eventqueue, var) );
       *added = TRUE;
    }
    else
@@ -325,7 +325,7 @@ RETCODE addBoundViolated(
       {
          debugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
-         CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var, 
+         CHECK_OKAY( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, 
                -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
          *added = TRUE;
       }
@@ -337,7 +337,7 @@ RETCODE addBoundViolated(
 /** adds problem variables with negative reduced costs to pricing storage */
 RETCODE SCIPpricestoreAddProbVars(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -404,7 +404,7 @@ RETCODE SCIPpricestoreAddProbVars(
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
             /** add variable to pricing storage, if zero is not best bound w.r.t. objective function */
-            CHECK_OKAY( addBoundViolated(pricestore, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, &added) );
+            CHECK_OKAY( addBoundViolated(pricestore, blkmem, set, stat, tree, lp, branchcand, eventqueue, var, &added) );
 
             if( added )
             {
@@ -448,7 +448,7 @@ RETCODE SCIPpricestoreAddProbVars(
                 */
                if( !SCIPsetIsPositive(set, feasibility) )
                {
-                  CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var, -feasibility / (col->len+1), root) );
+                  CHECK_OKAY( SCIPpricestoreAddVar(pricestore, blkmem, set, lp, var, -feasibility / (col->len+1), root) );
                   pricestore->nprobvarsfound++;
                   nfoundvars++;
                }
@@ -466,7 +466,7 @@ RETCODE SCIPpricestoreAddProbVars(
 /** adds priced variables to the LP */
 RETCODE SCIPpricestoreApplyVars(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory buffers */
+   BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
@@ -502,7 +502,7 @@ RETCODE SCIPpricestoreApplyVars(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          /* transform loose variable into column variable */
-         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat, prob, lp) );
+         CHECK_OKAY( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -530,7 +530,7 @@ RETCODE SCIPpricestoreApplyVars(
       /* transform variable into column variable, if needed */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat, prob, lp) );
+         CHECK_OKAY( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
@@ -542,7 +542,7 @@ RETCODE SCIPpricestoreApplyVars(
       CHECK_OKAY( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
       /* release the variable */
-      CHECK_OKAY( SCIPvarRelease(&pricestore->vars[v], memhdr, set, lp) );
+      CHECK_OKAY( SCIPvarRelease(&pricestore->vars[v], blkmem, set, lp) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -557,7 +557,7 @@ RETCODE SCIPpricestoreApplyVars(
 /** reset variables' bounds violated by zero to its original value */
 RETCODE SCIPpricestoreResetBounds(
    PRICESTORE*      pricestore,         /**< pricing storage */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
@@ -585,9 +585,9 @@ RETCODE SCIPpricestoreResetBounds(
 
       debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", var->name, 
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarslb[v]) );
-      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarsub[v]) );
-      CHECK_OKAY( SCIPvarRelease(&pricestore->bdviolvars[v], memhdr, set, lp) );
+      CHECK_OKAY( SCIPvarChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarslb[v]) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, pricestore->bdviolvarsub[v]) );
+      CHECK_OKAY( SCIPvarRelease(&pricestore->bdviolvars[v], blkmem, set, lp) );
    }
    pricestore->naddedbdviolvars = 0;
    pricestore->nbdviolvars = 0;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.76 2005/01/21 09:16:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.77 2005/01/31 12:20:56 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -172,14 +172,7 @@ RETCODE runSCIP(
 
    CHECK_OKAY( SCIPfree(&scip) );
 
-
-   /*****************************
-    * Local Memory Deallocation *
-    *****************************/
-
-#ifndef NDEBUG
-   memoryCheckEmpty();
-#endif
+   checkEmptyMemory();
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.22 2005/01/21 09:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.23 2005/01/31 12:21:00 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -699,7 +699,7 @@ RETCODE SCIPparamSetToDefault(
 static
 RETCODE paramCreate(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    DECL_PARAMCHGD   ((*paramchgd)),     /**< change information method of parameter */
@@ -710,7 +710,7 @@ RETCODE paramCreate(
    assert(name != NULL);
    assert(desc != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, param) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, param) );
    
    ALLOC_OKAY( duplicateMemoryArray(&(*param)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray(&(*param)->desc, desc, strlen(desc)+1) );
@@ -725,7 +725,7 @@ RETCODE paramCreate(
 static
 RETCODE paramCreateBool(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -737,7 +737,7 @@ RETCODE paramCreateBool(
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, memhdr, name, desc, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_BOOL;
    (*param)->data.boolparam.valueptr = valueptr;
@@ -752,7 +752,7 @@ RETCODE paramCreateBool(
 static
 RETCODE paramCreateInt(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -766,7 +766,7 @@ RETCODE paramCreateInt(
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, memhdr, name, desc, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_INT;
    (*param)->data.intparam.valueptr = valueptr;
@@ -783,7 +783,7 @@ RETCODE paramCreateInt(
 static
 RETCODE paramCreateLongint(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -797,7 +797,7 @@ RETCODE paramCreateLongint(
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, memhdr, name, desc, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_LONGINT;
    (*param)->data.longintparam.valueptr = valueptr;
@@ -814,7 +814,7 @@ RETCODE paramCreateLongint(
 static
 RETCODE paramCreateReal(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -828,7 +828,7 @@ RETCODE paramCreateReal(
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, memhdr, name, desc, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_REAL;
    (*param)->data.realparam.valueptr = valueptr;
@@ -845,7 +845,7 @@ RETCODE paramCreateReal(
 static
 RETCODE paramCreateChar(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -858,7 +858,7 @@ RETCODE paramCreateChar(
    assert(param != NULL);
    assert(name != NULL);
 
-   CHECK_OKAY( paramCreate(param, memhdr, name, desc, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_CHAR;
    (*param)->data.charparam.valueptr = valueptr;
@@ -879,7 +879,7 @@ RETCODE paramCreateChar(
 static
 RETCODE paramCreateString(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -893,7 +893,7 @@ RETCODE paramCreateString(
    assert(valueptr == NULL || *valueptr == NULL);
    assert(defaultvalue != NULL);
 
-   CHECK_OKAY( paramCreate(param, memhdr, name, desc, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreate(param, blkmem, name, desc, paramchgd, paramdata) );
 
    (*param)->paramtype = SCIP_PARAMTYPE_STRING;
    (*param)->data.stringparam.valueptr = valueptr;
@@ -909,7 +909,7 @@ RETCODE paramCreateString(
 static
 void paramFree(
    PARAM**          param,              /**< pointer to the parameter */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(param != NULL);
@@ -943,7 +943,7 @@ void paramFree(
 
    freeMemoryArray(&(*param)->name);
    freeMemoryArray(&(*param)->desc);
-   freeBlockMemory(memhdr, param);
+   freeBlockMemory(blkmem, param);
 }
 
 /** sets Bool parameter according to the value of the given string */
@@ -1209,14 +1209,14 @@ RETCODE paramWrite(
 /** creates parameter set */
 RETCODE SCIPparamsetCreate(
    PARAMSET**       paramset,           /**< pointer to store the parameter set */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    assert(paramset != NULL);
 
    ALLOC_OKAY( allocMemory(paramset) );
 
-   CHECK_OKAY( SCIPhashtableCreate(&(*paramset)->hashtable, memhdr, SCIP_HASHSIZE_PARAMS,
+   CHECK_OKAY( SCIPhashtableCreate(&(*paramset)->hashtable, blkmem, SCIP_HASHSIZE_PARAMS,
                   hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString) );
 
    (*paramset)->params = NULL;
@@ -1229,7 +1229,7 @@ RETCODE SCIPparamsetCreate(
 /** frees parameter set */
 void SCIPparamsetFree(
    PARAMSET**       paramset,           /**< pointer to the parameter set */
-   MEMHDR*          memhdr              /**< block memory */
+   BLKMEM*          blkmem              /**< block memory */
    )
 {
    int i;
@@ -1241,7 +1241,7 @@ void SCIPparamsetFree(
 
    for( i = 0; i < (*paramset)->nparams; ++i )
    {
-      paramFree(&(*paramset)->params[i], memhdr);
+      paramFree(&(*paramset)->params[i], blkmem);
    }
 
    SCIPhashtableFree(&(*paramset)->hashtable);
@@ -1282,7 +1282,7 @@ RETCODE paramsetAdd(
 /** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
 RETCODE SCIPparamsetAddBool(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -1296,7 +1296,7 @@ RETCODE SCIPparamsetAddBool(
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateBool(&param, memhdr, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreateBool(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    CHECK_OKAY( paramsetAdd(paramset, param) );
@@ -1307,7 +1307,7 @@ RETCODE SCIPparamsetAddBool(
 /** creates a int parameter, sets it to its default value, and adds it to the parameter set */
 RETCODE SCIPparamsetAddInt(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -1323,7 +1323,7 @@ RETCODE SCIPparamsetAddInt(
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateInt(&param, memhdr, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   CHECK_OKAY( paramCreateInt(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
@@ -1335,7 +1335,7 @@ RETCODE SCIPparamsetAddInt(
 /** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
 RETCODE SCIPparamsetAddLongint(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -1351,7 +1351,7 @@ RETCODE SCIPparamsetAddLongint(
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateLongint(&param, memhdr, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   CHECK_OKAY( paramCreateLongint(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
@@ -1363,7 +1363,7 @@ RETCODE SCIPparamsetAddLongint(
 /** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
 RETCODE SCIPparamsetAddReal(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -1379,7 +1379,7 @@ RETCODE SCIPparamsetAddReal(
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateReal(&param, memhdr, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
+   CHECK_OKAY( paramCreateReal(&param, blkmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue, 
                   paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
@@ -1391,7 +1391,7 @@ RETCODE SCIPparamsetAddReal(
 /** creates a char parameter, sets it to its default value, and adds it to the parameter set */
 RETCODE SCIPparamsetAddChar(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -1406,7 +1406,7 @@ RETCODE SCIPparamsetAddChar(
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateChar(&param, memhdr, name, desc, valueptr, defaultvalue, allowedvalues, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreateChar(&param, blkmem, name, desc, valueptr, defaultvalue, allowedvalues, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    CHECK_OKAY( paramsetAdd(paramset, param) );
@@ -1417,7 +1417,7 @@ RETCODE SCIPparamsetAddChar(
 /** creates a string parameter, sets it to its default value, and adds it to the parameter set */
 RETCODE SCIPparamsetAddString(
    PARAMSET*        paramset,           /**< parameter set */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    const char*      name,               /**< name of the parameter */
    const char*      desc,               /**< description of the parameter */
    char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
@@ -1431,7 +1431,7 @@ RETCODE SCIPparamsetAddString(
    assert(paramset != NULL);
 
    /* create the parameter */
-   CHECK_OKAY( paramCreateString(&param, memhdr, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
+   CHECK_OKAY( paramCreateString(&param, blkmem, name, desc, valueptr, defaultvalue, paramchgd, paramdata) );
 
    /* add parameter to the parameter set */
    CHECK_OKAY( paramsetAdd(paramset, param) );

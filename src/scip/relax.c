@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.5 2005/01/21 09:17:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.6 2005/01/31 12:21:01 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -64,7 +64,7 @@ DECL_PARAMCHGD(paramChgdRelaxPriority)
 RETCODE SCIPrelaxCreate(
    RELAX**          relax,              /**< pointer to relaxator data structure */
    SET*             set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory for parameter settings */
+   BLKMEM*          blkmem,             /**< block memory for parameter settings */
    const char*      name,               /**< name of relaxator */
    const char*      desc,               /**< description of relaxator */
    int              priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
@@ -103,12 +103,12 @@ RETCODE SCIPrelaxCreate(
    /* add parameters */
    sprintf(paramname, "relaxing/%s/priority", name);
    sprintf(paramdesc, "priority of relaxator <%s>", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*relax)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdRelaxPriority, (PARAMDATA*)(*relax)) ); /*lint !e740*/
    sprintf(paramname, "relaxing/%s/freq", name);
    sprintf(paramdesc, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+   CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*relax)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.42 2005/01/21 09:16:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.43 2005/01/31 12:20:58 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -217,15 +217,15 @@ Bool SCIPeventhdlrIsInitialized(
 /** creates an event for an addition of a variable to the problem */
 RETCODE SCIPeventCreateVarAdded(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var                 /**< variable that was added to the problem */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_VARADDED;
    (*event)->data.eventvaradded.var = var;
 
@@ -235,19 +235,19 @@ RETCODE SCIPeventCreateVarAdded(
 /** creates an event for a fixing of a variable */
 RETCODE SCIPeventCreateVarFixed(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var                 /**< variable that was fixed */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_VARFIXED;
    (*event)->data.eventvarfixed.var = var;
 
@@ -257,18 +257,18 @@ RETCODE SCIPeventCreateVarFixed(
 /** creates an event for a change in the number of locks of a variable */
 RETCODE SCIPeventCreateLocksChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var                 /**< variable that was fixed */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_LOCKSCHANGED;
    (*event)->data.eventvarfixed.var = var;
 
@@ -278,18 +278,18 @@ RETCODE SCIPeventCreateLocksChanged(
 /** creates an event for a change in the objective value of a variable */
 RETCODE SCIPeventCreateObjChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var,                /**< variable whose objective value changed */
    Real             oldobj,             /**< old objective value before value changed */
    Real             newobj              /**< new objective value after value changed */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(oldobj != newobj); /*lint !e777*/
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_OBJCHANGED;
    (*event)->data.eventobjchg.var = var;
    (*event)->data.eventobjchg.oldobj = oldobj;
@@ -301,18 +301,18 @@ RETCODE SCIPeventCreateObjChanged(
 /** creates an event for a change in the lower bound of a variable */
 RETCODE SCIPeventCreateLbChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
    Real             oldbound,           /**< old bound before bound changed */
    Real             newbound            /**< new bound after bound changed */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(oldbound != newbound); /*lint !e777*/
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    if( newbound > oldbound )
       (*event)->eventtype = SCIP_EVENTTYPE_LBTIGHTENED;
    else
@@ -327,18 +327,18 @@ RETCODE SCIPeventCreateLbChanged(
 /** creates an event for a change in the upper bound of a variable */
 RETCODE SCIPeventCreateUbChanged(
    EVENT**          event,              /**< pointer to store the event */
-   MEMHDR*          memhdr,             /**< block memory */
+   BLKMEM*          blkmem,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
    Real             oldbound,           /**< old bound before bound changed */
    Real             newbound            /**< new bound after bound changed */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(oldbound != newbound); /*lint !e777*/
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
    if( newbound < oldbound )
       (*event)->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;
    else
@@ -353,13 +353,13 @@ RETCODE SCIPeventCreateUbChanged(
 /** frees an event */
 RETCODE SCIPeventFree(
    EVENT**          event,              /**< event to free */
-   MEMHDR*          memhdr              /**< block memory buffer */
+   BLKMEM*          blkmem              /**< block memory buffer */
    )
 {
    assert(event != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   freeBlockMemory(memhdr, event);
+   freeBlockMemory(blkmem, event);
 
    return SCIP_OKAY;
 }
@@ -732,13 +732,13 @@ RETCODE SCIPeventProcess(
 static
 RETCODE eventfilterEnsureMem(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in array */
    )
 {
    assert(eventfilter != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
 
    if( num > eventfilter->size )
@@ -746,10 +746,10 @@ RETCODE eventfilterEnsureMem(
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventtypes, eventfilter->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventhdlrs, eventfilter->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventdatas, eventfilter->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->nextpos, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &eventfilter->eventtypes, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &eventfilter->eventhdlrs, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &eventfilter->eventdatas, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &eventfilter->nextpos, eventfilter->size, newsize) );
       eventfilter->size = newsize;
    }
    assert(num <= eventfilter->size);
@@ -760,13 +760,13 @@ RETCODE eventfilterEnsureMem(
 /** creates an event filter */
 RETCODE SCIPeventfilterCreate(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
-   MEMHDR*          memhdr              /**< block memory buffer */
+   BLKMEM*          blkmem              /**< block memory buffer */
    )
 {
    assert(eventfilter != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, eventfilter) );
+   ALLOC_OKAY( allocBlockMemory(blkmem, eventfilter) );
    (*eventfilter)->eventtypes = NULL;
    (*eventfilter)->eventhdlrs = NULL;
    (*eventfilter)->eventdatas = NULL;
@@ -785,7 +785,7 @@ RETCODE SCIPeventfilterCreate(
 /** frees an event filter and the associated event data entries */
 RETCODE SCIPeventfilterFree(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set                 /**< global SCIP settings */
    )
 {
@@ -794,7 +794,7 @@ RETCODE SCIPeventfilterFree(
    assert(eventfilter != NULL);
    assert(*eventfilter != NULL);
    assert(!(*eventfilter)->delayupdates);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
    assert(set->scip != NULL);
 
@@ -813,11 +813,11 @@ RETCODE SCIPeventfilterFree(
    }
 
    /* free event filter data */
-   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventtypes, (*eventfilter)->size);
-   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventhdlrs, (*eventfilter)->size);
-   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventdatas, (*eventfilter)->size);
-   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->nextpos, (*eventfilter)->size);
-   freeBlockMemory(memhdr, eventfilter);
+   freeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventtypes, (*eventfilter)->size);
+   freeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventhdlrs, (*eventfilter)->size);
+   freeBlockMemoryArrayNull(blkmem, &(*eventfilter)->eventdatas, (*eventfilter)->size);
+   freeBlockMemoryArrayNull(blkmem, &(*eventfilter)->nextpos, (*eventfilter)->size);
+   freeBlockMemory(blkmem, eventfilter);
 
    return SCIP_OKAY;
 }
@@ -825,7 +825,7 @@ RETCODE SCIPeventfilterFree(
 /** adds element to event filter */
 RETCODE SCIPeventfilterAdd(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -836,7 +836,7 @@ RETCODE SCIPeventfilterAdd(
    int pos;
 
    assert(eventfilter != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
    assert(eventhdlr != NULL);
 
@@ -846,7 +846,7 @@ RETCODE SCIPeventfilterAdd(
        * in delayed addition we have to add to the end of the arrays, in order to not destroy the validity of the
        * arrays we are currently iterating over
        */
-      CHECK_OKAY( eventfilterEnsureMem(eventfilter, memhdr, set, eventfilter->len + 1) );
+      CHECK_OKAY( eventfilterEnsureMem(eventfilter, blkmem, set, eventfilter->len + 1) );
       pos = eventfilter->len;
       eventfilter->len++;
 
@@ -858,7 +858,7 @@ RETCODE SCIPeventfilterAdd(
       if( eventfilter->firstfreepos == -1 )
       {
          /* insert addition to the end of the arrays */
-         CHECK_OKAY( eventfilterEnsureMem(eventfilter, memhdr, set, eventfilter->len + 1) );
+         CHECK_OKAY( eventfilterEnsureMem(eventfilter, blkmem, set, eventfilter->len + 1) );
          pos = eventfilter->len;
          eventfilter->len++;
       }
@@ -918,7 +918,7 @@ int eventfilterSearch(
 /** deletes element from event filter */
 RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -927,7 +927,7 @@ RETCODE SCIPeventfilterDel(
    )
 {
    assert(eventfilter != NULL);
-   assert(memhdr != NULL);
+   assert(blkmem != NULL);
    assert(set != NULL);
    assert(eventtype != SCIP_EVENTTYPE_DISABLED);
    assert(eventhdlr != NULL);
@@ -1165,7 +1165,7 @@ RETCODE eventqueueAppend(
 /** processes event or adds event to the event queue */
 RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
    LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
@@ -1186,7 +1186,7 @@ RETCODE SCIPeventqueueAdd(
    {
       /* immediately process event */
       CHECK_OKAY( SCIPeventProcess(*event, set, primal, lp, branchcand, eventfilter) );
-      CHECK_OKAY( SCIPeventFree(event, memhdr) );
+      CHECK_OKAY( SCIPeventFree(event, blkmem) );
    }
    else
    {
@@ -1246,7 +1246,7 @@ RETCODE SCIPeventqueueAdd(
             }
 
             /* free the event that is of no use any longer */
-            CHECK_OKAY( SCIPeventFree(event, memhdr) );
+            CHECK_OKAY( SCIPeventFree(event, blkmem) );
          }
          else
          {
@@ -1296,7 +1296,7 @@ RETCODE SCIPeventqueueAdd(
             }
 
             /* free the event that is of no use any longer */
-            CHECK_OKAY( SCIPeventFree(event, memhdr) );
+            CHECK_OKAY( SCIPeventFree(event, blkmem) );
          }
          else
          {
@@ -1346,7 +1346,7 @@ RETCODE SCIPeventqueueAdd(
             }
 
             /* free the event that is of no use any longer */
-            CHECK_OKAY( SCIPeventFree(event, memhdr) );
+            CHECK_OKAY( SCIPeventFree(event, blkmem) );
          }
          else
          {
@@ -1393,7 +1393,7 @@ RETCODE SCIPeventqueueDelay(
 /** processes all delayed events, marks queue to process events immediately */
 RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   MEMHDR*          memhdr,             /**< block memory buffer */
+   BLKMEM*          blkmem,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
@@ -1445,7 +1445,7 @@ RETCODE SCIPeventqueueProcess(
       /* free the event immediately, because additionally raised events during event processing
        * can lead to a large event queue
        */
-      CHECK_OKAY( SCIPeventFree(&eventqueue->events[i], memhdr) );
+      CHECK_OKAY( SCIPeventFree(&eventqueue->events[i], blkmem) );
    }
 
    assert(i == eventqueue->nevents);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.35 2005/01/21 09:16:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.36 2005/01/31 12:20:59 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -30,8 +30,14 @@
 
 #include "memory.h"
 
-
 /*#define CHECKMEM*/
+
+
+
+
+/*****************
+ * Global Defines
+ *****************/
 
 #ifdef DEBUG
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
@@ -39,44 +45,47 @@
 #define debugMessage(...)               /**/
 #endif
 
-#define TRUE     1
-#define FALSE    0
+#define Bool unsigned int               /**< type used for boolean values */
+#define TRUE  1                         /**< boolean value TRUE */
+#define FALSE 0                         /**< boolean value FALSE */
+
 #define MAX(x,y) ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
 #define MIN(x,y) ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
 
 
-/******************************
- * Standard Memory Management *
- ******************************/
 
 
-#ifndef NOSAFEMEM
-
-/*
- * safe memory management with leakage detection in debug mode
- */
-
+/*************************************************************************************
+ * Standard Memory Management
+ *
+ * In debug mode, these methods extend malloc() and free() by logging all currently
+ * allocated memory elements in an allocation list. This can be used as a simple leak
+ * detection.
+ *************************************************************************************/
 
 #ifndef NDEBUG
 
-typedef struct MemList MEMLIST;
+typedef struct Memlist MEMLIST;         /**< memory list for debugging purposes */
 
 /** memory list for debugging purposes */
-struct MemList
+struct Memlist
 {
-   void    *ptr;
-   size_t  size;
-   char    *filename;
-   int     line;
-   MEMLIST *next;
+   const void*      ptr;                /**< pointer to allocated memory */
+   size_t           size;               /**< size of memory element */
+   char*            filename;           /**< source file where the allocation was performed */
+   int              line;               /**< line number in source file where the allocation was performed */
+   MEMLIST*         next;               /**< next entry in the memory list */
 };
 
-static MEMLIST *memlist = NULL;
-static long long memused = 0;
+static MEMLIST*     memlist = NULL;     /**< global memory list for debugging purposes */
+static long long    memused = 0;        /**< number of allocated bytes */
 
 #ifdef CHECKMEM
+/** checks, whether the number of allocated bytes match the entries in the memory list */
 static
-void memListCheck(void)
+void checkMemlist(
+   void
+   )
 {
    MEMLIST* list = memlist;
    long long used = 0;
@@ -89,34 +98,51 @@ void memListCheck(void)
    assert(used == memused);
 }
 #else
-#define memListCheck() /**/
+#define checkMemlist() /**/
 #endif
 
+/** adds entry to list of allocated memory */
 static
-void memListAdd(void *ptr, size_t size, const char *filename, int line)
+void addMemlistEntry(
+   const void*      ptr,                /**< pointer to allocated memory */
+   size_t           size,               /**< size of memory element */
+   const char*      filename,           /**< source file where the allocation was performed */
+   int              line                /**< line number in source file where the allocation was performed */
+   )
 {
-   MEMLIST *list = (MEMLIST*)malloc(sizeof(MEMLIST));
+   MEMLIST* list;
 
-   assert(list != NULL);
    assert(ptr != NULL && size > 0);
+
+   list = (MEMLIST*)malloc(sizeof(MEMLIST));
+   assert(list != NULL);
+
    list->ptr = ptr;
    list->size = size;
-   list->filename = (char *) malloc((strlen(filename) + 1) * sizeof(char));
-   strcpy(list->filename, filename);
+   list->filename = strdup(filename);
+   assert(list->filename != NULL);
    list->line = line;
    list->next = memlist;
    memlist = list;
    memused += (long long)size;
-   memListCheck();
+   checkMemlist();
 }
 
+/** removes entry from the list of allocated memory */
 static
-void memListRemove(void *ptr, const char *filename, int line)
+void removeMemlistEntry(
+   const void*      ptr,                /**< pointer to allocated memory */
+   const char*      filename,           /**< source file where the deallocation was performed */
+   int              line                /**< line number in source file where the deallocation was performed */
+   )
 {
-   MEMLIST *list = memlist;
-   MEMLIST **listptr = &memlist;
+   MEMLIST* list = memlist;
+   MEMLIST** listptr = &memlist;
 
    assert(ptr != NULL);
+
+   list = memlist;
+   listptr = &memlist;
    while( list != NULL && ptr != list->ptr )
    {
       listptr = &(list->next);
@@ -131,13 +157,17 @@ void memListRemove(void *ptr, const char *filename, int line)
    }
    else
       fprintf(stderr, "[%s:%d] ERROR: Tried to free unknown pointer <%p>\n", filename, line, ptr);
-   memListCheck();
+   checkMemlist();
 }
 
-size_t memorySize(void *ptr)
+/** returns the size of an allocated memory element */
+size_t getPointerSize_call(
+   const void*      ptr                 /**< pointer to allocated memory */
+   )
 {
-   MEMLIST *list = memlist;
+   MEMLIST* list;
 
+   list = memlist;
    while( list != NULL && ptr != list->ptr )
       list = list->next;
    if( list != NULL )
@@ -146,12 +176,17 @@ size_t memorySize(void *ptr)
       return 0;
 }
 
-void memoryDiagnostic(void)
+/** outputs information about currently allocated memory to the screen */
+void displayMemory_call(
+   void
+   )
 {
-   MEMLIST   *list = memlist;
-   long long used = 0;
+   MEMLIST* list;
+   long long used;
 
    printf("Allocated memory:\n");
+   list = memlist;
+   used = 0;
    while( list != NULL )
    {
       printf("%12p %8lld %s:%d\n", list->ptr, (long long)(list->size), list->filename, list->line);
@@ -162,15 +197,18 @@ void memoryDiagnostic(void)
    if( used != memused )
       fprintf(stderr, "[%s:%d] ERROR: Used memory in list sums up to %lld instead of %lld\n",
 	 __FILE__, __LINE__, used, memused);
-   memListCheck();
+   checkMemlist();
 }
 
-void memoryCheckEmpty(void)
+/** displays a warning message on the screen, if allocated memory exists */
+void checkEmptyMemory_call(
+   void
+   )
 {
    if( memlist != NULL || memused > 0 )
    {
       printf("Warning! Memory list not empty.\n");
-      memoryDiagnostic();
+      displayMemory_call();
    }
 }
 
@@ -180,17 +218,26 @@ void memoryCheckEmpty(void)
  * but links the optimized version compiles
  */
 
-size_t memorySize(void *ptr)
+/** returns the size of an allocated memory element */
+size_t getPointerSize_call(
+   const void*      ptr                 /**< pointer to allocated memory */
+   )
 {
    return 0;
 }
 
-void memoryDiagnostic(void)
+/** outputs information about currently allocated memory to the screen */
+void displayMemory_call(
+   void
+   )
 {
    printf("optimized version of memory shell linked - no memory diagnostics available\n");
 }
 
-void memoryCheckEmpty(void)
+/** displays a warning message on the screen, if allocated memory exists */
+void checkEmptyMemory_call(
+   void
+   )
 {
    printf("optimized version of memory shell linked - no memory leakage check available\n");
 }
@@ -198,11 +245,17 @@ void memoryCheckEmpty(void)
 #endif
 
 
-void* allocMemory_call(size_t size, const char *filename, int line)
+/** allocates memory; returns NULL if memory allocation failed */
+void* allocMemory_call(
+   size_t           size,               /**< size of memory element to allocate */
+   const char*      filename,           /**< source file where the allocation is performed */
+   int              line                /**< line number in source file where the allocation is performed */
+   )
 {
-   void   *ptr = NULL;
+   void* ptr;
 
    debugMessage("malloc %lld bytes [%s:%d]\n", (long long)size, filename, line);
+
    size = MAX(size, 1);
    ptr = malloc(size);
 
@@ -211,18 +264,25 @@ void* allocMemory_call(size_t size, const char *filename, int line)
          filename, line, (long long) size);
 #ifndef NDEBUG
    else
-      memListAdd(ptr, size, filename, line);
+      addMemlistEntry(ptr, size, filename, line);
 #endif
+
    return ptr;
 }
 
-void* reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
+/** allocates memory; returns NULL if memory allocation failed */
+void* reallocMemory_call(
+   void*            ptr,                /**< pointer to memory to reallocate */
+   size_t           size,               /**< new size of memory element */
+   const char*      filename,           /**< source file where the reallocation is performed */
+   int              line                /**< line number in source file where the reallocation is performed */
+   )
 {
-   void   *newptr = NULL;
+   void* newptr;
 
 #ifndef NDEBUG
    if( ptr != NULL )
-      memListRemove(ptr, filename, line);
+      removeMemlistEntry(ptr, filename, line);
 #endif
 
    size = MAX(size, 1);
@@ -233,41 +293,68 @@ void* reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
          filename, line, (long long) size);
 #ifndef NDEBUG
    else
-      memListAdd(newptr, size, filename, line);
+      addMemlistEntry(newptr, size, filename, line);
 #endif
+
    return newptr;
 }
 
-void clearMemory_call(void* ptr, size_t size)
+/** clears a memory element (i.e. fills it with zeros) */
+void clearMemory_call(
+   void*            ptr,                /**< pointer to memory element */
+   size_t           size                /**< size of memory element */
+   )
 {
    assert(ptr != NULL);
+
    memset(ptr, 0, size);
 }
 
-void copyMemory_call(void* ptr, const void* source, size_t size)
+/** copies the contents of one memory element into another memory element */
+void copyMemory_call(
+   void*            ptr,                /**< pointer to target memory element */
+   const void*      source,             /**< pointer to source memory element */
+   size_t           size                /**< size of memory element to copy */
+   )
 {
    assert(ptr != NULL);
    assert(source != NULL);
+   
    memcpy(ptr, source, size);
 }
 
-void* duplicateMemory_call(const void* source, size_t size, const char *filename, int line)
+/** allocates memory and copies the contents of the given memory element into the new memory element */
+void* duplicateMemory_call(
+   const void*      source,             /**< pointer to source memory element */
+   size_t           size,               /**< size of memory element to copy */
+   const char*      filename,           /**< source file where the duplication is performed */
+   int              line                /**< line number in source file where the duplication is performed */
+   )
 {
-   void   *ptr = NULL;
+   void* ptr;
 
    assert(source != NULL);
+
    ptr = allocMemory_call(size, filename, line);
    if( ptr != NULL )
       copyMemory_call(ptr, source, size);
+
    return ptr;
 }
 
-void freeMemory_call(void **ptr, const char *filename, int line)
+/** frees an allocated memory element */
+void freeMemory_call(
+   void**           ptr,                /**< address of pointer to memory element */
+   const char*      filename,           /**< source file where the deallocation is performed */
+   int              line                /**< line number in source file where the deallocation is performed */
+   )
 {
+   assert(ptr != NULL);
+
    if( *ptr != NULL )
    {
 #ifndef NDEBUG
-      memListRemove(*ptr, filename, line);
+      removeMemlistEntry(*ptr, filename, line);
 #endif
       free(*ptr);
       *ptr = NULL;
@@ -278,106 +365,78 @@ void freeMemory_call(void **ptr, const char *filename, int line)
 
 
 
-#else
 
-/*
- * standard memory management via malloc
- */
-
-void* duplicateMemory_call(const void* source, size_t size)
-{
-   void   *ptr = NULL;
-
-   allocMemorySize(&ptr, size);
-   if( ptr != NULL )
-      copyMemorySize(ptr, source, size);
-   return ptr;
-}
-
-#endif
-
-
-
-
-
-
-
-/***************************
- * Block Memory Management *
- ***************************/
-
-
-#ifndef NOBLOCKMEM
+/********************************************************************
+ * Chunk Memory Management
+ *
+ * Efficient memory management for multiple objects of the same size
+ ********************************************************************/
 
 /* 
  * block memory methods for faster memory access
  */
 
-#define BLOCKHASH_SIZE     1013	/* should be prime */
-#define CHUNKLENGTH_MIN    1024 /* minimal size of a chunk (in bytes) */
-#define CHUNKLENGTH_MAX 1048576	/* maximal size of a chunk (in bytes) */
-#define STORESIZE_MAX      8192	/* maximal number of elements in one chunk */
-#define ALIGNMENT       (sizeof(FREELIST))
-#define GARBAGE_SIZE        256	/* size of lazy free list to start garbage collection */
+#define CHUNKLENGTH_MIN            1024 /**< minimal size of a chunk (in bytes) */
+#define CHUNKLENGTH_MAX         1048576 /**< maximal size of a chunk (in bytes) */
+#define STORESIZE_MAX              8192 /**< maximal number of elements in one chunk */
+#define GARBAGE_SIZE                256 /**< size of lazy free list to start garbage collection */
+#define ALIGNMENT    (sizeof(FREELIST)) /**< minimal alignment of chunks */
 
-typedef struct free_list FREELIST;
-typedef struct chunk_header CHKHDR;
-typedef struct block_header BLKHDR;
+typedef struct Freelist FREELIST;       /**< linked list of free memory elements */
+typedef struct Chunk CHUNK;             /**< chunk of memory elements */
 
-struct free_list
+/** linked list of free memory elements */
+struct Freelist
 {
    FREELIST*        next;               /**< pointer to the next free element */
 };
 
-struct chunk_header
+/** chunk of memory elements */
+struct Chunk
 {
-   int              elemSize;           /**< size of each element in the chunk (= size of elements in the block) */
-   int              storeSize;          /**< number of elements in this chunk */
-   int              eagerFreeSize;      /**< number of elements in the eager free list */
-   int              arraypos;           /**< position of chunk in the blocks chunkarray */
    void*            store;              /**< data storage */
    void*            storeend;           /**< points to the first byte in memory not belonging to the chunk */
-   FREELIST*        eagerFree;          /**< eager free list */
-   CHKHDR*          nextEager;          /**< next chunk, that has a non-empty eager free list */
-   CHKHDR*          prevEager;          /**< previous chunk, that has a non-empty eager free list */
-   BLKHDR*          block;              /**< memory block, this chunk belongs to */
-}; /* the chunk header must be aligned! */
+   FREELIST*        eagerfree;          /**< eager free list */
+   CHUNK*           nexteager;          /**< next chunk, that has a non-empty eager free list */
+   CHUNK*           preveager;          /**< previous chunk, that has a non-empty eager free list */
+   CHKMEM*          chkmem;             /**< chunk memory collection, this chunk belongs to */
+   int              elemsize;           /**< size of each element in the chunk */
+   int              storesize;          /**< number of elements in this chunk */
+   int              eagerfreesize;      /**< number of elements in the eager free list */
+   int              arraypos;           /**< position of chunk in the chunk header's chunkarray */
+}; /* the chunk data structure must be aligned, because the storage is allocated directly behind the chunk header! */
 
-struct block_header
+/** collection of memory chunks of the same element size */
+struct ChkMem
 {
-   int              elemSize;           /**< size of each memory element in the block */
-   int              chunkarraySize;     /**< size of the chunk array */
-   int              numChunks;          /**< number of chunks in this block (used slots of the chunk array) */
-   int              lastChunkSize;      /**< number of elements in the last allocated chunk */
-   int              storeSize;          /**< total number of elements in this block */
-   int              lazyFreeSize;       /**< number of elements in the lazy free list of the block */
-   int              eagerFreeSize;      /**< total number of elements of all eager free lists of the block's chunks */
-   FREELIST*        lazyFree;           /**< lazy free list */
-   CHKHDR**         chunkarray;         /**< array with the chunks of the block */
-   CHKHDR*          firstEager;         /**< first chunk with a non-empty eager free list */ 
-   BLKHDR*          next;               /**< next memory block in the hash list */
-   MEMHDR*          mem;                /**< memory header, this block belongs to */
+   FREELIST*        lazyfree;           /**< lazy free list of unused memory elements of all chunks of this chunk block */
+   CHUNK**          chunks;             /**< array with the chunks of the chunk header */
+   CHUNK*           firsteager;         /**< first chunk with a non-empty eager free list */ 
+   CHKMEM*          nextchkmem;         /**< next chunk block in the block memory's hash list */
+   int              elemsize;           /**< size of each memory element in the chunk memory */
+   int              chunkssize;         /**< size of the chunks array */
+   int              nchunks;            /**< number of chunks in this chunk block (used slots of the chunk array) */
+   int              lastchunksize;      /**< number of elements in the last allocated chunk */
+   int              storesize;          /**< total number of elements in this chunk block */
+   int              lazyfreesize;       /**< number of elements in the lazy free list of the chunk block */
+   int              eagerfreesize;      /**< total number of elements of all eager free lists of the block's chunks */
+   int              initchunksize;      /**< number of elements in the first chunk */
+   int              garbagefactor;      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
 #ifndef NDEBUG
-   char*            filename;           /**< source file, where this block was created */
-   int              line;               /**< source line, where this block was created */
-   int              numGarbageCalls;    /**< number of times, the garbage collector was called */
-   int              numGarbageFrees;    /**< number of chunks, the garbage collector freed */
+   char*            filename;           /**< source file, where this chunk block was created */
+   int              line;               /**< source line, where this chunk block was created */
+   int              ngarbagecalls;      /**< number of times, the garbage collector was called */
+   int              ngarbagefrees;      /**< number of chunks, the garbage collector freed */
 #endif
 };
 
-struct memory_header
-{
-   BLKHDR*          blockhash[BLOCKHASH_SIZE]; /**< hash table with memory blocks */
-   int              initChunkSize;      /**< number of elements in the first chunk */
-   int              clearUnusedBlocks;  /**< TRUE iff unused blocks should be deleted */
-   int              garbageFactor;      /**< garbage collector is called, if at least garbageFactor * avg. chunksize 
-                                         *   elements are free */
-   long long        memused;            /**< total number of used bytes in the memory header */
-};
 
-
+/** aligns the given byte size corresponding to the minimal alignment */
 static
-void alignSize(size_t* size)
+void alignSize(
+   size_t*          size                /**< pointer to the size to align */
+   )
 {
    if( *size < ALIGNMENT )
       *size = ALIGNMENT;
@@ -385,956 +444,1138 @@ void alignSize(size_t* size)
       *size = ((*size + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
 }
 
-void alignMemsize(size_t* size)
+/** aligns the given byte size corresponding to the minimal alignment for chunk and block memory  */
+void alignMemsize(
+   size_t*          size                /**< pointer to the size to align */
+   )
 {
    assert(ALIGNMENT == sizeof(void*));
    alignSize(size);
 }
 
-int isAligned(size_t size)
+/** checks whether the given size meets the alignment conditions for chunk and block memory */
+int isAligned(
+   size_t           size                /**< size to check for alignment */
+   )
 {
    assert(ALIGNMENT == sizeof(void*));
    return( size >= ALIGNMENT && size % ALIGNMENT == 0 );
 }
 
 #ifndef NDEBUG
-/* checks, if ptr belongs to chunk 'chk' */
+/** checks, if the given pointer belongs to the given chunk */
 static
-int isPtrInChunk(const CHKHDR * chk, const void *ptr)
+int isPtrInChunk(
+   const CHUNK*     chunk,              /**< memory chunk */
+   const void*      ptr                 /**< pointer */
+   )
 {
-   assert(chk != NULL);
-   assert(chk->store <= chk->storeend);
+   assert(chunk != NULL);
+   assert(chunk->store <= chunk->storeend);
 
-   return (ptr >= (void*)(chk->store) && ptr < (void*)(chk->storeend));
+   return (ptr >= (void*)(chunk->store) && ptr < (void*)(chunk->storeend));
 }
 #endif
 
-/* Given a pointer, find the chunk this pointer points to
- * in the chunk array of the block. Binary search is used.
+/** given a pointer, finds the chunk this pointer points to in the chunk array of the given chunk block;
+ *  binary search is used;
+ *  returns NULL if the pointer does not belong to the chunk block
  */
 static
-CHKHDR* findChunk(BLKHDR * blk, const void *ptr)
+CHUNK* findChunk(
+   const CHKMEM*    chkmem,             /**< chunk block */
+   const void*      ptr                 /**< pointer */
+   )
 {
-   CHKHDR* chk;
+   CHUNK* chunk;
    int left;
    int right;
    int middle;
 
-   assert(blk != NULL);
+   assert(chkmem != NULL);
    assert(ptr != NULL);
 
    /* binary search for the chunk containing the ptr */
    left = 0;
-   right = blk->numChunks-1;
+   right = chkmem->nchunks-1;
    while( left <= right )
    {
       middle = (left+right)/2;
-      assert(0 <= middle && middle < blk->numChunks);
-      chk = blk->chunkarray[middle];
-      assert(chk != NULL);
-      if( ptr < chk->store )
+      assert(0 <= middle && middle < chkmem->nchunks);
+      chunk = chkmem->chunks[middle];
+      assert(chunk != NULL);
+      if( ptr < chunk->store )
          right = middle-1;
-      else if( ptr >= chk->storeend )
+      else if( ptr >= chunk->storeend )
          left = middle+1;
       else
-         return chk;
+         return chunk;
    }
 
    /* ptr was not found in chunk */
    return NULL;
 }
 
-/* checks, if 'ptr' belongs to a chunk of block 'blk' */
+/** checks, if a pointer belongs to a chunk of the given chunk block */
 static
-int isPtrInBlock(BLKHDR * blk, const void *ptr)
+int isPtrInChkmem(
+   const CHKMEM*    chkmem,             /**< chunk block */
+   const void*      ptr                 /**< pointer */
+   )
 {
-   assert(blk != NULL);
-   return (findChunk(blk, ptr) != NULL);
+   assert(chkmem != NULL);
+
+   return (findChunk(chkmem, ptr) != NULL);
 }
 
-/* finds the block, to whick 'ptr' belongs to.
- * this could be done by selecting the block of the
- * corresponding element size, but in a case of an
- * error (free gives an incorrect element size), we
- * want to identify and output the correct element size
- */
-static
-BLKHDR* findBlock(MEMHDR *mem, const void *ptr)
-{
-   BLKHDR *blk = NULL;
-   int     i;
 
-   assert(mem != NULL);
-   for( i = 0; blk == NULL && i < BLOCKHASH_SIZE; ++i )
-   {
-      blk = mem->blockhash[i];
-      while( blk != NULL && !isPtrInBlock(blk, ptr) )
-	 blk = blk->next;
-   }
-   return blk;
-}
 
-#if defined(DEBUG) && !defined(NDEBUG)
 /*
  * debugging methods
  */
+
+#ifdef CHECKMEM
+/** sanity check for a memory chunk */
 static
-void checkChunk(CHKHDR * chk)
+void checkChunk(
+   const CHUNK*  chunk               /**< memory chunk */
+   )
 {
    FREELIST* eager;
-   int eagerFreeSize;
+   int eagerfreesize;
 
-   assert(chk != NULL);
-   assert(chk->store != NULL);
-   assert(chk->storeend == (void*)((char*)(chk->store) + chk->elemSize * chk->storeSize));
-   assert(chk->block != NULL);
-   assert(chk->block->elemSize == chk->elemSize);
+   assert(chunk != NULL);
+   assert(chunk->store != NULL);
+   assert(chunk->storeend == (void*)((char*)(chunk->store) + chunk->elemsize * chunk->storesize));
+   assert(chunk->chkmem != NULL);
+   assert(chunk->chkmem->elemsize == chunk->elemsize);
 
-   if( chk->eagerFree == NULL )
-      assert(chk->nextEager == NULL && chk->prevEager == NULL);
-   else if( chk->prevEager == NULL )
-      assert(chk->block->firstEager == chk);
+   if( chunk->eagerfree == NULL )
+      assert(chunk->nexteager == NULL && chunk->preveager == NULL);
+   else if( chunk->preveager == NULL )
+      assert(chunk->chkmem->firsteager == chunk);
 
-   if( chk->nextEager != NULL )
-      assert(chk->nextEager->prevEager == chk);
-   if( chk->prevEager != NULL )
-      assert(chk->prevEager->nextEager == chk);
+   if( chunk->nexteager != NULL )
+      assert(chunk->nexteager->preveager == chunk);
+   if( chunk->preveager != NULL )
+      assert(chunk->preveager->nexteager == chunk);
 
-   eagerFreeSize = 0;
-   eager = chk->eagerFree;
+   eagerfreesize = 0;
+   eager = chunk->eagerfree;
    while( eager != NULL )
    {
-      assert(isPtrInChunk(chk, eager));
-      eagerFreeSize++;
+      assert(isPtrInChunk(chunk, eager));
+      eagerfreesize++;
       eager = eager->next;
    }
-   assert(chk->eagerFreeSize == eagerFreeSize);
+   assert(chunk->eagerfreesize == eagerfreesize);
 }
 
+/** sanity check for a chunk block */
 static
-void checkBlock(BLKHDR * blk)
+void checkChkmem(
+   const CHKMEM*    chkmem              /**< chunk block */
+   )
 {
-   CHKHDR* chk;
+   CHUNK* chunk;
    FREELIST* lazy;
-   int numChunks;
-   int storeSize;
-   int lazyFreeSize;
-   int eagerFreeSize;
+   int nchunks;
+   int storesize;
+   int lazyfreesize;
+   int eagerfreesize;
    int i;
 
-   assert(blk != NULL);
-   assert(blk->chunkarray != NULL || blk->chunkarraySize == 0);
-   assert(blk->numChunks <= blk->chunkarraySize);
+   assert(chkmem != NULL);
+   assert(chkmem->chunks != NULL || chkmem->chunkssize == 0);
+   assert(chkmem->nchunks <= chkmem->chunkssize);
 
-   numChunks = 0;    
-   storeSize = 0;    
-   lazyFreeSize = 0; 
-   eagerFreeSize = 0;
+   nchunks = 0;    
+   storesize = 0;    
+   lazyfreesize = 0; 
+   eagerfreesize = 0;
 
-   for( i = 0; i < blk->numChunks; ++i )
+   for( i = 0; i < chkmem->nchunks; ++i )
    {
-      chk = blk->chunkarray[i];
-      assert(chk != NULL);
+      chunk = chkmem->chunks[i];
+      assert(chunk != NULL);
 
-      checkChunk(chk);
-      numChunks++;
-      storeSize += chk->storeSize;
-      eagerFreeSize += chk->eagerFreeSize;
+      checkChunk(chunk);
+      nchunks++;
+      storesize += chunk->storesize;
+      eagerfreesize += chunk->eagerfreesize;
    }
-   assert(blk->numChunks == numChunks);
-   assert(blk->storeSize == storeSize);
-   assert(blk->eagerFreeSize == eagerFreeSize);
+   assert(chkmem->nchunks == nchunks);
+   assert(chkmem->storesize == storesize);
+   assert(chkmem->eagerfreesize == eagerfreesize);
 
-   assert((blk->eagerFreeSize == 0) ^ (blk->firstEager != NULL));
+   assert((chkmem->eagerfreesize == 0) ^ (chkmem->firsteager != NULL));
 
-   if( blk->firstEager != NULL )
-      assert(blk->firstEager->prevEager == NULL);
+   if( chkmem->firsteager != NULL )
+      assert(chkmem->firsteager->preveager == NULL);
 
-   lazy = blk->lazyFree;
+   lazy = chkmem->lazyfree;
    while( lazy != NULL )
    {
-      chk = findChunk(blk, lazy);
-      assert(chk != NULL);
-      assert(chk->block == blk);
-      lazyFreeSize++;
+      chunk = findChunk(chkmem, lazy);
+      assert(chunk != NULL);
+      assert(chunk->chkmem == chkmem);
+      lazyfreesize++;
       lazy = lazy->next;
    }
-   assert(blk->lazyFreeSize == lazyFreeSize);
+   assert(chkmem->lazyfreesize == lazyfreesize);
 }
-
-static
-void checkMem(MEMHDR *mem)
-{
-   BLKHDR* blk;
-   int i;
-
-   assert(mem != NULL);
-   assert(mem->blockhash != NULL);
-
-   for( i = 0; i < BLOCKHASH_SIZE; ++i )
-   {
-      blk = mem->blockhash[i];
-      while( blk != NULL )
-      {
-	 assert(blk->mem == mem);
-	 checkBlock(blk);
-	 blk = blk->next;
-      }
-   }
-}
-
 #else
-
-#define checkChunk(chk) /**/
-#define checkBlock(blk) /**/
-#define checkMem(mem) /**/
-
+#define checkChunk(chunk) /**/
+#define checkChkmem(chkmem) /**/
 #endif
 
 
-/* links chunk to the block's chunk array, sort it by store pointer
- * Returns:
- *    TRUE  if successful
- *    FALSE otherwise
+/** links chunk to the block's chunk array, sort it by store pointer;
+ *  returns TRUE if successful, FALSE otherwise
  */
 static
-int linkChunk(BLKHDR* blk, CHKHDR* chk)
+int linkChunk(
+   CHKMEM*          chkmem,             /**< chunk block */
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   CHKHDR* curchk;
+   CHUNK* curchunk;
    int left;
    int right;
    int middle;
    int i;
 
-   assert(blk != NULL);
-   assert(blk->numChunks <= blk->chunkarraySize);
-   assert(chk != NULL);
-   assert(chk->store != NULL);
+   assert(chkmem != NULL);
+   assert(chkmem->nchunks <= chkmem->chunkssize);
+   assert(chunk != NULL);
+   assert(chunk->store != NULL);
 
    /* binary search for the position to insert the chunk */
    left = -1;
-   right = blk->numChunks;
+   right = chkmem->nchunks;
    while( left < right-1 )
    {
       middle = (left+right)/2;
-      assert(0 <= middle && middle < blk->numChunks);
+      assert(0 <= middle && middle < chkmem->nchunks);
       assert(left < middle && middle < right);
-      curchk = blk->chunkarray[middle];
-      assert(curchk != NULL);
-      if( chk->store < curchk->store )
+      curchunk = chkmem->chunks[middle];
+      assert(curchunk != NULL);
+      if( chunk->store < curchunk->store )
          right = middle;
       else
       {
-         assert(chk->store >= curchk->storeend);
+         assert(chunk->store >= curchunk->storeend);
          left = middle;
       }
    }
-   assert(-1 <= left && left < blk->numChunks);
-   assert(0 <= right && right <= blk->numChunks);
+   assert(-1 <= left && left < chkmem->nchunks);
+   assert(0 <= right && right <= chkmem->nchunks);
    assert(left+1 == right);
-   assert(left == -1 || blk->chunkarray[left]->storeend <= chk->store);
-   assert(right == blk->numChunks || chk->storeend <= blk->chunkarray[right]->store);
+   assert(left == -1 || chkmem->chunks[left]->storeend <= chunk->store);
+   assert(right == chkmem->nchunks || chunk->storeend <= chkmem->chunks[right]->store);
 
    /* ensure, that chunk array can store the additional chunk */
-   if( blk->numChunks == blk->chunkarraySize )
+   if( chkmem->nchunks == chkmem->chunkssize )
    {
-      blk->chunkarraySize = 2*(blk->numChunks+1);
-      reallocMemoryArray(&blk->chunkarray, blk->chunkarraySize);
-      if( blk->chunkarray == NULL )
+      chkmem->chunkssize = 2*(chkmem->nchunks+1);
+      reallocMemoryArray(&chkmem->chunks, chkmem->chunkssize);
+      if( chkmem->chunks == NULL )
          return FALSE;
    }
-   assert(blk->numChunks < blk->chunkarraySize);
-   assert(blk->chunkarray != NULL);
+   assert(chkmem->nchunks < chkmem->chunkssize);
+   assert(chkmem->chunks != NULL);
 
    /* move all chunks from 'right' to end one position to the right */
-   for( i = blk->numChunks; i > right; --i )
+   for( i = chkmem->nchunks; i > right; --i )
    {
-      blk->chunkarray[i] = blk->chunkarray[i-1];
-      blk->chunkarray[i]->arraypos = i;
+      chkmem->chunks[i] = chkmem->chunks[i-1];
+      chkmem->chunks[i]->arraypos = i;
    }
 
    /* insert chunk at position 'right' */
-   chk->arraypos = right;
-   blk->chunkarray[right] = chk;
-   blk->numChunks++;
-   blk->storeSize += chk->storeSize;
+   chunk->arraypos = right;
+   chkmem->chunks[right] = chunk;
+   chkmem->nchunks++;
+   chkmem->storesize += chunk->storesize;
 
    return TRUE;
 }
 
-/* unlinks chunk from the block's chunk list */
+/** unlinks chunk from the chunk block's chunk list */
 static
-void unlinkChunk(CHKHDR* chk)
+void unlinkChunk(
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   BLKHDR* blk;
+   CHKMEM* chkmem;
    int i;
 
-   assert(chk != NULL);
-   assert(chk->eagerFree == NULL);
-   assert(chk->nextEager == NULL);
-   assert(chk->prevEager == NULL);
+   assert(chunk != NULL);
+   assert(chunk->eagerfree == NULL);
+   assert(chunk->nexteager == NULL);
+   assert(chunk->preveager == NULL);
 
-   blk = chk->block;
-   assert(blk != NULL);
-   assert(blk->elemSize == chk->elemSize);
-   assert(0 <= chk->arraypos && chk->arraypos < blk->numChunks);
-   assert(blk->chunkarray[chk->arraypos] == chk);
+   chkmem = chunk->chkmem;
+   assert(chkmem != NULL);
+   assert(chkmem->elemsize == chunk->elemsize);
+   assert(0 <= chunk->arraypos && chunk->arraypos < chkmem->nchunks);
+   assert(chkmem->chunks[chunk->arraypos] == chunk);
    
-   /* remove the chunk from the chunkarray of the block */
-   for( i = chk->arraypos; i < blk->numChunks-1; ++i )
+   /* remove the chunk from the chunks of the chunk block */
+   for( i = chunk->arraypos; i < chkmem->nchunks-1; ++i )
    {
-      blk->chunkarray[i] = blk->chunkarray[i+1];
-      blk->chunkarray[i]->arraypos = i;
+      chkmem->chunks[i] = chkmem->chunks[i+1];
+      chkmem->chunks[i]->arraypos = i;
    }
-   blk->numChunks--;
-   blk->storeSize -= chk->storeSize;
+   chkmem->nchunks--;
+   chkmem->storesize -= chunk->storesize;
 }
 
-/* links chunk to the block's eager chunk list */
+/** links chunk to the chunk block's eager chunk list */
 static
-void linkEagerChunk(BLKHDR * blk, CHKHDR * chk)
+void linkEagerChunk(
+   CHKMEM*          chkmem,             /**< chunk block */
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   assert(chk->block == blk);
-   assert(chk->nextEager == NULL);
-   assert(chk->prevEager == NULL);
+   assert(chunk->chkmem == chkmem);
+   assert(chunk->nexteager == NULL);
+   assert(chunk->preveager == NULL);
 
-   chk->nextEager = blk->firstEager;
-   chk->prevEager = NULL;
-   if( blk->firstEager != NULL )
+   chunk->nexteager = chkmem->firsteager;
+   chunk->preveager = NULL;
+   if( chkmem->firsteager != NULL )
    {
-      assert(blk->firstEager->prevEager == NULL);
-      blk->firstEager->prevEager = chk;
+      assert(chkmem->firsteager->preveager == NULL);
+      chkmem->firsteager->preveager = chunk;
    }
-   blk->firstEager = chk;
+   chkmem->firsteager = chunk;
 }
 
-/* unlinks chunk from the block's eager chunk list */
+/** unlinks chunk from the chunk block's eager chunk list */
 static
-void unlinkEagerChunk(CHKHDR * chk)
+void unlinkEagerChunk(
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   assert(chk != NULL);
-   assert(chk->eagerFreeSize == 0 || chk->eagerFreeSize == chk->storeSize);
+   assert(chunk != NULL);
+   assert(chunk->eagerfreesize == 0 || chunk->eagerfreesize == chunk->storesize);
 
-   if( chk->nextEager != NULL )
-      chk->nextEager->prevEager = chk->prevEager;
-   if( chk->prevEager != NULL )
-      chk->prevEager->nextEager = chk->nextEager;
+   if( chunk->nexteager != NULL )
+      chunk->nexteager->preveager = chunk->preveager;
+   if( chunk->preveager != NULL )
+      chunk->preveager->nexteager = chunk->nexteager;
    else
    {
-      assert(chk->block->firstEager == chk);
-      chk->block->firstEager = chk->nextEager;
+      assert(chunk->chkmem->firsteager == chunk);
+      chunk->chkmem->firsteager = chunk->nexteager;
    }
-   chk->nextEager = NULL;
-   chk->prevEager = NULL;
-   chk->eagerFree = NULL;
+   chunk->nexteager = NULL;
+   chunk->preveager = NULL;
+   chunk->eagerfree = NULL;
 }
 
-/* Allocates new memory if all chunks are full and
- * adds memory blocks to the lazy free list.
- * Parameters:
- *    blk : Pointer to headerstruct.
- * Returns:
- *    TRUE  if successful
- *    FALSE otherwise
+/** creates a new memory chunk in the given chunk block and adds memory elements to the lazy free list;
+ *  returns TRUE if successful, FALSE otherwise
  */
 static
-int createChunk(BLKHDR * blk)
+int createChunk(
+   CHKMEM*          chkmem              /**< chunk block */
+   )
 {
-   CHKHDR *newchunk;
-   FREELIST *freeList;
+   CHUNK *newchunk;
+   FREELIST *freelist;
    int i;
-   int storeSize;
+   int storesize;
    int retval;
 
-   assert(blk != NULL);
-   assert(blk->mem != NULL);
+   assert(chkmem != NULL);
 
    /* calculate store size */
-   if( blk->numChunks == 0 )
-      storeSize = blk->mem->initChunkSize;
+   if( chkmem->nchunks == 0 )
+      storesize = chkmem->initchunksize;
    else
-      storeSize = 2 * blk->lastChunkSize;
-   assert(storeSize > 0);
-   storeSize = MAX(storeSize, CHUNKLENGTH_MIN / blk->elemSize);
-   storeSize = MIN(storeSize, CHUNKLENGTH_MAX / blk->elemSize);
-   storeSize = MIN(storeSize, STORESIZE_MAX);
-   storeSize = MAX(storeSize, 1);
-   blk->lastChunkSize = storeSize;
+      storesize = 2 * chkmem->lastchunksize;
+   assert(storesize > 0);
+   storesize = MAX(storesize, CHUNKLENGTH_MIN / chkmem->elemsize);
+   storesize = MIN(storesize, CHUNKLENGTH_MAX / chkmem->elemsize);
+   storesize = MIN(storesize, STORESIZE_MAX);
+   storesize = MAX(storesize, 1);
+   chkmem->lastchunksize = storesize;
 
    /* create new chunk */
-   assert(sizeof(CHKHDR) % ALIGNMENT == 0);
-   allocMemorySize(&newchunk, sizeof(CHKHDR) + storeSize * blk->elemSize);
+   assert(isAligned(sizeof(CHUNK)));
+   allocMemorySize(&newchunk, sizeof(CHUNK) + storesize * chkmem->elemsize);
    if( newchunk == NULL )
       return FALSE;
 
    /* the store is allocated directly behind the chunk header */
-   newchunk->elemSize = blk->elemSize;
-   newchunk->storeSize = storeSize;
-   newchunk->store = (void*) ((char*) newchunk + sizeof(CHKHDR));
-   newchunk->storeend = (void*) ((char*) newchunk->store + storeSize * blk->elemSize);
+   newchunk->store = (void*) ((char*) newchunk + sizeof(CHUNK));
+   newchunk->storeend = (void*) ((char*) newchunk->store + storesize * chkmem->elemsize);
+   newchunk->eagerfree = NULL;
+   newchunk->nexteager = NULL;
+   newchunk->preveager = NULL;
+   newchunk->chkmem = chkmem;
+   newchunk->elemsize = chkmem->elemsize;
+   newchunk->storesize = storesize;
+   newchunk->eagerfreesize = 0;
    newchunk->arraypos = -1;
-   newchunk->block = blk;
 
    debugMessage("allocated new chunk %p: %d elements with size %lld\n", 
-      newchunk, newchunk->storeSize, (long long)(newchunk->elemSize));
+      newchunk, newchunk->storesize, (long long)(newchunk->elemsize));
 
    /* add new memory to the lazy free list */
-   for( i = 0; i < newchunk->storeSize - 1; ++i )
+   for( i = 0; i < newchunk->storesize - 1; ++i )
    {
-      freeList = (FREELIST *) ((char *) (newchunk->store) + i * blk->elemSize); /*lint !e826*/
-      freeList->next = (FREELIST *) ((char *) (newchunk->store) + (i + 1) * blk->elemSize); /*lint !e826*/
+      freelist = (FREELIST*) ((char*) (newchunk->store) + i * chkmem->elemsize); /*lint !e826*/
+      freelist->next = (FREELIST*) ((char*) (newchunk->store) + (i + 1) * chkmem->elemsize); /*lint !e826*/
    }
 
-   freeList = (FREELIST *) ((char *) (newchunk->store) + (newchunk->storeSize - 1) * blk->elemSize); /*lint !e826*/
-   freeList->next = blk->lazyFree;
-   blk->lazyFree = (FREELIST *) (newchunk->store);
-   blk->lazyFreeSize += newchunk->storeSize;
+   freelist = (FREELIST*) ((char*) (newchunk->store) + (newchunk->storesize - 1) * chkmem->elemsize); /*lint !e826*/
+   freelist->next = chkmem->lazyfree;
+   chkmem->lazyfree = (FREELIST*) (newchunk->store);
+   chkmem->lazyfreesize += newchunk->storesize;
 
-   /* initialize eager free list of the chunk */
-   newchunk->eagerFreeSize = 0;
-   newchunk->eagerFree = NULL;
+   /* link chunk into chunk block */
+   retval = linkChunk(chkmem, newchunk);
 
-   /* initialize chunk links */
-   newchunk->nextEager = NULL;
-   newchunk->prevEager = NULL;
-
-   /* link chunk into block */
-   retval = linkChunk(blk, newchunk);
-
-   checkBlock(blk);
+   checkChkmem(chkmem);
 
    return retval;
 }
 
-/* destroy a chunk without updating the chunk lists
- * Parameters:
- *    chk : Pointer to chunkheader of chunk to delete.
- */
+/** destroys a chunk without updating the chunk lists */
 static
-void destroyChunk(CHKHDR * chk)
+void destroyChunk(
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   assert(chk != NULL);
+   assert(chunk != NULL);
 
    /* free chunk header and store (allocated in one call) */
-   freeMemory(&chk);
+   freeMemory(&chunk);
 }
 
-/* remove a completely unused chunk, that is a chunk with all elements in the eager free list
- * Parameters:
- *    chk : Pointer to chunkheader of chunk to delete.
- */
+/** removes a completely unused chunk, i.e. a chunk with all elements in the eager free list */
 static
-void freeChunk(CHKHDR * chk)
+void freeChunk(
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   assert(chk != NULL);
-   assert(chk->store != NULL);
-   assert(chk->eagerFree != NULL);
-   assert(chk->block != NULL);
-   assert(chk->block->chunkarray != NULL);
-   assert(chk->block->firstEager != NULL);
-   assert(chk->eagerFreeSize == chk->storeSize);
+   assert(chunk != NULL);
+   assert(chunk->store != NULL);
+   assert(chunk->eagerfree != NULL);
+   assert(chunk->chkmem != NULL);
+   assert(chunk->chkmem->chunks != NULL);
+   assert(chunk->chkmem->firsteager != NULL);
+   assert(chunk->eagerfreesize == chunk->storesize);
 
    /* count the deleted eager free slots */
-   chk->block->eagerFreeSize -= chk->eagerFreeSize;
-   assert(chk->block->eagerFreeSize >= 0);
+   chunk->chkmem->eagerfreesize -= chunk->eagerfreesize;
+   assert(chunk->chkmem->eagerfreesize >= 0);
 
    /* remove chunk from eager chunk list */
-   unlinkEagerChunk(chk);
+   unlinkEagerChunk(chunk);
 
    /* remove chunk from chunk list */
-   unlinkChunk(chk);
+   unlinkChunk(chunk);
 
    /* destroy the chunk */
-   destroyChunk(chk);
+   destroyChunk(chunk);
 }
 
-/* returns an element of the eager free list and removes
- * it from the list
- */
+/** returns an element of the eager free list and removes it from the list */
 static
-void* allocChunkElement(CHKHDR * chk)
+void* allocChunkElement(
+   CHUNK*           chunk               /**< memory chunk */
+   )
 {
-   FREELIST *ptr;
+   FREELIST* ptr;
 
-   assert(chk != NULL);
-   assert(chk->eagerFree != NULL);
-   assert(chk->eagerFreeSize > 0);
-   assert(chk->block != NULL);
+   assert(chunk != NULL);
+   assert(chunk->eagerfree != NULL);
+   assert(chunk->eagerfreesize > 0);
+   assert(chunk->chkmem != NULL);
 
    /* unlink first element in the eager free list */
-   ptr = chk->eagerFree;
-   chk->eagerFree = ptr->next;
-   chk->eagerFreeSize--;
-   chk->block->eagerFreeSize--;
+   ptr = chunk->eagerfree;
+   chunk->eagerfree = ptr->next;
+   chunk->eagerfreesize--;
+   chunk->chkmem->eagerfreesize--;
 
-   assert((chk->eagerFreeSize == 0 && chk->eagerFree == NULL)
-      ||  (chk->eagerFreeSize != 0 && chk->eagerFree != NULL));
-   assert(chk->block->eagerFreeSize >= 0);
+   assert((chunk->eagerfreesize == 0 && chunk->eagerfree == NULL)
+      ||  (chunk->eagerfreesize != 0 && chunk->eagerfree != NULL));
+   assert(chunk->chkmem->eagerfreesize >= 0);
 
    /* unlink chunk from eager chunk list if necessary */
-   if( chk->eagerFree == NULL )
+   if( chunk->eagerfree == NULL )
    {
-      assert(chk->eagerFreeSize == 0);
-      unlinkEagerChunk(chk);
+      assert(chunk->eagerfreesize == 0);
+      unlinkEagerChunk(chunk);
    }
 
-   checkChunk(chk);
-   return (void *) ptr;
+   checkChunk(chunk);
+
+   return (void*) ptr;
 }
 
-/* puts ptr in the eager free list and adds the chunk
- * to the eager list of its block, if necessary
- */
+/** puts given pointer into the eager free list and adds the chunk to the eager list of its chunk block, if necessary */
 static
-void freeChunkElement(CHKHDR * chk, void *ptr)
+void freeChunkElement(
+   CHUNK*           chunk,              /**< memory chunk */
+   void*            ptr                 /**< pointer */
+   )
 {
-   assert(chk != NULL);
-   assert(chk->block != NULL);
-   assert(isPtrInChunk(chk, ptr));
+   assert(chunk != NULL);
+   assert(chunk->chkmem != NULL);
+   assert(isPtrInChunk(chunk, ptr));
 
    /* link chunk to the eager chunk list if necessary */
-   if( chk->eagerFree == NULL )
+   if( chunk->eagerfree == NULL )
    {
-      assert(chk->eagerFreeSize == 0);
-      linkEagerChunk(chk->block, chk);
+      assert(chunk->eagerfreesize == 0);
+      linkEagerChunk(chunk->chkmem, chunk);
    }
 
    /* add ptr to the chunks eager free list */
-   ((FREELIST *) ptr)->next = chk->eagerFree;
-   chk->eagerFree = (FREELIST *) ptr;
-   chk->eagerFreeSize++;
-   chk->block->eagerFreeSize++;
+   ((FREELIST*)ptr)->next = chunk->eagerfree;
+   chunk->eagerfree = (FREELIST*)ptr;
+   chunk->eagerfreesize++;
+   chunk->chkmem->eagerfreesize++;
 
-   checkChunk(chk);
+   checkChunk(chunk);
 }
 
-/*-----------------------------------------------------------------------------
- *--- Name: Create new block allocation pool in memory structure 'mem'.     ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    mem           : memory header structure.
- *    size          : Storage size per element.
- * Returns   :
- *    Pointer to block header structure.
- */
+/** creates a new chunk block data structure */
 static
-BLKHDR* createBlock(MEMHDR *mem, int size)
+CHKMEM* createChkmem(
+   int              size,               /**< element size of the chunk block */
+   int              initchunksize,      /**< number of elements in the first chunk of the chunk block */
+   int              garbagefactor       /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
+   )
 {
-   BLKHDR *blk;
+   CHKMEM* chkmem;
 
-   assert(size >= (int)ALIGNMENT);
+   assert(isAligned(size));
 
-   allocMemory(&blk);
+   allocMemory(&chkmem);
+   if( chkmem == NULL )
+      return NULL;
 
-   if( blk != NULL )
-   {
-      blk->elemSize = size;
-      blk->chunkarraySize = 0;
-      blk->numChunks = 0;
-      blk->lastChunkSize = 0;
-      blk->storeSize = 0;
-      blk->lazyFreeSize = 0;
-      blk->eagerFreeSize = 0;
-      blk->lazyFree = NULL;
-      blk->chunkarray = NULL;
-      blk->firstEager = NULL;
-      blk->next = NULL;
-      blk->mem = mem;
+   chkmem->lazyfree = NULL;
+   chkmem->chunks = NULL;
+   chkmem->firsteager = NULL;
+   chkmem->nextchkmem = NULL;
+   chkmem->elemsize = size;
+   chkmem->chunkssize = 0;
+   chkmem->nchunks = 0;
+   chkmem->lastchunksize = 0;
+   chkmem->storesize = 0;
+   chkmem->lazyfreesize = 0;
+   chkmem->eagerfreesize = 0;
+   chkmem->initchunksize = initchunksize;
+   chkmem->garbagefactor = garbagefactor;
 #ifndef NDEBUG
-      blk->filename = NULL;
-      blk->line = 0;
-      blk->numGarbageCalls = 0;
-      blk->numGarbageFrees = 0;
+   chkmem->filename = NULL;
+   chkmem->line = 0;
+   chkmem->ngarbagecalls = 0;
+   chkmem->ngarbagefrees = 0;
 #endif
-   }
 
-   return blk;
+   return chkmem;
 }
 
-/* destroy all chunks of the block, but keep block
- * header structure
- */
+/** destroys all chunks of the chunk block, but keeps the chunk block header structure */
 static
-void clearBlock(BLKHDR * blk)
+void clearChkmem(
+   CHKMEM*          chkmem              /**< chunk block */
+   )
 {
    int i;
 
-   assert(blk != NULL);
+   assert(chkmem != NULL);
 
-   /* destroy all chunks of the block */
-   for( i = 0; i < blk->numChunks; ++i )
-      destroyChunk(blk->chunkarray[i]);
+   /* destroy all chunks of the chunk block */
+   for( i = 0; i < chkmem->nchunks; ++i )
+      destroyChunk(chkmem->chunks[i]);
 
-   blk->numChunks = 0;
-   blk->lastChunkSize = 0;
-   blk->storeSize = 0;
-   blk->lazyFreeSize = 0;
-   blk->eagerFreeSize = 0;
-   blk->lazyFree = NULL;
-   blk->firstEager = NULL;
+   chkmem->lazyfree = NULL;
+   chkmem->firsteager = NULL;
+   chkmem->nchunks = 0;
+   chkmem->lastchunksize = 0;
+   chkmem->storesize = 0;
+   chkmem->lazyfreesize = 0;
+   chkmem->eagerfreesize = 0;
 }
 
-/*-----------------------------------------------------------------------------
- *--- Name: Delete block allocation pool.                                   ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    blk : Pointer to block header of block to destroy.
- */
+/** deletes chunk block and frees all associated memory chunks */
 static
-void destroyBlock(BLKHDR * blk)
+void destroyChkmem(
+   CHKMEM**         chkmem              /**< pointer to chunk block */
+   )
 {
-   assert(blk != NULL);
+   assert(chkmem != NULL);
+   assert(*chkmem != NULL);
 
-   clearBlock(blk);
-
-   freeMemoryArrayNull(&blk->chunkarray);
+   clearChkmem(*chkmem);
+   freeMemoryArrayNull(&(*chkmem)->chunks);
 
 #ifndef NDEBUG
-   freeMemoryArrayNull(&blk->filename);
+   freeMemoryArrayNull(&(*chkmem)->filename);
 #endif
-   freeMemory(&blk);
+
+   freeMemory(chkmem);
 }
 
-/*-----------------------------------------------------------------------------
- *--- Name: Allocate a new memory element from the block.                   ---
- *-----------------------------------------------------------------------------
- * Returns:
- *    A pointer to a memory block of the block's elements size.
- */
+/** allocates a new memory element from the chunk block */
 static
-void* allocBlockElement(BLKHDR * blk)
+void* allocChkmemElement(
+   CHKMEM*          chkmem              /**< chunk block */
+   )
 {
-   FREELIST *ptr;
+   FREELIST* ptr;
 
-   assert(blk != NULL);
+   assert(chkmem != NULL);
 
-   /* if the lazy freelist is empty, we have to find the
-      memory element somewhere else */
-   if( blk->lazyFree == NULL )
+   /* if the lazy freelist is empty, we have to find the memory element somewhere else */
+   if( chkmem->lazyfree == NULL )
    {
-      assert(blk->lazyFreeSize == 0);
+      assert(chkmem->lazyfreesize == 0);
 
       /* check for a free element in the eager freelists */
-      if( blk->firstEager != NULL )
-	 return allocChunkElement(blk->firstEager);
+      if( chkmem->firsteager != NULL )
+	 return allocChunkElement(chkmem->firsteager);
 
       /* allocate a new chunk */
-      if( createChunk(blk) == FALSE )
+      if( !createChunk(chkmem) )
 	 return NULL;
    }
 
    /* now the lazy freelist should contain an element */
-   assert(blk->lazyFree != NULL);
-   assert(blk->lazyFreeSize > 0);
+   assert(chkmem->lazyfree != NULL);
+   assert(chkmem->lazyfreesize > 0);
 
-   ptr = blk->lazyFree;
-   blk->lazyFree = ptr->next;
-   blk->lazyFreeSize--;
+   ptr = chkmem->lazyfree;
+   chkmem->lazyfree = ptr->next;
+   chkmem->lazyfreesize--;
 
-   checkBlock(blk);
-   return (void *) ptr;
+   checkChkmem(chkmem);
+
+   return (void*) ptr;
 }
 
-/*-----------------------------------------------------------------------------
- *--- Name: Free a block of memory and return it to the lazy freelist.      ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    blk : Pointer to the headerstruct.
- *    ptr : Pointer to the block  of memory to free.
+/** sorts the lazy free list of the chunk block into the eager free lists of the chunks, and removes completely
+ *  unused chunks
  */
-/*ARGSUSED*/
 static
-void freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
+void garbagecollectChkmem(
+   CHKMEM*          chkmem              /**< chunk block */
+   )
 {
-   assert(blk != NULL);
+   CHUNK* chunk;
+   CHUNK* nexteager;
+   FREELIST* lazyfree;
+
+   assert(chkmem != NULL);
+
+   /* check, if the chunk block is completely unused */
+   if( chkmem->lazyfreesize + chkmem->eagerfreesize == chkmem->storesize )
+   {
+      clearChkmem(chkmem);
+      return;
+   }
+
+#ifndef NDEBUG
+   chkmem->ngarbagecalls++;
+#endif
+
+   /* put the lazy free elements into the eager free lists */
+   while( chkmem->lazyfree != NULL )
+   {
+      /* unlink first element from the lazy free list */
+      lazyfree = chkmem->lazyfree;
+      chkmem->lazyfree = chkmem->lazyfree->next;
+      chkmem->lazyfreesize--;
+
+      /* identify the chunk of the element */
+      chunk = findChunk(chkmem, (void*)lazyfree);
+#ifndef NDEBUG
+      if( chunk == NULL )
+         fprintf(stderr, "[%s:%d] ERROR: chunk for lazy free chunk %p not found in chunk block %p\n",
+            __FILE__, __LINE__, lazyfree, chkmem);
+#endif
+      assert(chunk != NULL);
+
+      /* add the element to the chunk's eager free list */
+      freeChunkElement(chunk, (void*)lazyfree);
+      assert(chunk->eagerfreesize > 0);
+   }
+   assert(chkmem->lazyfreesize == 0);
+
+   /* delete completely unused chunks, but keep at least one */
+   chunk = chkmem->firsteager;
+   while( chunk != NULL && chkmem->nchunks > 1 )
+   {
+      nexteager = chunk->nexteager;
+      if( chunk->eagerfreesize == chunk->storesize )
+      {
+#ifndef NDEBUG
+	 chkmem->ngarbagefrees++;
+#endif
+	 freeChunk(chunk);
+      }
+      chunk = nexteager;
+   }
+
+   checkChkmem(chkmem);
+}
+
+/** frees a memory element and returns it to the lazy freelist of the chunk block */
+static
+void freeChkmemElement(
+   CHKMEM*          chkmem,             /**< chunk block */
+   void*            ptr,                /**< memory element */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   assert(chkmem != NULL);
    assert(ptr != NULL);
 
-#ifdef DEBUG
-   /* check, if ptr belongs to block */
-   if( !isPtrInBlock(blk, ptr) )
+#ifdef CHKMEM
+   /* check, if ptr belongs to the chunk block */
+   if( !isPtrInChkmem(chkmem, ptr) )
    {
-      BLKHDR *correctblk;
+      CHKMEM* correctchkmem;
 
-      fprintf(stderr, "[%s:%d] ERROR: pointer %p does not belong to block %p (size: %lld)\n", 
-         filename, line, ptr, blk, (long long)(blk->elemSize));
-
-      correctblk = findBlock(blk->mem, ptr);
-      if( correctblk == NULL )
-	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p does not belong to memory structure %p\n", 
-            filename, line, ptr, blk->mem);
-      else
-	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p belongs to block %p instead (size: %lld)\n", 
-            filename, line, ptr, correctblk, (long long)(correctblk->elemSize));
+      fprintf(stderr, "[%s:%d] ERROR: pointer %p does not belong to chunk block %p (size: %lld)\n", 
+         filename, line, ptr, chkmem, (long long)(chkmem->elemsize));
    }
 #endif
 
    /* put ptr in lazy free list */
-   ((FREELIST *) ptr)->next = blk->lazyFree;
-   blk->lazyFree = (FREELIST *) ptr;
-   blk->lazyFreeSize++;
+   ((FREELIST*)ptr)->next = chkmem->lazyfree;
+   chkmem->lazyfree = (FREELIST*)ptr;
+   chkmem->lazyfreesize++;
 
-   checkBlock(blk);
-}
-
-/*-----------------------------------------------------------------------------
- *--- Name: Get Hash number of memory size                                  ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    size : size of memory block.
- * Returns   :
- *    Hash number of size.
- */
-static
-int getHashNumber(int size)
-{
-   assert(size % (int)ALIGNMENT == 0);
-   return ((size / (int)ALIGNMENT) % BLOCKHASH_SIZE);
-}
-
-/*-----------------------------------------------------------------------------
- *--- Name: Create a block memory allocation structure.                     ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    initChunkSize     : nr. of elements in the first chunk.
- *    clearUnusedBlocks : immedeately clear a block, if it is unused
- *    garbageFactor     : if at least garbageFactor * avg. chunksize elements
- *                        are free, call garbage collection,
- *                        a value of -1 disables garbage collection
- * Returns   :
- *    Pointer to memory header structure.
- */
-MEMHDR* createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
-   int garbageFactor, const char *filename, int line)
-{
-   MEMHDR *mem;
-   int     i;
-
-   allocMemory(&mem);
-   if( mem != NULL )
+   /* check if we want to apply garbage collection */
+   if( chkmem->garbagefactor >= 0 && chkmem->nchunks > 0 && chkmem->lazyfreesize >= GARBAGE_SIZE
+      && chkmem->lazyfreesize + chkmem->eagerfreesize
+      > chkmem->garbagefactor * (double)(chkmem->storesize) / (double)(chkmem->nchunks) )
    {
-      for( i = 0; i < BLOCKHASH_SIZE; ++i )
-	 mem->blockhash[i] = NULL;
-      mem->initChunkSize = initChunkSize;
-      mem->clearUnusedBlocks = clearUnusedBlocks;
-      mem->garbageFactor = garbageFactor;
-      mem->memused = 0;
+      garbagecollectChkmem(chkmem);
    }
+
+   checkChkmem(chkmem);
+}
+
+/** creates a new chunk block data structure */
+CHKMEM* createChunkMemory_call(
+   int              size,               /**< element size of the chunk block */
+   int              initchunksize,      /**< number of elements in the first chunk of the chunk block */
+   int              garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   CHKMEM* chkmem;
+
+   chkmem = createChkmem(size, initchunksize, garbagefactor);
+   if( chkmem == NULL )
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for chunk block\n", filename, line);
+
+   return chkmem;
+}
+
+/** clears a chunk block data structure */
+void clearChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   if( chkmem != NULL )
+      clearChkmem(chkmem);
    else
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for memory header\n", filename, line);
-
-   return mem;
+      fprintf(stderr, "[%s:%d] ERROR: Tried to clear null chunk block\n", filename, line);
 }
 
-/*-----------------------------------------------------------------------------
- *--- Name: frees all chunks in the memory structure.                       ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    mem : Pointer to memory header to clear.
- */
-void freeAllBlockMemory_call(MEMHDR *mem, const char *filename, int line)
+/** destroys and frees a chunk block data structure */
+void destroyChunkMemory_call(
+   CHKMEM**         chkmem,             /**< pointer to chunk block */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
 {
-   BLKHDR *blk;
-   BLKHDR *nextblk;
-   int     i;
+   assert(chkmem != NULL);
 
-   if( mem != NULL )
-   {
-      for( i = 0; i < BLOCKHASH_SIZE; ++i )
-      {
-	 blk = mem->blockhash[i];
-	 while( blk != NULL )
-	 {
-	    nextblk = blk->next;
-	    destroyBlock(blk);
-	    blk = nextblk;
-	 }
-	 mem->blockhash[i] = NULL;
-      }
-      mem->memused = 0;
-   }
+   if( *chkmem != NULL )
+      destroyChkmem(chkmem);
    else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to clear null block\n", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Tried to destroy null chunk block\n", filename, line);
 }
 
-/*-----------------------------------------------------------------------------
- *--- Name: Delete a block allocation.                                      ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    mem : Pointer to memory header to destroy.
- */
-void destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
+/** allocates a memory element of the given chunk block */
+void* allocChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
 {
-   assert(mem != NULL);
+   void* ptr;
 
-   if( *mem != NULL )
-   {
-      freeAllBlockMemory_call(*mem, filename, line);
-      freeMemory(mem);
-      assert(*mem == NULL);
-   }
-   else
-      fprintf(stderr, "[%s:%d] ERROR: Tried to destroy null block\n", filename, line);
-}
+   assert(chkmem != NULL);
+   assert((int)size == chkmem->elemsize);
 
-/*-----------------------------------------------------------------------------
- *--- Name: Get a new block of memory.                                      ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    mem  : Pointer to memory header.
- *    size : size of requested block in bytes.
- * Returns:
- *    Pointer to a new block of memory of size "size".
- */
-void* allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
-{
-   BLKHDR **blkptr;
-   int     hashNumber;
-   void   *ptr;
-
-   /* calculate hash number of given size */
-   alignSize(&size);
-   hashNumber = getHashNumber((int)size);
-
-   /* find correspoding block header */
-   blkptr = &(mem->blockhash[hashNumber]);
-   while( *blkptr != NULL && (*blkptr)->elemSize != (int)size )
-      blkptr = &((*blkptr)->next);
-
-   /* create new block header if necessary */
-   if( *blkptr == NULL )
-   {
-      *blkptr = createBlock(mem, (int)size);
-      if( *blkptr == NULL )
-      {
-	 fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for block header\n", filename, line);
-	 return NULL;
-      }
-#ifndef NDEBUG
-      duplicateMemoryArray(&(*blkptr)->filename, filename, strlen(filename) + 1);
-      (*blkptr)->line = line;
-#endif
-   }
-
-   /* get memory inside the block */
-   ptr = allocBlockElement(*blkptr);
+   /* get memory inside the chunk block */
+   ptr = allocChkmemElement(chkmem);
    if( ptr == NULL )
       fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
-   debugMessage("alloced %8lld bytes in %p [%s:%4d]\n", (long long)size, ptr, filename, line);
+   debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
-   mem->memused += size;
-
-   checkMem(mem);
+   checkChkmem(chkmem);
 
    return ptr;
 }
 
-void* reallocBlockMemory_call(MEMHDR *mem, void* ptr, size_t oldsize, size_t newsize, const char *filename, int line)
+/** duplicates a given memory element by allocating a new element of the same chunk block and copying the data */
+void* duplicateChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   const void*      source,             /**< source memory element */
+   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert(chkmem != NULL);
+   assert(source != NULL);
+   assert((int)size == chkmem->elemsize);
+
+   ptr = allocChunkMemory_call(chkmem, size, filename, line);
+   if( ptr != NULL )
+      copyMemorySize(ptr, source, chkmem->elemsize);
+
+   return ptr;
+}
+
+/** frees a memory element of the given chunk block */
+void freeChunkMemory_call(
+   CHKMEM*          chkmem,             /**< chunk block */
+   void**           ptr,                /**< pointer to memory element to free */
+   size_t           size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   assert(chkmem != NULL);
+   assert(ptr != NULL);
+   assert((int)size == chkmem->elemsize);
+   
+   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, *ptr, filename, line);
+
+   if( *ptr == NULL )
+   {
+      fprintf(stderr, "[%s:%d] ERROR: Tried to free null block pointer\n", filename, line);
+      return;
+   }
+
+   /* free memory in chunk block */
+   freeChkmemElement(chkmem, *ptr, filename, line);
+   *ptr = NULL;
+
+   checkChkmem(chkmem);
+}
+
+/** calls garbage collection of chunk block and frees chunks without allocated memory elements */
+void garbagecollectChunkMemory_call(
+   CHKMEM*          chkmem              /**< chunk block */
+   )
+{
+   garbagecollectChkmem(chkmem);
+}
+
+
+
+
+/***********************************************************
+ * Block Memory Management
+ *
+ * Efficient memory management for objects of varying sizes
+ ***********************************************************/
+
+#define CHKHASH_SIZE               1013 /**< size of chunk block hash table; should be prime */
+
+/** collection of chunk blocks */
+struct BlkMem
+{
+   CHKMEM*          chkmemhash[CHKHASH_SIZE]; /**< hash table with chunk blocks */
+   long long        memused;            /**< total number of used bytes in the memory header */
+   int              initchunksize;      /**< number of elements in the first chunk of each chunk block */
+   int              garbagefactor;      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
+};
+
+
+
+/*
+ * debugging methods
+ */
+
+#ifdef CHKMEM
+static
+void checkBlkmem(
+   const BLKMEM*    blkmem              /**< block memory */
+   )
+{
+   const CHKMEM* chkmem;
+   int i;
+
+   assert(blkmem != NULL);
+   assert(blkmem->chkmemhash != NULL);
+
+   for( i = 0; i < CHKHASH_SIZE; ++i )
+   {
+      chkmem = blkmem->chkmemhash[i];
+      while( chkmem != NULL )
+      {
+         checkChkmem(chkmem);
+	 chkmem = chkmem->nextchkmem;
+      }
+   }
+}
+#else
+#define checkBlkmem(blkmem) /**/
+#endif
+
+
+/** finds the chunk block, to whick the given pointer belongs to;
+ *  this could be done by selecting the chunk block of the corresponding element size, but in a case of an
+ *  error (free gives an incorrect element size), we want to identify and output the correct element size
+ */
+static
+CHKMEM* findChkmem(
+   const BLKMEM*    blkmem,             /**< block memory */
+   const void*      ptr                 /**< memory element to search */
+   )
+{
+   CHKMEM* chkmem;
+   int i;
+
+   assert(blkmem != NULL);
+
+   chkmem = NULL;
+   for( i = 0; chkmem == NULL && i < CHKHASH_SIZE; ++i )
+   {
+      chkmem = blkmem->chkmemhash[i];
+      while( chkmem != NULL && !isPtrInChkmem(chkmem, ptr) )
+	 chkmem = chkmem->nextchkmem;
+   }
+
+   return chkmem;
+}
+
+/** calculates hash number of memory size */
+static
+int getHashNumber(
+   int              size                /**< element size */
+   )
+{
+   assert(isAligned(size));
+
+   return (size % CHKHASH_SIZE);
+}
+
+/** creates a block memory allocation data structure */
+BLKMEM* createBlockMemory_call(
+   int              initchunksize,      /**< number of elements in the first chunk of each chunk block */
+   int              garbagefactor,      /**< garbage collector is called, if at least garbagefactor * avg. chunksize 
+                                         *   elements are free (-1: disable garbage collection) */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   BLKMEM* blkmem;
+   int i;
+
+   allocMemory(&blkmem);
+   if( blkmem != NULL )
+   {
+      for( i = 0; i < CHKHASH_SIZE; ++i )
+	 blkmem->chkmemhash[i] = NULL;
+      blkmem->initchunksize = initchunksize;
+      blkmem->garbagefactor = garbagefactor;
+      blkmem->memused = 0;
+   }
+   else
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for block memory header\n", filename, line);
+
+   return blkmem;
+}
+
+/** frees all chunk blocks in the block memory */
+void clearBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   CHKMEM* chkmem;
+   CHKMEM* nextchkmem;
+   int i;
+
+   if( blkmem != NULL )
+   {
+      for( i = 0; i < CHKHASH_SIZE; ++i )
+      {
+	 chkmem = blkmem->chkmemhash[i];
+	 while( chkmem != NULL )
+	 {
+	    nextchkmem = chkmem->nextchkmem;
+	    destroyChkmem(&chkmem);
+	    chkmem = nextchkmem;
+	 }
+	 blkmem->chkmemhash[i] = NULL;
+      }
+      blkmem->memused = 0;
+   }
+   else
+      fprintf(stderr, "[%s:%d] ERROR: Tried to clear null block memory\n", filename, line);
+}
+
+/** clears and deletes block memory */
+void destroyBlockMemory_call(
+   BLKMEM**         blkmem,             /**< pointer to block memory */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   assert(blkmem != NULL);
+
+   if( *blkmem != NULL )
+   {
+      clearBlockMemory_call(*blkmem, filename, line);
+      freeMemory(blkmem);
+      assert(*blkmem == NULL);
+   }
+   else
+      fprintf(stderr, "[%s:%d] ERROR: Tried to destroy null block memory\n", filename, line);
+}
+
+/** allocates memory in the block memory pool */
+void* allocBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   size_t           size,               /**< size of memory element to allocate */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
+{
+   CHKMEM** chkmemptr;
+   int hashnumber;
+   void* ptr;
+
+   /* calculate hash number of given size */
+   alignSize(&size);
+   hashnumber = getHashNumber((int)size);
+
+   /* find correspoding chunk block */
+   chkmemptr = &(blkmem->chkmemhash[hashnumber]);
+   while( *chkmemptr != NULL && (*chkmemptr)->elemsize != (int)size )
+      chkmemptr = &((*chkmemptr)->nextchkmem);
+
+   /* create new chunk block if necessary */
+   if( *chkmemptr == NULL )
+   {
+      *chkmemptr = createChkmem((int)size, blkmem->initchunksize, blkmem->garbagefactor);
+      if( *chkmemptr == NULL )
+      {
+	 fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for chunk block\n", filename, line);
+	 return NULL;
+      }
+#ifndef NDEBUG
+      duplicateMemoryArray(&(*chkmemptr)->filename, filename, strlen(filename) + 1);
+      (*chkmemptr)->line = line;
+#endif
+   }
+
+   /* get memory inside the chunk block */
+   ptr = allocChkmemElement(*chkmemptr);
+   if( ptr == NULL )
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
+   debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
+
+   blkmem->memused += size;
+
+   checkBlkmem(blkmem);
+
+   return ptr;
+}
+
+/** resizes memory element in the block memory pool, and copies the data */
+void* reallocBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   void*            ptr,                /**< memory element to reallocated */
+   size_t           oldsize,            /**< old size of memory element */
+   size_t           newsize,            /**< new size of memory element */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
 {
    void* newptr;
 
-   if( ptr == NULL )
-   {
-      assert(oldsize == 0);
-      return allocBlockMemory_call(mem, newsize, filename, line);
-   }
+   assert((ptr == NULL) == (oldsize == 0));
 
-   assert(ptr != NULL);
+   if( ptr == NULL )
+      return allocBlockMemory_call(blkmem, newsize, filename, line);
 
    alignSize(&oldsize);
    alignSize(&newsize);
    if( oldsize == newsize )
       return ptr;
 
-   newptr = allocBlockMemory_call(mem, newsize, filename, line);
+   newptr = allocBlockMemory_call(blkmem, newsize, filename, line);
    if( newptr != NULL )
       copyMemorySize(newptr, ptr, MIN(oldsize, newsize));
-   freeBlockMemory_call(mem, &ptr, oldsize, filename, line);
+   freeBlockMemory_call(blkmem, &ptr, oldsize, filename, line);
 
    return newptr;
 }
 
-void* duplicateBlockMemory_call(MEMHDR *mem, const void* source, size_t size, const char *filename, int line)
+/** duplicates memory element in the block memory pool, and copies the data */
+void* duplicateBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   const void*      source,             /**< memory element to duplicate */
+   size_t           size,               /**< size of memory elements */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
 {
-   void   *ptr = NULL;
+   void* ptr;
 
    assert(source != NULL);
-   ptr = allocBlockMemory_call(mem, size, filename, line);
+
+   ptr = allocBlockMemory_call(blkmem, size, filename, line);
    if( ptr != NULL )
       copyMemorySize(ptr, source, size);
 
    return ptr;
 }
 
-/* sort the lazy free list into the eager free lists,
- * and remove completely unused chunks
- */
-static
-void garbageCollection(BLKHDR * blk)
+/** frees memory element in the block memory pool */
+void freeBlockMemory_call(
+   BLKMEM*          blkmem,             /**< block memory */
+   void**           ptr,                /**< pointer to memory element to free */
+   size_t           size,               /**< size of memory element */
+   const char*      filename,           /**< source file of the function call */
+   int              line                /**< line number in source file of the function call */
+   )
 {
-   CHKHDR *chk;
-   CHKHDR *nextEager;
-   FREELIST *lazyFree;
-
-   assert(blk != NULL);
-
-#ifndef NDEBUG
-   blk->numGarbageCalls++;
-#endif
-
-   /* put the lazy free elements in the eager free lists */
-   while( blk->lazyFree != NULL )
-   {
-      /* unlink first element from the lazy free list */
-      lazyFree = blk->lazyFree;
-      blk->lazyFree = blk->lazyFree->next;
-      blk->lazyFreeSize--;
-
-      /* identify the chunk of the element */
-      chk = findChunk(blk, (void *) lazyFree);
-#ifndef NDEBUG
-      if( chk == NULL )
-         fprintf(stderr, "[%s:%d] ERROR: chunk for lazy free block %p not found in block %p\n",
-            __FILE__, __LINE__, lazyFree, blk );
-#endif
-      assert(chk != NULL);
-
-      /* add the element to the chunk's eager free list */
-      freeChunkElement(chk, (void *) lazyFree);
-      assert(chk->eagerFreeSize > 0);
-   }
-   assert(blk->lazyFreeSize == 0);
-
-   /* delete completely unused chunks, but keep at least one */
-   chk = blk->firstEager;
-   while( chk != NULL && blk->numChunks > 1 )
-   {
-      nextEager = chk->nextEager;
-      if( chk->eagerFreeSize == chk->storeSize )
-      {
-#ifndef NDEBUG
-	 blk->numGarbageFrees++;
-#endif
-	 freeChunk(chk);
-      }
-      chk = nextEager;
-   }
-
-   checkBlock(blk);
-}
-
-/*-----------------------------------------------------------------------------
- *--- Name: Free a block of memory.                                         ---
- *-----------------------------------------------------------------------------
- * Parameters:
- *    mem  : Pointer to memory header.
- *    ptr  : Pointer to memory to free.
- *    size : size of memory block.
- */
-void freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
-   const char *filename, int line)
-{
-   BLKHDR *blk;
-   int     hashNumber;
+   CHKMEM* chkmem;
+   int hashnumber;
 
    assert(ptr != NULL);
 
@@ -1342,246 +1583,278 @@ void freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
    {
       /* calculate hash number of given size */
       alignSize(&size);
-      hashNumber = getHashNumber((int)size);
+      hashnumber = getHashNumber((int)size);
 
-      debugMessage("free    %8lld bytes in %p [%s:%4d]\n", (long long)size, *ptr, filename, line);
-      /* find correspoding block header */
-      blk = mem->blockhash[hashNumber];
-      while( blk != NULL && blk->elemSize != (int)size )
-	 blk = blk->next;
-      if( blk == NULL )
+      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, *ptr, filename, line);
+
+      /* find correspoding chunk block */
+      chkmem = blkmem->chkmemhash[hashnumber];
+      while( chkmem != NULL && chkmem->elemsize != (int)size )
+	 chkmem = chkmem->nextchkmem;
+      if( chkmem == NULL )
       {
 	 fprintf(stderr, "[%s:%d] ERROR: Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
-            filename, line, *ptr, mem, (long long) size);
+            filename, line, *ptr, blkmem, (long long) size);
 	 return;
       }
 
-      /* free memory in block */
-      freeBlockElement(blk, *ptr, filename, line);
+      /* free memory in chunk block */
+      freeChkmemElement(chkmem, *ptr, filename, line);
       *ptr = NULL;
 
-      /* check, if we want to clear the block */
-      if( mem->clearUnusedBlocks
-	 && blk->lazyFreeSize + blk->eagerFreeSize == blk->storeSize )
-	 clearBlock(blk);
-
-      /* check, if we want to do garbage collection */
-      if( mem->garbageFactor >= 0
-         && blk->numChunks > 0
-	 && blk->lazyFreeSize >= GARBAGE_SIZE
-	 && blk->lazyFreeSize + blk->eagerFreeSize >
-         mem->garbageFactor * (double)(blk->storeSize) / (double)(blk->numChunks) )
-      {
-	 garbageCollection(blk);
-      }
-
-      mem->memused -= size;
-      assert(mem->memused >= 0);
+      blkmem->memused -= size;
+      assert(blkmem->memused >= 0);
    }
    else
       fprintf(stderr, "[%s:%d] ERROR: Tried to free null block pointer\n", filename, line);
 
-   checkMem(mem);
+   checkBlkmem(blkmem);
 }
 
-long long getBlockMemoryUsed(MEMHDR *mem)
+/** calls garbage collection of block memory, frees chunks without allocated memory elements, and frees
+ *  chunk blocks without any chunks
+ */
+void garbagecollectBlockMemory_call(
+   BLKMEM*          blkmem              /**< block memory */
+   )
 {
-   assert(mem != NULL);
+   int i;
 
-   return mem->memused;
+   assert(blkmem != NULL);
+
+   for( i = 0; i < CHKHASH_SIZE; ++i )
+   {
+      CHKMEM** chkmemptr;
+
+      chkmemptr = &blkmem->chkmemhash[i];
+      while( *chkmemptr != NULL )
+      {
+         garbagecollectChkmem(*chkmemptr);
+         if( (*chkmemptr)->nchunks == 0 )
+         {
+            CHKMEM* nextchkmem;
+
+            nextchkmem = (*chkmemptr)->nextchkmem;
+            destroyChkmem(chkmemptr);
+            *chkmemptr = nextchkmem;
+         }
+         else
+            chkmemptr = &(*chkmemptr)->nextchkmem;
+      }
+   }
 }
 
-size_t blockMemorySize(MEMHDR *mem, void *ptr)
+/** returns the number of allocated bytes in the block memory */
+long long getBlockMemoryUsed_call(
+   const BLKMEM*    blkmem              /**< block memory */
+   )
 {
-   BLKHDR *blk;
+   assert(blkmem != NULL);
 
-   assert(mem != NULL);
+   return blkmem->memused;
+}
+
+/** returns the size of the given memory element; returns 0, if the element is not member of the block memory */
+size_t getBlockPointerSize_call(
+   const BLKMEM*    blkmem,             /**< block memory */
+   const void*      ptr                 /**< memory element */
+   )
+{
+   const CHKMEM* chkmem;
+
+   assert(blkmem != NULL);
+
    if( ptr == NULL )
       return 0;
 
-   blk = findBlock(mem, ptr);
-   if( blk == NULL )
+   chkmem = findChkmem(blkmem, ptr);
+   if( chkmem == NULL )
       return 0;
 
-   return (size_t)(blk->elemSize);
+   return (size_t)(chkmem->elemsize);
 }
 
-void blockMemoryDiagnostic(MEMHDR *mem)
+/** outputs allocation diagnostics of block memory */
+void displayBlockMemory_call(
+   const BLKMEM*    blkmem              /**< block memory */
+   )
 {
-   BLKHDR*   blk;
-   int       numBlocks = 0;
-   int       numUnusedBlocks = 0;
-   int       totalNumChunks = 0;
-   int       totalNumEagerChunks = 0;
-   int       totalNumElems = 0;
-   int       totalNumEagerElems = 0;
-   int       totalNumLazyElems = 0;
+   const CHKMEM* chkmem;
+   int nblocks = 0;
+   int nunusedblocks = 0;
+   int totalnchunks = 0;
+   int totalneagerchunks = 0;
+   int totalnelems = 0;
+   int totalneagerelems = 0;
+   int totalnlazyelems = 0;
 #ifndef NDEBUG
-   int       totalNumGarbageCalls = 0;
-   int       totalNumGarbageFrees = 0;
+   int totalngarbagecalls = 0;
+   int totalngarbagefrees = 0;
 #endif
-   long long allocedMem = 0;
-   long long freeMem = 0;
-   int       i;
-   int       c;
+   long long allocedmem = 0;
+   long long freemem = 0;
+   int i;
+   int c;
 
 #ifndef NDEBUG
-   printf(" ElSize #Chk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
+   printf(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
 #else
-   printf(" ElSize #Chk #Eag  #Elems  #EagFr  #LazFr  Free\n");
+   printf(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  Free\n");
 #endif
 
-   assert(mem != NULL);
+   assert(blkmem != NULL);
 
-   for( i = 0; i < BLOCKHASH_SIZE; ++i )
+   for( i = 0; i < CHKHASH_SIZE; ++i )
    {
-      blk = mem->blockhash[i];
-      while( blk != NULL )
+      chkmem = blkmem->chkmemhash[i];
+      while( chkmem != NULL )
       {
-	 CHKHDR *chk;
-	 int     numChunks = 0;
-	 int     numElems = 0;
-	 int     numEagerChunks = 0;
-	 int     numEagerElems = 0;
+	 const CHUNK* chunk;
+	 int nchunks = 0;
+	 int nelems = 0;
+	 int neagerchunks = 0;
+	 int neagerelems = 0;
 
-         for( c = 0; c < blk->numChunks; ++c )
+         for( c = 0; c < chkmem->nchunks; ++c )
          {
-            chk = blk->chunkarray[c];
-            assert(chk != NULL);
-	    assert(chk->elemSize == blk->elemSize);
-	    assert(chk->block == blk);
-	    numChunks++;
-	    numElems += chk->storeSize;
-	    if( chk->eagerFree != NULL )
+            chunk = chkmem->chunks[c];
+            assert(chunk != NULL);
+	    assert(chunk->elemsize == chkmem->elemsize);
+	    assert(chunk->chkmem == chkmem);
+	    nchunks++;
+	    nelems += chunk->storesize;
+	    if( chunk->eagerfree != NULL )
 	    {
-	       numEagerChunks++;
-	       numEagerElems += chk->eagerFreeSize;
+	       neagerchunks++;
+	       neagerelems += chunk->eagerfreesize;
 	    }
 	 }
 
-	 assert(numChunks == blk->numChunks);
-	 assert(numElems == blk->storeSize);
-	 assert(numEagerElems == blk->eagerFreeSize);
+	 assert(nchunks == chkmem->nchunks);
+	 assert(nelems == chkmem->storesize);
+	 assert(neagerelems == chkmem->eagerfreesize);
 
-	 if( numElems > 0 )
+	 if( nelems > 0 )
 	 {
-	    numBlocks++;
-	    allocedMem += blk->elemSize * numElems;
-	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
+	    nblocks++;
+	    allocedmem += chkmem->elemsize * nelems;
+	    freemem += chkmem->elemsize * (neagerelems + chkmem->lazyfreesize);
 
 #ifndef NDEBUG
 	    printf("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
-	       (long long)(blk->elemSize), numChunks, numEagerChunks, numElems,
-	       numEagerElems, blk->lazyFreeSize, blk->numGarbageCalls, blk->numGarbageFrees,
-	       100.0 * (double) (numEagerElems + blk->lazyFreeSize) / (double) (numElems), blk->filename, blk->line);
+	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
+	       neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
+	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems), 
+               chkmem->filename, chkmem->line);
 #else
 	    printf("%7lld %4d %4d %7d %7d %7d %5.1f%%\n",
-	       (long long)(blk->elemSize), numChunks, numEagerChunks, numElems,
-	       numEagerElems, blk->lazyFreeSize,
-	       100.0 * (double) (numEagerElems + blk->lazyFreeSize) / (double) (numElems));
+	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
+	       neagerelems, chkmem->lazyfreesize,
+	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems));
 #endif
 	 }
 	 else
 	 {
 #ifndef NDEBUG
 	    printf("%7lld <unused>                          %5d %4d        %s:%d\n",
-	       (long long)(blk->elemSize), blk->numGarbageCalls, blk->numGarbageFrees, blk->filename, blk->line);
+	       (long long)(chkmem->elemsize), chkmem->ngarbagecalls, chkmem->ngarbagefrees, 
+               chkmem->filename, chkmem->line);
 #else
-	    printf("%7lld <unused>\n", (long long)(blk->elemSize));
+	    printf("%7lld <unused>\n", (long long)(chkmem->elemsize));
 #endif
-	    numUnusedBlocks++;
+	    nunusedblocks++;
 	 }
-         totalNumChunks += numChunks;
-         totalNumEagerChunks += numEagerChunks;
-         totalNumElems += numElems;
-         totalNumEagerElems += numEagerElems;
-         totalNumLazyElems += blk->lazyFreeSize;
+         totalnchunks += nchunks;
+         totalneagerchunks += neagerchunks;
+         totalnelems += nelems;
+         totalneagerelems += neagerelems;
+         totalnlazyelems += chkmem->lazyfreesize;
 #ifndef NDEBUG
-         totalNumGarbageCalls += blk->numGarbageCalls;
-         totalNumGarbageFrees += blk->numGarbageFrees;
+         totalngarbagecalls += chkmem->ngarbagecalls;
+         totalngarbagefrees += chkmem->ngarbagefrees;
 #endif
-	 blk = blk->next;
+	 chkmem = chkmem->nextchkmem;
       }
    }
 #ifndef NDEBUG
    printf("  Total %4d %4d %7d %7d %7d %5d %4d %5.1f%%\n",
-      totalNumChunks, totalNumEagerChunks, totalNumElems, totalNumEagerElems, totalNumLazyElems, 
-      totalNumGarbageCalls, totalNumGarbageFrees,
-      totalNumElems > 0 ? 100.0 * (double) (totalNumEagerElems + totalNumLazyElems) / (double) (totalNumElems) : 0.0);
+      totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
+      totalngarbagecalls, totalngarbagefrees,
+      totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0);
 #else
    printf("  Total %4d %4d %7d %7d %7d %5.1f%%\n",
-      totalNumChunks, totalNumEagerChunks, totalNumElems, totalNumEagerElems, totalNumLazyElems, 
-      totalNumElems > 0 ? 100.0 * (double) (totalNumEagerElems + totalNumLazyElems) / (double) (totalNumElems) : 0.0);
+      totalnchunks, totalneagerchunks, totalnelems, totalneagerelems, totalnlazyelems, 
+      totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0);
 #endif
    printf("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
-      numBlocks + numUnusedBlocks, numUnusedBlocks, allocedMem, freeMem);
-   if( allocedMem > 0 )
-      printf(" (%.1f%%)", 100.0 * (double) freeMem / (double) allocedMem);
+      nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
+   if( allocedmem > 0 )
+      printf(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
    printf("\n");
 }
 
-void blockMemoryCheckEmpty(MEMHDR *mem)
+/** outputs warning messages, if there are allocated elements in the block memory */
+void checkEmptyBlockMemory_call(
+   const BLKMEM*    blkmem              /**< block memory */
+   )
 {
-   BLKHDR*   blk;
-   long long allocedMem = 0;
-   long long freeMem = 0;
-   int       i;
-   int       c;
+   const CHKMEM* chkmem;
+   long long allocedmem = 0;
+   long long freemem = 0;
+   int i;
+   int c;
 
-   assert(mem != NULL);
+   assert(blkmem != NULL);
 
-   for( i = 0; i < BLOCKHASH_SIZE; ++i )
+   for( i = 0; i < CHKHASH_SIZE; ++i )
    {
-      blk = mem->blockhash[i];
-      while( blk != NULL )
+      chkmem = blkmem->chkmemhash[i];
+      while( chkmem != NULL )
       {
-	 CHKHDR *chk;
-	 int     numChunks = 0;
-	 int     numElems = 0;
-	 int     numEagerElems = 0;
+	 const CHUNK* chunk;
+	 int nchunks = 0;
+	 int nelems = 0;
+	 int neagerelems = 0;
 
-         for( c = 0; c < blk->numChunks; ++c )
+         for( c = 0; c < chkmem->nchunks; ++c )
          {
-            chk = blk->chunkarray[c];
-            assert(chk != NULL);
-	    assert(chk->elemSize == blk->elemSize);
-	    assert(chk->block == blk);
-	    numChunks++;
-	    numElems += chk->storeSize;
-	    if( chk->eagerFree != NULL )
-	       numEagerElems += chk->eagerFreeSize;
+            chunk = chkmem->chunks[c];
+            assert(chunk != NULL);
+	    assert(chunk->elemsize == chkmem->elemsize);
+	    assert(chunk->chkmem == chkmem);
+	    nchunks++;
+	    nelems += chunk->storesize;
+	    if( chunk->eagerfree != NULL )
+	       neagerelems += chunk->eagerfreesize;
 	 }
 
-	 assert(numChunks == blk->numChunks);
-	 assert(numElems == blk->storeSize);
-	 assert(numEagerElems == blk->eagerFreeSize);
+	 assert(nchunks == chkmem->nchunks);
+	 assert(nelems == chkmem->storesize);
+	 assert(neagerelems == chkmem->eagerfreesize);
 
-	 if( numElems > 0 )
+	 if( nelems > 0 )
 	 {
-	    allocedMem += blk->elemSize * numElems;
-	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
+	    allocedmem += chkmem->elemsize * nelems;
+	    freemem += chkmem->elemsize * (neagerelems + chkmem->lazyfreesize);
 
-            if( numElems != numEagerElems + blk->lazyFreeSize )
+            if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
                printf("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
-                  ((numElems - numEagerElems) - blk->lazyFreeSize) * (long long)(blk->elemSize),
-                  (numElems - numEagerElems) - blk->lazyFreeSize, (long long)(blk->elemSize),
-                  blk->filename, blk->line);
+                  ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
+                  (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
+                  chkmem->filename, chkmem->line);
 #else
                printf("%lld bytes (%d elements of size %lld) not freed.\n",
-                  ((numElems - numEagerElems) - blk->lazyFreeSize) * (long long)(blk->elemSize),
-                  (numElems - numEagerElems) - blk->lazyFreeSize, (long long)(blk->elemSize));
+                  ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
+                  (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
             }
 	 }
-	 blk = blk->next;
+	 chkmem = chkmem->nextchkmem;
       }
    }
 
-   if( allocedMem != freeMem )
-      printf("%lld bytes not freed in total.\n", allocedMem - freeMem);
+   if( allocedmem != freemem )
+      printf("%lld bytes not freed in total.\n", allocedmem - freemem);
 }
-
-
-#endif
