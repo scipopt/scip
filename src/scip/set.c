@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.147 2005/03/21 11:37:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.148 2005/03/22 18:42:19 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -57,7 +57,9 @@
 
 /* Branching */
 
-#define SCIP_DEFAULT_BRANCH_SCOREFAC      0.167 /**< branching score factor to weigh downward and upward gain prediction */
+#define SCIP_DEFAULT_BRANCH_SCOREFUNC       'p' /**< branching score function ('s'um, 'p'roduct) */
+#define SCIP_DEFAULT_BRANCH_SCOREFAC      0.167 /**< branching score factor to weigh downward and upward gain prediction
+                                                 *   in sum score function */
 #define SCIP_DEFAULT_BRANCH_PREFERBINARY  FALSE /**< should branching on binary variables be preferred? */
 
 
@@ -367,9 +369,14 @@ RETCODE SCIPsetCreate(
    (*set)->vbc_filename = NULL;
 
    /* branching parameters */
+   CHECK_OKAY( SCIPsetAddCharParam(*set, blkmem,
+         "branching/scorefunc",
+         "branching score function ('s'um, 'p'roduct)",
+         &(*set)->branch_scorefunc, SCIP_DEFAULT_BRANCH_SCOREFUNC, "sp",
+         NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
          "branching/scorefac",
-         "branching score factor to weigh downward and upward gain prediction",
+         "branching score factor to weigh downward and upward gain prediction in sum score function",
          &(*set)->branch_scorefac, SCIP_DEFAULT_BRANCH_SCOREFAC, 0.0, 1.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,

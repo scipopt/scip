@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.26 2005/03/21 16:42:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.27 2005/03/22 18:42:19 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -50,7 +50,7 @@
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
-                                         * 1.0 for dynamic, depending on solutions already found */
+                                         *   1.0 for dynamic, depending on solutions already found */
 
 
 /** primal heuristic data */
@@ -410,7 +410,7 @@ DECL_HEUREXEC(heurExecFeaspump)
    objnorm = MAX(objnorm, 1.0);
    nsolsfound = SCIPgetNSolsFound(scip);
    if( heurdata->objfactor == 1.0 )
-      objfactor = MIN(1.0 - 0.5 / (Real)(1 + nsolsfound), 0.99);
+      objfactor = MIN(1.0 - 0.1 / (Real)(1 + nsolsfound), 0.999);
    else  
       objfactor = heurdata->objfactor;
    alpha = 1.0;

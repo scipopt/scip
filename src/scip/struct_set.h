@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.49 2005/03/21 11:37:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.50 2005/03/22 18:42:19 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -107,7 +107,9 @@ struct Set
    Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
 
    /* branching settings */
-   Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction */
+   char             branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct) */
+   Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction
+                                         *   in sum score function */
    Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
 
    /* conflict analysis settings */

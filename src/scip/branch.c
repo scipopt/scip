@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.63 2005/02/16 17:46:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.64 2005/03/22 18:42:19 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1291,17 +1291,33 @@ Real SCIPbranchGetScore(
    )
 {
    Real score;
+   Real eps;
 
    assert(set != NULL);
 
-   /* weigh the two child nodes with branchscorefac and 1-branchscorefac */
-   if( downgain > upgain )
-      score = set->branch_scorefac * downgain + (1.0-set->branch_scorefac) * upgain;
-   else
-      score = set->branch_scorefac * upgain + (1.0-set->branch_scorefac) * downgain;
-
    /* slightly increase gains, such that for zero gains, the branch factor comes into account */
-   score += SCIPsetSumepsilon(set);
+   eps = SCIPsetSumepsilon(set);
+   downgain = MAX(downgain, eps);
+   upgain = MAX(upgain, eps);
+
+   switch( set->branch_scorefunc )
+   {
+   case 's':  /* linear sum score function */
+      /* weigh the two child nodes with branchscorefac and 1-branchscorefac */
+      if( downgain > upgain )
+         score = set->branch_scorefac * downgain + (1.0-set->branch_scorefac) * upgain;
+      else
+         score = set->branch_scorefac * upgain + (1.0-set->branch_scorefac) * downgain;
+      break;
+
+   case 'p':  /* product score function */
+      score = downgain * upgain;
+      break;
+
+   default:
+      errorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
+      abort();
+   }
 
    /* apply the branch factor of the variable */
    if( var != NULL )

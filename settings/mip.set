@@ -1,4 +1,8 @@
-# branching score factor to weigh downward and upward gain prediction
+# branching score function ('s'um, 'p'roduct)
+# [type: char, range: {sp}, default: p]
+branching/scorefunc = p
+
+# branching score factor to weigh downward and upward gain prediction in sum score function
 # [type: real, range: [0,1], default: 0.167]
 branching/scorefac = 0.167
 
@@ -915,16 +919,16 @@ branching/relpscost/maxbounddist = 1
 branching/relpscost/minreliable = 1
 
 # maximal value for minimum pseudo cost size to regard pseudo cost value as reliable
-# [type: real, range: [0,1.79769313486232e+308], default: 32]
-branching/relpscost/maxreliable = 32
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
+branching/relpscost/maxreliable = 8
 
 # maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
 # [type: real, range: [0,1.79769313486232e+308], default: 0.5]
 branching/relpscost/sbiterquot = 0.5
 
 # additional number of allowed strong branching LP iterations
-# [type: int, range: [0,2147483647], default: 20000]
-branching/relpscost/sbiterofs = 20000
+# [type: int, range: [0,2147483647], default: 100000]
+branching/relpscost/sbiterofs = 100000
 
 # maximal number of further variables evaluated without better score
 # [type: int, range: [1,2147483647], default: 8]

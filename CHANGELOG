@@ -70,6 +70,7 @@ plugins:
 - new plugin: clique separator for clique cuts with at least 3 elements
 - changed implementation of reliability value calculation in reliability branching; slightly modified influence
   of maximal total number of strong branching LP iterations in reliability branching
+- modified the automatic objfactor setting of feaspump heuristic to let the objective function have stronger influence
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -96,9 +97,8 @@ parameters:
 - changed default of parameter lp/pricing to 's'teepest edge pricing
 - new parameter lp/checkstability to disable stability check of LP solver's result code
 - default parameter branching/relpscost/minreliable changed to 1.0
-- default parameter branching/relpscost/maxreliable changed to 32.0
 - default parameter branching/relpscost/maxlookahead changed to 8
-- default parameter branching/relpscost/sbiterofs changed to 20000
+- default parameter branching/relpscost/sbiterofs changed to 100000
 - default parameter heuristics/coefdiving/maxlpiterquot changed to 0.05
 - default parameter heuristics/fracdiving/maxlpiterquot changed to 0.05
 - default parameter heuristics/guideddiving/maxlpiterquot changed to 0.05
@@ -125,6 +125,7 @@ parameters:
 - new parameter heuristics/objfeaspump/maxsols
 - new parameter heuristics/objpscostdiving/maxsols
 - new parameter heuristics/rootsoldiving/maxsols
+- new parameter branching/scorefunc
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex
@@ -138,6 +139,7 @@ features:
 - support for barrier algorithm
 - added TSP example in examples/TSP
 - SCIPaddVarImplication() now also adds variable lower and upper bounds, if the implied variable is non-binary
+- removed storing of dual norms in LPI state of CPLEX interface (too memory consuming)
 
 fixed bugs:
 - fixed bug in MPS file reader

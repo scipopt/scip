@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.40 2005/03/02 19:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.41 2005/03/22 18:42:19 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -469,6 +469,9 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    int nviolrows;
    int c;
    int r;
+   Longint ncalls;
+   Longint nsolsfound;
+   Longint nnodes;
 
    /**@todo try to shift continuous variables to stay feasible */
    /**@todo improve rounding heuristic */
@@ -483,6 +486,13 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* don't call heuristic, if it was not successful enough in the past */
+   ncalls = SCIPheurGetNCalls(heur);
+   nsolsfound = SCIPheurGetNSolsFound(heur);
+   nnodes = SCIPgetNNodes(scip);
+   if( nnodes % ((ncalls/10000)/(nsolsfound+1)+1) != 0 )
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.31 2005/03/21 11:37:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.32 2005/03/22 18:42:19 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -36,9 +36,9 @@
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
-#define DEFAULT_MAXRELIABLE     32.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
+#define DEFAULT_MAXRELIABLE      8.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
-#define DEFAULT_SBITEROFS    20000      /**< additional number of allowed strong branching LP iterations */
+#define DEFAULT_SBITEROFS   100000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
 #define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
 #define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of pseudo cost entries (0: auto) */
@@ -274,6 +274,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       Real maxlookahead;
       Real lookahead;
       Longint nodenum;
+      Longint nsblpiterations;
       Longint maxnsblpiterations;
       int depth;
       int maxdepth;
@@ -321,7 +322,12 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       maxbdchgs = branchruledata->maxbdchgs;
 
       /* calculate value used as reliability */
-      prio = (maxnsblpiterations - SCIPgetNStrongbranchLPIterations(scip))/(maxnsblpiterations+1.0);
+      nsblpiterations = SCIPgetNStrongbranchLPIterations(scip);
+#if 0
+      prio = (maxnsblpiterations - nsblpiterations)/(maxnsblpiterations + 1.0);
+#else
+      prio = (maxnsblpiterations - nsblpiterations)/(nsblpiterations + 1.0);
+#endif
       reliable = (1.0-prio) * branchruledata->minreliable + prio * branchruledata->maxreliable;
 
       /* search for the best pseudo cost candidate, while remembering unreliable candidates in a sorted buffer */
