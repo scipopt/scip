@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.72 2004/10/29 10:38:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.73 2004/11/01 09:20:17 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1036,66 +1036,66 @@ RETCODE conflictAddClause(
       conflict->nconflictvars + conflict->ntmpconflictvars, currentdepth, d, validdepth);
    
    /* if all branching variables are in the conflict set, the conflict clause is of no use */
-   if( d == currentdepth )
-      return SCIP_OKAY;
-
-   /* remove all variables from conflict set, that have fixing depth smaller than the conflict clause's depth */
-   conflictRemoveInvalidConflictVars(conflict, d);
-   *nliterals = conflict->nconflictvars + conflict->ntmpconflictvars;
-   debugMessage(" -> final conflict clause has %d literals\n", *nliterals);
-
-   /* if no conflict variables exist, the node and its sub tree in the conflict clause's depth can be cut off completely */
-   if( *nliterals == 0 )
+   if( d < currentdepth )
    {
-      debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", currentdepth, validdepth);
-      
-      SCIPnodeCutoff(tree->path[d], set, stat, tree);
-      *success = TRUE;
-   }
-   else
-   {
-      RESULT result;
-      int propdepth;
-      int h;
+      /* remove all variables from conflict set, that have fixing depth smaller than the conflict clause's depth */
+      conflictRemoveInvalidConflictVars(conflict, d);
+      *nliterals = conflict->nconflictvars + conflict->ntmpconflictvars;
+      debugMessage(" -> final conflict clause has %d literals\n", *nliterals);
 
-      /* sort conflict handlers by priority */
-      SCIPsetSortConflicthdlrs(set);
-      
-      /* call conflict handlers to create a conflict constraint */
-      for( h = 0; h < set->nconflicthdlrs; ++h )
+      /* if no conflict variables exist, the node and its sub tree in the conflict clause's depth can be 
+       * cut off completely
+       */
+      if( *nliterals == 0 )
       {
-         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d], 
-               conflict->conflictvars, *nliterals, (validdepth > 0), *success, &result) );
-         *success = *success || (result == SCIP_CONSADDED);
-         debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",
-            SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
-            *nliterals, result);
+         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", currentdepth, validdepth);
+      
+         SCIPnodeCutoff(tree->path[d], set, stat, tree);
+         *success = TRUE;
       }
-
-      if( *success )
+      else
       {
-         SCIPvbcFoundConflict(stat->vbc, stat, tree->path[currentdepth]);
+         RESULT result;
+         int propdepth;
+         int h;
 
-         /* reactivate propagation on the node at depth level of the last but one fixed conflict variable,
-          * such that the last fixed conflict variable can be deduced to the opposite value
-          */
-         if( set->conf_repropagate )
+         /* sort conflict handlers by priority */
+         SCIPsetSortConflicthdlrs(set);
+      
+         /* call conflict handlers to create a conflict constraint */
+         for( h = 0; h < set->nconflicthdlrs; ++h )
          {
-            propdepth = conflictGetPropagateDepth(conflict);
-            assert(0 <= propdepth && propdepth < tree->pathlen);
-            assert(tree->path[propdepth]->depth == propdepth);
-            SCIPnodePropagateAgain(tree->path[propdepth], set, stat, tree);
+            CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d], 
+                  conflict->conflictvars, *nliterals, (validdepth > 0), *success, &result) );
+            *success = *success || (result == SCIP_CONSADDED);
+            debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",
+               SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
+               *nliterals, result);
+         }
 
-            debugMessage("marked node %p in depth %d to be repropagated due to conflict found in depth %d with %d literals\n", 
-               tree->path[propdepth], propdepth, currentdepth, *nliterals);
-#ifdef DEBUG
+         if( *success )
+         {
+            SCIPvbcFoundConflict(stat->vbc, stat, tree->path[currentdepth]);
+
+            /* reactivate propagation on the node at depth level of the last but one fixed conflict variable,
+             * such that the last fixed conflict variable can be deduced to the opposite value
+             */
+            if( set->conf_repropagate )
             {
+               propdepth = conflictGetPropagateDepth(conflict);
+               assert(0 <= propdepth && propdepth < tree->pathlen);
+               assert(tree->path[propdepth]->depth == propdepth);
+               SCIPnodePropagateAgain(tree->path[propdepth], set, stat, tree);
+
+               debugMessage("marked node %p in depth %d to be repropagated due to conflict found in depth %d with %d literals\n", 
+                  tree->path[propdepth], propdepth, currentdepth, *nliterals);
+#ifdef DEBUG
                printf(" -> clause:");
                for( i = 0; i < *nliterals; ++i )
                   printf(" <%s>(%d)", SCIPvarGetName(conflict->conflictvars[i]), conflict->conflictvardepths[i]);
                printf("\n");
-            }
 #endif
+            }
          }
       }
    }
@@ -3129,16 +3129,7 @@ RETCODE undoBdchgsDualsol(
          assert(c == -1 || col == lp->lpicols[c]);
 
          /* get reduced costs from LPI, or calculate it manually if the column is not in current LP */
-         if( c == -1 )
-            varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
-         else
-         {
-#ifndef NDEBUG
-            varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
-            assert(SCIPsetIsSumEQ(set, varredcosts[v]/1000.0, redcosts[c]/1000.0)); /* LP solver can be quite unexact */
-#endif
-            varredcosts[v] = redcosts[c];
-         }
+         varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
          /* check dual feasibility */
          if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsFeasPositive(set, varredcosts[v]))

@@ -3,8 +3,8 @@ SCIP version 0.75
 - started change log
 
 
-current SCIP version
-====================
+SCIP version 0.76
+=================
 
 interface:
 - new method SCIPchgVarBranchDirection()
@@ -48,3 +48,10 @@ fixed bugs:
 known bugs (still not fixed):
 - unbounded models lead to an error
 - air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?
+
+
+current SCIP version
+====================
+
+fixed bugs:
+- removed bug in conflict analysis that appears if the conflict is only active at the current depth level
