@@ -934,6 +934,28 @@ RETCODE SCIPreleaseVar(
    VAR**            var                 /**< pointer to variable */
    );
 
+/** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
+ *  a new transformed variable for this variable is created
+ */
+extern
+RETCODE SCIPtransformVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get/create transformed variable for */
+   VAR**            transvar            /**< pointer to store the transformed variable */
+   );
+
+/** gets and captures transformed variables for an array of variables;
+ *  if a variable of the array is not yet transformed, a new transformed variable for this variable is created;
+ *  it is possible to call this method with vars == transvars
+ */
+extern
+RETCODE SCIPtransformVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of variables to get/create transformed variables for */
+   VAR**            vars,               /**< array with variables to get/create transformed variables for */
+   VAR**            transvars           /**< array to store the transformed variables */
+   );
+
 /** gets corresponding transformed variable of a given variable;
  *  returns NULL as transvar, if transformed variable is not yet existing
  */
@@ -1202,12 +1224,49 @@ RETCODE SCIPreleaseCons(
    CONS**           cons                /**< pointer to constraint */
    );
 
-/** copies original constraint into transformed constraint, that is captured */
+/** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
+ *  a new transformed constraint for this constraint is created
+ */
 extern
 RETCODE SCIPtransformCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            origcons,           /**< original constraint */
+   CONS*            cons,               /**< constraint to get/create transformed constraint for */
    CONS**           transcons           /**< pointer to store the transformed constraint */
+   );
+
+/** gets and captures transformed constraints for an array of constraints;
+ *  if a constraint in the array is not yet transformed, a new transformed constraint for this constraint is created;
+ *  it is possible to call this method with conss == transconss
+ */
+extern
+RETCODE SCIPtransformConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nconss,             /**< number of constraints to get/create transformed constraints for */
+   CONS**           conss,              /**< array with constraints to get/create transformed constraints for */
+   CONS**           transconss          /**< array to store the transformed constraints */
+   );
+
+/** gets corresponding transformed constraint of a given constraint;
+ *  returns NULL as transcons, if transformed constraint is not yet existing
+ */
+extern
+RETCODE SCIPgetTransformedCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to get the transformed constraint for */
+   CONS**           transcons           /**< pointer to store the transformed constraint */
+   );
+
+/** gets corresponding transformed constraints for an array of constraints;
+ *  stores NULL in a transconss slot, if the transformed constraint is not yet existing;
+ *  it is possible to call this method with conss == transconss, but remember that constraints that are not
+ *  yet transformed will be replaced with NULL
+ */
+extern
+RETCODE SCIPgetTransformedConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nconss,             /**< number of constraints to get the transformed constraints for */
+   CONS**           conss,              /**< constraints to get the transformed constraints for */
+   CONS**           transconss          /**< array to store the transformed constraints */
    );
 
 /** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
@@ -1489,6 +1548,19 @@ RETCODE SCIPcreateRow(
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
+   Real             lhs,                /**< left hand side of row */
+   Real             rhs,                /**< right hand side of row */
+   Bool             local,              /**< is row only valid locally? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   );
+
+/** creates and captures an LP row without any coefficients */
+extern
+RETCODE SCIPcreateEmptyRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW**            row,                /**< pointer to row */
+   const char*      name,               /**< name of row */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */

@@ -91,6 +91,9 @@ void SCIPretcodePrint(
    case SCIP_PARSEERROR:
       fprintf(file, "invalid input given to the parser");
       break;
+   case SCIP_MAXDEPTHLEVEL:
+      fprintf(file, "maximal branching depth level exceeded");
+      break;
    default:
       fprintf(file, "unknown error code");
       break;

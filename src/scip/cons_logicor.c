@@ -879,7 +879,7 @@ RETCODE createRow(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   CHECK_OKAY( SCIPcreateRow(scip, &consdata->row, SCIPconsGetName(cons), 0, NULL, NULL, 1.0, SCIPinfinity(scip),
+   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
    for( v = 0; v < consdata->nvars; ++v )

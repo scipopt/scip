@@ -2769,6 +2769,7 @@ RETCODE SCIPconsCreate(
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*cons)->name, name, strlen(name)+1) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
+   (*cons)->transcons = NULL;
    (*cons)->addconssetchg = NULL;
    (*cons)->addarraypos = -1;
    (*cons)->consspos = -1;
@@ -2946,35 +2947,59 @@ RETCODE SCIPconsDelete(
    return SCIP_OKAY;
 }
 
-/** copies original constraint into transformed constraint, that is captured */
+/** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
+ *  a new transformed constraint for this constraint is created
+ */
 RETCODE SCIPconsTransform(
-   CONS**           transcons,          /**< pointer to store the transformed constraint */
+   CONS*            origcons,           /**< original constraint */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   CONS*            origcons            /**< original constraint */
+   CONS**           transcons           /**< pointer to store the transformed constraint */
    )
 {
-   assert(transcons != NULL);
-   assert(memhdr != NULL);
    assert(origcons != NULL);
    assert(origcons->conshdlr != NULL);
    assert(origcons->original);
+   assert(transcons != NULL);
 
-   if( origcons->conshdlr->constrans != NULL )
+   /* check, if the constraint is already transformed */
+   if( origcons->transcons != NULL )
    {
-      /* use constraints own method to transform constraint */
-      CHECK_OKAY( origcons->conshdlr->constrans(set->scip, origcons->conshdlr, origcons, transcons) );
+      *transcons = origcons->transcons;
+      SCIPconsCapture(*transcons);
    }
    else
    {
-      /* create new constraint with empty constraint data */
-      CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL, origcons->initial,
-                     origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
-                     origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
+      /* create transformed constraint */
+      if( origcons->conshdlr->constrans != NULL )
+      {
+         /* use constraint handler's own method to transform constraint */
+         CHECK_OKAY( origcons->conshdlr->constrans(set->scip, origcons->conshdlr, origcons, transcons) );
+      }
+      else
+      {
+         /* create new constraint with empty constraint data */
+         CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL, origcons->initial,
+                        origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
+                        origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
+      }
+
+      /* link original and transformed constraint */
+      origcons->transcons = *transcons;
    }
    assert(*transcons != NULL);
 
    return SCIP_OKAY;
+}
+
+/** gets transformed constraint of an original constraint */
+CONS* SCIPconsGetTransformed(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons->original);
+
+   return cons->transcons;
 }
 
 /** activates constraint or marks constraint to be activated in next update */
@@ -3474,6 +3499,16 @@ Bool SCIPconsIsRemoveable(
    assert(cons != NULL);
 
    return cons->removeable;
+}
+
+/** returns TRUE iff constraint belongs to the global problem */
+Bool SCIPconsIsInProb(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (cons->addconssetchg == NULL && cons->addarraypos >= 0);
 }
 
 /** returns TRUE iff constraint is belonging to original space */

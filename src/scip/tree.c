@@ -28,6 +28,9 @@
 #include "tree.h"
 
 
+#define MAXDEPTH   65535  /**< maximal depth level for nodes, must correspond to node data structure */
+
+
 /*
  * dynamic memory arrays
  */
@@ -433,6 +436,11 @@ RETCODE nodeAssignParent(
    {
       node->lowerbound = parent->lowerbound;
       node->depth = parent->depth+1;
+      if( parent->depth >= MAXDEPTH-1 )
+      {
+         errorMessage("maximal depth level exceeded\n");
+         return SCIP_MAXDEPTHLEVEL;
+      }
    }
    debugMessage("assigning parent %p to node %p in depth %d\n", parent, node, node->depth);
 
@@ -855,8 +863,8 @@ RETCODE SCIPnodeAddBoundchg(
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
    
-   debugMessage("                    transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
-      var->name, var->actdom.lb, var->actdom.ub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
+   debugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
+      var->name, var->actdom.lb, var->actdom.ub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, var->obj);
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {

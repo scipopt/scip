@@ -29,10 +29,12 @@
 #include "scip.h"
 #include "reader_cnf.h"
 #include "reader_mps.h"
+#include "reader_rtp.h"
 #include "disp_default.h"
 #include "cons_and.h"
 #include "cons_binpack.h"
-#include "cons_bitstring.h"
+#include "cons_bitarith.h"
+#include "cons_bitvar.h"
 #include "cons_eqknapsack.h"
 #include "cons_integral.h"
 #include "cons_invarknapsack.h"
@@ -76,11 +78,13 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* include user defined callbacks */
-   CHECK_OKAY( SCIPincludeReaderCNF(scip) );
-   CHECK_OKAY( SCIPincludeReaderMPS(scip) );
+   CHECK_OKAY( SCIPincludeReaderCnf(scip) );
+   CHECK_OKAY( SCIPincludeReaderMps(scip) );
+   CHECK_OKAY( SCIPincludeReaderRtp(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrAnd(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrBitstring(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrBitarith(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrBitvar(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLogicor(scip) );
@@ -148,57 +152,36 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
 #else
    {
-      VAR** vars;
-      CONS* andcons;
+      CONS* bitvar1;
+      CONS* bitvar2;
+      CONS* bitvar3;
       CONS* cons;
-      char varname[255];
-      int v;
 
       CHECK_OKAY( SCIPcreateProb(scip, "testprob", NULL, NULL, NULL) );
       
-      CHECK_OKAY( SCIPallocMemoryArray(scip, &vars, 3) );
-      for( v = 0; v < 3; ++v )
-      {
-         sprintf(varname, "x%d", v);
-         CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 10.0, -1.0, SCIP_VARTYPE_INTEGER, FALSE) );
-         CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
-      }
+      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar1, "bitvar1", 16, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, bitvar1) );
+      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar2, "bitvar2", 16, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, bitvar2) );
+      CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar3, "bitvar3", 16, -1.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, bitvar3) );
 
-      CHECK_OKAY( SCIPcreateConsAnd(scip, &andcons, "andcons", 0, NULL, TRUE, TRUE, FALSE, FALSE) );
-
-      /* +3x0 -11x1 +4x2 <= 0 */
-      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "lincons1", 0, NULL, NULL, -SCIPinfinity(scip), 0.0,
-                     FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +3.0) );
-      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], -11.0) );
-      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +4.0) );
-      CHECK_OKAY( SCIPaddElemConsAnd(scip, andcons, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-
-      /* +2x0 +3x1 +1x2 <= 7 */
-      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "lincons2", 0, NULL, NULL, -SCIPinfinity(scip), 7.0,
-                     FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[0], +2.0) );
-      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[1], +3.0) );
-      CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, vars[2], +1.0) );
-      CHECK_OKAY( SCIPaddElemConsAnd(scip, andcons, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-
-      CHECK_OKAY( SCIPaddCons(scip, andcons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &andcons) );
-
-      for( v = 0; v < 3; ++v )
-      {
-         CHECK_OKAY( SCIPreleaseVar(scip, &vars[v]) );
-      }
-      SCIPfreeMemoryArray(scip, &vars);
-
-      /* bitstring constraint */
-      CHECK_OKAY( SCIPcreateConsBitstring(scip, &cons, "bitstring", 19, -1.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
+      CHECK_OKAY( SCIPcreateConsBitarith(scip, &cons, "bitarith", SCIP_BITARITHTYPE_ADD, bitvar1, bitvar2, bitvar3,
+                     TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) );
-      CHECK_OKAY( SCIPchgVarUb(scip, SCIPgetWordsConsBitstring(scip, cons)[1], 2.0) );
-      CHECK_OKAY( SCIPchgVarLb(scip, SCIPgetBitsConsBitstring(scip, cons)[17], 1.0) );
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, "linear", 0, NULL, NULL, 1.0, SCIPinfinity(scip),
+                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddCoefLinear(scip, cons, SCIPgetWordBitvar(bitvar1, 0), +1.0) );
+      CHECK_OKAY( SCIPaddCoefLinear(scip, cons, SCIPgetWordBitvar(bitvar2, 0), +1.0) );
+      CHECK_OKAY( SCIPaddCoefLinear(scip, cons, SCIPgetWordBitvar(bitvar3, 0), -1.0) );
+      CHECK_OKAY( SCIPaddCons(scip, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+      CHECK_OKAY( SCIPreleaseCons(scip, &bitvar1) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &bitvar2) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &bitvar3) );
    }
 #endif
 

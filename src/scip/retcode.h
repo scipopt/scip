@@ -47,7 +47,8 @@ enum Retcode
    SCIP_PARAMETERWRONGTYPE = -14,       /**< the parameter is not of the expected type */
    SCIP_PARAMETERWRONGVAL  = -15,       /**< the value is invalid for the given parameter */
    SCIP_KEYALREADYEXISTING = -16,       /**< the given key is already existing in table */
-   SCIP_PARSEERROR         = -17        /**< invalid input given to the parser */
+   SCIP_PARSEERROR         = -17,       /**< invalid input given to the parser */
+   SCIP_MAXDEPTHLEVEL      = -18        /**< maximal branching depth level exceeded */
 };
 typedef enum Retcode RETCODE;           /**< return code for SCIP method */
 

@@ -508,6 +508,7 @@ struct Cons
    char*            name;               /**< name of the constraint */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
+   CONS*            transcons;          /**< transformed constraint (for original constraints), or NULL */
    CONSSETCHG*      addconssetchg;      /**< constraint change that added constraint to current subproblem, or NULL if
                                          *   constraint is from global problem */
    int              addarraypos;        /**< position of constraint in the conssetchg's/prob's addedconss/conss array */
@@ -1054,13 +1055,21 @@ RETCODE SCIPconsDelete(
    PROB*            prob                /**< problem data */
    );
 
-/** copies original constraint into transformed constraint, that is captured */
+/** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
+ *  a new transformed constraint for this constraint is created
+ */
 extern
 RETCODE SCIPconsTransform(
-   CONS**           transcons,          /**< pointer to store the transformed constraint */
+   CONS*            origcons,           /**< original constraint */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   CONS*            origcons            /**< original constraint */
+   CONS**           transcons           /**< pointer to store the transformed constraint */
+   );
+
+/** gets transformed constraint of an original constraint */
+extern
+CONS* SCIPconsGetTransformed(
+   CONS*            cons                /**< constraint */
    );
 
 /** activates constraint or marks constraint to be activated in next update */
@@ -1253,6 +1262,12 @@ Bool SCIPconsIsRemoveable(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint belongs to the global problem */
+extern
+Bool SCIPconsIsInProb(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is belonging to original space */
 extern
 Bool SCIPconsIsOriginal(
@@ -1303,6 +1318,7 @@ Bool SCIPconsIsLocked(
 #define SCIPconsIsLocal(cons)           (cons)->local
 #define SCIPconsIsModifiable(cons)      (cons)->modifiable
 #define SCIPconsIsRemoveable(cons)      (cons)->removeable
+#define SCIPconsIsInProb(cons)          ((cons)->addconssetchg == NULL && (cons)->addarraypos >= 0)
 #define SCIPconsIsOriginal(cons)        (cons)->original
 #define SCIPconsIsTransformed(cons)     !(cons)->original
 #define SCIPconsIsLockedPos(cons)       ((cons)->nlockspos > 0)

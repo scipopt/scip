@@ -47,7 +47,7 @@ struct Sol
    Real             time;               /**< clock time, when the solution was discovered */
    Longint          nodenum;            /**< last node number, where this solution was modified */
    unsigned int     solorigin:2;        /**< origin of solution: where to retrieve uncached elements */
-   unsigned int     depth:30;           /**< depth at which the solution was found */
+   unsigned int     depth:16;           /**< depth at which the solution was found */
 };
 
 

@@ -2244,7 +2244,7 @@ RETCODE createRow(
    assert(consdata != NULL);
    assert(consdata->row == NULL);
 
-   CHECK_OKAY( SCIPcreateRow(scip, &consdata->row, SCIPconsGetName(cons), 0, NULL, NULL, consdata->lhs, consdata->rhs,
+   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
    for( v = 0; v < consdata->nvars; ++v )
@@ -4159,7 +4159,7 @@ RETCODE SCIPcreateConsLinear(
 }
 
 /** adds coefficient in linear constraint */
-RETCODE SCIPaddCoefConsLinear(
+RETCODE SCIPaddCoefLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    VAR*             var,                /**< variable of constraint entry */
@@ -4182,7 +4182,7 @@ RETCODE SCIPaddCoefConsLinear(
 }
 
 /** gets left hand side of linear constraint */
-RETCODE SCIPgetLhsConsLinear(
+RETCODE SCIPgetLhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real*            lhs                 /**< pointer to store left hand side */
@@ -4207,7 +4207,7 @@ RETCODE SCIPgetLhsConsLinear(
 }
 
 /** gets right hand side of linear constraint */
-RETCODE SCIPgetRhsConsLinear(
+RETCODE SCIPgetRhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real*            rhs                 /**< pointer to store right hand side */
@@ -4232,7 +4232,7 @@ RETCODE SCIPgetRhsConsLinear(
 }
 
 /** changes left hand side of linear constraint */
-RETCODE SCIPchgLhsConsLinear(
+RETCODE SCIPchgLhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real             lhs                 /**< new left hand side */
@@ -4250,7 +4250,7 @@ RETCODE SCIPchgLhsConsLinear(
 }
 
 /** changes right hand side of linear constraint */
-RETCODE SCIPchgRhsConsLinear(
+RETCODE SCIPchgRhsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real             rhs                 /**< new right hand side */

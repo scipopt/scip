@@ -525,7 +525,9 @@ Bool SCIPvarMayRoundUp(
    VAR*             var                 /**< problem variable */
    );
 
-/** copies original variable into loose transformed variable, that is captured */
+/** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
+ *  a new transformed variable for this variable is created
+ */
 extern
 RETCODE SCIPvarTransform(
    VAR*             origvar,            /**< original problem variable */

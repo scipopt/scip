@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.c
- * @brief  CNF file reader
+ * @brief  cnf file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
  */
@@ -30,14 +30,14 @@
 #include "cons_logicor.h"
 
 
-#define READER_NAME             "CNFreader"
-#define READER_DESC             "CNF file reader"
+#define READER_NAME             "cnfreader"
+#define READER_DESC             "cnf file reader"
 #define READER_EXTENSION        "cnf"
 
 
 
 /*
- * CNF reader internal methods
+ * cnf reader internal methods
  */
 
 static
@@ -64,9 +64,9 @@ void readWarning(
    warningMessage(s);
 }
 
-/** reads the next non-empty non-comment line of a CNF file */
+/** reads the next non-empty non-comment line of a cnf file */
 static
-RETCODE readCNFLine(
+RETCODE readCnfLine(
    FILE*            file,               /**< input file */
    char*            buffer,             /**< buffer for storing the input line */
    int              size,               /**< size of the buffer */
@@ -122,7 +122,7 @@ RETCODE readCNFLine(
  *  The method reads all files of CNF format. Other formats (SAT, SATX, SATE) are not supported.
  */  
 static
-RETCODE readCNF(
+RETCODE readCnf(
    SCIP*            scip,               /**< SCIP data structure */   
    FILE*            file                /**< input file */
    )
@@ -157,7 +157,7 @@ RETCODE readCNF(
    linecount = 0;
 
    /* read header */
-   CHECK_OKAY( readCNFLine(file, line, sizeof(line), &linecount) );
+   CHECK_OKAY( readCnfLine(file, line, sizeof(line), &linecount) );
    if( *line != 'p' )
    {
       readError(linecount, "problem declaration line expected");
@@ -210,7 +210,7 @@ RETCODE readCNF(
    clauselen = 0;
    do
    {
-      retcode = readCNFLine(file, line, sizeof(line), &linecount);
+      retcode = readCnfLine(file, line, sizeof(line), &linecount);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
 
@@ -318,8 +318,13 @@ RETCODE readCNF(
  * Callback methods
  */
 
+/** destructor of reader to free user data (called when SCIP is exiting) */
+#define readerFreeCnf NULL
+
+
+/** problem reading method of reader */
 static
-DECL_READERREAD(SCIPreaderReadCNF)
+DECL_READERREAD(readerReadCnf)
 {
    FILE* f;
    RETCODE retcode;
@@ -347,8 +352,8 @@ DECL_READERREAD(SCIPreaderReadCNF)
    /* create problem */
    CHECK_OKAY( SCIPcreateProb(scip, filename, NULL, NULL, NULL) );
 
-   /* read CNF file */
-   retcode = readCNF(scip, f);
+   /* read cnf file */
+   retcode = readCnf(scip, f);
 
    /* close file */
    fclose(f);
@@ -362,19 +367,24 @@ DECL_READERREAD(SCIPreaderReadCNF)
 
 
 /*
- * CNF file reader specific interface methods
+ * cnf file reader specific interface methods
  */
 
-/** includes the CNF file reader in SCIP */
-RETCODE SCIPincludeReaderCNF(
+/** includes the cnf file reader in SCIP */
+RETCODE SCIPincludeReaderCnf(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   /* include CNF reader */
-   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-                  NULL, SCIPreaderReadCNF, NULL) );
+   READERDATA* readerdata;
 
-   /* add CNF reader parameters */
+   /* create cnf reader data */
+   readerdata = NULL;
+
+   /* include cnf reader */
+   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+                  readerFreeCnf, readerReadCnf, readerdata) );
+
+   /* add cnf reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
                   "reader/cnf/dynamiccols", "should columns be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );

@@ -2360,6 +2360,67 @@ RETCODE SCIPreleaseVar(
    }
 }
 
+/** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
+ *  a new transformed variable for this variable is created
+ */
+RETCODE SCIPtransformVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get/create transformed variable for */
+   VAR**            transvar            /**< pointer to store the transformed variable */
+   )
+{
+   assert(transvar != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPtransformVar", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( SCIPvarIsTransformed(var) )
+   {
+      *transvar = var;
+      SCIPvarCapture(*transvar);
+   }
+   else
+   {
+      CHECK_OKAY( SCIPvarTransform(var, scip->mem->solvemem, scip->set, scip->stat, scip->origprob->objsense, transvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets and captures transformed variables for an array of variables;
+ *  if a variable of the array is not yet transformed, a new transformed variable for this variable is created;
+ *  it is possible to call this method with vars == transvars
+ */
+RETCODE SCIPtransformVars(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of variables to get/create transformed variables for */
+   VAR**            vars,               /**< array with variables to get/create transformed variables for */
+   VAR**            transvars           /**< array to store the transformed variables */
+   )
+{
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || transvars != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPtransformVars", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      if( SCIPvarIsTransformed(vars[v]) )
+      {
+         transvars[v] = vars[v];
+         SCIPvarCapture(transvars[v]);
+      }
+      else
+      {
+         CHECK_OKAY( SCIPvarTransform(vars[v], scip->mem->solvemem, scip->set, scip->stat, scip->origprob->objsense,
+                        &transvars[v]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets corresponding transformed variable of a given variable;
  *  returns NULL as transvar, if transformed variable is not yet existing
  */
@@ -2384,7 +2445,7 @@ RETCODE SCIPgetTransformedVar(
 }
 
 /** gets corresponding transformed variables for an array of variables;
- *  stores NULL in a transvars slot, if the transfored variable is not yet existing;
+ *  stores NULL in a transvars slot, if the transformed variable is not yet existing;
  *  it is possible to call this method with vars == transvars, but remember that variables that are not
  *  yet transformed will be replaced with NULL
  */
@@ -2796,8 +2857,14 @@ RETCODE SCIPfixVar(
       else
       {
          *infeasible = FALSE;
-         CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
-         CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
+         if( SCIPsetIsGT(scip->set, fixedval, SCIPvarGetLbLocal(var)) )
+         {
+            CHECK_OKAY( SCIPchgVarLb(scip, var, fixedval) );
+         }
+         if( SCIPsetIsLT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
+         {
+            CHECK_OKAY( SCIPchgVarUb(scip, var, fixedval) );
+         }
       }
       return SCIP_OKAY;
 
@@ -3005,9 +3072,9 @@ RETCODE SCIPreleaseCons(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_FREESOLVE:
-      if( SCIPconsIsOriginal(*cons) )
+      if( SCIPconsIsOriginal(*cons) && (*cons)->nuses == 1 )
       {
-         errorMessage("cannot release original constraint while solving the problem");
+         errorMessage("cannot release last use of original constraint while solving the problem");
          return SCIP_INVALIDCALL;
       }
       SCIPconsRelease(cons, scip->mem->solvemem, scip->set);
@@ -3019,16 +3086,113 @@ RETCODE SCIPreleaseCons(
    }
 }
 
-/** copies original constraint into transformed constraint, that is captured */
+/** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
+ *  a new transformed constraint for this constraint is created
+ */
 RETCODE SCIPtransformCons(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            origcons,           /**< original constraint */
+   CONS*            cons,               /**< constraint to get/create transformed constraint for */
    CONS**           transcons           /**< pointer to store the transformed constraint */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPtransformCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   assert(transcons != NULL);
 
-   CHECK_OKAY( SCIPconsTransform(transcons, scip->mem->solvemem, scip->set, origcons) );
+   CHECK_OKAY( checkStage(scip, "SCIPtransformCons", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( SCIPconsIsTransformed(cons) )
+   {
+      *transcons = cons;
+      SCIPconsCapture(*transcons);
+   }
+   else
+   {
+      CHECK_OKAY( SCIPconsTransform(cons, scip->mem->solvemem, scip->set, transcons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets and captures transformed constraints for an array of constraints;
+ *  if a constraint in the array is not yet transformed, a new transformed constraint for this constraint is created;
+ *  it is possible to call this method with conss == transconss
+ */
+RETCODE SCIPtransformConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nconss,             /**< number of constraints to get/create transformed constraints for */
+   CONS**           conss,              /**< array with constraints to get/create transformed constraints for */
+   CONS**           transconss          /**< array to store the transformed constraints */
+   )
+{
+   int c;
+
+   assert(nconss == 0 || conss != NULL);
+   assert(nconss == 0 || transconss != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPtransformConss", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsTransformed(conss[c]) )
+      {
+         transconss[c] = conss[c];
+         SCIPconsCapture(transconss[c]);
+      }
+      else
+      {
+         CHECK_OKAY( SCIPconsTransform(conss[c], scip->mem->solvemem, scip->set, &transconss[c]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets corresponding transformed constraint of a given constraint;
+ *  returns NULL as transcons, if transformed constraint is not yet existing
+ */
+RETCODE SCIPgetTransformedCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to get the transformed constraint for */
+   CONS**           transcons           /**< pointer to store the transformed constraint */
+   )
+{
+   assert(transcons != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransformedCons", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( SCIPconsIsTransformed(cons) )
+      *transcons = cons;
+   else
+      *transcons = SCIPconsGetTransformed(cons);
+
+   return SCIP_OKAY;
+}
+
+/** gets corresponding transformed constraints for an array of constraints;
+ *  stores NULL in a transconss slot, if the transformed constraint is not yet existing;
+ *  it is possible to call this method with conss == transconss, but remember that constraints that are not
+ *  yet transformed will be replaced with NULL
+ */
+RETCODE SCIPgetTransformedConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nconss,             /**< number of constraints to get the transformed constraints for */
+   CONS**           conss,              /**< constraints to get the transformed constraints for */
+   CONS**           transconss          /**< array to store the transformed constraints */
+   )
+{
+   int c;
+
+   assert(nconss == 0 || conss != NULL);
+   assert(nconss == 0 || transconss != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransformedConss", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsTransformed(conss[c]) )
+         transconss[c] = conss[c];
+      else
+         transconss[c] = SCIPconsGetTransformed(conss[c]);
+   }
 
    return SCIP_OKAY;
 }
@@ -3572,6 +3736,26 @@ RETCODE SCIPcreateRow(
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
                   name, len, col, val, lhs, rhs, local, modifiable, removeable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row without any coefficients */
+RETCODE SCIPcreateEmptyRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW**            row,                /**< pointer to row */
+   const char*      name,               /**< name of row */
+   Real             lhs,                /**< left hand side of row */
+   Real             rhs,                /**< right hand side of row */
+   Bool             local,              /**< is row only valid locally? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
+                  name, 0, NULL, NULL, lhs, rhs, local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }

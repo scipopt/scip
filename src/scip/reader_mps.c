@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mps.c
- * @brief  MPS file reader
+ * @brief  mps file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
  */
@@ -30,14 +30,14 @@
 #include "cons_linear.h"
 
 
-#define READER_NAME             "MPSreader"
-#define READER_DESC             "MPS file reader"
+#define READER_NAME             "mpsreader"
+#define READER_DESC             "mps file reader"
 #define READER_EXTENSION        "mps"
 
 
 
 /*
- * MPS reader internal methods
+ * mps reader internal methods
  */
 
 #define MPS_MAX_LINELEN 256
@@ -359,7 +359,7 @@ void patchField(
          buf[i] = PATCH_CHAR;
 }
 
-/* read a MPS format data line and parse the fields.
+/* read a mps format data line and parse the fields.
  */
 static
 Bool mpsinputReadLine(
@@ -800,7 +800,7 @@ RETCODE readCols(
             mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else if( !SCIPisZero(scip, val) )
          {
-            CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, var, val) );
+            CHECK_OKAY( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
       if (mpsinputField5(mpsi) != NULL)
@@ -820,7 +820,7 @@ RETCODE readCols(
                mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else if( !SCIPisZero(scip, val) )
             {
-               CHECK_OKAY( SCIPaddCoefConsLinear(scip, cons, var, val) );
+               CHECK_OKAY( SCIPaddCoefLinear(scip, cons, var, val) );
             }
          }
       }
@@ -880,27 +880,27 @@ RETCODE readRhs(
             val = atof(mpsinputField3(mpsi));
 
             /* find out the row sense */
-            CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
-            CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
+            CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
+            CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
                assert(SCIPisZero(scip, lhs));
-               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
                assert(SCIPisZero(scip, lhs));
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
-               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
             }
          }
       }
@@ -914,27 +914,27 @@ RETCODE readRhs(
             val = atof(mpsinputField5(mpsi));
          
             /* find out the row sense */
-            CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
-            CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
+            CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
+            CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
                assert(SCIPisZero(scip, lhs));
-               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
             }
             else
             {
                /* lhs > -infinity, rhs < infinity -> equality */
                assert(SCIPisZero(scip, lhs));
                assert(SCIPisZero(scip, rhs));
-               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, val) );
-               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, val) );
+               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, val) );
             }
          }
       }
@@ -1001,17 +1001,17 @@ RETCODE readRanges(
             val = atof(mpsinputField3(mpsi));
 
             /* find out the row sense */
-            CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
-            CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
+            CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
+            CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
             if( SCIPisInfinity(scip, -lhs) )
             {
                /* lhs = -infinity -> lower or equal */
-               CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, rhs - ABS(val)) );
+               CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - ABS(val)) );
             }
             else if( SCIPisInfinity(scip, rhs) )
             {
                /* rhs = +infinity -> greater or equal */
-               CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, lhs + ABS(val)) );
+               CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + ABS(val)) );
             }
             else
             {
@@ -1019,11 +1019,11 @@ RETCODE readRanges(
                assert(SCIPisEQ(scip, lhs, rhs));
                if( val >= 0.0 )
                {
-                  CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, rhs + val) );
+                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, rhs + val) );
                }
                else
                {
-                  CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, lhs + val) );
+                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, lhs + val) );
                }
             }
          }
@@ -1037,17 +1037,17 @@ RETCODE readRanges(
                val = atof(mpsinputField5(mpsi));
 
                /* find out the row sense */
-               CHECK_OKAY( SCIPgetLhsConsLinear(scip, cons, &lhs) );
-               CHECK_OKAY( SCIPgetRhsConsLinear(scip, cons, &rhs) );
+               CHECK_OKAY( SCIPgetLhsLinear(scip, cons, &lhs) );
+               CHECK_OKAY( SCIPgetRhsLinear(scip, cons, &rhs) );
                if( SCIPisInfinity(scip, -lhs) )
                {
                   /* lhs = -infinity -> lower or equal */
-                  CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, rhs - ABS(val)) );
+                  CHECK_OKAY( SCIPchgLhsLinear(scip, cons, rhs - ABS(val)) );
                }
                else if( SCIPisInfinity(scip, rhs) )
                {
                   /* rhs = +infinity -> greater or equal */
-                  CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, lhs + ABS(val)) );
+                  CHECK_OKAY( SCIPchgRhsLinear(scip, cons, lhs + ABS(val)) );
                }
                else
                {
@@ -1055,11 +1055,11 @@ RETCODE readRanges(
                   assert(SCIPisEQ(scip, lhs, rhs));
                   if( val >= 0.0 )
                   {
-                     CHECK_OKAY( SCIPchgRhsConsLinear(scip, cons, rhs + val) );
+                     CHECK_OKAY( SCIPchgRhsLinear(scip, cons, rhs + val) );
                   }
                   else
                   {
-                     CHECK_OKAY( SCIPchgLhsConsLinear(scip, cons, lhs + val) );
+                     CHECK_OKAY( SCIPchgLhsLinear(scip, cons, lhs + val) );
                   }
                }
             }
@@ -1213,7 +1213,7 @@ RETCODE readBounds(
  *  If this happens it may complain and read nothing or read "something".
  */  
 static
-RETCODE readMPS(
+RETCODE readMps(
    SCIP*            scip,               /**< SCIP data structure */   
    const char*      filename            /**< name of the input file */
    )
@@ -1291,19 +1291,25 @@ RETCODE readMPS(
 
 
 
+
 /*
- * Callback methods
+ * Callback methods of reader
  */
 
+/** destructor of reader to free user data (called when SCIP is exiting) */
+#define readerFreeMps NULL
+
+
+/** problem reading method of reader */
 static
-DECL_READERREAD(SCIPreaderReadMPS)
+DECL_READERREAD(readerReadMps)
 {
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   CHECK_OKAY( readMPS(scip, filename) );
+   CHECK_OKAY( readMps(scip, filename) );
 
    *result = SCIP_SUCCESS;
 
@@ -1314,19 +1320,24 @@ DECL_READERREAD(SCIPreaderReadMPS)
 
 
 /*
- * MPS file reader specific interface methods
+ * mps file reader specific interface methods
  */
 
-/** includes the MPS file reader in SCIP */
-RETCODE SCIPincludeReaderMPS(
+/** includes the mps file reader in SCIP */
+RETCODE SCIPincludeReaderMps(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   /* include MPS reader */
-   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-                  NULL, SCIPreaderReadMPS, NULL) );
+   READERDATA* readerdata;
 
-   /* add MPS reader parameters */
+   /* create mps reader data */
+   readerdata = NULL;
+
+   /* include mps reader */
+   CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+                  readerFreeMps, readerReadMps, readerdata) );
+
+   /* add mps reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
                   "reader/mps/dynamiccols", "should columns be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );

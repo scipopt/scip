@@ -3342,7 +3342,7 @@ void SCIProwPrint(
       file = stdout;
 
    /* print left hand side */
-   fprintf(file, "%+f <= ", row->lhs);
+   fprintf(file, "%+g <= ", row->lhs);
 
    /* print coefficients */
    if( row->len == 0 )
@@ -3353,14 +3353,15 @@ void SCIProwPrint(
       assert(row->cols[c]->var != NULL);
       assert(row->cols[c]->var->name != NULL);
       assert(row->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-      fprintf(file, "%+f%s ", row->vals[c], row->cols[c]->var->name);
+      fprintf(file, "%+g%s ", row->vals[c], row->cols[c]->var->name);
    }
 
    /* print constant */
-   fprintf(file, "%+f ", row->constant);
+   if( ABS(row->constant) > SCIP_DEFAULT_EPSILON )
+      fprintf(file, "%+g ", row->constant);
 
    /* print right hand side */
-   fprintf(file, "<= %+f\n", row->rhs);
+   fprintf(file, "<= %+g\n", row->rhs);
 }
 
 

@@ -260,7 +260,7 @@ RETCODE SCIPprobTransform(
    /* transform and copy all constraints to target problem */
    for( c = 0; c < source->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsTransform(&targetcons, memhdr, set, source->conss[c]) );
+      CHECK_OKAY( SCIPconsTransform(source->conss[c], memhdr, set, &targetcons) );
       CHECK_OKAY( SCIPprobAddCons(*target, memhdr, set, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
    }

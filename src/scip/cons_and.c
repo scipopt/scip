@@ -187,7 +187,7 @@ RETCODE addAllConss(
       {
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            printf/*????????????????debugMessage*/("adding constraint <%s> from add concatenation <%s>\n",
+            debugMessage("adding constraint <%s> from add concatenation <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             CHECK_OKAY( SCIPaddConsLocal(scip, consdata->conss[i]) );
             *result = SCIP_CONSADDED;
@@ -393,7 +393,7 @@ DECL_CONSPRESOL(consPresolAnd)
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            printf/*????????????????debugMessage*/("adding constraint <%s> from add concatenation <%s>\n",
+            debugMessage("adding constraint <%s> from add concatenation <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             CHECK_OKAY( SCIPaddCons(scip, consdata->conss[i]) );
             *result = SCIP_SUCCESS;
@@ -544,7 +544,7 @@ RETCODE SCIPcreateConsAnd(
 }
 
 /** adds constraint to the concatenation of an and constraint */
-RETCODE SCIPaddElemConsAnd(
+RETCODE SCIPaddConsElemAnd(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< and constraint */
    CONS*            andcons             /**< additional constraint in concatenation */

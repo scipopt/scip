@@ -15,24 +15,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_mps.h
- * @brief  mps file reader
- * @author Thorsten Koch
+/**@file   reader_rtp.h
+ * @brief  rtp file reader
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __READER_MPS_H__
-#define __READER_MPS_H__
+#ifndef __READER_RTP_H__
+#define __READER_RTP_H__
 
 
 #include "scip.h"
 
 
-/** includes the mps file reader into SCIP */
+/** includes the rtp file reader into SCIP */
 extern
-RETCODE SCIPincludeReaderMps(
+RETCODE SCIPincludeReaderRtp(
    SCIP*            scip                /**< SCIP data structure */
    );
 

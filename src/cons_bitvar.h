@@ -53,31 +53,63 @@ RETCODE SCIPcreateConsBitvar(
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
-/** gets array with bits of bitvar, sorted least significant bit first */
-VAR** SCIPgetBitsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
+/** gets number of bits in bitvar */
+extern
+int SCIPgetNBitsBitvar(
    CONS*            cons                /**< bitvar constraint */
    );
 
-/** gets number of bits in bitvar */
+/** gets array with bits of bitvar, sorted least significant bit first */
 extern
-int SCIPgetNBitsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
+VAR** SCIPgetBitsBitvar(
+   CONS*            cons                /**< bitvar constraint */
+   );
+
+/** gets variable for single bit in bitvar */
+extern
+VAR* SCIPgetBitBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              bit                 /**< bit number to get variable for */
+   );
+
+/** gets number of words in bitvar */
+extern
+int SCIPgetNWordsBitvar(
    CONS*            cons                /**< bitvar constraint */
    );
 
 /** gets array with words of bitvar, sorted least significant word first */
 extern
-VAR** SCIPgetWordsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
+VAR** SCIPgetWordsBitvar(
    CONS*            cons                /**< bitvar constraint */
    );
 
-/** gets number of words in bitvar */
+/** gets variable for single word in bitvar */
 extern
-int SCIPgetNWordsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< bitvar constraint */
+VAR* SCIPgetWordBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number to get variable for */
+   );
+
+/** gets number of bits in a given word of a bitvar */
+extern
+int SCIPgetNWordBitsBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number */
+   );
+
+/** returns the number of bits of the given word */
+extern
+int SCIPgetWordSizeBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number */
+   );
+
+/** returns the number of different values the given word can store (2^#bits) */
+extern
+int SCIPgetWordPowerBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number */
    );
 
 #endif

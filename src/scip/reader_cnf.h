@@ -16,7 +16,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_cnf.h
- * @brief  CNF file reader
+ * @brief  cnf file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
  */
@@ -30,9 +30,9 @@
 #include "scip.h"
 
 
-/** includes the CNF file reader into SCIP */
+/** includes the cnf file reader into SCIP */
 extern
-RETCODE SCIPincludeReaderCNF(
+RETCODE SCIPincludeReaderCnf(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -39,6 +39,9 @@ struct BranchCand
    int              nlpcands;           /**< number of candidates for branching on LP solution */
    int              pseudocandssize;    /**< number of available slots in pseudocands array */
    int              npseudocands;       /**< number of candidates for branching on pseudo solution */
+   int              npseudobins;        /**< number of binary candidates for branching on pseudo solution */
+   int              npseudoints;        /**< number of integer candidates for branching on pseudo solution */
+   int              npseudoimpls;       /**< number of implicit integer candidates for branching on pseudo solution */
    int              validlpcandslp;     /**< lp number for which lpcands are valid */
 };
 
@@ -135,6 +138,9 @@ RETCODE SCIPbranchcandCreate(
    (*branchcand)->nlpcands = 0;
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
+   (*branchcand)->npseudobins = 0;
+   (*branchcand)->npseudoints = 0;
+   (*branchcand)->npseudoimpls = 0;
    (*branchcand)->validlpcandslp = -1;
    
    return SCIP_OKAY;
@@ -321,12 +327,68 @@ RETCODE SCIPbranchcandUpdateVar(
       /* variable is continous or fixed: make sure it is not member of the pseudo branching candidate list */
       if( var->pseudocandindex >= 0 )
       {
+         int freepos;
+         int intstart;
+         int implstart;
+
          assert(var->pseudocandindex < branchcand->npseudocands);
          assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
-         branchcand->pseudocands[var->pseudocandindex] = branchcand->pseudocands[branchcand->npseudocands-1];
-         branchcand->pseudocands[var->pseudocandindex]->pseudocandindex = var->pseudocandindex;
+
+         debugMessage("deleting pseudo candidate <%s> of type %d at %d from candidate set (%d/%d/%d)\n",
+            var->name, var->vartype, var->pseudocandindex, 
+            branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
+
+         /* delete the variable from pseudocands, retaining the ordering binaries, integers, implicit integers */
+         intstart = branchcand->npseudobins;
+         implstart = intstart + branchcand->npseudoints;
+         freepos = var->pseudocandindex;
+
+         switch( var->vartype )
+         {
+         case SCIP_VARTYPE_BINARY:
+            assert(0 <= var->pseudocandindex && var->pseudocandindex < intstart);
+            branchcand->npseudobins--;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            assert(intstart <= var->pseudocandindex && var->pseudocandindex < implstart);
+            branchcand->npseudoints--;
+            break;
+         case SCIP_VARTYPE_IMPLINT:
+            assert(implstart <= var->pseudocandindex && var->pseudocandindex < branchcand->npseudocands);
+            branchcand->npseudoimpls--;
+            break;
+         default:
+            errorMessage("unknown variable type");
+            abort();
+         }
+
+         if( freepos < intstart-1 )
+         {
+            /* move last binary to free slot */
+            branchcand->pseudocands[freepos] = branchcand->pseudocands[intstart-1];
+            branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+            freepos = intstart-1;
+         }
+         if( freepos < implstart-1 )
+         {
+            /* move last integer to free slot */
+            branchcand->pseudocands[freepos] = branchcand->pseudocands[implstart-1];
+            branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+            freepos = implstart-1;
+         }
+         if( freepos < branchcand->npseudocands-1 )
+         {
+            /* move last integer to free slot */
+            branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npseudocands-1];
+            branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+            freepos = branchcand->npseudocands-1;
+         }
+         assert(freepos == branchcand->npseudocands-1);
+
          branchcand->npseudocands--;
          var->pseudocandindex = -1;
+
+         assert(branchcand->npseudocands == branchcand->npseudobins + branchcand->npseudoints + branchcand->npseudoimpls);
       }
    }
    else
@@ -336,10 +398,56 @@ RETCODE SCIPbranchcandUpdateVar(
       /* variable is not fixed: make sure it is member of the pseudo branching candidate list */
       if( var->pseudocandindex == -1 )
       {
+         int insertpos;
+         int intstart;
+         int implstart;
+
+         debugMessage("adding pseudo candidate <%s> of type %d to candidate set (%d/%d/%d)\n",
+            var->name, var->vartype, branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
+
          CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
-         branchcand->pseudocands[branchcand->npseudocands] = var;
-         var->pseudocandindex = branchcand->npseudocands;
+
+         /* insert the variable into pseudocands, retaining the ordering binaries, integers, implicit integers */
+         intstart = branchcand->npseudobins;
+         implstart = intstart + branchcand->npseudoints;
+         insertpos = branchcand->npseudocands;
+         if( var->vartype == SCIP_VARTYPE_IMPLINT )
+            branchcand->npseudoimpls++;
+         else
+         {
+            if( insertpos > implstart )
+            {
+               branchcand->pseudocands[insertpos] = branchcand->pseudocands[implstart];
+               branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
+               insertpos = implstart;
+            }
+            assert(insertpos == implstart);
+
+            if( var->vartype == SCIP_VARTYPE_INTEGER )
+               branchcand->npseudoints++;
+            else
+            {
+               assert(var->vartype == SCIP_VARTYPE_BINARY);
+               if( insertpos > intstart )
+               {
+                  branchcand->pseudocands[insertpos] = branchcand->pseudocands[intstart];
+                  branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
+                  insertpos = intstart;
+               }
+               assert(insertpos == intstart);
+
+               branchcand->npseudobins++;
+            }
+         }
          branchcand->npseudocands++;
+
+         assert(branchcand->npseudocands == branchcand->npseudobins + branchcand->npseudoints + branchcand->npseudoimpls);
+         assert((var->vartype == SCIP_VARTYPE_BINARY && insertpos == branchcand->npseudobins - 1)
+            || (var->vartype == SCIP_VARTYPE_INTEGER && insertpos == branchcand->npseudobins + branchcand->npseudoints - 1)
+            || (var->vartype == SCIP_VARTYPE_IMPLINT && insertpos == branchcand->npseudocands - 1));
+         
+         branchcand->pseudocands[insertpos] = var;
+         var->pseudocandindex = insertpos;
       }
    }
 

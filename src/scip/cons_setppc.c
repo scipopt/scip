@@ -972,7 +972,7 @@ RETCODE createRow(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPcreateRow(scip, &consdata->row, SCIPconsGetName(cons), 0, NULL, NULL, lhs, rhs,
+   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), lhs, rhs,
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
 
    CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );

@@ -15,7 +15,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define DEBUG
 /**@file   cons_bitvar.c
  * @brief  constraint handler for bitvar constraints
  * @author Tobias Achterberg
@@ -92,7 +91,7 @@ int wordSize(
       return consdata->nbits - (consdata->nwords-1) * WORDSIZE;
 }
 
-/** returns the number of different values the given word store (2^#bits) */
+/** returns the number of different values the given word can store (2^#bits) */
 static
 int wordPower(
    CONSDATA*        consdata,           /**< bitvar constraint data */
@@ -119,7 +118,7 @@ RETCODE conshdlrdataCreate(
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
 
-   /* get event handler for updating linear constraint activity bounds */
+   /* get event handler for processing bound change events */
    (*conshdlrdata)->eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
@@ -197,6 +196,9 @@ RETCODE consdataCreateVars(
       CHECK_OKAY( SCIPaddVar(scip, consdata->bits[i]) );
       bitobj *= 2.0;
       
+      debugMessage("created bit variable <%s> with obj=%g for bitvar constraint\n",
+         SCIPvarGetName(consdata->bits[i]), bitobj);
+
       /* if we are in the transformed problem, catch bound tighten events on variable */
       if( SCIPvarIsTransformed(consdata->bits[i]) )
       {
@@ -213,6 +215,8 @@ RETCODE consdataCreateVars(
                      SCIP_VARTYPE_INTEGER, TRUE) );
       CHECK_OKAY( SCIPaddVar(scip, consdata->words[i]) );
       
+      debugMessage("created word variable <%s> for bitvar constraint\n", SCIPvarGetName(consdata->words[i]));
+
       /* if we are in the transformed problem, catch bound tighten events on variable */
       if( SCIPvarIsTransformed(consdata->words[i]) )
       {
@@ -374,7 +378,7 @@ RETCODE checkWord(
       return SCIP_OKAY;
 
    /* get the value of the word and convert it into an integer */
-   wordsol = SCIPgetVarSol(scip, consdata->words[word]);
+   wordsol = SCIPgetSolVal(scip, sol, consdata->words[word]);
    assert(SCIPisIntegral(scip, wordsol));
    wordsolint = (int)(wordsol+0.5);
    assert(SCIPisFeasEQ(scip, wordsol, (Real)wordsolint));
@@ -385,7 +389,7 @@ RETCODE checkWord(
    for( b = 0; b < wordsize; ++b )
    {
       assert(0 <= bitmask && bitmask <= WORDPOWER/2);
-      bitsol = SCIPgetVarSol(scip, consdata->bits[word*WORDSIZE+b]);
+      bitsol = SCIPgetSolVal(scip, sol, consdata->bits[word*WORDSIZE+b]);
       assert(SCIPisIntegral(scip, bitsol));
       assert(SCIPisFeasEQ(scip, bitsol, 0.0) || SCIPisFeasEQ(scip, bitsol, 1.0));
       bitsolisone = (bitsol > 0.5);
@@ -470,7 +474,7 @@ RETCODE createRow(
 
    /* create equality  - word + 2^0*bit[0] + 2^1*bit[1] + ... + 2^(WORDSIZE-1)*bit[WORDSIZE-1] == 0 */
    sprintf(rowname, "c_%s", SCIPvarGetName(consdata->words[word]));
-   CHECK_OKAY( SCIPcreateRow(scip, &consdata->rows[word], rowname, 0, NULL, NULL, 0.0, 0.0,
+   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->rows[word], rowname, 0.0, 0.0,
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
    CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[word], consdata->words[word], -1.0) );
@@ -632,11 +636,19 @@ RETCODE propagateWord(
    /* update the bounds of the word respectively: if the most significant k bits of an n-bit word are fixed,
     * the value of the word must be in  [fixedval, fixedval+2^(n-k)-1]
     */
-   if( nfixedbits > 0 && SCIPvarGetStatus(wordvar) != SCIP_VARSTATUS_FIXED )
+   if( nfixedbits > 0 /*&& SCIPvarGetStatus(wordvar) != SCIP_VARSTATUS_FIXED*/ )
    {
       unfixedpower = (1 << (wordsize-nfixedbits));
       assert(unfixedpower >= 1);
 
+      if( ub < fixedval - 0.5 || lb > fixedval + unfixedpower - 1 + 0.5 )
+      {
+         /* the bit fixings don't match with the word's current bounds -> the node is infeasible */
+         debugMessage("bitvar constraint infeasible: most significant bits in word %d give bounds [%d,%d], word: [%g,%g]\n",
+            word, fixedval, fixedval + unfixedpower - 1, lb, ub);
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
       if( lb < fixedval - 0.5 )
       {
          /* lower bound can be adjusted to fixedval */
@@ -671,23 +683,41 @@ RETCODE propagateWord(
       if( lbbitset == ubbitset )
       {
          /* both bounds are identical in this bit: fix the corresponding bit variables */
-         if( SCIPvarGetStatus(consdata->bits[b]) != SCIP_VARSTATUS_FIXED )
+         if( SCIPvarGetLbLocal(consdata->bits[b]) < SCIPvarGetUbLocal(consdata->bits[b]) + 0.5 )
+         {
+            if( lbbitset )
+            {
+               debugMessage("bitvar <%s>: fixing bit %d <%s>: [%g,%g] -> [1,1] (word %d <%s>: [%g,%g])\n",
+                  SCIPconsGetName(cons), b, SCIPvarGetName(consdata->bits[b]),
+                  SCIPvarGetLbLocal(consdata->bits[b]), SCIPvarGetUbLocal(consdata->bits[b]),
+                  word, SCIPvarGetName(wordvar), lb, ub);
+               CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 1.0, infeasible) );
+            }
+            else
+            {
+               debugMessage("bitvar <%s>: fixing bit %d <%s>: [%g,%g] -> [0,0] (word %d <%s>: [%g,%g])\n",
+                  SCIPconsGetName(cons), b, SCIPvarGetName(consdata->bits[b]),
+                  SCIPvarGetLbLocal(consdata->bits[b]), SCIPvarGetUbLocal(consdata->bits[b]),
+                  word, SCIPvarGetName(wordvar), lb, ub);
+               CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 0.0, infeasible) );
+            }
             (*nfixedvars)++;
-         if( lbbitset )
-         {
-            debugMessage("bitvar <%s>: fixing bit %d <%s> to 1.0 (word %d <%s>: [%g,%g])\n",
-               SCIPconsGetName(cons), b, SCIPvarGetName(consdata->bits[b]), word, SCIPvarGetName(wordvar), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 1.0, infeasible) );
+            if( *infeasible )
+            {
+               debugMessage(" -> infeasible fixing\n");
+               return SCIP_OKAY;
+            }
          }
-         else
+         else if( lbbitset != (SCIPvarGetLbLocal(consdata->bits[b]) > 0.5) )
          {
-            debugMessage("bitvar <%s>: fixing bit %d <%s> to 0.0 (word %d <%s>: [%g,%g])\n",
-               SCIPconsGetName(cons), b, SCIPvarGetName(consdata->bits[b]), word, SCIPvarGetName(wordvar), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, consdata->bits[b], 0.0, infeasible) );
-         }
-         nfixedbits++;
-         if( *infeasible )
+            debugMessage("bitvar constraint infeasible: bit %d in word is fixed to %d, bit variable: [%g,%g]\n",
+               b, lbbitset, SCIPvarGetLbLocal(consdata->bits[b]), SCIPvarGetUbLocal(consdata->bits[b]));
+            *infeasible = TRUE;
             return SCIP_OKAY;
+         }
+         if( lbbitset )
+            fixedval += bitval;
+         nfixedbits++;
       }
       else
       {
@@ -700,13 +730,25 @@ RETCODE propagateWord(
    /* if all bits are fixed, fix the word */
    if( nfixedbits == wordsize )
    {
-      debugMessage("bitvar <%s>: fixing word %d <%s>: [%g,%g] -> [%g,%g]\n",
-         SCIPconsGetName(cons), word, SCIPvarGetName(wordvar), lb, ub, (Real)fixedval, (Real)fixedval);
-      if( SCIPvarGetStatus(wordvar) != SCIP_VARSTATUS_FIXED )
+      if( lbint < ubint )
+      {
+         debugMessage("bitvar <%s>: fixing word %d <%s>: [%g,%g] -> [%g,%g]\n",
+            SCIPconsGetName(cons), word, SCIPvarGetName(wordvar), lb, ub, (Real)fixedval, (Real)fixedval);
+         CHECK_OKAY( SCIPfixVar(scip, wordvar, (Real)fixedval, infeasible) );
          (*nfixedvars)++;
-      CHECK_OKAY( SCIPfixVar(scip, wordvar, (Real)fixedval, infeasible) );
-      if( *infeasible )
+         if( *infeasible )
+         {
+            debugMessage(" -> infeasible fixing\n");
+            return SCIP_OKAY;
+         }
+      }
+      else if( fixedval != lbint )
+      {
+         debugMessage("bitvar constraint infeasible: bits of word %d are fixed to value %d, word variable: [%d,%d]\n",
+            word, fixedval, lbint, ubint);
+         *infeasible = TRUE;
          return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
@@ -844,6 +886,7 @@ DECL_CONSINITLP(consInitlpBitvar)
 
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
+   /* add LP relaxations for all initial constraints */
    for( c = 0; c < nconss; ++c )
    {
       if( SCIPconsIsInitial(conss[c]) )
@@ -854,6 +897,7 @@ DECL_CONSINITLP(consInitlpBitvar)
          assert(consdata != NULL);
 
          /** add rows for all words in the bitvar constraint */
+         debugMessage("adding initial bitvar constraint <%s> to LP\n", SCIPconsGetName(conss[c]));
          for( w = 0; w < consdata->nwords; ++w )
          {
             CHECK_OKAY( addCut(scip, conss[c], w, 0.0) );
@@ -880,7 +924,7 @@ DECL_CONSSEPA(consSepaBitvar)
    /* step 1: check all useful bitvar constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      /*debugMessage("separating bitvar constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+      debugMessage("separating bitvar constraint <%s>\n", SCIPconsGetName(conss[c]));
       CHECK_OKAY( separate(scip, conss[c], result) );
    }
 
@@ -889,6 +933,7 @@ DECL_CONSSEPA(consSepaBitvar)
    {
       for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
       {
+         debugMessage("separating bitvar constraint <%s>\n", SCIPconsGetName(conss[c]));
          CHECK_OKAY( separate(scip, conss[c], result) );
       }
    }
@@ -915,6 +960,7 @@ DECL_CONSENFOLP(consEnfolpBitvar)
    /* step 1: check all useful bitvar constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
+      debugMessage("LP enforcing bitvar constraint <%s>\n", SCIPconsGetName(conss[c]));
       CHECK_OKAY( separate(scip, conss[c], result) );
    }
    if( *result != SCIP_FEASIBLE )
@@ -923,6 +969,7 @@ DECL_CONSENFOLP(consEnfolpBitvar)
    /* step 2: check all obsolete bitvar constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
+      debugMessage("LP enforcing bitvar constraint <%s>\n", SCIPconsGetName(conss[c]));
       CHECK_OKAY( separate(scip, conss[c], result) );
    }
 
@@ -1157,6 +1204,8 @@ DECL_EVENTEXEC(eventExecBitvar)
    CONSDATA* consdata;
 
    consdata = (CONSDATA*)eventdata;
+   assert(consdata != NULL);
+
    consdata->propagated = FALSE;
 
    return SCIP_OKAY;
@@ -1248,26 +1297,8 @@ RETCODE SCIPcreateConsBitvar(
    return SCIP_OKAY;
 }
 
-/** gets array with bits of bitvar, sorted least significant bit first */
-VAR** SCIPgetBitsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< bitvar constraint */
-   )
-{
-   CONSDATA* consdata;
-
-   assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   return consdata->bits;
-}
-
 /** gets number of bits in bitvar */
-int SCIPgetNBitsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
+int SCIPgetNBitsBitvar(
    CONS*            cons                /**< bitvar constraint */
    )
 {
@@ -1282,9 +1313,58 @@ int SCIPgetNBitsConsBitvar(
    return consdata->nbits;
 }
 
+/** gets array with bits of bitvar, sorted least significant bit first */
+VAR** SCIPgetBitsBitvar(
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->bits;
+}
+
+/** gets variable for single bit in bitvar */
+VAR* SCIPgetBitBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              bit                 /**< bit number to get variable for */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(0 <= bit && bit < consdata->nbits);
+
+   return consdata->bits[bit];
+}
+
+/** gets number of words in bitvar */
+int SCIPgetNWordsBitvar(
+   CONS*            cons                /**< bitvar constraint */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->nwords;
+}
+
 /** gets array with words of bitvar, sorted least significant word first */
-VAR** SCIPgetWordsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
+VAR** SCIPgetWordsBitvar(
    CONS*            cons                /**< bitvar constraint */
    )
 {
@@ -1299,10 +1379,10 @@ VAR** SCIPgetWordsConsBitvar(
    return consdata->words;
 }
 
-/** gets number of words in bitvar */
-int SCIPgetNWordsConsBitvar(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< bitvar constraint */
+/** gets variable for single word in bitvar */
+VAR* SCIPgetWordBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number to get variable for */
    )
 {
    CONSDATA* consdata;
@@ -1312,6 +1392,52 @@ int SCIPgetNWordsConsBitvar(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(0 <= word && word < consdata->nwords);
 
-   return consdata->nwords;
+   return consdata->words[word];
+}
+
+/** gets number of bits in a given word of a bitvar */
+int SCIPgetNWordBitsBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(word >= 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( word >= consdata->nwords )
+      return 0;
+   else
+      return wordSize(consdata, word);
+}
+
+/** returns the number of bits of the given word */
+int SCIPgetWordSizeBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number */
+   )
+{
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   return wordSize(SCIPconsGetData(cons), word);
+}
+
+/** returns the number of different values the given word can store (2^#bits) */
+int SCIPgetWordPowerBitvar(
+   CONS*            cons,               /**< bitvar constraint */
+   int              word                /**< word number */
+   )
+{
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   return wordPower(SCIPconsGetData(cons), word);
 }

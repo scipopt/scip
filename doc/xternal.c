@@ -22,6 +22,7 @@
  * @version  0.4
  * @author   Tobias Achterberg
  * @author   Thorsten Koch
+ * @author   Alexander Martin
  *
  * SCIP is a program and library to solve constraint mixed integer programs (CMIPs).
  *

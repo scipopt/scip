@@ -1,0 +1,8 @@
+#--- $Id: make.seq.linux.x86.gnu.gcov,v 1.1 2003/09/03 10:40:25 bzfpfend Exp $
+CPPFLAGS	+=	-DWITH_READLINE
+CFLAGS		=	-O0 -fprofile-arcs -ftest-coverage
+CXXFLAGS	=	-O0 -fprofile-arcs -ftest-coverage
+ARFLAGS		=	crs
+LDFLAGS		+=	-lreadline -lncurses
+# -static
+# gcov [-b] -o obj/O.seq.linux.x86.gnu.gcov/ src/<file>.c

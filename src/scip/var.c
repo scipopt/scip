@@ -1430,7 +1430,9 @@ Bool SCIPvarMayRoundUp(
    return (SCIPvarGetNLocksUp(var) == 0);
 }
 
-/** copies original variable into loose transformed variable, that is captured */
+/** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
+ *  a new transformed variable for this variable is created
+ */
 RETCODE SCIPvarTransform(
    VAR*             origvar,            /**< original problem variable */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
@@ -1447,31 +1449,39 @@ RETCODE SCIPvarTransform(
    assert(origvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
    assert(origvar->glbdom.lb == origvar->actdom.lb);
    assert(origvar->glbdom.ub == origvar->actdom.ub);
-   assert(origvar->data.transvar == NULL);
    assert(transvar != NULL);
 
-   /* convert 0/1 integer variables into binary variables */
-   vartype = (VARTYPE)(origvar->vartype);
-   if( vartype == SCIP_VARTYPE_INTEGER
-      && SCIPsetIsEQ(set, origvar->glbdom.lb, 0.0) && SCIPsetIsEQ(set, origvar->glbdom.ub, 1.0) )
-      vartype = SCIP_VARTYPE_BINARY;
-
-   /* create transformed variable */
-   sprintf(name, "t_%s", origvar->name);
-   CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
-                  name, origvar->glbdom.lb, origvar->glbdom.ub, objsense * origvar->obj, vartype, origvar->removeable) );
-
-   /* duplicate hole lists */
-   CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
-   CHECK_OKAY( holelistDuplicate(&(*transvar)->actdom.holelist, memhdr, set, origvar->actdom.holelist) );
-
-   /* link original and transformed variable */
-   origvar->data.transvar = *transvar;
-   CHECK_OKAY( varAddParent(*transvar, memhdr, set, origvar) );
-
-   /* copy rounding locks */
-   (*transvar)->nlocksdown = origvar->nlocksdown;
-   (*transvar)->nlocksup = origvar->nlocksup;
+   /* check if variable is already transformed */
+   if( origvar->data.transvar != NULL )
+   {
+      *transvar = origvar->data.transvar;
+      SCIPvarCapture(*transvar);
+   }
+   else
+   {
+      /* convert 0/1 integer variables into binary variables */
+      vartype = (VARTYPE)(origvar->vartype);
+      if( vartype == SCIP_VARTYPE_INTEGER
+         && SCIPsetIsEQ(set, origvar->glbdom.lb, 0.0) && SCIPsetIsEQ(set, origvar->glbdom.ub, 1.0) )
+         vartype = SCIP_VARTYPE_BINARY;
+      
+      /* create transformed variable */
+      sprintf(name, "t_%s", origvar->name);
+      CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
+                     name, origvar->glbdom.lb, origvar->glbdom.ub, objsense * origvar->obj, vartype, origvar->removeable) );
+      
+      /* duplicate hole lists */
+      CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
+      CHECK_OKAY( holelistDuplicate(&(*transvar)->actdom.holelist, memhdr, set, origvar->actdom.holelist) );
+      
+      /* link original and transformed variable */
+      origvar->data.transvar = *transvar;
+      CHECK_OKAY( varAddParent(*transvar, memhdr, set, origvar) );
+      
+      /* copy rounding locks */
+      (*transvar)->nlocksdown = origvar->nlocksdown;
+      (*transvar)->nlocksup = origvar->nlocksup;
+   }
 
    debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
 
