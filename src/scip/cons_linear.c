@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.94 2004/05/03 08:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.95 2004/05/05 13:27:42 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2518,10 +2518,7 @@ RETCODE createRow(
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), consdata->lhs, consdata->rhs,
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[v], consdata->vals[v]) );
-   }
+   CHECK_OKAY( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->vals) );
 
    return SCIP_OKAY;
 }

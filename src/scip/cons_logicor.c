@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.39 2004/05/03 08:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.40 2004/05/05 13:27:43 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -867,10 +867,7 @@ RETCODE createRow(
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 1.0, SCIPinfinity(scip),
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    
-   for( v = 0; v < consdata->nvars; ++v )
-   {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[v], 1.0) );
-   }
+   CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.90 2004/05/03 16:59:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.91 2004/05/05 13:27:44 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5615,7 +5615,7 @@ RETCODE SCIPvarAddToRow(
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
       assert(var->data.col->var == var);
-      CHECK_OKAY( SCIProwIncCoeff(row, memhdr, set, lp, var->data.col, val) );
+      CHECK_OKAY( SCIProwIncCoef(row, memhdr, set, lp, var->data.col, val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.21 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.22 2004/05/05 13:27:42 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -638,10 +638,7 @@ RETCODE createRelaxation(
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
-   for( i = 0; i < nvars; ++i )
-   {
-      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->vars[i], -1.0) );
-   }
+   CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );
 
    return SCIP_OKAY;
 }  

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.116 2004/05/05 12:47:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.117 2004/05/05 13:27:43 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -603,7 +603,7 @@ int colSearchCoeffPart(
 
 /** searches coefficient in column, returns position in col vector or -1 if not found */
 static
-int colSearchCoeff(
+int colSearchCoef(
    COL*             col,                /**< column to be searched in */
    const ROW*       row                 /**< coefficient to be searched for */
    )
@@ -680,7 +680,7 @@ int rowSearchCoeffPart(
  *  if the sorting of the row is delayed, returns -1
  */
 static
-int rowSearchCoeff(
+int rowSearchCoef(
    ROW*             row,                /**< row to be searched in */
    const COL*       col                 /**< coefficient to be searched for */
    )
@@ -722,7 +722,7 @@ int rowSearchCoeff(
 
 /** moves a coefficient in a column to a different place, and updates all corresponding data structures */
 static
-void colMoveCoeff(
+void colMoveCoef(
    COL*             col,                /**< LP column */
    int              oldpos,             /**< old position of coefficient */
    int              newpos              /**< new position of coefficient */
@@ -818,7 +818,7 @@ void colSwapCoeffs(
 
 /** moves a coefficient in a row to a different place, and updates all corresponding data structures */
 static
-void rowMoveCoeff(
+void rowMoveCoef(
    ROW*             row,                /**< LP row */
    int              oldpos,             /**< old position of coefficient */
    int              newpos              /**< new position of coefficient */
@@ -1047,7 +1047,7 @@ void coefChanged(
 
 /** adds a previously non existing coefficient to an LP column */
 static
-RETCODE colAddCoeff(
+RETCODE colAddCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -1065,7 +1065,7 @@ RETCODE colAddCoeff(
    assert(col->var != NULL);
    assert(row != NULL);
    assert(!SCIPsetIsZero(set, val));
-   /*assert(colSearchCoeff(col, row) == -1);*/ /* this assert would lead to slight differences in the solution process */
+   /*assert(colSearchCoef(col, row) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    CHECK_OKAY( colEnsureSize(col, memhdr, set, col->len+1) );
    assert(col->rows != NULL);
@@ -1083,14 +1083,11 @@ RETCODE colAddCoeff(
       /* move the first non-LP/not linked row to the end */
       if( col->nlprows < pos )
       {
-         colMoveCoeff(col, col->nlprows, pos);
+         colMoveCoef(col, col->nlprows, pos);
          pos = col->nlprows;
       }
       col->nlprows++;
    }
-
-   debugMessage("adding coefficient %g * <%s> at position %d (%d/%d) to column <%s>\n",
-      val, row->name, pos, col->nlprows, col->len, SCIPvarGetName(col->var));
 
    /* insert the row at the correct position and update the links */
    col->rows[pos] = row;
@@ -1129,6 +1126,9 @@ RETCODE colAddCoeff(
    
    coefChanged(row, col, lp);
 
+   debugMessage("added coefficient %g * <%s> at position %d (%d/%d) to column <%s> (nunlinked=%d)\n",
+      val, row->name, pos, col->nlprows, col->len, SCIPvarGetName(col->var), col->nunlinked);
+
    return SCIP_OKAY;
 }
 
@@ -1163,13 +1163,13 @@ RETCODE colDelCoeffPos(
    /* if row is a linked LP row, move last linked LP coefficient to position of empty slot (deleted coefficient) */
    if( pos < col->nlprows )
    {
-      colMoveCoeff(col, col->nlprows-1, pos);
+      colMoveCoef(col, col->nlprows-1, pos);
       col->nlprows--;
       pos = col->nlprows;
    }
 
    /* move last coefficient to position of empty slot */
-   colMoveCoeff(col, col->len-1, pos);
+   colMoveCoef(col, col->len-1, pos);
    col->len--;
 
    coefChanged(row, col, lp);
@@ -1321,7 +1321,7 @@ void rowDelNorms(
 
 /** adds a previously non existing coefficient to an LP row */
 static
-RETCODE rowAddCoeff(
+RETCODE rowAddCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -1340,7 +1340,7 @@ RETCODE rowAddCoeff(
    assert(col->var != NULL);
    assert(col->var_probindex == SCIPvarGetProbindex(col->var));
    assert(!SCIPsetIsZero(set, val));
-   /*assert(rowSearchCoeff(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
+   /*assert(rowSearchCoef(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    if( row->nlocks > 0 )
    {
@@ -1363,14 +1363,11 @@ RETCODE rowAddCoeff(
       /* move the first non-LP/not linked column to the end */
       if( row->nlpcols < pos )
       {
-         rowMoveCoeff(row, row->nlpcols, pos);
+         rowMoveCoef(row, row->nlpcols, pos);
          pos = row->nlpcols;
       }
       row->nlpcols++;
    }
-
-   debugMessage("adding coefficient %g * <%s> at position %d (%d/%d) to row <%s>\n",
-      val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->name);
 
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
@@ -1413,6 +1410,9 @@ RETCODE rowAddCoeff(
 
    coefChanged(row, col, lp);
 
+   debugMessage("added coefficient %g * <%s> at position %d (%d/%d) to row <%s> (nunlinked=%d)\n",
+      val, SCIPvarGetName(col->var), pos, row->nlpcols, row->len, row->name, row->nunlinked);
+
    return SCIP_OKAY;
 }
 
@@ -1454,13 +1454,13 @@ RETCODE rowDelCoeffPos(
    /* if column is a linked LP column, move last linked LP coefficient to position of empty slot (deleted coefficient) */
    if( pos < row->nlpcols )
    {
-      rowMoveCoeff(row, row->nlpcols-1, pos);
+      rowMoveCoef(row, row->nlpcols-1, pos);
       row->nlpcols--;
       pos = row->nlpcols;
    }
 
    /* move last coefficient to position of empty slot */
-   rowMoveCoeff(row, row->len-1, pos);
+   rowMoveCoef(row, row->len-1, pos);
    row->len--;
 
    rowDelNorms(row, set, col->index, val);
@@ -1597,7 +1597,7 @@ RETCODE colLink(
          if( col->linkpos[i] == -1 )
          {
             /* this call might swap the current row with the first non-LP/not linked row, but this is of no harm */
-            CHECK_OKAY( rowAddCoeff(col->rows[i], memhdr, set, lp, col, col->vals[i], i) );
+            CHECK_OKAY( rowAddCoef(col->rows[i], memhdr, set, lp, col, col->vals[i], i) );
          }
          assert(col->rows[i]->cols[col->linkpos[i]] == col);
          assert(col->rows[i]->linkpos[col->linkpos[i]] == i);
@@ -1677,7 +1677,7 @@ RETCODE rowLink(
          if( row->linkpos[i] == -1 )
          {
             /* this call might swap the current column with the first non-LP/not linked column, but this is of no harm */
-            CHECK_OKAY( colAddCoeff(row->cols[i], memhdr, set, lp, row, row->vals[i], i) );
+            CHECK_OKAY( colAddCoef(row->cols[i], memhdr, set, lp, row, row->vals[i], i) );
          }
          assert(row->cols[i]->rows[row->linkpos[i]] == row);
          assert(row->cols[i]->linkpos[row->linkpos[i]] == i);
@@ -2136,7 +2136,7 @@ void SCIPcolSort(
 }
 
 /** adds a previously non existing coefficient to an LP column */
-RETCODE SCIPcolAddCoeff(
+RETCODE SCIPcolAddCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -2148,7 +2148,7 @@ RETCODE SCIPcolAddCoeff(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1) );
+   CHECK_OKAY( colAddCoef(col, memhdr, set, lp, row, val, -1) );
 
    checkLinks(lp);
 
@@ -2156,7 +2156,7 @@ RETCODE SCIPcolAddCoeff(
 }
 
 /** deletes existing coefficient from column */
-RETCODE SCIPcolDelCoeff(
+RETCODE SCIPcolDelCoef(
    COL*             col,                /**< column to be changed */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
@@ -2172,7 +2172,7 @@ RETCODE SCIPcolDelCoeff(
    assert(row != NULL);
 
    /* search the position of the row in the column's row vector */
-   pos = colSearchCoeff(col, row);
+   pos = colSearchCoef(col, row);
    if( pos == -1 )
    {
       errorMessage("coefficient for row <%s> doesn't exist in column <%s>\n", row->name, SCIPvarGetName(col->var));
@@ -2199,7 +2199,7 @@ RETCODE SCIPcolDelCoeff(
 }
 
 /** changes or adds a coefficient to an LP column */
-RETCODE SCIPcolChgCoeff(
+RETCODE SCIPcolChgCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -2216,13 +2216,13 @@ RETCODE SCIPcolChgCoeff(
    assert(row != NULL);
 
    /* search the position of the row in the column's row vector */
-   pos = colSearchCoeff(col, row);
+   pos = colSearchCoef(col, row);
 
    /* check, if row already exists in the column's row vector */
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, val, -1) );
+      CHECK_OKAY( colAddCoef(col, memhdr, set, lp, row, val, -1) );
    }
    else
    {
@@ -2249,7 +2249,7 @@ RETCODE SCIPcolChgCoeff(
 }
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
-RETCODE SCIPcolIncCoeff(
+RETCODE SCIPcolIncCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -2269,13 +2269,13 @@ RETCODE SCIPcolIncCoeff(
       return SCIP_OKAY;
 
    /* search the position of the row in the column's row vector */
-   pos = colSearchCoeff(col, row);
+   pos = colSearchCoef(col, row);
 
    /* check, if row already exists in the column's row vector */
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      CHECK_OKAY( colAddCoeff(col, memhdr, set, lp, row, incval, -1) );
+      CHECK_OKAY( colAddCoef(col, memhdr, set, lp, row, incval, -1) );
    }
    else
    {
@@ -3362,7 +3362,7 @@ RETCODE SCIProwUnlock(
 }
 
 /** adds a previously non existing coefficient to an LP row */
-RETCODE SCIProwAddCoeff(
+RETCODE SCIProwAddCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -3374,7 +3374,7 @@ RETCODE SCIProwAddCoeff(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1) );
+   CHECK_OKAY( rowAddCoef(row, memhdr, set, lp, col, val, -1) );
 
    checkLinks(lp);
 
@@ -3382,7 +3382,7 @@ RETCODE SCIProwAddCoeff(
 }
 
 /** deletes coefficient from row */
-RETCODE SCIProwDelCoeff(
+RETCODE SCIProwDelCoef(
    ROW*             row,                /**< row to be changed */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
@@ -3399,7 +3399,7 @@ RETCODE SCIProwDelCoeff(
    assert(col->var != NULL);
 
    /* search the position of the column in the row's col vector */
-   pos = rowSearchCoeff(row, col);
+   pos = rowSearchCoef(row, col);
    if( pos == -1 )
    {
       errorMessage("coefficient for column <%s> doesn't exist in row <%s>\n", SCIPvarGetName(col->var), row->name);
@@ -3426,7 +3426,7 @@ RETCODE SCIProwDelCoeff(
 }
 
 /** changes or adds a coefficient to an LP row */
-RETCODE SCIProwChgCoeff(
+RETCODE SCIProwChgCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -3444,13 +3444,13 @@ RETCODE SCIProwChgCoeff(
    assert(col != NULL);
 
    /* search the position of the column in the row's col vector */
-   pos = rowSearchCoeff(row, col);
+   pos = rowSearchCoef(row, col);
 
    /* check, if column already exists in the row's col vector */
    if( pos == -1 )
    {
       /* add previously not existing coefficient */
-      CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, val, -1) );
+      CHECK_OKAY( rowAddCoef(row, memhdr, set, lp, col, val, -1) );
    }
    else
    {
@@ -3477,7 +3477,7 @@ RETCODE SCIProwChgCoeff(
 }
 
 /** increases value of an existing or nonexisting coefficient in an LP row */
-RETCODE SCIProwIncCoeff(
+RETCODE SCIProwIncCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -3497,13 +3497,13 @@ RETCODE SCIProwIncCoeff(
       return SCIP_OKAY;
 
    /* search the position of the column in the row's col vector */
-   pos = rowSearchCoeff(row, col);
+   pos = rowSearchCoef(row, col);
 
    /* check, if column already exists in the row's col vector */
    if( pos == -1 )
    {
       /* coefficient doesn't exist, or sorting is delayed: add coefficient to the end of the row's arrays */
-      CHECK_OKAY( rowAddCoeff(row, memhdr, set, lp, col, incval, -1) );
+      CHECK_OKAY( rowAddCoef(row, memhdr, set, lp, col, incval, -1) );
    }
    else
    {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.43 2004/05/03 08:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.44 2004/05/05 13:27:42 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -335,10 +335,13 @@ RETCODE createRelaxation(
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons),
                   -SCIPinfinity(scip), (Real)consdata->capacity,
                   SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+
+   CHECK_OKAY( SCIPcacheRowExtensions(scip, consdata->row) );
    for( i = 0; i < consdata->nvars; ++i )
    {
       CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[i], (Real)consdata->weights[i]) );
    }
+   CHECK_OKAY( SCIPflushRowExtensions(scip, consdata->row) );
 
    return SCIP_OKAY;
 }  
@@ -813,6 +816,8 @@ RETCODE separateCardinality(
             CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), (Real)ncovervars, 
                            SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
             
+            CHECK_OKAY( SCIPcacheRowExtensions(scip, row) );
+
             /* add cover elements to cut */
             for( v = 0; v < ncovervars; v++ )
             {
@@ -827,6 +832,8 @@ RETCODE separateCardinality(
                   CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[noncovervars[v]], (Real)liftcoefs[v]) );
                }
             }
+
+            CHECK_OKAY( SCIPflushRowExtensions(scip, row) );
             
             /* check, if cut is violated enough */
             cutnorm = SCIProwGetNorm(row);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.164 2004/05/05 12:47:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.165 2004/05/05 13:27:43 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6024,6 +6024,41 @@ RETCODE SCIPchgRowRhs(
    return SCIP_OKAY;
 }
 
+/** informs row, that all subsequent additions of variables to the row should be cached and not directly applied;
+ *  after all additions were applied, SCIPflushRowExtensions() must be called;
+ *  while the caching of row extensions is activated, information methods of the row give invalid results;
+ *  caching should be used, if a row is build with SCIPaddVarToRow() calls variable by variable to increase
+ *  the performance
+ */
+RETCODE SCIPcacheRowExtensions(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcacheRowExtension", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* delay the row sorting */
+   SCIProwDelaySort(row);
+
+   return SCIP_OKAY;
+}
+
+/** flushes all cached row extensions after a call of SCIPcacheRowExtensions() and merges coefficients with
+ *  equal columns into a single coefficient
+ */
+RETCODE SCIPflushRowExtensions(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPflushRowExtension", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* force the row sorting, and merge equal column entries */
+   SCIProwForceSort(row, scip->set);
+
+   return SCIP_OKAY;
+}
+
 /** resolves variable to columns and adds them with the coefficient to the row */
 RETCODE SCIPaddVarToRow(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6040,8 +6075,7 @@ RETCODE SCIPaddVarToRow(
 }
 
 /** resolves variables to columns and adds them with the coefficients to the row;
- *  if you want to add more than one variable to a row, for performance reasons this method is highly
- *  preferable to many single calls to SCIPaddVarToRow()
+ *  this method caches the row extensions and flushes them afterwards to gain better performance
  */
 RETCODE SCIPaddVarsToRow(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6075,8 +6109,7 @@ RETCODE SCIPaddVarsToRow(
 }
 
 /** resolves variables to columns and adds them with the same single coefficient to the row;
- *  if you want to add more than one variable to a row, for performance reasons this method is highly
- *  preferable to many single calls to SCIPaddVarToRow()
+ *  this method caches the row extensions and flushes them afterwards to gain better performance
  */
 RETCODE SCIPaddVarsToRowSameCoef(
    SCIP*            scip,               /**< SCIP data structure */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.3 2004/05/03 13:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.4 2004/05/05 13:27:44 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -137,6 +137,8 @@ RETCODE createObjRow(
       /* create objective value equality */
       CHECK_OKAY( SCIPcreateEmptyRow(scip, &sepadata->objrow, "objrow", 0.0, 0.0,
                      FALSE, !SCIPallVarsInProb(scip), TRUE) );
+
+      CHECK_OKAY( SCIPcacheRowExtensions(scip, sepadata->objrow) );
       for( v = 0; v < nvars; ++v )
       {
          obj = SCIPvarGetObj(vars[v]);
@@ -146,6 +148,7 @@ RETCODE createObjRow(
          }
       }
       CHECK_OKAY( SCIPaddVarToRow(scip, sepadata->objrow, sepadata->objvar, -1.0) );
+      CHECK_OKAY( SCIPflushRowExtensions(scip, sepadata->objrow) );
 
       debugMessage("created objective value row: ");
       debug(SCIPprintRow(scip, sepadata->objrow, NULL));

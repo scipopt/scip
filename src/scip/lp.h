@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.77 2004/05/04 19:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.78 2004/05/05 13:27:43 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -81,7 +81,7 @@ void SCIPcolSort(
 
 /** adds a previously non existing coefficient to an LP column */
 extern
-RETCODE SCIPcolAddCoeff(
+RETCODE SCIPcolAddCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -92,7 +92,7 @@ RETCODE SCIPcolAddCoeff(
 
 /** deletes coefficient from column */
 extern
-RETCODE SCIPcolDelCoeff(
+RETCODE SCIPcolDelCoef(
    COL*             col,                /**< column to be changed */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
@@ -101,7 +101,7 @@ RETCODE SCIPcolDelCoeff(
 
 /** changes or adds a coefficient to an LP column */
 extern
-RETCODE SCIPcolChgCoeff(
+RETCODE SCIPcolChgCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -112,7 +112,7 @@ RETCODE SCIPcolChgCoeff(
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
 extern
-RETCODE SCIPcolIncCoeff(
+RETCODE SCIPcolIncCoef(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -279,7 +279,7 @@ void SCIProwForceSort(
 
 /** adds a previously non existing coefficient to an LP row */
 extern
-RETCODE SCIProwAddCoeff(
+RETCODE SCIProwAddCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -290,7 +290,7 @@ RETCODE SCIProwAddCoeff(
 
 /** deletes coefficient from row */
 extern
-RETCODE SCIProwDelCoeff(
+RETCODE SCIProwDelCoef(
    ROW*             row,                /**< row to be changed */
    SET*             set,                /**< global SCIP settings */
    LP*              lp,                 /**< current LP data */
@@ -299,7 +299,7 @@ RETCODE SCIProwDelCoeff(
 
 /** changes or adds a coefficient to an LP row */
 extern
-RETCODE SCIProwChgCoeff(
+RETCODE SCIProwChgCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -310,7 +310,7 @@ RETCODE SCIProwChgCoeff(
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
 extern
-RETCODE SCIProwIncCoeff(
+RETCODE SCIProwIncCoef(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */

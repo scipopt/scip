@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.131 2004/05/03 16:59:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.132 2004/05/05 13:27:44 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2332,6 +2332,27 @@ RETCODE SCIPchgRowRhs(
    Real             rhs                 /**< new right hand side */
    );
 
+/** informs row, that all subsequent additions of variables to the row should be cached and not directly applied;
+ *  after all additions were applied, SCIPflushRowExtensions() must be called;
+ *  while the caching of row extensions is activated, information methods of the row give invalid results;
+ *  caching should be used, if a row is build with SCIPaddVarToRow() calls variable by variable to increase
+ *  the performance
+ */
+extern
+RETCODE SCIPcacheRowExtensions(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
+/** flushes all cached row extensions after a call of SCIPcacheRowExtensions() and merges coefficients with
+ *  equal columns into a single coefficient
+ */
+extern
+RETCODE SCIPflushRowExtensions(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< LP row */
+   );
+
 /** resolves variable to columns and adds them with the coefficient to the row */
 extern
 RETCODE SCIPaddVarToRow(
@@ -2342,8 +2363,7 @@ RETCODE SCIPaddVarToRow(
    );
 
 /** resolves variables to columns and adds them with the coefficients to the row;
- *  if you want to add more than one variable to a row, for performance reasons this method is highly
- *  preferable to many single calls to SCIPaddVarToRow()
+ *  this method caches the row extensions and flushes them afterwards to gain better performance
  */
 extern
 RETCODE SCIPaddVarsToRow(
@@ -2355,8 +2375,7 @@ RETCODE SCIPaddVarsToRow(
    );
 
 /** resolves variables to columns and adds them with the same single coefficient to the row;
- *  if you want to add more than one variable to a row, for performance reasons this method is highly
- *  preferable to many single calls to SCIPaddVarToRow()
+ *  this method caches the row extensions and flushes them afterwards to gain better performance
  */
 extern
 RETCODE SCIPaddVarsToRowSameCoef(
