@@ -1142,6 +1142,8 @@ RETCODE SCIPlpiGetRows(
    Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
+   int retcode;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -1155,7 +1157,11 @@ RETCODE SCIPlpiGetRows(
       CHECK_OKAY( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
       CHECK_ZERO( CPXgetsense(cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
       CHECK_ZERO( CPXgetrhs(cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
-      CHECK_ZERO( CPXgetrngval(cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow) );
+      retcode = CPXgetrngval(cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
+      if( retcode != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
+      {
+         CHECK_ZERO( retcode );
+      }
       
       /* convert sen/rhs/range into lhs/rhs tuples */
       reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
