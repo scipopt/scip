@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.66 2004/10/19 18:36:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.67 2004/10/20 15:52:41 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3627,7 +3627,7 @@ RETCODE conflictAnalyzeLP(
             valid = SCIPlpiIsPrimalInfeasible(lpi);
 
          /* count number of LP iterations */
-         CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &iter) );
+         CHECK_OKAY( SCIPlpiGetIterations(lpi, &iter) );
          (*iterations) += iter;
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
@@ -3933,7 +3933,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStop(stat->conflictlptime, set);
 
          /* count number of LP iterations */
-         CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITER, &iter) );
+         CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, &iter) );
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
          conflict->nsbiterations += iter;
@@ -3978,7 +3978,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStop(stat->conflictlptime, set);
 
          /* count number of LP iterations */
-         CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITER, &iter) );
+         CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, &iter) );
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
          conflict->nsbiterations += iter;

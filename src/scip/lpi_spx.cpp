@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.32 2004/10/20 10:51:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.33 2004/10/20 15:52:42 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -59,8 +59,6 @@ class SPxSCIP : public SPxSolver
    SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
-   bool             m_fastmip;          /**< FASTMIP setting (not used) */
-   bool             m_scaling;          /**< SCALING setting (not used) */
    Real             m_objLoLimit;       /**< lower objective limit */
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
@@ -70,8 +68,6 @@ public:
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
-        m_fastmip(false),
-        m_scaling(false),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
         m_stat(NO_PROBLEM)
@@ -101,26 +97,6 @@ public:
    void setFromScratch(bool fs)
    {
       m_fromscratch = fs;
-   }
-
-   bool getFastMip() const
-   {
-      return m_fastmip;
-   }
-
-   void setFastMip(bool fm)
-   {
-      m_fastmip = fm;
-   }
-
-   bool getScaling() const
-   {
-      return m_scaling;
-   }
-
-   void setScaling(bool fm)
-   {
-      m_scaling = fm;
    }
 
    void setProbname(const char* probname)
@@ -1781,6 +1757,22 @@ RETCODE SCIPlpiGetDualfarkas(
    return SCIP_OKAY;
 }
 
+/** gets the number of LP iterations of the last solve call */
+RETCODE SCIPlpiGetIterations(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             iterations          /**< pointer to store the number of iterations of the last solve call */
+   )
+{
+   debugMessage("calling SCIPlpiGetIterations()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   *iterations = lpi->spx->iterations();
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -2184,23 +2176,11 @@ RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FROMSCRATCH:
       *ival = lpi->spx->getFromScratch();
       break;
-   case SCIP_LPPAR_FASTMIP:
-      *ival = lpi->spx->getFastMip();
-      break;
-   case SCIP_LPPAR_SCALING:
-      *ival = lpi->spx->getScaling();
-      break;
-   case SCIP_LPPAR_PRICING:
-      *ival = SCIP_PRICING_AUTO;
-      break;
    case SCIP_LPPAR_LPINFO:
       *ival = (Param::verbose() > 0 ? TRUE : FALSE);
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->terminationIter();
-      break;
-   case SCIP_LPPAR_LPITER:
-      *ival = lpi->spx->iterations();
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -2226,16 +2206,6 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FROMSCRATCH:
       assert(ival == TRUE || ival == FALSE);
       lpi->spx->setFromScratch(bool(ival));
-      break;
-   case SCIP_LPPAR_FASTMIP:
-      assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setFastMip(bool(ival));
-      break;
-   case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setScaling(bool(ival));
-      break;
-   case SCIP_LPPAR_PRICING:
       break;
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
@@ -2270,9 +2240,6 @@ RETCODE SCIPlpiGetRealpar(
    switch( type )
    {
    case SCIP_LPPAR_FEASTOL:
-      *dval = lpi->spx->delta();
-      break;
-   case SCIP_LPPAR_DUALFEASTOL:
       *dval = lpi->spx->delta();
       break;
    case SCIP_LPPAR_LOBJLIM:

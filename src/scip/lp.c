@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.153 2004/10/19 18:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.154 2004/10/20 15:52:41 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1834,18 +1834,24 @@ static
 RETCODE lpSetIntpar(
    LP*              lp,                 /**< current LP data */
    LPPARAM          lpparam,            /**< LP parameter */
-   int              value               /**< value to set parameter to */
+   int              value,              /**< value to set parameter to */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    RETCODE retcode;
 
    assert(lp != NULL);
+   assert(success != NULL);
 
    retcode = SCIPlpiSetIntpar(lp->lpi, lpparam, value);
 
-   /* ignore unknown parameter error */
+   /* check, if parameter is unknown */
    if( retcode == SCIP_PARAMETERUNKNOWN )
+   {
+      *success = FALSE;
       return SCIP_OKAY;
+   }
+   *success = TRUE;
 
    return retcode;
 }
@@ -1855,18 +1861,24 @@ static
 RETCODE lpSetRealpar(
    LP*              lp,                 /**< current LP data */
    LPPARAM          lpparam,            /**< LP parameter */
-   Real             value               /**< value to set parameter to */
+   Real             value,              /**< value to set parameter to */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    RETCODE retcode;
 
    assert(lp != NULL);
+   assert(success != NULL);
 
    retcode = SCIPlpiSetRealpar(lp->lpi, lpparam, value);
 
-   /* ignore unknown parameter error */
+   /* check, if parameter is unknown */
    if( retcode == SCIP_PARAMETERUNKNOWN )
+   {
+      *success = FALSE;
       return SCIP_OKAY;
+   }
+   *success = TRUE;
 
    return retcode;
 }
@@ -1946,14 +1958,18 @@ RETCODE lpSetUobjlim(
 
    if( uobjlim != lp->lpiuobjlim )
    {
-      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_UOBJLIM, uobjlim) );
+      Bool success;
 
-      /* mark the current solution invalid */
-      lp->solved = FALSE;
-      lp->primalfeasible = FALSE;
-      lp->lpobjval = SCIP_INVALID;
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-      lp->lpiuobjlim = uobjlim;
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_UOBJLIM, uobjlim, &success) );
+      if( success )
+      {
+         /* mark the current solution invalid */
+         lp->solved = FALSE;
+         lp->primalfeasible = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         lp->lpiuobjlim = uobjlim;
+      }
    }
 
    return SCIP_OKAY;
@@ -1963,27 +1979,34 @@ RETCODE lpSetUobjlim(
 static
 RETCODE lpSetFeastol(
    LP*              lp,                 /**< current LP data */
-   Real             feastol             /**< new feasibility tolerance */
+   Real             feastol,            /**< new feasibility tolerance */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
    assert(feastol >= 0.0);
-   
+   assert(success != NULL);
+
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_FEASTOL, lp->lpifeastol) );
 
    if( feastol != lp->lpifeastol )
    {
-      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, feastol) );
-      if( lp->nrows > 0 && feastol < lp->lpifeastol )
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, feastol, success) );
+      if( *success )
       {
-         /* mark the current solution invalid */
-         lp->solved = FALSE;
-         lp->primalfeasible = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         if( lp->nrows > 0 && feastol < lp->lpifeastol )
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            lp->primalfeasible = FALSE;
+            lp->lpobjval = SCIP_INVALID;
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpifeastol = feastol;
       }
-      lp->lpifeastol = feastol;
    }
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1992,27 +2015,34 @@ RETCODE lpSetFeastol(
 static
 RETCODE lpSetDualFeastol(
    LP*              lp,                 /**< current LP data */
-   Real             dualfeastol         /**< new reduced costs feasibility tolerance */
+   Real             dualfeastol,        /**< new reduced costs feasibility tolerance */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
    assert(dualfeastol >= 0.0);
+   assert(success != NULL);
 
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_DUALFEASTOL, lp->lpidualfeastol) );
 
    if( dualfeastol != lp->lpidualfeastol )
    {
-      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, dualfeastol) );
-      if( lp->nrows > 0 && dualfeastol < lp->lpidualfeastol )
+      CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, dualfeastol, success) );
+      if( *success )
       {
-         /* mark the current solution invalid */
-         lp->solved = FALSE;
-         lp->dualfeasible = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         if( lp->nrows > 0 && dualfeastol < lp->lpidualfeastol )
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            lp->dualfeasible = FALSE;
+            lp->lpobjval = SCIP_INVALID;
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpidualfeastol = dualfeastol;
       }
-      lp->lpidualfeastol = dualfeastol;
    }
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2021,19 +2051,24 @@ RETCODE lpSetDualFeastol(
 static
 RETCODE lpSetFromscratch(
    LP*              lp,                 /**< current LP data */
-   Bool             fromscratch         /**< new FROMSCRATCH setting */
+   Bool             fromscratch,        /**< new FROMSCRATCH setting */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
+   assert(success != NULL);
 
    CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_FROMSCRATCH, lp->lpifromscratch) );
 
    if( fromscratch != lp->lpifromscratch )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, fromscratch) );
-      lp->lpifromscratch = fromscratch;
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, fromscratch, success) );
+      if( *success )
+         lp->lpifromscratch = fromscratch;
    }
-   
+   else
+      *success = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -2041,19 +2076,24 @@ RETCODE lpSetFromscratch(
 static
 RETCODE lpSetFastmip(
    LP*              lp,                 /**< current LP data */
-   Bool             fastmip             /**< new FASTMIP setting */
+   Bool             fastmip,            /**< new FASTMIP setting */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
+   assert(success != NULL);
 
    CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
 
    if( fastmip != lp->lpifastmip )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FASTMIP, fastmip) );
-      lp->lpifastmip = fastmip;
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FASTMIP, fastmip, success) );
+      if( *success )
+         lp->lpifastmip = fastmip;
    }
-   
+   else
+      *success = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -2061,19 +2101,49 @@ RETCODE lpSetFastmip(
 static
 RETCODE lpSetScaling(
    LP*              lp,                 /**< current LP data */
-   Bool             scaling             /**< new SCALING setting */
+   Bool             scaling,            /**< new SCALING setting */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
+   assert(success != NULL);
 
    CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_SCALING, lp->lpiscaling) );
 
    if( scaling != lp->lpiscaling )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_SCALING, scaling) );
-      lp->lpiscaling = scaling;
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_SCALING, scaling, success) );
+      if( *success )
+         lp->lpiscaling = scaling;
    }
-   
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets the PRESOLVING setting of the LP solver */
+static
+RETCODE lpSetPresolving(
+   LP*              lp,                 /**< current LP data */
+   Bool             presolving,         /**< new PRESOLVING setting */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_PRESOLVING, lp->lpipresolving) );
+
+   if( presolving != lp->lpipresolving )
+   {
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_PRESOLVING, presolving, success) );
+      if( *success )
+         lp->lpipresolving = presolving;
+   }
+   else
+      *success = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -2084,6 +2154,8 @@ RETCODE lpSetIterationLimit(
    int              itlim               /**< maximal number of LP iterations to perform, or -1 for no limit */
    )
 {
+   Bool success;
+
    assert(lp != NULL);
    assert(itlim >= -1);
 
@@ -2094,18 +2166,20 @@ RETCODE lpSetIterationLimit(
 
    if( itlim != lp->lpiitlim )
    {
-      if( itlim > lp->lpiitlim )
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPITLIM, itlim, &success) );
+      if( success )
       {
-         /* mark the current solution invalid */
-         lp->solved = FALSE;
-         lp->lpobjval = SCIP_INVALID;
-         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         if( itlim > lp->lpiitlim )
+         {
+            /* mark the current solution invalid */
+            lp->solved = FALSE;
+            lp->lpobjval = SCIP_INVALID;
+            lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         }
+         lp->lpiitlim = itlim;
       }
-
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPITLIM, itlim) );
-      lp->lpiitlim = itlim;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2116,16 +2190,19 @@ RETCODE lpSetLPInfo(
    Bool             lpinfo              /**< should the LP solver display status messages? */
    )
 {
+   Bool success;
+
    assert(lp != NULL);
 
    CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_LPINFO, lp->lpilpinfo) );
 
    if( lpinfo != lp->lpilpinfo )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPINFO, lpinfo) );
-      lp->lpilpinfo = lpinfo;
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPINFO, lpinfo, &success) );
+      if( success )
+         lp->lpilpinfo = lpinfo;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -6120,6 +6197,8 @@ RETCODE SCIPlpCreate(
    const char*      name                /**< problem name */
    )
 {
+   Bool success;
+
    assert(lp != NULL);
    assert(set != NULL);
    assert(name != NULL);
@@ -6182,20 +6261,62 @@ RETCODE SCIPlpCreate(
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
    (*lp)->lpiscaling = TRUE;
+   (*lp)->lpipresolving = TRUE;
    (*lp)->lpilpinfo = FALSE;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lastwasprimal = FALSE;
 
    /* set default parameters in LP solver */
-   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim) );
-   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol) );
-   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: upper objective limit cannot be set -- can lead to unnecessary simplex iterations\n");
+   }
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_FEASTOL, (*lp)->lpifeastol, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: primal feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n");
+   }
+   CHECK_OKAY( lpSetRealpar(*lp, SCIP_LPPAR_DUALFEASTOL, (*lp)->lpidualfeastol, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n");
+   }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: fastmip setting not available -- SCIP parameter has no effect\n");
+   }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: scaling not available -- SCIP parameter has no effect\n");
+   }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRESOLVING, (*lp)->lpipresolving, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: presolving not available -- SCIP parameter has no effect\n");
+   }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: iteration limit cannot be set -- can lead to unnecessary simplex iterations\n");
+   }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo, &success) );
+   if( !success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver: lpinfo setting not available -- SCIP parameter has no effect\n");
+   }
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO, &success) ); /*lint !e641*/
 
    return SCIP_OKAY;
 }
@@ -7734,8 +7855,9 @@ RETCODE lpPrimalSimplex(
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+      printf("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
+         lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
 
@@ -7808,8 +7930,9 @@ RETCODE lpDualSimplex(
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
-      printf("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d)\n", 
-         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling);
+      printf("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+         fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
+         lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
 #endif
 
@@ -7900,6 +8023,8 @@ RETCODE lpSolveStable(
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
+   Bool success;
+
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->looseobjvalinf == 0);
@@ -7911,11 +8036,12 @@ RETCODE lpSolveStable(
 
    /* solve with given settings (usually fast but unprecise) */
    CHECK_OKAY( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
-   CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set)) );
-   CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set)) );
-   CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
-   CHECK_OKAY( lpSetFastmip(lp, fastmip) );
-   CHECK_OKAY( lpSetScaling(lp, set->lp_scaling) );
+   CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+   CHECK_OKAY( lpSetDualFeastol(lp, SCIPsetDualfeastol(set), &success) );
+   CHECK_OKAY( lpSetFromscratch(lp, fromscratch, &success) );
+   CHECK_OKAY( lpSetFastmip(lp, fastmip, &success) );
+   CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
+   CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
    CHECK_OKAY( lpSetLPInfo(lp, set->disp_lpinfo) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
@@ -7926,89 +8052,159 @@ RETCODE lpSolveStable(
    /* if FASTMIP is turned on, solve again without FASTMIP */
    if( fastmip )
    {
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s simplex\n", 
-         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-      CHECK_OKAY( lpSetFastmip(lp, FALSE) );
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+      CHECK_OKAY( lpSetFastmip(lp, FALSE, &success) );
+      if( success )
+      {
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s simplex\n", 
+            stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
+         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+         
+         /* check for stability */
+         if( SCIPlpiIsStable(lp->lpi) )
+            return SCIP_OKAY;
+      }
+   }
 
+   /* solve again with opposite scaling setting */
+   CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling, &success) );
+   if( success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles in LP %d -- solve again with %s simplex %s scaling\n", 
+         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
+      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+   
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
          return SCIP_OKAY;
-   }
 
-   /* if not already done, solve again from scratch */
-   if( !fromscratch )
+      /* reset scaling */
+      CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
+      assert(success);
+   }
+      
+   /* solve again with opposite presolving setting */
+   CHECK_OKAY( lpSetPresolving(lp, !set->lp_presolving, &success) );
+   if( success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
+         "(node %lld) numerical troubles in LP %d -- solve again with %s simplex %s presolving\n", 
+         stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_presolving ? "with" : "without");
+      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+   
+      /* check for stability */
+      if( SCIPlpiIsStable(lp->lpi) )
+         return SCIP_OKAY;
+
+      /* reset presolving */
+      CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
+      assert(success);
+   }
+      
+   /* solve again with a tighter feasibility tolerance */
+   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set), &success) );
+   if( success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
          stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-      CHECK_OKAY( lpSetFromscratch(lp, TRUE) );
       CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
       
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
          return SCIP_OKAY;
+
+      /* reset feasibility tolerance */
+      CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+      assert(success);
    }
 
-   /* solve again with a tighter feasibility tolerance */
-   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
-      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set)) );
-   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
-
-   /* check for stability */
-   if( SCIPlpiIsStable(lp->lpi) )
-      return SCIP_OKAY;
+   /* if not already done, solve again from scratch */
+   if( !fromscratch )
+   {
+      CHECK_OKAY( lpSetFromscratch(lp, TRUE, &success) );
+      if( success )
+      {
+         infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
+            stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
+         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+         
+         /* check for stability */
+         if( SCIPlpiIsStable(lp->lpi) )
+            return SCIP_OKAY;
+      }
+   }
 
    /* solve again, use other simplex this time */
    infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set)) );
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
       return SCIP_OKAY;
+
+   /* solve again with opposite scaling and other simplex */
+   CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling, &success) );
+   if( success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
+         stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
+      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+      
+      /* check for stability */
+      if( SCIPlpiIsStable(lp->lpi) )
+         return SCIP_OKAY;
+
+      /* reset scaling */
+      CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
+      assert(success);
+   }
+
+   /* solve again with opposite presolving and other simplex */
+   CHECK_OKAY( lpSetPresolving(lp, !set->lp_presolving, &success) );
+   if( success )
+   {
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s presolving\n", 
+         stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_presolving ? "with" : "without");
+      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+      
+      /* check for stability */
+      if( SCIPlpiIsStable(lp->lpi) )
+         return SCIP_OKAY;
+
+      /* reset presolving */
+      CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
+      assert(success);
+   }
 
    /* solve again with tighter feasibility tolerance, use other simplex this time */
-   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
-      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set)) );
-   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
-
-   /* check for stability */
-   if( SCIPlpiIsStable(lp->lpi) )
-      return SCIP_OKAY;
-
-   /* solve again with opposite scaling setting */
-   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
-   CHECK_OKAY( lpSetScaling(lp, !set->lp_scaling) );
-   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
-   
-   /* check for stability */
-   if( SCIPlpiIsStable(lp->lpi) )
-      return SCIP_OKAY;
-
-   /* solve again with opposite scaling, use other simplex this time */
-   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
-      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
-   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
-
-   /* check for stability */
-   if( !SCIPlpiIsStable(lp->lpi) )
+   CHECK_OKAY( lpSetFeastol(lp, 0.001*SCIPsetFeastol(set), &success) );
+   if( success )
    {
-      /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
-      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %lld) unresolved numerical troubles in LP %d\n", 
-         stat->nnodes, stat->nlps);
-      *lperror = TRUE;
+      infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles in LP %d -- solve again from scratch with tighter feasibility tolerance with %s simplex\n", 
+         stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
+      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+
+      /* check for stability */
+      if( SCIPlpiIsStable(lp->lpi) )
+         return SCIP_OKAY;
+
+      /* reset feasibility tolerance */
+      CHECK_OKAY( lpSetFeastol(lp, SCIPsetFeastol(set), &success) );
+      assert(success);
    }
+
+   /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
+   infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %lld) unresolved numerical troubles in LP %d\n", 
+      stat->nnodes, stat->nlps);
+   *lperror = TRUE;
 
    return SCIP_OKAY;
 }
@@ -9315,9 +9511,8 @@ RETCODE SCIPlpGetIterations(
    )
 {
    assert(lp != NULL);
-   assert(iterations != NULL);
 
-   CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPITER, iterations) );
+   CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, iterations) );
 
    return SCIP_OKAY;
 }

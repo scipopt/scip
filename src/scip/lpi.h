@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.43 2004/10/13 17:41:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.44 2004/10/20 15:52:42 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -519,6 +519,13 @@ extern
 RETCODE SCIPlpiGetDualfarkas(
    LPI*             lpi,                /**< LP interface structure */
    Real*            dualfarkas          /**< dual farkas row multipliers */
+   );
+
+/** gets the number of LP iterations of the last solve call */
+extern
+RETCODE SCIPlpiGetIterations(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             iterations          /**< pointer to store the number of iterations of the last solve call */
    );
 
 /**@} */

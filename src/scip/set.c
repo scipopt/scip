@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.116 2004/10/19 18:36:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.117 2004/10/20 15:52:42 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -118,6 +118,7 @@
 #define SCIP_DEFAULT_LP_CHECKFEAS          TRUE /**< should LP solutions be checked to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
+#define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
 
 
 /* Memory */
@@ -512,6 +513,11 @@ RETCODE SCIPsetCreate(
          "lp/scaling",
          "should scaling of LP solver be used?",
          &(*set)->lp_scaling, SCIP_DEFAULT_LP_SCALING,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "lp/presolving",
+         "should presolving of LP solver be used?",
+         &(*set)->lp_presolving, SCIP_DEFAULT_LP_PRESOLVING,
          NULL, NULL) );
 
    /* memory parameters */

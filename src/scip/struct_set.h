@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.34 2004/10/19 18:36:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.35 2004/10/20 15:52:42 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -151,6 +151,7 @@ struct Set
    Bool             lp_checkfeas;       /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
    Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+   Bool             lp_presolving;      /**< should presolving of LP solver be used? */
 
    /* memory settings */
    Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */

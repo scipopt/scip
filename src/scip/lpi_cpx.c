@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.74 2004/10/13 17:41:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.75 2004/10/20 15:52:42 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2073,7 +2073,7 @@ RETCODE SCIPlpiStrongbranch(
             *down = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
          if( iter != NULL )
          {
-            CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &it) );
+            CHECK_OKAY( SCIPlpiGetIterations(lpi, &it) );
             *iter += it;
          }
          debugMessage(" -> down (x%d <= %g): %g\n", col, newub, *down);
@@ -2100,7 +2100,7 @@ RETCODE SCIPlpiStrongbranch(
             *up = objsen == CPX_MIN ? getDblParam(lpi, CPX_PARAM_OBJLLIM) : getDblParam(lpi, CPX_PARAM_OBJULIM);
          if( iter != NULL )
          {
-            CHECK_OKAY( SCIPlpiGetIntpar(lpi, SCIP_LPPAR_LPITER, &it) );
+            CHECK_OKAY( SCIPlpiGetIterations(lpi, &it) );
             *iter += it;
          }
          debugMessage(" -> up  (x%d >= %g): %g\n", col, newlb, *up);
@@ -2487,6 +2487,23 @@ RETCODE SCIPlpiGetDualfarkas(
    return SCIP_OKAY;
 }
 
+/** gets the number of LP iterations of the last solve call */
+RETCODE SCIPlpiGetIterations(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             iterations          /**< pointer to store the number of iterations of the last solve call */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+   assert(iterations != NULL);
+
+   *iterations = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -2787,6 +2804,9 @@ RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_SCALING:
       *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
       break;
+   case SCIP_LPPAR_PRESOLVING:
+      *ival = (getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON);
+      break;
    case SCIP_LPPAR_PRICING:
       switch( getIntParam(lpi, CPX_PARAM_DPRIIND) )
       {
@@ -2811,9 +2831,6 @@ RETCODE SCIPlpiGetIntpar(
       *ival = getIntParam(lpi, CPX_PARAM_ITLIM);
       if( *ival >= CPX_INT_MAX )
          *ival = INT_MAX;
-      break;
-   case SCIP_LPPAR_LPITER:
-      *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp) + CPXgetitcnt(cpxenv, lpi->cpxlp);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -2848,6 +2865,10 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
       setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
+      break;
+   case SCIP_LPPAR_PRESOLVING:
+      assert(ival == TRUE || ival == FALSE);
+      setIntParam(lpi, CPX_PARAM_PREIND, ival == TRUE ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_PRICING:
       switch( (PRICING)ival )
