@@ -39,6 +39,7 @@ typedef enum Setting SETTING;
 
 typedef struct Set SET;                 /**< global SCIP settings */
 
+#include <math.h>
 
 #include "def.h"
 #include "sort.h"
@@ -49,6 +50,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "disp.h"
 #include "lp.h"
 #include "message.h"
+#include "buffer.h"
 
 
 /** global SCIP settings */
@@ -65,6 +67,7 @@ struct Set
    int              treeGrowInit;       /**< initial size of tree array */
    Real             pathGrowFac;        /**< memory growing factor for path array */
    int              pathGrowInit;       /**< initial size of path array */
+   BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
    READER**         readers;            /**< file readers */
    int              nreaders;           /**< number of file readers */
    int              readerssize;        /**< size of readers array */
@@ -82,7 +85,11 @@ struct Set
    int              dispfreq;           /**< frequency for displaying node information lines */
    int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
+   int              maxpricevarsroot;   /**< maximal number of priced variables at the root node */
+   Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
+   int              maxsepacutsroot;    /**< maximal number of separated cuts at the root node */
+   int              agelimit;           /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    int              nodelimit;          /**< maximal number of nodes to process */
    unsigned int     usepricing:1;       /**< use pricing of variables */
@@ -179,6 +186,13 @@ RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
    Real             feastol             /**< new feasibility tolerance */
    );
 
+
+#ifdef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 extern
 Bool SCIPsetIsEQ(                       /**< checks, if values are in range of epsilon */
    const SET*       set,                /**< global SCIP settings */
@@ -273,5 +287,35 @@ Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPsetIsEQ(set, val1, val2)    ( ABS((val1)-(val2)) < (set)->epsilon )
+#define SCIPsetIsL(set, val1, val2)     ( (val1) < (val2) - (set)->epsilon )
+#define SCIPsetIsLE(set, val1, val2)    ( (val1) <= (val2) + (set)->epsilon )
+#define SCIPsetIsG(set, val1, val2)     ( (val1) > (val2) + (set)->epsilon )
+#define SCIPsetIsGE(set, val1, val2)    ( (val1) >= (val2) - (set)->epsilon )
+#define SCIPsetIsInfinity(set, val)     ( (val) >= (set)->infinity )
+#define SCIPsetIsZero(set, val)         ( ABS(val) <= (set)->epsilon )
+#define SCIPsetIsPos(set, val)          ( (val) > (set)->epsilon )
+#define SCIPsetIsNeg(set, val)          ( (val) < -(set)->epsilon )
+#define SCIPsetIsFeasible(set, val)     ( (val) >= -(set)->feastol )
+#define SCIPsetFloor(set, val)          ( floor((val) + (set)->feastol) )
+#define SCIPsetCeil(set, val)           ( ceil((val) - (set)->feastol) )
+#define SCIPsetIsIntegral(set, val)     ( SCIPsetCeil(set, val) - (val) <= (set)->feastol )
+
+#endif
+
+
+#define SCIPsetCaptureBufferArray(set,ptr,num)   ( SCIPbufferCapture((set)->buffer, set, (void**)(&(ptr)), \
+                                                   (num)*sizeof(*(ptr))) )
+#define SCIPsetReleaseBufferArray(set,ptr)       ( SCIPbufferRelease((set)->buffer, (void**)(&ptr)) )
+#define SCIPsetCaptureBufferSize(set,ptr,size)   ( SCIPbufferCapture((set)->buffer, set, (void**)(&(ptr)), size) )
+#define SCIPsetReleaseBufferSize(set,ptr)        ( SCIPbufferRelease((set)->buffer, (void**)(&ptr)) )
+
 
 #endif

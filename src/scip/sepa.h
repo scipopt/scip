@@ -32,6 +32,10 @@ typedef struct Sepa SEPA;               /**< storage for sepad variables */
 
 #include "def.h"
 #include "retcode.h"
+#include "set.h"
+#include "mem.h"
+#include "lp.h"
+#include "tree.h"
 
 
 extern
@@ -47,10 +51,12 @@ RETCODE SCIPsepaFree(                   /**< frees separation storage */
 extern
 RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and captures it */
    SEPA*            sepa,               /**< separation storage */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
-   Bool             pool                /**< should the cut be used in the global cut pool? Cut must be global valid! */
+   Bool             root                /**< are we at the root node? */
    );
 
 extern

@@ -59,7 +59,7 @@ struct Cons
    char*            name;               /**< name of the constraint */
    CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
    CONSDATA*        consdata;           /**< data for this specific constraint */
-   int              numuses;            /**< number of times, this constraint is referenced */
+   int              nuses;              /**< number of times, this constraint is referenced */
    unsigned int     model:1;            /**< TRUE iff constraint is necessary for feasibility */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
@@ -393,7 +393,7 @@ Bool SCIPconshdlrIsInitialized(         /**< is constraint handler initialized? 
  * Constraint methods
  */
 
-RETCODE SCIPconsCreate(                 /**< creates a constraint */
+RETCODE SCIPconsCreate(                 /**< creates and captures a constraint */
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
    const char*      name,               /**< name of constraint */
@@ -413,11 +413,14 @@ RETCODE SCIPconsCreate(                 /**< creates a constraint */
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*cons)->name, name, strlen(name)+1) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
-   (*cons)->numuses = 0;
+   (*cons)->nuses = 0;
    (*cons)->model = model;
    (*cons)->original = original;
    (*cons)->active = FALSE;
    (*cons)->arraypos = 0;
+
+   /* capture constraint */
+   SCIPconsCapture(*cons);
 
    return SCIP_OKAY;
 }
@@ -430,7 +433,7 @@ RETCODE SCIPconsFree(                   /**< frees a constraint */
 {
    assert(cons != NULL);
    assert(*cons != NULL);
-   assert((*cons)->numuses == 0);
+   assert((*cons)->nuses == 0);
    assert((*cons)->conshdlr != NULL);
    assert((*cons)->conshdlr->initialized);
    assert(memhdr != NULL);
@@ -452,10 +455,10 @@ void SCIPconsCapture(                   /**< increases usage counter of constrai
    )
 {
    assert(cons != NULL);
-   assert(cons->numuses >= 0);
+   assert(cons->nuses >= 0);
 
-   debugMessage("capture constraint <%s> with numuses=%d\n", cons->name, cons->numuses);
-   cons->numuses++;
+   debugMessage("capture constraint <%s> with nuses=%d\n", cons->name, cons->nuses);
+   cons->nuses++;
 }
 
 RETCODE SCIPconsRelease(                /**< decreases usage counter of constraint, and frees memory if necessary */
@@ -467,15 +470,16 @@ RETCODE SCIPconsRelease(                /**< decreases usage counter of constrai
    assert(memhdr != NULL);
    assert(cons != NULL);
    assert(*cons != NULL);
-   assert((*cons)->numuses >= 1);
+   assert((*cons)->nuses >= 1);
 
-   debugMessage("release constraint <%s> with numuses=%d\n", (*cons)->name, (*cons)->numuses);
-   (*cons)->numuses--;
-   if( (*cons)->numuses == 0 )
+   debugMessage("release constraint <%s> with nuses=%d\n", (*cons)->name, (*cons)->nuses);
+   (*cons)->nuses--;
+   if( (*cons)->nuses == 0 )
    {
       CHECK_OKAY( SCIPconsFree(cons, memhdr, set) );
    }
-   
+   *cons  = NULL;
+
    return SCIP_OKAY;
 }
 
@@ -507,18 +511,18 @@ RETCODE SCIPconsDeactivate(             /**< deactivates constraint */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconsTransform(              /**< copies original constraint into transformed constraint */
-   CONS*            origcons,           /**< original constraint */
+RETCODE SCIPconsTransform(              /**< copies original constraint into transformed constraint, that is captured */
+   CONS**           transcons,          /**< pointer to store the transformed constraint */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   CONS**           transcons           /**< pointer to transformed constraint */
+   CONS*            origcons            /**< original constraint */
    )
 {
    CONSDATA* consdata;
 
-   assert(origcons != NULL);
-   assert(memhdr != NULL);
    assert(transcons != NULL);
+   assert(memhdr != NULL);
+   assert(origcons != NULL);
 
    /* transform constraint data */
    consdata = NULL;

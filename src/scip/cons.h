@@ -281,7 +281,7 @@ Bool SCIPconshdlrIsInitialized(         /**< is constraint handler initialized? 
  */
 
 extern
-RETCODE SCIPconsCreate(                 /**< creates a constraint */
+RETCODE SCIPconsCreate(                 /**< creates and captures a constraint */
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
    const char*      name,               /**< name of constraint */
@@ -322,11 +322,11 @@ RETCODE SCIPconsDeactivate(             /**< deactivates constraint */
    );
 
 extern
-RETCODE SCIPconsTransform(              /**< copies original constraint into transformed constraint */
-   CONS*            origcons,           /**< original constraint */
+RETCODE SCIPconsTransform(              /**< copies original constraint into transformed constraint, that is captured */
+   CONS**           transcons,          /**< pointer to store the transformed constraint */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
-   CONS**           transcons           /**< pointer to transformed constraint */
+   CONS*            origcons            /**< original constraint */
    );
 
 extern

@@ -142,16 +142,16 @@ DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound) /**< node comparator for best lower boun
 static
 void forkCaptureLPIState(               /**< increases the reference counter of the LP state in the fork */
    FORK*            fork,               /**< fork data */
-   int              numuses             /**< number to add to the usage counter */
+   int              nuses               /**< number to add to the usage counter */
    )
 {
    assert(fork != NULL);
    assert(fork->nlpistateref >= 0);
    assert(fork->lpistate != NULL);
-   assert(numuses > 0);
+   assert(nuses > 0);
 
-   fork->nlpistateref += numuses;
-   debugMessage("captured fork's LPI state %d times -> new nlpistateref=%d\n", numuses, fork->nlpistateref);
+   fork->nlpistateref += nuses;
+   debugMessage("captured fork's LPI state %d times -> new nlpistateref=%d\n", nuses, fork->nlpistateref);
 }
 
 static
@@ -178,16 +178,16 @@ RETCODE forkReleaseLPIState(            /**< decreases the reference counter of 
 static
 void subrootCaptureLPIState(            /**< increases the reference counter of the LP state in the subroot */
    SUBROOT*         subroot,            /**< subroot data */
-   int              numuses             /**< number to add to the usage counter */
+   int              nuses               /**< number to add to the usage counter */
    )
 {
    assert(subroot != NULL);
    assert(subroot->nlpistateref >= 0);
    assert(subroot->lpistate != NULL);
-   assert(numuses > 0);
+   assert(nuses > 0);
 
    subroot->nlpistateref++;
-   debugMessage("captured subroot's LPI state %d times -> new nlpistateref=%d\n", numuses, subroot->nlpistateref);
+   debugMessage("captured subroot's LPI state %d times -> new nlpistateref=%d\n", nuses, subroot->nlpistateref);
 }
 
 static
@@ -213,19 +213,19 @@ RETCODE subrootReleaseLPIState(         /**< decreases the reference counter of 
 
 void SCIPnodeCaptureLPIState(           /**< increases the reference counter of the LP state in the fork or subroot node */
    NODE*            node,               /**< fork/subroot node */
-   int              numuses             /**< number to add to the usage counter */
+   int              nuses               /**< number to add to the usage counter */
    )
 {
    assert(node != NULL);
 
-   debugMessage("capture %d times node's LPI state at depth %d\n", numuses, node->depth);
+   debugMessage("capture %d times node's LPI state at depth %d\n", nuses, node->depth);
    switch( node->nodetype )
    {
    case SCIP_NODETYPE_FORK:
-      forkCaptureLPIState(node->data.fork, numuses);
+      forkCaptureLPIState(node->data.fork, nuses);
       break;
    case SCIP_NODETYPE_SUBROOT:
-      subrootCaptureLPIState(node->data.subroot, numuses);
+      subrootCaptureLPIState(node->data.subroot, nuses);
       break;
    default:
       errorMessage("node for capturing the LPI state is neither fork nor subroot");
@@ -296,6 +296,7 @@ static
 RETCODE forkCreate(                     /**< creates fork data */
    FORK**           fork,               /**< pointer to fork data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -310,7 +311,7 @@ RETCODE forkCreate(                     /**< creates fork data */
 
    ALLOC_OKAY( allocBlockMemory(memhdr, *fork) );
 
-   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, &((*fork)->lpistate)) );
+   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, &((*fork)->lpistate)) );
    (*fork)->nlpistateref = 0;
    (*fork)->addedcols = NULL;
    (*fork)->addedrows = NULL;
@@ -365,7 +366,9 @@ RETCODE forkFree(                       /**< frees fork data */
 
    /* release the added rows */
    for( i = 0; i < (*fork)->naddedrows; ++i )
-      SCIProwRelease(&(*fork)->addedrows[i], memhdr, set, lp);
+   {
+      CHECK_OKAY( SCIProwRelease(&(*fork)->addedrows[i], memhdr, set, lp) );
+   }
 
    freeBlockMemoryArrayNull(memhdr, (*fork)->addedcols, (*fork)->naddedcols);
    freeBlockMemoryArrayNull(memhdr, (*fork)->addedrows, (*fork)->naddedrows);
@@ -378,6 +381,7 @@ static
 RETCODE subrootCreate(                  /**< creates subroot data */
    SUBROOT**        subroot,            /**< pointer to subroot data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -394,7 +398,7 @@ RETCODE subrootCreate(                  /**< creates subroot data */
 
    ALLOC_OKAY( allocBlockMemory(memhdr, *subroot) );
 
-   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, &((*subroot)->lpistate)) );
+   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, &((*subroot)->lpistate)) );
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = lp->ncols;
    (*subroot)->nrows = lp->nrows;
@@ -434,7 +438,9 @@ RETCODE subrootFree(                    /**< frees subroot */
 
    /* release the rows of the subroot */
    for( i = 0; i < (*subroot)->nrows; ++i )
-      SCIProwRelease(&(*subroot)->rows[i], memhdr, set, lp);
+   {
+      CHECK_OKAY( SCIProwRelease(&(*subroot)->rows[i], memhdr, set, lp) );
+   }
 
    freeBlockMemoryArrayNull(memhdr, (*subroot)->cols, (*subroot)->ncols);
    freeBlockMemoryArrayNull(memhdr, (*subroot)->rows, (*subroot)->nrows);
@@ -588,6 +594,66 @@ RETCODE SCIPnodeCreate(                 /**< creates a child node of the active 
    return SCIP_OKAY;
 }
 
+static
+void treeRemoveSibling(                 /**< removes given node from the siblings array */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            sibling             /**< sibling node to remove */
+   )
+{
+   DOMCHGDYN* domchgdyn;
+   int delpos;
+
+   assert(tree != NULL);
+   assert(sibling != NULL);
+   assert(sibling->nodetype == SCIP_NODETYPE_SIBLING);
+   assert(sibling->data.sibling.arraypos >= 0 && sibling->data.sibling.arraypos < tree->nsiblings);
+   assert(tree->siblings[sibling->data.sibling.arraypos] == sibling);
+   assert(tree->siblings[tree->nsiblings-1]->nodetype == SCIP_NODETYPE_SIBLING);
+
+   delpos = sibling->data.sibling.arraypos;
+
+   /* switch domain change data of removed sibling and last sibling in array */
+   domchgdyn = tree->siblingsdomchg[delpos];
+   tree->siblingsdomchg[delpos] = tree->siblingsdomchg[tree->nsiblings-1];
+   tree->siblingsdomchg[tree->nsiblings-1] = domchgdyn;
+
+   /* move last sibling in array to position of removed sibling */
+   tree->siblings[delpos] = tree->siblings[tree->nsiblings-1];
+   tree->siblings[delpos]->data.sibling.arraypos = delpos;
+   sibling->data.sibling.arraypos = -1;
+   tree->nsiblings--;
+}
+
+static
+void treeRemoveChild(                   /**< removes given node from the children array */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            child               /**< child node to remove */
+   )
+{
+   DOMCHGDYN* domchgdyn;
+   int delpos;
+
+   assert(tree != NULL);
+   assert(child != NULL);
+   assert(child->nodetype == SCIP_NODETYPE_CHILD);
+   assert(child->data.child.arraypos >= 0 && child->data.child.arraypos < tree->nchildren);
+   assert(tree->children[child->data.child.arraypos] == child);
+   assert(tree->children[tree->nchildren-1]->nodetype == SCIP_NODETYPE_CHILD);
+
+   delpos = child->data.child.arraypos;
+
+   /* switch domain change data of removed child and last child in array */
+   domchgdyn = tree->childrendomchg[delpos];
+   tree->childrendomchg[delpos] = tree->childrendomchg[tree->nchildren-1];
+   tree->childrendomchg[tree->nchildren-1] = domchgdyn;
+
+   /* move last child in array to position of removed child */
+   tree->children[delpos] = tree->children[tree->nchildren-1];
+   tree->children[delpos]->data.child.arraypos = delpos;
+   child->data.child.arraypos = -1;
+   tree->nchildren--;
+}
+
 RETCODE SCIPnodeFree(                   /**< frees node */
    NODE**           node,               /**< node data */
    MEMHDR*          memhdr,             /**< block memory buffer */
@@ -618,6 +684,7 @@ RETCODE SCIPnodeFree(                   /**< frees node */
       {
          CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
       }
+      treeRemoveSibling(tree, *node);
       break;
    case SCIP_NODETYPE_CHILD:
       assert((*node)->data.child.arraypos >= 0);
@@ -628,6 +695,7 @@ RETCODE SCIPnodeFree(                   /**< frees node */
        * At the same time, they become siblings or leaves, such that freeing a child
        * of the active node doesn't require to release the LPI state
        */
+      treeRemoveChild(tree, *node);
       break;
    case SCIP_NODETYPE_LEAF:
       if( (*node)->data.leaf.lpfork != NULL )
@@ -1375,6 +1443,7 @@ RETCODE actnodeToJunction(              /**< converts the active node into a jun
 static
 RETCODE actnodeToFork(                  /**< converts the active node into a fork node */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    )
@@ -1394,7 +1463,7 @@ RETCODE actnodeToFork(                  /**< converts the active node into a for
    /* detach dynamic size data from domain change data of old active node */
    CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
 
-   CHECK_OKAY( forkCreate(&fork, memhdr, lp, tree) );
+   CHECK_OKAY( forkCreate(&fork, memhdr, set, lp, tree) );
    
    tree->actnode->nodetype = SCIP_NODETYPE_FORK;
    tree->actnode->data.fork = fork;
@@ -1408,6 +1477,7 @@ RETCODE actnodeToFork(                  /**< converts the active node into a for
 static
 RETCODE actnodeToSubroot(               /**< converts the active node into a subroot node */
    MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    )
@@ -1427,7 +1497,7 @@ RETCODE actnodeToSubroot(               /**< converts the active node into a sub
    /* detach dynamic size data from domain change data of old active node */
    CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
 
-   CHECK_OKAY( subrootCreate(&subroot, memhdr, lp, tree) );
+   CHECK_OKAY( subrootCreate(&subroot, memhdr, set, lp, tree) );
 
    tree->actnode->nodetype = SCIP_NODETYPE_SUBROOT;
    tree->actnode->data.subroot = subroot;
@@ -1470,66 +1540,6 @@ RETCODE treeNodesToQueue(               /**< puts all nodes in the array on the 
    *nnodes = 0;
 
    return SCIP_OKAY;
-}
-
-static
-void treeRemoveSibling(                 /**< removes given node from the siblings array */
-   TREE*            tree,               /**< branch-and-bound tree */
-   NODE*            sibling             /**< sibling node to remove */
-   )
-{
-   DOMCHGDYN* domchgdyn;
-   int delpos;
-
-   assert(tree != NULL);
-   assert(sibling != NULL);
-   assert(sibling->nodetype == SCIP_NODETYPE_SIBLING);
-   assert(sibling->data.sibling.arraypos >= 0 && sibling->data.sibling.arraypos < tree->nsiblings);
-   assert(tree->siblings[sibling->data.sibling.arraypos] == sibling);
-   assert(tree->siblings[tree->nsiblings-1]->nodetype == SCIP_NODETYPE_SIBLING);
-
-   delpos = sibling->data.sibling.arraypos;
-
-   /* switch domain change data of removed sibling and last sibling in array */
-   domchgdyn = tree->siblingsdomchg[delpos];
-   tree->siblingsdomchg[delpos] = tree->siblingsdomchg[tree->nsiblings-1];
-   tree->siblingsdomchg[tree->nsiblings-1] = domchgdyn;
-
-   /* move last sibling in array to position of removed sibling */
-   tree->siblings[delpos] = tree->siblings[tree->nsiblings-1];
-   tree->siblings[delpos]->data.sibling.arraypos = delpos;
-   sibling->data.sibling.arraypos = -1;
-   tree->nsiblings--;
-}
-
-static
-void treeRemoveChild(                   /**< removes given node from the children array */
-   TREE*            tree,               /**< branch-and-bound tree */
-   NODE*            child               /**< child node to remove */
-   )
-{
-   DOMCHGDYN* domchgdyn;
-   int delpos;
-
-   assert(tree != NULL);
-   assert(child != NULL);
-   assert(child->nodetype == SCIP_NODETYPE_CHILD);
-   assert(child->data.child.arraypos >= 0 && child->data.child.arraypos < tree->nchildren);
-   assert(tree->children[child->data.child.arraypos] == child);
-   assert(tree->children[tree->nchildren-1]->nodetype == SCIP_NODETYPE_CHILD);
-
-   delpos = child->data.child.arraypos;
-
-   /* switch domain change data of removed child and last child in array */
-   domchgdyn = tree->childrendomchg[delpos];
-   tree->childrendomchg[delpos] = tree->childrendomchg[tree->nchildren-1];
-   tree->childrendomchg[tree->nchildren-1] = domchgdyn;
-
-   /* move last child in array to position of removed child */
-   tree->children[delpos] = tree->children[tree->nchildren-1];
-   tree->children[delpos]->data.child.arraypos = delpos;
-   child->data.child.arraypos = -1;
-   tree->nchildren--;
 }
 
 static
@@ -1595,7 +1605,7 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
       {
          /* convert old active node into a fork node */
          todoMessage("decide: old active node becomes junction, fork, or subroot");
-         CHECK_OKAY( actnodeToFork(memhdr, tree, lp) );
+         CHECK_OKAY( actnodeToFork(memhdr, set, tree, lp) );
       }
       else
       {
@@ -1743,9 +1753,8 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    (*tree)->childrendomchg = NULL;
    (*tree)->siblingsdomchg = NULL;
 
-   /* create and capture root pseudo solution */
+   /* create root pseudo solution */
    CHECK_OKAY( SCIPsolCreate(&(*tree)->actpseudosol, memhdr, stat, NULL) );
-   SCIPsolCapture((*tree)->actpseudosol);
    for( v = 0; v < prob->nvars; ++v )
    {
       var = prob->vars[v];
@@ -1804,7 +1813,7 @@ RETCODE SCIPtreeFree(                   /**< frees tree data structure */
    SCIPdomchgdynFree(&(*tree)->actnodedomchg, memhdr);
 
    /* release actual pseudo solution */
-   SCIPsolRelease(&(*tree)->actpseudosol, memhdr, set, lp);
+   CHECK_OKAY( SCIPsolRelease(&(*tree)->actpseudosol, memhdr, set, lp) );
    /* #endif */
 
    /* free pointer arrays */
@@ -1845,7 +1854,6 @@ RETCODE SCIPtreeCutoff(                 /**< cuts off nodes with lower bound not
       {
          debugMessage("cut off sibling %p in depth %d with lowerbound=%g at position %d\n", 
             node, node->depth, node->lowerbound, i);
-         treeRemoveSibling(tree, node);
          CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
       }
    }
@@ -1858,7 +1866,6 @@ RETCODE SCIPtreeCutoff(                 /**< cuts off nodes with lower bound not
       {
          debugMessage("cut off child %p in depth %d with lowerbound=%g at position %d\n",
             node, node->depth, node->lowerbound, i);
-         treeRemoveChild(tree, node);
          CHECK_OKAY( SCIPnodeFree(&node, memhdr, set, tree, lp) );
       }
    }
@@ -1926,6 +1933,7 @@ RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a va
    case SCIP_VARSTATUS_ORIGINAL:
    case SCIP_VARSTATUS_FIXED:
    case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("tree was informed of a bound change of a non-mutable variable");
       return SCIP_INVALIDDATA;
    default:

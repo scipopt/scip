@@ -663,8 +663,6 @@ RETCODE readRows(
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
-   CONS* cons;
-
    while(mpsinputReadLine(mpsi))
    {
       if (mpsinputField0(mpsi) != NULL)
@@ -685,6 +683,8 @@ RETCODE readRows(
       }
       else
       {
+         CONS* cons;
+   
          CHECK_OKAY( SCIPfindCons(scip, mpsinputField2(mpsi), &cons) );
          if( cons != NULL )
             break;
@@ -693,21 +693,22 @@ RETCODE readRows(
          {
          case 'G' :
             CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, SCIPinfinity(scip), TRUE) );
+                           0.0, SCIPinfinity(scip), TRUE, FALSE) );
             break;
          case 'E' :
             CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, 0.0, TRUE) );
+                           0.0, 0.0, TRUE, FALSE) );
             break;
          case 'L' :
             CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
-                           -SCIPinfinity(scip), 0.0, TRUE) );
+                           -SCIPinfinity(scip), 0.0, TRUE, FALSE) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
          CHECK_SCIP( SCIPaddCons(scip, cons) );
+         CHECK_SCIP( SCIPreleaseCons(scip, &cons) );
       }
    }
    mpsinputSyntaxerror(mpsi);
@@ -740,8 +741,9 @@ RETCODE readCols(
          if( var != NULL )
          {
             CHECK_SCIP( SCIPaddVar(scip, var) );
-            var = NULL;
+            CHECK_SCIP( SCIPreleaseVar(scip, &var) );
          }
+         assert(var == NULL);
 
          mpsinputSetSection(mpsi, MPS_RHS);
          return SCIP_OKAY;
@@ -756,8 +758,9 @@ RETCODE readCols(
          if( var != NULL )
          {
             CHECK_SCIP( SCIPaddVar(scip, var) );
-            var = NULL;
+            CHECK_SCIP( SCIPreleaseVar(scip, &var) );
          }
+         assert(var == NULL);
 
          strcpy(colname, mpsinputField1(mpsi));
 

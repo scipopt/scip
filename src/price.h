@@ -47,9 +47,12 @@ RETCODE SCIPpriceFree(                  /**< frees pricing storage */
 extern
 RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage and capture it */
    PRICE*           price,              /**< pricing storage */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
    VAR*             var,                /**< priced variable */
-   Real             score               /**< pricing score of variable (the larger, the better the variable) */
+   Real             score,              /**< pricing score of variable (the larger, the better the variable) */
+   Bool             root                /**< are we at the root node? */
    );
 
 extern

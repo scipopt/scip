@@ -27,6 +27,10 @@
 #define __DEF_H__
 
 
+#include <limits.h>
+
+
+
 #define SCIP_VERSION                 10 /**< SCIP version number (multiplied by 100 to get integer number) */
 
 
@@ -67,6 +71,7 @@ typedef int Bool;                       /**< type used for boolean values */
 
 typedef double Real;                    /**< type used for floating point values */
 #define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
+#define SCIP_DEFAULT_SUMEPSILON  1e-07  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
 #define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */
@@ -83,74 +88,13 @@ typedef double Real;                    /**< type used for floating point values
 
 
 /*
- * Message Output
- */
-
-#define SCIP_DEFAULT_VERBLEVEL    SCIP_VERBLEVEL_NORMAL
-
-
-/*
- * Dynamic Memory
- */
-
-#define SCIP_DEFAULT_MEMGROWFAC       1.2
-#define SCIP_DEFAULT_MEMGROWINIT      4
-#define SCIP_DEFAULT_BUFGROWFAC       2.0
-#define SCIP_DEFAULT_BUFGROWINIT  65536
-#define SCIP_DEFAULT_TREEGROWFAC      2.0
-#define SCIP_DEFAULT_TREEGROWINIT 65536
-#define SCIP_DEFAULT_PATHGROWFAC      2.0
-#define SCIP_DEFAULT_PATHGROWINIT   256
-#define SCIP_HASHSIZE_NAMES       23663
-
-
-/*
- * Pricing
- */
-
-#define SCIP_DEFAULT_USEPRICING   FALSE /**< activate pricing of variables */
-#define SCIP_DEFAULT_MAXPRICEVARS    16 /**< maximal number of variables priced in per pricing round */
-
-
-
-/*
- * Cut Separation
- */
-
-#define SCIP_DEFAULT_MAXSEPACUTS     32 /**< maximal number of cuts separated per separation round */
-
-
-
-/*
- * Primal Solutions
- */
-
-#define SCIP_DEFAULT_MAXSOL         256 /**< maximal number of solutions to store in the solution storage */
-
-
-/*
- * Tree
- */
-
-#define SCIP_DEFAULT_NODELIMIT  1000000 /**< maximal number of nodes to create */
-
-
-/*
- * Display
- */
-
-#define SCIP_DEFAULT_DISPWIDTH      140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ     10000 /**< frequency for displaying node information lines */
-#define SCIP_DEFAULT_DISPHEADERFREQ  15 /**< frequency for displaying header lines (every n'th node information line) */
-
-
-
-/*
- * Block Memory
+ * Memory settings
  */
 
 #define SCIP_SAFEMEMORY                 /**< use memory leakage detection in debug mode */
 #define SCIP_BLOCKMEMORY                /**< use block memory */
+#define SCIP_HASHSIZE_NAMES       32749
+#define SCIP_HASHSIZE_CUTPOOLS    32749
 
 
 

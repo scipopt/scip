@@ -267,9 +267,12 @@ void* hashlistRetrieve(                 /**< retrieves element with given key fr
    HASHLIST*        hashlist,           /**< hash list */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   int              keyval,             /**< hash value of key */
    void*            key                 /**< key to retrieve */
    )
 {
+   int actkeyval;
    void* actkey;
 
    assert(hashkeyeq != NULL);
@@ -278,7 +281,8 @@ void* hashlistRetrieve(                 /**< retrieves element with given key fr
    while( hashlist != NULL )
    {
       actkey = hashgetkey(hashlist->element);
-      if( hashkeyeq(actkey, key) )
+      actkeyval = hashkeyval(actkey);
+      if( actkeyval == keyval && hashkeyeq(actkey, key) )
          return hashlist->element;
       hashlist = hashlist->next;
    }
@@ -368,7 +372,7 @@ void SCIPhashtableFree(                 /**< frees the hash table */
    freeMemory(*hashtable);
 }
 
-RETCODE SCIPhashtableInsert(            /**< inserts element in hash table */
+RETCODE SCIPhashtableInsert(            /**< inserts element in hash table (multiple inserts of same element possible) */
    HASHTABLE*       hashtable,          /**< hash table */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to insert into the table */
@@ -418,7 +422,8 @@ void* SCIPhashtableRetrieve(            /**< retrieve element with key from hash
    keyval = hashtable->hashkeyval(key);
    hashval = keyval % hashtable->nlists;
 
-   return hashlistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, key);
+   return hashlistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, hashtable->hashkeyval,
+      keyval, key);
 }
 
 RETCODE SCIPhashtableRemove(            /**< removes existing element from the hash table */
@@ -616,6 +621,90 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
          while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
          ptrarray[actpos] = tmpptr;
          dblarray[actpos] = tmpdbl;
+         sortpos = actpos;
+         actpos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
+void SCIPbsortPtrDblInt(                /**< bubble sort of three joint arrays of pointers/Reals/Ints, sorted by first */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   int*             intarray,           /**< int array to be permuted in the same way */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int actpos;
+   int sortpos;
+   void* tmpptr;
+   Real tmpdbl;
+   int tmpint;
+
+   assert(len == 0 || ptrarray != NULL);
+   assert(len == 0 || dblarray != NULL);
+   assert(len == 0 || intarray != NULL);
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      actpos = firstpos;
+      sortpos = firstpos;
+      while( actpos < lastpos )
+      {
+         while( actpos < lastpos && ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) <= 0 )
+            actpos++;
+         if( actpos >= lastpos )
+            break;
+         assert( ptrcmp(ptrarray[actpos], ptrarray[actpos+1]) > 0 );
+         tmpptr = ptrarray[actpos];
+         tmpdbl = dblarray[actpos];
+         tmpint = intarray[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos+1];
+            dblarray[actpos] = dblarray[actpos+1];
+            intarray[actpos] = intarray[actpos+1];
+            actpos++;
+         }
+         while( actpos < lastpos && ptrcmp(tmpptr, ptrarray[actpos+1]) > 0 );
+         ptrarray[actpos] = tmpptr;
+         dblarray[actpos] = tmpdbl;
+         intarray[actpos] = tmpint;
+         sortpos = actpos;
+         actpos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      actpos = lastpos;
+      sortpos = lastpos;
+      while( actpos > firstpos )
+      {
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) <= 0 )
+            actpos--;
+         if( actpos <= firstpos )
+            break;
+         assert( ptrcmp(ptrarray[actpos-1], ptrarray[actpos]) > 0 );
+         tmpptr = ptrarray[actpos];
+         tmpdbl = dblarray[actpos];
+         tmpint = intarray[actpos];
+         do
+         {
+            ptrarray[actpos] = ptrarray[actpos-1];
+            dblarray[actpos] = dblarray[actpos-1];
+            intarray[actpos] = intarray[actpos-1];
+            actpos--;
+         }
+         while( actpos > firstpos && ptrcmp(ptrarray[actpos-1], tmpptr) > 0 );
+         ptrarray[actpos] = tmpptr;
+         dblarray[actpos] = tmpdbl;
+         intarray[actpos] = tmpint;
          sortpos = actpos;
          actpos--;
       }

@@ -34,6 +34,7 @@
 #include "solve.h"
 #include "price.h"
 #include "sepa.h"
+#include "cutpool.h"
 #include "primal.h"
 #include "lpi.h"
 
@@ -51,6 +52,7 @@ struct Scip
    LP*              lp;                 /**< LP data */
    PRICE*           price;              /**< storage for priced variables */
    SEPA*            sepa;               /**< storage for separated cuts */
+   CUTPOOL*         cutpool;            /**< global cut pool */
    PRIMAL*          primal;             /**< primal data and solution storage */
 };
 
@@ -85,6 +87,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp == NULL);
       assert(scip->price == NULL);
       assert(scip->sepa == NULL);
+      assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
@@ -103,6 +106,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp == NULL);
       assert(scip->price == NULL);
       assert(scip->sepa == NULL);
+      assert(scip->cutpool == NULL);
       assert(scip->primal == NULL);
       assert(scip->tree == NULL);
 
@@ -134,6 +138,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
+      assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree == NULL);
 
@@ -152,6 +157,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
+      assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
 
@@ -170,6 +176,7 @@ RETCODE checkStage(                     /**< checks, if SCIP is in one of the fe
       assert(scip->lp != NULL);
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
+      assert(scip->cutpool != NULL);
       assert(scip->primal != NULL);
       assert(scip->tree != NULL);
 
@@ -262,6 +269,7 @@ RETCODE SCIPcreate(                     /**< creates and initializes SCIP data s
    (*scip)->lp = NULL;
    (*scip)->price = NULL;
    (*scip)->sepa = NULL;
+   (*scip)->cutpool = NULL;
    (*scip)->primal = NULL;
 
    return SCIP_OKAY;
@@ -310,6 +318,7 @@ RETCODE SCIPreadProb(                   /**< reads problem from file and initial
    RETCODE retcode;
    Bool read;
    int i;
+   char s[255];
 
    assert(filename != NULL);
 
@@ -328,6 +337,13 @@ RETCODE SCIPreadProb(                   /**< reads problem from file and initial
       printf("No reader for input file <%s> available\n", filename);
       return SCIP_READERR;
    }
+
+   assert(scip->origprob != NULL);
+
+   sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+      scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
+      scip->origprob->ncons);
+   infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
 
    return SCIP_OKAY;
 }
@@ -398,6 +414,7 @@ RETCODE SCIPsolve(                      /**< solves problem */
       CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
       CHECK_OKAY( SCIPpriceCreate(&scip->price) );
       CHECK_OKAY( SCIPsepaCreate(&scip->sepa) );
+      CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->agelimit) );
 
       /* copy problem in solve memory */
       CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, &scip->transprob) );
@@ -426,7 +443,7 @@ RETCODE SCIPsolve(                      /**< solves problem */
    case SCIP_STAGE_SOLVING:
       /* continue solution process */
       CHECK_OKAY( SCIPsolveCIP(scip->set, scip->mem->solvemem, scip->stat, scip->transprob, scip->tree, 
-                     scip->lp, scip->price, scip->sepa, scip->primal) );
+                     scip->lp, scip->price, scip->sepa, scip->cutpool, scip->primal) );
 
       /* detect, whether problem is solved */
       todoMessage("detect, whether problem is solved");
@@ -472,6 +489,7 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
       CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
+      CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPsepaFree(&scip->sepa) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
@@ -492,7 +510,7 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
    }
 }
 
-RETCODE SCIPcreateVar(                  /**< create problem variable */
+RETCODE SCIPcreateVar(                  /**< create and capture problem variable */
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            var,                /**< pointer to variable object */
    const char*      name,               /**< name of column */
@@ -551,7 +569,7 @@ RETCODE SCIPreleaseVar(                 /**< decreases usage counter of variable
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->lp);
+      CHECK_OKAY( SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->lp) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -564,7 +582,7 @@ RETCODE SCIPreleaseVar(                 /**< decreases usage counter of variable
          errorMessage("cannot release original variables while solving the problem");
          return SCIP_INVALIDCALL;
       }
-      SCIPvarRelease(var, scip->mem->solvemem, scip->set, scip->lp);
+      CHECK_OKAY( SCIPvarRelease(var, scip->mem->solvemem, scip->set, scip->lp) );
       return SCIP_OKAY;
 
    default:
@@ -695,7 +713,7 @@ RETCODE SCIPfindVar(                    /**< finds variable of given name in the
    }
 }
 
-RETCODE SCIPcreateRow(                  /**< creates an LP row */
+RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
    const char*      name,               /**< name of row */
@@ -703,7 +721,8 @@ RETCODE SCIPcreateRow(                  /**< creates an LP row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
-   Real             rhs                 /**< right hand side of row */
+   Real             rhs,                /**< right hand side of row */
+   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
    assert(row != NULL);
@@ -711,7 +730,7 @@ RETCODE SCIPcreateRow(                  /**< creates an LP row */
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->lp, scip->stat, name, 
-                  len, col, val, lhs, rhs) );
+                  len, col, val, lhs, rhs, modifiable) );
 
    return SCIP_OKAY;
 }
@@ -737,7 +756,7 @@ RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, 
 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseRow", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE) );
 
-   SCIProwRelease(row, scip->mem->solvemem, scip->set, scip->lp);
+   CHECK_OKAY( SCIProwRelease(row, scip->mem->solvemem, scip->set, scip->lp) );
    
    return SCIP_OKAY;
 }
@@ -829,16 +848,32 @@ RETCODE SCIPprintRow(                   /**< output row to file stream */
 RETCODE SCIPaddCut(                     /**< adds cut to separation storage */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
-   Real             score,              /**< separation score of cut (the larger, the better the cut) */
-   Bool             pool                /**< should the cut be used in the global cut pool? Cut must be global valid! */
+   Real             score               /**< separation score of cut (the larger, the better the cut) */
    )
 {
    assert(cut != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsepaAddCut(scip->sepa, scip->set, cut, score, pool) );
+   assert(scip->tree->actnode != NULL);
+
+   CHECK_OKAY( SCIPsepaAddCut(scip->sepa, scip->mem->solvemem, scip->set, scip->lp,
+                  cut, score, (scip->tree->actnode->depth == 0)) );
    
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPpoolCut(                    /**< if not already existing, adds row to global cut pool */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< cutting plane to add */
+   )
+{
+   assert(row != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPpoolCut", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPcutpoolAddRow(scip->cutpool, scip->mem->solvemem, scip->set, row) );
+
    return SCIP_OKAY;
 }
 
@@ -971,7 +1006,7 @@ RETCODE SCIPincludeDisp(                /**< creates a display column and includ
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcreateCons(                 /**< creates a constraint of the given constraint handler */
+RETCODE SCIPcreateCons(                 /**< creates and captures a constraint of the given constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to constraint */
    const char*      name,               /**< name of constraint */
@@ -1485,6 +1520,20 @@ RETCODE SCIPgetBestSol(                 /**< gets best feasible primal solution 
    }
    else
       *sol = NULL;
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetPoolsize(                /**< gets actual number of rows in the global cut pool */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             poolsize            /**< pointer to store the number of columns */
+   )
+{
+   assert(poolsize != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetPoolsize", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   *poolsize = SCIPcutpoolGetNCuts(scip->cutpool);
    
    return SCIP_OKAY;
 }

@@ -34,7 +34,8 @@ enum Varstatus
    SCIP_VARSTATUS_LOOSE      = 1,       /**< variable is a loose variable of the transformed problem */
    SCIP_VARSTATUS_COLUMN     = 2,       /**< variable is a column of the transformed problem */
    SCIP_VARSTATUS_FIXED      = 3,       /**< variable is fixed to specific value in the transformed problem */
-   SCIP_VARSTATUS_AGGREGATED = 4        /**< variable is aggregated to $x = a*y + c$ in the transformed problem */
+   SCIP_VARSTATUS_AGGREGATED = 4,       /**< variable is aggregated to $x = a*y + c$ in the transformed problem */
+   SCIP_VARSTATUS_MULTAGGR   = 5        /**< variable is aggregated to $x = a_1*y_1 + ... + a_k*y_k + c$ */
 };
 typedef enum Varstatus VARSTATUS;
 
@@ -56,6 +57,7 @@ typedef struct Hole HOLE;               /**< hole in a domain of an integer vari
 typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */
 typedef struct Dom DOM;                 /**< datastructures for storing domains of variables */
 typedef struct Aggregate AGGREGATE;     /**< aggregation information */
+typedef struct Multaggr MULTAGGR;       /**< multiple aggregation information */
 typedef struct Var VAR;                 /**< variable of the problem */
 
 
@@ -85,6 +87,15 @@ struct Aggregate
    Real             constant;           /**< constant shift $c$ in aggregation */
 };
 
+/** multiple aggregation information: $x = a_1*y_1 + ... + a_k*y_k + c$ */
+struct Multaggr
+{
+   VAR**            vars;               /**< variables $y$ in multiple aggregation */
+   Real*            scalars;            /**< multipliers $a$ in multiple aggregation */
+   Real             constant;           /**< constant shift $c$ in multiple aggregation */
+   int              nvars;              /**< number of variables in aggregation */
+};
+
 /** variable of the problem */
 struct Var
 {
@@ -93,13 +104,14 @@ struct Var
       VAR*          transvar;           /**< pointer to representing transformed variable (for original variables) */
       COL*          col;                /**< LP column (for column variables) */
       AGGREGATE     aggregate;          /**< aggregation information (for aggregated variables) */
+      MULTAGGR      multaggr;           /**< multiple aggregation information (for multiple aggregated variables) */
    } data;
    VAR*             origvar;            /**< pointer to original problem variable this var represents, or NULL */
    char*            name;               /**< name of the variable */
    DOM              dom;                /**< domain of variable */
    Real             obj;                /**< objective function value of variable */
    int              index;              /**< consecutively numbered variable identifier */
-   int              numuses;            /**< number of times, this variable is referenced */
+   int              nuses;              /**< number of times, this variable is referenced */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int     inprob:1;           /**< TRUE iff variable is stored in a problem object */
@@ -203,7 +215,7 @@ DOMCHG** SCIPdomchgdynGetDomchgPtr(     /**< gets pointer to domain change data 
  */
 
 extern
-RETCODE SCIPvarCreate(                  /**< creates an original problem variable */
+RETCODE SCIPvarCreate(                  /**< creates and captures an original problem variable */
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -216,7 +228,7 @@ RETCODE SCIPvarCreate(                  /**< creates an original problem variabl
    );
 
 extern
-RETCODE SCIPvarCreateTransformed(       /**< creates a variable belonging only to the transformed problem */
+RETCODE SCIPvarCreateTransformed(       /**< creates and captures a loose variable belonging to the transformed problem */
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -229,11 +241,11 @@ RETCODE SCIPvarCreateTransformed(       /**< creates a variable belonging only t
    );
 
 extern
-void SCIPvarFree(                       /**< frees a variable */
+RETCODE SCIPvarFree(                    /**< frees a variable */
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
    );
 
 extern
@@ -242,11 +254,11 @@ void SCIPvarCapture(                    /**< increases usage counter of variable
    );
 
 extern
-void SCIPvarRelease(                    /**< decreases usage counter of variable, and frees memory if necessary */
+RETCODE SCIPvarRelease(                 /**< decreases usage counter of variable, and frees memory if necessary */
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
    );
 
 extern
@@ -259,13 +271,13 @@ RETCODE SCIPvarAddHole(                 /**< adds a hole to the variables domain
    );
 
 extern
-RETCODE SCIPvarTransform(               /**< copies original variable into transformed variable */
-   VAR*             origvar,            /**< original problem variable */
+RETCODE SCIPvarTransform(               /**< copies original variable into loose transformed variable, that is captured */
+   VAR**            transvar,           /**< pointer to store the transformed variable */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
-   VAR**            transvar            /**< pointer to transformed variable */
+   VAR*             origvar             /**< original problem variable */
    );
 
 extern

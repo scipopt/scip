@@ -117,7 +117,7 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    {
       assert((*prob)->vars[v]->inprob);
       (*prob)->vars[v]->inprob = FALSE;
-      SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp);
+      CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp) );
    }
    freeMemoryArrayNull((*prob)->vars);
 
@@ -159,8 +159,9 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
    {
-      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
+      CHECK_OKAY( SCIPvarTransform(&targetvar, memhdr, set, stat, source->objsense, source->vars[v]) );
       CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, targetvar) );
+      CHECK_OKAY( SCIPvarRelease(&targetvar, memhdr, set, NULL) );
    }
    assert((*target)->nvars == source->nvars);
 
@@ -168,8 +169,9 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    conslist = source->conslist;
    while( conslist != NULL )
    {
-      CHECK_OKAY( SCIPconsTransform(conslist->cons, memhdr, set, &targetcons) );
+      CHECK_OKAY( SCIPconsTransform(&targetcons, memhdr, set, conslist->cons) );
       CHECK_OKAY( SCIPprobAddCons(*target, memhdr, targetcons) );
+      SCIPconsRelease(&targetcons, memhdr, set);
       conslist = conslist->next;
    }
 

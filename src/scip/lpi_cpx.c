@@ -38,8 +38,8 @@
 
 typedef DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET DUALPACKETSIZE
-typedef SINGLEPACKET ROWPACKET;         /* each row needs one bit of information (basic/nonbasic) */
-#define ROWS_PER_PACKET SINGLEPACKETSIZE
+typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information (basic/on_lower/on_upper) */
+#define ROWS_PER_PACKET DUALPACKETSIZE
 
 /* CPLEX parameter lists which can be changed */
 #define NUMINTPARAM  6
@@ -192,7 +192,7 @@ void lpistatePack(                      /**< store row and column basis status i
    assert(lpistate->packrstat != NULL);
 
    SCIPencodeDualBit(cstat, lpistate->packcstat, lpistate->ncol);
-   SCIPencodeSingleBit(rstat, lpistate->packrstat, lpistate->nrow);
+   SCIPencodeDualBit(rstat, lpistate->packrstat, lpistate->nrow);
 }
 
 static
@@ -207,7 +207,7 @@ void lpistateUnpack(                    /**< unpacks row and column basis status
    assert(lpistate->packrstat != NULL);
 
    SCIPdecodeDualBit(lpistate->packcstat, cstat, lpistate->ncol);
-   SCIPdecodeSingleBit(lpistate->packrstat, rstat, lpistate->nrow);
+   SCIPdecodeDualBit(lpistate->packrstat, rstat, lpistate->nrow);
 }
 
 static
@@ -446,7 +446,7 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    {
       assert(numlp == 0);
       cpxenv = CPXopenCPLEX(&restat);
-      CHECK_ZERO(restat);
+      CHECK_ZERO( restat );
 
       /* get default parameter values */
       getParameterValues(&defparam);
@@ -471,7 +471,7 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    numlp++;
 
    todoMessage("can presolving be turned on? it has to be turned off because dual farkas doesn't work if presolver detected infeasibility");
-   CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+   /*CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );*/
    
    return SCIP_OKAY;
 }
@@ -502,36 +502,6 @@ RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    {
       CHECK_ZERO( CPXcloseCPLEX(&cpxenv) );
    }
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object */
-   LPI*             lpi,                /**< LP interface structure */
-   int              ncol,               /**< number of columns */
-   int              nrow,               /**< number of rows */
-   OBJSEN           objsen,             /**< objective sense */
-   const Real*      obj,                /**< objective function vector */
-   const Real*      rhs,                /**< right hand side vector */
-   const char*      sen,                /**< row sense vector */
-   const int*       beg,                /**< start index of each column in ind- and val-array */
-   const int*       cnt,                /**< number of nonzeros for each column */
-   const int*       ind,                /**< row indices of constraint matrix entries */
-   const Real*      val,                /**< values of constraint matrix entries */
-   const Real*      lb,                 /**< lower bound vector */
-   const Real*      ub,                 /**< upper bound vector */
-   const char**     cname,              /**< column names */
-   const char**     rname               /**< row names */
-   )
-{
-   assert(cpxenv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->cpxlp != NULL);
-
-   invalidateSolution(lpi);
-
-   CHECK_ZERO( CPXcopylpwnames(cpxenv, lpi->cpxlp, ncol, nrow, cpxObjsen(objsen), 
-                  obj, rhs, sen, beg, cnt, ind, val, lb, ub, NULL, (char**)cname, (char**)rname) );
 
    return SCIP_OKAY;
 }
@@ -596,6 +566,69 @@ RETCODE SCIPlpiDelCols(                 /**< deletes all columns in the given ra
    return SCIP_OKAY;   
 }
 
+static
+void convertSides(                      /**< converts SCIP's lhs/rhs pairs into CPLEX's sen/rhs/rng */
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrow,               /**< number of rows */
+   const Real*      lhs,                /**< left hand side vector */
+   const Real*      rhs,                /**< right hand side vector */
+   Real             infinity,           /**< value used as infinity */
+   int*             rngcount            /**< pointer to store the number of range rows */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(nrow >= 0);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(rngcount != NULL);
+
+   *rngcount = 0;
+   for( i = 0; i < nrow; ++i )
+   {
+      assert(lhs[i] <= rhs[i]);
+      if( lhs[i] == rhs[i] )
+      {
+         assert(-infinity < rhs[i] && rhs[i] < infinity);
+         lpi->senarray[i] = 'E';
+         lpi->rhsarray[i] = rhs[i];
+      }
+      else if( lhs[i] <= -infinity )
+      {
+         assert(-infinity < rhs[i] && rhs[i] < infinity);
+         lpi->senarray[i] = 'L';
+         lpi->rhsarray[i] = rhs[i];
+      }
+      else if( rhs[i] >= infinity )
+      {
+         assert(-infinity < lhs[i] && lhs[i] < infinity);
+         lpi->senarray[i] = 'G';
+         lpi->rhsarray[i] = lhs[i];
+      }
+      else
+      {
+         /* CPLEX defines a ranged row to be within rhs and rhs+rng.
+          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rng,
+          *    but there seems to be a bug in CPLEX's presolve with negative range values (the ranged row
+          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
+          *    would lead to the CPLEX row
+          *              -x -Rg = 100000 
+          *                  Rg = 0
+          *    instead of the correct presolving implication  Rg = -100000.
+          * -> Because of this bug, we have to use an additional rhsarray[] for the converted right hand sides and
+          *    use rhsarray[i] = lhs[i] and rngarray[i] = rhs[i] - lhs[i] for ranged rows to keep the range values
+          *    non-negative.
+          */
+         lpi->senarray[i] = 'R';
+         lpi->rhsarray[i] = lhs[i];
+         lpi->rngarray[*rngcount] = rhs[i] - lhs[i];
+         lpi->rngindarray[*rngcount] = i;
+         (*rngcount)++;
+      }
+   }
+}
+
 RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
@@ -620,46 +653,10 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
 
    CHECK_OKAY( ensureSidechgarrayMem(lpi, nrow) );
 
-   /* convert lhs/rhs into rhs/range pairs */
-   rngcount = 0;
-   for( i = 0; i < nrow; ++i )
-   {
-      assert(lhs[i] <= rhs[i]);
-      assert(rhs[i] < infinity);
-      if( lhs[i] == rhs[i] )
-      {
-         lpi->senarray[i] = 'E';
-         lpi->rhsarray[i] = rhs[i];
-         /*lpi->rngarray[i] = 0.0;*/
-      }
-      else if( lhs[i] <= -infinity )
-      {
-         lpi->senarray[i] = 'L';
-         lpi->rhsarray[i] = rhs[i];
-         /*lpi->rngarray[i] = 0.0;*/
-      }
-      else
-      {
-         /* CPLEX defines a ranged row to be within rhs and rhs+rng.
-          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rng,
-          *    but there seems to be a bug in CPLEX's presolve with negative range values (the ranged row
-          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
-          *    would lead to the CPLEX row
-          *              -x -Rg = 100000 
-          *                  Rg = 0
-          *    instead of the correct presolving implication  Rg = -100000.
-          * -> Because of this bug, we have to use an additional rhsarray[] for the converted right hand sides and
-          *    use rhsarray[i] = lhs[i] and rngarray[i] = rhs[i] - lhs[i] for ranged rows to keep the range values
-          *    non-negative.
-          */
-         lpi->senarray[i] = 'R';
-         lpi->rhsarray[i] = lhs[i];
-         lpi->rngarray[rngcount] = rhs[i] - lhs[i];
-         lpi->rngindarray[rngcount] = ind[i];
-         rngcount++;
-      }
-   }
+   /* convert lhs/rhs into sen/rhs/range tuples */
+   convertSides(lpi, nrow, lhs, rhs, infinity, &rngcount);
 
+   /* add rows to LP */
    CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL, name) );
    CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
 
@@ -775,48 +772,12 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
 
    CHECK_OKAY( ensureSidechgarrayMem(lpi, n) );
 
-   /* convert lhs/rhs into rhs/range pairs */
-   rngcount = 0;
-   for( i = 0; i < n; ++i )
-   {
-      assert(lhs[i] <= rhs[i]);
-      assert(rhs[i] < infinity);
-      if( lhs[i] == rhs[i] )
-      {
-         lpi->senarray[i] = 'E';
-         lpi->rhsarray[i] = rhs[i];
-         /*lpi->rngarray[i] = 0.0;*/
-      }
-      else if( lhs[i] <= -infinity )
-      {
-         lpi->senarray[i] = 'L';
-         lpi->rhsarray[i] = rhs[i];
-         /*lpi->rngarray[i] = 0.0;*/
-      }
-      else
-      {
-         /* CPLEX defines a ranged row to be within rhs and rhs+rng.
-          * -> To keep SCIP's meaning of the rhs value, we would like to use negative range values: rng := lhs - rng,
-          *    but there seems to be a bug in CPLEX's presolve with negative range values (the ranged row
-          *              0 <= -x <= 100000 with x >= 0 (rhs=0, rng=-100000) 
-          *    would lead to the CPLEX row
-          *              -x -Rg = 100000 
-          *                  Rg = 0
-          *    instead of the correct presolving implication  Rg = -100000.
-          * -> Because of this bug, we have to use an additional rhsarray[] for the converted right hand sides and
-          *    use rhsarray[i] = lhs[i] and rngarray[i] = rhs[i] - lhs[i] for ranged rows to keep the range values
-          *    non-negative.
-          */
-         lpi->senarray[i] = 'R';
-         lpi->rhsarray[i] = lhs[i];
-         lpi->rngarray[rngcount] = rhs[i] - lhs[i];
-         lpi->rngindarray[rngcount] = ind[i];
-         rngcount++;
-      }
-   }
+   /* convert lhs/rhs into sen/rhs/range tuples */
+   convertSides(lpi, n, lhs, rhs, infinity, &rngcount);
 
-   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
+   /* change row sides */
    CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
+   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
    CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
 
    return SCIP_OKAY;
@@ -1017,7 +978,7 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    Real*            objval,             /**< stores the objective value */
    Real*            primsol,            /**< primal solution vector */
    Real*            dualsol,            /**< dual solution vector */
-   Real*            slack,              /**< slack vector */
+   Real*            activity,           /**< row activity vector */
    Real*            redcost             /**< reduced cost vector */
    )
 {
@@ -1028,8 +989,31 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, slack, redcost) );
+   CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, primsol, dualsol, NULL, redcost) );
    assert(dummy == lpi->solstat);
+
+   if( activity != NULL )
+   {
+      CHECK_ZERO( CPXgetax(cpxenv, lpi->cpxlp, activity, 0, CPXgetnumrows(cpxenv, lpi->cpxlp)-1) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpiGetPrimalRay(            /**< gets primal ray for unbounded LPs */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            ray                 /**< primal ray */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   debugMessage("calling CPLEX get primal ray: %d cols, %d rows\n",
+      CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
+
+   CHECK_ZERO( CPXgetray(cpxenv, lpi->cpxlp, ray) );
 
    return SCIP_OKAY;
 }
@@ -1044,6 +1028,9 @@ RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasib
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
    assert(dualfarkas != NULL);
+
+   debugMessage("calling CPLEX dual farkas: %d cols, %d rows\n",
+      CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    CHECK_ZERO( CPXdualfarkas(cpxenv, lpi->cpxlp, dualfarkas, NULL) );
 
@@ -1100,6 +1087,34 @@ RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the L
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
+   if( lpi->solstat == CPX_STAT_INForUNBD )
+   {
+      /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+      debugMessage("CPLEX returned INForUNBD -> calling CPLEX primal simplex again without presolve\n");
+      
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+      retval = CPXprimopt( cpxenv, lpi->cpxlp );
+      switch( retval  )
+      {
+      case 0:
+         break;
+      case CPXERR_NO_MEMORY:
+         return SCIP_NOMEMORY;
+      default:
+         return SCIP_LPERROR;
+      }
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
+
+      lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+      debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
+      if( lpi->solstat == CPX_STAT_INForUNBD )
+      {
+         /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
+         errorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off");
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1134,6 +1149,34 @@ RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP 
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
    debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
    
+   if( lpi->solstat == CPX_STAT_INForUNBD )
+   {
+      /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+      debugMessage("CPLEX returned INForUNBD -> calling CPLEX dual simplex again without presolve\n");
+      
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+      retval = CPXdualopt( cpxenv, lpi->cpxlp );
+      switch( retval  )
+      {
+      case 0:
+         break;
+      case CPXERR_NO_MEMORY:
+         return SCIP_NOMEMORY;
+      default:
+         return SCIP_LPERROR;
+      }
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
+
+      lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+      debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
+      if( lpi->solstat == CPX_STAT_INForUNBD )
+      {
+         /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
+         errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off");
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1239,6 +1282,7 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
 RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis information) into lpistate object */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
@@ -1262,8 +1306,13 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncol, nrow) );
 
    /* allocate temporary buffer for storing uncompressed basis information */
+#if 0 /* ??? */
    ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, ncol) );
    ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, nrow) );
+#else
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, cstat, ncol) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, rstat, nrow) );
+#endif
 
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
@@ -1282,8 +1331,13 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    lpistatePack(*lpistate, cstat, rstat);
 
    /* free temporary memory */
+#if 0 /* ??? */
    freeBlockMemoryArray(memhdr, cstat, ncol);
    freeBlockMemoryArray(memhdr, rstat, nrow);
+#else
+   SCIPsetReleaseBufferArray(set, rstat);
+   SCIPsetReleaseBufferArray(set, cstat);
+#endif
 
    return SCIP_OKAY;
 }
@@ -1291,6 +1345,7 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
 RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LPi state information (like basis information) */
    )
 {
@@ -1306,8 +1361,13 @@ RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis informa
    assert(lpistate->nrow == CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    /* allocate temporary buffer for storing uncompressed basis information */
+#if 0 /* ??? */
    ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, lpistate->ncol) );
    ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, lpistate->nrow) );
+#else
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, cstat, lpistate->ncol) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, rstat, lpistate->nrow) );
+#endif
 
    lpistateUnpack(lpistate, cstat, rstat);
    if( lpistate->dnorm != NULL && getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
@@ -1320,8 +1380,13 @@ RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis informa
    }
 
    /* free temporary memory */
+#if 0 /* ??? */
    freeBlockMemoryArray(memhdr, cstat, lpistate->ncol);
    freeBlockMemoryArray(memhdr, rstat, lpistate->nrow);
+#else
+   SCIPsetReleaseBufferArray(set, rstat);
+   SCIPsetReleaseBufferArray(set, cstat);
+#endif
 
    return SCIP_OKAY;
 }

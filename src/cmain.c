@@ -90,7 +90,7 @@ static const Real  row_rhs [] = {      100000.0, 100000.0 };
 #endif
 
 int
-main(void)
+main(int argc, char **argv)
 {
    SCIP* scip = NULL;
    VAR** vars;
@@ -147,7 +147,6 @@ main(void)
    for( v = 0; v < nvars; ++v )
    {
       CHECK_SCIP( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], SCIP_VARTYPE_INTEGER) );
-      CHECK_SCIP( SCIPcaptureVar(scip, vars[v]) ); /* we need the variables for constraint creation */
       CHECK_SCIP( SCIPaddVar(scip, vars[v]) );
    }
 
@@ -159,13 +158,14 @@ main(void)
 
       for( i = 0; i < row_len[r]; ++i )
       {
-         rowvars[i] = vars[row_idx[pos]];  /* we captured the variables, so this is valid */
+         rowvars[i] = vars[row_idx[pos]];
          rowvals[i] = row_val[pos];
          pos++;
       }
       CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals,
-                     row_lhs[r], row_rhs[r], TRUE) );
+                     row_lhs[r], row_rhs[r], TRUE, FALSE) );
       CHECK_SCIP( SCIPaddCons(scip, cons) ); /* add as a global constraint */
+      CHECK_SCIP( SCIPreleaseCons(scip, &cons) );
    }
 
    /* release variables, because we don't need them any longer */
@@ -175,10 +175,19 @@ main(void)
    }
 
 #else
+   if( argc < 2 )
+   {
+      printf("syntax: %s <problem>\n", argv[0]);
+      return 0;
+   }
 
-   printf("\nread problem\n");
+   printf("\nread problem <%s>\n", argv[1]);
+   CHECK_OKAY( SCIPreadProb(scip, argv[1]) );
+
    /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/egout.mps") );*/
-   CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/markshare1.mps") );
+   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/markshare1.mps") );*/
+   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/rentacar.mps") );*/
+   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/dano3mip.mps") );*/
 
 #endif
 
@@ -202,7 +211,7 @@ main(void)
 #endif
 
 #ifndef NDEBUG
-   SCIPdebugMemory(scip);
+   /*SCIPdebugMemory(scip);*/
 #endif
 
 

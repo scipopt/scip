@@ -654,7 +654,7 @@ DOMCHG** SCIPdomchgdynGetDomchgPtr(     /**< gets pointer to domain change data 
  * methods for variables 
  */
 
-RETCODE SCIPvarCreate(                  /**< creates an original problem variable */
+RETCODE SCIPvarCreate(                  /**< creates and captures an original problem variable */
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -680,15 +680,18 @@ RETCODE SCIPvarCreate(                  /**< creates an original problem variabl
    (*var)->dom.ub = ub;
    (*var)->obj = obj;
    (*var)->index = stat->nvaridx++;
-   (*var)->numuses = 0;
+   (*var)->nuses = 0;
    (*var)->vartype = vartype;
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL;
    (*var)->inprob = FALSE;
 
+   /* capture variable */
+   SCIPvarCapture(*var);
+
    return SCIP_OKAY;
 }
 
-RETCODE SCIPvarCreateTransformed(       /**< creates a loose variable belonging only to the transformed problem */
+RETCODE SCIPvarCreateTransformed(       /**< creates and captures a loose variable belonging to the transformed problem */
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -712,27 +715,29 @@ RETCODE SCIPvarCreateTransformed(       /**< creates a loose variable belonging 
    (*var)->dom.ub = ub;
    (*var)->obj = obj;
    (*var)->index = stat->nvaridx++;
-   (*var)->numuses = 0;
+   (*var)->nuses = 0;
    (*var)->vartype = vartype;
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE;
    (*var)->inprob = FALSE;
 
+   /* capture variable */
+   SCIPvarCapture(*var);
+
    return SCIP_OKAY;   
 }
 
-void SCIPvarFree(                       /**< frees a variable */
+RETCODE SCIPvarFree(                    /**< frees a variable */
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data (or NULL, if it's an original variable) */
+   LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
    )
 {
    assert(memhdr != NULL);
    assert(var != NULL);
    assert(*var != NULL);
-   assert((*var)->varstatus == SCIP_VARSTATUS_ORIGINAL || lp != NULL);
    assert((*var)->varstatus != SCIP_VARSTATUS_COLUMN || (VAR**)(&(*var)->data.col->var) != var);
-   assert((*var)->numuses == 0);
+   assert((*var)->nuses == 0);
    assert(!(*var)->inprob);
 
    debugMessage("free variable <%s> with status=%d\n", (*var)->name, (*var)->varstatus);
@@ -745,11 +750,18 @@ void SCIPvarFree(                       /**< frees a variable */
    case SCIP_VARSTATUS_LOOSE:
       break;
    case SCIP_VARSTATUS_COLUMN:
-      SCIPcolFree(&(*var)->data.col, memhdr, set, lp);  /* free corresponding LP column */
+      CHECK_OKAY( SCIPcolFree(&(*var)->data.col, memhdr, set, lp) );  /* free corresponding LP column */
       break;
    case SCIP_VARSTATUS_FIXED:
       break;
    case SCIP_VARSTATUS_AGGREGATED:
+      break;
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert((*var)->data.multaggr.vars != NULL);
+      assert((*var)->data.multaggr.scalars != NULL);
+      assert((*var)->data.multaggr.nvars >= 2);
+      freeBlockMemoryArray(memhdr, (*var)->data.multaggr.vars, (*var)->data.multaggr.nvars);
+      freeBlockMemoryArray(memhdr, (*var)->data.multaggr.scalars, (*var)->data.multaggr.nvars);
       break;
    default:
       errorMessage("Unknown variable status");
@@ -768,6 +780,8 @@ void SCIPvarFree(                       /**< frees a variable */
 
    freeBlockMemoryArray(memhdr, (*var)->name, strlen((*var)->name)+1);
    freeBlockMemory(memhdr, *var);
+
+   return SCIP_OKAY;
 }
 
 void SCIPvarCapture(                    /**< increases usage counter of variable */
@@ -775,13 +789,13 @@ void SCIPvarCapture(                    /**< increases usage counter of variable
    )
 {
    assert(var != NULL);
-   assert(var->numuses >= 0);
+   assert(var->nuses >= 0);
 
-   debugMessage("capture variable <%s> with numuses=%d\n", var->name, var->numuses);
-   var->numuses++;
+   debugMessage("capture variable <%s> with nuses=%d\n", var->name, var->nuses);
+   var->nuses++;
 }
 
-void SCIPvarRelease(                    /**< decreases usage counter of variable, and frees memory if necessary */
+RETCODE SCIPvarRelease(                 /**< decreases usage counter of variable, and frees memory if necessary */
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -791,15 +805,18 @@ void SCIPvarRelease(                    /**< decreases usage counter of variable
    assert(memhdr != NULL);
    assert(var != NULL);
    assert(*var != NULL);
-   assert((*var)->numuses >= 1);
-   assert((*var)->varstatus == SCIP_VARSTATUS_ORIGINAL || lp != NULL);
+   assert((*var)->nuses >= 1);
 
-   debugMessage("release variable <%s> with numuses=%d\n", (*var)->name, (*var)->numuses);
-   (*var)->numuses--;
-   if( (*var)->numuses == 0 )
-      SCIPvarFree(var, memhdr, set, lp);
+   debugMessage("release variable <%s> with nuses=%d\n", (*var)->name, (*var)->nuses);
+   (*var)->nuses--;
+   if( (*var)->nuses == 0 )
+   {
+      CHECK_OKAY( SCIPvarFree(var, memhdr, set, lp) );
+   }
 
    *var = NULL;
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPvarAddHole(                 /**< adds a hole to the variables domain */
@@ -817,13 +834,13 @@ RETCODE SCIPvarAddHole(                 /**< adds a hole to the variables domain
    return SCIP_OKAY;
 }
 
-RETCODE SCIPvarTransform(               /**< copies original variable into loose transformed variable */
-   VAR*             origvar,            /**< original problem variable */
+RETCODE SCIPvarTransform(               /**< copies original variable into loose transformed variable, that is captured */
+   VAR**            transvar,           /**< pointer to store the transformed variable */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
-   VAR**            transvar            /**< pointer to transformed variable */
+   VAR*             origvar             /**< original problem variable */
    )
 {
    assert(origvar != NULL);
@@ -897,6 +914,9 @@ RETCODE SCIPvarFix(                     /**< converts variable into fixed variab
    case SCIP_VARSTATUS_AGGREGATED:
       todoMessage("fix aggregation variable of aggregated variable, transform aggregated to fixed");
       abort();
+   case SCIP_VARSTATUS_MULTAGGR:
+      errorMessage("cannot fix a multiple aggregated variable");
+      return SCIP_INVALIDDATA;
    default:
       errorMessage("Unknown variable status");
       abort();
@@ -1006,6 +1026,10 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
          }
          break;
          
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("cannot change the bounds of a multiple aggregated variable");
+         return SCIP_INVALIDDATA;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -1076,6 +1100,10 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
          }
          break;
          
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("cannot change the bounds of a multiple aggregated variable");
+         return SCIP_INVALIDDATA;
+
       default:
          errorMessage("unknown variable status");
          abort();
@@ -1171,6 +1199,9 @@ Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of var
    VAR*             var                 /**< problem variable */
    )
 {
+   Real primsol;
+   int i;
+
    assert(var != NULL);
 
    switch( var->varstatus )
@@ -1179,18 +1210,32 @@ Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of var
       if( var->data.transvar == NULL )
          return SCIP_INVALID;
       return SCIPvarGetPrimsol(var->data.transvar);
+
    case SCIP_VARSTATUS_LOOSE:
       assert(var->dom.lb <= 0.0 && var->dom.ub >= 0.0);
       return 0.0;
+
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
       return var->data.col->primsol;
+
    case SCIP_VARSTATUS_FIXED:
       assert(var->dom.lb == var->dom.ub);
       return var->dom.lb;
+
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
       return var->data.aggregate.scalar * SCIPvarGetPrimsol(var->data.aggregate.var) + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+      assert(var->data.multaggr.nvars >= 2);
+      primsol = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         primsol += var->data.multaggr.scalars[i] * SCIPvarGetPrimsol(var->data.multaggr.vars[i]);
+      return primsol;
+
    default:
       errorMessage("Unknown variable status");
       return SCIP_INVALIDDATA;
@@ -1203,6 +1248,9 @@ Real SCIPvarGetSol(                     /**< get solution value of variable at a
    LP*              lp                  /**< actual LP data */
    )
 {
+   Real sol;
+   int i;
+
    assert(var != NULL);
    assert(lp != NULL);
 
@@ -1212,21 +1260,35 @@ Real SCIPvarGetSol(                     /**< get solution value of variable at a
       if( var->data.transvar == NULL )
          return SCIP_INVALID;
       return SCIPvarGetSol(var->data.transvar, lp);
+
    case SCIP_VARSTATUS_LOOSE:
       assert(!lp->solved || SCIPvarGetBestBound(var) == 0.0);
       return SCIPvarGetBestBound(var);
+
    case SCIP_VARSTATUS_COLUMN:
       assert(var->data.col != NULL);
       if( lp->solved )
          return var->data.col->primsol;
       else
          return SCIPvarGetBestBound(var);
+
    case SCIP_VARSTATUS_FIXED:
       assert(var->dom.lb == var->dom.ub);
       return var->dom.lb;
+
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
       return var->data.aggregate.scalar * SCIPvarGetSol(var->data.aggregate.var, lp) + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+      assert(var->data.multaggr.nvars >= 2);
+      sol = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+         sol += var->data.multaggr.scalars[i] * SCIPvarGetSol(var->data.multaggr.vars[i], lp);
+      return sol;
+
    default:
       errorMessage("Unknown variable status");
       return SCIP_INVALIDDATA;
@@ -1243,6 +1305,8 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
    Real             val                 /**< value of coefficient */
    )
 {
+   int i;
+
    assert(var != NULL);
    assert(row != NULL);
    assert(!SCIPsetIsInfinity(set, ABS(val)));
@@ -1282,6 +1346,18 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
       assert(var->data.aggregate.var != NULL);
       CHECK_OKAY( SCIPvarAddToRow(var->data.aggregate.var, memhdr, set, lp, stat, row, var->data.aggregate.scalar * val) );
       CHECK_OKAY( SCIProwAddConst(row, set, lp, var->data.aggregate.constant * val) );
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+      assert(var->data.multaggr.nvars >= 2);
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         CHECK_OKAY( SCIPvarAddToRow(var->data.multaggr.vars[i], memhdr, set, lp, stat, row, 
+                        var->data.multaggr.scalars[i] * val) );
+      }
+      CHECK_OKAY( SCIProwAddConst(row, set, lp, var->data.multaggr.constant * val) );
       return SCIP_OKAY;
 
    default:

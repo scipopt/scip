@@ -184,7 +184,7 @@ RETCODE SCIPnodeFree(                   /**< frees node */
 extern
 void SCIPnodeCaptureLPIState(           /**< increases the reference counter of the LP state in the fork or subroot node */
    NODE*            node,               /**< fork/subroot node */
-   int              numuses             /**< number to add to the usage counter */
+   int              nuses               /**< number to add to the usage counter */
    );
 
 extern

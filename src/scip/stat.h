@@ -50,6 +50,7 @@ struct Stat
    int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nnodes;             /**< number of nodes processed (including active node) */
    int              lastdispnode;       /**< last node for which an information line was displayed */
+   int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
 };
 

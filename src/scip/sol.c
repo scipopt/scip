@@ -152,7 +152,7 @@ RETCODE solEnsureValsMem(               /**< resizes vals array to be able to st
 
 
 
-RETCODE SCIPsolCreate(                  /**< creates primal CIP solution */
+RETCODE SCIPsolCreate(                  /**< creates and captures primal CIP solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    STAT*            stat,               /**< problem statistics data */
@@ -170,15 +170,18 @@ RETCODE SCIPsolCreate(                  /**< creates primal CIP solution */
    (*sol)->nvals = 0;
    (*sol)->valssize = 0;
    (*sol)->firstindex = -1;
-   (*sol)->numuses = 0;
+   (*sol)->nuses = 0;
    (*sol)->nodenum = stat->nnodes;
+
+   /* capture solution */
+   SCIPsolCapture(*sol);
 
    debugMessage("created solution %p\n", *sol);
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP solution */
+RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP solution, and captures solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -271,7 +274,7 @@ RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP sol
    return SCIP_OKAY;
 }
 
-void SCIPsolFree(                       /**< frees primal CIP solution */
+RETCODE SCIPsolFree(                    /**< frees primal CIP solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -280,13 +283,15 @@ void SCIPsolFree(                       /**< frees primal CIP solution */
 {
    assert(sol != NULL);
    assert(*sol != NULL);
-   assert((*sol)->numuses == 0);
+   assert((*sol)->nuses == 0);
 
-   SCIPsolClear(*sol, memhdr, set, lp);
+   CHECK_OKAY( SCIPsolClear(*sol, memhdr, set, lp) );
 
    freeBlockMemoryArrayNull(memhdr, (*sol)->vars, (*sol)->valssize);
    freeBlockMemoryArrayNull(memhdr, (*sol)->vals, (*sol)->valssize);
    freeBlockMemory(memhdr, *sol);
+
+   return SCIP_OKAY;
 }
 
 void SCIPsolCapture(                    /**< increases usage counter of primal CIP solution */
@@ -294,13 +299,13 @@ void SCIPsolCapture(                    /**< increases usage counter of primal C
    )
 {
    assert(sol != NULL);
-   assert(sol->numuses >= 0);
+   assert(sol->nuses >= 0);
 
-   debugMessage("capture sol %p with numuses=%d\n", sol, sol->numuses);
-   sol->numuses++;
+   debugMessage("capture sol %p with nuses=%d\n", sol, sol->nuses);
+   sol->nuses++;
 }
 
-void SCIPsolRelease(                    /**< decreases usage counter of primal CIP solution, frees memory if necessary */
+RETCODE SCIPsolRelease(                 /**< decreases usage counter of primal CIP solution, frees memory if necessary */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -309,17 +314,21 @@ void SCIPsolRelease(                    /**< decreases usage counter of primal C
 {
    assert(sol != NULL);
    assert(*sol != NULL);
-   assert((*sol)->numuses >= 1);
+   assert((*sol)->nuses >= 1);
 
-   debugMessage("release sol %p with numuses=%d\n", *sol, (*sol)->numuses);
-   (*sol)->numuses--;
-   if( (*sol)->numuses == 0 )
-      SCIPsolFree(sol, memhdr, set, lp);
+   debugMessage("release sol %p with nuses=%d\n", *sol, (*sol)->nuses);
+   (*sol)->nuses--;
+   if( (*sol)->nuses == 0 )
+   {
+      CHECK_OKAY( SCIPsolFree(sol, memhdr, set, lp) );
+   }
 
    *sol = NULL;
+
+   return SCIP_OKAY;
 }
 
-void SCIPsolClear(                      /**< clears primal CIP solution */
+RETCODE SCIPsolClear(                   /**< clears primal CIP solution */
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -334,12 +343,16 @@ void SCIPsolClear(                      /**< clears primal CIP solution */
    for( v = 0; v < sol->nvals; ++v )
    {
       if( sol->vars[v] != NULL )
-         SCIPvarRelease(&sol->vars[v], memhdr, set, lp);
+      {
+         CHECK_OKAY( SCIPvarRelease(&sol->vars[v], memhdr, set, lp) );
+      }
    }
 
    sol->obj = 0.0;
    sol->nvals = 0;
    sol->firstindex = -1;
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal CIP solution */

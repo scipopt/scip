@@ -93,6 +93,14 @@
 #define DISP_POSI_ACTROWS       3100
 #define DISP_STRI_ACTROWS       TRUE
 
+#define DISP_NAME_POOLSIZE      "poolsize"
+#define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
+#define DISP_HEAD_POOLSIZE      "pool"
+#define DISP_WIDT_POOLSIZE      6
+#define DISP_PRIO_POOLSIZE      80
+#define DISP_POSI_POOLSIZE      3200
+#define DISP_STRI_POOLSIZE      TRUE
+
 #define DISP_NAME_ACTDUALBOUND  "actdualbound"
 #define DISP_DESC_ACTDUALBOUND  "dual bound of actual node"
 #define DISP_HEAD_ACTDUALBOUND  "actdualbound"
@@ -268,6 +276,21 @@ DECL_DISPOUTP(SCIPdispOutpActrows)
 }
 
 static
+DECL_DISPOUTP(SCIPdispOutpPoolsize)
+{
+   int poolsize;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_POOLSIZE) == 0);
+   assert(scip != NULL);
+
+   CHECK_OKAY( SCIPgetPoolsize(scip, &poolsize) );
+   fprintf(file, "%5d ", poolsize);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_DISPOUTP(SCIPdispOutpActdualbound)
 {
    Real actdualbound;
@@ -394,6 +417,9 @@ RETCODE SCIPincludeDispDefault(         /**< includes the default display column
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTROWS, DISP_DESC_ACTROWS, DISP_HEAD_ACTROWS,
                   NULL, NULL, SCIPdispOutpActrows, NULL, 
                   DISP_WIDT_ACTROWS, DISP_PRIO_ACTROWS, DISP_POSI_ACTROWS, DISP_STRI_ACTROWS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
+                  NULL, NULL, SCIPdispOutpPoolsize, NULL, 
+                  DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTDUALBOUND, DISP_DESC_ACTDUALBOUND, DISP_HEAD_ACTDUALBOUND,
                   NULL, NULL, SCIPdispOutpActdualbound, NULL, 
                   DISP_WIDT_ACTDUALBOUND, DISP_PRIO_ACTDUALBOUND, DISP_POSI_ACTDUALBOUND, DISP_STRI_ACTDUALBOUND) );

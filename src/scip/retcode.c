@@ -52,6 +52,9 @@ void SCIPretcodePrint(                  /**< prints error message for return cod
    case SCIP_SEPARATED:
       fprintf(errout, "the method added a cutting plane");
       break;
+   case SCIP_UNBOUNDED:
+      fprintf(errout, "an unboundness was detected");
+      break;
    case SCIP_INFEASIBLE:
       fprintf(errout, "an infeasibility was detected");
       break;

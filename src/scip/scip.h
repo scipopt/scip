@@ -169,7 +169,7 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
    );
 
 extern
-RETCODE SCIPcreateVar(                  /**< create problem variable */
+RETCODE SCIPcreateVar(                  /**< create and capture problem variable */
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            var,                /**< pointer to variable object */
    const char*      name,               /**< name of column */
@@ -216,7 +216,7 @@ RETCODE SCIPfindVar(                    /**< finds variable of given name in the
    );
 
 extern
-RETCODE SCIPcreateRow(                  /**< creates an LP row */
+RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
    const char*      name,               /**< name of row */
@@ -224,7 +224,8 @@ RETCODE SCIPcreateRow(                  /**< creates an LP row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
-   Real             rhs                 /**< right hand side of row */
+   Real             rhs,                /**< right hand side of row */
+   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
 extern
@@ -279,8 +280,13 @@ extern
 RETCODE SCIPaddCut(                     /**< adds cut to separation storage */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
-   Real             score,              /**< separation score of cut (the larger, the better the cut) */
-   Bool             pool                /**< should the cut be used in the global cut pool? Cut must be global valid! */
+   Real             score               /**< separation score of cut (the larger, the better the cut) */
+   );
+
+extern
+RETCODE SCIPpoolCut(                    /**< if not already existing, adds row to global cut pool */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row                 /**< cutting plane to add */
    );
 
 extern
@@ -357,7 +363,7 @@ RETCODE SCIPincludeDisp(                /**< creates a display column and includ
    );
 
 extern
-RETCODE SCIPcreateCons(                 /**< creates a constraint of the given constraint handler */
+RETCODE SCIPcreateCons(                 /**< creates and captures a constraint of the given constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to constraint */
    const char*      name,               /**< name of constraint */
@@ -546,6 +552,12 @@ extern
 RETCODE SCIPgetBestSol(                 /**< gets best feasible primal solution found so far */
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol                 /**< pointer to store the solution, returns NULL if no solution available */
+   );
+
+extern
+RETCODE SCIPgetPoolsize(                /**< gets actual number of rows in the global cut pool */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             poolsize            /**< pointer to store the number of columns */
    );
 
 extern

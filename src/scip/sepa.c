@@ -25,24 +25,20 @@
 
 #include <assert.h>
 
-#include "set.h"
-#include "mem.h"
+#include "sepa.h"
 #include "prob.h"
-#include "lp.h"
 #include "stat.h"
 #include "var.h"
 #include "scip.h"
 #include "cons_linear.h"
-#include "sepa.h"
 
 
 /** storage for separated cuts */
 struct Sepa
 {
-   ROW**            cuts;               /**< array with separated cuts with violated slacks sorted by score */
-   Real*            score;              /**< score for each separated cut (e.g. |slack|/(eucnorm * #nonzeros)) */
-   Bool*            pool;               /**< should the cut be used in the global cut pool? Cut must be global valid! */
-   int              cutssize;           /**< size of cuts, score, and pool arrays */
+   ROW**            cuts;               /**< array with separated cuts sorted by score */
+   Real*            score;              /**< score for each separated cut (e.g. violation/(eucnorm * #nonzeros)) */
+   int              cutssize;           /**< size of cuts and score arrays */
    int              ncuts;              /**< number of separated cuts (max. is set->maxsepacuts) */
 };
 
@@ -68,7 +64,6 @@ RETCODE sepaEnsureCutsMem(              /**< resizes cuts and score arrays to be
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(sepa->cuts, newsize) );
       ALLOC_OKAY( reallocMemoryArray(sepa->score, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(sepa->pool, newsize) );
       sepa->cutssize = newsize;
    }
    assert(num <= sepa->cutssize);
@@ -89,7 +84,6 @@ RETCODE SCIPsepaCreate(                 /**< creates separation storage */
    
    (*sepa)->cuts = NULL;
    (*sepa)->score = NULL;
-   (*sepa)->pool = NULL;
    (*sepa)->cutssize = 0;
    (*sepa)->ncuts = 0;
 
@@ -104,7 +98,6 @@ RETCODE SCIPsepaFree(                   /**< frees separation storage */
 
    freeMemoryArrayNull((*sepa)->cuts);
    freeMemoryArrayNull((*sepa)->score);
-   freeMemoryArrayNull((*sepa)->pool);
    freeMemory(*sepa);
 
    return SCIP_OKAY;
@@ -112,12 +105,15 @@ RETCODE SCIPsepaFree(                   /**< frees separation storage */
 
 RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and captures it */
    SEPA*            sepa,               /**< separation storage */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
    Real             score,              /**< separation score of cut (the larger, the better the cut) */
-   Bool             pool                /**< should the cut be used in the global cut pool? Cut must be global valid! */
+   Bool             root                /**< are we at the root node? */
    )
 {
+   int maxsepacuts;
    int c;
    int i;
 
@@ -125,52 +121,46 @@ RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and 
    assert(set != NULL);
    assert(cut != NULL);
 
+   maxsepacuts = root ? set->maxsepacutsroot : set->maxsepacuts;
+   assert(sepa->ncuts <= maxsepacuts);
+   if( maxsepacuts == 0 )
+      return SCIP_OKAY;
+
    /* get enough memory to store the cut */
    CHECK_OKAY( sepaEnsureCutsMem(sepa, set, sepa->ncuts+1) );
    assert(sepa->ncuts <= sepa->cutssize);
 
-   /* capture cut */
-   SCIProwCapture(cut);
-
    /* check, if cut belongs to the best "maxsepacuts" separation cuts */
-   if( sepa->ncuts < set->maxsepacuts || score > sepa->score[set->maxsepacuts-1] )
+   if( sepa->ncuts < maxsepacuts || score > sepa->score[maxsepacuts-1] )
    {
+      /* capture the cut */
+      SCIProwCapture(cut);
+
       /* search the correct position of the cut in the cuts array */
       for( c = 0; c < sepa->ncuts && score <= sepa->score[c]; ++c )
       {
       }
-      assert(c < set->maxsepacuts);
+      assert(c <= sepa->ncuts);
+      assert(c < maxsepacuts);
 
-      /* if the array consists of at least "maxsepacuts" cuts, move the worst of the best "maxsepacuts" cuts
-       * to the end of the array
-       */
-      if( sepa->ncuts >= set->maxsepacuts )
+      /* if the array consists of "maxsepacuts" cuts, release the worst cut */
+      if( sepa->ncuts == maxsepacuts )
       {
-         sepa->cuts[sepa->ncuts] = sepa->cuts[set->maxsepacuts-1];
-         sepa->score[sepa->ncuts] = sepa->score[set->maxsepacuts-1];
-         sepa->pool[sepa->ncuts] = sepa->pool[set->maxsepacuts-1];
+         CHECK_OKAY( SCIProwRelease(&sepa->cuts[sepa->ncuts], memhdr, set, lp) );
+         sepa->ncuts--;
       }
+      assert(sepa->ncuts < maxsepacuts);
 
       /* insert cut in the sorted arrays */
-      for( i = MIN(sepa->ncuts, set->maxsepacuts-1); i > c; --i )
+      for( i = sepa->ncuts; i > c; --i )
       {
          sepa->cuts[i] = sepa->cuts[i-1];
          sepa->score[i] = sepa->score[i-1];
-         sepa->pool[i] = sepa->pool[i-1];
       }
       sepa->cuts[c] = cut;
       sepa->score[c] = score;
-      sepa->pool[c] = pool;
+      sepa->ncuts++;
    }
-   else
-   {
-      /* cut is not under the best "maxsepacuts" cuts: put it to the end of the arrays */
-      sepa->cuts[sepa->ncuts] = cut;
-      sepa->score[sepa->ncuts] = score;
-      sepa->pool[sepa->ncuts] = pool;
-   }
-    
-   sepa->ncuts++;
 
    return SCIP_OKAY;
 }
@@ -189,7 +179,7 @@ RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears sepa
    assert(set != NULL);
    assert(lp != NULL);
 
-   for( c = 0; c < MIN(sepa->ncuts, set->maxsepacuts); ++c )
+   for( c = 0; c < sepa->ncuts; ++c )
    {
       debugMessage("apply cut: ");
       debug( SCIProwPrint(sepa->cuts[c], NULL) );
@@ -197,20 +187,11 @@ RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears sepa
       /* add cut to the LP and capture it */
       CHECK_OKAY( SCIPlpAddRow(lp, set, sepa->cuts[c]) );
 
-      if( sepa->pool[c] )
-      {
-         CONS* cons;
-
-         /* add the cut to the global cut pool and capture it: create a global linear constraint */
-         debugMessage("  -> put it as global linear constraint in the cut pool\n");
-         CHECK_OKAY( SCIPcreateConsLPRow(set->scip, &cons, sepa->cuts[c], FALSE) );
-         CHECK_OKAY( SCIPtreeAddGlobalCons(tree, memhdr, set, cons) );
-      }
+      /* release the row */
+      CHECK_OKAY( SCIProwRelease(&sepa->cuts[c], memhdr, set, lp) );
    }
 
-   /* release all cuts of the pricing storage and clear the storage */
-   for( c = 0; c < sepa->ncuts; ++c )
-      SCIProwRelease(&sepa->cuts[c], memhdr, set, lp);
+   /* clear the separation storage */
    sepa->ncuts = 0;
 
    return SCIP_OKAY;

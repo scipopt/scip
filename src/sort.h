@@ -110,7 +110,7 @@ void SCIPhashtableFree(                 /**< frees the hash table */
    );
 
 extern
-RETCODE SCIPhashtableInsert(            /**< inserts element in hash table */
+RETCODE SCIPhashtableInsert(            /**< inserts element in hash table (multiple inserts of same element possible) */
    HASHTABLE*       hashtable,          /**< hash table */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to append to the list */
@@ -156,5 +156,13 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
    );
 
+extern
+void SCIPbsortPtrDblInt(                /**< bubble sort of three joint arrays of pointers/Reals/Ints, sorted by first */
+   void**           ptrarray,           /**< pointer array to be sorted */
+   Real*            dblarray,           /**< Real array to be permuted in the same way */
+   int*             intarray,           /**< int array to be permuted in the same way */
+   int              len,                /**< length of both arrays */
+   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   );
 
 #endif

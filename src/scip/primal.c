@@ -128,7 +128,7 @@ RETCODE SCIPprimalFree(                 /**< frees primal data */
    /* release primal CIP solutions */
    for( s = 0; s < (*primal)->nsols; ++s )
    {
-      SCIPsolRelease(&(*primal)->sols[s], memhdr, set, lp);
+      CHECK_OKAY( SCIPsolRelease(&(*primal)->sols[s], memhdr, set, lp) );
    }
    freeMemoryArrayNull((*primal)->sols);
    freeMemory(*primal);
@@ -190,7 +190,7 @@ RETCODE SCIPprimalAddSol(               /**< adds solution to primal solution st
    else
    {
       /* we don't need the solution -> release it */
-      SCIPsolRelease(sol, memhdr, set, lp);
+      CHECK_OKAY( SCIPsolRelease(sol, memhdr, set, lp) );
    }
 
    return SCIP_OKAY;

@@ -94,15 +94,6 @@ RETCODE solveLP(                        /**< solves the LP with simplex algorith
       {
          debugMessage("solving primal LP\n");
          CHECK_OKAY( SCIPlpSolvePrimal(lp, set, memhdr, stat) );
-         if( set->usepricing )
-         {
-            todoMessage("this is ugly, but CPXdualfarkas() works only if the dual simplex was used");
-            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
-            {
-               debugMessage("resolving with dual simplex\n");
-               CHECK_OKAY( SCIPlpSolveDual(lp, set, memhdr, stat) );
-            }
-         }
       }
       switch( SCIPlpGetSolstat(lp) )
       {
@@ -116,8 +107,8 @@ RETCODE solveLP(                        /**< solves the LP with simplex algorith
          }
          return SCIP_INFEASIBLE;
       case SCIP_LPSOLSTAT_UNBOUNDED:
-         todoMessage("LP unboundness processing");
-         return SCIP_ERROR;
+         CHECK_OKAY( SCIPlpGetUnboundedSol(lp, set, memhdr, stat) );
+         return SCIP_UNBOUNDED;
       case SCIP_LPSOLSTAT_OBJLIMIT:
          if( set->usepricing )
          {
@@ -147,8 +138,7 @@ RETCODE solveLP(                        /**< solves the LP with simplex algorith
       case SCIP_LPSOLSTAT_INFEASIBLE:
          return SCIP_INFEASIBLE;
       case SCIP_LPSOLSTAT_UNBOUNDED:
-         todoMessage("LP unboundness processing");
-         return SCIP_ERROR;
+         return SCIP_UNBOUNDED;
       case SCIP_LPSOLSTAT_OBJLIMIT:
          return SCIP_INFEASIBLE;         
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -178,11 +168,14 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
    SEPA*            sepa,               /**< separation storage */
+   CUTPOOL*         cutpool,            /**< global cut pool */
+   PRIMAL*          primal,             /**< primal data */
    CONSHDLR**       conshdlrs_sepa      /**< constraint handlers sorted by separation priority */
    )
 {
    Bool mustprice;
    Bool mustsepar;
+   Bool root;
    int h;
 
    assert(set != NULL);
@@ -193,6 +186,9 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
    assert(tree->actnode != NULL);
    assert(lp != NULL);
    assert(price != NULL);
+   assert(sepa != NULL);
+   assert(cutpool != NULL);
+   assert(primal != NULL);
    assert(set->nconshdlrs == 0 || conshdlrs_sepa != NULL);
 
    /* load the LP into the solver and load the LP state */
@@ -200,7 +196,8 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
    CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, lp) );
    
    /* init root node LP */
-   if( tree->actnode->depth == 0 )
+   root = (tree->actnode->depth == 0);
+   if( root )
    {
       assert(stat->nlp == 0);
       CHECK_OKAY( initRootLP(set, memhdr, stat, prob, lp, tree) );
@@ -220,10 +217,14 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
    {
       debugMessage("-------- node solving loop --------\n");
 
+      /* if the LP is unbounded, we don't need to price */
+      mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
+
       /* pricing (has to be done completely to get a valid lower bound) */
       while( set->usepricing && mustprice )
       {
          assert(lp->solved);
+         assert(lp->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDED);
 
          debugMessage("pricing:\n");
          CHECK_OKAY( SCIPpriceVars(price, set, memhdr, stat, prob, lp, tree) );
@@ -247,25 +248,31 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
          debugMessage("reset bounds: solve LP\n");
          CHECK_OKAY( solveLP(set, memhdr, lp, stat) );
          assert(lp->solved);
-      }
 
-      /* check for infeasible LP */
-      assert(lp->solved);
-      if( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
-      {
-         debugMessage("node %d in depth %d is infeasible (obj=%g)\n",
-            stat->nnodes, SCIPnodeGetDepth(tree->actnode), SCIPlpGetObjval(lp));
-         mustsepar = FALSE;
+         /* if the LP is unbounded, we can stop pricing */
+         mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
       }
+      assert(lp->solved);
+
+      /* update lower bound */
+      tree->actnode->lowerbound = SCIPlpGetObjval(lp);
+      tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+
+      /* if the LP is infeasible, we don't need to separate cuts */
+      mustsepar &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE);
 
       /* separation (has not to be done completely, because we just want to increase the lower bound) */
       if( mustsepar )
       {
          assert(lp->solved);
 
+         /* global cut pool separation */
+         debugMessage("global cut pool separation\n");
+         assert(SCIPsepaGetNCuts(sepa) == 0);
+         CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepa, root) );
+
          /* constraint separation */
          debugMessage("constraint separation\n");
-         assert(SCIPsepaGetNCuts(sepa) == 0);
          for( h = 0; h < set->nconshdlrs && SCIPsepaGetNCuts(sepa) == 0; ++h )
          {
             CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], set) );
@@ -292,6 +299,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
    tree->actnode->lowerbound = SCIPlpGetObjval(lp);
+   tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
 
    return SCIP_OKAY;
 }
@@ -305,6 +313,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    LP*              lp,                 /**< LP data */
    PRICE*           price,              /**< pricing storage */
    SEPA*            sepa,               /**< separation storage */
+   CUTPOOL*         cutpool,            /**< global cut pool */
    PRIMAL*          primal              /**< primal data */
    )
 {
@@ -325,6 +334,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    assert(lp != NULL);
    assert(price != NULL);
    assert(sepa != NULL);
+   assert(cutpool != NULL);
    assert(primal != NULL);
 
    /* sort constraint handlers by priorities */
@@ -364,14 +374,14 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
 #if 0
          if( ... )
          {
-            CHECK_OKAY( solveNodeLP(set, memhdr, stat, prob, tree, lp, price, sepa, conshdlrs_sepa) );
+            CHECK_OKAY( solveNodeLP(set, memhdr, stat, prob, tree, lp, price, sepa, cutpool, primal, conshdlrs_sepa) );
          }
          else
          {
             CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
          }
 #else
-         CHECK_OKAY( solveNodeLP(set, memhdr, stat, prob, tree, lp, price, sepa, conshdlrs_sepa) );
+         CHECK_OKAY( solveNodeLP(set, memhdr, stat, prob, tree, lp, price, sepa, cutpool, primal, conshdlrs_sepa) );
 #endif
 
          /* check for infeasible node */
@@ -435,6 +445,7 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
             assert(!resolved);
             CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, lp) );
             CHECK_OKAY( SCIPprimalAddSol(primal, memhdr, set, stat, tree, lp, &sol) );
+            CHECK_OKAY( SCIPsolRelease(&sol, memhdr, set, lp) );
          }
 
          /* call primal heuristics */

@@ -69,6 +69,7 @@ typedef enum Pricing PRICING;
 #include "def.h"
 #include "mem.h"
 #include "retcode.h"
+#include "set.h"
 
 
 
@@ -257,8 +258,14 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    Real*            objval,             /**< stores the objective value */
    Real*            primsol,            /**< primal solution vector */
    Real*            dualsol,            /**< dual solution vector */
-   Real*            slack,              /**< slack vector */
+   Real*            activity,           /**< row activity vector */
    Real*            redcost             /**< reduced cost vector */
+   );
+
+extern 
+RETCODE SCIPlpiGetPrimalRay(            /**< gets primal ray for unbounded LPs */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            ray                 /**< primal ray */
    );
 
 extern
@@ -334,6 +341,7 @@ extern
 RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpistate object */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
@@ -341,6 +349,7 @@ extern
 RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 

@@ -44,7 +44,7 @@ char SCIPheurGetDispchar(               /**< gets display character of primal he
    )
 {
    if( heur == NULL )
-      return 'f';
+      return '*';
    else
       return heur->dispchar;
 }

@@ -16,44 +16,59 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   solve.h
- * @brief  main solving loop and node processing
+/**@file   buffer.h
+ * @brief  memory buffer for temporary objects
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SOLVE_H__
-#define __SOLVE_H__
+#ifndef __BUFFER_H__
+#define __BUFFER_H__
+
+
+typedef struct Buffer BUFFER;
 
 
 #include "def.h"
 #include "retcode.h"
 #include "set.h"
-#include "mem.h"
-#include "stat.h"
-#include "prob.h"
-#include "tree.h"
-#include "lp.h"
-#include "price.h"
-#include "sepa.h"
-#include "cutpool.h"
-#include "primal.h"
+
+
+/** memory buffer storage for temporary objects */
+struct Buffer
+{
+   void**           data;               /**< allocated memory chunks for arbitrary data */
+   int*             size;               /**< sizes of buffers in bytes */
+   Bool*            used;               /**< TRUE iff corresponding buffer is in use */
+   int              ndata;              /**< number of memory chunks */
+   int              firstfree;          /**< first unused memory chunk */
+};
+
 
 
 extern
-RETCODE SCIPsolveCIP(                   /**< main solving loop */
-   const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr,             /**< block memory buffers */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch and bound tree */
-   LP*              lp,                 /**< LP data */
-   PRICE*           price,              /**< pricing storage */
-   SEPA*            sepa,               /**< separation storage */
-   CUTPOOL*         cutpool,            /**< global cut pool */
-   PRIMAL*          primal              /**< primal data */
+RETCODE SCIPbufferCreate(               /**< creates memory buffer storage */
+   BUFFER**         buffer              /**< pointer to memory buffer */
    );
 
+extern
+void SCIPbufferFree(                    /**< frees memory buffer storage */
+   BUFFER**         buffer              /**< pointer to memory buffer */
+   );
+
+extern
+RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
+   BUFFER*          buffer,             /**< memory buffer storage */
+   const SET*       set,                /**< global SCIP settings */
+   void**           ptr,                /**< pointer to store the allocated memory buffer */
+   int              size                /**< minimal required size of the buffer */
+   );
+
+extern
+void SCIPbufferRelease(                 /**< releases a buffer */
+   BUFFER*          buffer,             /**< memory buffer storage */
+   void**           ptr                 /**< pointer to the allocated memory buffer */
+   );
 
 #endif

@@ -48,6 +48,7 @@ struct Price
    int              bdviolvarssize;     /**< size of bdviolvars, bdviolvarslb, and bdviolvarsub arrays */
    int              nbdviolvars;        /**< number of variables, where zero violates the bounds */
    int              naddedbdviolvars;   /**< number of bound violated variables already added to the LP */
+   int              nfoundvars;         /**< total number of variables, that were added (and evtl. thrown away) */
 };
 
 
@@ -123,6 +124,7 @@ RETCODE SCIPpriceCreate(                /**< creates pricing storage */
    (*price)->bdviolvarssize = 0;
    (*price)->nbdviolvars = 0;
    (*price)->naddedbdviolvars = 0;
+   (*price)->nfoundvars = 0;
 
    return SCIP_OKAY;
 }
@@ -145,11 +147,15 @@ RETCODE SCIPpriceFree(                  /**< frees pricing storage */
 
 RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage and capture it */
    PRICE*           price,              /**< pricing storage */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
    VAR*             var,                /**< priced variable */
-   Real             score               /**< pricing score of variable (the larger, the better the variable) */
+   Real             score,              /**< pricing score of variable (the larger, the better the variable) */
+   Bool             root                /**< are we at the root node? */
    )
 {
+   int maxpricevars;
    int v;
    int i;
 
@@ -157,48 +163,47 @@ RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage an
    assert(set != NULL);
    assert(var != NULL);
 
-   /* get enough memory to store "maxpricevars" variables */
+   price->nfoundvars++;
+
+   /* get enough memory to store variables */
    CHECK_OKAY( priceEnsureVarsMem(price, set, price->nvars+1) );
    assert(price->nvars <= price->varssize);
 
-   /* capture variable */
-   SCIPvarCapture(var);
+   maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
+   assert(maxpricevars >= 1);
+   assert(price->nvars <= maxpricevars);
 
    /* check, if variable belongs to the best "maxpricevars" pricing variables */
-   if( price->nvars < set->maxpricevars || score > price->score[set->maxpricevars-1] )
+   if( price->nvars < maxpricevars || score > price->score[maxpricevars-1] )
    {
+      /* capture variable */
+      SCIPvarCapture(var);
+
       /* search the variable's position in the sorted arrays */
       for( v = 0; v < price->nvars && score <= price->score[v]; ++v )
       {
       }
-      assert(v < set->maxpricevars);
+      assert(v <= price->nvars);
+      assert(v < maxpricevars);
 
-      /* if the array consists of at least "maxpricevars" variables, move the worst of the best "maxpricevars" variables
-       * to the end of the array
-       */
-      if( price->nvars >= set->maxpricevars )
+      /* if the array consists of "maxpricevars" variables, release the worst variables */
+      if( price->nvars == maxpricevars )
       {
-         price->vars[price->nvars] = price->vars[set->maxpricevars-1];
-         price->score[price->nvars] = price->score[set->maxpricevars-1];
+         CHECK_OKAY( SCIPvarRelease(&price->vars[price->nvars-1], memhdr, set, lp) );
+         price->nvars--;
       }
+      assert(price->nvars < maxpricevars);
 
       /* insert variable in the sorted arrays */
-      for( i = MIN(price->nvars, set->maxpricevars-1); i > v; --i )
+      for( i = price->nvars; i > v; --i )
       {
          price->vars[i] = price->vars[i-1];
          price->score[i] = price->score[i-1];
       }
       price->vars[v] = var;
       price->score[v] = score;
+      price->nvars++;
    }
-   else
-   {
-      /* variable is not under the best "maxpricevars" variables: put it to the end of the arrays */
-      price->vars[price->nvars] = var;
-      price->score[price->nvars] = score;
-   }
-
-   price->nvars++;
 
    return SCIP_OKAY;
 }
@@ -219,6 +224,8 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    assert(price->naddedbdviolvars <= price->nbdviolvars);
 
    debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", var->name, var->dom.lb, var->dom.ub);
+
+   price->nfoundvars++;
 
    /* get enough memory to store "maxpricevars" variables */
    CHECK_OKAY( priceEnsureBdviolvarsMem(price, set, price->nbdviolvars+1) );
@@ -263,19 +270,32 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
 {
    VAR* var;
    COL* col;
+   Bool root;
+   int abortpricevars;
+   int maxpricevars;
    int v;
-
+   
    assert(price != NULL);
+   assert(price->nvars == 0);
+   assert(price->naddedbdviolvars == price->nbdviolvars);
    assert(set != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
-   assert(price->nvars == 0);
-   assert(price->naddedbdviolvars == price->nbdviolvars);
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+
+   root = (tree->actnode->depth == 0);
+   maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
+   assert(maxpricevars >= 1);
+   abortpricevars = set->abortpricevarsfac * maxpricevars;
+   assert(abortpricevars >= maxpricevars);
+   
+   todoMessage("test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ...");
 
    /* price already existing problem variables */
-   for( v = 0; v < prob->nvars; ++v )
+   for( v = 0; v < prob->nvars && price->nfoundvars < abortpricevars; ++v )
    {
       var = prob->vars[v];
       switch( var->varstatus )
@@ -296,7 +316,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             }
             else if( SCIPsetIsPos(set, var->obj) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -var->obj * var->dom.lb) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.lb, root) );
             }
          }
          else if( SCIPsetIsPos(set, var->dom.ub) )
@@ -307,7 +327,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             }
             else if( SCIPsetIsNeg(set, var->obj) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -var->obj * var->dom.ub) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.ub, root) );
             }
          }
          break;
@@ -355,12 +375,13 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
             /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns */
             if( !SCIPsetIsFeasible(set, feasibility) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, set, var, -feasibility / (col->len+1)) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -feasibility / (col->len+1), root) );
             }
          }
          break;
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_AGGREGATED:
+      case SCIP_VARSTATUS_MULTAGGR:
          /* we don't have to price fixed or aggregated variables */
          break;
       }
@@ -388,7 +409,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, var) );
       }
       assert(var->inprob);
-      assert(var->numuses >= 2); /* at least used in pricing storage and in problem */
+      assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       /* transform loose variable into column variable */
       CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
@@ -406,7 +427,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    price->naddedbdviolvars = price->nbdviolvars;
 
    /* add the selected pricing variables to LP */
-   for( v = 0; v < MIN(price->nvars, set->maxpricevars); ++v )
+   for( v = 0; v < price->nvars; ++v )
    {
       var = price->vars[v];
 
@@ -416,7 +437,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, var) );
       }
       assert(var->inprob);
-      assert(var->numuses >= 2); /* at least used in pricing storage and in problem */
+      assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       /* transform variable into column variable, if needed */
       if( var->varstatus == SCIP_VARSTATUS_LOOSE )
@@ -431,12 +452,14 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       assert(col->lpipos == -1);
       debugMessage("adding priced variable <%s> (score=%g)\n", var->name, price->score[v]);
       CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
+
+      /* release the variable */
+      CHECK_OKAY( SCIPvarRelease(&price->vars[v], memhdr, set, lp) );
    }
 
-   /* release all variables of the pricing storage and clear the storage */
-   for( v = 0; v < price->nvars; ++v )
-      SCIPvarRelease(&price->vars[v], memhdr, set, lp);
+   /* clear the pricing storage */
    price->nvars = 0;
+   price->nfoundvars = 0;
 
    return SCIP_OKAY;
 }
@@ -467,7 +490,7 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
       CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], memhdr, set, lp, tree, price->bdviolvarslb[v]) );
       CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], memhdr, set, lp, tree, price->bdviolvarsub[v]) );
-      SCIPvarRelease(&price->bdviolvars[v], memhdr, set, lp);
+      CHECK_OKAY( SCIPvarRelease(&price->bdviolvars[v], memhdr, set, lp) );
    }
    price->naddedbdviolvars = 0;
    price->nbdviolvars = 0;

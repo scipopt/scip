@@ -48,13 +48,13 @@ struct Sol
    int              nvals;              /**< number of values in the index range of solution */
    int              valssize;           /**< size of vars and vals array */
    int              firstindex;         /**< first index of the index range */
-   int              numuses;            /**< number of times, this solution is referenced */
+   int              nuses;              /**< number of times, this solution is referenced */
    int              nodenum;            /**< node number, where this solution was found */
 };
 
 
 extern
-RETCODE SCIPsolCreate(                  /**< creates primal CIP solution */
+RETCODE SCIPsolCreate(                  /**< creates and captures primal CIP solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    STAT*            stat,               /**< problem statistics data */
@@ -62,7 +62,7 @@ RETCODE SCIPsolCreate(                  /**< creates primal CIP solution */
    );
 
 extern
-RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP solution */
+RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP solution, and captures solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -71,7 +71,7 @@ RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP sol
    );
 
 extern
-void SCIPsolFree(                       /**< frees primal CIP solution */
+RETCODE SCIPsolFree(                    /**< frees primal CIP solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -84,7 +84,7 @@ void SCIPsolCapture(                    /**< increases usage counter of primal C
    );
 
 extern
-void SCIPsolRelease(                    /**< decreases usage counter of primal CIP solution, frees memory if necessary */
+RETCODE SCIPsolRelease(                 /**< decreases usage counter of primal CIP solution, frees memory if necessary */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -92,7 +92,7 @@ void SCIPsolRelease(                    /**< decreases usage counter of primal C
    );
 
 extern
-void SCIPsolClear(                      /**< clears primal CIP solution */
+RETCODE SCIPsolClear(                   /**< clears primal CIP solution */
    SOL*             sol,                /**< primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */

@@ -75,6 +75,7 @@ struct LinCons
    Real             rhs;                /**< right hand side of row */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
+   unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
 };
 
 /** constraint data for linear constraints */
@@ -128,7 +129,8 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
-   Real             rhs                 /**< right hand side of row */
+   Real             rhs,                /**< right hand side of row */
+   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
    assert(lincons != NULL);
@@ -160,6 +162,7 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
    (*lincons)->rhs = rhs;
    (*lincons)->varssize = nvars;
    (*lincons)->nvars = nvars;
+   (*lincons)->modifiable = modifiable;
 
    return SCIP_OKAY;
 }
@@ -200,22 +203,22 @@ RETCODE linconsAddCoef(                 /**< adds coefficient in linear constrai
 }
 
 static
-Real linconsGetSlack(                   /**< calculates the slack for the linear constraint */
+Real linconsGetActivity(                /**< calculates the activity for the linear constraint */
    LINCONS*         lincons             /**< linear constraint data object */
    )
 {
-   Real slack;
+   Real activity;
    int v;
 
    assert(lincons != NULL);
    
-   slack = lincons->rhs;
+   activity = 0.0;
    for( v = 0; v < lincons->nvars; ++v )
    {
-      slack -= SCIPvarGetPrimsol(lincons->vars[v]) * lincons->vals[v];
+      activity += SCIPvarGetPrimsol(lincons->vars[v]) * lincons->vals[v];
    }
 
-   return slack;
+   return activity;
 }
 
 static
@@ -223,13 +226,13 @@ Real linconsGetFeasibility(             /**< calculates the feasibility for the 
    LINCONS*         lincons             /**< linear constraint data object */
    )
 {
-   Real slack;
+   Real activity;
 
    assert(lincons != NULL);
 
-   slack = linconsGetSlack(lincons);
+   activity = linconsGetActivity(lincons);
 
-   return MIN(slack, lincons->rhs - lincons->lhs - slack);
+   return MIN(lincons->rhs - activity, activity - lincons->lhs);
 }
 
 static
@@ -247,7 +250,7 @@ RETCODE linconsToRow(                   /**< creates an LP row from a linear con
    assert(scip != NULL);
    assert(row != NULL);
 
-   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, lincons->lhs, lincons->rhs) );
+   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, lincons->lhs, lincons->rhs, lincons->modifiable) );
    
    for( v = 0; v < lincons->nvars; ++v )
    {
@@ -297,13 +300,11 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
             Real feasibility;
 
             CHECK_OKAY( SCIPgetRowFeasibility(scip, row, &feasibility) );
-            debugMessage("row feasibility = %g\n", feasibility);
+            debugMessage("  row feasibility = %g\n", feasibility);
             if( !SCIPisFeasible(scip, feasibility) )
             {
-               /* insert LP row as cut
-                * we don't need to pool these rows, because they are already stored as linear constraints
-                */
-               CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1), FALSE) );
+               /* insert LP row as cut */
+               CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
                found = TRUE;
             }
          }
@@ -313,9 +314,10 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
          LINCONS* lincons = consdata->data.lincons;
          Real feasibility;
          
+         /* check feasibility of linear constraint; if it's an equality, add the cut in any case */
          feasibility = linconsGetFeasibility(lincons);
-         debugMessage("lincons feasibility = %g\n", feasibility);
-         if( !SCIPisFeasible(scip, feasibility) )
+         debugMessage("  lincons feasibility = %g\n", feasibility);
+         if( !SCIPisFeasible(scip, feasibility) || SCIPisEQ(scip, lincons->lhs, lincons->rhs) )
          {
             ROW* row;
             
@@ -329,18 +331,15 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
             }
 #endif
 
-            /* capture the row, because we need it as data storage */
-            SCIPcaptureRow(scip, row);
-
             /* free the lincons data and convert consdata to point to the row */
             linconsFree(&consdata->data.lincons, scip);
             consdata->islprow = TRUE;
             consdata->data.row = row;
             
-            /* insert LP row as cut
-             * we don't need to pool these rows, because they are already stored as linear constraints
-             */
-            CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1), FALSE) );
+            /* don't release the row, because we need it as data storage */
+
+            /* insert LP row as cut */
+            CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
             found = TRUE;
          }
       }
@@ -421,7 +420,7 @@ DECL_CONSTRAN(SCIPconsTranLinear)
    (*targetdata)->islprow = FALSE;
 
    CHECK_OKAY( linconsCreate(&(*targetdata)->data.lincons, scip, lincons->nvars, lincons->vars, lincons->vals,
-                  lincons->lhs, lincons->rhs) );
+                  lincons->lhs, lincons->rhs, lincons->modifiable) );
    
    return SCIP_OKAY;
 }
@@ -503,7 +502,7 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
+RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
@@ -512,7 +511,8 @@ RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model               /**< is constraint necessary for feasibility? */
+   Bool             model,              /**< is constraint necessary for feasibility? */
+   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    )
 {
    CONSHDLR* conshdlr;
@@ -531,7 +531,7 @@ RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
    /* create the constraint specific data */
    ALLOC_OKAY( SCIPallocBlockMemory(scip, consdata) );
    consdata->islprow = FALSE;
-   CHECK_OKAY( linconsCreate(&consdata->data.lincons, scip, len, var, val, lhs, rhs) );
+   CHECK_OKAY( linconsCreate(&consdata->data.lincons, scip, len, var, val, lhs, rhs, modifiable) );
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, model) );
@@ -539,7 +539,7 @@ RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcreateConsLPRow(            /**< creates a linear constraint from an LP row and captures the row */
+RETCODE SCIPcreateConsLPRow(            /**< creates and captures a linear constraint from an LP row, captures the row */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    ROW*             row,                /**< LP row */

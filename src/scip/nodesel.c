@@ -147,6 +147,8 @@ RETCODE SCIPnodepqFree(                 /**< frees node priority queue and all n
    /* free the nodes of the queue */
    for( i = 0; i < (*nodepq)->len; ++i )
    {
+      assert((*nodepq)->slots[i] != NULL);
+      assert((*nodepq)->slots[i]->nodetype == SCIP_NODETYPE_LEAF);
       CHECK_OKAY( SCIPnodeFree(&(*nodepq)->slots[i], memhdr, set, tree, lp) );
    }
    
@@ -212,7 +214,7 @@ Bool nodepqDelPos(                      /**< deletes node at given position from
    Bool parentfelldown;
 
    assert(nodepq != NULL);
-   assert(nodepq->len >= 0);
+   assert(nodepq->len > 0);
    assert(set != NULL);
    assert(0 <= rempos && rempos < nodepq->len);
 
@@ -237,15 +239,21 @@ Bool nodepqDelPos(                      /**< deletes node at given position from
    }
 
    /* remove node of the tree and get a free slot,
+    * if the removed node was the last node of the queue
+    *  - do nothing
     * if the last node of the queue is better than the parent of the removed node:
     *  - move the parent to the free slot, until the last node can be placed in the free slot
     * if the last node of the queue is not better than the parent of the free slot:
     *  - move the better child to the free slot until the last node can be placed in the free slot
     */
-   lastnode = nodepq->slots[nodepq->len-1];
-   nodepq->len--;
    nodepq->lowerboundsum -= nodepq->slots[rempos]->lowerbound;
    freepos = rempos;
+   lastnode = nodepq->slots[nodepq->len-1];
+   nodepq->len--;
+
+   if( freepos == nodepq->len )
+      return FALSE;
+   assert(freepos < nodepq->len);
 
    /* try to move parents downwards to insert last node */
    parentfelldown = FALSE;
@@ -398,9 +406,15 @@ RETCODE SCIPnodepqBound(                /**< free all nodes from the queue that 
       assert(node->nodetype == SCIP_NODETYPE_LEAF);
       if( SCIPsetIsGE(set, node->lowerbound, upperbound) )
       {
-         debugMessage("free node in slot %d at depth %d with lowerbound=%g\n", pos, node->depth, node->lowerbound);
-         /* cut off node; because we looped from back to front, the node must be a leaf of the PQ tree */
-         assert(PQ_LEFTCHILD(pos) >= nodepq->len);
+         debugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
+            pos, nodepq->len, node->depth, node->lowerbound);
+         /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
+          * lower bound than the cut off value
+          */
+         assert(PQ_LEFTCHILD(pos) >= nodepq->len
+            || SCIPsetIsL(set, nodepq->slots[PQ_LEFTCHILD(pos)]->lowerbound, upperbound));
+         assert(PQ_RIGHTCHILD(pos) >= nodepq->len
+            || SCIPsetIsL(set, nodepq->slots[PQ_RIGHTCHILD(pos)]->lowerbound, upperbound));
 
          /* free the slot in the node PQ */
          parentfelldown = nodepqDelPos(nodepq, set, pos);

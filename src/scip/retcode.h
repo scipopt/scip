@@ -31,11 +31,12 @@
 /** return codes for SCIP methods: negative return codes are errors */
 enum Retcode
 {
-   SCIP_DIDNOTRUN   =   7,              /**< the method was not executed */
-   SCIP_FAILURE     =   6,              /**< the method was executed, but did not have success to find anything */
-   SCIP_BRANCHED    =   5,              /**< the method created a branching */
-   SCIP_REDUCEDDOM  =   4,              /**< the method reduced the domain of a variable */
-   SCIP_SEPARATED   =   3,              /**< the method added a cutting plane */
+   SCIP_DIDNOTRUN   =   8,              /**< the method was not executed */
+   SCIP_FAILURE     =   7,              /**< the method was executed, but did not have success to find anything */
+   SCIP_BRANCHED    =   6,              /**< the method created a branching */
+   SCIP_REDUCEDDOM  =   5,              /**< the method reduced the domain of a variable */
+   SCIP_SEPARATED   =   4,              /**< the method added a cutting plane */
+   SCIP_UNBOUNDED   =   3,              /**< an unboundness was detected */
    SCIP_INFEASIBLE  =   2,              /**< an infeasibility was detected */
    SCIP_FEASIBLE    =   1,              /**< no infeasibility could be found */
    SCIP_OKAY        =   0,              /**< normal termination */

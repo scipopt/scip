@@ -46,7 +46,7 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
    );
 
 extern
-RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
+RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear constraint */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
@@ -55,11 +55,12 @@ RETCODE SCIPcreateConsLinear(           /**< creates a linear constraint */
    Real*            val,                /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
-   Bool             model               /**< is constraint necessary for feasibility? */
+   Bool             model,              /**< is constraint necessary for feasibility? */
+   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
 extern
-RETCODE SCIPcreateConsLPRow(            /**< creates a linear constraint from an LP row and captures the row */
+RETCODE SCIPcreateConsLPRow(            /**< creates and captures a linear constraint from an LP row, captures the row */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    ROW*             row,                /**< LP row */

@@ -27,12 +27,9 @@
  *      lhs <=   A * x <= rhs
  *      lb  <=       x <= ub
  *
- *  There are only lower-or-equal-, equal-, and ranged-rows, but no 
- *  greater-or-equal-rows.
- *
- *  The slacks are defined as 
- *     slack = rhs - A * x
- *  and must therefore be in the range of [0,rhs-lhs].
+ *  The row activities are defined as 
+ *     activity = A * x
+ *  and must therefore be in the range of [lhs,rhs].
  *
  *  The reduced costs are defined as
  *     redcost = obj - A^T * y
@@ -103,13 +100,14 @@ struct Col
    VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    ROW**            row;                /**< rows of column entries, that may have a nonzero dual solution value */
    Real*            val;                /**< coefficients of column entries */
-   Bool*            linked;             /**< is the row informed about this matrix entry? */
+   int*             linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
    Real             farkas;             /**< value in dual farkas infeasibility proof */
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
+   int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              numpos;             /**< number of positive coefficients */
    int              numneg;             /**< number of negative coefficients */
@@ -119,7 +117,6 @@ struct Col
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     alllinked:1;        /**< TRUE iff all column entries are inserted in corresponding row vectors */
    unsigned int     inlp:1;             /**< TRUE iff column is in actual LP */
 };
 
@@ -129,30 +126,32 @@ struct Row
    char*            name;               /**< name of the row */
    COL**            col;                /**< columns of row entries, that may have a nonzero primal solution value */
    Real*            val;                /**< coefficients of row entries */
-   Bool*            linked;             /**< is the column informed about this matrix entry? */
+   int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    Real             lhs;                /**< left hand side of row */
    Real             rhs;                /**< right hand side of row */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
-   Real             maxval;             /**< maximal absolute value of row vector */
+   Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
    Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
-   Real             slack;              /**< slack value in LP, or SCIP_INVALID if not yet calculated */
+   Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
-   int              numuses;            /**< number of times, this row is referenced */
+   int              nunlinked;          /**< number of row entries, where the columns don't know about the row */
+   int              nuses;              /**< number of times, this row is referenced */
    int              lpipos;             /**< row position number in LP solver, or -1 if not in LP solver */
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
-   int              nummaxval;          /**< number of coefficients with absolute value equal to maxval */
-   int              validslacklp;       /**< lp number for which slack value is valid */
-   unsigned int     sorted:1;           /**< TRUE iff column indices are sorted in increasing order */
-   unsigned int     validminmaxidx:1;   /**< TRUE iff minimal and maximal column index is valid */
-   unsigned int     lhschanged:1;       /**< TRUE iff left hand side changed, and data of LP solver has to be updated */
-   unsigned int     rhschanged:1;       /**< TRUE iff right hand side changed, and data of LP solver has to be updated */
-   unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     alllinked:1;        /**< TRUE iff all row entries are inserted in corresponding column vectors */
-   unsigned int     inlp:1;             /**< TRUE iff row is in actual LP */
+   int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
+   int              validactivitylp;    /**< lp number for which activity value is valid */
+   unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
+   unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
+   unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
+   unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
+   unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
+   unsigned int     inlp:1;             /**< is row in actual LP? */
+   unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
+   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** actual LP data */
@@ -208,7 +207,7 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    );
 
 extern
-void SCIPcolFree(                       /**< frees an LP column */
+RETCODE SCIPcolFree(                    /**< frees an LP column */
    COL**            col,                /**< pointer to LP column */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -231,7 +230,7 @@ RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coef
    );
 
 extern
-void SCIPcolDelCoeff(                   /**< deletes coefficient from column */
+RETCODE SCIPcolDelCoeff(                /**< deletes coefficient from column */
    COL*             col,                /**< column to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
@@ -303,7 +302,7 @@ void SCIPcolPrint(                      /**< output column to file stream */
  */
 
 extern
-RETCODE SCIProwCreate(                  /**< creates an LP row */
+RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    ROW**            row,                /**< pointer to LP row data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -314,11 +313,12 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
-   Real             rhs                 /**< right hand side of row */
+   Real             rhs,                /**< right hand side of row */
+   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
 extern
-void SCIProwFree(                       /**< frees an LP row */
+RETCODE SCIProwFree(                    /**< frees an LP row */
    ROW**            row,                /**< pointer to LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -331,11 +331,21 @@ void SCIProwCapture(                    /**< increases usage counter of LP row *
    );
 
 extern
-void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
+RETCODE SCIProwRelease(                 /**< decreases usage counter of LP row, and frees memory if necessary */
    ROW**            row,                /**< pointer to LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
+   );
+
+extern
+RETCODE SCIProwLock(                    /**< locks an unmodifiable row, which forbids further changes */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+RETCODE SCIProwUnlock(                  /**< unlocks a lock of a row; a row with no sealed lock may be modified */
+   ROW*             row                 /**< LP row */
    );
 
 extern
@@ -354,7 +364,7 @@ RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coef
    );
 
 extern
-void SCIProwDelCoeff(                   /**< deletes coefficient from row */
+RETCODE SCIProwDelCoeff(                /**< deletes coefficient from row */
    ROW*             row,                /**< row to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
@@ -434,12 +444,7 @@ Bool SCIProwIsInLP(                     /**< returns TRUE iff row is member of a
    );
 
 extern
-void SCIProwCalcSlack(                  /**< recalculates the actual slack of a row */
-   ROW*             row                 /**< LP row */
-   );
-
-extern
-Real SCIProwGetSlack(                   /**< returns the slack of a row in the last LP solution or after recalculation */
+Real SCIProwGetActivity(                /**< returns the activity of a row in the last LP or after recalculation */
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
@@ -458,6 +463,12 @@ int SCIProwGetNNonz(                    /**< get number of nonzero entries in ro
 extern
 Real SCIProwGetNorm(                    /**< get euclidean norm of row vector */
    ROW*             row                 /**< LP row */
+   );
+
+extern
+Real SCIProwGetMaxval(                  /**< gets maximal absolute value of row vector coefficients */
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 extern
@@ -550,6 +561,7 @@ extern
 RETCODE SCIPlpGetState(                 /**< stores LP state (like basis information) into LP state object */
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
@@ -601,6 +613,14 @@ Real SCIPlpGetObjval(                   /**< gets objective value of last soluti
 
 extern
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   STAT*            stat                /**< problem statistics */
+   );
+
+extern
+RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite objective value in the columns and rows */
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr,             /**< block memory buffers */

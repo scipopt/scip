@@ -32,6 +32,62 @@
 #include "set.h"
 
 
+/*
+ * Default settings
+ */
+
+/* Message Output */
+
+#define SCIP_DEFAULT_VERBLEVEL    SCIP_VERBLEVEL_NORMAL
+
+
+/* Dynamic Memory */
+
+#define SCIP_DEFAULT_MEMGROWFAC        1.2
+#define SCIP_DEFAULT_MEMGROWINIT         4
+#define SCIP_DEFAULT_BUFGROWFAC        2.0
+#define SCIP_DEFAULT_BUFGROWINIT     65536
+#define SCIP_DEFAULT_TREEGROWFAC       2.0
+#define SCIP_DEFAULT_TREEGROWINIT    65536
+#define SCIP_DEFAULT_PATHGROWFAC       2.0
+#define SCIP_DEFAULT_PATHGROWINIT      256
+
+
+/* Pricing */
+
+#define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
+#define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
+#define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
+#define SCIP_DEFAULT_ABORTPRICEVARSFAC 5.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+
+
+/* Cut Separation */
+
+#define SCIP_DEFAULT_MAXSEPACUTS       128 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_MAXSEPACUTSROOT  4092 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_AGELIMIT          128 /**< maximum age a cut can reach before it is deleted from global cut pool */
+
+
+/* Primal Solutions */
+
+#define SCIP_DEFAULT_MAXSOL            256 /**< maximal number of solutions to store in the solution storage */
+
+
+/* Tree */
+
+/*#define SCIP_DEFAULT_NODELIMIT     INT_MAX*/ /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT    10000000 /**< maximal number of nodes to create */
+
+
+/* Display */
+
+#define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPFREQ        10000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
+
+
+
+
 static
 int calcGrowSize(                       /**< calculate memory size for dynamically allocated arrays */
    int              initsize,           /**< initial size of array */
@@ -75,6 +131,9 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->treeGrowInit = SCIP_DEFAULT_TREEGROWINIT;
    (*set)->pathGrowFac = SCIP_DEFAULT_PATHGROWFAC;
    (*set)->pathGrowInit = SCIP_DEFAULT_PATHGROWINIT;
+
+   CHECK_OKAY( SCIPbufferCreate(&(*set)->buffer) );
+
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
    (*set)->readerssize = 0;
@@ -92,7 +151,11 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->dispfreq = SCIP_DEFAULT_DISPFREQ;
    (*set)->dispheaderfreq = SCIP_DEFAULT_DISPHEADERFREQ;
    (*set)->maxpricevars = SCIP_DEFAULT_MAXPRICEVARS;
+   (*set)->maxpricevarsroot = SCIP_DEFAULT_MAXPRICEVARSROOT;
+   (*set)->abortpricevarsfac = SCIP_DEFAULT_ABORTPRICEVARSFAC;
    (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
+   (*set)->maxsepacutsroot = SCIP_DEFAULT_MAXSEPACUTSROOT;
+   (*set)->agelimit = SCIP_DEFAULT_AGELIMIT;
    (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
    (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
    (*set)->usepricing = SCIP_DEFAULT_USEPRICING;
@@ -107,6 +170,9 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    int i;
 
    assert(set != NULL);
+
+   /* free memory buffers */
+   SCIPbufferFree(&(*set)->buffer);
 
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )
@@ -420,6 +486,13 @@ RETCODE SCIPsetSetFeastol(              /**< sets LP feasibility tolerance */
    return SCIP_OKAY;
 }
 
+
+#ifdef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 Bool SCIPsetIsEQ(                       /**< checks, if values are in range of epsilon */
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
@@ -526,9 +599,8 @@ Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within
    Real             val                 /**< value to be compared against zero */
    )
 {
-#if 0
-   return (SCIPsetCeil(set, val) - SCIPsetFloor(set, val) < 0.5);
-#else
    return (SCIPsetCeil(set, val) - val <= set->feastol);
-#endif
 }
+
+#endif
+

@@ -217,8 +217,7 @@ RETCODE SCIPdispPrintLine(              /**< prints one line of output with the 
       Bool stripline;
 
       /* display header line */
-      if( stat->nnodes != stat->lastdispnode
-         && (stat->nnodes % (set->dispheaderfreq * set->dispfreq) == 0 || stat->nnodes == 1) )
+      if( stat->ndisplines % set->dispheaderfreq == 0 )
       {
          int fillspace;
 
@@ -258,6 +257,7 @@ RETCODE SCIPdispPrintLine(              /**< prints one line of output with the 
       printf("\n");
 
       stat->lastdispnode = stat->nnodes;
+      stat->ndisplines++;
    }
 
    return SCIP_OKAY;
