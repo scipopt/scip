@@ -235,6 +235,15 @@ RETCODE SCIPlpiChgSides(
    const Real*      rhs                 /**< new values for right hand sides */
    );
 
+/** changes a single coefficient */
+extern
+RETCODE SCIPlpiChgCoef(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number of coefficient to change */
+   int              col,                /**< column number of coefficient to change */
+   Real             newval              /**< new value of coefficient */
+   );
+
 /** changes the objective sense */
 extern 
 RETCODE SCIPlpiChgObjsen(
@@ -249,6 +258,24 @@ RETCODE SCIPlpiChgObj(
    int              ncols,              /**< number of columns to change objective value for */
    int*             cols,               /**< column indices to change objective value for */
    Real*            vals                /**< new objective values for columns */
+   );
+
+/** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
+extern
+RETCODE SCIPlpiScaleRow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number to scale */
+   Real             scaleval            /**< scaling multiplier */
+   );
+
+/** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
+ *  are divided by the scalar; for negative scalars, the column's bounds are switched
+ */
+extern
+RETCODE SCIPlpiScaleCol(
+   LPI*             lpi,                /**< LP interface structure */
+   int              col,                /**< column number to scale */
+   Real             scaleval            /**< scaling multiplier */
    );
 
 /**@} */
@@ -316,6 +343,24 @@ RETCODE SCIPlpiGetRows(
    int*             beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*             ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
    Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   );
+
+/** gets objective values from LP problem object */
+extern
+RETCODE SCIPlpiGetObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            vals                /**< array to store objective values */
+   );
+
+/** gets a single coefficient */
+extern
+RETCODE SCIPlpiGetCoef(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number of coefficient */
+   int              col,                /**< column number of coefficient */
+   Real*            val                 /**< pointer to store the value of the coefficient */
    );
 
 /**@} */

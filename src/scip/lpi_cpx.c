@@ -79,11 +79,14 @@ struct LPi
    char*            senarray;           /**< array for storing row senses */
    Real*            rhsarray;           /**< array for storing rhs values */
    Real*            rngarray;           /**< array for storing range values */
+   Real*            valarray;           /**< array for storing coefficient values */
    int*             rngindarray;        /**< array for storing row indices with range values */
    int*             cstat;              /**< array for storing column basis status */
    int*             rstat;              /**< array for storing row basis status */
+   int*             indarray;           /**< array for storing coefficient indices */
    int              boundchgsize;       /**< size of larray and uarray */
    int              sidechgsize;        /**< size of senarray, rngarray, and rngindarray */
+   int              valsize;            /**< size of valarray and indarray */
    int              cstatsize;          /**< size of cstat array */
    int              rstatsize;          /**< size of rstat array */
 };
@@ -160,6 +163,29 @@ RETCODE ensureSidechgMem(
       lpi->sidechgsize = newsize;
    }
    assert(num <= lpi->sidechgsize);
+
+   return SCIP_OKAY;
+}
+
+/** resizes valarray and indarray to have at least num entries */
+static
+RETCODE ensureValMem(
+   LPI*             lpi,                /**< LP interface structure */
+   int              num                 /**< minimal number of entries in array */
+   )
+{
+   assert(lpi != NULL);
+
+   if( num > lpi->valsize )
+   {
+      int newsize;
+
+      newsize = MAX(2*lpi->valsize, num);
+      ALLOC_OKAY( reallocMemoryArray(&lpi->valarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->indarray, newsize) );
+      lpi->valsize = newsize;
+   }
+   assert(num <= lpi->valsize);
 
    return SCIP_OKAY;
 }
@@ -671,11 +697,14 @@ RETCODE SCIPlpiCreate(
    (*lpi)->senarray = NULL;
    (*lpi)->rhsarray = NULL;
    (*lpi)->rngarray = NULL;
+   (*lpi)->valarray = NULL;
    (*lpi)->rngindarray = NULL;
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
+   (*lpi)->indarray = NULL;
    (*lpi)->boundchgsize = 0;
    (*lpi)->sidechgsize = 0;
+   (*lpi)->valsize = 0;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
@@ -981,6 +1010,25 @@ RETCODE SCIPlpiChgSides(
    return SCIP_OKAY;
 }
 
+/** changes a single coefficient */
+RETCODE SCIPlpiChgCoef(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number of coefficient to change */
+   int              col,                /**< column number of coefficient to change */
+   Real             newval              /**< new value of coefficient */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXchgcoef(cpxenv, lpi->cpxlp, row, col, newval) );
+
+   return SCIP_OKAY;
+}
+
 /** changes the objective sense */
 RETCODE SCIPlpiChgObjsen(
    LPI*             lpi,                /**< LP interface structure */
@@ -1013,6 +1061,112 @@ RETCODE SCIPlpiChgObj(
    assert(ncols == 0 || vals != NULL);
 
    CHECK_ZERO( CPXchgobj(cpxenv, lpi->cpxlp, ncols, cols, vals) );
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
+RETCODE SCIPlpiScaleRow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number to scale */
+   Real             scaleval            /**< scaling multiplier */
+   )
+{
+   Real lhs;
+   Real rhs;
+   int nnonz;
+   int beg;
+   int i;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(scaleval != 0.0);
+
+   invalidateSolution(lpi);
+
+   CHECK_OKAY( ensureValMem(lpi, CPXgetnumcols(cpxenv, lpi->cpxlp)) );
+
+   /* get the row */
+   CHECK_OKAY( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, lpi->indarray, lpi->valarray) );
+
+   /* scale row coefficients */
+   for( i = 0; i < nnonz; ++i )
+   {
+      CHECK_OKAY( SCIPlpiChgCoef(lpi, row, lpi->indarray[i], lpi->valarray[i] * scaleval) );
+   }
+
+   /* scale row sides */
+   if( lhs > -CPX_INFBOUND )
+      lhs *= scaleval;
+   if( rhs < CPX_INFBOUND )
+      rhs *= scaleval;
+   if( scaleval > 0.0 )
+   {
+      CHECK_OKAY( SCIPlpiChgSides(lpi, 1, &row, &lhs, &rhs) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPlpiChgSides(lpi, 1, &row, &rhs, &lhs) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
+ *  are divided by the scalar; for negative scalars, the column's bounds are switched
+ */
+RETCODE SCIPlpiScaleCol(
+   LPI*             lpi,                /**< LP interface structure */
+   int              col,                /**< column number to scale */
+   Real             scaleval            /**< scaling multiplier */
+   )
+{
+   Real lb;
+   Real ub;
+   Real obj;
+   int nnonz;
+   int beg;
+   int i;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(scaleval != 0.0);
+
+   invalidateSolution(lpi);
+
+   CHECK_OKAY( ensureValMem(lpi, CPXgetnumcols(cpxenv, lpi->cpxlp)) );
+
+   /* get the column */
+   CHECK_OKAY( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
+
+   /** get objective value */
+   CHECK_OKAY( SCIPlpiGetObj(lpi, col, col, &obj) );
+
+   /* scale column coefficients */
+   for( i = 0; i < nnonz; ++i )
+   {
+      CHECK_OKAY( SCIPlpiChgCoef(lpi, lpi->indarray[i], col, lpi->valarray[i] * scaleval) );
+   }
+
+   /* scale objective value */
+   obj *= scaleval;
+   CHECK_OKAY( SCIPlpiChgObj(lpi, 1, &col, &obj) );
+
+   /* scale column bounds */
+   if( lb > -CPX_INFBOUND )
+      lb /= scaleval;
+   if( ub < CPX_INFBOUND )
+      ub /= scaleval;
+   if( scaleval > 0.0 )
+   {
+      CHECK_OKAY( SCIPlpiChgBounds(lpi, 1, &col, &lb, &ub) );
+   }
+   else
+   {
+      CHECK_OKAY( SCIPlpiChgBounds(lpi, 1, &col, &ub, &lb) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1192,6 +1346,42 @@ RETCODE SCIPlpiGetRows(
       assert(ind == NULL);
       assert(val == NULL);
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets objective values from LP problem object */
+RETCODE SCIPlpiGetObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            vals                /**< array to store objective values */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(firstcol <= lastcol);
+   assert(vals != NULL);
+   
+   CHECK_ZERO( CPXgetobj(cpxenv, lpi->cpxlp, vals, firstcol, lastcol) );
+
+   return SCIP_OKAY;
+}
+
+/** gets a single coefficient */
+RETCODE SCIPlpiGetCoef(
+   LPI*             lpi,                /**< LP interface structure */
+   int              row,                /**< row number of coefficient */
+   int              col,                /**< column number of coefficient */
+   Real*            val                 /**< pointer to store the value of the coefficient */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXgetcoef(cpxenv, lpi->cpxlp, row, col, val) );
 
    return SCIP_OKAY;
 }
