@@ -1230,6 +1230,10 @@ separating/gomory/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 500]
 separating/gomory/maxsepacutsroot = 500
 
+# maximal valid range max(|weights|)/min(|weights|) of row weights
+# [type: real, range: [1,1.79769313486232e+308], default: 10000]
+separating/gomory/maxweightrange = 10000
+
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/gomory/dynamiccuts = TRUE

@@ -819,8 +819,8 @@ heuristics/feaspump/depthfac = 0.5
 heuristics/feaspump/depthfacnosol = 2
 
 # priority of heuristic <fixandinfer>
-# [type: int, range: [-2147483648,2147483647], default: -2000000]
-heuristics/fixandinfer/priority = -2000000
+# [type: int, range: [-2147483648,2147483647], default: -500000]
+heuristics/fixandinfer/priority = -500000
 
 # frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
@@ -1229,6 +1229,10 @@ separating/gomory/maxsepacuts = 50
 # maximal number of gomory cuts separated per separation round in the root node
 # [type: int, range: [0,2147483647], default: 500]
 separating/gomory/maxsepacutsroot = 500
+
+# maximal valid range max(|weights|)/min(|weights|) of row weights
+# [type: real, range: [1,1.79769313486232e+308], default: 10000]
+separating/gomory/maxweightrange = 10000
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
