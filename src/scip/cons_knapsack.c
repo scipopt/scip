@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.81 2005/01/31 12:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.82 2005/02/03 12:19:06 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -88,6 +88,7 @@ struct ConsData
    Longint          weightsum;          /**< sum of all weights */
    Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
    unsigned int     propagated:1;       /**< is the knapsack constraint already propagated? */
+   unsigned int     presolved:1;        /**< is the knapsack constraint already presolved? */
    unsigned int     sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int     merged:1;           /**< are the constraint's equal variables already merged? */
 };
@@ -315,6 +316,7 @@ RETCODE consdataCreate(
    (*consdata)->weightsum = 0;
    (*consdata)->onesweightsum = 0;
    (*consdata)->propagated = FALSE;
+   (*consdata)->presolved = FALSE;
    (*consdata)->sorted = FALSE;
    (*consdata)->merged = FALSE;
 
@@ -396,6 +398,7 @@ void consdataChgWeight(
    }
 
    consdata->propagated = FALSE;
+   consdata->presolved = FALSE;
    consdata->sorted = FALSE;
 }
 
@@ -1182,6 +1185,7 @@ RETCODE addCoef(
       consdata->merged = FALSE;
    }
    consdata->propagated = FALSE;
+   consdata->presolved = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1237,6 +1241,7 @@ RETCODE delCoefPos(
    consdata->nvars--;
 
    consdata->propagated = FALSE;
+   consdata->presolved = FALSE;
    consdata->sorted = FALSE;
 
    return SCIP_OKAY;
@@ -1855,13 +1860,15 @@ DECL_CONSPRESOL(consPresolKnapsack)
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
-         consdata->propagated = FALSE;
+         consdata->presolved = FALSE;
 
-      if( consdata->propagated )
+      if( consdata->presolved )
          continue;
 
       debugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
       debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+
+      consdata->presolved = TRUE;
 
       /* remove all fixed variables */
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
@@ -2130,6 +2137,7 @@ DECL_EVENTEXEC(eventExecKnapsack)
    case SCIP_EVENTTYPE_LBTIGHTENED:
       eventdata->consdata->onesweightsum += eventdata->weight;
       eventdata->consdata->propagated = FALSE;
+      eventdata->consdata->presolved = FALSE;
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
@@ -2140,7 +2148,7 @@ DECL_EVENTEXEC(eventExecKnapsack)
       break;
    case SCIP_EVENTTYPE_VARFIXED:
       /* the variable should be removed from the constraint in presolving */
-      eventdata->consdata->propagated = FALSE;
+      eventdata->consdata->presolved = FALSE;
       break;
    default:
       errorMessage("invalid event type %x\n", SCIPeventGetType(event));

@@ -63,6 +63,10 @@ fixed bugs:
 - fixed bug that CONSLOCK method of constraint handlers that don't need constraints is not called
 - fixed bug that after a resolve and further preprocessing, existing primal solutions may get corrupted due to
   aggregations or fixings that are possible due to the primal bound (given by the best solution)
+- fixeg bug in setppc constraint handler with pairs of aggregated variables in the same constraint
+- removed bug with dual presolver, that declared a problem to be unbounded or infeasible, if it could fix a variable
+  to infinity even if its objective value is zero
+- fixed bug in knapsack constraint handler that fixed variables are sometimes not removed in presolving
 
 known bugs:
 - conflict analysis should be made available in presolving (for probing)

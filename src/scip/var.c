@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.136 2005/02/02 19:34:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.137 2005/02/03 12:19:06 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2049,8 +2049,6 @@ RETCODE varFreeParents(
       assert((*var)->parentvars != NULL);
       parentvar = (*var)->parentvars[i];
       assert(parentvar != NULL);
-      assert(SCIPvarIsTransformed(*var) == SCIPvarIsTransformed((*var)->parentvars[i])
-         || (*var)->parentvars[i]->nuses >= 2); /* otherwise we would use the wrong blkmem in varFree() */
 
       switch( SCIPvarGetStatus(parentvar) )
       {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.75 2005/01/21 09:16:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.76 2005/02/03 12:19:06 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -826,35 +826,12 @@ RETCODE processFixings(
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
    *addcut = FALSE;
-   *mustcheck = FALSE;
+   *mustcheck = TRUE;
 
    debugMessage("processing constraint <%s> with respect to fixed variables (%d fixed to 0.0, %d fixed to 1.0)\n",
       SCIPconsGetName(cons), consdata->nfixedzeros, consdata->nfixedones);
 
-   if( consdata->nfixedones >= 2 )
-   {
-      /* at least two variables are fixed to 1:
-       * - a set covering constraint is feasible anyway and can be disabled
-       * - a set partitioning or packing constraint is infeasible
-       */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
-      {
-         debugMessage(" -> disabling set covering constraint <%s>\n", SCIPconsGetName(cons));
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-      }
-      else
-      {
-         debugMessage(" -> conflict on set packing/partitioning constraint <%s>\n", SCIPconsGetName(cons));
-
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-
-         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-         CHECK_OKAY( analyzeConflictOne(scip, cons) );
-
-         *cutoff = TRUE;
-      }
-   }
-   else if( consdata->nfixedones == 1 )
+   if( consdata->nfixedones == 1 )
    {
       /* exactly one variable is fixed to 1:
        * - a set covering constraint is feasible anyway and can be disabled
@@ -881,15 +858,17 @@ RETCODE processFixings(
             debugMessage(" -> fixing all other variables to zero in set packing/partitioning constraint <%s>\n", 
                SCIPconsGetName(cons));
 
-            /* unfixed variables exist: fix them to zero */
+            /* unfixed variables exist: fix them to zero;
+             * this could result in additional variables fixed to one due to aggregations; in this case, the
+             * constraint is infeasible in local bounds
+             */
             vars = consdata->vars;
             nvars = consdata->nvars;
             fixedonefound = FALSE;
             fixed = FALSE;
-            for( v = 0; v < nvars; ++v )
+            for( v = 0; v < nvars && consdata->nfixedones == 1; ++v )
             {
                var = vars[v];
-               assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLbLocal(var)));
                assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
@@ -902,7 +881,7 @@ RETCODE processFixings(
                   fixedonefound = TRUE;
             }
             /* the fixed to one variable must have been found, and at least one variable must have been fixed */
-            assert(fixedonefound && fixed);
+            assert(consdata->nfixedones >= 2 || (fixedonefound && fixed));
 
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *reduceddom = TRUE;
@@ -911,12 +890,38 @@ RETCODE processFixings(
          /* now all other variables are fixed to zero:
           * the constraint is feasible, and if it's not modifiable, it is redundant
           */
-         if( !SCIPconsIsModifiable(cons) )
+         if( !SCIPconsIsModifiable(cons) && consdata->nfixedones == 1 )
          {
             debugMessage(" -> disabling set packing/partitioning constraint <%s>\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
       }
+      *mustcheck = FALSE;
+   }
+
+   if( consdata->nfixedones >= 2 )
+   {
+      /* at least two variables are fixed to 1:
+       * - a set covering constraint is feasible anyway and can be disabled
+       * - a set partitioning or packing constraint is infeasible
+       */
+      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
+      {
+         debugMessage(" -> disabling set covering constraint <%s>\n", SCIPconsGetName(cons));
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      }
+      else
+      {
+         debugMessage(" -> conflict on set packing/partitioning constraint <%s>\n", SCIPconsGetName(cons));
+
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+
+         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         CHECK_OKAY( analyzeConflictOne(scip, cons) );
+
+         *cutoff = TRUE;
+      }
+      *mustcheck = FALSE;
    }
    else if( consdata->nfixedzeros == consdata->nvars )
    {
@@ -951,8 +956,9 @@ RETCODE processFixings(
             *cutoff = TRUE;
          }
       }
+      *mustcheck = FALSE;
    }
-   else if( consdata->nfixedzeros == consdata->nvars - 1 )
+   else if( consdata->nfixedzeros == consdata->nvars - 1 && consdata->nfixedones == 0 )
    {
       /* all variables except one are fixed to zero:
        * - a set packing constraint is feasible anyway, and if it's unmodifiable, it can be disabled
@@ -960,8 +966,6 @@ RETCODE processFixings(
        *   remaining variable is fixed to one
        * - a modifiable set partitioning or covering constraint must be checked manually
        */
-      assert(consdata->nfixedones == 0);
-      
       if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
       {
          if( !SCIPconsIsModifiable(cons) )
@@ -969,6 +973,7 @@ RETCODE processFixings(
             debugMessage(" -> disabling set packing constraint <%s>\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
+         *mustcheck = FALSE;
       }
       else if( !SCIPconsIsModifiable(cons) )
       {
@@ -998,23 +1003,15 @@ RETCODE processFixings(
             }
          }
          assert(v < nvars);
+         assert(consdata->nfixedzeros == consdata->nvars - 1);
+         assert(consdata->nfixedones == 1);
 
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          *reduceddom = TRUE;
+         *mustcheck = FALSE;
       }
-      else
-         *mustcheck = TRUE;
    }
-   else
-   {
-      /* no variable is fixed to one, and at least two variables are not fixed to zero:
-       * - the constraint must be checked manually
-       */
-      assert(consdata->nfixedones == 0);
-      assert(consdata->nfixedzeros < consdata->nvars - 1);
-
-      *mustcheck = TRUE;
-   }
+   assert(consdata->nfixedzeros + consdata->nfixedones <= consdata->nvars);
 
    return SCIP_OKAY;
 }
