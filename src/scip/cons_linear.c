@@ -2490,8 +2490,9 @@ RETCODE SCIPupgradeConsLinear(
       }
    }
 
-   printf("upgrading linear constraint <%s>: +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d integral=%d\n",
-      SCIPconsGetName(*cons), nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
+   debugMessage("upgrading linear constraint <%s>:\n", SCIPconsGetName(*cons));
+   debugMessage(" +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d integral=%d\n",
+      nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
       ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac, integral);
 
    /* try all upgrading methods in priority order */

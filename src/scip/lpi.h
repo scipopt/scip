@@ -132,6 +132,26 @@ RETCODE SCIPlpiFree(
 /**@name Modification Methods */
 /**@{ */
 
+/** copies LP data with column matrix into LP solver */
+extern
+RETCODE SCIPlpiLoadColLP(
+   LPI*             lpi,                /**< LP interface structure */
+   OBJSEN           objsen,             /**< objective sense */
+   int              ncols,              /**< number of columns */
+   const Real*      obj,                /**< objective function values of columns */
+   const Real*      lb,                 /**< lower bounds of columns */
+   const Real*      ub,                 /**< upper bounds of columns */
+   char**           colnames,           /**< column names, or NULL */
+   int              nrows,              /**< number of rows */
+   const Real*      lhs,                /**< left hand sides of rows */
+   const Real*      rhs,                /**< right hand sides of rows */
+   char**           rownames,           /**< row names, or NULL */
+   int              nnonz,              /**< number of nonzero elements in the constraint matrix */
+   const int*       beg,                /**< start index of each column in ind- and val-array */
+   const int*       ind,                /**< row indices of constraint matrix entries */
+   const Real*      val                 /**< values of constraint matrix entries */
+   );
+
 /** adds columns to the LP */
 extern 
 RETCODE SCIPlpiAddCols(
