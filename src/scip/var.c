@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.146 2005/02/08 16:56:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.147 2005/02/09 13:39:03 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5372,11 +5372,11 @@ RETCODE SCIPvarAddImplic(
       CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
          
       /* check for conflicting and redundant implication */
-      if( (implbound == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.ub, implbound))
-         || (implbound == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.lb, implbound)) )
+      if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.ub, implbound))
+         || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.lb, implbound)) )
          *conflict = TRUE;
-      else if( (implbound == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.lb, implbound))
-         || (implbound == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.ub, implbound)) )
+      else if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.lb, implbound))
+         || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.ub, implbound)) )
       {
          if( var == implvar )
          {
