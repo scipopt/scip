@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -60,7 +60,7 @@ struct Branchrule
    DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional LP solutions */
    DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
    BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
-   unsigned int     initialized:1;      /**< is branching rule initialized? */
+   Bool             initialized;        /**< is branching rule initialized? */
 };
 
 

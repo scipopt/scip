@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.86 2003/12/03 18:08:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.87 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1706,22 +1706,54 @@ Real SCIPcolGetRedcost(
    return col->redcost;
 }
 
-/** gets the feasibility of a column in last LP or after recalculation */
+/** gets the feasibility of (the dual row of) a column in last LP or after recalculation */
 Real SCIPcolGetFeasibility(
    COL*             col,                /**< LP column */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
 {
-   Real redcost;
-
    assert(col != NULL);
+   assert(set != NULL);
 
-   redcost = SCIPcolGetRedcost(col, stat);
-
-   if( col->lb < 0.0 )
-      return -ABS(redcost);
+   /* A column's reduced cost is defined as
+    *   redcost  = obj - activity,  activity = y^T * col.   (activity = obj - redcost)
+    * The activity is equal to the activity of the corresponding row in the dual LP.
+    * The column's feasibility is the feasibility of the corresponding row in the dual LP.
+    * The sides of the dual row depend on the bounds of the column:
+    *  - lb == ub      :  dual row is a free row with infinite sides
+    *  -  0 <= lb <  ub:         activity <= obj  =>  0 <= redcost
+    *  - lb <   0 <  ub:  obj <= activity <= obj  =>  0 <= redcost <= 0
+    *  - lb <  ub <=  0:  obj <= activity         =>       redcost <= 0
+    */
+   if( SCIPsetIsEQ(set, col->lb, col->ub) )
+   {
+      /* dual row is free */
+      return set->infinity;
+   }
    else
-      return redcost;
+   {
+      Real redcost;
+
+      /* calculate reduced costs */
+      redcost = SCIPcolGetRedcost(col, stat);
+   
+      if( !SCIPsetIsNegative(set, col->lb) )
+      {
+         /* dual row is  activity <= obj  <=>  redcost >= 0 */
+         return redcost;
+      }
+      else if( SCIPsetIsPositive(set, col->ub) )
+      {
+         /* dual row is  activity == obj  <=>  redcost == 0 */
+         return -ABS(redcost);
+      }
+      else
+      {
+         /* dual row is  activity >= obj  <=>  redcost <= 0 */
+         return -redcost;
+      }
+   }
 }
 
 /** calculates the farkas value of a column */
@@ -3458,6 +3490,7 @@ RETCODE lpFlushDelCols(
          markColDeleted(lp->lpicols[i]);
       }
       lp->nlpicols = lp->lpifirstchgcol;
+      lp->flushdeletedcols = TRUE;
    }
    assert(lp->nlpicols == lp->lpifirstchgcol);
 
@@ -3597,6 +3630,8 @@ RETCODE lpFlushAddCols(
    SCIPsetFreeBufferArray(set, &lb);
    SCIPsetFreeBufferArray(set, &obj);
 
+   lp->flushaddedcols = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -3648,6 +3683,7 @@ RETCODE lpFlushDelRows(
          markRowDeleted(lp->lpirows[i]);
       }
       lp->nlpirows = lp->lpifirstchgrow;
+      lp->flushdeletedrows = TRUE;
    }
    assert(lp->nlpirows == lp->lpifirstchgrow);
 
@@ -3776,6 +3812,8 @@ RETCODE lpFlushAddRows(
    SCIPsetFreeBufferArray(set, &beg);
    SCIPsetFreeBufferArray(set, &rhs);
    SCIPsetFreeBufferArray(set, &lhs);
+
+   lp->flushaddedrows = TRUE;
    
    return SCIP_OKAY;
 }
@@ -3985,6 +4023,11 @@ RETCODE lpFlush(
    
    assert(!lp->solved);
 
+   lp->flushdeletedcols = FALSE;
+   lp->flushaddedcols = FALSE;
+   lp->flushdeletedrows = FALSE;
+   lp->flushaddedrows = FALSE;
+
    CHECK_OKAY( lpFlushDelCols(lp) );
    CHECK_OKAY( lpFlushDelRows(lp) );
    CHECK_OKAY( lpFlushChgCols(lp, memhdr, set) );
@@ -4049,22 +4092,31 @@ RETCODE SCIPlpCreate(
    (*lp)->firstnewrow = 0;
    (*lp)->nremoveablecols = 0;
    (*lp)->nremoveablerows = 0;
+   (*lp)->flushdeletedcols = FALSE;
+   (*lp)->flushaddedcols = FALSE;
+   (*lp)->flushdeletedrows = FALSE;
+   (*lp)->flushaddedrows = FALSE;
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->diving = FALSE;
+   (*lp)->lpifeastol = set->feastol;
+   (*lp)->lpifromscratch = FALSE;
+   (*lp)->lpifastmip = TRUE;
+   (*lp)->lpiscaling = TRUE;
+   (*lp)->lastwasprimal = FALSE;
 
    /* set objective sense */
    CHECK_OKAY( SCIPlpiChgObjsen((*lp)->lpi, SCIP_OBJSEN_MINIMIZE) );
 
    /* set default parameters in LP solver */
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_SCALING, TRUE) );
+   CHECK_OKAY( SCIPlpSetFeastol(*lp, (*lp)->lpifeastol) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_LPINFO, FALSE) );
-   CHECK_OKAY( SCIPlpSetFeastol(*lp, set->feastol) );
 
    return SCIP_OKAY;
 }
@@ -4887,20 +4939,108 @@ RETCODE SCIPlpSetFeastol(
    Real             feastol             /**< new feasibility tolerance */
    )
 {
-   Real oldfeastol;
-
    assert(lp != NULL);
    assert(feastol >= 0.0);
    
-   CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, &oldfeastol) );
-   CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, feastol) );
-   if( lp->nrows > 0 && feastol < oldfeastol )
+#ifndef NDEBUG
    {
-      lp->solved = FALSE;
-      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-      lp->primalfeasible = FALSE;
+      Real oldfeastol;
+      
+      CHECK_OKAY( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, &oldfeastol) );
+      assert(oldfeastol == lp->lpifeastol);
+   }
+#endif
+
+   if( feastol != lp->lpifeastol )
+   {
+      CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_FEASTOL, feastol) );
+      if( lp->nrows > 0 && feastol < lp->lpifeastol )
+      {
+         lp->solved = FALSE;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         lp->primalfeasible = FALSE;
+      }
+      lp->lpifeastol = feastol;
    }
 
+   return SCIP_OKAY;
+}
+
+/** sets the FROMSCRATCH setting of the LP solver */
+RETCODE SCIPlpSetFromscratch(
+   LP*              lp,                 /**< actual LP data */
+   Bool             fromscratch         /**< new FROMSCRATCH setting */
+   )
+{
+   assert(lp != NULL);
+
+#ifndef NDEBUG
+   {
+      Bool oldfromscratch;
+      
+      CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, &oldfromscratch) );
+      assert(oldfromscratch == lp->lpifromscratch);
+   }
+#endif
+
+   if( fromscratch != lp->lpifromscratch )
+   {
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, fromscratch) );
+      lp->lpifromscratch = fromscratch;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** sets the FASTMIP setting of the LP solver */
+RETCODE SCIPlpSetFastmip(
+   LP*              lp,                 /**< actual LP data */
+   Bool             fastmip             /**< new FASTMIP setting */
+   )
+{
+   assert(lp != NULL);
+
+#ifndef NDEBUG
+   {
+      Bool oldfastmip;
+      
+      CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, &oldfastmip) );
+      assert(oldfastmip == lp->lpifastmip);
+   }
+#endif
+
+   if( fastmip != lp->lpifastmip )
+   {
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, fastmip) );
+      lp->lpifastmip = fastmip;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** sets the SCALING setting of the LP solver */
+RETCODE SCIPlpSetScaling(
+   LP*              lp,                 /**< actual LP data */
+   Bool             scaling             /**< new SCALING setting */
+   )
+{
+   assert(lp != NULL);
+
+#ifndef NDEBUG
+   {
+      Bool oldscaling;
+      
+      CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_SCALING, &oldscaling) );
+      assert(oldscaling == lp->lpiscaling);
+   }
+#endif
+
+   if( scaling != lp->lpiscaling )
+   {
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, scaling) );
+      lp->lpiscaling = scaling;
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -4928,8 +5068,6 @@ RETCODE lpPrimalSimplex(
    )
 {
    int iterations;
-   Bool primalfeasible;
-   Bool dualfeasible;
 
    assert(lp != NULL);
    assert(set != NULL);
@@ -4943,6 +5081,7 @@ RETCODE lpPrimalSimplex(
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
+   lp->lastwasprimal = TRUE;
 
    /* stop timing */
    SCIPclockStop(stat->primallptime, set);
@@ -4960,13 +5099,7 @@ RETCODE lpPrimalSimplex(
          stat->ndivinglpiterations += iterations;
    }
 
-   /* check for primal and dual feasibility */
-   CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
-   lp->primalfeasible = primalfeasible;
-   lp->dualfeasible = dualfeasible;
-
-   debugMessage("solved primal LP in %d iterations: primalfeasible=%d, dualfeasible=%d\n", 
-      iterations, primalfeasible, dualfeasible);
+   debugMessage("solved primal LP in %d iterations\n", iterations);
 
    return SCIP_OKAY;
 }
@@ -4980,8 +5113,6 @@ RETCODE lpDualSimplex(
    )
 {
    int iterations;
-   Bool primalfeasible;
-   Bool dualfeasible;
 
    assert(lp != NULL);
    assert(lp->flushed);
@@ -4996,6 +5127,7 @@ RETCODE lpDualSimplex(
 
    /* call dual simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
+   lp->lastwasprimal = FALSE;
 
    /* stop timing */
    SCIPclockStop(stat->duallptime, set);
@@ -5013,114 +5145,37 @@ RETCODE lpDualSimplex(
          stat->ndivinglpiterations += iterations;
    }
 
+   debugMessage("solved dual LP in %d iterations\n", iterations);
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP with the primal or dual simplex algorithm */
+static
+RETCODE lpSimplex(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   Bool             useprimal           /**< should the primal simplex be used? */
+   )
+{
+   assert(lp != NULL);
+
+   /* call appropriate simplex */
+   if( useprimal )
+   {
+      CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
+   }
+   else
+   {
+      CHECK_OKAY( lpDualSimplex(lp, set, stat) );
+   }
+   
    /* check for primal and dual feasibility */
-   CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
-   lp->primalfeasible = primalfeasible;
-   lp->dualfeasible = dualfeasible;
+   CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &lp->primalfeasible, &lp->dualfeasible) );
 
-   debugMessage("solved dual LP in %d iterations: primalfeasible=%d, dualfeasible=%d\n", 
-      iterations, primalfeasible, dualfeasible);
+   debugMessage("LP feasibility: primalfeasible=%d, dualfeasible=%d\n", lp->primalfeasible, lp->dualfeasible);
 
-   return SCIP_OKAY;
-}
-
-/** calls LPI to perform primal simplex from scratch with tighter feasibility tolerance */
-static
-RETCODE lpPrimalSimplexStable(
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(lp != NULL);
-   assert(set != NULL);
-
-   /* reduce the feasibility tolerance of the LP solver, deactivate FASTMIP */
-   CHECK_OKAY( SCIPlpSetFeastol(lp, 0.001*set->feastol) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
-   
-   /* solve primal simplex */
-   CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
-   
-   /* reset the feasibility tolerance of the LP solver to its original value, and activate FASTMIP again */
-   CHECK_OKAY( SCIPlpSetFeastol(lp, set->feastol) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
-   
-   return SCIP_OKAY;
-}
-
-/** calls LPI to perform dual simplex from scratch with tighter feasibility tolerance */
-static
-RETCODE lpDualSimplexStable(
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(lp != NULL);
-   assert(set != NULL);
-
-   /* reduce the feasibility tolerance of the LP solver, deactivate FASTMIP */
-   CHECK_OKAY( SCIPlpSetFeastol(lp, 0.001*set->feastol) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
-   
-   /* solve dual simplex */
-   CHECK_OKAY( lpDualSimplex(lp, set, stat) );
-   
-   /* reset the feasibility tolerance of the LP solver to its original value, and activate FASTMIP again */
-   CHECK_OKAY( SCIPlpSetFeastol(lp, set->feastol) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
-   
-   return SCIP_OKAY;
-}
-
-/** calls LPI to perform primal simplex from scratch with tighter feasibility tolerance and without scaling */
-static
-RETCODE lpPrimalSimplexStableUnscaled(
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(lp != NULL);
-   assert(set != NULL);
-
-   /* deactivate scaling */
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, FALSE) );
-   
-   /* solve primal simplex */
-   CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
-   
-   /* activate scaling again */
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, TRUE) );
-   
-   return SCIP_OKAY;
-}
-
-/** calls LPI to perform dual simplex from scratch with tighter feasibility tolerance and without scaling */
-static
-RETCODE lpDualSimplexStableUnscaled(
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(lp != NULL);
-   assert(set != NULL);
-
-   /* deactivate scaling */
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, FALSE) );
-   
-   /* solve dual simplex */
-   CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
-   
-   /* activate scaling again */
-   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, TRUE) );
-   
    return SCIP_OKAY;
 }
 
@@ -5138,33 +5193,34 @@ RETCODE lpSolveStable(
    assert(set != NULL);
    assert(stat != NULL);
 
+   /* set LP solver to be fast but unprecise */
+   CHECK_OKAY( SCIPlpSetFeastol(lp, set->feastol) );
+   CHECK_OKAY( SCIPlpSetFromscratch(lp, FALSE) );
+   CHECK_OKAY( SCIPlpSetFastmip(lp, TRUE) );
+   CHECK_OKAY( SCIPlpSetScaling(lp, TRUE) );
+
+   /* if columns have been deleted to the LPI, turn FASTMIP off */
+   if( lp->flushdeletedcols )
+   {
+      CHECK_OKAY( SCIPlpSetFastmip(lp, FALSE) );
+   }
+
    /* call simplex */
-   if( useprimal )
-   {
-      CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
-   }
-   else
-   {
-      CHECK_OKAY( lpDualSimplex(lp, set, stat) );
-   }
+   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
       return SCIP_OKAY;
 
-   /* solve again from scratch */
+   /* solve again from scratch without FASTMIP and a tighter feasibility tolerance */
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-   if( useprimal )
-   {
-      CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
-   }
-   else
-   {
-      CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
-   }
-   
+   CHECK_OKAY( SCIPlpSetFeastol(lp, 0.001*set->feastol) );
+   CHECK_OKAY( SCIPlpSetFromscratch(lp, TRUE) );
+   CHECK_OKAY( SCIPlpSetFastmip(lp, FALSE) );
+   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
       return SCIP_OKAY;
@@ -5173,14 +5229,7 @@ RETCODE lpSolveStable(
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, useprimal ? "dual" : "primal");
-   if( useprimal )
-   {
-      CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
-   }
-   else
-   {
-      CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
-   }
+   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
@@ -5190,14 +5239,8 @@ RETCODE lpSolveStable(
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex without scaling\n", 
       stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-   if( useprimal )
-   {
-      CHECK_OKAY( lpPrimalSimplexStableUnscaled(lp, set, stat) );
-   }
-   else
-   {
-      CHECK_OKAY( lpDualSimplexStableUnscaled(lp, set, stat) );
-   }
+   CHECK_OKAY( SCIPlpSetScaling(lp, FALSE) );
+   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
    
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
@@ -5207,14 +5250,7 @@ RETCODE lpSolveStable(
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex without scaling\n", 
       stat->nnodes, stat->nlps, useprimal ? "dual" : "primal");
-   if( useprimal )
-   {
-      CHECK_OKAY( lpDualSimplexStableUnscaled(lp, set, stat) );
-   }
-   else
-   {
-      CHECK_OKAY( lpPrimalSimplexStableUnscaled(lp, set, stat) );
-   }
+   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
@@ -5234,12 +5270,13 @@ RETCODE lpSolveStable(
    }
 }
 
-/** solves the LP with the primal simplex algorithm and evaluates return status */
+/** solves the LP with the primal or dual simplex algorithm and evaluates return status */
 static
-RETCODE lpSolvePrimal(
+RETCODE lpSolve(
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             useprimal           /**< should the primal simplex be used? */
    )
 {
    assert(lp != NULL);
@@ -5247,79 +5284,8 @@ RETCODE lpSolvePrimal(
    assert(set != NULL);
    assert(stat != NULL);
 
-   /* call primal simplex */
-   CHECK_OKAY( lpSolveStable(lp, set, stat, TRUE) );
-
-   /* evaluate solution status */
-   if( SCIPlpiIsOptimal(lp->lpi) )
-   {
-      assert(lp->primalfeasible);
-      assert(lp->dualfeasible);
-      lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
-      if( SCIPsetIsRelGE(set, lp->objval, lp->upperbound) )
-      {
-         /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
-         lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-         lp->objval = set->infinity;
-      }
-   }
-   else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
-   {
-      lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
-      lp->objval = set->infinity;
-   }
-   else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
-   {
-      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
-      lp->objval = -set->infinity;
-   }
-   else if( SCIPlpiIsIterlimExc(lp->lpi) )
-   {
-      lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
-      lp->objval = -set->infinity;
-   }
-   else if( SCIPlpiIsTimelimExc(lp->lpi) )
-   {
-      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
-      lp->objval = -set->infinity;
-   }
-   else if( SCIPlpiIsObjlimExc(lp->lpi) )
-   {
-      errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
-      lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-      lp->objval = -set->infinity;
-      return SCIP_LPERROR;
-   }
-   else
-   {
-      errorMessage("Unknown return status of primal simplex\n");
-      lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-      return SCIP_LPERROR;
-   }
-
-   lp->solved = TRUE;
-
-   debugMessage("solving primal LP returned solstat=%d\n", lp->lpsolstat);
-
-   return SCIP_OKAY;
-}
-
-/** solves the LP with the dual simplex algorithm */
-static
-RETCODE lpSolveDual(
-   LP*              lp,                 /**< actual LP data */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   )
-{
-   assert(lp != NULL);
-   assert(lp->flushed);
-   assert(set != NULL);
-   assert(stat != NULL);
-
-   /* call dual simplex */
-   CHECK_OKAY( lpSolveStable(lp, set, stat, FALSE) );
+   /* call simplex */
+   CHECK_OKAY( lpSolveStable(lp, set, stat, useprimal) );
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
@@ -5337,6 +5303,13 @@ RETCODE lpSolveDual(
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
+      if( lp->lastwasprimal )
+      {
+         errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
+         lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
+         lp->objval = -set->infinity;
+         return SCIP_LPERROR;
+      }
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->objval = set->infinity;
    }
@@ -5353,24 +5326,23 @@ RETCODE lpSolveDual(
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
-      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+      lp->objval = -set->infinity;
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
-      CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+      lp->objval = -set->infinity;
    }
    else
    {
-      errorMessage("Unknown return status of dual simplex\n");
+      errorMessage("Unknown return status of %s simplex\n", lp->lastwasprimal ? "primal" : "dual");
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
-      lp->objval = -set->infinity;
       return SCIP_LPERROR;
    }
 
    lp->solved = TRUE;
 
-   debugMessage("solving dual LP returned solstat=%d\n", lp->lpsolstat);
+   debugMessage("solving %s LP returned solstat=%d\n", lp->lastwasprimal ? "primal" : "dual", lp->lpsolstat);
 
    return SCIP_OKAY;
 }
@@ -5402,12 +5374,12 @@ RETCODE SCIPlpSolve(
    if( lp->dualfeasible || !lp->primalfeasible )
    {
       debugMessage("solving dual LP\n");
-      CHECK_OKAY( lpSolveDual(lp, set, stat) );
+      CHECK_OKAY( lpSolve(lp, set, stat, FALSE) );
    }
    else
    {
       debugMessage("solving primal LP\n");
-      CHECK_OKAY( lpSolvePrimal(lp, set, stat) );
+      CHECK_OKAY( lpSolve(lp, set, stat, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -5432,7 +5404,8 @@ RETCODE SCIPlpSolveAndEval(
 
    if( !lp->solved )
    {
-      Bool infeasible;
+      Bool primalfeasible;
+      Bool dualfeasible;
       Bool resetfastmip;
       Bool resetfromscratch;
 
@@ -5455,9 +5428,9 @@ RETCODE SCIPlpSolveAndEval(
       switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
-         CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &infeasible) );
+         CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &primalfeasible, &dualfeasible) );
 
-         if( aging && !lp->diving )
+         if( primalfeasible && dualfeasible && aging && !lp->diving )
          {
             /* update ages and remove obsolete columns and rows from LP */
             CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
@@ -5466,20 +5439,19 @@ RETCODE SCIPlpSolveAndEval(
             if( !lp->solved )
             {
                /* resolve LP after removing obsolete columns and rows */
-               debugMessage("remove obsoletes: resolve LP again\n");
-               debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
-                  lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
-               CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
-               assert(lp->solved);
-               assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-               CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &infeasible) );
+               debugMessage("removed obsoletes - resolve LP again: %d rows, %d cols\n", lp->nrows, lp->ncols);
+               aging = FALSE; /* to prevent infinite loops */
+               goto SOLVEAGAIN;
             }
          }
-         if( infeasible )
+         if( !primalfeasible || !dualfeasible )
          {
             if( !resetfastmip )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
+               infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again without FASTMIP\n",
+                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
                resetfastmip = TRUE;
                assert(!resetfromscratch);
@@ -5488,6 +5460,9 @@ RETCODE SCIPlpSolveAndEval(
             else if( !resetfromscratch )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
+               infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) solution of LP %d not optimal (pfeas=%d, dfeas=%d) -- solving again from scratch\n",
+                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
                CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
                CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
                resetfastmip = TRUE;
@@ -5496,7 +5471,7 @@ RETCODE SCIPlpSolveAndEval(
             }
             else
             {
-               warningMessage("Numerical troubles at node %lld in LP %d\n", stat->nnodes, stat->nlps);
+               warningMessage("(node %lld) unresolved numerical troubles in LP %d\n", stat->nnodes, stat->nlps);
             }
          }
          debugMessage(" -> LP objective value: %g\n", lp->objval);
@@ -5518,7 +5493,7 @@ RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_OBJLIMIT:
          if( set->npricers > 0 || prob->nvars > lp->ncols )
          {
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL) );
+            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, NULL) );
          }
          debugMessage(" -> LP objective limit reached\n");
          break;
@@ -5574,7 +5549,8 @@ RETCODE SCIPlpGetSol(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   Bool*            infeasible          /**< pointer to store whether the solution is primal infeasible, or NULL */
+   Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
+   Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {
    COL** lpicols;
@@ -5595,8 +5571,10 @@ RETCODE SCIPlpGetSol(
    assert(set != NULL);
    assert(memhdr != NULL);
 
-   if( infeasible != NULL )
-      *infeasible = FALSE;
+   if( primalfeasible != NULL )
+      *primalfeasible = TRUE;
+   if( dualfeasible != NULL )
+      *dualfeasible = TRUE;
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -5618,12 +5596,22 @@ RETCODE SCIPlpGetSol(
       lpicols[c]->primsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
       lpicols[c]->validredcostlp = lpcount;
-      if( infeasible != NULL )
-         *infeasible = *infeasible
-            || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->lb)
-            || SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->ub);
-      /*debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f\n",
-        SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost);*/
+      if( primalfeasible != NULL )
+         *primalfeasible = *primalfeasible
+            && SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb)
+            && SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub);
+      if( dualfeasible != NULL )
+      {
+         if( SCIPsetIsGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
+         if( SCIPsetIsLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+      }
+      debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%d/%d, dfeas=%d\n",
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
+         SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb),
+         SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub),
+         !SCIPsetIsFeasNegative(set, lpicols[c]->redcost));
    }
 
    /* copy dual solution and activities into rows */
@@ -5632,12 +5620,23 @@ RETCODE SCIPlpGetSol(
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
       lpirows[r]->validactivitylp = lpcount;
-      if( infeasible != NULL )
-         *infeasible = *infeasible
-            || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->lhs)
-            || SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->rhs);
-      /*debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f\n", 
-        lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity);*/
+      if( primalfeasible != NULL )
+         *primalfeasible = *primalfeasible
+            && SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs)
+            && SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs);
+      if( dualfeasible != NULL )
+      {
+         if( SCIPsetIsInfinity(set, -lpirows[r]->lhs) )
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol);
+         if( SCIPsetIsInfinity(set, lpirows[r]->rhs) )
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol);
+      }
+      debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f, pfeas=%d/%d, dfeas=%d/%d\n", 
+         lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity,
+         SCIPsetIsFeasGE(set, lpirows[r]->activity, lpirows[r]->lhs),
+         SCIPsetIsFeasLE(set, lpirows[r]->activity, lpirows[r]->rhs),
+         SCIPsetIsInfinity(set, -lpirows[r]->lhs) ? !SCIPsetIsFeasPositive(set, lpirows[r]->dualsol) : TRUE,
+         SCIPsetIsInfinity(set, lpirows[r]->rhs) ? !SCIPsetIsFeasNegative(set, lpirows[r]->dualsol) : TRUE);
    }
 
    /* free temporary memory */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -175,11 +175,20 @@ struct Lp
    int              firstnewrow;        /**< first row added at the active node */
    int              nremoveablecols;    /**< number of removeable columns in the LP */
    int              nremoveablerows;    /**< number of removeable rows in the LP */
-   unsigned int     flushed:1;          /**< are all cached changes applied to the LP solver? */
-   unsigned int     solved:1;           /**< is current LP solved? */
-   unsigned int     primalfeasible:1;   /**< is actual LP basis primal feasible? */
-   unsigned int     dualfeasible:1;     /**< is actual LP basis dual feasible? */
-   unsigned int     diving:1;           /**< LP is used for diving: col bounds and obj don't corresond to variables */
+   Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */
+   Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
+   Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
+   Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
+   Bool             flushed;            /**< are all cached changes applied to the LP solver? */
+   Bool             solved;             /**< is current LP solved? */
+   Bool             primalfeasible;     /**< is actual LP basis primal feasible? */
+   Bool             dualfeasible;       /**< is actual LP basis dual feasible? */
+   Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
+   Real             lpifeastol;         /**< current feasibility tolerance in LPI */
+   Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
+   Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
+   Bool             lpiscaling;         /**< current SCALING setting in LPI */
+   Bool             lastwasprimal;      /**< was the last simplex call a call to the primal simplex? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.2 2003/12/04 15:11:32 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch-and-bound tree
@@ -129,8 +129,8 @@ struct Tree
    int              nchildren;          /**< actual number of children (number of used slots in children vector) */
    int              siblingssize;       /**< available slots in siblings vector */
    int              nsiblings;          /**< actual number of siblings (number of used slots in siblings vector) */
-   unsigned int     actnodehaslp:1;     /**< is LP being processed in the active node? */
-   unsigned int     cutoffdelayed:1;    /**< the treeCutoff() call was delayed because of diving and has to be executed */
+   Bool             actnodehaslp;       /**< is LP being processed in the active node? */
+   Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
 
 

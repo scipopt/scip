@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -47,7 +47,7 @@ struct NodePQ
    Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
    Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
    int              nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
-   unsigned int     validlowerbound:1;  /**< is lower bound value valid? */
+   Bool             validlowerbound;    /**< is lower bound value valid? */
 };
 
 /** node selector */
@@ -63,8 +63,8 @@ struct Nodesel
    DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
    DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
    NODESELDATA*     nodeseldata;        /**< node selector data */
-   unsigned int     lowestboundfirst:1; /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
-   unsigned int     initialized:1;      /**< is node selector initialized? */
+   Bool             lowestboundfirst;   /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
+   Bool             initialized;        /**< is node selector initialized? */
 };
 
 

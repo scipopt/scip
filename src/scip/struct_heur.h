@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -48,8 +48,8 @@ struct Heur
    CLOCK*           clock;              /**< heuristic execution time */
    Longint          ncalls;             /**< number of times, this heuristic was called */
    Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
-   unsigned int     pseudonodes:1;      /**< call heuristic at nodes where only a pseudo solution exist? */
-   unsigned int     initialized:1;      /**< is primal heuristic initialized? */
+   Bool             pseudonodes;        /**< call heuristic at nodes where only a pseudo solution exist? */
+   Bool             initialized;        /**< is primal heuristic initialized? */
 };
 
 

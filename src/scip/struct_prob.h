@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -61,7 +61,7 @@ struct Prob
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int              maxnconss;          /**< maximum number of constraints existing at the same time */
    int              startnconss;        /**< number of constraints existing when problem solving started */
-   unsigned int     transformed:1;      /**< TRUE iff problem is the transformed problem */
+   Bool             transformed;        /**< TRUE iff problem is the transformed problem */
 };
 
 

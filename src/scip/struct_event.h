@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -87,7 +87,7 @@ struct Eventhdlr
    DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
    DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
    EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
-   unsigned int     initialized:1;      /**< is event handler initialized? */
+   Bool             initialized;        /**< is event handler initialized? */
 };
 
 /** event queue to cache events and process them later */

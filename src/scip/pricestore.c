@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.5 2003/12/03 18:08:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.6 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -319,44 +319,31 @@ RETCODE SCIPpricestoreAddProbVars(
          abort();
 
       case SCIP_VARSTATUS_LOOSE:
-         /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
-          * In addition, we have to add all variables, where zero violates the bounds.
-          */
          debugMessage("price loose variable <%s> in bounds [%g,%g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         if( SCIPsetIsNegative(set, SCIPvarGetLbLocal(var)) )
+
+         /* Add all variables, where zero violates the bounds, and
+          * add all variables, that can contribute negatively to the objective function.
+          */
+         if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) || SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)) )
          {
-            if( SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)) )
-            {
-               CHECK_OKAY( SCIPpricestoreAddBdviolvar(pricestore, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                              var) );
-               pricestore->nprobvarsfound++;
-               nfoundvars++;
-            }
-            else if( SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
-            {
-               CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var,
-                              -SCIPvarGetObj(var) * SCIPvarGetLbLocal(var), root) );
-               pricestore->nprobvarsfound++;
-               nfoundvars++;
-            }
+            CHECK_OKAY( SCIPpricestoreAddBdviolvar(pricestore, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
+            pricestore->nprobvarsfound++;
+            nfoundvars++;
          }
-         else if( SCIPsetIsPositive(set, SCIPvarGetUbLocal(var)) )
+         else if( SCIPsetIsNegative(set, SCIPvarGetLbLocal(var)) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
          {
-            if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) )
-            {
-               CHECK_OKAY( SCIPpricestoreAddBdviolvar(pricestore, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                              var) );
-               pricestore->nprobvarsfound++;
-               nfoundvars++;
-            }
-            else if( SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
-            {
-               CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var,
-                              -SCIPvarGetObj(var) * SCIPvarGetUbLocal(var), root) );
-               pricestore->nprobvarsfound++;
-               nfoundvars++;
-            }
+            CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var,
+                           -SCIPvarGetObj(var) * SCIPvarGetLbLocal(var), root) );
+            pricestore->nprobvarsfound++;
+            nfoundvars++;
+         }
+         else if( SCIPsetIsPositive(set, SCIPvarGetUbLocal(var)) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
+         {
+            CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var,
+                           -SCIPvarGetObj(var) * SCIPvarGetUbLocal(var), root) );
+            pricestore->nprobvarsfound++;
+            nfoundvars++;
          }
          break;
 
@@ -364,12 +351,12 @@ RETCODE SCIPpricestoreAddProbVars(
          col = SCIPvarGetCol(var);
          assert(col != NULL);
          assert(col->var == var);
+         assert(col->len >= 0);
          assert(col->lppos >= -1);
          assert(col->lpipos >= -1);
-         assert((col->lppos == -1) == (col->lpipos == -1));
-         assert(col->len >= 0);
+         assert(SCIPcolIsInLP(col) == (col->lpipos >= 0));
             
-         if( col->lppos == -1 )
+         if( !SCIPcolIsInLP(col) )
          {
             Real feasibility;
             Bool added;
@@ -392,7 +379,7 @@ RETCODE SCIPpricestoreAddProbVars(
             {
                Real bestbound;
 
-               /* if zero is not best bound w.r.t. objective function */
+               /* add variable, if zero is not best bound w.r.t. objective function */
                bestbound = SCIPvarGetBestBound(var);
                if( !SCIPsetIsZero(set, bestbound) )
                {
@@ -426,10 +413,11 @@ RETCODE SCIPpricestoreAddProbVars(
                else
                {
                   /* The dual LP is feasible, and we have a feasible dual solution. Pricing in this case means to
-                   * add variables with negative feasibility, that is negative reduced costs for non-negative
-                   * variables, and non-zero reduced costs for variables that can be negative.
+                   * add variables with negative feasibility, that is
+                   *  - positive reduced costs for variables with negative lower bound
+                   *  - negative reduced costs for variables with positive upper bound
                    */
-                  feasibility = SCIPcolGetFeasibility(col, stat);
+                  feasibility = SCIPcolGetFeasibility(col, set, stat);
                   debugMessage("  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                

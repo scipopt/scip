@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.47 2003/12/03 18:08:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.48 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0
@@ -1722,6 +1722,10 @@ Bool SCIPlpiIsPrimalUnbounded(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
+   /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
+    * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
+    * result as instability, s.t. the problem is resolved from scratch
+    */
    return (primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD));
 }
 
@@ -1739,8 +1743,11 @@ Bool SCIPlpiIsPrimalInfeasible(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE
-      || (!primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD)));
+   /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
+    * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
+    * result as instability, s.t. the problem is resolved from scratch
+    */
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || (!primalfeasible && lpi->solstat == CPX_STAT_INForUNBD));
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -1799,6 +1806,20 @@ Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
+
+   /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
+    * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we interpret this
+    * result as instability, s.t. the problem is resolved from scratch
+    */
+   if( lpi->solstat == CPX_STAT_UNBOUNDED )
+   {
+      int primalfeasible;
+      
+      ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
+
+      if( !primalfeasible )
+         return FALSE;
+   }
 
    return (lpi->solstat != CPX_STAT_NUM_BEST && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS);
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -44,7 +44,6 @@ struct Presol
    DECL_PRESOLEXEC  ((*presolexec));    /**< presolver execution method */
    PRESOLDATA*      presoldata;         /**< presolver data */
    CLOCK*           clock;              /**< presolving time */
-   unsigned int     initialized:1;      /**< is presolver initialized? */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
@@ -63,6 +62,7 @@ struct Presol
    int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+   Bool             initialized;        /**< is presolver initialized? */
 };
 
 
