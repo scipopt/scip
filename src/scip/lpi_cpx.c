@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.46 2003/11/27 17:48:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.47 2003/12/03 18:08:12 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0
@@ -56,11 +56,12 @@ typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information
 #define ROWS_PER_PACKET DUALPACKETSIZE
 
 /* CPLEX parameter lists which can be changed */
-#define NUMINTPARAM  8
+#define NUMINTPARAM  9
 static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
    CPX_PARAM_FASTMIP,
+   CPX_PARAM_SCAIND,
    CPX_PARAM_PREIND,
    CPX_PARAM_PPRIIND,
    CPX_PARAM_DPRIIND,
@@ -1721,7 +1722,7 @@ Bool SCIPlpiIsPrimalUnbounded(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
-   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
+   return (primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD));
 }
 
 /** returns TRUE iff LP is primal infeasible */
@@ -1738,7 +1739,8 @@ Bool SCIPlpiIsPrimalInfeasible(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && !primalfeasible));
+   return (lpi->solstat == CPX_STAT_INFEASIBLE
+      || (!primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD)));
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -2199,6 +2201,9 @@ RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FASTMIP:
       *ival = (getIntParam(lpi, CPX_PARAM_FASTMIP) == CPX_ON);
       break;
+   case SCIP_LPPAR_SCALING:
+      *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
+      break;
    case SCIP_LPPAR_PRICING:
       switch( getIntParam(lpi, CPX_PARAM_DPRIIND) )
       {
@@ -2252,6 +2257,10 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:
       assert(ival == TRUE || ival == FALSE);
       setIntParam(lpi, CPX_PARAM_FASTMIP, (ival == TRUE) ? CPX_ON : CPX_OFF);
+      break;
+   case SCIP_LPPAR_SCALING:
+      assert(ival == TRUE || ival == FALSE);
+      setIntParam(lpi, CPX_PARAM_SCAIND, (ival == TRUE) ? 0 : -1);
       break;
    case SCIP_LPPAR_PRICING:
       switch( (PRICING)ival )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.57 2003/12/01 14:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.58 2003/12/03 18:08:12 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -496,30 +496,6 @@ void SCIPlpMarkSize(
    LP*              lp                  /**< actual LP data */
    );
 
-/** get array with newly added columns after the last mark */
-extern
-COL** SCIPlpGetNewcols(
-   LP*              lp                  /**< actual LP data */
-   );
-
-/** get number of newly added columns after the last mark */
-extern
-int SCIPlpGetNumNewcols(
-   LP*              lp                  /**< actual LP data */
-   );
-
-/** get array with newly added rows after the last mark */
-extern
-ROW** SCIPlpGetNewrows(
-   LP*              lp                  /**< actual LP data */
-   );
-
-/** get number of newly added rows after the last mark */
-extern
-int SCIPlpGetNumNewrows(
-   LP*              lp                  /**< actual LP data */
-   );
-
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 extern
 RETCODE SCIPlpGetBasisInd(
@@ -749,5 +725,78 @@ RETCODE SCIPlpWrite(
    LP*              lp,                 /**< actual LP data */
    const char*      fname               /**< file name */
    );
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets array with columns of the LP */
+extern
+COL** SCIPlpGetCols(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets current number of columns in LP */
+extern
+int SCIPlpGetNCols(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets array with rows of the LP */
+extern
+ROW** SCIPlpGetRows(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets current number of rows in LP */
+extern
+int SCIPlpGetNRows(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets array with newly added columns after the last mark */
+extern
+COL** SCIPlpGetNewcols(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets number of newly added columns after the last mark */
+extern
+int SCIPlpGetNNewcols(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets array with newly added rows after the last mark */
+extern
+ROW** SCIPlpGetNewrows(
+   LP*              lp                  /**< actual LP data */
+   );
+
+/** gets number of newly added rows after the last mark */
+extern
+int SCIPlpGetNNewrows(
+   LP*              lp                  /**< actual LP data */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPlpGetCols(lp)               ((lp)->cols)
+#define SCIPlpGetNCols(lp)              ((lp)->ncols)
+#define SCIPlpGetRows(lp)               ((lp)->rows)
+#define SCIPlpGetNRows(lp)              ((lp)->nrows)
+#define SCIPlpGetNewcols(lp)            (&((lp)->cols[(lp)->firstnewcol]))
+#define SCIPlpGetNNewcols(lp)           ((lp)->ncols - (lp)->firstnewcol)
+#define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
+#define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
+
+#endif
+
 
 #endif

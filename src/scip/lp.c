@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.85 2003/12/02 11:50:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.86 2003/12/03 18:08:12 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3534,8 +3534,8 @@ RETCODE lpFlushAddCols(
       assert(col->lppos == c);
       assert(nnonz + col->len <= naddcoefs);
 
-      debugMessage("flushing added column <%s>:", SCIPvarGetName(col->var));
-      debug( SCIPcolPrint(col, NULL) );
+      /*debugMessage("flushing added column <%s>:", SCIPvarGetName(col->var));*/
+      /*debug( SCIPcolPrint(col, NULL) );*/
 
       /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
@@ -4061,6 +4061,7 @@ RETCODE SCIPlpCreate(
    /* set default parameters in LP solver */
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_SCALING, TRUE) );
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_LPINFO, FALSE) );
    CHECK_OKAY( SCIPlpSetFeastol(*lp, set->feastol) );
@@ -4110,7 +4111,7 @@ RETCODE SCIPlpAddCol(
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    
-   debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
+   /*debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);*/
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
@@ -4270,50 +4271,6 @@ void SCIPlpMarkSize(
 
    lp->firstnewcol = lp->ncols;
    lp->firstnewrow = lp->nrows;
-}
-
-/** get array with newly added columns after the last mark */
-COL** SCIPlpGetNewcols(
-   LP*              lp                  /**< actual LP data */
-   )
-{
-   assert(lp != NULL);
-   assert(0 <= lp->firstnewcol && lp->firstnewcol <= lp->ncols);
-
-   return &(lp->cols[lp->firstnewcol]);
-}
-
-/** get number of newly added columns after the last mark */
-int SCIPlpGetNumNewcols(
-   LP*              lp                  /**< actual LP data */
-   )
-{
-   assert(lp != NULL);
-   assert(0 <= lp->firstnewcol && lp->firstnewcol <= lp->ncols);
-
-   return lp->ncols - lp->firstnewcol;
-}
-
-/** get array with newly added rows after the last mark */
-ROW** SCIPlpGetNewrows(
-   LP*              lp                  /**< actual LP data */
-   )
-{
-   assert(lp != NULL);
-   assert(0 <= lp->firstnewrow && lp->firstnewrow <= lp->nrows);
-
-   return &(lp->rows[lp->firstnewrow]);
-}
-
-/** get number of newly added rows after the last mark */
-int SCIPlpGetNumNewrows(
-   LP*              lp                  /**< actual LP data */
-   )
-{
-   assert(lp != NULL);
-   assert(0 <= lp->firstnewrow && lp->firstnewrow <= lp->nrows);
-
-   return lp->nrows - lp->firstnewrow;
 }
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
@@ -5008,7 +4965,8 @@ RETCODE lpPrimalSimplex(
    lp->primalfeasible = primalfeasible;
    lp->dualfeasible = dualfeasible;
 
-   debugMessage("solved primal LP in %d iterations\n", iterations);
+   debugMessage("solved primal LP in %d iterations: primalfeasible=%d, dualfeasible=%d\n", 
+      iterations, primalfeasible, dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -5060,7 +5018,8 @@ RETCODE lpDualSimplex(
    lp->primalfeasible = primalfeasible;
    lp->dualfeasible = dualfeasible;
 
-   debugMessage("solved dual LP in %d iterations\n", iterations);
+   debugMessage("solved dual LP in %d iterations: primalfeasible=%d, dualfeasible=%d\n", 
+      iterations, primalfeasible, dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -5081,7 +5040,7 @@ RETCODE lpPrimalSimplexStable(
    CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
    CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
    
-   /* solve again, use dual simplex this time */
+   /* solve primal simplex */
    CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
    
    /* reset the feasibility tolerance of the LP solver to its original value, and activate FASTMIP again */
@@ -5108,7 +5067,7 @@ RETCODE lpDualSimplexStable(
    CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
    CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
    
-   /* solve again, use dual simplex this time */
+   /* solve dual simplex */
    CHECK_OKAY( lpDualSimplex(lp, set, stat) );
    
    /* reset the feasibility tolerance of the LP solver to its original value, and activate FASTMIP again */
@@ -5117,6 +5076,162 @@ RETCODE lpDualSimplexStable(
    CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
    
    return SCIP_OKAY;
+}
+
+/** calls LPI to perform primal simplex from scratch with tighter feasibility tolerance and without scaling */
+static
+RETCODE lpPrimalSimplexStableUnscaled(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+
+   /* deactivate scaling */
+   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, FALSE) );
+   
+   /* solve primal simplex */
+   CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
+   
+   /* activate scaling again */
+   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, TRUE) );
+   
+   return SCIP_OKAY;
+}
+
+/** calls LPI to perform dual simplex from scratch with tighter feasibility tolerance and without scaling */
+static
+RETCODE lpDualSimplexStableUnscaled(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+
+   /* deactivate scaling */
+   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, FALSE) );
+   
+   /* solve dual simplex */
+   CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
+   
+   /* activate scaling again */
+   CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_SCALING, TRUE) );
+   
+   return SCIP_OKAY;
+}
+
+/** solves the LP with the simplex algorithm, and tries to resolve numerical problems */
+static
+RETCODE lpSolveStable(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   Bool             useprimal           /**< should the primal simplex be used? */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   /* call simplex */
+   if( useprimal )
+   {
+      CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
+   }
+   else
+   {
+      CHECK_OKAY( lpDualSimplex(lp, set, stat) );
+   }
+
+   /* check for stability */
+   if( SCIPlpiIsStable(lp->lpi) )
+      return SCIP_OKAY;
+
+   /* solve again from scratch */
+   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
+      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
+   if( useprimal )
+   {
+      CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
+   }
+   else
+   {
+      CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
+   }
+   
+   /* check for stability */
+   if( SCIPlpiIsStable(lp->lpi) )
+      return SCIP_OKAY;
+
+   /* solve again, use other simplex this time */
+   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
+      stat->nnodes, stat->nlps, useprimal ? "dual" : "primal");
+   if( useprimal )
+   {
+      CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
+   }
+   else
+   {
+      CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
+   }
+
+   /* check for stability */
+   if( SCIPlpiIsStable(lp->lpi) )
+      return SCIP_OKAY;
+
+   /* solve again without scaling */
+   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex without scaling\n", 
+      stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
+   if( useprimal )
+   {
+      CHECK_OKAY( lpPrimalSimplexStableUnscaled(lp, set, stat) );
+   }
+   else
+   {
+      CHECK_OKAY( lpDualSimplexStableUnscaled(lp, set, stat) );
+   }
+   
+   /* check for stability */
+   if( SCIPlpiIsStable(lp->lpi) )
+      return SCIP_OKAY;
+
+   /* solve again, use other simplex this time */
+   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex without scaling\n", 
+      stat->nnodes, stat->nlps, useprimal ? "dual" : "primal");
+   if( useprimal )
+   {
+      CHECK_OKAY( lpDualSimplexStableUnscaled(lp, set, stat) );
+   }
+   else
+   {
+      CHECK_OKAY( lpPrimalSimplexStableUnscaled(lp, set, stat) );
+   }
+
+   /* check for stability */
+   if( SCIPlpiIsStable(lp->lpi) )
+      return SCIP_OKAY;
+   else
+   {
+      char lpname[MAXSTRLEN];
+      
+      /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
+      sprintf(lpname, "lp%d.lp", stat->nlps);
+      errorMessage("(node %lld) unresolved numerical troubles in LP %d -- saved in file <%s>\n", 
+         stat->nnodes, stat->nlps, lpname);
+      
+      CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, lpname) );
+            
+      return SCIP_LPERROR;
+   }
 }
 
 /** solves the LP with the primal simplex algorithm and evaluates return status */
@@ -5133,34 +5248,7 @@ RETCODE lpSolvePrimal(
    assert(stat != NULL);
 
    /* call primal simplex */
-   CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
-
-   /* check for stability */
-   if( !SCIPlpiIsStable(lp->lpi) )
-   {
-      /* solve again from scratch */
-      CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
-
-      /* check again for stability */
-      if( !SCIPlpiIsStable(lp->lpi) )
-      {
-         /* solve again, use dual simplex this time */
-         CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
-         
-         /* check again for stability */
-         if( !SCIPlpiIsStable(lp->lpi) )
-         {
-            char lpname[MAXSTRLEN];
-            
-            sprintf(lpname, "lp%d.lp", stat->nlps);
-            errorMessage("numerical troubles in LP %d, saved in file <%s>\n", stat->nlps, lpname);
-            
-            CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, lpname) );
-            
-            return SCIP_LPERROR;
-         }
-      }
-   }
+   CHECK_OKAY( lpSolveStable(lp, set, stat, TRUE) );
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
@@ -5231,34 +5319,7 @@ RETCODE lpSolveDual(
    assert(stat != NULL);
 
    /* call dual simplex */
-   CHECK_OKAY( lpDualSimplex(lp, set, stat) );
-
-   /* check for stability */
-   if( !SCIPlpiIsStable(lp->lpi) )
-   {
-      /* solve again from scratch */
-      CHECK_OKAY( lpDualSimplexStable(lp, set, stat) );
-      
-      /* check again for stability */
-      if( !SCIPlpiIsStable(lp->lpi) )
-      {
-         /* solve again, use primal simplex this time */
-         CHECK_OKAY( lpPrimalSimplexStable(lp, set, stat) );
-         
-         /* check again for stability */
-         if( !SCIPlpiIsStable(lp->lpi) )
-         {
-            char lpname[MAXSTRLEN];
-            
-            sprintf(lpname, "lp%d.lp", stat->nlps);
-            errorMessage("numerical troubles in LP %d, saved in file <%s>\n", stat->nlps, lpname);
-            
-            CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, lpname) );
-            
-            return SCIP_LPERROR;
-         }
-      }
-   }
+   CHECK_OKAY( lpSolveStable(lp, set, stat, FALSE) );
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
@@ -5468,6 +5529,7 @@ RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
          /**@todo time limit exceeded processing */
+         errorMessage("LP time limit exceeded -- case not implemented yet\n");
          return SCIP_ERROR;
 
       case SCIP_LPSOLSTAT_ERROR:
@@ -5560,8 +5622,8 @@ RETCODE SCIPlpGetSol(
          *infeasible = *infeasible
             || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->lb)
             || SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->ub);
-      debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f\n",
-         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost);
+      /*debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f\n",
+        SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost);*/
    }
 
    /* copy dual solution and activities into rows */
@@ -5574,8 +5636,8 @@ RETCODE SCIPlpGetSol(
          *infeasible = *infeasible
             || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->lhs)
             || SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->rhs);
-      debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f\n", 
-         lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity);
+      /*debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f\n", 
+        lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity);*/
    }
 
    /* free temporary memory */
@@ -5765,8 +5827,8 @@ RETCODE SCIPlpUpdateAges(
          lpicols[c]->age++;
       else
          lpicols[c]->age = 0;
-      debugMessage(" -> col <%s>: primsol=%f, age=%d\n", 
-         SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->age);
+      /*debugMessage(" -> col <%s>: primsol=%f, age=%d\n", 
+        SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->age);*/
    }
 
    for( r = 0; r < nlpirows; ++r )
@@ -5777,7 +5839,7 @@ RETCODE SCIPlpUpdateAges(
          lpirows[r]->age++;
       else
          lpirows[r]->age = 0;
-      debugMessage(" -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);
+      /*debugMessage(" -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);*/
    }
 
    return SCIP_OKAY;
@@ -6406,3 +6468,95 @@ RETCODE SCIPlpWrite(
    return SCIP_OKAY;
 }
 
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets array with columns of the LP */
+COL** SCIPlpGetCols(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->cols;
+}
+
+/** gets current number of columns in LP */
+int SCIPlpGetNCols(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->ncols;
+}
+
+/** gets array with rows of the LP */
+ROW** SCIPlpGetRows(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->rows;
+}
+
+/** gets current number of rows in LP */
+int SCIPlpGetNRows(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->nrows;
+}
+
+/** gets array with newly added columns after the last mark */
+COL** SCIPlpGetNewcols(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(0 <= lp->firstnewcol && lp->firstnewcol <= lp->ncols);
+
+   return &(lp->cols[lp->firstnewcol]);
+}
+
+/** gets number of newly added columns after the last mark */
+int SCIPlpGetNNewcols(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(0 <= lp->firstnewcol && lp->firstnewcol <= lp->ncols);
+
+   return lp->ncols - lp->firstnewcol;
+}
+
+/** gets array with newly added rows after the last mark */
+ROW** SCIPlpGetNewrows(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(0 <= lp->firstnewrow && lp->firstnewrow <= lp->nrows);
+
+   return &(lp->rows[lp->firstnewrow]);
+}
+
+/** gets number of newly added rows after the last mark */
+int SCIPlpGetNNewrows(
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(0 <= lp->firstnewrow && lp->firstnewrow <= lp->nrows);
+
+   return lp->nrows - lp->firstnewrow;
+}
+
+#endif

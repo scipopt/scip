@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.66 2003/12/01 16:14:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.67 2003/12/03 18:08:13 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -270,6 +270,7 @@ RETCODE forkCreate(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
    assert(tree != NULL);
    assert(tree->nchildren > 0);
 
@@ -279,8 +280,8 @@ RETCODE forkCreate(
    (*fork)->nlpistateref = 0;
    (*fork)->addedcols = NULL;
    (*fork)->addedrows = NULL;
-   (*fork)->naddedcols = SCIPlpGetNumNewcols(lp);
-   (*fork)->naddedrows = SCIPlpGetNumNewrows(lp);
+   (*fork)->naddedcols = SCIPlpGetNNewcols(lp);
+   (*fork)->naddedrows = SCIPlpGetNNewrows(lp);
    (*fork)->nchildren = tree->nchildren;
 
    debugMessage("creating fork information with %d children (%d new cols, %d new rows)\n",
@@ -358,6 +359,7 @@ RETCODE subrootCreate(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
    assert(tree != NULL);
    assert(tree->nchildren > 0);
 
@@ -365,11 +367,11 @@ RETCODE subrootCreate(
 
    CHECK_OKAY( SCIPlpGetState(lp, memhdr, &((*subroot)->lpistate)) );
    (*subroot)->nlpistateref = 0;
-   (*subroot)->ncols = lp->ncols;
-   (*subroot)->nrows = lp->nrows;
+   (*subroot)->ncols = SCIPlpGetNCols(lp);
+   (*subroot)->nrows = SCIPlpGetNRows(lp);
    (*subroot)->nchildren = tree->nchildren;
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->cols, lp->cols, (*subroot)->ncols) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->rows, lp->rows, (*subroot)->nrows) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->cols, SCIPlpGetCols(lp), (*subroot)->ncols) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->rows, SCIPlpGetRows(lp), (*subroot)->nrows) );
 
    /* capture the rows of the subroot */
    for( i = 0; i < (*subroot)->nrows; ++i )
@@ -1456,7 +1458,7 @@ RETCODE SCIPtreeLoadLP(
 
    debugMessage("load LP for actual fork node %p at depth %d\n", 
       tree->actlpfork, tree->actlpfork == NULL ? -1 : (int)(tree->actlpfork->depth));
-   debugMessage("-> old LP has %d cols and %d rows\n", lp->ncols, lp->nrows);
+   debugMessage("-> old LP has %d cols and %d rows\n", SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
    debugMessage("-> correct LP has %d cols and %d rows\n", 
       tree->correctlpdepth >= 0 ? tree->pathnlpcols[tree->correctlpdepth] : 0,
       tree->correctlpdepth >= 0 ? tree->pathnlprows[tree->correctlpdepth] : 0);
@@ -1522,10 +1524,10 @@ RETCODE SCIPtreeLoadLP(
    tree->correctlpdepth = MAX(tree->correctlpdepth, lpforkdepth);
    assert(lpforkdepth == -1 || tree->pathnlpcols[tree->correctlpdepth] == tree->pathnlpcols[lpforkdepth]);
    assert(lpforkdepth == -1 || tree->pathnlprows[tree->correctlpdepth] == tree->pathnlprows[lpforkdepth]);
-   assert(lpforkdepth == -1 || lp->ncols == tree->pathnlpcols[lpforkdepth]);
-   assert(lpforkdepth == -1 || lp->nrows == tree->pathnlprows[lpforkdepth]);
-   assert(lpforkdepth >= 0 || lp->ncols == 0);
-   assert(lpforkdepth >= 0 || lp->nrows == 0);
+   assert(lpforkdepth == -1 || SCIPlpGetNCols(lp) == tree->pathnlpcols[lpforkdepth]);
+   assert(lpforkdepth == -1 || SCIPlpGetNRows(lp) == tree->pathnlprows[lpforkdepth]);
+   assert(lpforkdepth >= 0 || SCIPlpGetNCols(lp) == 0);
+   assert(lpforkdepth >= 0 || SCIPlpGetNRows(lp) == 0);
 
    /* load LP state, if existing */
    if( lpfork != NULL )
@@ -1558,7 +1560,7 @@ RETCODE SCIPtreeLoadLP(
 
    debugMessage("-> new correctlpdepth: %d\n", tree->correctlpdepth);
    debugMessage("-> new LP has %d cols and %d rows, primalfeasible=%d, dualfeasible=%d\n", 
-      lp->ncols, lp->nrows, lp->primalfeasible, lp->dualfeasible);
+      SCIPlpGetNCols(lp), SCIPlpGetNRows(lp), lp->primalfeasible, lp->dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -1696,6 +1698,7 @@ RETCODE actnodeToFork(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    debugMessage("actnode %p to fork at depth %d\n", tree->actnode, tree->actnode->depth);
 
@@ -1706,6 +1709,23 @@ RETCODE actnodeToFork(
    if( !lp->solved )
    {
       CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+
+      /* If the reduced LP is not solved to optimality, something numerically weird happened.
+       * The only thing we can do, is to completely forget about the LP and treat the node as
+       * if it was only a pseudo-solution node. Therefore we have to remove all additional
+       * columns and rows from the LP and convert the node into a junction.
+       */
+      if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         /* remove all additions to the LP at this node */
+         CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+         CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
+
+         /* convert node into a junction */
+         CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+
+         return SCIP_OKAY;
+      }
    }
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
@@ -1758,6 +1778,7 @@ RETCODE actnodeToSubroot(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
 
@@ -1777,6 +1798,23 @@ RETCODE actnodeToSubroot(
    if( !lp->solved )
    {
       CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+
+      /* If the reduced LP is not solved to optimality, something numerically weird happened.
+       * The only thing we can do, is to completely forget about the LP and treat the node as
+       * if it was only a pseudo-solution node. Therefore we have to remove all additional
+       * columns and rows from the LP and convert the node into a junction.
+       */
+      if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         /* remove all additions to the LP at this node */
+         CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+         CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
+
+         /* convert node into a junction */
+         CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+
+         return SCIP_OKAY;
+      }
    }
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
@@ -1928,12 +1966,14 @@ RETCODE SCIPnodeActivate(
       }
       else
       {
+         /* convert old active node into a dead end */
          CHECK_OKAY( actnodeToDeadend(memhdr, tree, lp) );
       }
    }
 
-   /* now the old active node was converted to a subroot, fork, or junction; the first two cases made the old active
-    * node the new LP fork, which is the correct LP fork for the child nodes of the old active node
+   /* now the old active node was converted to a subroot, fork, junction, or dead end; the first two cases made the
+    * old active node the new tree->actlpfork, which is the correct LP fork for the child nodes of the old active node;
+    * in case of a junction, the LP fork for the child nodes remains the current tree->actlpfork
     */
    newlpfork = tree->actlpfork;
 

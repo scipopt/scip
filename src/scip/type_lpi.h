@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.1 2003/12/01 14:41:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.2 2003/12/03 18:08:13 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -40,14 +40,15 @@ enum LPParam
 {
    SCIP_LPPAR_FROMSCRATCH =  0,         /**< solver should start from scratch at next call */
    SCIP_LPPAR_FASTMIP     =  1,         /**< fast mip setting of LP solver */
-   SCIP_LPPAR_PRICING     =  2,         /**< pricing strategy */
-   SCIP_LPPAR_LPINFO      =  3,         /**< should LP solver output information to the screen? */
-   SCIP_LPPAR_FEASTOL     =  4,         /**< feasibility tolerance */
-   SCIP_LPPAR_LOBJLIM     =  5,         /**< lower objective limit */
-   SCIP_LPPAR_UOBJLIM     =  6,         /**< upper objective limit */
-   SCIP_LPPAR_LPITLIM     =  7,         /**< LP iteration limit */
-   SCIP_LPPAR_LPTILIM     =  8,         /**< LP time limit */
-   SCIP_LPPAR_LPITER      =  9          /**< number of simplex iterations for last LP solve */
+   SCIP_LPPAR_SCALING     =  2,         /**< solver should use scaling */
+   SCIP_LPPAR_PRICING     =  3,         /**< pricing strategy */
+   SCIP_LPPAR_LPINFO      =  4,         /**< should LP solver output information to the screen? */
+   SCIP_LPPAR_FEASTOL     =  5,         /**< feasibility tolerance */
+   SCIP_LPPAR_LOBJLIM     =  6,         /**< lower objective limit */
+   SCIP_LPPAR_UOBJLIM     =  7,         /**< upper objective limit */
+   SCIP_LPPAR_LPITLIM     =  8,         /**< LP iteration limit */
+   SCIP_LPPAR_LPTILIM     =  9,         /**< LP time limit */
+   SCIP_LPPAR_LPITER      = 10          /**< number of simplex iterations for last LP solve */
 };
 typedef enum LPParam LPPARAM;
 

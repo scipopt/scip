@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.4 2003/12/01 16:14:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.5 2003/12/03 18:08:12 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -288,10 +288,10 @@ RETCODE SCIPpricestoreAddProbVars(
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(tree->actnodehaslp);
-   assert(prob->nvars >= lp->ncols);
+   assert(prob->nvars >= SCIPlpGetNCols(lp));
 
    /* if all problem variables are already in the LP, nothing is to be done */
-   if( prob->nvars == lp->ncols )
+   if( prob->nvars == SCIPlpGetNCols(lp) )
       return SCIP_OKAY;
 
    root = (SCIPnodeGetDepth(tree->actnode) == 0);
@@ -494,7 +494,7 @@ RETCODE SCIPpricestoreApplyVars(
 
    debugMessage("adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",
       SCIPpricestoreGetNVars(pricestore), pricestore->nbdviolvars - pricestore->naddedbdviolvars,
-      pricestore->nvars, lp->ncols);
+      pricestore->nvars, SCIPlpGetNCols(lp));
 
    /* add the variables with violated bounds to LP */
    for( v = pricestore->naddedbdviolvars; v < pricestore->nbdviolvars; ++v )

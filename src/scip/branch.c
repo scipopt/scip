@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.30 2003/12/01 16:14:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.31 2003/12/03 18:08:12 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -163,20 +163,25 @@ RETCODE SCIPbranchcandGetLPCands(
    /* check, if the actual LP branching candidate array is invalid */
    if( branchcand->validlpcandslp < stat->lpcount )
    {
+      COL** cols;
       VAR* var;
       COL* col;
       Real frac;
+      int ncols;
       int c;
 
       debugMessage(" -> recalculating LP branching candidates\n");
 
+      cols = SCIPlpGetCols(lp);
+      ncols = SCIPlpGetNCols(lp);
+
       /* construct the LP branching candidate set */
-      CHECK_OKAY( ensureLpcandsSize(branchcand, set, lp->ncols) );
+      CHECK_OKAY( ensureLpcandsSize(branchcand, set, ncols) );
 
       branchcand->nlpcands = 0;
-      for( c = 0; c < lp->ncols; ++c )
+      for( c = 0; c < ncols; ++c )
       {
-         col = lp->cols[c];
+         col = cols[c];
          assert(col != NULL);
          assert(col->primsol < SCIP_INVALID);
          assert(col->lppos == c);

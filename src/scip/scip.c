@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.109 2003/12/01 16:14:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.110 2003/12/03 18:08:13 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4504,9 +4504,9 @@ RETCODE SCIPgetLPColsData(
    if( scip->tree->actnodehaslp )
    {
       if( cols != NULL )
-         *cols = scip->lp->cols;
+         *cols = SCIPlpGetCols(scip->lp);
       if( ncols != NULL )
-         *ncols = scip->lp->ncols;
+         *ncols = SCIPlpGetNCols(scip->lp);
    }
    else
    {
@@ -4527,7 +4527,7 @@ COL** SCIPgetLPCols(
    CHECK_ABORT( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
    if( scip->tree->actnodehaslp )
-      return scip->lp->cols;
+      return SCIPlpGetCols(scip->lp);
    else
       return NULL;
 }
@@ -4540,7 +4540,7 @@ int SCIPgetNLPCols(
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
    if( scip->tree->actnodehaslp )
-      return scip->lp->ncols;
+      return SCIPlpGetNCols(scip->lp);
    else
       return scip->tree->pathnlpcols[scip->tree->pathlen-1];
 }
@@ -4557,9 +4557,9 @@ RETCODE SCIPgetLPRowsData(
    if( scip->tree->actnodehaslp )
    {
       if( rows != NULL )
-         *rows = scip->lp->rows;
+         *rows = SCIPlpGetRows(scip->lp);
       if( nrows != NULL )
-         *nrows = scip->lp->nrows;
+         *nrows = SCIPlpGetNRows(scip->lp);
    }
    else
    {
@@ -4580,7 +4580,7 @@ ROW** SCIPgetLPRows(
    CHECK_ABORT( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
    
    if( scip->tree->actnodehaslp )
-      return scip->lp->rows;
+      return SCIPlpGetRows(scip->lp);
    else
       return NULL;
 }
@@ -4593,7 +4593,7 @@ int SCIPgetNLPRows(
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
    if( scip->tree->actnodehaslp )
-      return scip->lp->nrows;
+      return SCIPlpGetNRows(scip->lp);
    else
       return scip->tree->pathnlprows[scip->tree->pathlen-1];
 }
@@ -4607,7 +4607,7 @@ Bool SCIPallVarsInLP(
 {
    CHECK_ABORT( checkStage(scip, "SCIPallVarsInLP", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   return (scip->lp->ncols == scip->transprob->nvars && scip->set->npricers == 0);
+   return (SCIPlpGetNCols(scip->lp) == scip->transprob->nvars && scip->set->npricers == 0);
 }
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */

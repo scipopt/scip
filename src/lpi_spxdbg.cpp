@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.3 2003/11/27 18:04:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.4 2003/12/03 18:08:12 bzfpfend Exp $"
 
 /**@file   lpi_spxdbg.cpp
  * @brief  LP interface for SOPLEX 1.2.1 debug mode
@@ -91,6 +91,7 @@ class SPxSCIP : public SoPlex
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    bool             m_fastmip;          /**< FASTMIP setting (not used) */
+   bool             m_scaling;          /**< SCALING setting (not used) */
    Real             m_objLoLimit;       /**< lower objective limit */
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
@@ -140,6 +141,16 @@ public:
    void setFastMip(bool fm)
    {
       m_fastmip = fm;
+   }
+
+   bool getScaling() const
+   {
+      return m_scaling;
+   }
+
+   void setScaling(bool fm)
+   {
+      m_scaling = fm;
    }
 
    void setProbname(const char* probname)
@@ -2067,6 +2078,9 @@ RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FASTMIP:
       *ival = lpi->spx->getFastMip();
       break;
+   case SCIP_LPPAR_SCALING:
+      *ival = lpi->spx->getScaling();
+      break;
    case SCIP_LPPAR_PRICING:
       *ival = SCIP_PRICING_AUTO;
       break;
@@ -2107,6 +2121,10 @@ RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:
       assert(ival == TRUE || ival == FALSE);
       lpi->spx->setFastMip(bool(ival));
+      break;
+   case SCIP_LPPAR_SCALING:
+      assert(ival == TRUE || ival == FALSE);
+      lpi->spx->setScaling(bool(ival));
       break;
    case SCIP_LPPAR_PRICING:
       break;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.73 2003/12/01 16:14:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.74 2003/12/03 18:08:13 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -150,8 +150,8 @@ RETCODE initRootLP(
    int h;
 
    assert(lp != NULL);
-   assert(lp->ncols == 0);
-   assert(lp->nrows == 0);
+   assert(SCIPlpGetNCols(lp) == 0);
+   assert(SCIPlpGetNRows(lp) == 0);
    assert(lp->nremoveablecols == 0);
    assert(lp->nremoveablerows == 0);
 
@@ -311,7 +311,7 @@ RETCODE solveNodeLP(
       /* if the LP is unbounded, we don't need to price */
       mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
       /* if all the variables are already in the LP, we don't need to price */
-      mustprice = mustprice && (prob->nvars > lp->ncols || set->npricers > 0);
+      mustprice = mustprice && (prob->nvars > SCIPlpGetNCols(lp) || set->npricers > 0);
 
       /* pricing (has to be done completely to get a valid lower bound) */
       while( !(*cutoff) && mustprice )
@@ -540,6 +540,7 @@ RETCODE redcostStrengthening(
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   COL** cols;
    VAR* var;
    int* cstat;
    Real lpobjval;
@@ -547,6 +548,7 @@ RETCODE redcostStrengthening(
    Real oldlb;
    Real oldub;
    Real newbd;
+   int ncols;
    int c;
 
    assert(tree != NULL);
@@ -560,24 +562,27 @@ RETCODE redcostStrengthening(
    /* start redcost strengthening timer */
    SCIPclockStart(stat->redcoststrtime, set);
 
+   cols = SCIPlpGetCols(lp);
+   ncols = SCIPlpGetNCols(lp);
+
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, ncols) );
 
    /* get basis status for columns and LP objective value */
    CHECK_OKAY( SCIPlpGetBase(lp, cstat, NULL) );
    lpobjval = SCIPlpGetObjval(lp);
 
    /* check reduced costs for non-basic columns */
-   for( c = 0; c < lp->ncols; ++c )
+   for( c = 0; c < ncols; ++c )
    {
       switch( cstat[c] )
       {
       case SCIP_BASESTAT_LOWER:
-         redcost = SCIPcolGetRedcost(lp->cols[c], stat);
+         redcost = SCIPcolGetRedcost(cols[c], stat);
          assert(!SCIPsetIsFeasNegative(set, redcost));
          if( SCIPsetIsFeasPositive(set, redcost) )
          {
-            var = SCIPcolGetVar(lp->cols[c]);
+            var = SCIPcolGetVar(cols[c]);
             oldlb = SCIPvarGetLbLocal(var);
             oldub = SCIPvarGetUbLocal(var);
             if( SCIPsetIsFeasLT(set, oldlb, oldub) )
@@ -605,11 +610,11 @@ RETCODE redcostStrengthening(
          break;
 
       case SCIP_BASESTAT_UPPER:
-         redcost = SCIPcolGetRedcost(lp->cols[c], stat);
+         redcost = SCIPcolGetRedcost(cols[c], stat);
          assert(!SCIPsetIsFeasPositive(set, redcost));
          if( SCIPsetIsFeasNegative(set, redcost) )
          {
-            var = SCIPcolGetVar(lp->cols[c]);
+            var = SCIPcolGetVar(cols[c]);
             oldlb = SCIPvarGetLbLocal(var);
             oldub = SCIPvarGetUbLocal(var);
             if( SCIPsetIsFeasLT(set, oldlb, oldub) )
