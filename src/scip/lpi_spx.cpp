@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.24 2004/09/28 11:46:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.25 2004/09/29 19:08:05 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -197,22 +197,26 @@ public:
    virtual void addCol(const LPCol& col)
    {
       SPxSolver::addCol(col);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCol(SPxColId& theid, const LPCol& col)
    {
       SPxSolver::addCol(theid, col);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(const LPColSet& pset)
    {
       SPxSolver::addCols(pset);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(SPxColId theid[], const LPColSet& theset)
    {
       SPxSolver::addCols(theid, theset);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.9 2004/09/28 11:49:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.10 2004/09/29 19:08:05 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -197,22 +197,26 @@ public:
    virtual void addCol(const LPCol& col)
    {
       SoPlex::addCol(col);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCol(SPxColId& theid, const LPCol& col)
    {
       SoPlex::addCol(theid, col);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(const LPColSet& pset)
    {
       SoPlex::addCols(pset);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(SPxColId theid[], const LPColSet& theset)
    {
       SoPlex::addCols(theid, theset);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
 
 };

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.9 2004/08/10 14:19:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.10 2004/09/29 19:08:05 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (debug version)
@@ -38,6 +38,19 @@
 #include "spxsteeppr.h"
 #include "spxfastrt.h"
 
+/* reset the defines to its original SCIP values */
+#undef DEBUG
+#undef NDEBUG
+#ifdef ___DEBUG
+#define DEBUG
+#undef ___DEBUG
+#endif
+#ifdef ___NDEBUG
+#undef ___NDEBUG
+#define NDEBUG
+#endif
+
+#include <cassert>
 
 
 /********************************************************************/
@@ -183,36 +196,29 @@ public:
    virtual void addCol(const LPCol& col)
    {
       SPxSolver::addCol(col);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCol(SPxColId& theid, const LPCol& col)
    {
       SPxSolver::addCol(theid, col);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(const LPColSet& pset)
    {
       SPxSolver::addCols(pset);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
    virtual void addCols(SPxColId theid[], const LPColSet& theset)
    {
       SPxSolver::addCols(theid, theset);
-      SPxBasis::loadMatrixVecs(); /* bug workaround */
+      if( matrixIsSetup )
+         SPxBasis::loadMatrixVecs(); /* bug workaround */
    }
 };
 
-/* reset the defines to its original SCIP values */
-#undef DEBUG
-#undef NDEBUG
-#ifdef ___DEBUG
-#define DEBUG
-#undef ___DEBUG
-#endif
-#ifdef ___NDEBUG
-#undef ___NDEBUG
-#define NDEBUG
-#endif
 
 
 
@@ -225,7 +231,6 @@ extern "C"
 #include "lpi.h"
 #include "bitencode.h"
 #include "message.h"
-#include "pub_misc.h"
 }
 
 
@@ -2319,6 +2324,23 @@ Bool SCIPlpiIsInfinity(
 /**@name File Interface Methods */
 /**@{ */
 
+/** returns, whether the given file exists */
+static
+Bool fileExists(
+   const char*      filename            /**< file name */
+   )
+{
+   FILE* f;
+
+   f = fopen(filename, "r");
+   if( f == NULL )
+      return FALSE;
+
+   fclose(f);
+
+   return TRUE;
+}
+
 /** reads LP from a file */
 RETCODE SCIPlpiReadLP(
    LPI*             lpi,                /**< LP interface structure */
@@ -2330,7 +2352,7 @@ RETCODE SCIPlpiReadLP(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   if( !SCIPfileExists(fname) )
+   if( !fileExists(fname) )
       return SCIP_NOFILE;
 
    if( !lpi->spx->readFile(fname) )
