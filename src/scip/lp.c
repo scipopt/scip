@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.182 2005/02/24 11:02:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.183 2005/02/25 11:09:55 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8427,7 +8427,7 @@ RETCODE lpPrimalSimplex(
    if( stat->nnodes == 1 && !lp->diving  )
    {
       char fname[MAXSTRLEN];
-      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
       printf("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
@@ -8526,7 +8526,7 @@ RETCODE lpDualSimplex(
    if( stat->nnodes == 1 && !lp->diving )
    {
       char fname[MAXSTRLEN];
-      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
       printf("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
@@ -8626,7 +8626,7 @@ RETCODE lpBarrier(
    if( stat->nnodes == 1 && !lp->diving  )
    {
       char fname[MAXSTRLEN];
-      sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
+      sprintf(fname, "lp%lld_%d.mps", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
       printf("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.274 2005/02/24 11:02:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.275 2005/02/25 11:09:56 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -393,6 +393,9 @@ void SCIPprintError(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
+   if( file == NULL )
+      file = stdout;
+
    fprintf(file, "SCIP Error (%d): ", retcode);
    SCIPretcodePrint(file, retcode);
    fprintf(file, "\n");
