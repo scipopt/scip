@@ -961,7 +961,7 @@ Real linconsGetActivity(
    assert(lincons != NULL);
    assert(lincons->transformed);
 
-   if( sol == NULL && SCIPhasActnodeLP(scip) )
+   if( sol == NULL && !SCIPhasActnodeLP(scip) )
    {
       /* for performance reasons, the pseudo activity is updated with each bound change, so we don't have to
        * recalculate it

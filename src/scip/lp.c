@@ -4021,6 +4021,8 @@ RETCODE SCIPlpUpdateAges(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->nlpicols == lp->ncols);
+   assert(lp->nlpirows == lp->nrows);
 
    debugMessage("updating LP ages\n");
 
@@ -4029,21 +4031,23 @@ RETCODE SCIPlpUpdateAges(
 
    for( c = 0; c < lp->nlpicols; ++c )
    {
+      assert(lpicols[c] == lp->cols[c]);
       if( SCIPsetIsZero(set, lpicols[c]->primsol) )
          lpicols[c]->age++;
       else
          lpicols[c]->age = 0;
-      debugMessage(" -> col <%s>: age=%d\n", lpicols[c]->var->name, lpicols[c]->age);
+      debugMessage(" -> col <%s>: primsol=%f, age=%d\n", lpicols[c]->var->name, lpicols[c]->primsol, lpicols[c]->age);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
    {
+      assert(lpirows[r] == lp->rows[r]);
       if( SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
          && SCIPsetIsLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
          lpirows[r]->age++;
       else
          lpirows[r]->age = 0;
-      debugMessage(" -> row <%s>: age=%d\n", lpirows[r]->name, lpirows[r]->age);
+      debugMessage(" -> row <%s>: activity=%f, age=%d\n", lpirows[r]->name, lpirows[r]->activity, lpirows[r]->age);
    }
 
    return SCIP_OKAY;
@@ -4229,6 +4233,8 @@ RETCODE lpRemoveObsoleteCols(
          coldstat[c] = 1;
          ndelcols++;
          cols[c]->obsoletenode = stat->nnodes;
+         debugMessage("removing obsolete col <%s>: primsol=%f, bounds=[%g,%g]\n", 
+            cols[c]->var->name, cols[c]->primsol, cols[c]->var->dom.lb, cols[c]->var->dom.ub);
       }
    }
 
@@ -4292,6 +4298,8 @@ RETCODE lpRemoveObsoleteRows(
          rowdstat[r] = 1;
          ndelrows++;
          rows[r]->obsoletenode = stat->nnodes;
+         debugMessage("removing obsolete row <%s>: activity=%f, sides=[%g,%g]\n", 
+            rows[r]->name, rows[r]->activity, rows[r]->lhs, rows[r]->rhs);
       }
    }
 
