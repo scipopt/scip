@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.65 2004/06/02 07:39:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.66 2004/08/10 14:19:01 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -654,7 +654,7 @@ void convertSides(
 
 /** converts CPLEX's sen/rhs/rng triplets into SCIP's lhs/rhs pairs */
 static
-void reconvertSides(
+void reconvertBothSides(
    LPI*             lpi,                /**< LP interface structure */
    int              nrows,              /**< number of rows */
    Real*            lhs,                /**< buffer to store the left hand side vector */
@@ -710,6 +710,119 @@ void reconvertSides(
       }
       assert(lhs[i] <= rhs[i]);
    }
+}
+
+/** converts CPLEX's sen/rhs/rng triplets into SCIP's lhs/rhs pairs, only storing the left hand side */
+static
+void reconvertLhs(
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrows,              /**< number of rows */
+   Real*            lhs                 /**< buffer to store the left hand side vector */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(nrows >= 0);
+   assert(lhs != NULL);
+
+   for( i = 0; i < nrows; ++i )
+   {
+      switch( lpi->senarray[i] )
+      {
+      case 'E':
+         assert(lpi->rngarray[i] == 0.0);
+         lhs[i] = lpi->rhsarray[i];
+         break;
+
+      case 'L':
+         assert(lpi->rngarray[i] == 0.0);
+         lhs[i] = -CPX_INFBOUND;
+         break;
+
+      case 'G':
+         assert(lpi->rngarray[i] == 0.0);
+         lhs[i] = lpi->rhsarray[i];
+         break;
+
+      case 'R':
+         assert(lpi->rngarray[i] != 0.0);
+         if( lpi->rngarray[i] > 0.0 )
+            lhs[i] = lpi->rhsarray[i];
+         else
+            lhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
+         break;
+         
+      default:
+         errorMessage("invalid row sense\n");
+         abort();
+      }
+   }
+}
+
+/** converts CPLEX's sen/rhs/rng triplets into SCIP's lhs/rhs pairs, only storing the right hand side */
+static
+void reconvertRhs(
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrows,              /**< number of rows */
+   Real*            rhs                 /**< buffer to store the right hand side vector */
+   )
+{
+   int i;
+
+   assert(lpi != NULL);
+   assert(nrows >= 0);
+   assert(rhs != NULL);
+
+   for( i = 0; i < nrows; ++i )
+   {
+      switch( lpi->senarray[i] )
+      {
+      case 'E':
+         assert(lpi->rngarray[i] == 0.0);
+         rhs[i] = lpi->rhsarray[i];
+         break;
+
+      case 'L':
+         assert(lpi->rngarray[i] == 0.0);
+         rhs[i] = lpi->rhsarray[i];
+         break;
+
+      case 'G':
+         assert(lpi->rngarray[i] == 0.0);
+         rhs[i] = CPX_INFBOUND;
+         break;
+
+      case 'R':
+         assert(lpi->rngarray[i] != 0.0);
+         if( lpi->rngarray[i] > 0.0 )
+            rhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
+         else
+            rhs[i] = lpi->rhsarray[i];
+         break;
+         
+      default:
+         errorMessage("invalid row sense\n");
+         abort();
+      }
+   }
+}
+
+/** converts CPLEX's sen/rhs/rng triplets into SCIP's lhs/rhs pairs */
+static
+void reconvertSides(
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrows,              /**< number of rows */
+   Real*            lhs,                /**< buffer to store the left hand side vector, or NULL */
+   Real*            rhs                 /**< buffer to store the right hand side vector, or NULL */
+   )
+{
+   if( lhs != NULL && rhs != NULL )
+      reconvertBothSides(lpi, nrows, lhs, rhs);
+   else if( lhs != NULL )
+      reconvertLhs(lpi, nrows, lhs);
+   else if( rhs != NULL )
+      reconvertRhs(lpi, nrows, rhs);
 }
 
 
@@ -1314,7 +1427,7 @@ RETCODE SCIPlpiScaleCol(
    /* get the column */
    CHECK_OKAY( SCIPlpiGetCols(lpi, col, col, &lb, &ub, &nnonz, &beg, lpi->indarray, lpi->valarray) );
 
-   /** get objective value */
+   /** get objective coefficient */
    CHECK_OKAY( SCIPlpiGetObj(lpi, col, col, &obj) );
 
    /* scale column coefficients */
@@ -1492,10 +1605,8 @@ RETCODE SCIPlpiGetRows(
 
    debugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
-   if( lhs != NULL )
+   if( lhs != NULL || rhs != NULL )
    {
-      assert(rhs != NULL);
-
       /* get row sense, rhs, and ranges */
       CHECK_OKAY( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
       CHECK_ZERO( CPXgetsense(cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
@@ -1511,8 +1622,6 @@ RETCODE SCIPlpiGetRows(
       /* convert sen/rhs/range into lhs/rhs tuples */
       reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
    }
-   else
-      assert(rhs == NULL);
 
    if( nnonz != NULL )
    {
@@ -1537,12 +1646,12 @@ RETCODE SCIPlpiGetRows(
    return SCIP_OKAY;
 }
 
-/** gets objective values from LP problem object */
+/** gets objective coefficients from LP problem object */
 RETCODE SCIPlpiGetObj(
    LPI*             lpi,                /**< LP interface structure */
-   int              firstcol,           /**< first column to get objective value for */
-   int              lastcol,            /**< last column to get objective value for */
-   Real*            vals                /**< array to store objective values */
+   int              firstcol,           /**< first column to get objective coefficient for */
+   int              lastcol,            /**< last column to get objective coefficient for */
+   Real*            vals                /**< array to store objective coefficients */
    )
 {
    assert(cpxenv != NULL);
@@ -1561,8 +1670,8 @@ RETCODE SCIPlpiGetObj(
 /** gets current bounds from LP problem object */
 RETCODE SCIPlpiGetBounds(
    LPI*             lpi,                /**< LP interface structure */
-   int              firstcol,           /**< first column to get objective value for */
-   int              lastcol,            /**< last column to get objective value for */
+   int              firstcol,           /**< first column to get bounds for */
+   int              lastcol,            /**< last column to get bounds for */
    Real*            lbs,                /**< array to store lower bound values, or NULL */
    Real*            ubs                 /**< array to store upper bound values, or NULL */
    )
@@ -1583,6 +1692,42 @@ RETCODE SCIPlpiGetBounds(
    {
       CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, ubs, firstcol, lastcol) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets current row sides from LP problem object */
+RETCODE SCIPlpiGetSides(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to get sides for */
+   int              lastrow,            /**< last row to get sides for */
+   Real*            lhss,               /**< array to store left hand side values, or NULL */
+   Real*            rhss                /**< array to store right hand side values, or NULL */
+   )
+{
+   RETCODE retcode;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(firstrow <= lastrow);
+   
+   debugMessage("getting row sides %d to %d\n", firstrow, lastrow);
+
+   /* get row sense, rhs, and ranges */
+   CHECK_OKAY( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
+   CHECK_ZERO( CPXgetsense(cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
+   CHECK_ZERO( CPXgetrhs(cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+   retcode = CPXgetrngval(cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
+   if( retcode != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
+   {
+      CHECK_ZERO( retcode );
+   }
+   else
+      clearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
+   
+   /* convert sen/rhs/range into lhs/rhs tuples */
+   reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss);
 
    return SCIP_OKAY;
 }

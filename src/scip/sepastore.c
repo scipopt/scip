@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.19 2004/07/29 09:01:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.20 2004/08/10 14:19:03 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -386,6 +386,7 @@ RETCODE SCIPsepastoreApplyCuts(
    assert(sepastore != NULL);
    assert(set != NULL);
    assert(tree != NULL);
+   assert(tree->actnode != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
 
@@ -408,7 +409,7 @@ RETCODE SCIPsepastoreApplyCuts(
             if( SCIPsetIsLE(set, val, SCIPvarGetUbLocal(var)) )
             {
                CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                              var, val, SCIP_BOUNDTYPE_LOWER) );
+                     var, val, SCIP_BOUNDTYPE_LOWER) );
             }
             else
                *cutoff = TRUE;
@@ -427,7 +428,7 @@ RETCODE SCIPsepastoreApplyCuts(
             if( SCIPsetIsGE(set, val, SCIPvarGetLbLocal(var)) )
             {
                CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                              var, val, SCIP_BOUNDTYPE_UPPER) );
+                     var, val, SCIP_BOUNDTYPE_UPPER) );
             }
             else
                *cutoff = TRUE;
@@ -448,7 +449,7 @@ RETCODE SCIPsepastoreApplyCuts(
          debug( SCIProwPrint(sepastore->cuts[i], NULL) );
          
          /* add cut to the LP and capture it */
-         CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[i]) );
+         CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[i], tree->actnode->depth) );
          
          /* release the row */
          CHECK_OKAY( SCIProwRelease(&sepastore->cuts[i], memhdr, set, lp) );

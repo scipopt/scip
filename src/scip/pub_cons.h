@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.11 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.12 2004/08/10 14:19:02 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -337,6 +337,14 @@ int SCIPconsGetNUses(
    CONS*            cons                /**< constraint */
    );
 
+/** for an active constraint, returns the depth in the tree at which the constraint was activated;
+ *  for local active constraints, this is the depth at which the constraint is valid
+ */
+extern
+int SCIPconsGetActiveDepth(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is active in the current node */
 extern
 Bool SCIPconsIsActive(
@@ -467,6 +475,7 @@ Bool SCIPconsIsLocked(
 #define SCIPconsGetHdlr(cons)           (cons)->conshdlr
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsGetNUses(cons)          (cons)->nuses
+#define SCIPconsGetActiveDepth(cons)    (cons)->activedepth
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted || (cons)->updatedelete)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.25 2004/08/03 16:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.26 2004/08/10 14:18:58 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -160,6 +160,12 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             SCIPvarGetName(lpcands[c]), lpcandssol[c]);
 
          CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, &down, &up, &lperror) );
+
+         /* display node information line in root node */
+         if( SCIPgetDepth(scip) == 0 && SCIPgetNStrongbranchs(scip) % 100 == 0 )
+         {
+            CHECK_OKAY( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_HIGH) );
+         }
 
          /* check for an error in strong branching */
          if( lperror )

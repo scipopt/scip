@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.8 2004/02/26 13:53:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.9 2004/08/10 14:19:02 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (debug version)
@@ -1193,12 +1193,12 @@ RETCODE SCIPlpiGetRows(
    return SCIP_OKAY;
 }
 
-/** gets objective values from LP problem object */
+/** gets objective coefficients from LP problem object */
 RETCODE SCIPlpiGetObj(
    LPI*             lpi,                /**< LP interface structure */
-   int              firstcol,           /**< first column to get objective value for */
-   int              lastcol,            /**< last column to get objective value for */
-   Real*            vals                /**< array to store objective values */
+   int              firstcol,           /**< first column to get objective coefficient for */
+   int              lastcol,            /**< last column to get objective coefficient for */
+   Real*            vals                /**< array to store objective coefficients */
    )
 {
    int i;
@@ -1212,6 +1212,62 @@ RETCODE SCIPlpiGetObj(
    
    for( i = firstcol; i <= lastcol; ++i )
       vals[i-firstcol] = lpi->spx->obj(i);
+
+   return SCIP_OKAY;
+}
+
+/** gets current bounds from LP problem object */
+RETCODE SCIPlpiGetBounds(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get objective value for */
+   int              lastcol,            /**< last column to get objective value for */
+   Real*            lbs,                /**< array to store lower bound values, or NULL */
+   Real*            ubs                 /**< array to store upper bound values, or NULL */
+   )
+{
+   int i;
+
+   debugMessage("calling SCIPlpiGetBounds()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->spx->nCols());
+   
+   for( i = firstcol; i <= lastcol; ++i )
+   {
+      if( lbs != NULL )
+         lbs[i-firstcol] = lpi->spx->lower(i);
+      if( ubs != NULL )
+         ubs[i-firstcol] = lpi->spx->upper(i);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets current row sides from LP problem object */
+RETCODE SCIPlpiGetSides(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to get sides for */
+   int              lastrow,            /**< last row to get sides for */
+   Real*            lhss,               /**< array to store left hand side values, or NULL */
+   Real*            rhss                /**< array to store right hand side values, or NULL */
+   )
+{
+   int i;
+
+   debugMessage("calling SCIPlpiGetSides()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->spx->nRows());
+   
+   for( i = firstrow; i <= lastrow; ++i )
+   {
+      if( lhss != NULL )
+         lhss[i-firstrow] = lpi->spx->lhs(i);
+      if( rhss != NULL )
+         rhss[i-firstrow] = lpi->spx->rhs(i);
+   }
 
    return SCIP_OKAY;
 }

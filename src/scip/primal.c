@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.41 2004/08/02 16:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.42 2004/08/10 14:19:02 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -140,6 +140,123 @@ RETCODE SCIPprimalFree(
    return SCIP_OKAY;
 }
 
+/**@todo implement an objective function domain propagator instead of the following code */
+#if 0
+/** applies domain propagation of the objective function after a new upper bound was found */
+static
+RETCODE primalPropagateGlobalObj(
+   PRIMAL*          primal,             /**< primal data */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   VAR* var;
+   Real minobj;
+   Real maxobj;
+   Real obj;
+   Real maxdelta;
+   Real lb;
+   Real ub;
+   Real upperbound;
+   Real lowerbound;
+   int v;
+
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+
+   /* if there are unknown variables, we cannot propagate on the objective function */
+   if( set->nactivepricers > 0 )
+      return SCIP_OKAY;
+
+   /* calculate minimal and maximal objective value in current global bounds */
+   minobj = 0.0;
+   maxobj = 0.0;
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      var = prob->vars[v];
+      obj = SCIPvarGetObj(var);
+      if( obj > 0.0 )
+      {
+         minobj += SCIPvarGetLbGlobal(var) * obj;
+         maxobj += SCIPvarGetUbGlobal(var) * obj;
+      }
+      else if( obj < 0.0 )
+      {
+         minobj += SCIPvarGetUbGlobal(var) * obj;
+         maxobj += SCIPvarGetLbGlobal(var) * obj;
+      }
+   }
+
+   /* update global bounds w.r.t. the objective function */
+   lowerbound = SCIPtreeGetLowerbound(tree, set);
+   upperbound = primal->cutoffbound;
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      var = prob->vars[v];
+      obj = SCIPvarGetObj(var);
+      if( SCIPsetIsPositive(set, obj) )
+      {
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+
+         maxdelta = (lowerbound - maxobj) / obj;
+         if( SCIPsetIsLbBetter(set, ub + maxdelta, lb) )
+         {
+            debugMessage("tightening global lower bound of <%s> due to dual bound: [%g,%g] -> [%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, ub+maxdelta, ub);
+            CHECK_OKAY( SCIPvarSetLbGlobal(var, set, ub+maxdelta) );
+            lb = ub + maxdelta;
+            stat->nrootboundchgs++;
+            stat->nrootboundchgsrun++;
+         }
+
+         maxdelta = (upperbound - minobj) / obj;
+         if( SCIPsetIsUbBetter(set, lb + maxdelta, ub) )
+         {
+            debugMessage("tightening global upper bound of <%s> due to primal bound: [%g,%g] -> [%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, lb, lb+maxdelta);
+            CHECK_OKAY( SCIPvarSetUbGlobal(var, set, lb+maxdelta) );
+            ub = lb + maxdelta;
+            stat->nrootboundchgs++;
+            stat->nrootboundchgsrun++;
+         }
+      }
+      else if( SCIPsetIsNegative(set, obj) )
+      {
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+
+         maxdelta = (lowerbound - maxobj) / obj;
+         if( SCIPsetIsUbBetter(set, lb + maxdelta, ub) )
+         {
+            debugMessage("tightening global upper bound of <%s> due to dual bound: [%g,%g] -> [%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, lb, lb+maxdelta);
+            CHECK_OKAY( SCIPvarSetUbGlobal(var, set, lb+maxdelta) );
+            ub = lb + maxdelta;
+            stat->nrootboundchgs++;
+            stat->nrootboundchgsrun++;
+         }
+
+         maxdelta = (upperbound - minobj) / obj;
+         if( SCIPsetIsLbBetter(set, ub + maxdelta, lb) )
+         {
+            debugMessage("tightening global lower bound of <%s> due to primal bound: [%g,%g] -> [%g,%g]\n",
+               SCIPvarGetName(var), lb, ub, ub+maxdelta, ub);
+            CHECK_OKAY( SCIPvarSetLbGlobal(var, set, ub+maxdelta) );
+            lb = ub + maxdelta;
+            stat->nrootboundchgs++;
+            stat->nrootboundchgsrun++;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** sets upper bound in primal data and in LP solver */
 static
 RETCODE primalSetUpperbound(
@@ -181,6 +298,11 @@ RETCODE primalSetUpperbound(
 
       /* update upper bound in VBC output */
       SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
+
+#if 0
+      /* propagate global bounds on variables */
+      CHECK_OKAY( primalPropagateGlobalObj(primal, set, stat, prob, tree) );
+#endif
    }
 
    return SCIP_OKAY;
@@ -519,6 +641,7 @@ RETCODE SCIPprimalTrySol(
 
    assert(primal != NULL);
    assert(set != NULL);
+   assert(tree != NULL);
    assert(sol != NULL);
    assert(stored != NULL);
 
@@ -531,7 +654,8 @@ RETCODE SCIPprimalTrySol(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, tree->actnode == NULL ? -1 : tree->actnode->depth,
+            checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -574,6 +698,7 @@ RETCODE SCIPprimalTrySolFree(
    int insertpos;
 
    assert(primal != NULL);
+   assert(tree != NULL);
    assert(sol != NULL);
    assert(*sol != NULL);
    assert(stored != NULL);
@@ -586,7 +711,8 @@ RETCODE SCIPprimalTrySolFree(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, checkintegrality, checklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, tree->actnode == NULL ? -1 : tree->actnode->depth,
+            checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.11 2004/08/04 15:29:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.12 2004/08/10 14:19:03 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -114,6 +114,12 @@ int SCIPcolGetLPPos(
    COL*             col                 /**< LP column */
    );
 
+/** gets depth in the tree where the column entered the LP, or -1 if it is not in LP */
+extern
+int SCIPcolGetLPDepth(
+   COL*             col                 /**< LP column */
+   );
+
 /** returns TRUE iff column is member of current LP */
 extern
 Bool SCIPcolIsInLP(
@@ -161,21 +167,22 @@ Longint SCIPcolGetStrongbranchNode(
  * speed up the algorithms.
  */
 
-#define SCIPcolGetObj(col)              ((col)->obj)
-#define SCIPcolGetLb(col)               ((col)->lb)
-#define SCIPcolGetUb(col)               ((col)->ub)
+#define SCIPcolGetObj(col)              (col)->obj
+#define SCIPcolGetLb(col)               (col)->lb
+#define SCIPcolGetUb(col)               (col)->ub
 #define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
-#define SCIPcolGetVar(col)              ((col)->var)
-#define SCIPcolIsIntegral(col)          ((col)->integral)
-#define SCIPcolIsRemoveable(col)        ((col)->removeable)
-#define SCIPcolGetLPPos(col)            ((col)->lppos)
+#define SCIPcolGetVar(col)              (col)->var
+#define SCIPcolIsIntegral(col)          (col)->integral
+#define SCIPcolIsRemoveable(col)        (col)->removeable
+#define SCIPcolGetLPPos(col)            (col)->lppos
+#define SCIPcolGetLPDepth(col)          (col)->lpdepth
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
-#define SCIPcolGetNNonz(col)            ((col)->len)
-#define SCIPcolGetNLPNonz(col)          ((col)->nlprows)
-#define SCIPcolGetRows(col)             ((col)->rows)
-#define SCIPcolGetVals(col)             ((col)->vals)
-#define SCIPcolGetStrongbranchNode(col) ((col)->strongbranchnode)
+#define SCIPcolGetNNonz(col)            (col)->len
+#define SCIPcolGetNLPNonz(col)          (col)->nlprows
+#define SCIPcolGetRows(col)             (col)->rows
+#define SCIPcolGetVals(col)             (col)->vals
+#define SCIPcolGetStrongbranchNode(col) (col)->strongbranchnode
 
 #endif
 
@@ -310,6 +317,12 @@ int SCIProwGetLPPos(
    ROW*             row                 /**< LP row */
    );
 
+/** gets depth in the tree where the row entered the LP, or -1 if it is not in LP */
+extern
+int SCIProwGetLPDepth(
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns TRUE iff row is member of current LP */
 extern
 Bool SCIProwIsInLP(
@@ -322,22 +335,23 @@ Bool SCIProwIsInLP(
  * speed up the algorithms.
  */
 
-#define SCIProwGetNNonz(row)            ((row)->len)
-#define SCIProwGetNLPNonz(row)          ((row)->nlpcols)
-#define SCIProwGetCols(row)             ((row)->cols)
-#define SCIProwGetVals(row)             ((row)->vals)
-#define SCIProwGetConstant(row)         ((row)->constant)
-#define SCIProwGetNorm(row)             (sqrt((row)->sqrnorm))
-#define SCIProwGetLhs(row)              ((row)->lhs)
-#define SCIProwGetRhs(row)              ((row)->rhs)
+#define SCIProwGetNNonz(row)            (row)->len
+#define SCIProwGetNLPNonz(row)          (row)->nlpcols
+#define SCIProwGetCols(row)             (row)->cols
+#define SCIProwGetVals(row)             (row)->vals
+#define SCIProwGetConstant(row)         (row)->constant
+#define SCIProwGetNorm(row)             sqrt((row)->sqrnorm)
+#define SCIProwGetLhs(row)              (row)->lhs
+#define SCIProwGetRhs(row)              (row)->rhs
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
-#define SCIProwGetName(row)             ((row)->name)
-#define SCIProwGetIndex(row)            ((row)->index)
-#define SCIProwIsIntegral(row)          ((row)->integral)
-#define SCIProwIsLocal(row)             ((row)->local)
-#define SCIProwIsModifiable(row)        ((row)->modifiable)
-#define SCIProwIsRemoveable(row)        ((row)->removeable)
-#define SCIProwGetLPPos(row)            ((row)->lppos)
+#define SCIProwGetName(row)             (row)->name
+#define SCIProwGetIndex(row)            (row)->index
+#define SCIProwIsIntegral(row)          (row)->integral
+#define SCIProwIsLocal(row)             (row)->local
+#define SCIProwIsModifiable(row)        (row)->modifiable
+#define SCIProwIsRemoveable(row)        (row)->removeable
+#define SCIProwGetLPPos(row)            (row)->lppos
+#define SCIProwGetLPDepth(row)          (row)->lpdepth
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.38 2004/06/01 16:40:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.39 2004/08/10 14:19:01 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -303,23 +303,33 @@ RETCODE SCIPlpiGetRows(
    Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    );
 
-/** gets objective values from LP problem object */
+/** gets objective coefficients from LP problem object */
 extern
 RETCODE SCIPlpiGetObj(
    LPI*             lpi,                /**< LP interface structure */
-   int              firstcol,           /**< first column to get objective value for */
-   int              lastcol,            /**< last column to get objective value for */
-   Real*            vals                /**< array to store objective values */
+   int              firstcol,           /**< first column to get objective coefficient for */
+   int              lastcol,            /**< last column to get objective coefficient for */
+   Real*            vals                /**< array to store objective coefficients */
    );
 
 /** gets current bounds from LP problem object */
 extern
 RETCODE SCIPlpiGetBounds(
    LPI*             lpi,                /**< LP interface structure */
-   int              firstcol,           /**< first column to get objective value for */
-   int              lastcol,            /**< last column to get objective value for */
+   int              firstcol,           /**< first column to get bounds for */
+   int              lastcol,            /**< last column to get bounds for */
    Real*            lbs,                /**< array to store lower bound values, or NULL */
    Real*            ubs                 /**< array to store upper bound values, or NULL */
+   );
+
+/** gets current row sides from LP problem object */
+extern
+RETCODE SCIPlpiGetSides(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to get sides for */
+   int              lastrow,            /**< last row to get sides for */
+   Real*            lhss,               /**< array to store left hand side values, or NULL */
+   Real*            rhss                /**< array to store right hand side values, or NULL */
    );
 
 /** gets a single coefficient */

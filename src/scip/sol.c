@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.39 2004/08/02 16:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.40 2004/08/10 14:19:04 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -712,6 +712,7 @@ RETCODE SCIPsolCheck(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   int              depth,              /**< depth of current node, or -1 for global problem */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */
@@ -729,8 +730,8 @@ RETCODE SCIPsolCheck(
    *feasible = TRUE;
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, stat, prob, sol, checkintegrality, checklprows,
-                     &result) );
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, stat, prob, sol, 
+            depth, checkintegrality, checklprows, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
    }
 
@@ -834,12 +835,14 @@ RETCODE SCIPsolPrint(
       solval = SCIPsolGetVal(sol, stat, prob->vars[v]);
       if( !SCIPsetIsZero(set, solval) )
       {
+         fprintf(file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( SCIPsetIsInfinity(set, solval) )
-            fprintf(file, "%-32s +infinity\n", SCIPvarGetName(prob->vars[v]));
+            fprintf(file, " +infinity");
          else if( SCIPsetIsInfinity(set, -solval) )
-            fprintf(file, "%-32s -infinity\n", SCIPvarGetName(prob->vars[v]));
+            fprintf(file, " -infinity");
          else
-            fprintf(file, "%-32s %f \t(obj:%g)\n", SCIPvarGetName(prob->vars[v]), solval, SCIPvarGetObj(prob->vars[v]));
+            fprintf(file, " %f", solval);
+         fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -852,13 +855,14 @@ RETCODE SCIPsolPrint(
          solval = SCIPsolGetVal(sol, stat, transprob->vars[v]);
          if( !SCIPsetIsZero(set, solval) )
          {
+            fprintf(file, "%-32s", SCIPvarGetName(transprob->vars[v]));
             if( SCIPsetIsInfinity(set, solval) )
-               fprintf(file, "%-32s +infinity\n", SCIPvarGetName(transprob->vars[v]));
+               fprintf(file, " +infinity");
             else if( SCIPsetIsInfinity(set, -solval) )
-               fprintf(file, "%-32s -infinity\n", SCIPvarGetName(transprob->vars[v]));
+               fprintf(file, " -infinity");
             else
-               fprintf(file, "%-32s %f \t(obj:%g)\n", 
-                  SCIPvarGetName(transprob->vars[v]), solval, SCIPvarGetObj(transprob->vars[v]));
+               fprintf(file, " %f", solval);
+            fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }

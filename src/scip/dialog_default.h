@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.16 2004/06/24 15:34:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.17 2004/08/10 14:19:01 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -38,6 +38,10 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu);
 /** standard menu dialog execution method, that doesn't display it's help screen */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
+
+/** dialog execution method for the checksol command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecChecksol);
 
 /** dialog execution method for the display branching command */
 extern
@@ -90,6 +94,10 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
 /** dialog execution method for the display transproblem command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem);
+
+/** dialog execution method for the display value command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayValue);
 
 /** dialog execution method for the display varbranchstatistics command */
 extern

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.88 2004/08/02 16:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.89 2004/08/10 14:18:58 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -734,7 +734,8 @@ RETCODE conshdlrActivateCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons,               /**< constraint to add */
+   int              depth               /**< depth in the tree where the activation takes place, or -1 for global problem */
    )
 {
    assert(conshdlr != NULL);
@@ -759,6 +760,7 @@ RETCODE conshdlrActivateCons(
    /* activate constraint */
    CHECK_OKAY( conshdlrEnsureConssMem(conshdlr, set, conshdlr->nconss+1) );
    cons->active = TRUE;
+   cons->activedepth = depth;
    cons->consspos = conshdlr->nconss;
    conshdlr->conss[conshdlr->nconss] = cons;
    conshdlr->nconss++;
@@ -855,6 +857,7 @@ RETCODE conshdlrDeactivateCons(
    conshdlr->nconss--;
    cons->consspos = -1;
    cons->active = FALSE;
+   cons->activedepth = -1;
    stat->nactiveconss--;
 
    assert(cons->consspos == -1);
@@ -879,7 +882,8 @@ RETCODE conshdlrProcessUpdates(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   int              depth               /**< depth in the tree where the update processing takes place, or -1 for global problem */
    )
 {
    CONS* cons;
@@ -917,7 +921,7 @@ RETCODE conshdlrProcessUpdates(
          assert(!cons->updatedelete);
          assert(!cons->updateobsolete);
 
-         CHECK_OKAY( conshdlrActivateCons(conshdlr, set, stat, cons) );
+         CHECK_OKAY( conshdlrActivateCons(conshdlr, set, stat, cons, depth) );
          assert(cons->active);
          cons->updateactivate = FALSE;
       }
@@ -1007,7 +1011,8 @@ RETCODE conshdlrForceUpdates(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   int              depth               /**< depth in the tree where the update processing takes place, or -1 for global problem */
    )
 {
    assert(conshdlr != NULL);
@@ -1016,7 +1021,7 @@ RETCODE conshdlrForceUpdates(
    debugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
    conshdlr->delayupdates = FALSE;
 
-   CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, stat, prob) );
+   CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, stat, prob, depth) );
    assert(conshdlr->nupdateconss == 0);
 
    return SCIP_OKAY;
@@ -1506,7 +1511,7 @@ RETCODE SCIPconshdlrInitLP(
       CHECK_OKAY( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, 0) );
    }
 
    return SCIP_OKAY;
@@ -1610,7 +1615,7 @@ RETCODE SCIPconshdlrSeparate(
          SCIPclockStop(conshdlr->sepatime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, depth) );
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -1663,6 +1668,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
+   assert(tree->actnode != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
@@ -1740,7 +1746,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          SCIPclockStop(conshdlr->enfolptime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, tree->actnode->depth) );
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -1800,6 +1806,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
+   assert(tree->actnode != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
@@ -1873,7 +1880,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIPclockStop(conshdlr->enfopstime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, tree->actnode->depth) );
 
          /* evaluate result */
          if( *result != SCIP_DIDNOTRUN
@@ -1922,6 +1929,7 @@ RETCODE SCIPconshdlrCheck(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
+   int              depth,              /**< depth of current node, or -1 for global problem */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -1953,7 +1961,7 @@ RETCODE SCIPconshdlrCheck(
       debugMessage(" -> checking returned result <%d>\n", *result);
       
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, depth) );
 
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
@@ -2061,7 +2069,7 @@ RETCODE SCIPconshdlrPropagate(
          SCIPclockStop(conshdlr->proptime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, depth) );
 
          /* check result code of callback method */
          if( *result != SCIP_CUTOFF
@@ -2194,7 +2202,7 @@ RETCODE SCIPconshdlrPresolve(
       conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, -1) );
 
       /* check result code of callback method */
       if( *result != SCIP_CUTOFF
@@ -2766,6 +2774,7 @@ RETCODE SCIPconssetchgAddAddedCons(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons,               /**< added constraint */
+   int              depth,              /**< depth of constraint set change's node */
    Bool             active              /**< is the constraint set change currently active? */
    )
 {
@@ -2792,7 +2801,7 @@ RETCODE SCIPconssetchgAddAddedCons(
    /* activate constraint, if node is active */
    if( active && !SCIPconsIsActive(cons) )
    {
-      CHECK_OKAY( SCIPconsActivate(cons, set, stat) );
+      CHECK_OKAY( SCIPconsActivate(cons, set, stat, depth) );
       assert(SCIPconsIsActive(cons));
          
       /* remember, that this constraint set change data was resposible for the constraint's addition */
@@ -2911,7 +2920,8 @@ RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+   STAT*            stat,               /**< dynamic problem statistics */
+   int              depth               /**< depth of constraint set change's node */
    )
 {
    CONS* cons;
@@ -2944,7 +2954,7 @@ RETCODE SCIPconssetchgApply(
          assert(cons->addarraypos == -1);
 
          /* activate constraint */
-         CHECK_OKAY( SCIPconsActivate(cons, set, stat) );
+         CHECK_OKAY( SCIPconsActivate(cons, set, stat, depth) );
          assert(cons->active);
          assert(!cons->update);
          
@@ -3125,6 +3135,7 @@ RETCODE SCIPconsCreate(
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
+   (*cons)->activedepth = -1;
    (*cons)->nuses = 0;
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
@@ -3385,7 +3396,8 @@ CONS* SCIPconsGetTransformed(
 RETCODE SCIPconsActivate(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+   STAT*            stat,               /**< dynamic problem statistics */
+   int              depth               /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
    )
 {
    assert(cons != NULL);
@@ -3401,12 +3413,13 @@ RETCODE SCIPconsActivate(
    if( cons->conshdlr->delayupdates )
    {
       cons->updateactivate = TRUE;
+      cons->activedepth = depth;
       CHECK_OKAY( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
       assert(cons->update);
    }
    else
    {
-      CHECK_OKAY( conshdlrActivateCons(cons->conshdlr, set, stat, cons) );
+      CHECK_OKAY( conshdlrActivateCons(cons->conshdlr, set, stat, cons, depth) );
       assert(cons->active);
    }
 
@@ -3429,6 +3442,7 @@ RETCODE SCIPconsDeactivate(
    if( cons->conshdlr->delayupdates )
    {
       cons->updatedeactivate = TRUE;
+      cons->activedepth = -1;
       CHECK_OKAY( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
       assert(cons->update);
    }
@@ -3841,6 +3855,19 @@ int SCIPconsGetNUses(
    assert(cons != NULL);
 
    return cons->nuses;
+}
+
+/** for an active constraint, returns the depth in the tree at which the constraint was activated;
+ *  for local active constraints, this is the depth at which the constraint is valid
+ */
+int SCIPconsGetActiveDepth(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsIsActive(cons));
+
+   return cons->activedepth;
 }
 
 /** returns TRUE iff constraint is active in the current node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.152 2004/08/03 16:02:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.153 2004/08/10 14:19:03 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2015,7 +2015,7 @@ RETCODE SCIPinitConflictAnalysis(
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
- *      whose current assignment lead to the conflict (i.e. the infeasibility of a globally valid constraint).
+ *      whose current assignment lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
  */
@@ -2026,13 +2026,27 @@ RETCODE SCIPaddConflictVar(
    );
 
 /** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set; the conflict analysis
- *  should only be called if a globally valid constraint was violated -- otherwise, the resulting conflict
- *  constraint wouldn't be globally valid
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+ *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictVar()
+ *  is valid for the whole subtree; if the conflict was found by a violated constraint,
+ *  use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
  */
 extern
 RETCODE SCIPanalyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+ *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
+ *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictVar())
+ */
+extern
+RETCODE SCIPanalyzeConflictCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint that detected the conflict */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
@@ -3154,6 +3168,27 @@ RETCODE SCIPtrySolFree(
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
 
+/** checks solution for feasibility without adding it to the solution store */
+extern
+RETCODE SCIPcheckSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   Bool*            feasible            /**< stores whether given solution is feasible */
+   );
+
+/** checks solution for feasibility in original problem without adding it to the solution store;
+ *  this method is used to double check a solution in order to validate the presolving process
+ */
+extern
+RETCODE SCIPcheckSolOrig(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            feasible,           /**< stores whether given solution is feasible */
+   CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed */
+   );
+
 /**@} */
 
 
@@ -3596,6 +3631,14 @@ extern
 RETCODE SCIPprintBranchingStatistics(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** outputs node information display line */
+extern
+RETCODE SCIPprintDisplayLine(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file,               /**< output file (or NULL for standard output) */
+   VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
    );
 
 /**@} */

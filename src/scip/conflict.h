@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.17 2004/05/24 17:46:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.18 2004/08/10 14:18:58 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -91,6 +91,7 @@ RETCODE SCIPconflicthdlrExec(
    NODE*            node,               /**< node to add conflict constraint to */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */
+   Bool             local,              /**< is the conflict set only valid locally? */
    Bool             resolved,           /**< is the conflict set already used to create a constraint? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -148,6 +149,7 @@ RETCODE SCIPconflictAnalyze(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 

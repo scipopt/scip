@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.54 2004/08/02 14:17:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.55 2004/08/10 14:19:00 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -713,11 +713,13 @@ RETCODE applyFixings(
 static
 RETCODE analyzeConflictZero(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
+   CONS*            cons                /**< set partitioning / packing / covering constraint that detected the conflict */
    )
 {
+   CONSDATA* consdata;
    int v;
 
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
       || consdata->setppctype == SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
@@ -730,7 +732,7 @@ RETCODE analyzeConflictZero(
    }
 
    /* analyze the conflict */
-   CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
+   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
 }
@@ -741,12 +743,14 @@ RETCODE analyzeConflictZero(
 static
 RETCODE analyzeConflictOne(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
+   CONS*            cons                /**< set partitioning / packing / covering constraint that detected the conflict */
    )
 {
+   CONSDATA* consdata;
    int v;
    int n;
 
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
       || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
@@ -765,7 +769,7 @@ RETCODE analyzeConflictOne(
    assert(n == 2);
 
    /* analyze the conflict */
-   CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
+   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
 }
@@ -813,11 +817,10 @@ RETCODE processFixings(
       else
       {
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-         if( SCIPconsIsGlobal(cons) )
-         {
-            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-            CHECK_OKAY( analyzeConflictOne(scip, consdata) );
-         }
+
+         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         CHECK_OKAY( analyzeConflictOne(scip, cons) );
+
          *cutoff = TRUE;
       }
    }
@@ -903,11 +906,9 @@ RETCODE processFixings(
             *addcut = TRUE;
          else
          {
-            if( SCIPconsIsGlobal(cons) )
-            {
-               /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-               CHECK_OKAY( analyzeConflictZero(scip, consdata) );
-            }
+            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            CHECK_OKAY( analyzeConflictZero(scip, cons) );
+
             *cutoff = TRUE;
          }
       }
@@ -2606,7 +2607,7 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-         FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 

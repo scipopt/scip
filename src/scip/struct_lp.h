@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.21 2004/08/06 08:18:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.22 2004/08/10 14:19:04 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -93,6 +93,7 @@ struct Col
    int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
    int              lppos;              /**< column position number in current LP, or -1 if not in current LP */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
+   int              lpdepth;            /**< depth level at which column entered the LP, or -1 if not in current LP */
    int              validredcostlp;     /**< LP number for which reduced cost value is valid */
    int              validfarkaslp;      /**< LP number for which farkas coefficient is valid */
    int              validstrongbranchlp;/**< LP number for which strong branching values are valid */
@@ -146,6 +147,7 @@ struct Row
    int              nuses;              /**< number of times, this row is referenced */
    int              lppos;              /**< row position number in current LP, or -1 if not in current LP */
    int              lpipos;             /**< row position number in LP solver, or -1 if not in LP solver */
+   int              lpdepth;            /**< depth level at which row entered the LP, or -1 if not in current LP */
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.5 2004/04/27 15:50:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.6 2004/08/10 14:19:04 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -75,6 +75,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - node            : node to add resulting conflict clause to (with SCIPaddConsNode())
  *  - conflictvars    : array with binary variables in the conflict set
  *  - nconflictvars   : number of binary variables in the conflict set
+ *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
  *  - resolved        : is the conflict set already used to create a constraint?
  *  - result          : pointer to store the result of the conflict processing call
  *
@@ -84,7 +85,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
 #define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, NODE* node, \
-                                        VAR** conflictvars, int nconflictvars, Bool resolved, RESULT* result)
+      VAR** conflictvars, int nconflictvars, Bool local, Bool resolved, RESULT* result)
 
 
 

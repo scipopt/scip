@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.25 2004/07/19 15:52:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.26 2004/08/10 14:19:03 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -41,6 +41,7 @@
 #include "cons_or.h"
 #include "cons_setppc.h"
 #include "cons_varbound.h"
+#include "cons_xor.h"
 #include "dialog_default.h"
 #include "disp_default.h"
 #include "heur_coefdiving.h"
@@ -81,6 +82,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeConshdlrOr(scip) );
    CHECK_OKAY( SCIPincludeConshdlrSetppc(scip) );
    CHECK_OKAY( SCIPincludeConshdlrVarbound(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrXor(scip) );
 
 #if 0
    CHECK_OKAY( SCIPincludeConshdlrEqknapsack(scip) );

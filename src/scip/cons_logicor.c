@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.49 2004/07/13 15:03:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.50 2004/08/10 14:18:59 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -557,11 +557,13 @@ RETCODE applyFixings(
 static
 RETCODE analyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< logic or constraint to be analyzed */
+   CONS*            cons                /**< logic or constraint that detected the conflict */
    )
 {
+   CONSDATA* consdata;
    int v;
 
+   consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
@@ -572,7 +574,7 @@ RETCODE analyzeConflict(
    }
 
    /* analyze the conflict */
-   CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
+   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
    return SCIP_OKAY;
 }
@@ -764,11 +766,8 @@ RETCODE processWatchedVars(
          *addcut = TRUE;
       else
       {
-         if( SCIPconsIsGlobal(cons) )
-         {
-            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-            CHECK_OKAY( analyzeConflict(scip, consdata) );
-         }
+         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         CHECK_OKAY( analyzeConflict(scip, cons) );
 
          /* mark the node to be cut off */
          *cutoff = TRUE;
@@ -2128,7 +2127,7 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    /* create a constraint out of the conflict set */
    sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
    CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
-         FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+         FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
    CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.100 2004/07/09 08:11:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.101 2004/08/10 14:19:04 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -825,7 +825,7 @@ RETCODE SCIPnodeAddCons(
    }
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
-   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, stat, cons, node->active) );
+   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, stat, cons, node->depth, node->active) );
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
    assert(!node->active || SCIPconsIsActive(cons));
@@ -1405,7 +1405,7 @@ RETCODE treeSwitchPath(
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
       debugMessage("switch path: apply constraint set changed in depth %d\n", i);
-      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set, stat) );
+      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set, stat, i) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue, i) );
    }
@@ -1445,9 +1445,13 @@ RETCODE subrootConstructLP(
    assert(nrows == 0 || rows != NULL);
    
    for( c = 0; c < ncols; ++c )
-      CHECK_OKAY( SCIPlpAddCol(lp, set, cols[c]) );
+   {
+      CHECK_OKAY( SCIPlpAddCol(lp, set, cols[c], subroot->depth) );
+   }
    for( r = 0; r < nrows; ++r )
-      CHECK_OKAY( SCIPlpAddRow(lp, set, rows[r]) );
+   {
+      CHECK_OKAY( SCIPlpAddRow(lp, set, rows[r], subroot->depth) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1484,9 +1488,13 @@ RETCODE forkAddLP(
    assert(nrows == 0 || rows != NULL);
    
    for( c = 0; c < ncols; ++c )
-      CHECK_OKAY( SCIPlpAddCol(lp, set, cols[c]) );
+   {
+      CHECK_OKAY( SCIPlpAddCol(lp, set, cols[c], fork->depth) );
+   }
    for( r = 0; r < nrows; ++r )
-      CHECK_OKAY( SCIPlpAddRow(lp, set, rows[r]) );
+   {
+      CHECK_OKAY( SCIPlpAddRow(lp, set, rows[r], fork->depth) );
+   }
 
    return SCIP_OKAY;
 }

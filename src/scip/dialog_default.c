@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.26 2004/08/02 16:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.27 2004/08/10 14:19:00 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -110,6 +110,39 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu)
 DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 {  /*lint --e{715}*/
    CHECK_OKAY( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the checksol command */
+DECL_DIALOGEXEC(SCIPdialogExecChecksol)
+{  /*lint --e{715}*/
+   SOL* sol;
+   CONS* infeascons;
+   Bool feasible;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   sol = SCIPgetBestSol(scip);
+   if( sol == NULL )
+      printf("no feasible solution available\n");
+   else
+   {
+      CHECK_OKAY( SCIPcheckSolOrig(scip, sol, &feasible, &infeascons) );
+      
+      if( feasible )
+         printf("best solution is feasible in original problem\n");
+      else
+      { 
+         printf("best solution violates constraint <%s> [%s] of original problem:\n", 
+            SCIPconsGetName(infeascons), SCIPconshdlrGetName(SCIPconsGetHdlr(infeascons)));
+         CHECK_OKAY( SCIPprintCons(scip, infeascons, NULL) );
+      }
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialogGetParent(dialog);
 
    return SCIP_OKAY;
 }
@@ -502,6 +535,53 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem)
 
    printf("\n");
    CHECK_OKAY( SCIPprintTransProblem(scip, NULL) );
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display value command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
+{  /*lint --e{715}*/
+   SOL* sol;
+   VAR* var;
+   const char* varname;
+   Real solval;
+
+   printf("\n");
+   sol = SCIPgetBestSol(scip);
+   if( sol == NULL )
+   {
+      printf("no feasible solution available\n");
+      SCIPdialoghdlrClearBuffer(dialoghdlr);
+   }
+   else
+   {
+      varname = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter variable name: ");
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, varname) );
+
+      if( varname[0] != '\0' )
+      {
+         var = SCIPfindVar(scip, varname);
+         if( var == NULL )
+            printf("variable <%s> not found\n", varname);
+         else
+         {
+            solval = SCIPgetSolVal(scip, sol, var);
+            printf("%-32s", SCIPvarGetName(var));
+            if( SCIPisInfinity(scip, solval) )
+               printf(" +infinity");
+            else if( SCIPisInfinity(scip, -solval) )
+               printf(" -infinity");
+            else
+               printf(" %f", solval);
+            printf(" \t(obj:%g)\n", SCIPvarGetObj(var));
+         }
+      }
+   }
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1061,17 +1141,26 @@ RETCODE SCIPincludeDialogDefault(
    if( root == NULL )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &root, SCIPdialogExecMenuLazy, NULL,
-                     "SCIP", "SCIP's main menu", TRUE, NULL) );
+            "SCIP", "SCIP's main menu", TRUE, NULL) );
       CHECK_OKAY( SCIPsetRootDialog(scip, root) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &root) );
       root = SCIPgetRootDialog(scip);
+   }
+
+   /* checksol */
+   if( !SCIPdialogHasEntry(root, "checksol") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecChecksol, NULL,
+            "checksol", "double checks best solution w.r.t. original problem", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* display */
    if( !SCIPdialogHasEntry(root, "display") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "display", "display information", TRUE, NULL) );
+            "display", "display information", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1082,7 +1171,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "branching") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayBranching, NULL,
-                     "branching", "display branching rule priorities", FALSE, NULL) );
+            "branching", "display branching rule priorities", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1091,7 +1180,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "conflict") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayConflict, NULL,
-                     "conflict", "display conflict handler priorities", FALSE, NULL) );
+            "conflict", "display conflict handler priorities", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1100,7 +1189,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "conshdlrs") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayConshdlrs, NULL,
-                     "conshdlrs", "display constraint handler settings", FALSE, NULL) );
+            "conshdlrs", "display constraint handler settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1109,7 +1198,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "displaycols") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayDisplaycols, NULL,
-                     "displaycols", "display display column settings", FALSE, NULL) );
+            "displaycols", "display display column settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1118,7 +1207,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "heuristics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayHeuristics, NULL,
-                     "heuristics", "display primal heuristics settings", FALSE, NULL) );
+            "heuristics", "display primal heuristics settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1127,7 +1216,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "nodeselectors") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayNodeselectors, NULL,
-                     "nodeselectors", "display node selectors settings", FALSE, NULL) );
+            "nodeselectors", "display node selectors settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1136,7 +1225,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "presolvers") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayPresolvers, NULL,
-                     "presolvers", "display presolvers settings", FALSE, NULL) );
+            "presolvers", "display presolvers settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1145,7 +1234,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "problem") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayProblem, NULL,
-                     "problem", "display original problem", FALSE, NULL) );
+            "problem", "display original problem", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1154,7 +1243,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "readers") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayReaders, NULL,
-                     "readers", "display file readers settings", FALSE, NULL) );
+            "readers", "display file readers settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1163,7 +1252,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "separators") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplaySeparators, NULL,
-                     "separators", "display cut separators settings", FALSE, NULL) );
+            "separators", "display cut separators settings", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1172,7 +1261,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "solution") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplaySolution, NULL,
-                     "solution", "display best primal solution", FALSE, NULL) );
+            "solution", "display best primal solution", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1181,7 +1270,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "statistics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayStatistics, NULL,
-                     "statistics", "display problem and optimization statistics", FALSE, NULL) );
+            "statistics", "display problem and optimization statistics", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1190,7 +1279,16 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "transproblem") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayTransproblem, NULL,
-                     "transproblem", "display transformed/preprocessed problem", FALSE, NULL) );
+            "transproblem", "display transformed/preprocessed problem", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display value */
+   if( !SCIPdialogHasEntry(submenu, "value") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayValue, NULL,
+            "value", "display value of single variable in best primal solution", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1199,7 +1297,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "varbranchstatistics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayVarbranchstatistics, NULL,
-                     "varbranchstatistics", "display statistics for branching on variables", FALSE, NULL) );
+            "varbranchstatistics", "display statistics for branching on variables", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1208,7 +1306,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "transsolution") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayTranssolution, NULL,
-                     "transsolution", "display best primal solution in transformed variables", FALSE, NULL) );
+            "transsolution", "display best primal solution in transformed variables", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1217,7 +1315,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "free") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecFree, NULL,
-                     "free", "free current problem from memory", FALSE, NULL) );
+            "free", "free current problem from memory", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1226,7 +1324,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "help") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecHelp, NULL,
-                     "help", "display this help", FALSE, NULL) );
+            "help", "display this help", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1235,7 +1333,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "newstart") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecNewstart, NULL,
-                     "newstart", "reset branch and bound tree to start again from root", FALSE, NULL) );
+            "newstart", "reset branch and bound tree to start again from root", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1244,7 +1342,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "optimize") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecOptimize, NULL,
-                     "optimize", "solve the problem", FALSE, NULL) );
+            "optimize", "solve the problem", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1253,7 +1351,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "presolve") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecPresolve, NULL,
-                     "presolve", "solve the problem, but stop after presolving stage", FALSE, NULL) );
+            "presolve", "solve the problem, but stop after presolving stage", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1262,7 +1360,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "quit") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecQuit, NULL,
-                     "quit", "leave SCIP", FALSE, NULL) );
+            "quit", "leave SCIP", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1271,7 +1369,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "read") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecRead, NULL,
-                     "read", "read a problem", FALSE, NULL) );
+            "read", "read a problem", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1284,7 +1382,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(root, "debug") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "debug", "debugging information", TRUE, NULL) );
+            "debug", "debugging information", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1295,7 +1393,7 @@ RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "memory") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDebugMemory, NULL,
-                     "memory", "display memory diagnostics", FALSE, NULL) );
+            "memory", "display memory diagnostics", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1332,7 +1430,7 @@ RETCODE addParamDialog(
 
          /* create a parameter change dialog */
          CHECK_OKAY( SCIPcreateDialog(scip, &paramdialog, SCIPdialogExecSetParam, SCIPdialogDescSetParam, 
-                        paramname, SCIPparamGetDesc(param), FALSE, (DIALOGDATA*)param) );
+               paramname, SCIPparamGetDesc(param), FALSE, (DIALOGDATA*)param) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, menu, paramdialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &paramdialog) );
       }
@@ -1399,7 +1497,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(root, "set") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &setmenu, SCIPdialogExecMenu, NULL,
-                     "set", "load/save/change parameters", TRUE, NULL) );
+            "set", "load/save/change parameters", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, root, setmenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &setmenu) );
    }
@@ -1410,7 +1508,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "load") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetLoad, NULL,
-                     "load", "load parameter settings from a file", FALSE, NULL) );
+            "load", "load parameter settings from a file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1419,7 +1517,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "save") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetSave, NULL,
-                     "save", "save parameter settings to a file", FALSE, NULL) );
+            "save", "save parameter settings to a file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1428,7 +1526,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "diffsave") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetDiffsave, NULL,
-                     "diffsave", "save non-default parameter settings to a file", FALSE, NULL) );
+            "diffsave", "save non-default parameter settings to a file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -1437,7 +1535,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "branching") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "branching", "change parameters for branching rules", TRUE, NULL) );
+            "branching", "change parameters for branching rules", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1451,7 +1549,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPbranchruleGetName(branchrule)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPbranchruleGetName(branchrule), SCIPbranchruleGetDesc(branchrule), TRUE, NULL) );
+               SCIPbranchruleGetName(branchrule), SCIPbranchruleGetDesc(branchrule), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1461,7 +1559,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "conflict") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "conflict", "change parameters for conflict handlers", TRUE, NULL) );
+            "conflict", "change parameters for conflict handlers", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1475,7 +1573,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlr)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPconflicthdlrGetName(conflicthdlr), SCIPconflicthdlrGetDesc(conflicthdlr), TRUE, NULL) );
+               SCIPconflicthdlrGetName(conflicthdlr), SCIPconflicthdlrGetDesc(conflicthdlr), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1485,7 +1583,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "constraints") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "constraints", "change parameters for constraint handlers", TRUE, NULL) );
+            "constraints", "change parameters for constraint handlers", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1499,7 +1597,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPconshdlrGetName(conshdlr)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPconshdlrGetName(conshdlr), SCIPconshdlrGetDesc(conshdlr), TRUE, NULL) );
+               SCIPconshdlrGetName(conshdlr), SCIPconshdlrGetDesc(conshdlr), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1509,7 +1607,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "display") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "display", "change parameters for display columns", TRUE, NULL) );
+            "display", "change parameters for display columns", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1523,7 +1621,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPdispGetName(disp)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPdispGetName(disp), SCIPdispGetDesc(disp), TRUE, NULL) );
+               SCIPdispGetName(disp), SCIPdispGetDesc(disp), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1533,7 +1631,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "heuristics", "change parameters for primal heuristics", TRUE, NULL) );
+            "heuristics", "change parameters for primal heuristics", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1547,7 +1645,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPheurGetName(heur)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPheurGetName(heur), SCIPheurGetDesc(heur), TRUE, NULL) );
+               SCIPheurGetName(heur), SCIPheurGetDesc(heur), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1557,11 +1655,11 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "limits") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "limits", "change parameters for time, memory, objective value, and other limits", TRUE, NULL) );
+            "limits", "change parameters for time, memory, objective value, and other limits", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
 
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetLimitsObjective, NULL,
-                     "objective", "set limit on objective value", FALSE, NULL) );
+            "objective", "set limit on objective value", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       
@@ -1572,7 +1670,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "lp") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "lp", "change parameters for linear programming relaxations", TRUE, NULL) );
+            "lp", "change parameters for linear programming relaxations", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1581,7 +1679,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "memory") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "memory", "change parameters for memory management", TRUE, NULL) );
+            "memory", "change parameters for memory management", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1590,7 +1688,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "nodeselection") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "nodeselection", "change parameters for node selectors", TRUE, NULL) );
+            "nodeselection", "change parameters for node selectors", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1604,7 +1702,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPnodeselGetName(nodesel)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPnodeselGetName(nodesel), SCIPnodeselGetDesc(nodesel), TRUE, NULL) );
+               SCIPnodeselGetName(nodesel), SCIPnodeselGetDesc(nodesel), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1614,7 +1712,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "numerics") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "numerics", "change parameters for numerical values", TRUE, NULL) );
+            "numerics", "change parameters for numerical values", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1623,7 +1721,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "presolving") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "presolving", "change parameters for presolving", TRUE, NULL) );
+            "presolving", "change parameters for presolving", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1637,7 +1735,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPpresolGetName(presol)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPpresolGetName(presol), SCIPpresolGetDesc(presol), TRUE, NULL) );
+               SCIPpresolGetName(presol), SCIPpresolGetDesc(presol), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1647,7 +1745,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "pricing") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "pricing", "change parameters for pricing variables", TRUE, NULL) );
+            "pricing", "change parameters for pricing variables", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1661,7 +1759,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPpricerGetName(pricer)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPpricerGetName(pricer), SCIPpricerGetDesc(pricer), TRUE, NULL) );
+               SCIPpricerGetName(pricer), SCIPpricerGetDesc(pricer), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1680,7 +1778,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "reading") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "reading", "change parameters for problem file readers", TRUE, NULL) );
+            "reading", "change parameters for problem file readers", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1694,7 +1792,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPreaderGetName(reader)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPreaderGetName(reader), SCIPreaderGetDesc(reader), TRUE, NULL) );
+               SCIPreaderGetName(reader), SCIPreaderGetDesc(reader), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1704,7 +1802,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "separating") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "separating", "change parameters for cut separators", TRUE, NULL) );
+            "separating", "change parameters for cut separators", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1718,7 +1816,7 @@ RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPsepaGetName(sepa)) )
       {
          CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
-                        SCIPsepaGetName(sepa), SCIPsepaGetDesc(sepa), TRUE, NULL) );
+               SCIPsepaGetName(sepa), SCIPsepaGetDesc(sepa), TRUE, NULL) );
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -1728,7 +1826,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "timing") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "timing", "change parameters for timing issues", TRUE, NULL) );
+            "timing", "change parameters for timing issues", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -1737,7 +1835,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "misc") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
-                     "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
+            "misc", "change parameters for miscellaneous stuff", TRUE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, submenu) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
    }

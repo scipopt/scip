@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.16 2004/07/12 11:14:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.17 2004/08/10 14:19:04 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -52,6 +52,7 @@ struct Cons
    int              nuses;              /**< number of times, this constraint is referenced */
    int              nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int              nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
+   int              activedepth;        /**< depth level of constraint activation (-1: inactive or problem constraint) */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.83 2004/08/06 08:18:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.84 2004/08/10 14:19:01 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -516,7 +516,8 @@ extern
 RETCODE SCIPlpAddCol(
    LP*              lp,                 /**< LP data */
    SET*             set,                /**< global SCIP settings */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   int              depth               /**< depth in the tree where the column addition is performed */
    );
 
 /** adds a row to the LP and captures it */
@@ -524,7 +525,8 @@ extern
 RETCODE SCIPlpAddRow(
    LP*              lp,                 /**< LP data */
    SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   int              depth               /**< depth in the tree where the row addition is performed */
    );
 
 /** removes all columns after the given number of columns from the LP */

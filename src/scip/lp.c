@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.135 2004/08/06 08:18:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.136 2004/08/10 14:19:01 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2191,6 +2191,7 @@ RETCODE SCIPcolCreate(
    (*col)->nunlinked = len;
    (*col)->lppos = -1;
    (*col)->lpipos = -1;
+   (*col)->lpdepth = -1;
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
    (*col)->farkascoef = SCIP_INVALID;
@@ -3183,8 +3184,20 @@ int SCIPcolGetLPPos(
    )
 {
    assert(col != NULL);
+   assert((col->lppos == -1) == (col->lpdepth == -1));
 
    return col->lppos;
+}
+
+/** gets depth in the tree where the column entered the LP, or -1 if it is not in LP */
+int SCIPcolGetLPDepth(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert((col->lppos == -1) == (col->lpdepth == -1));
+
+   return col->lpdepth;
 }
 
 /** returns TRUE iff column is member of current LP */
@@ -3193,6 +3206,7 @@ Bool SCIPcolIsInLP(
    )
 {
    assert(col != NULL);
+   assert((col->lppos == -1) == (col->lpdepth == -1));
 
    return (col->lppos >= 0);
 }
@@ -3521,6 +3535,7 @@ RETCODE SCIProwCreate(
    (*row)->nuses = 0;
    (*row)->lppos = -1;
    (*row)->lpipos = -1;
+   (*row)->lpdepth = -1;
    (*row)->minidx = INT_MAX;
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
@@ -4788,8 +4803,20 @@ int SCIProwGetLPPos(
    )
 {
    assert(row != NULL);
+   assert((row->lppos == -1) == (row->lpdepth == -1));
 
    return row->lppos;
+}
+
+/** gets depth in the tree where the row entered the LP, or -1 if it is not in LP */
+int SCIProwGetLPDepth(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert((row->lppos == -1) == (row->lpdepth == -1));
+
+   return row->lpdepth;
 }
 
 /** returns TRUE iff row is member of current LP */
@@ -4798,6 +4825,7 @@ Bool SCIProwIsInLP(
    )
 {
    assert(row != NULL);
+   assert((row->lppos == -1) == (row->lpdepth == -1));
 
    return (row->lppos >= 0);
 }
@@ -5690,7 +5718,8 @@ RETCODE SCIPlpFree(
 RETCODE SCIPlpAddCol(
    LP*              lp,                 /**< LP data */
    SET*             set,                /**< global SCIP settings */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   int              depth               /**< depth in the tree where the column addition is performed */
    )
 {
    assert(lp != NULL);
@@ -5717,6 +5746,7 @@ RETCODE SCIPlpAddCol(
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
+   col->lpdepth = depth;
    col->age = 0;
    lp->ncols++;
    if( col->removeable )
@@ -5741,7 +5771,8 @@ RETCODE SCIPlpAddCol(
 RETCODE SCIPlpAddRow(
    LP*              lp,                 /**< LP data */
    SET*             set,                /**< global SCIP settings */
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   int              depth               /**< depth in the tree where the row addition is performed */
    )
 {
    assert(lp != NULL);
@@ -5769,6 +5800,7 @@ RETCODE SCIPlpAddRow(
    CHECK_OKAY( ensureRowsSize(lp, set, lp->nrows+1) );
    lp->rows[lp->nrows] = row;
    row->lppos = lp->nrows;
+   row->lpdepth = depth;
    row->age = 0;
    lp->nrows++;
    if( row->removeable )
@@ -5819,6 +5851,7 @@ RETCODE SCIPlpShrinkCols(
          
          /* mark column to be removed from the LP */
          col->lppos = -1;
+         col->lpdepth = -1;
          lp->ncols--;
 
          /* count removeable columns */
@@ -5873,6 +5906,7 @@ RETCODE SCIPlpShrinkRows(
 
          /* mark row to be removed from the LP */
          row->lppos = -1;
+         row->lpdepth = -1;
          lp->nrows--;
 
          /* count removeable rows */
@@ -8620,6 +8654,7 @@ RETCODE lpDelColset(
          /* mark column to be deleted from the LPI and update column arrays of all linked rows */
          markColDeleted(col);
          colUpdateDelLP(col);
+         col->lpdepth = -1;
 
          lp->cols[c] = NULL;
          lp->lpicols[c] = NULL;
@@ -8700,6 +8735,7 @@ RETCODE lpDelRowset(
          /* mark row to be deleted from the LPI and update row arrays of all linked columns */
          markRowDeleted(row);
          rowUpdateDelLP(row);
+         row->lpdepth = -1;
 
          CHECK_OKAY( SCIProwRelease(&lp->lpirows[r], memhdr, set, lp) );
          SCIProwUnlock(lp->rows[r]);

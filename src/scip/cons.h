@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.72 2004/07/12 11:14:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.73 2004/08/10 14:18:59 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -210,6 +210,7 @@ RETCODE SCIPconshdlrCheck(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    SOL*             sol,                /**< primal CIP solution */
+   int              depth,              /**< depth of current node, or -1 for global problem */
    Bool             checkintegrality,   /**< has integrality to be checked? */
    Bool             checklprows,        /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -273,6 +274,7 @@ RETCODE SCIPconssetchgAddAddedCons(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    CONS*            cons,               /**< added constraint */
+   int              depth,              /**< depth of constraint set change's node */
    Bool             active              /**< is the constraint set change currently active? */
    );
 
@@ -291,7 +293,8 @@ RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+   STAT*            stat,               /**< dynamic problem statistics */
+   int              depth               /**< depth of constraint set change's node */
    );
 
 /** undoes constraint set change */
@@ -408,7 +411,8 @@ extern
 RETCODE SCIPconsActivate(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< dynamic problem statistics */
+   STAT*            stat,               /**< dynamic problem statistics */
+   int              depth               /**< depth in the tree where the constraint activation takes place, or -1 for global problem */
    );
 
 /** deactivates constraint or marks constraint to be deactivated in next update */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.59 2004/07/19 15:52:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.60 2004/08/10 14:18:59 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -970,20 +970,17 @@ RETCODE propagateCons(
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
 
-      if( SCIPconsIsGlobal(cons) )
+      /* start conflict analysis with the fixed-to-one variables */
+      CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+      for( i = 0; i < consdata->nvars; i++ )
       {
-         /* start conflict analysis with the fixed-to-one variables */
-         CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-         for( i = 0; i < consdata->nvars; i++ )
+         if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
          {
-            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
-            {
-               CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
-            }
+            CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
          }
-         
-         CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
       }
+         
+      CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
 
       return SCIP_OKAY;
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.192 2004/08/06 08:18:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.193 2004/08/10 14:19:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4187,16 +4187,16 @@ RETCODE SCIPchgVarUb(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
+      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
@@ -5494,7 +5494,7 @@ RETCODE SCIPinitConflictAnalysis(
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
  *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
- *      whose current assignment lead to the conflict (i.e. the infeasibility of a globally valid constraint).
+ *      whose current assignment lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
  */
@@ -5511,19 +5511,48 @@ RETCODE SCIPaddConflictVar(
 }
 
 /** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
- *  conflict handlers to create a conflict constraint out of the resulting conflict set; the conflict analysis
- *  should only be called if a globally valid constraint was violated -- otherwise, the resulting conflict
- *  constraint wouldn't be globally valid
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+ *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictVar()
+ *  is valid for the whole subtree; if the conflict was found by a violated constraint,
+ *  use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct valid depth is used
  */
 RETCODE SCIPanalyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
-         scip->transprob, scip->tree, success) );
+         scip->transprob, scip->tree, validdepth, success) );
+   
+   return SCIP_OKAY;
+}
+
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set;
+ *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
+ *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictVar())
+ */
+RETCODE SCIPanalyzeConflictCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint that detected the conflict */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflictCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( SCIPconsIsGlobal(cons) )
+   {
+      CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
+            scip->transprob, scip->tree, 0, success) );
+   }
+   else if( SCIPconsIsActive(cons) )
+   {
+      CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
+            scip->transprob, scip->tree, SCIPconsGetActiveDepth(cons), success) );
+   }
    
    return SCIP_OKAY;
 }
@@ -7747,6 +7776,60 @@ RETCODE SCIPtrySolFree(
 
    CHECK_OKAY( SCIPprimalTrySolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
          scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
+   
+   return SCIP_OKAY;
+}
+
+/** checks solution for feasibility without adding it to the solution store */
+RETCODE SCIPcheckSol(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   Bool*            feasible            /**< stores whether given solution is feasible */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcheckSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
+   checklprows = checklprows || scip->set->exactsolve;
+   
+   CHECK_OKAY( SCIPsolCheck(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+         scip->tree == NULL || scip->tree->actnode == NULL ? -1 : scip->tree->actnode->depth,
+         checkintegrality, checklprows, feasible) );
+
+   return SCIP_OKAY;
+}
+
+/** checks solution for feasibility in original problem without adding it to the solution store;
+ *  this method is used to double check a solution in order to validate the presolving process
+ */
+RETCODE SCIPcheckSolOrig(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool*            feasible,           /**< stores whether given solution is feasible */
+   CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed */
+   )
+{
+   RESULT result;
+   int c;
+
+   assert(feasible != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPcheckSolOrig", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   *feasible = TRUE;
+   for( c = 0; c < scip->origprob->nconss && *feasible; ++c )
+   {
+      CHECK_OKAY( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol, TRUE, TRUE, &result) );
+      *feasible = *feasible && (result == SCIP_FEASIBLE);
+   }
+
+   if( !(*feasible) && infeascons != NULL )
+   {
+      assert(1 <= c && c <= scip->origprob->nconss);
+      *infeascons = scip->origprob->conss[c-1];
+   }
 
    return SCIP_OKAY;
 }
@@ -9144,8 +9227,7 @@ RETCODE SCIPprintBranchingStatistics(
    int v;
    int i;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBranchingHistory",
-         TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBranchingHistory", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( file == NULL )
       file = stdout;
@@ -9209,6 +9291,23 @@ RETCODE SCIPprintBranchingStatistics(
       errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+/** outputs node information display line */
+RETCODE SCIPprintDisplayLine(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file,               /**< output file (or NULL for standard output) */
+   VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPprintDisplayLine", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( (VERBLEVEL)scip->set->verblevel >= verblevel )
+   {
+      CHECK_OKAY( SCIPdispPrintLine(scip->set, scip->stat, TRUE) );
+   }
 
    return SCIP_OKAY;
 }

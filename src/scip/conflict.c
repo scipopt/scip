@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.47 2004/08/06 08:18:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.48 2004/08/10 14:18:58 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -31,6 +31,9 @@
  * (applied e.g. in domain propagation) that lead to the conflict. This clause
  * can then be added to the constraint set to help cutting off similar parts
  * of the branch and bound tree, that would lead to the same conflict.
+ * A conflict clause can also be generated, if the conflict was detected by a
+ * locally valid constraint. In this case, the resulting conflict clause is
+ * also locally valid in the same depth as the conflict detecting constraint.
  *
  *  1. Put all the given variables to a priority queue, which is ordered,
  *     such that the variable that was fixed last due to branching or deduction
@@ -41,25 +44,27 @@
  *  3. (a) If the remaining queue is non-empty, and variable w (the one that is now
  *         on the top of the queue) was fixed at the same depth level as v, and if
  *         the assignment to v was a deduction with known inference reason, and if
- *         the inference constraint is globally valid:
+ *         the inference constraint's valid depth is smaller or equal to the
+ *         conflict detecting constraint's valid depth:
  *          - Resolve variable v by asking the constraint that infered the
- *            assignment of v to put all the variables that when assigned to their
- *            current values lead to the deduction of v's current value on the
- *            priority queue.
+ *            assignment of v to put all the variables on the priority queue, that
+ *            when assigned to their current values lead to the deduction of v's
+ *            current value.
  *            Note that these variables have at most the same inference depth
  *            level as variable v, and were deduced earlier than v.
  *     (b) Otherwise, the assignment to variable v was a branching decision or
- *         a deduction with missing inference reason.
+ *         a deduction with missing inference reason, or the inference constraint's
+ *         validity is more local than the one of the conflict detecing constraint.
  *          - Put v or the negation of v into the conflict set, depending on which
- *            of the ones is currently fixed to FALSE.
+ *            of them is currently fixed to FALSE.
  *            Note that if v was a branching variable, all deduced variables remaining
  *            in the priority queue have smaller inference depth level than v, since
  *            deductions are always applied after the branching decisions. However,
  *            there is the possibility, that v was a deduced variable, where the
- *            inference reason was not given. With this lack of information, we must
- *            treat the deduced variable like a branching variable, and there may
- *            exist other deduced variables of the same inference depth level in
- *            the priority queue.
+ *            inference reason was not given or the inference constraint was too local.
+ *            With this lack of information, we must treat the deduced variable like
+ *            a branching variable, and there may exist other deduced variables of the
+ *            same inference depth level in the priority queue.
  *  4. If priority queue is non-empty, goto step 2.
  *  5. The conflict set represents the conflict clause saying that at least one
  *     of the conflict variables must be set to TRUE.
@@ -67,7 +72,7 @@
  *     a corresponding constraint (e.g. a logicor constraint) out of these conflict
  *     variables and add it to the problem.
  *
- * If all deduced variables come with inference information, the resulting
+ * If all deduced variables come with (global) inference information, the resulting
  * conflict set has the property, that for each depth level at most one variable
  * assigned at that level is member of the conflict set. This conflict variable
  * is the first unique implication point of its depth level (FUIP).
@@ -79,15 +84,15 @@
  *    the reason variables leading to the assignment of v with a call to
  *    SCIPaddConflictVar() on the conflict queue (algorithm step 3.(a)).
  *  - If the current assignment of the binary variables lead to a deduction of
- *    a different binary variable, the constraint handler should call
- *    SCIPinferBinVar(), thus providing the constraint that infered the
- *    assignment to SCIP.
- *  - If an (with the current assignment) infeasible globally valid constraint
- *    is detected, the constraint handler should
+ *    a different binary variable (e.g. in domain propagation), the constraint
+ *    handler should call SCIPinferBinVar(), thus providing the constraint that
+ *    infered the assignment to SCIP.
+ *  - If an (with the current assignment) infeasible constraint is detected,
+ *    the constraint handler should
  *     1. call SCIPinitConflictAnalysis() to initialize the conflict queue,
  *     2. call SCIPaddConflictVar() for each variable in the infeasible
  *        constraint,
- *     3. call SCIPanalyzeConflict() to analyze the conflict and add an
+ *     3. call SCIPanalyzeConflictCons() to analyze the conflict and add an
  *        appropriate conflict constraint.
  */
 
@@ -293,6 +298,7 @@ RETCODE SCIPconflicthdlrExec(
    NODE*            node,               /**< node to add conflict constraint to */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */
+   Bool             local,              /**< is the conflict set only valid locally? */
    Bool             resolved,           /**< is the conflict set already used to create a constraint? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -305,7 +311,8 @@ RETCODE SCIPconflicthdlrExec(
    *result = SCIP_DIDNOTRUN;
    if( conflicthdlr->conflictexec != NULL )
    {
-      CHECK_OKAY( conflicthdlr->conflictexec(scip, conflicthdlr, node, conflictvars, nconflictvars, resolved, result) );
+      CHECK_OKAY( conflicthdlr->conflictexec(scip, conflicthdlr, node, conflictvars, nconflictvars, local, resolved, 
+            result) );
 
       if( *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTFIND
@@ -570,10 +577,9 @@ RETCODE SCIPconflictAddVar(
    assert(conflict != NULL);
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   assert(getLbLocal(var) > 0.5 || getUbLocal(var) < 0.5);
 
    debugMessage(" -> adding variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>, info:%d] to conflict candidates\n",
-      SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var),
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var),
       SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
       SCIPvarGetInferCons(var) == NULL ? "null" : SCIPconsGetName(SCIPvarGetInferCons(var)), SCIPvarGetInferInfo(var));
 
@@ -611,6 +617,7 @@ RETCODE conflictAnalyze(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    int              maxsize,            /**< maximal size of conflict set */
    Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    Bool*            success             /**< pointer to store whether the conflict set is valid */
@@ -625,6 +632,9 @@ RETCODE conflictAnalyze(
 
    assert(conflict != NULL);
    assert(tree != NULL);
+   assert(tree->actnode != NULL);
+   assert(tree->actnode->depth == tree->pathlen-1);
+   assert(0 <= validdepth && validdepth <= tree->actnode->depth);
    assert(success != NULL);
 
    debugMessage("analyzing conflict with %d conflict candidates (maxsize=%d)\n",
@@ -639,6 +649,12 @@ RETCODE conflictAnalyze(
       return SCIP_INVALIDDATA;
    }
 
+   /* if the conflict set is only valid at the current node and not higher in the tree, no useful conflict clause
+    * can be found
+    */
+   if( validdepth == tree->actnode->depth )
+      return SCIP_OKAY;
+
    /* increase the conflict set counter, such that variables of new conflict set are labeled with this new counter */
    conflict->count++;
 
@@ -646,9 +662,13 @@ RETCODE conflictAnalyze(
    conflict->nconflictvars = 0;
    nresolutions = 0;
 
-   /* process all variables in the conflict candidate queue */
+   /* process all variables in the conflict candidate queue;
+    * we need not to resolve variables that were fixed earlier than the valid depth of the initial conflict set,
+    * because the conflict clause can only be added locally at the valid depth, and all variables fixed earlier
+    * can be removed from the conflict clause, since they are already fixed in the constraint's subtree
+    */
    var = (VAR*)(SCIPpqueueRemove(conflict->varqueue));
-   while( var != NULL && conflict->nconflictvars < maxsize )
+   while( var != NULL && conflict->nconflictvars < maxsize && SCIPvarGetFixDepth(var) >= validdepth )
    {
 #ifdef DEBUG
       {
@@ -685,11 +705,16 @@ RETCODE conflictAnalyze(
       {
          Bool resolved = FALSE;
 
-         /* check, if the variable can and should be resolved */
+         /* check, if the variable can and should be resolved:
+          * resolutions on local constraints should only be applied, if the constraint is valid at the valid depth
+          * level of the initial conflict set (because this depth level is the topmost level to add the conflict
+          * clause to anyways)
+          */
          infercons = SCIPvarGetInferCons(var);
          if( nextvar != NULL
             && infercons != NULL
-            && SCIPconsIsGlobal(infercons)
+            && (SCIPconsIsGlobal(infercons)
+               || (SCIPconsIsActive(infercons) && SCIPconsGetActiveDepth(infercons) <= validdepth))
             && SCIPvarGetFixDepth(var) == SCIPvarGetFixDepth(nextvar) )
          {
             /* resolve variable v by asking the constraint that infered the
@@ -698,9 +723,9 @@ RETCODE conflictAnalyze(
              */
             infervar = SCIPvarGetInferVar(var);
             assert(infervar != NULL);
-            assert(SCIPsetIsEQ(set, getLbLocal(infervar), getUbLocal(infervar)));
+            assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(infervar), SCIPvarGetUbLocal(infervar)));
             debugMessage("resolving variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:<%s>(%s), info:%d]\n",
-               SCIPvarGetName(var), getLbLocal(var), getUbLocal(var), SCIPvarGetStatus(var),
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var),
                SCIPvarGetFixDepth(var), SCIPvarGetFixIndex(var), 
                SCIPconsGetName(infercons), SCIPconsIsGlobal(infercons) ? "global" : "local",
                SCIPvarGetInferInfo(var));
@@ -712,19 +737,19 @@ RETCODE conflictAnalyze(
             nresolutions++;
          else
          {
-            assert(SCIPsetIsFeasEQ(set, getLbLocal(var), getUbLocal(var)));
+            assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
 
             /* mark the active problem variable to belong to the current conflict */
             var->conflictsetcount = conflict->count;
 
             /* choose between variable or its negation, such that the literal is fixed to FALSE */
-            if( SCIPsetIsEQ(set, getLbLocal(var), 1.0) )
+            if( getLbLocal(var) > 0.5 )
             {
                /* variable is fixed to TRUE -> use the negation */
                CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
             }
-            assert(SCIPsetIsFeasEQ(set, getLbLocal(var), getUbLocal(var)));
-            assert(SCIPsetIsFeasZero(set, getLbLocal(var)));
+            assert(SCIPsetIsEQ(set, getLbLocal(var), getUbLocal(var)));
+            assert(SCIPsetIsZero(set, getLbLocal(var)));
 
             debugMessage("putting variable <%s> to conflict set\n", SCIPvarGetName(var));
 
@@ -765,9 +790,10 @@ RETCODE conflictAnalyze(
        * - if there is at least one branching variable in a node, we assume, that this branching was performed
        *   on variables, and that the siblings of this node are disjunct w.r.t. the branching variables' fixings
        * - the variables in the conflict set are labeled with the current conflict set counter
-       * - there are no branching variables in the root node, so we can start with depth level 1
+       * - we have to add the conflict clause at least in the valid depth of the initial conflict set,
+       *   so we start searching at the first branching after this depth level, i.e. validdepth+1
        */
-      for( d = 1; d < tree->pathlen; ++d )
+      for( d = validdepth+1; d < tree->pathlen; ++d )
       {
          node = tree->path[d];
          assert(node != NULL);
@@ -805,7 +831,7 @@ RETCODE conflictAnalyze(
        * not in the conflict set; this means, the siblings of the node may benefit from the conflict clause,
        * and the clause should be added to the node's parent, i.e. at depth level d-1
        */
-      assert(1 <= d && d <= tree->pathlen);
+      assert(validdepth+1 <= d && d <= tree->pathlen);
       debugMessage(" -> conflict found at depth %d is active in depth %d\n", tree->pathlen-1, d-1);
 
       /* if all branching variables are in the conflict set, the conflict clause is of no use */
@@ -819,7 +845,7 @@ RETCODE conflictAnalyze(
       for( h = 0; h < set->nconflicthdlrs; ++h )
       {
          CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d-1], 
-                        conflict->conflictvars, conflict->nconflictvars, *success, &result) );
+               conflict->conflictvars, conflict->nconflictvars, (validdepth > 0), *success, &result) );
          *success = *success || (result == SCIP_CONSADDED);
       }
    }
@@ -838,6 +864,7 @@ RETCODE SCIPconflictAnalyze(
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch and bound tree */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
@@ -871,7 +898,7 @@ RETCODE SCIPconflictAnalyze(
    conflict->npropcalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, TRUE, &valid) );
+   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, validdepth, maxsize, TRUE, &valid) );
 
    /* check, if a conflict constraint was created */
    if( valid )
@@ -1303,7 +1330,7 @@ RETCODE conflictAnalyzeLPAltpoly(
          if( valid )
          {
             /* analyze the conflict set, and create a conflict constraint on success */
-            CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, FALSE, success) );
+            CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
          }
       }
       
@@ -1402,8 +1429,18 @@ RETCODE unfixBinariesDualfarkas(
       assert(row == lp->lpirows[r]);
 
       /* ignore local rows and rows with farkas value 0.0 */
-      if( !row->local && !SCIPsetIsFeasZero(set, dualfarkas[r]) )
+      if( !row->local && !SCIPsetIsZero(set, dualfarkas[r]) )
       {
+#ifndef NDEBUG
+         {
+            Real lpilhs;
+            Real lpirhs;
+            CHECK_OKAY( SCIPlpiGetSides(lpi, r, r, &lpilhs, &lpirhs) );
+            assert(SCIPsetIsEQ(set, lpilhs, row->lhs - row->constant));
+            assert(SCIPsetIsEQ(set, lpirhs, row->rhs - row->constant));
+         }
+#endif
+
          /* add row coefficients to farkas row */
          for( i = 0; i < row->len; ++i )
          {
@@ -1424,6 +1461,12 @@ RETCODE unfixBinariesDualfarkas(
             farkaslhs += dualfarkas[r] * (row->rhs - row->constant);
          }
       }
+      else
+      {
+         debugMessage("ignoring %s row <%s> with dual farkas value %.10f (lhs=%g, rhs=%g)\n",
+            row->local ? "local" : "global", SCIProwGetName(row), dualfarkas[r], 
+            row->lhs - row->constant, row->rhs - row->constant);
+      }
    }
 
    /* calculate the current farkas activity, always using the best bound w.r.t. the farkas coefficient */
@@ -1435,15 +1478,23 @@ RETCODE unfixBinariesDualfarkas(
 
       /* ignore coefs close to 0.0 */
       if( SCIPsetIsZero(set, farkascoefs[v]) )
+      {
+         debugMessage("ignoring zero farkas coefficient <%s> [%g,%g]: %.10f\n",
+            SCIPvarGetName(var), curvarlbs[v], curvarubs[v], farkascoefs[v]);
          farkascoefs[v] = 0.0;
+      }
       else if( farkascoefs[v] > 0.0 )
       {
+         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
+            || !SCIPsetIsPositive(set, curvarubs[v]));
          if( SCIPsetIsInfinity(set, curvarubs[v]) )
             goto TERMINATE;
          farkasact += farkascoefs[v] * curvarubs[v];
       }
       else
       {
+         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
+            || !SCIPsetIsNegative(set, curvarlbs[v]));
          if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
             goto TERMINATE;
          farkasact += farkascoefs[v] * curvarlbs[v];
@@ -1972,38 +2023,25 @@ RETCODE conflictAnalyzeLP(
    )
 {
    LPI* lpi;
-   COL** cols;
    VAR** vars;
    VAR* var;
-   int* bdchginds;
-   Real* bdchgoldlbs;
-   Real* bdchgoldubs;
-   Real* bdchgnewlbs;
-   Real* bdchgnewubs;
    Real* curvarlbs;
    Real* curvarubs;
-   Real loclb;
-   Real locub;
    Real objval;
-   Bool valid;
-   Bool resolve;
-   int nbdchgs;
-   int lastnbdchgs;
-   int ncols;
    int nvars;
    int maxsize;
-   int iter;
-   int nloops;
    int v;
+   Bool valid;
 
    assert(set != NULL);
+   assert(set->nactivepricers == 0); /* conflict analysis is not possible with unknown variables */
    assert(prob != NULL);
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
    assert(iterations != NULL);
    assert(success != NULL);
-
+ 
    debugMessage("analyzing conflict on infeasible LP\n");
 
    *iterations = 0;
@@ -2028,10 +2066,6 @@ RETCODE conflictAnalyzeLP(
       if( objval < lp->lpiuobjlim )
          return SCIP_OKAY;
    }
-
-   /* get LP columns */
-   cols = SCIPlpGetCols(lp);
-   ncols = SCIPlpGetNCols(lp);
 
    /* get active problem variables */
    vars = prob->vars;
@@ -2071,15 +2105,107 @@ RETCODE conflictAnalyzeLP(
    /* conflict analysis only makes sense, if fixed binary variables exist */
    if( valid )
    {
-      /* temporarily remove objective limit in LP solver */
-      CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, set->infinity) );
+      ROW** rows;
+      COL** cols;
+      int* sidechginds;
+      Real* sidechgoldlhss;
+      Real* sidechgoldrhss;
+      Real* sidechgnewlhss;
+      Real* sidechgnewrhss;
+      int* bdchginds;
+      Real* bdchgoldlbs;
+      Real* bdchgoldubs;
+      Real* bdchgnewlbs;
+      Real* bdchgnewubs;
+      Real lpiinfinity;
+      Real loclb;
+      Real locub;
+      Bool resolve;
+      int nsidechgs;
+      int nbdchgs;
+      int lastnbdchgs;
+      int nrows;
+      int ncols;
+      int iter;
+      int nloops;
+      int r;
 
-      /* get temporary memory for remembering bound changes on LPI columns */
+      /* get infinity value of LP solver */
+      lpiinfinity = SCIPlpiInfinity(lpi);
+
+      /* get LP data */
+      rows = SCIPlpGetRows(lp);
+      nrows = SCIPlpGetNRows(lp);
+      cols = SCIPlpGetCols(lp);
+      ncols = SCIPlpGetNCols(lp);
+      assert(nrows == 0 || rows != NULL);
+      assert(ncols == 0 || cols != NULL);
+
+      /* temporarily remove objective limit in LP solver */
+      CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
+
+      /* get temporary memory for remembering side and bound changes on LPI rows and columns */
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &sidechginds, nrows) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &sidechgoldlhss, nrows) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &sidechgoldrhss, nrows) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &sidechgnewlhss, nrows) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &sidechgnewrhss, nrows) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchginds, ncols) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgoldlbs, ncols) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgoldubs, ncols) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgnewlbs, ncols) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgnewubs, ncols) );
+
+      /* remove all local rows by setting their sides to infinity;
+       * finite sides are only changed to near infinity, such that the row's sense in the LP solver
+       * is not affected (e.g. CPLEX cannot handle free rows)
+       */
+      nsidechgs = 0;
+      for( r = 0 ; r < nrows; ++r )
+      {
+         assert(SCIProwGetLPPos(rows[r]) == r);
+
+         if( SCIProwIsLocal(rows[r]) )
+         {
+            Real lhs;
+            Real rhs;
+            Real constant;
+
+            lhs = SCIProwGetLhs(rows[r]);
+            rhs = SCIProwGetRhs(rows[r]);
+            constant = SCIProwGetConstant(rows[r]);
+            assert(!SCIPsetIsInfinity(set, -lhs) || !SCIPsetIsInfinity(set, rhs));
+
+            sidechginds[nsidechgs] = r;
+            if( SCIPsetIsInfinity(set, -lhs) )
+            {
+               sidechgoldlhss[nsidechgs] = -lpiinfinity;
+               sidechgnewlhss[nsidechgs] = -lpiinfinity;
+            }
+            else
+            {
+               sidechgoldlhss[nsidechgs] = lhs - constant;
+               sidechgnewlhss[nsidechgs] = -lpiinfinity/2;
+            }
+            if( SCIPsetIsInfinity(set, rhs) )
+            {
+               sidechgoldrhss[nsidechgs] = lpiinfinity;
+               sidechgnewrhss[nsidechgs] = lpiinfinity;
+            }
+            else
+            {
+               sidechgoldrhss[nsidechgs] = rhs - constant;
+               sidechgnewrhss[nsidechgs] = lpiinfinity/2;
+            }
+            nsidechgs++;
+         }
+      }
+
+      /* apply changes of local rows to the LP solver */
+      if( nsidechgs > 0 )
+      {
+         CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgnewlhss, sidechgnewrhss) );
+      }
 
       /* get current bounds of non-binary variables, and unfix them:
        * compare local and global bounds of non-binary variables and remember differences
@@ -2166,20 +2292,29 @@ RETCODE conflictAnalyzeLP(
             }
 
             /* apply additional changes of binary variables to the LP solver */
-            if( valid && nbdchgs > lastnbdchgs )
+            if( resolve )
             {
+               assert(valid && nbdchgs > lastnbdchgs);
                CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs - lastnbdchgs, 
                      &bdchginds[lastnbdchgs], &bdchgnewlbs[lastnbdchgs], &bdchgnewubs[lastnbdchgs]) );
             }
          }
          assert(nbdchgs >= lastnbdchgs);
-         assert(!resolve || (nbdchgs > lastnbdchgs && valid));
       }
       while( resolve && nloops < 100 );
 
       /* reset variables to local bounds */
-      CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs) );
-   
+      if( nbdchgs > 0 )
+      {
+         CHECK_OKAY( SCIPlpiChgBounds(lpi, nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs) );
+      }
+
+      /* reset changes of local rows */
+      if( nsidechgs > 0 )
+      {
+         CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgoldlhss, sidechgoldrhss) );
+      }
+
       /* reset objective limit in LP solver */
       CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
@@ -2207,10 +2342,15 @@ RETCODE conflictAnalyzeLP(
          }
 
          /* analyze the conflict set, and create a conflict constraint on success */
-         CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, FALSE, success) );
+         CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
       }
 
       /* free temporary memory */
+      SCIPsetFreeBufferArray(set, &sidechgnewrhss);
+      SCIPsetFreeBufferArray(set, &sidechgnewlhss);
+      SCIPsetFreeBufferArray(set, &sidechgoldrhss);
+      SCIPsetFreeBufferArray(set, &sidechgoldlhss);
+      SCIPsetFreeBufferArray(set, &sidechginds);
       SCIPsetFreeBufferArray(set, &bdchgnewubs);
       SCIPsetFreeBufferArray(set, &bdchgnewlbs);
       SCIPsetFreeBufferArray(set, &bdchgoldubs);
@@ -2258,6 +2398,10 @@ RETCODE SCIPconflictAnalyzeLP(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+   
+   /* LP conflict analysis is only possible, if all variables are known */
+   if( set->nactivepricers > 0 )
       return SCIP_OKAY;
 
    /* start timing */
@@ -2340,6 +2484,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+   VAR* var;
    int* cstat;
    int* rstat;
    Real oldlb;
@@ -2355,7 +2500,9 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(col != NULL);
    assert((col->strongbranchdown >= lp->cutoffbound && SCIPsetCeil(set, col->primsol-1.0) >= col->lb - 0.5)
       || (col->strongbranchup >= lp->cutoffbound && SCIPsetFloor(set, col->primsol+1.0) <= col->ub + 0.5));
-   
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+
    if( success != NULL )
       *success = FALSE;
 
@@ -2365,6 +2512,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
 
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* LP conflict analysis is only possible, if all variables are known */
+   if( set->nactivepricers > 0 )
       return SCIP_OKAY;
 
    /* start timing */
@@ -2382,6 +2533,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    oldlb = col->lb;
    oldub = col->ub;
 
+   var = SCIPcolGetVar(col);
+
    /* is down branch infeasible? */
    if( col->strongbranchdown >= lp->cutoffbound )
    {
@@ -2391,10 +2544,14 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          /* change the upper bound */
          col->ub = newub;
          CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, 1, &col->lpipos, &col->lb, &col->ub) );
-            
+
          /* resolve the LP */
          CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
             
+         /* fake the fixdepth of the variable in order to get the conflict analysis running */
+         assert(var->fixdepth == -1);
+         var->fixdepth = tree->actnode->depth+1;
+
          /* perform conflict analysis on infeasible LP */
          CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iterations, &found) );
          conflict->nsbiterations += iterations;
@@ -2404,6 +2561,9 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
             if( success != NULL )
                *success = TRUE;
          }
+
+         /* reset the fixdepth of the variable */
+         var->fixdepth = -1;
 
          /* reset the upper bound */
          col->ub = oldub;
@@ -2427,6 +2587,10 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          /* resolve the LP */
          CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
             
+         /* fake the fixdepth of the variable in order to get the conflict analysis running */
+         assert(var->fixdepth == -1);
+         var->fixdepth = tree->actnode->depth+1;
+
          /* perform conflict analysis on infeasible LP */
          CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iterations, &found) );
          conflict->nsbiterations += iterations;
@@ -2436,6 +2600,9 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
             if( success != NULL )
                *success = TRUE;
          }
+
+         /* reset the fixdepth of the variable */
+         var->fixdepth = -1;
 
          /* reset the lower bound */
          col->lb = oldlb;
@@ -2611,7 +2778,7 @@ RETCODE SCIPconflictAnalyzePseudo(
       }
       
       /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, maxsize, TRUE, &valid) );
+      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, TRUE, &valid) );
       
       /* check, if a valid conflict was found */
       if( valid )

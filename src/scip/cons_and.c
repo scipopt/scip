@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.28 2004/07/07 08:58:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.29 2004/08/10 14:18:59 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -79,13 +79,13 @@ struct ConshdlrData
  */
 
 enum Proprule
-   {
-      PROPRULE_1,                          /**< v_i = FALSE                                  =>  r   = FALSE          */
-      PROPRULE_2,                          /**< r   = TRUE                                   =>  v_i = TRUE for all i */
-      PROPRULE_3,                          /**< v_i = TRUE for all i                         =>  r   = TRUE           */
-      PROPRULE_4,                          /**< r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE          */
-      PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
-   };
+{
+   PROPRULE_1,                          /**< v_i = FALSE                                  =>  r   = FALSE          */
+   PROPRULE_2,                          /**< r   = TRUE                                   =>  v_i = TRUE for all i */
+   PROPRULE_3,                          /**< v_i = TRUE for all i                         =>  r   = TRUE           */
+   PROPRULE_4,                          /**< r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE          */
+   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+};
 typedef enum Proprule PROPRULE;
 
 
@@ -781,6 +781,65 @@ RETCODE separateCons(
    return SCIP_OKAY;
 }
 
+/** analyzes conflicting TRUE assignment to resultant of given constraint, and adds conflict clause to problem */
+static
+RETCODE analyzeConflictOne(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< and constraint that detected the conflict */
+   int              falsepos            /**< position of operand that is fixed to FALSE */
+   )
+{
+   CONSDATA* consdata;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(SCIPvarGetLbLocal(consdata->resvar) > 0.5);
+   assert(0 <= falsepos && falsepos < consdata->nvars);
+   assert(SCIPvarGetUbLocal(consdata->vars[falsepos]) < 0.5);
+
+   /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
+   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+   CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
+   CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[falsepos]) );
+
+   /* analyze the conflict */
+   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** analyzes conflicting FALSE assignment to resultant of given constraint, and adds conflict clause to problem */
+static
+RETCODE analyzeConflictZero(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< or constraint that detected the conflict */
+   )
+{
+   CONSDATA* consdata;
+   int v;
+
+   assert(!SCIPconsIsModifiable(cons));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
+
+   /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+   CHECK_OKAY( SCIPaddConflictVar(scip, consdata->resvar) );
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      assert(SCIPvarGetLbLocal(consdata->vars[v]) > 0.5);
+      CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
+   }
+
+   /* analyze the conflict */
+   CHECK_OKAY( SCIPanalyzeConflictCons(scip, cons, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /** propagates constraint with the following rules:
  *   (1) v_i = FALSE                                  =>  r   = FALSE
  *   (2) r   = TRUE                                   =>  v_i = TRUE for all i
@@ -839,14 +898,21 @@ RETCODE propagateCons(
          debugMessage("constraint <%s>: operator var <%s> fixed to 0.0 -> fix resultant <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
          CHECK_OKAY( SCIPinferBinVar(scip, resvar, FALSE, cons, PROPRULE_1, &infeasible, &tightened) );
-         *cutoff = *cutoff || infeasible;
-         if( tightened )
-            (*nfixedvars)++;
-         if( infeasible || tightened )
+         if( infeasible )
          {
+            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            CHECK_OKAY( analyzeConflictOne(scip, cons, i) );
+
+            *cutoff = TRUE;
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          }
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         else if( tightened )
+         {
+            (*nfixedvars)++;
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         }
+
          return SCIP_OKAY;
       }
       else
@@ -862,15 +928,23 @@ RETCODE propagateCons(
          debugMessage("constraint <%s>: resultant var <%s> fixed to 1.0 -> fix operator var <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
          CHECK_OKAY( SCIPinferBinVar(scip, vars[i], TRUE, cons, PROPRULE_2, &infeasible, &tightened) );
-         *cutoff = *cutoff || infeasible;
-         if( tightened )
-            (*nfixedvars)++;
-         if( infeasible || tightened )
+         if( infeasible )
          {
+            /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+            CHECK_OKAY( analyzeConflictOne(scip, cons, i) );
+
+            *cutoff = TRUE;
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+            return SCIP_OKAY;
+         }
+         else if( tightened )
+         {
+            (*nfixedvars)++;
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          }
       }
       CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+
       return SCIP_OKAY;
    }
 
@@ -938,14 +1012,21 @@ RETCODE propagateCons(
       debugMessage("constraint <%s>: all operator vars fixed to 1.0 -> fix resultant <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
       CHECK_OKAY( SCIPinferBinVar(scip, resvar, TRUE, cons, PROPRULE_3, &infeasible, &tightened) );
-      *cutoff = *cutoff || infeasible;
-      if( tightened )
-         (*nfixedvars)++;
-      if( infeasible || tightened )
+      if( infeasible )
       {
+         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         CHECK_OKAY( analyzeConflictZero(scip, cons) );
+         
+         *cutoff = TRUE;
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       }
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      else if( tightened )
+      {
+         (*nfixedvars)++;
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      }
+
       return SCIP_OKAY;
    }
 
@@ -959,14 +1040,21 @@ RETCODE propagateCons(
       debugMessage("constraint <%s>: resultant <%s> fixed to 0.0, only one unfixed operand -> fix operand <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
       CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], FALSE, cons, PROPRULE_4, &infeasible, &tightened) );
-      *cutoff = *cutoff || infeasible;
-      if( tightened )
-         (*nfixedvars)++;
-      if( infeasible || tightened )
+      if( infeasible )
       {
+         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         CHECK_OKAY( analyzeConflictZero(scip, cons) );
+         
+         *cutoff = TRUE;
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       }
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      else if( tightened )
+      {
+         (*nfixedvars)++;
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      }
+
       return SCIP_OKAY;
    }
 

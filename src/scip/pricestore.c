@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.16 2004/08/06 08:18:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.17 2004/08/10 14:19:02 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -511,7 +511,7 @@ RETCODE SCIPpricestoreApplyVars(
       assert(col->lpipos == -1);
       debugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var), 
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
+      CHECK_OKAY( SCIPlpAddCol(lp, set, col, tree->actnode->depth) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -538,7 +538,7 @@ RETCODE SCIPpricestoreApplyVars(
       assert(col->lppos == -1);
       assert(col->lpipos == -1);
       debugMessage("adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
-      CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
+      CHECK_OKAY( SCIPlpAddCol(lp, set, col, tree->actnode->depth) );
 
       /* release the variable */
       CHECK_OKAY( SCIPvarRelease(&pricestore->vars[v], memhdr, set, lp) );
