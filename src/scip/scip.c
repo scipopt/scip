@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.146 2004/04/07 14:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.147 2004/04/08 13:14:44 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3536,6 +3536,27 @@ Real SCIPgetVarSol(
    CHECK_ABORT( checkStage(scip, "SCIPgetVarSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPvarGetSol(var, scip->tree->actnodehaslp);
+}
+
+/** gets solution values of multiple variables in active node */
+RETCODE SCIPgetVarSols(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of variables to get solution value for */
+   VAR**            vars,               /**< array with variables to get value for */
+   Real*            vals                /**< array to store solution values of variables */
+   )
+{
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetVarSols", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   for( v = 0; v < nvars; ++v )
+      vals[v] = SCIPvarGetSol(vars[v], scip->tree->actnodehaslp);
+
+   return SCIP_OKAY;
 }
 
 /** gets strong branching information on COLUMN variable */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.121 2004/04/06 16:05:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.122 2004/04/08 13:14:45 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1448,6 +1448,15 @@ extern
 Real SCIPgetVarSol(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to get solution value for */
+   );
+
+/** gets solution values of multiple variables in active node */
+extern
+RETCODE SCIPgetVarSols(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of variables to get solution value for */
+   VAR**            vars,               /**< array with variables to get value for */
+   Real*            vals                /**< array to store solution values of variables */
    );
 
 /** gets strong branching information on COLUMN variable */
