@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.41 2004/04/27 15:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.42 2004/04/30 11:58:49 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1872,4 +1872,28 @@ RETCODE SCIPcreateConsKnapsack(
                   local, modifiable, removeable) );
 
    return SCIP_OKAY;
+}
+
+/** output knapsack constraint to file stream */
+void SCIPprintConsKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   int i;
+
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      printf(" %lld<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
+   }
+   printf(" <= %lld\n", consdata->capacity);
 }

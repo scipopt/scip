@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.10 2004/03/22 17:46:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.11 2004/04/30 11:58:49 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -54,6 +54,14 @@ RETCODE SCIPcreateConsKnapsack(
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
+   );
+
+/** output knapsack constraint to file stream */
+extern
+void SCIPprintConsKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   FILE*            file                /**< output file (or NULL for standard output) */
    );
 
 #endif
