@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.61 2004/10/19 18:36:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.62 2004/10/21 14:20:35 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -33,16 +33,16 @@
 
 #define CONSHDLR_NAME          "setppc"
 #define CONSHDLR_DESC          "set partitioning / packing / covering constraints"
-#define CONSHDLR_SEPAPRIORITY   +700000
-#define CONSHDLR_ENFOPRIORITY   +700000
-#define CONSHDLR_CHECKPRIORITY  -700000
+#define CONSHDLR_SEPAPRIORITY   +800000
+#define CONSHDLR_ENFOPRIORITY   +800000
+#define CONSHDLR_CHECKPRIORITY  -800000
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define LINCONSUPGD_PRIORITY    +700000
+#define LINCONSUPGD_PRIORITY    +800000
 
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
@@ -2643,7 +2643,7 @@ DECL_EVENTEXEC(eventExecSetppc)
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
-   consdata->propagated = FALSE;
+   consdata->propagated = (consdata->nfixedones == 0 && consdata->nfixedzeros < consdata->nvars);
 
    debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
       consdata->nfixedzeros, consdata->nfixedones, consdata->nvars);

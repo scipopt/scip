@@ -14,10 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.55 2004/10/19 18:36:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.56 2004/10/21 14:20:35 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
+ *         (equivalent to set covering, but algorithms are suited for depth first search)
  * @author Tobias Achterberg
  */
 
@@ -33,16 +34,16 @@
 
 #define CONSHDLR_NAME          "logicor"
 #define CONSHDLR_DESC          "logic or constraints"
-#define CONSHDLR_SEPAPRIORITY   +800000
-#define CONSHDLR_ENFOPRIORITY   +800000
-#define CONSHDLR_CHECKPRIORITY  -800000
+#define CONSHDLR_SEPAPRIORITY   +700000
+#define CONSHDLR_ENFOPRIORITY   +700000
+#define CONSHDLR_CHECKPRIORITY  -700000
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define LINCONSUPGD_PRIORITY    +800000
+#define LINCONSUPGD_PRIORITY    +700000
 
 #define EVENTHDLR_NAME         "logicor"
 #define EVENTHDLR_DESC         "bound tighten event handler for logic or constraints"

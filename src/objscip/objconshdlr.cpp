@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.16 2004/08/24 11:57:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.17 2004/10/21 14:20:35 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -277,7 +277,7 @@ DECL_CONSENFOPS(consEnfopsObj)
 }
 
 
-/** feasibility check method of constraint handler for integral solutions */
+/** feasibility check method of constraint handler for primal solutions */
 static
 DECL_CONSCHECK(consCheckObj)
 {  /*lint --e{715}*/

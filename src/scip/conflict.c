@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.68 2004/10/21 09:55:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.69 2004/10/21 14:20:35 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -195,8 +195,8 @@ RETCODE SCIPconflicthdlrCreate(
    sprintf(paramname, "conflict/%s/priority", name);
    sprintf(paramdesc, "priority of conflict handler <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*conflicthdlr)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdConflicthdlrPriority, (PARAMDATA*)(*conflicthdlr)) ); /*lint !e740*/
+         &(*conflicthdlr)->priority, priority, INT_MIN, INT_MAX, 
+         paramChgdConflicthdlrPriority, (PARAMDATA*)(*conflicthdlr)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1066,6 +1066,9 @@ RETCODE conflictAddClause(
          CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, tree->path[d], 
                conflict->conflictvars, *nliterals, (validdepth > 0), *success, &result) );
          *success = *success || (result == SCIP_CONSADDED);
+         debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",
+            SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
+            *nliterals, result);
       }
 
       if( *success )
@@ -2093,7 +2096,7 @@ RETCODE conflictAnalyzeLPAltpoly(
    /* create alternative LP */
    CHECK_OKAY( SCIPlpiClear(conflict->lpi) );
    CHECK_OKAY( generateAltLP(set, lp, conflict->lpi, 
-                  &alt_nrowvars, &alt_ncolvars, alt_rowvars, alt_colvars, alt_islower) );
+         &alt_nrowvars, &alt_ncolvars, alt_rowvars, alt_colvars, alt_islower) );
 
    /* solve alternative LP with primal simplex, because the LP is primal feasible but not necessary dual feasible */
    CHECK_OKAY( SCIPlpiSolvePrimal(conflict->lpi) );
@@ -2566,11 +2569,11 @@ RETCODE addCand(
       score = SCIPsetInfinity(set);
    else
    {
-       /* calculate score for undoing the bound change */
-       score = 1.0 - proofactdelta/(prooflhs - proofact);
-       score = MAX(score, 0.0) + 1e-6;
-       score *= depth;
-       score = MIN(score, SCIPsetInfinity(set)/2);
+      /* calculate score for undoing the bound change */
+      score = 1.0 - proofactdelta/(prooflhs - proofact);
+      score = MAX(score, 0.0) + 1e-6;
+      score *= depth;
+      score = MIN(score, SCIPsetInfinity(set)/2);
    }
    
    /* get enough memory to store new candidate */

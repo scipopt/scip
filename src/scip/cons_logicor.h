@@ -14,10 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.10 2004/07/07 08:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.11 2004/10/21 14:20:35 bzfpfend Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
+ *         (equivalent to set covering, but algorithms are suited for depth first search)
  * @author Tobias Achterberg
  */
 

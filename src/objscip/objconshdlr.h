@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.21 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.22 2004/10/21 14:20:35 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -370,7 +370,7 @@ public:
       RESULT*       result              /**< pointer to store the result of the enforcing call */
       ) = 0;
 
-   /** feasibility check method of constraint handler for integral solutions
+   /** feasibility check method of constraint handler for primal solutions
     *
     *  The given solution has to be checked for feasibility.
     *  
