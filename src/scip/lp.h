@@ -978,24 +978,6 @@ RETCODE SCIPlpSetUpperbound(
    Real             upperbound          /**< new upper objective limit */
    );
 
-/** solves the LP with the primal simplex algorithm */
-extern
-RETCODE SCIPlpSolvePrimal(
-   LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   );
-
-/** solves the LP with the dual simplex algorithm */
-extern
-RETCODE SCIPlpSolveDual(
-   LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
-   );
-
 /** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
 extern
 RETCODE SCIPlpSolve(
@@ -1012,7 +994,8 @@ RETCODE SCIPlpSolveAndEval(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   Bool             aging               /**< should aging and removal of obsolete cols/rows be applied? */
    );
 
 /** gets solution status of last solve call */

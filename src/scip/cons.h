@@ -631,7 +631,7 @@ RETCODE SCIPconshdlrFree(
    SCIP*            scip                /**< SCIP data structure */   
    );
 
-/** initializes constraint handler */
+/** calls init method of constraint handler */
 extern
 RETCODE SCIPconshdlrInit(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */

@@ -1702,7 +1702,7 @@ RETCODE actnodeToFork(
    /* resolve LP after cleaning up */
    if( !lp->solved )
    {
-      CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
    }
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
@@ -1773,7 +1773,7 @@ RETCODE actnodeToSubroot(
    /* resolve LP after cleaning up */
    if( !lp->solved )
    {
-      CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
    }
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);

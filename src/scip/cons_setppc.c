@@ -39,10 +39,14 @@
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 
+#define LINCONSUPGD_PRIORITY    +700000
+
 #define EVENTHDLR_NAME         "setppc"
 #define EVENTHDLR_DESC         "bound change event handler for set partitioning / packing / covering constraints"
 
-#define LINCONSUPGD_PRIORITY    +700000
+#define CONFLICTHDLR_NAME      "setppc"
+#define CONFLICTHDLR_DESC      "conflict handler for set partitioning / packing / covering constraints"
+#define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
@@ -603,20 +607,15 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting assignment on given constraint where all of the variables where assigned to zero,
+/** analyses conflicting assignment on given constraint where all of the variables where assigned to zero,
  *  and adds conflict clause to problem
  */
 static
-RETCODE analyzeConflictZero(
+RETCODE analyseConflictZero(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
 {
-   CONS* cons;
-   VAR** conflictvars;
-   char consname[MAXSTRLEN];
-   Bool success;
-   int nconflictvars;
    int maxsize;
    int v;
 
@@ -631,38 +630,23 @@ RETCODE analyzeConflictZero(
       CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
    }
 
-   /* analyze the conflict */
-   maxsize = (int)(0.05 * SCIPgetNBinVars(scip)); /*???????????????????*/
+   /* analyse the conflict */
+   maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
    maxsize = MAX(maxsize, 12); /*???????????????????*/
-   CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
-
-   /* create a set covering constraint out of the conflict set */
-   if( success )
-   {
-      sprintf(consname, "cf%d", SCIPgetNConss(scip));
-      CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCons(scip, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-   }
+   CHECK_OKAY( SCIPanalyseConflict(scip, maxsize, NULL) );
 
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting assignment on given constraint where two of the variables where assigned to one,
+/** analyses conflicting assignment on given constraint where two of the variables where assigned to one,
  *  and adds conflict clause to problem
  */
 static
-RETCODE analyzeConflictOne(
+RETCODE analyseConflictOne(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
 {
-   CONS* cons;
-   VAR** conflictvars;
-   char consname[MAXSTRLEN];
-   Bool success;
-   int nconflictvars;
    int maxsize;
    int v;
    int n;
@@ -684,20 +668,10 @@ RETCODE analyzeConflictOne(
    }
    assert(n == 2);
 
-   /* analyze the conflict */
+   /* analyse the conflict */
    maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
    maxsize = MAX(maxsize, 12); /*???????????????????*/
-   CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
-
-   /* create a set covering constraint out of the conflict set */
-   if( success )
-   {
-      sprintf(consname, "cf%d", SCIPgetNConss(scip));
-      CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
-                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCons(scip, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-   }
+   CHECK_OKAY( SCIPanalyseConflict(scip, maxsize, NULL) );
 
    return SCIP_OKAY;
 }
@@ -745,7 +719,7 @@ RETCODE processFixings(
       else
       {
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-         CHECK_OKAY( analyzeConflictOne(scip, consdata) );
+         CHECK_OKAY( analyseConflictOne(scip, consdata) );
          *cutoff = TRUE;
       }
    }
@@ -831,7 +805,7 @@ RETCODE processFixings(
             *addcut = TRUE;
          else
          {
-            CHECK_OKAY( analyzeConflictZero(scip, consdata) );
+            CHECK_OKAY( analyseConflictZero(scip, consdata) );
             *cutoff = TRUE;
          }
       }
@@ -2409,6 +2383,43 @@ DECL_EVENTEXEC(eventExecSetppc)
 
 
 /*
+ * Callback methods of conflict handler
+ */
+
+static
+DECL_CONFLICTEXEC(conflictExecSetppc)
+{  /*lint --e{715}*/
+   CONS* cons;
+   char consname[MAXSTRLEN];
+   
+   assert(conflicthdlr != NULL);
+   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
+   assert(conflictvars != NULL || nconflictvars == 0);
+   assert(result != NULL);
+
+   /* don't already resolved conflicts */
+   if( resolved )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* create a constraint out of the conflict set */
+   sprintf(consname, "cf%d", SCIPgetNConss(scip));
+   CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
+                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+   CHECK_OKAY( SCIPaddCons(scip, cons) );
+   CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+   *result = SCIP_CONSADDED;
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * constraint specific interface methods
  */
 
@@ -2420,9 +2431,14 @@ RETCODE SCIPincludeConsHdlrSetppc(
    CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for bound change events */
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   CHECK_OKAY( SCIPincludeEventHdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecSetppc,
+                  NULL) );
+
+   /* create conflict handler for setppc constraints */
+   CHECK_OKAY( SCIPincludeConflictHdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+                  NULL, NULL, NULL, conflictExecSetppc,
                   NULL) );
 
    /* create constraint handler data */

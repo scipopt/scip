@@ -785,6 +785,45 @@ CONSHDLR* SCIPfindConsHdlr(
    return SCIPsetFindConsHdlr(scip->set, name);
 }
 
+/** creates a conflict handler and includes it in SCIP */
+RETCODE SCIPincludeConflictHdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of conflict handler */
+   const char*      desc,               /**< description of conflict handler */
+   int              priority,           /**< priority of the conflict handler */
+   DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
+   DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
+   DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   )
+{
+   CONFLICTHDLR* conflicthdlr;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludeConflictHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, scip->set,
+                  name, desc, priority, 
+                  conflictfree, conflictinit, conflictexit, conflictexec,
+                  conflicthdlrdata) );
+   CHECK_OKAY( SCIPsetIncludeConflictHdlr(scip->set, conflicthdlr) );
+   
+   return SCIP_OKAY;
+}
+
+/** returns the conflict handler of the given name, or NULL if not existing */
+CONFLICTHDLR* SCIPfindConflictHdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of conflict handler */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindConflictHdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindConflictHdlr(scip->set, name);
+}
+
 /** creates a presolver and includes it in SCIP */
 RETCODE SCIPincludePresol(
    SCIP*            scip,               /**< SCIP data structure */
@@ -903,7 +942,7 @@ HEUR* SCIPfindHeur(
 }
 
 /** creates an event handler and includes it in SCIP */
-RETCODE SCIPincludeEventhdlr(
+RETCODE SCIPincludeEventHdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
@@ -2064,6 +2103,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
+   CHECK_OKAY( SCIPlpconflictCreate(&scip->lpconflict, scip->set) );
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
@@ -2181,8 +2221,8 @@ RETCODE SCIPsolve(
       /* continue solution process */
       infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "");
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                     scip->lp, scip->price, scip->sepastore, scip->branchcand, scip->cutpool, scip->primal,
-                     scip->eventfilter, scip->eventqueue) );
+                     scip->lp, scip->price, scip->sepastore, scip->branchcand, scip->cutpool, scip->lpconflict,
+                     scip->primal, scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
@@ -2267,6 +2307,7 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
       CHECK_OKAY( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
       CHECK_OKAY( SCIPeventqueueFree(&scip->eventqueue) );
+      CHECK_OKAY( SCIPlpconflictFree(&scip->lpconflict) );
       CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPsepastoreFree(&scip->sepastore) );
@@ -3333,7 +3374,7 @@ RETCODE SCIPinitConflictAnalysis(
 
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
+ *   1. Before calling the SCIPanalyseConflict() method, SCIPaddConflictVar() should be called for each variable,
  *      whose current assignment lead to the conflict (i.e. the infeasibility of a constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
@@ -3350,26 +3391,18 @@ RETCODE SCIPaddConflictVar(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and returns a conflict set, that
- *  can be used to create a conflict constraint; the variables in the conflict set lead to a conflict (i.e. an
- *  infeasibility) when all set to FALSE; thus, a feasible conflict constraint must demand, that at least one of
- *  the variables in the conflict set is set to TRUE; the method stores the reference to the buffer with the
- *  conflict set in the given conflictvars pointer, and the number of variables in the set in the given
- *  nconflictvars pointer; this buffer may be modified at any time by SCIP, so the user must copy the needed
- *  information from the conflict set buffer, if he wants to use it later
+/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
-RETCODE SCIPanalyzeConflict(
+RETCODE SCIPanalyseConflict(
    SCIP*            scip,               /**< SCIP data structure */
    int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
-   VAR***           conflictvars,       /**< pointer to store the reference to the buffer, where the conflict set
-                                         *   is stored (user must not change this array) */
-   int*             nconflictvars,      /**< pointer to store the number of conflict variables */
-   Bool*            success             /**< pointer to store whether the conflict set is valid */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPanalyseConflict", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->set, maxsize, conflictvars, nconflictvars, success) );
+   CHECK_OKAY( SCIPconflictAnalyse(scip->conflict, scip->set, maxsize, success) );
    
    return SCIP_OKAY;
 }
@@ -4097,7 +4130,7 @@ RETCODE SCIPsolveDiveLP(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
+   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -6028,10 +6061,14 @@ void printConflictStatistics(
    )
 {
    fprintf(file, "Conflict Analysis  :         Time        Calls    Conflicts\n");
-   fprintf(file, "  total            : %12.2f %12lld %12lld\n",
+   fprintf(file, "  propagation      : %12.2f %12lld %12lld\n",
       SCIPconflictGetTime(scip->conflict),
       SCIPconflictGetNCalls(scip->conflict),
       SCIPconflictGetNConflicts(scip->conflict));
+   fprintf(file, "  infeasible LP    : %12.2f %12lld %12lld\n",
+      SCIPlpconflictGetTime(scip->lpconflict),
+      SCIPlpconflictGetNCalls(scip->lpconflict),
+      SCIPlpconflictGetNConflicts(scip->lpconflict));
 }
 
 static

@@ -212,7 +212,7 @@ RETCODE solveNodeInitialLP(
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
    assert(lp->solved);
 
    /* issue FIRSTLPSOLVED event */
@@ -235,6 +235,7 @@ RETCODE solveNodeLP(
    PRICE*           price,              /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
+   LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -268,7 +269,7 @@ RETCODE solveNodeLP(
    root = (SCIPnodeGetDepth(tree->actnode) == 0);
 
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
    assert(lp->solved);
 
    /* price-and-cut loop */
@@ -300,7 +301,7 @@ RETCODE solveNodeLP(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
          assert(lp->solved);
 
          /* reset bounds temporarily set by pricer to their original values */
@@ -311,7 +312,7 @@ RETCODE solveNodeLP(
 
          /* solve LP (with dual simplex) */
          debugMessage("reset bounds: solve LP\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
          assert(lp->solved);
 
          /* if the LP is unbounded, we can stop pricing */
@@ -411,7 +412,7 @@ RETCODE solveNodeLP(
             {
                /* solve LP (with dual simplex) */
                debugMessage("separation: solve LP\n");
-               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
             }
          }
          assert(*cutoff || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
@@ -446,6 +447,13 @@ RETCODE solveNodeLP(
    }
    debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
 
+   /* analyse an infeasible LP */
+   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
+      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+   {
+      CHECK_OKAY( SCIPlpconflictAnalyse(lpconflict, set, lp, INT_MAX, NULL) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -455,6 +463,7 @@ RETCODE redcostStrengthening(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -565,7 +574,7 @@ RETCODE redcostStrengthening(
    SCIPsetReleaseBufferArray(set, &cstat);
 
    /* resolve the LP (the optimal solution should stay the same) */
-   CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(SCIPsetIsFeasEQ(set, SCIPlpGetObjval(lp), lpobjval));
@@ -875,6 +884,7 @@ RETCODE SCIPsolveCIP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CUTPOOL*         cutpool,            /**< global cut pool */
+   LPCONFLICT*      lpconflict,         /**< conflict analysis data for infeasible LP conflicts */
    PRIMAL*          primal,             /**< primal data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -1054,8 +1064,8 @@ RETCODE SCIPsolveCIP(
                do
                {
                   /* continue solving the LP with price and cut */
-                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepastore, cutpool, primal, branchcand, 
-                                 eventfilter, eventqueue, conshdlrs_sepa, &cutoff) );
+                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepastore, cutpool, lpconflict,
+                                 primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa, &cutoff) );
                   assert(cutoff || lp->solved);
                   
                   /* reduced cost bound strengthening */
@@ -1068,7 +1078,7 @@ RETCODE SCIPsolveCIP(
                      oldnboundchanges = stat->nboundchanges;
 
                      /* apply reduced cost bound strengthening */
-                     CHECK_OKAY( redcostStrengthening(memhdr, set, stat, tree, lp, branchcand, primal, eventqueue) );
+                     CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue) );
                      assert(lp->solved);
 
                      /* apply further domain propagation, if addional bounds have been changed */

@@ -957,6 +957,23 @@ RETCODE SCIPlpiDelRowset(
    return SCIP_OKAY;   
 }
 
+/** clears the whole LP */
+RETCODE SCIPlpiClear(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, 0, CPXgetnumcols(cpxenv, lpi->cpxlp)-1) );
+   CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, 0, CPXgetnumrows(cpxenv, lpi->cpxlp)-1) );
+
+   return SCIP_OKAY;
+}
+
 /** changes lower and upper bounds of columns */
 RETCODE SCIPlpiChgBounds(
    LPI*             lpi,                /**< LP interface structure */

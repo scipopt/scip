@@ -250,6 +250,9 @@ RETCODE SCIPsetCreate(
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
+   (*set)->conflicthdlrs = NULL;
+   (*set)->nconflicthdlrs = 0;
+   (*set)->conflicthdlrssize = 0;
    (*set)->presols = NULL;
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
@@ -543,6 +546,13 @@ RETCODE SCIPsetFree(
       CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
    }
    freeMemoryArrayNull(&(*set)->conshdlrs);
+
+   /* free conflict handlers */
+   for( i = 0; i < (*set)->nconflicthdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconflicthdlrFree(&(*set)->conflicthdlrs[i], (*set)->scip) );
+   }
+   freeMemoryArrayNull(&(*set)->conflicthdlrs);
 
    /* free presolvers */
    for( i = 0; i < (*set)->npresols; ++i )
@@ -1058,6 +1068,58 @@ CONSHDLR* SCIPsetFindConsHdlr(
    return NULL;
 }
 
+/** inserts conflict handler in conflict handler list */
+RETCODE SCIPsetIncludeConflictHdlr(
+   SET*             set,                /**< global SCIP settings */
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   int priority;
+   int i;
+
+   assert(set != NULL);
+   assert(conflicthdlr != NULL);
+   assert(!SCIPconflicthdlrIsInitialized(conflicthdlr));
+
+   if( set->nconflicthdlrs >= set->conflicthdlrssize )
+   {
+      set->conflicthdlrssize = SCIPsetCalcMemGrowSize(set, set->nconflicthdlrs+1);
+      ALLOC_OKAY( reallocMemoryArray(&set->conflicthdlrs, set->conflicthdlrssize) );
+   }
+   assert(set->nconflicthdlrs < set->conflicthdlrssize);
+
+   priority = SCIPconflicthdlrGetPriority(conflicthdlr);
+   for( i = set->nconflicthdlrs; i > 0 && SCIPconflicthdlrGetPriority(set->conflicthdlrs[i-1]) < priority; --i )
+   {
+      set->conflicthdlrs[i] = set->conflicthdlrs[i-1];
+   }
+   
+   set->conflicthdlrs[i] = conflicthdlr;
+   set->nconflicthdlrs++;
+
+   return SCIP_OKAY;
+}
+
+/** returns the conflict handler of the given name, or NULL if not existing */
+CONFLICTHDLR* SCIPsetFindConflictHdlr(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of conflict handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nconflicthdlrs; ++i )
+   {
+      if( strcmp(SCIPconflicthdlrGetName(set->conflicthdlrs[i]), name) == 0 )
+         return set->conflicthdlrs[i];
+   }
+
+   return NULL;
+}
+
 /** inserts presolver in presolver list */
 RETCODE SCIPsetIncludePresol(
    SET*             set,                /**< global SCIP settings */
@@ -1414,6 +1476,12 @@ RETCODE SCIPsetInitCallbacks(
       CHECK_OKAY( SCIPconshdlrInit(set->conshdlrs[i], set->scip) );
    }
 
+   /* conflict handlers */
+   for( i = 0; i < set->nconflicthdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconflicthdlrInit(set->conflicthdlrs[i], set->scip) );
+   }
+
    /* presolvers */
    for( i = 0; i < set->npresols; ++i )
    {
@@ -1483,6 +1551,12 @@ RETCODE SCIPsetExitCallbacks(
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrExit(set->conshdlrs[i], set->scip) );
+   }
+
+   /* conflict handlers */
+   for( i = 0; i < set->nconflicthdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconflicthdlrExit(set->conflicthdlrs[i], set->scip) );
    }
 
    /* presolvers */

@@ -65,6 +65,10 @@
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
+#define CONFLICTHDLR_NAME      "linear"
+#define CONFLICTHDLR_DESC      "conflict handler for linear constraints"
+#define CONFLICTHDLR_PRIORITY  -1000000
+
 
 /** constraint data for linear constraints */
 struct ConsData
@@ -4228,6 +4232,65 @@ DECL_EVENTEXEC(eventExecLinear)
 
 
 
+
+/*
+ * Callback methods of conflict handler
+ */
+
+static
+DECL_CONFLICTEXEC(conflictExecLinear)
+{  /*lint --e{715}*/
+   CONS* cons;
+   CONS* upgdcons;
+   Real* vals;
+   char consname[MAXSTRLEN];
+   int v;
+
+   assert(conflicthdlr != NULL);
+   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
+   assert(conflictvars != NULL || nconflictvars == 0);
+   assert(result != NULL);
+
+   /* don't already resolved conflicts */
+   if( resolved )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* create array of ones for storing the coefficients: x1 + ... + xk >= 1 */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &vals, nconflictvars) );
+   for( v = 0; v < nconflictvars; ++v )
+      vals[v] = 1.0;
+
+   /* create a constraint out of the conflict set */
+   sprintf(consname, "cf%d", SCIPgetNConss(scip));
+   CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
+                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+
+   /* release the vals buffer */
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &vals) );
+
+   /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
+   CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
+   if( upgdcons != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+      cons = upgdcons;
+   }
+
+   /* add constraint to SCIP */
+   CHECK_OKAY( SCIPaddCons(scip, cons) );
+   CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+   *result = SCIP_CONSADDED;
+
+   return SCIP_OKAY;
+}
+
+
+
+
 /*
  * constraint specific interface methods
  */
@@ -4240,9 +4303,14 @@ RETCODE SCIPincludeConsHdlrLinear(
    CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for bound change events */
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   CHECK_OKAY( SCIPincludeEventHdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecLinear,
+                  NULL) );
+
+   /* create conflict handler for linear constraints */
+   CHECK_OKAY( SCIPincludeConflictHdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+                  NULL, NULL, NULL, conflictExecLinear,
                   NULL) );
 
    /* create constraint handler data */

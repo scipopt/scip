@@ -57,14 +57,15 @@
  *            the priority queue.
  *  4. If priority queue is non-empty, goto step 2.
  *  5. The conflict set represents the conflict clause saying that at least one
- *     of the conflict variables must be set to TRUE. The caller of the conflict
- *     analysis can form a corresponding constraint (e.g. a logicor constraint)
- *     out of these conflict variables and add it to the problem.
+ *     of the conflict variables must be set to TRUE.
+ *     The conflict set is then passed to the conflict handlers, that may create 
+ *     a corresponding constraint (e.g. a logicor constraint) out of these conflict
+ *     variables and add it to the problem.
  *
  * If all deduced variables come with inference information, the resulting
  * conflict set has the property, that for each depth level at most one variable
  * assigned at that level is member of the conflict set. This conflict variable
- * is the first unique implication point of its depth level (1UIP).
+ * is the first unique implication point of its depth level (FUIP).
  *
  * The user has to do the following to get the conflict analysis running in its
  * current implementation:
@@ -78,16 +79,17 @@
  *    assignment to SCIP.
  *  - If an (with the current assignment) infeasible constraint is detected,
  *    the constraint handler should
- *     1. call SCIPaddConflictVar() for each variable in the infeasible
+ *     1. call SCIPinitConflictAnalysis() to initialise the conflict queue,
+ *     2. call SCIPaddConflictVar() for each variable in the infeasible
  *        constraint,
- *     2. call SCIPanalyzeConflict() to get a set of variables that lead
- *        to the conflicing assignment when all set to FALSE,
- *     3. use the conflict set to create an appropriate constraint.
+ *     3. call SCIPanalyseConflict() to analyse the conflict and add an
+ *        appropriate conflict constraint.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "misc.h"
 #include "message.h"
@@ -95,15 +97,45 @@
 
 
 
+/** conflict handler */
+struct ConflictHdlr
+{
+   char*            name;               /**< name of conflict handler */
+   char*            desc;               /**< description of conflict handler */
+   int              priority;           /**< priority of the conflict handler */
+   DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
+   DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
+   DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
+   DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
+   CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
+   Bool             initialized;        /**< is conflict handler initialized? */
+};
+
+/** conflict analysis data structure for propagation conflicts */
 struct Conflict
 {
-   CLOCK*           analyzetime;        /**< time used for conflict analysis */
+   CLOCK*           analysetime;        /**< time used for propagation conflict analysis */
    PQUEUE*          varqueue;           /**< unprocessed conflict variables */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
-   Longint          ncalls;             /**< number of calls to conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in conflict analysis */
+   Longint          ncalls;             /**< number of calls to propagation conflict analysis */
+   Longint          nconflicts;         /**< number of valid conflicts detected in propagation conflict analysis */
+};
+
+/** conflict analysis data structure for infeasible LP conflicts */
+struct LPConflict
+{
+   /* ????? MARC: hier kannst Du Deine "permanent" gehaltenen Daten unterbringen, z.B. wie das folgende;
+    *             beachte, dass Du das in SCIPlpconflictCreate() und SCIPlpconflictFree() initialisierst bzw. freigibst
+    */
+   CLOCK*           analysetime;        /**< time used for infeasible LP conflict analysis */
+   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
+   VAR**            conflictvars;       /**< variables resembling the conflict clause */
+   int              conflictvarssize;   /**< size of conflictvars array */
+   int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
+   Longint          ncalls;             /**< number of calls to infeasible LP conflict analysis */
+   Longint          nconflicts;         /**< number of valid conflicts detected in infeasible LP conflict analysis */
 };
 
 
@@ -136,8 +168,236 @@ RETCODE conflictEnsureConflictvarsMem(
    return SCIP_OKAY;
 }
 
+/** resizes conflictvars array to be able to store at least num constraints */
+static
+RETCODE lpconflictEnsureConflictvarsMem(
+   LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimal number of slots in array */
+   )
+{
+   assert(lpconflict != NULL);
+
+   if( num > lpconflict->conflictvarssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&lpconflict->conflictvars, newsize) );
+      lpconflict->conflictvarssize = newsize;
+   }
+   assert(num <= lpconflict->conflictvarssize);
+
+   return SCIP_OKAY;
+}
 
 
+
+
+/*
+ * Conflict Handler
+ */
+
+/** creates a conflict handler */
+RETCODE SCIPconflicthdlrCreate(
+   CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of conflict handler */
+   const char*      desc,               /**< description of conflict handler */
+   int              priority,           /**< priority of the conflict handler */
+   DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
+   DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
+   DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(name != NULL);
+   assert(desc != NULL);
+
+   ALLOC_OKAY( allocMemory(conflicthdlr) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*conflicthdlr)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*conflicthdlr)->desc, desc, strlen(desc)+1) );
+   (*conflicthdlr)->priority = priority;
+   (*conflicthdlr)->conflictfree = conflictfree;
+   (*conflicthdlr)->conflictinit = conflictinit;
+   (*conflicthdlr)->conflictexit = conflictexit;
+   (*conflicthdlr)->conflictexec = conflictexec;
+   (*conflicthdlr)->conflicthdlrdata = conflicthdlrdata;
+   (*conflicthdlr)->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** calls destructor and frees memory of conflict handler */
+RETCODE SCIPconflicthdlrFree(
+   CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(*conflicthdlr != NULL);
+   assert(!(*conflicthdlr)->initialized);
+   assert(SCIPstage(scip) == SCIP_STAGE_INIT);
+
+   /* call destructor of conflict handler */
+   if( (*conflicthdlr)->conflictfree != NULL )
+   {
+      CHECK_OKAY( (*conflicthdlr)->conflictfree(scip, *conflicthdlr) );
+   }
+
+   freeMemoryArray(&(*conflicthdlr)->name);
+   freeMemoryArray(&(*conflicthdlr)->desc);
+   freeMemory(conflicthdlr);
+
+   return SCIP_OKAY;
+}
+
+/** calls init method of conflict handler */
+RETCODE SCIPconflicthdlrInit(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   if( conflicthdlr->initialized )
+   {
+      char s[MAXSTRLEN];
+      sprintf(s, "Conflict handler <%s> already initialized", conflicthdlr->name);
+      errorMessage(s);
+      return SCIP_INVALIDCALL;
+   }
+
+   /* call initialization method of conflict handler */
+   if( conflicthdlr->conflictinit != NULL )
+   {
+      CHECK_OKAY( conflicthdlr->conflictinit(scip, conflicthdlr) );
+   }
+   conflicthdlr->initialized = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** calls exit method of conflict handler */
+RETCODE SCIPconflicthdlrExit(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP*            scip                /**< SCIP data structure */   
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   if( !conflicthdlr->initialized )
+   {
+      char s[MAXSTRLEN];
+      sprintf(s, "Conflict handler <%s> not initialized", conflicthdlr->name);
+      errorMessage(s);
+      return SCIP_INVALIDCALL;
+   }
+
+   /* call deinitialization method of conflict handler */
+   if( conflicthdlr->conflictexit != NULL )
+   {
+      CHECK_OKAY( conflicthdlr->conflictexit(scip, conflicthdlr) );
+   }
+   conflicthdlr->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** calls execution method of conflict handler */
+RETCODE SCIPconflicthdlrExec(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP*            scip,               /**< SCIP data structure */   
+   VAR**            conflictvars,       /**< variables of the conflict set */
+   int              nconflictvars,      /**< number of variables in the conflict set */
+   Bool             resolved,           /**< is the conflict set already used to create a constraint? */
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(conflictvars != NULL || nconflictvars == 0);
+   assert(result != NULL);
+
+   /* call solution start method of conflict handler */
+   *result = SCIP_DIDNOTRUN;
+   if( conflicthdlr->conflictexec != NULL )
+   {
+      CHECK_OKAY( conflicthdlr->conflictexec(scip, conflicthdlr, conflictvars, nconflictvars, resolved, result) );
+
+      if( *result != SCIP_CONSADDED
+         && *result != SCIP_DIDNOTFIND
+         && *result != SCIP_DIDNOTRUN )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "execution method of conflict handler <%s> returned invalid result <%d>", 
+            conflicthdlr->name, *result);
+         errorMessage(s);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** gets name of conflict handler */
+const char* SCIPconflicthdlrGetName(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return conflicthdlr->name;
+}
+
+/** gets user data of conflict handler */
+CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return conflicthdlr->conflicthdlrdata;
+}
+
+/** sets user data of conflict handler; user has to free old data in advance! */
+void SCIPconflicthdlrSetData(
+   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   conflicthdlr->conflicthdlrdata = conflicthdlrdata;
+}
+
+/** gets priority of conflict handler */
+int SCIPconflicthdlrGetPriority(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return conflicthdlr->priority;
+}
+
+/** is conflict handler initialized? */
+Bool SCIPconflicthdlrIsInitialized(
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   return conflicthdlr->initialized;
+}
+
+
+
+
+/*
+ * Propagation Conflict Analysis
+ */
 
 /** compares two binary variables w.r.t. their inference information, such that variables infered later are
  *  ordered prior to variables infered earlier
@@ -171,7 +431,7 @@ DECL_SORTPTRCOMP(conflictVarCmp)
       return 0;
 }
 
-/** creates conflict analysis data */
+/** creates conflict analysis data for propagation conflicts */
 RETCODE SCIPconflictCreate(
    CONFLICT**       conflict,           /**< pointer to conflict analysis data */
    const SET*       set                 /**< global SCIP settings */
@@ -181,7 +441,7 @@ RETCODE SCIPconflictCreate(
 
    ALLOC_OKAY( allocMemory(conflict) );
 
-   CHECK_OKAY( SCIPclockCreate(&(*conflict)->analyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*conflict)->analysetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->varqueue, set->memgrowinit, set->memgrowfac, conflictVarCmp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
@@ -192,7 +452,7 @@ RETCODE SCIPconflictCreate(
    return SCIP_OKAY;
 }
 
-/** frees conflict analysis data */
+/** frees conflict analysis data for propagation conflicts */
 RETCODE SCIPconflictFree(
    CONFLICT**       conflict            /**< pointer to conflict analysis data */
    )
@@ -200,7 +460,7 @@ RETCODE SCIPconflictFree(
    assert(conflict != NULL);
    assert(*conflict != NULL);
 
-   SCIPclockFree(&(*conflict)->analyzetime);
+   SCIPclockFree(&(*conflict)->analysetime);
    SCIPpqueueFree(&(*conflict)->varqueue);
    freeMemoryArrayNull(&(*conflict)->conflictvars);
    freeMemory(conflict);
@@ -208,7 +468,7 @@ RETCODE SCIPconflictFree(
    return SCIP_OKAY;
 }
 
-/** initializes the conflict analysis by clearing the conflict variable candidate queue */
+/** initializes the propagation conflict analysis by clearing the conflict variable candidate queue */
 RETCODE SCIPconflictInit(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -264,11 +524,11 @@ RETCODE SCIPconflictAddVar(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and creates a conflict set in the
+/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and creates a conflict set in the
  *  conflict analysis data structure
  */
 static
-RETCODE conflictAnalyze(
+RETCODE conflictAnalyse(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
@@ -285,10 +545,12 @@ RETCODE conflictAnalyze(
 
    debugMessage("analyzing conflict with %d conflict candidates\n", SCIPpqueueNElems(conflict->varqueue));
 
-   /* check, if there is something to analyze */
+   *success = FALSE;
+
+   /* check, if there is something to analyse */
    if( SCIPpqueueNElems(conflict->varqueue) == 0 )
    {
-      errorMessage("no conflict variables to analyze");
+      errorMessage("no conflict variables to analyse");
       return SCIP_INVALIDDATA;
    }
 
@@ -368,55 +630,81 @@ RETCODE conflictAnalyze(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and returns a conflict set, that
- *  can be used to create a conflict constraint
+/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
-RETCODE SCIPconflictAnalyze(
+RETCODE SCIPconflictAnalyse(
    CONFLICT*        conflict,           /**< conflict analysis data */
    const SET*       set,                /**< global SCIP settings */
    int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
-   VAR***           conflictvars,       /**< pointer to store the conflict set (user must not change this array) */
-   int*             nconflictvars,      /**< pointer to store the number of conflict variables */
-   Bool*            success             /**< pointer to store whether the conflict set is valid */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
+   Bool valid;
+
    assert(conflict != NULL);
-   assert(conflictvars != NULL);
-   assert(nconflictvars != NULL);
+   assert(set != NULL);
+
+   if( success != NULL )
+      *success = FALSE;
+
+   /* check, if there are any conflict handlers to use a conflict set */
+   if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* start timing */
+   SCIPclockStart(conflict->analysetime, set);
 
    conflict->ncalls++;
 
-   /* start timing */
-   SCIPclockStart(conflict->analyzetime, set);
+   /* analyse conflict */
+   CHECK_OKAY( conflictAnalyse(conflict, set, maxsize, &valid) );
 
-   /* analyze conflict */
-   CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
-   assert(conflict->conflictvars != NULL);
-   assert(conflict->nconflictvars > 0);
+   /* if a valid conflict set was found, call the conflict handlers */
+   if( valid )
+   {
+      RESULT result;
+      Bool resolved;
+      int h;
+
+      assert(conflict->conflictvars != NULL);
+      assert(conflict->nconflictvars > 0);
+
+      /* call conflict handlers to create a conflict constraint */
+      resolved = FALSE;
+      for( h = 0; h < set->nconflicthdlrs; ++h )
+      {
+         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, 
+                        conflict->conflictvars, conflict->nconflictvars, resolved, &result) );
+         resolved = resolved || (result == SCIP_CONSADDED);
+      }
+
+      /* check, if a conflict constraint was created */
+      if( resolved )
+      {
+         if( success != NULL )
+            *success = TRUE;
+         conflict->nconflicts++;
+      }
+   }
 
    /* stop timing */
-   SCIPclockStop(conflict->analyzetime, set);
-
-   *conflictvars = conflict->conflictvars;
-   *nconflictvars = conflict->nconflictvars;
-
-   if( *success )
-      conflict->nconflicts++;
+   SCIPclockStop(conflict->analysetime, set);
 
    return SCIP_OKAY;
 }
 
-/** gets time in seconds used for analyzing conflicts */
+/** gets time in seconds used for analyzing propagation conflicts */
 Real SCIPconflictGetTime(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return SCIPclockGetTime(conflict->analyzetime);
+   return SCIPclockGetTime(conflict->analysetime);
 }
 
-/** gets number of calls to conflict analysis */
+/** gets number of calls to propagation conflict analysis */
 Longint SCIPconflictGetNCalls(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -426,7 +714,7 @@ Longint SCIPconflictGetNCalls(
    return conflict->ncalls;
 }
 
-/** gets number of valid conflicts detected in conflict analysis */
+/** gets number of valid conflicts detected in propagation conflict analysis */
 Longint SCIPconflictGetNConflicts(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -436,3 +724,182 @@ Longint SCIPconflictGetNConflicts(
    return conflict->nconflicts;
 }
 
+
+
+
+/*
+ * Infeasible LP Conflict Analysis
+ */
+
+/* ?????? MARC: Hier sollten Deine Methoden hinkommen; bitte halte Dich ein bisschen an das Sourcecode-Format,
+ *              das Du oben siehst, insbesondere alle externen Methoden mit SCIP... beginnen und ins conflict.h
+ *              file eintragen, alle internen Methoden static machen und den Namen mit nem Kleinbuchstaben
+ *              anfangen lassen
+ */
+
+/** creates conflict analysis data for infeasible LP conflicts */
+RETCODE SCIPlpconflictCreate(
+   LPCONFLICT**     lpconflict,         /**< pointer to LP conflict analysis data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(lpconflict != NULL);
+
+   ALLOC_OKAY( allocMemory(lpconflict) );
+
+   CHECK_OKAY( SCIPclockCreate(&(*lpconflict)->analysetime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPlpiCreate(&(*lpconflict)->lpi, "LPconflict") );
+   (*lpconflict)->conflictvars = NULL;
+   (*lpconflict)->conflictvarssize = 0;
+   (*lpconflict)->nconflictvars = 0;
+   (*lpconflict)->ncalls = 0;
+   (*lpconflict)->nconflicts = 0;
+   
+   return SCIP_OKAY;
+}
+
+/** frees conflict analysis data for infeasible LP conflicts */
+RETCODE SCIPlpconflictFree(
+   LPCONFLICT**     lpconflict          /**< pointer to LP conflict analysis data */
+   )
+{
+   assert(lpconflict != NULL);
+   assert(*lpconflict != NULL);
+
+   SCIPclockFree(&(*lpconflict)->analysetime);
+   CHECK_OKAY( SCIPlpiFree(&(*lpconflict)->lpi) );
+   freeMemoryArrayNull(&(*lpconflict)->conflictvars);
+   freeMemory(lpconflict);
+
+   return SCIP_OKAY;
+}
+
+/** analyses an infeasible LP trying to create a conflict set in the LP conflict analysis data structure */
+static
+RETCODE lpconflictAnalyse(
+   LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
+   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   Bool*            success             /**< pointer to store whether the conflict set is valid */
+   )
+{
+   assert(lpconflict != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* ????? MARC: Hier kommen Deine wesentlichen Methoden!
+    *             Diese sollten das LP analysieren (Zugriff ueber Methoden aus lp.h) und
+    *             als Output sollten Sie das lpconflict->conflictvars array fuellen, und zwar
+    *             mit der Bedeutung, dass das Setzen aller Variablen in dem Array auf FALSE zu
+    *             einem unzulaessigen LP fuehrt (das Constraint "mindestens eine dieser Variablen
+    *             muss TRUE sein" wird dann automatisch erzeugt).
+    *             Die Methode der Wahl, um das Array in die richtige Groesse zu bringen, ist
+    *               CHECK_OKAY( lpconflictEnsureConflictvarsMem(lpconflict, set, num) );
+    *             wobei num die gewuenschte Mindestgroesse ist.
+    *             Das LPI interface kennst Du ja schon ein bisschen. Fuer den Anfang wuerde ich
+    *             die Analyse erst mal mit nem 
+    *               CHECK_OKAY( SCIPlpiClear(lpi) );
+    *             beginnen. Wie man das macht, dass das LP nur upgedated werden muss, koennen wir
+    *             uns ja spaeter noch ueberlegen.
+    */
+   /*printf("LP infeasible: analyse LP conflict\n");*/ /*??????????????????????*/
+
+   return SCIP_OKAY;
+}
+
+/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set
+ */
+RETCODE SCIPlpconflictAnalyse(
+   LPCONFLICT*      lpconflict,         /**< LP conflict analysis data */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< LP data */
+   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   )
+{
+   Bool valid;
+
+   assert(lpconflict != NULL);
+   assert(set != NULL);
+
+   if( success != NULL )
+      *success = FALSE;
+
+   /* check, if there are any conflict handlers to use a conflict set */
+   if( set->nconflicthdlrs == 0 )
+      return SCIP_OKAY;
+
+   /* start timing */
+   SCIPclockStart(lpconflict->analysetime, set);
+
+   lpconflict->ncalls++;
+
+   /* analyse conflict */
+   CHECK_OKAY( lpconflictAnalyse(lpconflict, set, lp, maxsize, &valid) );
+
+   /* if a valid conflict set was found, call the conflict handlers */
+   if( valid )
+   {
+      RESULT result;
+      Bool resolved;
+      int h;
+
+      assert(lpconflict->conflictvars != NULL);
+      assert(lpconflict->nconflictvars > 0);
+
+      /* call conflict handlers to create a conflict constraint */
+      resolved = FALSE;
+      for( h = 0; h < set->nconflicthdlrs; ++h )
+      {
+         CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set->scip, 
+                        lpconflict->conflictvars, lpconflict->nconflictvars, resolved, &result) );
+         resolved = resolved || (result == SCIP_CONSADDED);
+      }
+
+      /* check, if a conflict constraint was created */
+      if( resolved )
+      {
+         if( success != NULL )
+            *success = TRUE;
+         lpconflict->nconflicts++;
+      }
+   }
+
+   /* stop timing */
+   SCIPclockStop(lpconflict->analysetime, set);
+
+   return SCIP_OKAY;
+}
+
+/** gets time in seconds used for analyzing infeasible LP conflicts */
+Real SCIPlpconflictGetTime(
+   LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
+   )
+{
+   assert(lpconflict != NULL);
+
+   return SCIPclockGetTime(lpconflict->analysetime);
+}
+
+/** gets number of calls to infeasible LP conflict analysis */
+Longint SCIPlpconflictGetNCalls(
+   LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
+   )
+{
+   assert(lpconflict != NULL);
+
+   return lpconflict->ncalls;
+}
+
+/** gets number of valid conflicts detected in infeasible LP conflict analysis */
+Longint SCIPlpconflictGetNConflicts(
+   LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
+   )
+{
+   assert(lpconflict != NULL);
+
+   return lpconflict->nconflicts;
+}

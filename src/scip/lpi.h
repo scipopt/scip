@@ -215,6 +215,12 @@ RETCODE SCIPlpiDelRowset(
                                          *   output: new position of row, -1 if row was deleted */
    );
 
+/** clears the whole LP */
+extern
+RETCODE SCIPlpiClear(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
 /** changes lower and upper bounds of columns */
 extern 
 RETCODE SCIPlpiChgBounds(

@@ -50,6 +50,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "reader.h"
 #include "pricer.h"
 #include "cons.h"
+#include "conflict.h"
 #include "presol.h"
 #include "sepa.h"
 #include "heur.h"
@@ -76,6 +77,9 @@ struct Set
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
+   CONFLICTHDLR**   conflicthdlrs;      /**< conflict handlers */
+   int              nconflicthdlrs;     /**< number of conflict handlers */
+   int              conflicthdlrssize;  /**< size of conflicthdlrs array */
    PRESOL**         presols;            /**< presolvers */
    int              npresols;           /**< number of presolvers */
    int              presolssize;        /**< size of presols array */
@@ -397,6 +401,20 @@ extern
 CONSHDLR* SCIPsetFindConsHdlr(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of constraint handler */
+   );
+
+/** inserts conflict handler in conflict handler list */
+extern
+RETCODE SCIPsetIncludeConflictHdlr(
+   SET*             set,                /**< global SCIP settings */
+   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
+   );
+
+/** returns the conflict handler of the given name, or NULL if not existing */
+extern
+CONFLICTHDLR* SCIPsetFindConflictHdlr(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of conflict handler */
    );
 
 /** inserts presolver in presolver list */

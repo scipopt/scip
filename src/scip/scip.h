@@ -55,6 +55,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "reader.h"
 #include "cons.h"
 #include "var.h"
+#include "conflict.h"
 #include "lp.h"
 #include "tree.h"
 #include "nodesel.h"
@@ -424,6 +425,27 @@ CONSHDLR* SCIPfindConsHdlr(
    const char*      name                /**< name of constraint handler */
    );
 
+/** creates a conflict handler and includes it in SCIP */
+extern
+RETCODE SCIPincludeConflictHdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of conflict handler */
+   const char*      desc,               /**< description of conflict handler */
+   int              priority,           /**< priority of the conflict handler */
+   DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
+   DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
+   DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
+   DECL_CONFLICTEXEC((*conflictexec)),  /**< conflict processing method of conflict handler */
+   CONFLICTHDLRDATA* conflicthdlrdata   /**< conflict handler data */
+   );
+
+/** returns the conflict handler of the given name, or NULL if not existing */
+extern
+CONFLICTHDLR* SCIPfindConflictHdlr(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of conflict handler */
+   );
+
 /** creates a presolver and includes it in SCIP */
 extern
 RETCODE SCIPincludePresol(
@@ -493,7 +515,7 @@ HEUR* SCIPfindHeur(
 
 /** creates an event handler and includes it in SCIP */
 extern
-RETCODE SCIPincludeEventhdlr(
+RETCODE SCIPincludeEventHdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
@@ -1171,7 +1193,7 @@ RETCODE SCIPinitConflictAnalysis(
 
 /** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
  *  one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
+ *   1. Before calling the SCIPanalyseConflict() method, SCIPaddConflictVar() should be called for each variable,
  *      whose current assignment lead to the conflict (i.e. the infeasibility of a constraint).
  *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
  *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
@@ -1182,22 +1204,14 @@ RETCODE SCIPaddConflictVar(
    VAR*             var                 /**< conflict variable to add to conflict candidate queue */
    );
 
-/** analyzes conflict variables that were added with calls to SCIPaddConflictVar(), and returns a conflict set, that
- *  can be used to create a conflict constraint; the variables in the conflict set lead to a conflict (i.e. an
- *  infeasibility) when all set to FALSE; thus, a feasible conflict constraint must demand, that at least one of
- *  the variables in the conflict set is set to TRUE; the method stores the reference to the buffer with the
- *  conflict set in the given conflictvars pointer, and the number of variables in the set in the given
- *  nconflictvars pointer; this buffer may be modified at any time by SCIP, so the user must copy the needed
- *  information from the conflict set buffer, if he wants to use it later
+/** analyses conflict variables that were added with calls to SCIPconflictAddVar(), and on success, calls the
+ *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
 extern
-RETCODE SCIPanalyzeConflict(
+RETCODE SCIPanalyseConflict(
    SCIP*            scip,               /**< SCIP data structure */
    int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
-   VAR***           conflictvars,       /**< pointer to store the reference to the buffer, where the conflict set
-                                         *   is stored (user must not change this array) */
-   int*             nconflictvars,      /**< pointer to store the number of conflict variables */
-   Bool*            success             /**< pointer to store whether the conflict set is valid */
+   Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    );
 
 /**@} */

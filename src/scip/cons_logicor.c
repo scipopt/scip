@@ -39,10 +39,14 @@
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 
+#define LINCONSUPGD_PRIORITY    +800000
+
 #define EVENTHDLR_NAME         "logicor"
 #define EVENTHDLR_DESC         "bound tighten event handler for logic or constraints"
 
-#define LINCONSUPGD_PRIORITY    +800000
+#define CONFLICTHDLR_NAME      "logicor"
+#define CONFLICTHDLR_DESC      "conflict handler for logic or constraints"
+#define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
@@ -519,18 +523,13 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** analyzes conflicting assignment on given constraint, and adds conflict clause to problem */
+/** analyses conflicting assignment on given constraint, and adds conflict clause to problem */
 static
-RETCODE analyzeConflict(
+RETCODE analyseConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< logic or constraint to be analyzed */
+   CONSDATA*        consdata            /**< logic or constraint to be analysed */
    )
 {
-   CONS* cons;
-   VAR** conflictvars;
-   char consname[MAXSTRLEN];
-   Bool success;
-   int nconflictvars;
    int maxsize;
    int v;
 
@@ -543,20 +542,10 @@ RETCODE analyzeConflict(
       CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
    }
 
-   /* analyze the conflict */
+   /* analyse the conflict */
    maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
    maxsize = MAX(maxsize, 12); /*???????????????????*/
-   CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
-
-   /* create a logicor constraint out of the conflict set */
-   if( success )
-   {
-      sprintf(consname, "cf%d", SCIPgetNConss(scip));
-      CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
-                     FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
-      CHECK_OKAY( SCIPaddCons(scip, cons) );
-      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-   }
+   CHECK_OKAY( SCIPanalyseConflict(scip, maxsize, NULL) );
 
    return SCIP_OKAY;
 }
@@ -748,7 +737,7 @@ RETCODE processWatchedVars(
       else
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
-         CHECK_OKAY( analyzeConflict(scip, consdata) );
+         CHECK_OKAY( analyseConflict(scip, consdata) );
 
          /* mark the node to be cut off */
          *cutoff = TRUE;
@@ -2076,6 +2065,43 @@ DECL_EVENTEXEC(eventExecLogicor)
 
 
 /*
+ * Callback methods of conflict handler
+ */
+
+static
+DECL_CONFLICTEXEC(conflictExecLogicor)
+{  /*lint --e{715}*/
+   CONS* cons;
+   char consname[MAXSTRLEN];
+   
+   assert(conflicthdlr != NULL);
+   assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
+   assert(conflictvars != NULL || nconflictvars == 0);
+   assert(result != NULL);
+
+   /* don't already resolved conflicts */
+   if( resolved )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   /* create a constraint out of the conflict set */
+   sprintf(consname, "cf%d", SCIPgetNConss(scip));
+   CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
+                  FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+   CHECK_OKAY( SCIPaddCons(scip, cons) );
+   CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+
+   *result = SCIP_CONSADDED;
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * constraint specific interface methods
  */
 
@@ -2087,9 +2113,14 @@ RETCODE SCIPincludeConsHdlrLogicor(
    CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for bound tighten events on watched variables */
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   CHECK_OKAY( SCIPincludeEventHdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecLogicor,
+                  NULL) );
+
+   /* create conflict handler for logic or constraints */
+   CHECK_OKAY( SCIPincludeConflictHdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+                  NULL, NULL, NULL, conflictExecLogicor,
                   NULL) );
 
    /* create constraint handler data */

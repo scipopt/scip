@@ -3943,7 +3943,7 @@ RETCODE SCIPlpCreate(
    ALLOC_OKAY( allocMemory(lp) );
 
    /* open LP Solver interface */
-   CHECK_OKAY( SCIPlpiCreate(&((*lp)->lpi), name) );
+   CHECK_OKAY( SCIPlpiCreate(&(*lp)->lpi, name) );
 
    (*lp)->divelpistate = NULL;
    (*lp)->lpicols = NULL;
@@ -4003,7 +4003,7 @@ RETCODE SCIPlpFree(
 
    if( (*lp)->lpi != NULL )
    {
-      CHECK_OKAY( SCIPlpiFree(&((*lp)->lpi)) );
+      CHECK_OKAY( SCIPlpiFree(&(*lp)->lpi) );
    }
 
    freeMemoryArrayNull(&(*lp)->lpicols);
@@ -4884,7 +4884,8 @@ RETCODE SCIPlpSetUpperbound(
 }
 
 /** solves the LP with the primal simplex algorithm */
-RETCODE SCIPlpSolvePrimal(
+static
+RETCODE lpSolvePrimal(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -5023,7 +5024,8 @@ RETCODE SCIPlpSolvePrimal(
 }
 
 /** solves the LP with the dual simplex algorithm */
-RETCODE SCIPlpSolveDual(
+static
+RETCODE lpSolveDual(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -5175,12 +5177,12 @@ RETCODE SCIPlpSolve(
    if( lp->dualfeasible || !lp->primalfeasible )
    {
       debugMessage("solving dual LP\n");
-      CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+      CHECK_OKAY( lpSolveDual(lp, memhdr, set, stat) );
    }
    else
    {
       debugMessage("solving primal LP\n");
-      CHECK_OKAY( SCIPlpSolvePrimal(lp, memhdr, set, stat) );
+      CHECK_OKAY( lpSolvePrimal(lp, memhdr, set, stat) );
    }
 
    return SCIP_OKAY;
@@ -5192,7 +5194,8 @@ RETCODE SCIPlpSolveAndEval(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   PROB*            prob                /**< problem data */
+   PROB*            prob,               /**< problem data */
+   Bool             aging               /**< should aging and removal of obsolete cols/rows be applied? */
    )
 {
    assert(lp != NULL);
@@ -5206,16 +5209,22 @@ RETCODE SCIPlpSolveAndEval(
    {
       Bool infeasible;
       Bool resetfastmip;
+      Bool resetfromscratch;
 
       resetfastmip = FALSE;
+      resetfromscratch = FALSE;
 
    SOLVEAGAIN:
       CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
 
-      /* reset FASTMIP setting, if it was turned off due to numerical problems */
+      /* reset FASTMIP and FROMSCRATCH setting, if it was turned off due to numerical problems */
       if( resetfastmip )
       {
          CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
+      }
+      if( resetfromscratch )
+      {
+         CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
       }
 
       switch( SCIPlpGetSolstat(lp) )
@@ -5223,7 +5232,7 @@ RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_OPTIMAL:
          CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &infeasible) );
 
-         if( !lp->diving )
+         if( aging && !lp->diving )
          {
             /* update ages and remove obsolete columns and rows from LP */
             CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
@@ -5241,14 +5250,32 @@ RETCODE SCIPlpSolveAndEval(
                CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &infeasible) );
             }
          }
-         if( infeasible && !resetfastmip )
+         if( infeasible )
          {
-            /* solution is infeasible (this can happen, if FASTMIP was on): solve again without FASTMIP */
-            CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
-            resetfastmip = TRUE;
-            goto SOLVEAGAIN;
+            if( !resetfastmip )
+            {
+               /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */
+               CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
+               resetfastmip = TRUE;
+               assert(!resetfromscratch);
+               goto SOLVEAGAIN;
+            }
+            else if( !resetfromscratch )
+            {
+               /* solution is infeasible (this can happen due to numerical problems): solve again from scratch */
+               CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
+               CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
+               resetfastmip = TRUE;
+               resetfromscratch = TRUE;
+               goto SOLVEAGAIN;
+            }
+            else
+            {
+               char s[MAXSTRLEN];
+               sprintf(s, "Numerical troubles at node %lld in LP %d", stat->nnodes, stat->nlps);
+               warningMessage(s);
+            }
          }
-
          debugMessage(" -> LP objective value: %g\n", lp->objval);
          break;
 
@@ -5365,8 +5392,8 @@ RETCODE SCIPlpGetSol(
          *infeasible = *infeasible
             || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->lb)
             || SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->ub);
-      debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
-         SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->redcost);
+      debugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f\n",
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -5378,8 +5405,8 @@ RETCODE SCIPlpGetSol(
          *infeasible = *infeasible
             || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->lhs)
             || SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->rhs);
-      debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
-         lpirows[r]->name, lpirows[r]->dualsol, lpirows[r]->activity);
+      debugMessage(" row <%s> [%g,%g]: dualsol=%.9f, activity=%.9f\n", 
+         lpirows[r]->name, lpirows[r]->lhs, lpirows[r]->rhs, lpirows[r]->dualsol, lpirows[r]->activity);
    }
 
    /* free temporary memory */
@@ -6152,7 +6179,7 @@ RETCODE SCIPlpEndDive(
    assert(lp->divelpistate == NULL);
 
    /* resolve LP to reset solution */
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
 
    /* switch to standard (non-diving) mode */
    lp->diving = FALSE;

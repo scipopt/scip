@@ -1206,7 +1206,6 @@ RETCODE SCIPconshdlrFree(
    assert(conshdlr != NULL);
    assert(*conshdlr != NULL);
    assert(!(*conshdlr)->initialized);
-   assert(scip != NULL);
    assert(SCIPstage(scip) == SCIP_STAGE_INIT);
 
    /* call destructor of constraint handler */
@@ -1234,14 +1233,13 @@ RETCODE SCIPconshdlrFree(
    return SCIP_OKAY;
 }
 
-/** initializes constraint handler */
+/** calls init method of constraint handler */
 RETCODE SCIPconshdlrInit(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
    assert(conshdlr != NULL);
-   assert(scip != NULL);
 
    if( conshdlr->initialized )
    {
@@ -1283,6 +1281,7 @@ RETCODE SCIPconshdlrInit(
    conshdlr->nchgcoefs = 0;
    conshdlr->nchgsides = 0;
 
+   /* call initialization method of constraint handler */
    if( conshdlr->consinit != NULL )
    {
       CHECK_OKAY( conshdlr->consinit(scip, conshdlr) );
@@ -1299,7 +1298,6 @@ RETCODE SCIPconshdlrExit(
    )
 {
    assert(conshdlr != NULL);
-   assert(scip != NULL);
 
    if( !conshdlr->initialized )
    {
@@ -1309,6 +1307,7 @@ RETCODE SCIPconshdlrExit(
       return SCIP_INVALIDCALL;
    }
 
+   /* call deinitialization method of constraint handler */
    if( conshdlr->consexit != NULL )
    {
       CHECK_OKAY( conshdlr->consexit(scip, conshdlr) );
@@ -1325,8 +1324,8 @@ RETCODE SCIPconshdlrSolstart(
    )
 {
    assert(conshdlr != NULL);
-   assert(scip != NULL);
 
+   /* call solution start method of constraint handler */
    if( conshdlr->conssolstart != NULL )
    {
       CHECK_OKAY( conshdlr->conssolstart(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
@@ -1347,7 +1346,6 @@ RETCODE SCIPconshdlrInitLP(
    )
 {
    assert(conshdlr != NULL);
-   assert(set->scip != NULL);
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -1395,7 +1393,6 @@ RETCODE SCIPconshdlrSeparate(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(0 <= conshdlr->lastnsepaconss && conshdlr->lastnsepaconss <= conshdlr->nsepaconss);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -1505,7 +1502,6 @@ RETCODE SCIPconshdlrEnforceLPSol(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(0 <= conshdlr->lastnenfoconss && conshdlr->lastnenfoconss <= conshdlr->nenfoconss);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1619,7 +1615,6 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(0 <= conshdlr->lastnenfoconss && conshdlr->lastnenfoconss <= conshdlr->nenfoconss);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1734,7 +1729,6 @@ RETCODE SCIPconshdlrCheck(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
@@ -1787,7 +1781,6 @@ RETCODE SCIPconshdlrPropagate(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -1862,7 +1855,6 @@ RETCODE SCIPconshdlrPresolve(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(nchgvartypes != NULL);
