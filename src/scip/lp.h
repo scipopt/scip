@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.85 2004/08/31 16:53:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.86 2004/09/07 18:22:18 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -499,6 +499,25 @@ extern
 Real SCIProwGetMinval(
    ROW*             row,                /**< LP row */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
+extern
+Real SCIProwGetEfficacy(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** returns whether the row's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
+extern
+Bool SCIProwIsEfficacious(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp,                 /**< current LP data */
+   Bool             root                /**< should the root's minimal cut efficacy be used? */
    );
 
 
@@ -1004,6 +1023,24 @@ LPI* SCIPlpGetLPI(
    LP*              lp                  /**< current LP data */
    );
 
+/** returns whether the LP is in diving mode */
+extern
+Bool SCIPlpDiving(
+   LP*              lp                  /**< current LP data */
+   );
+
+/** returns whether the LP is in diving mode and the objective value of at least one column was changed */
+extern
+Bool SCIPlpDivingObjChanged(
+   LP*              lp                  /**< current LP data */
+   );
+
+/** marks the diving LP to have a changed objective function */
+extern
+void SCIPlpMarkDivingObjChanged(
+   LP*              lp                  /**< current LP data */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1019,6 +1056,9 @@ LPI* SCIPlpGetLPI(
 #define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
 #define SCIPlpGetLPI(lp)                (lp)->lpi
+#define SCIPlpDiving(lp)                (lp)->diving
+#define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
+#define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
 
 #endif
 

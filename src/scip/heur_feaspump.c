@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.3 2004/07/08 10:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.4 2004/09/07 18:22:16 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump heuristic by Fischetti, Glover and Lodi 
@@ -166,7 +166,7 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActNodeLP(scip));
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.8 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.9 2004/09/07 18:22:17 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -113,7 +113,7 @@ DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActNodeLP(scip));
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.62 2004/08/25 15:02:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.63 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -50,7 +50,7 @@
 
 /** creates a child node of the active node */
 extern
-RETCODE SCIPnodeCreate(
+RETCODE SCIPnodeCreateChild(
    NODE**           node,               /**< pointer to node data structure */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -131,7 +131,7 @@ RETCODE SCIPnodeDisableCons(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** adds bound change with inference information to active node, child or sibling of active node;
+/** adds bound change with inference information to active node, child of active node, or probing node;
  *  if possible, adjusts bound to integral value
  */
 extern
@@ -148,10 +148,11 @@ RETCODE SCIPnodeAddBoundinfer(
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
-   int              inferinfo           /**< user information for inference to help resolving the conflict */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
-/** adds bound change to active node, child or sibling of active node; if possible, adjusts bound to integral value */
+/** adds bound change to active node, or child of active node; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
@@ -164,10 +165,11 @@ RETCODE SCIPnodeAddBoundchg(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    );
 
-/** adds hole change to active node, child or sibling of active node */
+/** adds hole change to active node, or child of active node */
 extern
 RETCODE SCIPnodeAddHolechg(
    NODE*            node,               /**< node to add bound change to */
@@ -180,28 +182,13 @@ RETCODE SCIPnodeAddHolechg(
    );
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
 extern
 void SCIPnodeUpdateLowerbound(
    NODE*            node,               /**< node to update lower bound for */
+   STAT*            stat,               /**< problem statistics */
    Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
-
-#else
-
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
- * speed up the algorithms.
- */
-
-#define SCIPnodeUpdateLowerbound(node, newbound)  { (node)->lowerbound = MAX((node)->lowerbound, newbound); }
-
-#endif
 
 
 
@@ -281,6 +268,35 @@ RETCODE SCIPtreeBranchVar(
    VAR*             var                 /**< variable to branch on */
    );
 
+/** switches to probing mode */
+extern
+RETCODE SCIPtreeStartProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints
+ *  arrays of active node
+ */
+extern
+RETCODE SCIPtreeEndProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** gets number of leaves */
 extern
 int SCIPtreeGetNLeaves(
@@ -292,6 +308,83 @@ extern
 int SCIPtreeGetNNodes(
    TREE*            tree                /**< branch and bound tree */
    );
+
+/** gets current node of the tree */
+extern
+NODE* SCIPtreeGetCurrentNode(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets depth of current node in the tree, or -1 if no current node exists */
+extern
+int SCIPtreeGetCurrentDepth(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns, whether the LP was or is to be solved in the current node */
+extern
+Bool SCIPtreeHasCurrentNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets active node of the tree */
+extern
+NODE* SCIPtreeGetActiveNode(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** gets depth of active node in the tree, or -1 if no active node exists */
+extern
+int SCIPtreeGetActiveDepth(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns, whether the LP was or is to be solved in the active node */
+extern
+Bool SCIPtreeHasActiveNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** sets mark to solve or to ignore the LP while processing the active node */
+extern
+void SCIPtreeSetActiveNodeLP(
+   TREE*            tree,               /**< branch and bound tree */
+   Bool             solvelp             /**< should the LP be solved in active node? */
+   );
+
+/** returns whether the current node is a temporary probing node */
+extern
+Bool SCIPtreeProbing(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns the temporary probing node, or NULL if the current node is not the probing node */
+extern
+NODE* SCIPtreeGetProbingNode(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPtreeGetNLeaves(tree)        SCIPnodepqLen((tree)->leaves)
+#define SCIPtreeGetNNodes(tree)         ((tree)->nchildren + (tree)->nsiblings + SCIPtreeGetNLeaves(tree))
+#define SCIPtreeGetActiveNode(tree)     (tree)->actnode
+#define SCIPtreeGetActiveDepth(tree)    ((tree)->actnode != NULL ? (tree)->actnode->depth : -1)
+#define SCIPtreeHasActiveNodeLP(tree)   (tree)->actnodehaslp
+#define SCIPtreeSetActiveNodeLP(tree,solvelp)  ((tree)->actnodehaslp = solvelp)
+#define SCIPtreeGetCurrentNode(tree)    ((tree)->probingnode != NULL ? (tree)->probingnode : SCIPtreeGetActiveNode(tree))
+#define SCIPtreeGetCurrentDepth(tree)   ((tree)->probingnode != NULL ? (tree)->probingnode->depth \
+      : SCIPtreeGetActiveDepth(tree))
+#define SCIPtreeHasCurrentNodeLP(tree)  ((tree)->probingnode != NULL ? FALSE : SCIPtreeHasActiveNodeLP(tree))
+#define SCIPtreeProbing(tree)           ((tree)->probingnode != NULL)
+#define SCIPtreeGetProbingNode(tree)    (tree)->probingnode
+
+#endif
+
 
 /** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
 extern

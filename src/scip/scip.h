@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.164 2004/09/03 11:34:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.165 2004/09/07 18:22:19 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -89,6 +89,7 @@
 #include "struct_scip.h"
 #include "set.h"
 #include "misc.h"
+#include "tree.h"
 #endif
 
 
@@ -1204,7 +1205,7 @@ Bool SCIPallVarsInProb(
    );
 
 /** adds constraint to the problem; if constraint is only valid locally, it is added to the local subproblem of the
- *  active node (and all of its subnodes); otherwise it is added to the global problem;
+ *  current node (and all of its subnodes); otherwise it is added to the global problem;
  *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
  */
 extern
@@ -1251,7 +1252,7 @@ RETCODE SCIPaddConsNode(
    CONS*            cons                /**< constraint to add */
    );
 
-/** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
+/** adds constraint locally to the current node (and all of its subnodes), even if it is a global constraint;
  *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
  */
 extern
@@ -1268,7 +1269,7 @@ RETCODE SCIPdisableConsNode(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
+/** disables constraint's separation, enforcing, and propagation capabilities at the current node (and all subnodes);
  *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
  */
 extern
@@ -1277,13 +1278,13 @@ RETCODE SCIPdisableConsLocal(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** gets dual bound of active node */
+/** gets dual bound of current node */
 extern
 Real SCIPgetLocalDualbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets lower bound of active node in transformed problem */
+/** gets lower bound of current node in transformed problem */
 extern
 Real SCIPgetLocalLowerbound(
    SCIP*            scip                /**< SCIP data structure */
@@ -1303,8 +1304,8 @@ Real SCIPgetNodeLowerbound(
    NODE*            node                /**< node to get dual bound for */
    );
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the active node's dual bound,
- *  sets the active node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
+ *  sets the current node's dual bound to the new value
  */
 extern
 RETCODE SCIPupdateLocalDualbound(
@@ -1312,7 +1313,7 @@ RETCODE SCIPupdateLocalDualbound(
    Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
-/** if given value is larger than the active node's lower bound (in transformed problem), sets the active node's
+/** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
  */
 extern
@@ -1490,14 +1491,14 @@ RETCODE SCIPgetBinvarRepresentative(
    Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
    );
 
-/** gets solution value for variable in active node */
+/** gets solution value for variable in current node */
 extern
 Real SCIPgetVarSol(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to get solution value for */
    );
 
-/** gets solution values of multiple variables in active node */
+/** gets solution values of multiple variables in current node */
 extern
 RETCODE SCIPgetVarSols(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1576,7 +1577,7 @@ Real SCIPadjustedVarUb(
    Real             ub                  /**< upper bound value to adjust */
    );
 
-/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
+/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  */
@@ -1587,7 +1588,7 @@ RETCODE SCIPchgVarLb(
    Real             newbound            /**< new value for bound */
    );
 
-/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
+/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  */
@@ -1605,7 +1606,7 @@ RETCODE SCIPchgVarUb(
 extern
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   NODE*            node,               /**< node to change bound at, or NULL for current node */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    );
@@ -1617,12 +1618,12 @@ RETCODE SCIPchgVarLbNode(
 extern
 RETCODE SCIPchgVarUbNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   NODE*            node,               /**< node to change bound at, or NULL for current node */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    );
 
-/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
@@ -1636,7 +1637,7 @@ RETCODE SCIPtightenVarLb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
@@ -1650,7 +1651,7 @@ RETCODE SCIPtightenVarUb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
@@ -1666,7 +1667,7 @@ RETCODE SCIPinferVarLb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
@@ -1682,7 +1683,7 @@ RETCODE SCIPinferVarUb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in active node;
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in current node;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason for the
  *  deduction of the fixing
  */
@@ -2312,9 +2313,9 @@ RETCODE SCIPprintCons(
 /**@name LP Methods */
 /**@{ */
 
-/** checks, whether the LP was solved in the active node */
+/** returns, whether the LP was or is to be solved in the current node */
 extern
-Bool SCIPhasActNodeLP(
+Bool SCIPhasCurrentNodeLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2442,89 +2443,6 @@ extern
 RETCODE SCIPwriteLP(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      fname               /**< file name */
-   );
-
-/**@} */
-
-
-
-
-/*
- * LP diving methods
- */
-
-/**@name LP Diving Methods */
-/**@{ */
-
-/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
-extern
-RETCODE SCIPstartDive(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** quits LP diving and resets bounds and objective values of columns to the current node's values */
-extern
-RETCODE SCIPendDive(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** changes variable's objective value in current dive */
-extern
-RETCODE SCIPchgVarObjDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the objective value for */
-   Real             newobj              /**< new objective value */
-   );
-
-/** changes variable's lower bound in current dive */
-extern
-RETCODE SCIPchgVarLbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   );
-
-/** changes variable's upper bound in current dive */
-extern
-RETCODE SCIPchgVarUbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   );
-
-/** gets variable's objective value in current dive */
-extern
-Real SCIPgetVarObjDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to get the bound for */
-   );
-
-/** gets variable's lower bound in current dive */
-extern
-Real SCIPgetVarLbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to get the bound for */
-   );
-
-/** gets variable's upper bound in current dive */
-extern
-Real SCIPgetVarUbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to get the bound for */
-   );
-
-/** solves the LP of the current dive */
-extern
-RETCODE SCIPsolveDiveLP(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
-   );
-
-/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
-extern
-Longint SCIPgetLastDivenode(
-   SCIP*            scip                /**< SCIP data structure */
    );
 
 /**@} */
@@ -2786,6 +2704,27 @@ RETCODE SCIPprintRow(
 /**@name Cutting Plane Methods */
 /**@{ */
 
+/** returns efficacy of the cut with respect to the current LP solution: e = -feasibility/norm */
+extern
+Real SCIPgetCutEfficacy(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             cut                 /**< separated cut */
+   );
+
+/** returns whether the cut's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
+extern
+Bool SCIPisCutEfficacious(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             cut                 /**< separated cut */
+   );
+
+/** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
+extern
+Bool SCIPisEfficacious(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             efficacy            /**< efficacy of the cut */
+   );
+
 /** adds cut to separation storage;
  *  if the cut should be forced to enter the LP, an infinite score has to be used
  */
@@ -2793,7 +2732,8 @@ extern
 RETCODE SCIPaddCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
-   Real             score               /**< separation score of cut (the larger, the better the cut) */
+   Real             scorefactor         /**< factor to weigh separation score of cut with (usually 1.0);
+                                         *   use infinite score factor to force using the cut */
    );
 
 /** if not already existing, adds row to global cut pool */
@@ -2861,6 +2801,144 @@ RETCODE SCIPseparateCutpool(
    SCIP*            scip,               /**< SCIP data structure */
    CUTPOOL*         cutpool,            /**< cut pool */
    RESULT*          result              /**< pointer to store the result of the separation call */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * LP diving methods
+ */
+
+/**@name LP Diving Methods */
+/**@{ */
+
+/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
+extern
+RETCODE SCIPstartDive(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** quits LP diving and resets bounds and objective values of columns to the current node's values */
+extern
+RETCODE SCIPendDive(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** changes variable's objective value in current dive */
+extern
+RETCODE SCIPchgVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             newobj              /**< new objective value */
+   );
+
+/** changes variable's lower bound in current dive */
+extern
+RETCODE SCIPchgVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** changes variable's upper bound in current dive */
+extern
+RETCODE SCIPchgVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** gets variable's objective value in current dive */
+extern
+Real SCIPgetVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   );
+
+/** gets variable's lower bound in current dive */
+extern
+Real SCIPgetVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   );
+
+/** gets variable's upper bound in current dive */
+extern
+Real SCIPgetVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   );
+
+/** solves the LP of the current dive */
+extern
+RETCODE SCIPsolveDiveLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   );
+
+/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
+extern
+Longint SCIPgetLastDivenode(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * probing methods
+ */
+
+/**@name LP Diving Methods */
+/**@{ */
+
+/** initiates probing, making methods SCIPchgVarLbProbing(), and SCIPchgVarUbProbing() available */
+extern
+RETCODE SCIPstartProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** quits probing and resets bounds and constraints to the active node's environment */
+extern
+RETCODE SCIPendProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** injects a change of variable's lower bound into probing node; the same can also be achieved with a call to
+ *  SCIPchgVarLb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
+ */
+extern
+RETCODE SCIPchgVarLbProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** injects a change of variable's upper bound into probing node; the same can also be achieved with a call to
+ *  SCIPchgVarUb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
+ */
+extern
+RETCODE SCIPchgVarUbProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+/** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
+ *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
+ *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
+ *  bounds due to SCIPchgVarLbProbing() and SCIPchgVarUbProbing() are used for propagation
+ */
+extern
+RETCODE SCIPpropagateProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
    );
 
 /**@} */
@@ -3592,7 +3670,7 @@ Longint SCIPgetNConflictsFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets depth of active node, or -1 if no active node exists */
+/** gets depth of current node, or -1 if no current node exists */
 extern
 int SCIPgetDepth(
    SCIP*            scip                /**< SCIP data structure */
@@ -4133,16 +4211,6 @@ Bool SCIPisUbBetter(
    Real             ub2                 /**< second upper bound to compare */
    );
 
-/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
- *  both, the activity and the rhs, should be normed
- */
-extern
-Bool SCIPisCutViolated(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             cutactivity,        /**< activity of the cut */
-   Real             cutrhs              /**< right hand side value of the cut */
-   );
-
 /** checks, if relative difference of values is in range of epsilon */
 extern
 Bool SCIPisRelEQ(
@@ -4308,7 +4376,7 @@ Real SCIPfrac(
 #define SCIPisLbBetter(scip, lb1, lb2)   SCIPsetIsLbBetter(scip->set, lb1, lb2)
 #define SCIPisUbBetter(scip, ub1, ub2)   SCIPsetIsUbBetter(scip->set, ub1, ub2)
 #define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, \
-                                         (SCIPnodeGetDepth((scip)->tree->actnode) == 0), act, rhs)
+      (SCIPtreeGetCurrentDepth((scip)->tree) == 0), act, rhs)
                                                                            
 #define SCIPisRelEQ(scip, val1, val2)    SCIPsetIsRelEQ((scip)->set, val1, val2)    
 #define SCIPisRelLT(scip, val1, val2)    SCIPsetIsRelLT((scip)->set, val1, val2)    

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.18 2004/08/24 11:57:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.19 2004/09/07 18:22:18 bzfpfend Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -323,7 +323,7 @@ RETCODE addBoundViolated(
          debugMessage(" -> best bound of <%s> [%g,%g] is not zero but %g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bestbound);
          CHECK_OKAY( SCIPpricestoreAddVar(pricestore, memhdr, set, lp, var, 
-                        -SCIPvarGetObj(var) * bestbound, (SCIPnodeGetDepth(tree->actnode) == 0)) );
+               -SCIPvarGetObj(var) * bestbound, (SCIPtreeGetCurrentDepth(tree) == 0)) );
          *added = TRUE;
       }
    }
@@ -360,15 +360,14 @@ RETCODE SCIPpricestoreAddProbVars(
    assert(lp != NULL);
    assert(lp->solved);
    assert(tree != NULL);
-   assert(tree->actnode != NULL);
-   assert(tree->actnodehaslp);
+   assert(SCIPtreeHasCurrentNodeLP(tree));
    assert(prob->nvars >= SCIPlpGetNCols(lp));
 
    /* if all problem variables of status COLUMN are already in the LP, nothing has to be done */
    if( prob->ncolvars == SCIPlpGetNCols(lp) )
       return SCIP_OKAY;
 
-   root = (SCIPnodeGetDepth(tree->actnode) == 0);
+   root = (SCIPtreeGetCurrentDepth(tree) == 0);
    maxpricevars = SCIPsetGetMaxpricevars(set, root);
    assert(maxpricevars >= 1);
    abortpricevars = (int)(set->abortpricevarsfac * maxpricevars);
@@ -483,8 +482,7 @@ RETCODE SCIPpricestoreApplyVars(
    assert(lp != NULL);
    assert(lp->solved || pricestore->initiallp);
    assert(tree != NULL);
-   assert(tree->actnode != NULL);
-   assert(tree->actnodehaslp);
+   assert(SCIPtreeHasCurrentNodeLP(tree));
 
    debugMessage("adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",
       SCIPpricestoreGetNVars(pricestore), pricestore->nbdviolvars - pricestore->naddedbdviolvars,
@@ -511,7 +509,7 @@ RETCODE SCIPpricestoreApplyVars(
       assert(col->lpipos == -1);
       debugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var), 
          pricestore->bdviolvarslb[v], pricestore->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPlpAddCol(lp, set, col, tree->actnode->depth) );
+      CHECK_OKAY( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
       if( !pricestore->initiallp )
          pricestore->nvarsapplied++;
@@ -538,7 +536,7 @@ RETCODE SCIPpricestoreApplyVars(
       assert(col->lppos == -1);
       assert(col->lpipos == -1);
       debugMessage("adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), pricestore->scores[v]);
-      CHECK_OKAY( SCIPlpAddCol(lp, set, col, tree->actnode->depth) );
+      CHECK_OKAY( SCIPlpAddCol(lp, set, col, SCIPtreeGetCurrentDepth(tree)) );
 
       /* release the variable */
       CHECK_OKAY( SCIPvarRelease(&pricestore->vars[v], memhdr, set, lp) );

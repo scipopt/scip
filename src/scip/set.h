@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.66 2004/08/06 08:18:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.67 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -755,15 +755,12 @@ Bool SCIPsetIsUbBetter(
    Real             ub2                 /**< second upper bound to compare */
    );
 
-/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
- *  both, the activity and the rhs, should be normed
- */
+/** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
 extern
-Bool SCIPsetIsCutViolated(
+Bool SCIPsetIsEfficacious(
    SET*             set,                /**< global SCIP settings */
-   Bool             root,               /**< should the root's cutvioleps be used? */
-   Real             cutactivity,        /**< activity of the cut */
-   Real             cutrhs              /**< right hand side value of the cut */
+   Bool             root,               /**< should the root's minimal cut efficacy be used? */
+   Real             efficacy            /**< efficacy of the cut */
    );
 
 /** checks, if relative difference of values is in range of epsilon */
@@ -931,8 +928,8 @@ Real SCIPsetFrac(
 
 #define SCIPsetIsLbBetter(set, lb1, lb2)   ( EPSGT(lb1, lb2, (set)->boundstreps) )
 #define SCIPsetIsUbBetter(set, ub1, ub2)   ( EPSLT(ub1, ub2, (set)->boundstreps) )
-#define SCIPsetIsCutViolated(set, root, act, rhs) ( root ? EPSGT(act, rhs, (set)->cutviolepsroot) \
-                                                         : EPSGT(act, rhs, (set)->cutvioleps) )
+#define SCIPsetIsEfficacious(set, root, efficacy) \
+   ( root ? EPSP(efficacy, (set)->mincutefficacyroot) : EPSP(efficacy, (set)->mincutefficacy) )
 
 #define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 #define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.12 2004/08/10 14:19:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.13 2004/09/07 18:22:19 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -203,6 +203,33 @@ void SCIProwLock(
 extern
 void SCIProwUnlock(
    ROW*             row                 /**< LP row */
+   );
+
+/** returns the scalar product of the coefficient vectors of the two given rows */
+extern
+Real SCIProwGetScalarProduct(
+   ROW*             row1,               /**< first LP row */
+   ROW*             row2                /**< second LP row */
+   );
+
+/** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
+ *  p = |v*w|/(|v|*|w|);
+ *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
+ */
+extern
+Real SCIProwGetParallelism(
+   ROW*             row1,               /**< first LP row */
+   ROW*             row2                /**< second LP row */
+   );
+
+/** returns the degree of orthogonality between the hyperplanes defined by the two row vectors v, w:
+ *  o = 1 - |v*w|/(|v|*|w|);
+ *  the hyperplanes are orthogonal, iff p = 1, they are parallel, iff p = 0
+ */
+extern
+Real SCIProwGetOrthogonality(
+   ROW*             row1,               /**< first LP row */
+   ROW*             row2                /**< second LP row */
    );
 
 /** output row to file stream */

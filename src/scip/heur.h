@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.29 2004/08/06 08:18:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.30 2004/09/07 18:22:16 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -94,9 +94,9 @@ RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data */
-   int              depth,              /**< depth of active node */
+   int              depth,              /**< depth of current node */
    int              lpforkdepth,        /**< depth of the last node with solved LP */
-   Bool             actnodehaslp,       /**< is LP being processed in the active node? */
+   Bool             currentnodehaslp,   /**< is LP being processed in the current node? */
    Bool             plunging,           /**< is the next node to be processed a child or sibling? */
    int*             ndelayedheurs,      /**< pointer to count the number of delayed heuristics */
    RESULT*          result              /**< pointer to store the result of the callback method */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.19 2004/08/12 14:31:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.20 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -58,6 +58,7 @@ struct Stat
    Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
    Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    Longint          nholechgs;          /**< total number of hole changes generated in the tree */
+   Real             rootlowerbound;     /**< lower bound of root node */
    CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    CLOCK*           primallptime;       /**< primal LP solution time */

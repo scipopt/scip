@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.141 2004/09/03 11:34:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.142 2004/09/07 18:22:17 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -235,7 +235,7 @@ RETCODE SCIProwEnsureSize(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->cols, row->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->cols_probindex, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->cols_index, row->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->vals, row->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->linkpos, row->size, newsize) );
       row->size = newsize;
@@ -352,13 +352,12 @@ void rowBSort(
 {
    COL** cols;
    Real* vals;
-   int* probindex;
+   int* index;
    int* linkpos;
    COL* tmpcol;
    Real tmpval;
-   int tmpprobindex;
-   int tmplinkpos;
    int tmpindex;
+   int tmplinkpos;
    int pos;
    int sortpos;
 
@@ -368,8 +367,13 @@ void rowBSort(
    /**@todo do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?) */
    cols = row->cols;
    vals = row->vals;
-   probindex = row->cols_probindex;
+   index = row->cols_index;
    linkpos = row->linkpos;
+
+#ifndef NDEBUG
+   for( pos = 0; pos < row->len; ++pos )
+      assert(index[pos] == cols[pos]->index);
+#endif
 
    while( firstpos < lastpos )
    {
@@ -378,27 +382,26 @@ void rowBSort(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && cols[pos]->index <= cols[pos+1]->index )
+         while( pos < lastpos && index[pos] <= index[pos+1] )
             pos++;
          if( pos >= lastpos )
             break;
-         assert(cols[pos]->index > cols[pos+1]->index);
+         assert(index[pos] > index[pos+1]);
          tmpcol = cols[pos];
-         tmpprobindex = probindex[pos];
+         tmpindex = index[pos];
          tmpval = vals[pos];
          tmplinkpos = linkpos[pos];
-         tmpindex = tmpcol->index;
          do
          {
             cols[pos] = cols[pos+1];
-            probindex[pos] = probindex[pos+1];
+            index[pos] = index[pos+1];
             vals[pos] = vals[pos+1];
             linkpos[pos] = linkpos[pos+1];
             pos++;
          }
-         while( pos < lastpos && cols[pos+1]->index < tmpindex );
+         while( pos < lastpos && index[pos+1] < tmpindex );
          cols[pos] = tmpcol;
-         probindex[pos] = tmpprobindex;
+         index[pos] = tmpindex;
          vals[pos] = tmpval;
          linkpos[pos] = tmplinkpos;
          sortpos = pos;
@@ -411,27 +414,26 @@ void rowBSort(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && cols[pos-1]->index <= cols[pos]->index )
+         while( pos > firstpos && index[pos-1] <= index[pos] )
             pos--;
          if( pos <= firstpos )
             break;
-         assert(cols[pos-1]->index > cols[pos]->index);
+         assert(index[pos-1] > index[pos]);
          tmpcol = cols[pos];
-         tmpprobindex = probindex[pos];
+         tmpindex = index[pos];
          tmpval = vals[pos];
          tmplinkpos = linkpos[pos];
-         tmpindex = tmpcol->index;
          do
          {
             cols[pos] = cols[pos-1];
-            probindex[pos] = probindex[pos-1];
+            index[pos] = index[pos-1];
             vals[pos] = vals[pos-1];
             linkpos[pos] = linkpos[pos-1];
             pos--;
          }
-         while( pos > firstpos && cols[pos-1]->index > tmpindex );
+         while( pos > firstpos && index[pos-1] > tmpindex );
          cols[pos] = tmpcol;
-         probindex[pos] = tmpprobindex;
+         index[pos] = tmpindex;
          vals[pos] = tmpval;
          linkpos[pos] = tmplinkpos;
          sortpos = pos;
@@ -668,7 +670,8 @@ int rowSearchCoefPart(
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] != NULL);
       assert((pos < row->nlpcols) == (row->cols[pos]->lppos >= 0 && row->linkpos[pos] >= 0));
-      idx = row->cols[pos]->index;
+      assert(row->cols_index[pos] == row->cols[pos]->index);
+      idx = row->cols_index[pos];
       if( searchidx == idx )
          return pos;
       else if( searchidx < idx )
@@ -848,7 +851,7 @@ void rowMoveCoef(
       return;
 
    row->cols[newpos] = row->cols[oldpos];
-   row->cols_probindex[newpos] = row->cols_probindex[oldpos];
+   row->cols_index[newpos] = row->cols_index[oldpos];
    row->vals[newpos] = row->vals[oldpos];
    row->linkpos[newpos] = row->linkpos[oldpos];
 
@@ -878,30 +881,31 @@ void rowSwapCoeffs(
 {
    COL* tmpcol;
    Real tmpval;
-   int tmpprobindex;
+   int tmpindex;
    int tmplinkpos;
    
    assert(row != NULL);
    assert(0 <= pos1 && pos1 < row->len);
    assert(0 <= pos2 && pos2 < row->len);
    assert(row->cols[pos1] != NULL);
+   assert(row->cols[pos1]->index == row->cols_index[pos1]);
 
    if( pos1 == pos2 )
       return;
 
    /* swap coefficients */
    tmpcol = row->cols[pos2];
-   tmpprobindex = row->cols_probindex[pos2];
+   tmpindex = row->cols_index[pos2];
    tmpval = row->vals[pos2];
    tmplinkpos = row->linkpos[pos2];
 
    row->cols[pos2] = row->cols[pos1];
-   row->cols_probindex[pos2] = row->cols_probindex[pos1];
+   row->cols_index[pos2] = row->cols_index[pos1];
    row->vals[pos2] = row->vals[pos1];
    row->linkpos[pos2] = row->linkpos[pos1];
 
    row->cols[pos1] = tmpcol;
-   row->cols_probindex[pos1] = tmpprobindex;
+   row->cols_index[pos1] = tmpindex;
    row->vals[pos1] = tmpval;
    row->linkpos[pos1] = tmplinkpos;
 
@@ -1437,7 +1441,7 @@ RETCODE rowAddCoef(
 
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
-   row->cols_probindex[pos] = col->var_probindex;
+   row->cols_index[pos] = col->index;
    row->vals[pos] = val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
@@ -1488,14 +1492,20 @@ RETCODE rowAddCoef(
       assert(row->nlpcols >= 1);
       assert(row->cols[row->nlpcols-1] == col);
       if( row->nlpcols > 1 )
-         row->lpcolssorted = row->lpcolssorted && (row->cols[row->nlpcols-2]->index < col->index);
+      {
+         assert(row->cols_index[row->nlpcols-2] == row->cols[row->nlpcols-2]->index);
+         row->lpcolssorted = row->lpcolssorted && (row->cols_index[row->nlpcols-2] < col->index);
+      }
    }
    else
    {
       assert(row->len - row->nlpcols >= 1);
       assert(row->cols[row->len-1] == col);
       if( row->len - row->nlpcols > 1 )
-         row->nonlpcolssorted = row->nonlpcolssorted && (row->cols[row->len-2]->index < col->index);
+      {
+         assert(row->cols_index[row->len-2] == row->cols[row->len-2]->index);
+         row->nonlpcolssorted = row->nonlpcolssorted && (row->cols_index[row->len-2] < col->index);
+      }
    }
    
    rowAddNorms(row, set, col->index, val);
@@ -1638,7 +1648,7 @@ RETCODE rowSideChanged(
          row->rhschanged = TRUE;
          break;
       default:
-         errorMessage("Unknown row side type\n");
+         errorMessage("unknown row side type\n");
          abort();
       }
 
@@ -2312,7 +2322,7 @@ RETCODE SCIPcolDelCoef(
    if( col->linkpos[pos] >= 0 )
    {
       assert(row->cols[col->linkpos[pos]] == col);
-      assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
+      assert(row->cols_index[col->linkpos[pos]] == col->index);
       assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
       CHECK_OKAY( rowDelCoeffPos(row, set, lp, col->linkpos[pos]) );
    }
@@ -2361,7 +2371,7 @@ RETCODE SCIPcolChgCoef(
       if( col->linkpos[pos] >= 0 )
       {
          assert(row->cols[col->linkpos[pos]] == col);
-         assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
+         assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
          CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, col->linkpos[pos], val) );
       }
@@ -2414,7 +2424,7 @@ RETCODE SCIPcolIncCoef(
       if( col->linkpos[pos] >= 0 )
       {
          assert(row->cols[col->linkpos[pos]] == col);
-         assert(row->cols_probindex[col->linkpos[pos]] == col->var_probindex);
+         assert(row->cols_index[col->linkpos[pos]] == col->index);
          assert(SCIPsetIsEQ(set, row->vals[col->linkpos[pos]], col->vals[pos]));
          CHECK_OKAY( rowChgCoeffPos(row, memhdr, set, lp, col->linkpos[pos], col->vals[pos] + incval) );
       }
@@ -3308,20 +3318,28 @@ void rowCalcNorms(
       assert(!SCIPsetIsZero(set, row->vals[i]));
       assert(row->cols[i]->lppos >= 0);
       assert(row->linkpos[i] >= 0);
+      assert(row->cols[i]->index == row->cols_index[i]);
 
-      rowAddNorms(row, set, row->cols[i]->index, row->vals[i]);
+      rowAddNorms(row, set, row->cols_index[i], row->vals[i]);
       if( i > 0 )
-         row->lpcolssorted = row->lpcolssorted && (row->cols[i-1]->index < row->cols[i]->index);
+      {
+         assert(row->cols[i-1]->index == row->cols_index[i-1]);
+         row->lpcolssorted = row->lpcolssorted && (row->cols_index[i-1] < row->cols_index[i]);
+      }
    }
    for( i = row->nlpcols; i < row->len; ++i )
    {
       assert(row->cols[i] != NULL);
       assert(!SCIPsetIsZero(set, row->vals[i]));
       assert(row->cols[i]->lppos == -1 || row->linkpos[i] == -1);
+      assert(row->cols[i]->index == row->cols_index[i]);
 
-      rowAddNorms(row, set, row->cols[i]->index, row->vals[i]);
+      rowAddNorms(row, set, row->cols_index[i], row->vals[i]);
       if( i > row->nlpcols )
-         row->nonlpcolssorted = row->nonlpcolssorted && (row->cols[i-1]->index < row->cols[i]->index);
+      {
+         assert(row->cols[i-1]->index == row->cols_index[i-1]);
+         row->nonlpcolssorted = row->nonlpcolssorted && (row->cols_index[i-1] < row->cols_index[i]);
+      }
    }
 }
 
@@ -3513,7 +3531,7 @@ RETCODE SCIProwCreate(
 
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->cols, cols, len) );
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->vals, vals, len) );
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->cols_probindex, len) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->cols_index, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->linkpos, len) );
 
       for( i = 0; i < len; ++i )
@@ -3522,9 +3540,7 @@ RETCODE SCIProwCreate(
          assert(!SCIPsetIsZero(set, vals[i]));
 
          var = cols[i]->var;
-         assert(cols[i]->var_probindex == SCIPvarGetProbindex(var));
-
-         (*row)->cols_probindex[i] = cols[i]->var_probindex;
+         (*row)->cols_index[i] = cols[i]->index;
          (*row)->linkpos[i] = -1;
          (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, vals[i]);
       }
@@ -3532,7 +3548,7 @@ RETCODE SCIProwCreate(
    else
    {
       (*row)->cols = NULL;
-      (*row)->cols_probindex = NULL;
+      (*row)->cols_index = NULL;
       (*row)->vals = NULL;
       (*row)->linkpos = NULL;
    }
@@ -3608,7 +3624,7 @@ RETCODE SCIProwFree(
 
    freeBlockMemoryArray(memhdr, &(*row)->name, strlen((*row)->name)+1);
    freeBlockMemoryArrayNull(memhdr, &(*row)->cols, (*row)->size);
-   freeBlockMemoryArrayNull(memhdr, &(*row)->cols_probindex, (*row)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*row)->cols_index, (*row)->size);
    freeBlockMemoryArrayNull(memhdr, &(*row)->vals, (*row)->size);
    freeBlockMemoryArrayNull(memhdr, &(*row)->linkpos, (*row)->size);
    freeBlockMemory(memhdr, row);
@@ -3732,7 +3748,7 @@ RETCODE SCIProwDelCoef(
    }
    assert(0 <= pos && pos < row->len);
    assert(row->cols[pos] == col);
-   assert(row->cols_probindex[pos] == col->var_probindex);
+   assert(row->cols_index[pos] == col->index);
 
    /* if column knows of the row, remove the row from the column's row vector */
    if( row->linkpos[pos] >= 0 )
@@ -3782,7 +3798,7 @@ RETCODE SCIProwChgCoef(
       /* modifify already existing coefficient */
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] == col);
-      assert(row->cols_probindex[pos] == col->var_probindex);
+      assert(row->cols_index[pos] == col->index);
 
       /* if column knows of the row, change the corresponding coefficient in the column */
       if( row->linkpos[pos] >= 0 )
@@ -3835,7 +3851,7 @@ RETCODE SCIProwIncCoef(
       /* modifify already existing coefficient */
       assert(0 <= pos && pos < row->len);
       assert(row->cols[pos] == col);
-      assert(row->cols_probindex[pos] == col->var_probindex);
+      assert(row->cols_index[pos] == col->index);
 
       /* if column knows of the row, change the corresponding coefficient in the column */
       if( row->linkpos[pos] >= 0 )
@@ -3993,7 +4009,7 @@ RETCODE SCIProwCalcIntegralScalar(
 
    assert(row != NULL);
    assert(row->len == 0 || row->cols != NULL);
-   assert(row->len == 0 || row->cols_probindex != NULL);
+   assert(row->len == 0 || row->cols_index != NULL);
    assert(row->len == 0 || row->vals != NULL);
    assert(maxdnom >= 1);
    assert(success != NULL);
@@ -4211,7 +4227,7 @@ void rowMerge(
    if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
    {
       COL** cols;
-      int* cols_probindex;
+      int* cols_index;
       Real* vals;
       int s;
       int t;
@@ -4223,10 +4239,10 @@ void rowMerge(
       
       /* merge equal columns, thereby recalculating whether the row's activity is always integral */
       cols = row->cols;
-      cols_probindex = row->cols_probindex;
+      cols_index = row->cols_index;
       vals = row->vals;
       assert(cols != NULL);
-      assert(cols_probindex != NULL);
+      assert(cols_index != NULL);
       assert(vals != NULL);
       
       t = 0;
@@ -4253,7 +4269,7 @@ void rowMerge(
                t++;
             }
             cols[t] = cols[s];
-            cols_probindex[t] = cols_probindex[s];
+            cols_index[t] = cols_index[s];
             vals[t] = vals[s];
          }
       }
@@ -4275,6 +4291,8 @@ void rowMerge(
 
       for( i = 0; i < row->len; ++i )
       {
+         assert(row->cols[i] != NULL);
+         assert(row->cols[i]->index == row->cols_index[i]);
          for( j = i+1; j < row->len; ++j )
             assert(row->cols[i] != row->cols[j]);
       }
@@ -4638,6 +4656,115 @@ Real SCIProwGetMinval(
    assert(row->minval >= 0.0);
 
    return row->minval;
+}
+
+/** returns row's efficacy with respect to the current LP solution: e = -feasibility/norm */
+Real SCIProwGetEfficacy(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   Real norm;
+   Real feasibility;
+
+   assert(set != NULL);
+
+   norm = SCIProwGetNorm(row);
+   norm = MAX(norm, set->sumepsilon);
+   feasibility = SCIProwGetLPFeasibility(row, stat, lp);
+
+   return -feasibility / norm;
+}
+
+/** returns whether the row's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
+Bool SCIProwIsEfficacious(
+   ROW*             row,                /**< LP row */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   LP*              lp,                 /**< current LP data */
+   Bool             root                /**< should the root's minimal cut efficacy be used? */
+   )
+{
+   Real efficacy;
+
+   efficacy = SCIProwGetEfficacy(row, set, stat, lp);
+
+   return SCIPsetIsEfficacious(set, root, efficacy);
+}
+
+/** returns the scalar product of the coefficient vectors of the two given rows */
+Real SCIProwGetScalarProduct(
+   ROW*             row1,               /**< first LP row */
+   ROW*             row2                /**< second LP row */
+   )
+{
+   Real scalarprod;
+   int i1;
+   int i2;
+
+   assert(row1 != NULL);
+   assert(row2 != NULL);
+
+   /* make sure, the rows are sorted */
+   SCIProwSort(row1);
+   assert(row1->lpcolssorted);
+   assert(row1->nonlpcolssorted);
+   SCIProwSort(row2);
+   assert(row2->lpcolssorted);
+   assert(row2->nonlpcolssorted);
+
+   /* calculate the scalar product */
+   scalarprod = 0.0;
+   i1 = 0;
+   i2 = 0;
+   while( i1 < row1->len && i2 < row2->len )
+   {
+      assert(row1->cols[i1]->index == row1->cols_index[i1]);
+      assert(row2->cols[i2]->index == row2->cols_index[i2]);
+      assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
+      if( row1->cols_index[i1] < row2->cols_index[i2] )
+         i1++;
+      else if( row1->cols_index[i1] > row2->cols_index[i2] )
+         i2++;
+      else
+      {
+         scalarprod += row1->vals[i1] * row2->vals[i2];
+         i1++;
+         i2++;
+      }
+   }
+
+   return scalarprod;
+}
+
+/** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
+ *  p = |v*w|/(|v|*|w|);
+ *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
+ */
+Real SCIProwGetParallelism(
+   ROW*             row1,               /**< first LP row */
+   ROW*             row2                /**< second LP row */
+   )
+{
+   Real scalarprod;
+
+   scalarprod = SCIProwGetScalarProduct(row1, row2);
+   
+   return (ABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2)));
+}
+
+/** returns the degree of orthogonality between the hyperplanes defined by the two row vectors v, w:
+ *  o = 1 - |v*w|/(|v|*|w|);
+ *  the hyperplanes are orthogonal, iff p = 1, they are parallel, iff p = 0
+ */
+Real SCIProwGetOrthogonality(
+   ROW*             row1,               /**< first LP row */
+   ROW*             row2                /**< second LP row */
+   )
+{
+   return 1.0 - SCIProwGetParallelism(row1, row2);
 }
 
 /** output row to file stream */
@@ -6118,7 +6245,7 @@ RETCODE SCIPlpSumRows(
          row = lp->rows[r];
          assert(row != NULL);
          assert(row->len == 0 || row->cols != NULL);
-         assert(row->len == 0 || row->cols_probindex != NULL);
+         assert(row->len == 0 || row->cols_index != NULL);
          assert(row->len == 0 || row->vals != NULL);
 
          /* add the row coefficients to the sum */
@@ -6129,8 +6256,7 @@ RETCODE SCIPlpSumRows(
             assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
             assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
             assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
-            idx = row->cols_probindex[i];
+            idx = row->cols[i]->var_probindex;
             assert(0 <= idx && idx < nvars);
             CHECK_OKAY( SCIPrealarrayIncVal(sumcoef, set, idx, weights[r] * row->vals[i]) );
          }
@@ -6202,7 +6328,7 @@ void sumMIRRow(
       row = lp->rows[r];
       assert(row != NULL);
       assert(row->len == 0 || row->cols != NULL);
-      assert(row->len == 0 || row->cols_probindex != NULL);
+      assert(row->len == 0 || row->cols_index != NULL);
       assert(row->len == 0 || row->vals != NULL);
 
       /* modifiable rows cannot be part of a MIR row summation; close to zero weights are ignored */
@@ -6238,8 +6364,7 @@ void sumMIRRow(
             assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
             assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
             assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
-            idx = row->cols_probindex[i];
+            idx = row->cols[i]->var_probindex;
             assert(0 <= idx && idx < nvars);
             mircoef[idx] += scale * weights[r] * row->vals[i];
          }
@@ -6712,7 +6837,7 @@ void substituteMIRRow(
       row = lp->rows[r];
       assert(row != NULL);
       assert(row->len == 0 || row->cols != NULL);
-      assert(row->len == 0 || row->cols_probindex != NULL);
+      assert(row->len == 0 || row->cols_index != NULL);
       assert(row->len == 0 || row->vals != NULL);
 
       /* get the slack's coefficient a'_r in the aggregated row */
@@ -6764,8 +6889,7 @@ void substituteMIRRow(
          assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
          assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-         assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
-         idx = row->cols_probindex[i];
+         idx = row->cols[i]->var_probindex;
          mircoef[idx] += mul * row->vals[i];
       }
 
@@ -7087,7 +7211,7 @@ RETCODE lpPrimalSimplex(
       }
    }
 
-   debugMessage("solved primal LP in %d iterations\n", iterations);
+   debugMessage("solved primal LP %d in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
@@ -7156,7 +7280,7 @@ RETCODE lpDualSimplex(
       }
    }
 
-   debugMessage("solved dual LP in %d iterations\n", iterations);
+   debugMessage("solved dual LP %d in %d iterations\n", stat->lpcount, iterations);
 
    return SCIP_OKAY;
 }
@@ -7396,7 +7520,7 @@ RETCODE lpSolve(
    }
    else
    {
-      errorMessage("Unknown return status of %s simplex (internal status: %d)\n", 
+      errorMessage("unknown return status of %s simplex (internal status: %d)\n", 
          lp->lastwasprimal ? "primal" : "dual", SCIPlpiGetInternalStatus(lp->lpi));
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
@@ -7576,11 +7700,11 @@ RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_NOTSOLVED:
-         errorMessage("Error in LP solver\n");
+         errorMessage("error in LP solver\n");
          return SCIP_LPERROR;
 
       default:
-         errorMessage("Unknown LP solution status\n");
+         errorMessage("unknown LP solution status\n");
          return SCIP_ERROR;
       }
    }
@@ -8368,7 +8492,7 @@ RETCODE SCIPlpGetSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   debugMessage("getting new LP solution\n");
+   debugMessage("getting new LP solution %d\n", stat->lpcount);
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -8481,7 +8605,7 @@ RETCODE SCIPlpGetUnboundedSol(
       return SCIP_OKAY;
    lp->validsollp = stat->lpcount;
 
-   debugMessage("getting new unbounded LP solution\n");
+   debugMessage("getting new unbounded LP solution %d\n", stat->lpcount);
 
    /* get temporary memory */
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
@@ -9603,6 +9727,37 @@ LPI* SCIPlpGetLPI(
    assert(lp != NULL);
 
    return lp->lpi;
+}
+
+/** returns whether the LP is in diving mode */
+Bool SCIPlpDiving(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->diving;
+}
+
+/** returns whether the LP is in diving mode and the objective value of at least one column was changed */
+Bool SCIPlpDivingObjChanged(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->divingobjchg;
+}
+
+/** marks the diving LP to have a changed objective function */
+void SCIPlpMarkDivingObjChanged(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->diving);
+
+   lp->divingobjchg = TRUE;
 }
 
 #endif

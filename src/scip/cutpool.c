@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.32 2004/08/12 14:31:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.33 2004/09/07 18:22:15 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -502,8 +502,7 @@ RETCODE SCIPcutpoolSeparate(
             if( !SCIPsetIsFeasible(set, feasibility) )
             {
                /* insert cut in separation storage */
-               CHECK_OKAY( SCIPsepastoreAddCut(sepastore, memhdr, set, stat, lp, row,
-                              -(feasibility/SCIProwGetNorm(row))/(SCIProwGetNNonz(row)+1), root ) );
+               CHECK_OKAY( SCIPsepastoreAddCut(sepastore, memhdr, set, stat, lp, row, 1.0, root) );
                found = TRUE;
             }
             else

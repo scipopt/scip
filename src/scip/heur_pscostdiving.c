@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.10 2004/07/14 14:05:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.11 2004/09/07 18:22:17 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -249,7 +249,7 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActNodeLP(scip));
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 

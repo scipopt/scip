@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.51 2004/08/24 11:57:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.52 2004/09/07 18:22:15 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -886,8 +886,7 @@ RETCODE createRow(
 static
 RETCODE addCut(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< logic or constraint */
-   Real             violation           /**< absolute violation of the constraint */
+   CONS*            cons                /**< logic or constraint */
    )
 {
    CONSDATA* consdata;
@@ -904,7 +903,7 @@ RETCODE addCut(
    assert(!SCIProwIsInLP(consdata->row));
             
    /* insert LP row as cut */
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, violation/(SCIProwGetNNonz(consdata->row)+1)) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
 
    return SCIP_OKAY;
 }
@@ -968,7 +967,7 @@ RETCODE separateCons(
    if( addcut )
    {
       /* insert LP row as cut */
-      CHECK_OKAY( addCut(scip, cons, 1.0) );
+      CHECK_OKAY( addCut(scip, cons) );
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
    }
@@ -992,7 +991,7 @@ RETCODE enforcePseudo(
    Bool addcut;
    Bool mustcheck;
 
-   assert(!SCIPhasActNodeLP(scip));
+   assert(!SCIPhasCurrentNodeLP(scip));
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
@@ -1171,7 +1170,7 @@ DECL_CONSINITLP(consInitlpLogicor)
    {
       if( SCIPconsIsInitial(conss[c]) )
       {
-         CHECK_OKAY( addCut(scip, conss[c], 0.0) );
+         CHECK_OKAY( addCut(scip, conss[c]) );
       }
    }
 

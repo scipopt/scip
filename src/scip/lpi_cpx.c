@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.68 2004/08/31 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.69 2004/09/07 18:22:18 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -509,7 +509,7 @@ int getIntParam(LPI* lpi, const int param)
       if( intparam[i] == param )
          return lpi->cpxparam.intparval[i];
 
-   errorMessage("Unknown CPLEX integer parameter\n");
+   errorMessage("unknown CPLEX integer parameter\n");
    abort();
 }
 
@@ -524,7 +524,7 @@ double getDblParam(LPI* lpi, const int param)
       if( dblparam[i] == param )
          return lpi->cpxparam.dblparval[i];
 
-   errorMessage("Unknown CPLEX double parameter\n");
+   errorMessage("unknown CPLEX double parameter\n");
    abort();
 }
 
@@ -542,7 +542,7 @@ void setIntParam(LPI* lpi, const int param, int parval)
          return;
       }
 
-   errorMessage("Unknown CPLEX integer parameter\n");
+   errorMessage("unknown CPLEX integer parameter\n");
    abort();
 }
 
@@ -560,7 +560,7 @@ void setDblParam(LPI* lpi, const int param, double parval)
          return;
       }
 
-   errorMessage("Unknown CPLEX double parameter\n");
+   errorMessage("unknown CPLEX double parameter\n");
    abort();
 }
 

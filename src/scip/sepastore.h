@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.13 2004/08/31 14:42:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.14 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -75,7 +75,8 @@ RETCODE SCIPsepastoreAddCut(
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< LP data */
    ROW*             cut,                /**< separated cut */
-   Real             score,              /**< separation score of cut (the larger, the better the cut) */
+   Real             scorefactor,        /**< factor to weigh separation score of cut with (usually 1.0);
+                                         *   use infinite score factor to force using the cut */
    Bool             root                /**< are we at the root node? */
    );
 
@@ -117,6 +118,12 @@ int SCIPsepastoreGetNCutsFound(
 /** get number of cuts found so far in current separation round */
 extern
 int SCIPsepastoreGetNCutsFoundRound(
+   SEPASTORE*            sepastore                /**< separation storage */
+   );
+
+/** get total number of cuts stored (and possibly removed again) in current separation round */
+extern
+int SCIPsepastoreGetNCutsStored(
    SEPASTORE*            sepastore                /**< separation storage */
    );
 

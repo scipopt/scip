@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.22 2004/08/10 14:19:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.23 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -136,7 +136,7 @@ struct Row
    Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    char*            name;               /**< name of the row */
    COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
-   int*             cols_probindex;     /**< copy of cols[i]->var->probindex for avoiding expensive dereferencing */
+   int*             cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
    Real*            vals;               /**< coefficients of row entries */
    int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    int              index;              /**< consecutively numbered row identifier */
@@ -201,11 +201,11 @@ struct Lp
    int              colssize;           /**< available slots in cols vector */
    int              ncols;              /**< current number of LP columns (number of used slots in cols vector) */
    int              nremoveablecols;    /**< number of removeable columns in the LP */
-   int              firstnewcol;        /**< first column added at the active node */
+   int              firstnewcol;        /**< first column added at the current node */
    int              rowssize;           /**< available slots in rows vector */
    int              nrows;              /**< current number of LP rows (number of used slots in rows vector) */
    int              nremoveablerows;    /**< number of removeable rows in the LP */
-   int              firstnewrow;        /**< first row added at the active node */
+   int              firstnewrow;        /**< first row added at the current node */
    int              looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */
    int              nloosevars;         /**< number of loose variables in LP */
    int              pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */

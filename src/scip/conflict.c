@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.57 2004/09/02 12:07:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.58 2004/09/07 18:22:14 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -692,17 +692,18 @@ RETCODE conflictAnalyze(
    BDCHGINFO* bdchginfo;
    BDCHGINFO* nextbdchginfo;
    RESULT result;
+   int currentdepth;
    int bdchgdepth;
    int nresolutions;
    Bool resolved;
 
    assert(conflict != NULL);
    assert(conflict->nconflictvars >= 0);
-   assert(tree != NULL);
-   assert(tree->actnode != NULL);
-   assert(tree->actnode->depth == tree->pathlen-1);
-   assert(0 <= validdepth && validdepth <= tree->actnode->depth);
    assert(success != NULL);
+
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+   assert(currentdepth == tree->pathlen-1);
+   assert(0 <= validdepth && validdepth <= currentdepth);
 
    debugMessage("analyzing conflict with %d+%d conflict candidates and starting conflict set of size %d (maxsize=%d)\n",
       SCIPpqueueNElems(conflict->binbdchgqueue), SCIPpqueueNElems(conflict->nonbinbdchgqueue),
@@ -713,18 +714,18 @@ RETCODE conflictAnalyze(
    /* if the conflict set is only valid at the current node and not higher in the tree, no useful conflict clause
     * can be found
     */
-   if( validdepth == tree->actnode->depth )
+   if( validdepth == currentdepth )
       return SCIP_OKAY;
 
    /* process all bound changes in the conflict candidate queue */
    nresolutions = 0;
    bdchginfo = conflictRemoveCand(conflict);
-   while( bdchginfo != NULL && conflict->nconflictvars < maxsize && validdepth < tree->actnode->depth )
+   while( bdchginfo != NULL && conflict->nconflictvars < maxsize && validdepth < currentdepth )
    {
       resolved = FALSE;
 
       bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
-      assert(0 <= bdchgdepth && bdchgdepth <= tree->actnode->depth);
+      assert(0 <= bdchgdepth && bdchgdepth <= currentdepth);
       assert(SCIPvarIsActive(SCIPbdchginfoGetVar(bdchginfo)));
 
       /* we don't need to resolve bound changes that are already active in the valid depth of the current conflict set,
@@ -866,7 +867,7 @@ RETCODE conflictAnalyze(
    }
 
    /* if a valid conflict set was found (where at least one resolution was applied), call the conflict handlers */
-   if( bdchginfo == NULL && validdepth < tree->actnode->depth
+   if( bdchginfo == NULL && validdepth < currentdepth
        && (!mustresolve || nresolutions >= 1 || conflict->nconflictvars == 0) )
    {
       NODE* node;
@@ -884,8 +885,7 @@ RETCODE conflictAnalyze(
       if( conflict->nconflictvars == 0 )
       {
          assert(0 <= validdepth && validdepth < tree->pathlen);
-         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", 
-            tree->actnode->depth, validdepth);
+         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", currentdepth, validdepth);
 
          SCIPnodeCutoff(tree->path[validdepth], set);
          *success = TRUE;
@@ -3107,8 +3107,6 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(col != NULL);
    assert((col->strongbranchdown >= lp->cutoffbound && SCIPsetCeil(set, col->primsol-1.0) >= col->lb - 0.5)
       || (col->strongbranchup >= lp->cutoffbound && SCIPsetFloor(set, col->primsol+1.0) <= col->ub + 0.5));
-   assert(tree != NULL);
-   assert(tree->actnode != NULL);
 
    if( success != NULL )
       *success = FALSE;

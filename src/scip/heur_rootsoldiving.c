@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.4 2004/07/13 15:03:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.5 2004/09/07 18:22:17 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -166,7 +166,7 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActNodeLP(scip));
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 

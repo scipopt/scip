@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.5 2004/06/30 14:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.6 2004/09/07 18:22:19 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -69,15 +69,22 @@ Real SCIPnodeGetLowerbound(
    NODE*            node                /**< node */
    );
 
+/** returns whether node is in the path to the current node */
+extern
+Bool SCIPnodeIsActive(
+   NODE*            node                /**< node */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
-#define SCIPnodeGetType(node)           ( (node)->nodetype )
-#define SCIPnodeGetDepth(node)          ( (node)->depth )
-#define SCIPnodeGetLowerbound(node)     ( (node)->lowerbound )
+#define SCIPnodeGetType(node)           ((node)->nodetype)
+#define SCIPnodeGetDepth(node)          ((node)->depth)
+#define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
+#define SCIPnodeIsActive(node)          ((node)->active)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.5 2004/04/27 15:50:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.6 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch and bound tree
@@ -29,14 +29,15 @@
 
 enum NodeType
 {
-   SCIP_NODETYPE_ACTNODE  = 0,          /**< the active node, whose data is stored in the dynamic data object */
-   SCIP_NODETYPE_SIBLING  = 1,          /**< unsolved sibling of the active node */
-   SCIP_NODETYPE_CHILD    = 2,          /**< unsolved child of the active node */
-   SCIP_NODETYPE_LEAF     = 3,          /**< unsolved leaf of the tree, stored in the tree's queue */
-   SCIP_NODETYPE_DEADEND  = 4,          /**< temporary type of active node, if it was solved completely */
-   SCIP_NODETYPE_JUNCTION = 5,          /**< fork without LP solution */
-   SCIP_NODETYPE_FORK     = 6,          /**< fork with solved LP and added rows and columns */
-   SCIP_NODETYPE_SUBROOT  = 7           /**< fork with solved LP and arbitrarily changed rows and columns */
+   SCIP_NODETYPE_ACTNODE     = 0,       /**< the active node, whose data is stored in the dynamic data object */
+   SCIP_NODETYPE_PROBINGNODE = 1,       /**< temporary child node of the active node used for probing */
+   SCIP_NODETYPE_SIBLING     = 2,       /**< unsolved sibling of the active node */
+   SCIP_NODETYPE_CHILD       = 3,       /**< unsolved child of the active node */
+   SCIP_NODETYPE_LEAF        = 4,       /**< unsolved leaf of the tree, stored in the tree's queue */
+   SCIP_NODETYPE_DEADEND     = 5,       /**< temporary type of active node, if it was solved completely */
+   SCIP_NODETYPE_JUNCTION    = 6,       /**< fork without LP solution */
+   SCIP_NODETYPE_FORK        = 7,       /**< fork with solved LP and added rows and columns */
+   SCIP_NODETYPE_SUBROOT     = 8        /**< fork with solved LP and arbitrarily changed rows and columns */
 };
 typedef enum NodeType NODETYPE;         /**< type of node */
 

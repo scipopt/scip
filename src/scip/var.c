@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.109 2004/08/31 16:53:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.110 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3203,6 +3203,22 @@ RETCODE SCIPvarNegate(
    return SCIP_OKAY;
 }
 
+/** informs variable that its position in problem's vars array changed */
+void SCIPvarSetProbindex(
+   VAR*             var,                /**< problem variable */
+   int              probindex           /**< new problem index of variable */
+   )
+{
+   assert(var != NULL);
+
+   var->probindex = probindex;
+   if( var->varstatus == SCIP_VARSTATUS_COLUMN )
+   {
+      assert(var->data.col != NULL);
+      var->data.col->var_probindex = probindex;
+   }
+}
+
 /** changes type of variable; cannot be called, if var belongs to a problem */
 RETCODE SCIPvarChgType(
    VAR*             var,                /**< problem variable to change */
@@ -3416,7 +3432,7 @@ RETCODE SCIPvarChgObjDive(
       newobj = 0.0;
 
    /* mark the LP's objective function invalid */
-   lp->divingobjchg = TRUE;
+   SCIPlpMarkDivingObjChanged(lp);
 
    /* change objective value of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -4388,7 +4404,7 @@ RETCODE SCIPvarChgLbDive(
 {
    assert(var != NULL);
    assert(lp != NULL);
-   assert(lp->diving);
+   assert(SCIPlpDiving(lp));
 
    /* adjust bound for integral variables */
    SCIPvarAdjustLb(var, set, &newbound);
@@ -4470,7 +4486,7 @@ RETCODE SCIPvarChgUbDive(
 {
    assert(var != NULL);
    assert(lp != NULL);
-   assert(lp->diving);
+   assert(SCIPlpDiving(lp));
 
    /* adjust bound for integral variables */
    SCIPvarAdjustUb(var, set, &newbound);
@@ -5474,6 +5490,7 @@ RETCODE SCIPvarGetProbvarSum(
 
    return SCIP_OKAY;
 }
+
 
 #ifndef NDEBUG
 

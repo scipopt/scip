@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.206 2004/09/03 11:34:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.207 2004/09/07 18:22:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2218,7 +2218,7 @@ RETCODE SCIPaddPricedVar(
 
    /* add variable to pricing storage */
    CHECK_OKAY( SCIPpricestoreAddVar(scip->pricestore, scip->mem->solvemem, scip->set, scip->lp, var, score,
-         (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
+         (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
    
    return SCIP_OKAY;
 }
@@ -2574,7 +2574,7 @@ Bool SCIPallVarsInProb(
 }
 
 /** adds constraint to the problem; if constraint is only valid locally, it is added to the local subproblem of the
- *  active node (and all of its subnodes); otherwise it is added to the global problem;
+ *  current node (and all of its subnodes); otherwise it is added to the global problem;
  *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
  */
 RETCODE SCIPaddCons(
@@ -2604,7 +2604,8 @@ RETCODE SCIPaddCons(
       }
       else
       {
-         CHECK_OKAY( SCIPnodeAddCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
+         CHECK_OKAY( SCIPnodeAddCons(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+               scip->tree, cons) );
       }
       return SCIP_OKAY;
 
@@ -2718,7 +2719,7 @@ RETCODE SCIPaddConsNode(
    return SCIP_OKAY;
 }
 
-/** adds constraint locally to the active node (and all of its subnodes), even if it is a global constraint;
+/** adds constraint locally to the current node (and all of its subnodes), even if it is a global constraint;
  *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
  */
 RETCODE SCIPaddConsLocal(
@@ -2730,7 +2731,7 @@ RETCODE SCIPaddConsLocal(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddConsLocal", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPaddConsNode(scip, scip->tree->actnode, cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, SCIPtreeGetCurrentNode(scip->tree), cons) );
    
    return SCIP_OKAY;
 }
@@ -2751,7 +2752,7 @@ RETCODE SCIPdisableConsNode(
    return SCIP_OKAY;
 }
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
+/** disables constraint's separation, enforcing, and propagation capabilities at the current node (and all subnodes);
  *  if the method is called during problem modification or presolving, the constraint is globally deleted from the problem
  */
 RETCODE SCIPdisableConsLocal(
@@ -2759,6 +2760,8 @@ RETCODE SCIPdisableConsLocal(
    CONS*            cons                /**< constraint to disable */
    )
 {
+   NODE* node;
+
    assert(cons != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPdisableConsLocal", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -2777,9 +2780,8 @@ RETCODE SCIPdisableConsLocal(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      assert(scip->tree->actnode != NULL);
-      assert(SCIPnodeGetType(scip->tree->actnode) == SCIP_NODETYPE_ACTNODE);
-      CHECK_OKAY( SCIPnodeDisableCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
+      node = SCIPtreeGetCurrentNode(scip->tree);
+      CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, cons) );
       return SCIP_OKAY;
 
    default:
@@ -2788,27 +2790,34 @@ RETCODE SCIPdisableConsLocal(
    }  /*lint !e788*/
 }
 
-/** gets dual bound of active node */
+/** gets dual bound of current node */
 Real SCIPgetLocalDualbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   NODE* node;
+
    CHECK_ABORT( checkStage(scip, "SCIPgetLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return scip->tree->actnode != NULL
+   node = SCIPtreeGetCurrentNode(scip->tree);
+   return node != NULL
       ? SCIPprobExternObjval(scip->origprob, scip->set, 
-         SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(scip->tree->actnode)))
+         SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node)))
       : SCIP_INVALID;
 }
 
-/** gets lower bound of active node in transformed problem */
+/** gets lower bound of current node in transformed problem */
 Real SCIPgetLocalLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   NODE* node;
+
    CHECK_ABORT( checkStage(scip, "SCIPgetLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return scip->tree->actnode != NULL ? SCIPnodeGetLowerbound(scip->tree->actnode) : SCIP_INVALID;
+   node = SCIPtreeGetCurrentNode(scip->tree);
+
+   return node != NULL ? SCIPnodeGetLowerbound(node) : SCIP_INVALID;
 }
 
 /** gets dual bound of given node */
@@ -2834,8 +2843,8 @@ Real SCIPgetNodeLowerbound(
    return SCIPnodeGetLowerbound(node);
 }
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the active node's dual bound,
- *  sets the active node's dual bound to the new value
+/** if given value is tighter (larger for minimization, smaller for maximization) than the current node's dual bound,
+ *  sets the current node's dual bound to the new value
  */
 RETCODE SCIPupdateLocalDualbound(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2844,13 +2853,13 @@ RETCODE SCIPupdateLocalDualbound(
 {
    CHECK_OKAY( checkStage(scip, "SCIPupdateLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(scip->tree->actnode, SCIPprobInternObjval(scip->transprob, scip->set, 
-         SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
+   SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat,
+      SCIPprobInternObjval(scip->transprob, scip->set, SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
 
    return SCIP_OKAY;
 }
 
-/** if given value is larger than the active node's lower bound (in transformed problem), sets the active node's
+/** if given value is larger than the current node's lower bound (in transformed problem), sets the current node's
  *  lower bound to the new value
  */
 RETCODE SCIPupdateLocalLowerbound(
@@ -2860,7 +2869,7 @@ RETCODE SCIPupdateLocalLowerbound(
 {
    CHECK_OKAY( checkStage(scip, "SCIPupdateLocalLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(scip->tree->actnode, newbound);
+   SCIPnodeUpdateLowerbound(SCIPtreeGetCurrentNode(scip->tree), scip->stat, newbound);
 
    return SCIP_OKAY;
 }
@@ -2876,7 +2885,7 @@ RETCODE SCIPupdateNodeDualbound(
 {
    CHECK_OKAY( checkStage(scip, "SCIPupdateNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, SCIPprobInternObjval(scip->transprob, scip->set, 
+   SCIPnodeUpdateLowerbound(node, scip->stat, SCIPprobInternObjval(scip->transprob, scip->set, 
          SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
 
    return SCIP_OKAY;
@@ -2893,7 +2902,7 @@ RETCODE SCIPupdateNodeLowerbound(
 {
    CHECK_OKAY( checkStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, newbound);
+   SCIPnodeUpdateLowerbound(node, scip->stat, newbound);
 
    return SCIP_OKAY;
 }
@@ -3290,7 +3299,7 @@ RETCODE freeSolve(
    /* switch stage to FREESOLVE */
    scip->stage = SCIP_STAGE_FREESOLVE;
 
-   /* deactivate the active node */
+   /* deactivate the current node */
    CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
          scip->branchcand, scip->eventqueue, scip->primal->cutoffbound) );
    
@@ -3523,23 +3532,23 @@ RETCODE SCIPsolve(
          /* release the CTRL-C interrupt */
          if( scip->set->catchctrlc )
             SCIPinterruptRelease(scip->interrupt);
-
-         /* check for restart */
-         if( restart )
+         
+         /* detect, whether problem is solved */
+         if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )
          {
-            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
-               "(run %d) restarting after %d root node bound changes\n\n",
-               scip->stat->nruns, scip->stat->nrootboundchgsrun);
-            CHECK_OKAY( SCIPfreeSolve(scip) );
-            assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+            /* tree is empty, and no current node exists -> problem is solved */
+            scip->stage = SCIP_STAGE_SOLVED;
          }
          else
          {
-            /* detect, whether problem is solved */
-            if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
+            /* check for restart */
+            if( restart )
             {
-               /* tree is empty, and no active node exists -> problem is solved */
-               scip->stage = SCIP_STAGE_SOLVED;
+               SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+                  "(run %d) restarting after %d root node bound changes\n\n",
+                  scip->stat->nruns, scip->stat->nrootboundchgsrun);
+               CHECK_OKAY( SCIPfreeSolve(scip) );
+               assert(scip->stage == SCIP_STAGE_TRANSFORMED);
             }
          }
          break;
@@ -3929,7 +3938,7 @@ RETCODE SCIPgetBinvarRepresentative(
    return SCIP_OKAY;
 }
 
-/** gets solution value for variable in active node */
+/** gets solution value for variable in current node */
 Real SCIPgetVarSol(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to get solution value for */
@@ -3937,10 +3946,10 @@ Real SCIPgetVarSol(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVarSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return SCIPvarGetSol(var, scip->tree->actnodehaslp);
+   return SCIPvarGetSol(var, SCIPtreeHasCurrentNodeLP(scip->tree));
 }
 
-/** gets solution values of multiple variables in active node */
+/** gets solution values of multiple variables in current node */
 RETCODE SCIPgetVarSols(
    SCIP*            scip,               /**< SCIP data structure */
    int              nvars,              /**< number of variables to get solution value for */
@@ -3956,7 +3965,7 @@ RETCODE SCIPgetVarSols(
    CHECK_OKAY( checkStage(scip, "SCIPgetVarSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    for( v = 0; v < nvars; ++v )
-      vals[v] = SCIPvarGetSol(vars[v], scip->tree->actnodehaslp);
+      vals[v] = SCIPvarGetSol(vars[v], SCIPtreeHasCurrentNodeLP(scip->tree));
 
    return SCIP_OKAY;
 }
@@ -3994,7 +4003,7 @@ RETCODE SCIPgetVarStrongbranch(
    if( scip->set->usesbconflict && scip->set->nconflicthdlrs > 0
       && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
       && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp)
-      && scip->tree->actnode->depth > 0 && !(*lperror) )
+      && SCIPtreeGetCurrentDepth(scip->tree) > 0 && !(*lperror) )
    {
       if( (col->strongbranchdown >= scip->lp->cutoffbound && SCIPsetCeil(scip->set, col->primsol-1.0) >= col->lb - 0.5)
          || (col->strongbranchup >= scip->lp->cutoffbound && SCIPsetFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
@@ -4140,7 +4149,7 @@ Real SCIPadjustedVarUb(
    return ub;
 }
 
-/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
+/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  */
@@ -4169,8 +4178,8 @@ RETCODE SCIPchgVarLb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -4179,7 +4188,7 @@ RETCODE SCIPchgVarLb(
    }  /*lint !e788*/
 }
 
-/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
+/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in current node;
  *  if possible, adjusts bound to integral value; doesn't store any inference information in the bound change, such
  *  that in conflict analysis, this change is treated like a branching decision
  */
@@ -4208,8 +4217,8 @@ RETCODE SCIPchgVarUb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -4224,7 +4233,7 @@ RETCODE SCIPchgVarUb(
  */
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   NODE*            node,               /**< node to change bound at, or NULL for current node */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    )
@@ -4234,7 +4243,7 @@ RETCODE SCIPchgVarLbNode(
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -4245,7 +4254,7 @@ RETCODE SCIPchgVarLbNode(
  */
 RETCODE SCIPchgVarUbNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to change bound at, or NULL for active node */
+   NODE*            node,               /**< node to change bound at, or NULL for current node */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
    )
@@ -4255,12 +4264,12 @@ RETCODE SCIPchgVarUbNode(
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
    
    return SCIP_OKAY;
 }
 
-/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
@@ -4312,8 +4321,8 @@ RETCODE SCIPtightenVarLb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
       break;
 
    default:
@@ -4327,7 +4336,7 @@ RETCODE SCIPtightenVarLb(
    return SCIP_OKAY;
 }
 
-/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
  *  is treated like a branching decision
@@ -4379,8 +4388,8 @@ RETCODE SCIPtightenVarUb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+      CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
       break;
 
    default:
@@ -4394,7 +4403,7 @@ RETCODE SCIPtightenVarUb(
    return SCIP_OKAY;
 }
 
-/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
@@ -4448,9 +4457,9 @@ RETCODE SCIPinferVarLb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, 
-            infercons, inferinfo) );
+      CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, 
+            infercons, inferinfo, FALSE) );
       break;
 
    default:
@@ -4464,7 +4473,7 @@ RETCODE SCIPinferVarLb(
    return SCIP_OKAY;
 }
 
-/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
  *  for the deduction of the bound change
@@ -4518,9 +4527,9 @@ RETCODE SCIPinferVarUb(
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, 
-            infercons, inferinfo) );
+      CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+            scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, 
+            infercons, inferinfo, FALSE) );
       break;
 
    default:
@@ -4534,7 +4543,7 @@ RETCODE SCIPinferVarUb(
    return SCIP_OKAY;
 }
 
-/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in active node;
+/** depending on SCIP's stage, fixes binary variable in the problem, in preprocessing, or in current node;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason for the
  *  deduction of the fixing
  */
@@ -4600,15 +4609,15 @@ RETCODE SCIPinferBinvar(
    case SCIP_STAGE_SOLVING:
       if( fixedval == TRUE )
       {
-         CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-               scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
-               infercons, inferinfo) );
+         CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+               scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
+               infercons, inferinfo, FALSE) );
       }
       else
       {
-         CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-               scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
-               infercons, inferinfo) );
+         CHECK_OKAY( SCIPnodeAddBoundinfer(SCIPtreeGetCurrentNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+               scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
+               infercons, inferinfo, FALSE) );
       }
       break;
 
@@ -6141,14 +6150,14 @@ RETCODE SCIPprintCons(
  * LP methods
  */
 
-/** checks, whether the LP was solved in the active node */
-Bool SCIPhasActNodeLP(
+/** returns, whether the LP was or is to be solved in the current node */
+Bool SCIPhasCurrentNodeLP(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPhasActNodeLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPhasCurrentNodeLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   return scip->tree->actnodehaslp;
+   return SCIPtreeHasCurrentNodeLP(scip->tree);
 }
 
 /** gets solution status of current LP */
@@ -6190,7 +6199,7 @@ RETCODE SCIPgetLPColsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPColsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );   
 
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       if( cols != NULL )
          *cols = SCIPlpGetCols(scip->lp);
@@ -6215,7 +6224,7 @@ COL** SCIPgetLPCols(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );   
 
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIPlpGetCols(scip->lp);
    else
       return NULL;
@@ -6228,7 +6237,7 @@ int SCIPgetNLPCols(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPCols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );   
 
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIPlpGetNCols(scip->lp);
    else
       return scip->tree->pathnlpcols[scip->tree->pathlen-1];
@@ -6243,7 +6252,7 @@ RETCODE SCIPgetLPRowsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPRowsData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );   
    
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       if( rows != NULL )
          *rows = SCIPlpGetRows(scip->lp);
@@ -6268,7 +6277,7 @@ ROW** SCIPgetLPRows(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );   
    
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIPlpGetRows(scip->lp);
    else
       return NULL;
@@ -6281,7 +6290,7 @@ int SCIPgetNLPRows(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPRows", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );   
 
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIPlpGetNRows(scip->lp);
    else
       return scip->tree->pathnlprows[scip->tree->pathlen-1];
@@ -6395,215 +6404,6 @@ RETCODE SCIPwriteLP(
    CHECK_OKAY( SCIPlpWrite(scip->lp, fname) );
 
    return SCIP_OKAY;
-}
-
-
-
-
-/*
- * LP diving methods
- */
-
-/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
-RETCODE SCIPstartDive(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( scip->lp->diving )
-   {
-      errorMessage("already in diving mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   if( !scip->tree->actnodehaslp )
-   {
-      errorMessage("cannot start diving at a pseudo node\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   CHECK_OKAY( SCIPlpStartDive(scip->lp, scip->mem->solvemem, scip->set) );
-
-   return SCIP_OKAY;
-}
-
-/** quits LP diving and resets bounds and objective values of columns to the current node's values */
-RETCODE SCIPendDive(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPendDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* reset the probably changed LP's cutoff bound */
-   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
-
-   /* unmark the diving flag in the LP and reset all variables' objective and bound values */
-   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-         scip->transprob->vars, scip->transprob->nvars) );
-
-   /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
-    * the cutoff has to be done now.
-    */
-   if( scip->tree->cutoffdelayed )
-   {
-      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->primal->cutoffbound) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** changes variable's objective value in current dive */
-RETCODE SCIPchgVarObjDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the objective value for */
-   Real             newobj              /**< new objective value */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPchgVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   CHECK_OKAY( SCIPvarChgObjDive(var, scip->set, scip->lp, newobj) );
-
-   /* invalidate the LP's cutoff bound, since this has nothing to do with the current objective value anymore;
-    * the cutoff bound is reset in SCIPendDive()
-    */
-   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->set->infinity) );
-
-   return SCIP_OKAY;
-}
-
-/** changes variable's lower bound in current dive */
-RETCODE SCIPchgVarLbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPchgVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   CHECK_OKAY( SCIPvarChgLbDive(var, scip->set, scip->lp, newbound) );
-
-   return SCIP_OKAY;
-}
-
-/** changes variable's upper bound in current dive */
-RETCODE SCIPchgVarUbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< variable to change the bound for */
-   Real             newbound            /**< new value for bound */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPchgVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   CHECK_OKAY( SCIPvarChgUbDive(var, scip->set, scip->lp, newbound) );
-
-   return SCIP_OKAY;
-}
-
-/** gets variable's objective value in current dive */
-Real SCIPgetVarObjDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to get the bound for */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      abort();
-   }
-
-   return SCIPvarGetObjLP(var);
-}
-
-/** gets variable's lower bound in current dive */
-Real SCIPgetVarLbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to get the bound for */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      abort();
-   }
-
-   return SCIPvarGetLbLP(var);
-}
-
-/** gets variable's upper bound in current dive */
-Real SCIPgetVarUbDive(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var                 /**< variable to get the bound for */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      abort();
-   }
-
-   return SCIPvarGetUbLP(var);
-}
-
-/** solves the LP of the current dive */
-RETCODE SCIPsolveDiveLP(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   if( !scip->lp->diving )
-   {
-      errorMessage("not in diving mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-         itlim, FALSE, lperror) );
-
-   return SCIP_OKAY;
-}
-
-/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
-Longint SCIPgetLastDivenode(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetLastDivenode", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
-   return scip->stat->lastdivenode;
 }
 
 
@@ -6963,7 +6763,7 @@ RETCODE SCIPrecalcRowActivity(
 {
    CHECK_OKAY( checkStage(scip, "SCIPrecalcRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       SCIProwRecalcLPActivity(row, scip->stat);
    else
       SCIProwRecalcPseudoActivity(row, scip->stat);
@@ -6979,7 +6779,7 @@ Real SCIPgetRowActivity(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetRowActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIProwGetLPActivity(row, scip->stat, scip->lp);
    else
       return SCIProwGetPseudoActivity(row, scip->stat);
@@ -6993,7 +6793,7 @@ Real SCIPgetRowFeasibility(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetRowFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( scip->tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
    else
       return SCIProwGetPseudoFeasibility(row, scip->stat);
@@ -7015,7 +6815,7 @@ Real SCIPgetRowSolActivity(
       CHECK_ABORT( SCIProwGetSolActivity(row, scip->set, scip->stat, sol, &activity) );
       return activity;
    }
-   else if( scip->tree->actnodehaslp )
+   else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIProwGetLPActivity(row, scip->stat, scip->lp);
    else
       return SCIProwGetPseudoActivity(row, scip->stat);
@@ -7037,7 +6837,7 @@ Real SCIPgetRowSolFeasibility(
       CHECK_ABORT( SCIProwGetSolFeasibility(row, scip->set, scip->stat, sol, &feasibility) );
       return feasibility;
    }
-   else if( scip->tree->actnodehaslp )
+   else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       return SCIProwGetLPFeasibility(row, scip->stat, scip->lp);
    else
       return SCIProwGetPseudoFeasibility(row, scip->stat);
@@ -7066,27 +6866,61 @@ RETCODE SCIPprintRow(
  * cutting plane methods
  */
 
+/** returns efficacy of the cut with respect to the current LP solution: e = -feasibility/norm */
+Real SCIPgetCutEfficacy(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             cut                 /**< separated cut */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetCutEfficacy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetEfficacy(cut, scip->set, scip->stat, scip->lp);
+}
+
+/** returns whether the cut's efficacy with respect to the current LP solution is greater than the minimal cut efficacy */
+Bool SCIPisCutEfficacious(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             cut                 /**< separated cut */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPisCutEfficacious", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIProwIsEfficacious(cut, scip->set, scip->stat, scip->lp, (SCIPtreeGetCurrentDepth(scip->tree) == 0));
+}
+
+/** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
+Bool SCIPisEfficacious(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             efficacy            /**< efficacy of the cut */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPisCutEfficacious", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetIsEfficacious(scip->set, (SCIPtreeGetCurrentDepth(scip->tree) == 0), efficacy);
+}
+
 /** adds cut to separation storage;
  *  if the cut should be forced to enter the LP, an infinite score has to be used
  */
 RETCODE SCIPaddCut(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             cut,                /**< separated cut */
-   Real             score               /**< separation score of cut (the larger, the better the cut) */
+   Real             scorefactor         /**< factor to weigh separation score of cut with (usually 1.0);
+                                         *   use infinite score factor to force using the cut */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   assert(scip->tree->actnode != NULL);
+   assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
-   if( !scip->tree->actnodehaslp )
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       errorMessage("cannot add cuts, because node LP is not processed\n");
       return SCIP_INVALIDCALL;
    }
 
    CHECK_OKAY( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-         cut, score, (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
+         cut, scorefactor, (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
    
    return SCIP_OKAY;
 }
@@ -7204,19 +7038,341 @@ RETCODE SCIPseparateCutpool(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   assert(scip->tree->actnode != NULL);
+   assert(SCIPtreeGetCurrentNode(scip->tree) != NULL);
 
-   if( !scip->tree->actnodehaslp )
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       errorMessage("cannot add cuts, because node LP is not processed\n");
       return SCIP_INVALIDCALL;
    }
    
    CHECK_OKAY( SCIPcutpoolSeparate(cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->sepastore,
-         (SCIPnodeGetDepth(scip->tree->actnode) == 0), result) );
+         (SCIPtreeGetCurrentDepth(scip->tree) == 0), result) );
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * LP diving methods
+ */
+
+/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available */
+RETCODE SCIPstartDive(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("already in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
+      errorMessage("cannot start diving at a pseudo node\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPlpStartDive(scip->lp, scip->mem->solvemem, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** quits LP diving and resets bounds and objective values of columns to the current node's values */
+RETCODE SCIPendDive(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPendDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* reset the probably changed LP's cutoff bound */
+   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
+
+   /* unmark the diving flag in the LP and reset all variables' objective and bound values */
+   CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+         scip->transprob->vars, scip->transprob->nvars) );
+
+   /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
+    * the cutoff has to be done now.
+    */
+   if( scip->tree->cutoffdelayed )
+   {
+      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->primal->cutoffbound) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's objective value in current dive */
+RETCODE SCIPchgVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             newobj              /**< new objective value */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPvarChgObjDive(var, scip->set, scip->lp, newobj) );
+
+   /* invalidate the LP's cutoff bound, since this has nothing to do with the current objective value anymore;
+    * the cutoff bound is reset in SCIPendDive()
+    */
+   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->set->infinity) );
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's lower bound in current dive */
+RETCODE SCIPchgVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPvarChgLbDive(var, scip->set, scip->lp, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's upper bound in current dive */
+RETCODE SCIPchgVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPvarChgUbDive(var, scip->set, scip->lp, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** gets variable's objective value in current dive */
+Real SCIPgetVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      abort();
+   }
+
+   return SCIPvarGetObjLP(var);
+}
+
+/** gets variable's lower bound in current dive */
+Real SCIPgetVarLbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      abort();
+   }
+
+   return SCIPvarGetLbLP(var);
+}
+
+/** gets variable's upper bound in current dive */
+Real SCIPgetVarUbDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      abort();
+   }
+
+   return SCIPvarGetUbLP(var);
+}
+
+/** solves the LP of the current dive */
+RETCODE SCIPsolveDiveLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("not in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+         itlim, FALSE, lperror) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the number of the node in the current branch and bound run, where the last LP diving was applied */
+Longint SCIPgetLastDivenode(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLastDivenode", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   return scip->stat->lastdivenode;
+}
+
+
+
+
+/*
+ * probing methods
+ */
+
+/** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), and SCIPpropagateProbing() available */
+RETCODE SCIPstartProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPstartProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("already in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPtreeStartProbing(scip->tree, scip->mem->solvemem, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** quits probing and resets bounds and constraints to the active node's environment */
+RETCODE SCIPendProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPendProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* switch back from probing to normal operation mode and restore variables and constraints to active node */
+   CHECK_OKAY( SCIPtreeEndProbing(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+         scip->branchcand, scip->eventqueue) );
+
+   return SCIP_OKAY;
+}
+
+/** injects a change of variable's lower bound into probing node; the same can also be achieved with a call to
+ *  SCIPchgVarLb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
+ */
+RETCODE SCIPchgVarLbProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarLbProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+         scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** injects a change of variable's upper bound into probing node; the same can also be achieved with a call to
+ *  SCIPchgVarUb(), but in this case, the bound change would be treated like a deduction instead of a branching decision
+ */
+RETCODE SCIPchgVarUbProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarUbProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPnodeAddBoundchg(SCIPtreeGetProbingNode(scip->tree), scip->mem->solvemem, scip->set, scip->stat,
+         scip->tree, scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
+ *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
+ *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
+ *  bounds due to SCIPchgVarLbProbing() and SCIPchgVarUbProbing() are used for propagation
+ */
+RETCODE SCIPpropagateProbing(
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            cutoff              /**< pointer to store whether the probing node can be cut off */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPpropagateProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, cutoff) );
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -7399,7 +7555,7 @@ RETCODE SCIPcreateChild(
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateChild", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPnodeCreate(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, nodeselprio) );
+   CHECK_OKAY( SCIPnodeCreateChild(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, nodeselprio) );
    
    return SCIP_OKAY;
 }
@@ -7494,7 +7650,7 @@ RETCODE SCIPcreateLPSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( !scip->tree->actnodehaslp )
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       errorMessage("LP solution does not exist\n");
       return SCIP_INVALIDCALL;
@@ -7557,7 +7713,7 @@ RETCODE SCIPlinkLPSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPlinkLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( !scip->tree->actnodehaslp )
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       errorMessage("LP solution does not exist\n");
       return SCIP_INVALIDCALL;
@@ -7740,7 +7896,7 @@ Real SCIPgetSolOrigObj(
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", 
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-      if( scip->tree->actnodehaslp )
+      if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPprobExternObjval(scip->origprob, scip->set,
             SCIPprobExternObjval(scip->transprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set)));
       else
@@ -7763,7 +7919,7 @@ Real SCIPgetSolTransObj(
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", 
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-      if( scip->tree->actnodehaslp )
+      if( SCIPtreeHasCurrentNodeLP(scip->tree) )
          return SCIPlpGetObjval(scip->lp, scip->set);
       else
          return SCIPlpGetPseudoObjval(scip->lp, scip->set);
@@ -8058,7 +8214,7 @@ RETCODE SCIPcheckSol(
    checklprows = checklprows || scip->set->exactsolve;
    
    CHECK_OKAY( SCIPsolCheck(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-         scip->tree == NULL || scip->tree->actnode == NULL ? -1 : scip->tree->actnode->depth,
+         scip->tree == NULL ? -1 : SCIPtreeGetCurrentDepth(scip->tree),
          checkintegrality, checklprows, feasible) );
 
    return SCIP_OKAY;
@@ -8585,17 +8741,14 @@ Longint SCIPgetNConflictsFound(
       + SCIPconflictGetNPseudoConflicts(scip->conflict);
 }
 
-/** gets depth of active node, or -1 if no active node exists */
+/** gets depth of current node, or -1 if no current node exists */
 int SCIPgetDepth(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetDepth", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( scip->tree->actnode != NULL )
-      return SCIPnodeGetDepth(scip->tree->actnode);
-   else
-      return -1;
+   return SCIPtreeGetCurrentDepth(scip->tree);
 }
 
 /** gets maximal depth of all processed nodes in current branch and bound run */
@@ -8734,15 +8887,13 @@ Real SCIPgetDualboundRoot(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   Real lowerbound;
-
    CHECK_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   lowerbound = SCIPnodeGetLowerbound(scip->tree->root);
-   if( SCIPsetIsInfinity(scip->set, lowerbound) )
+   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
       return SCIPgetPrimalbound(scip);
    else
-      return SCIPprobExternObjval(scip->origprob, scip->set, SCIPprobExternObjval(scip->transprob, scip->set, lowerbound));
+      return SCIPprobExternObjval(scip->origprob, scip->set, 
+         SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootlowerbound));
 }
 
 /** gets lower (dual) bound in transformed problem of the root node */
@@ -10234,23 +10385,6 @@ Bool SCIPisUbBetter(
    assert(scip != NULL);
 
    return SCIPsetIsUbBetter(scip->set, ub1, ub2);
-}
-
-/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
- *  both, the activity and the rhs, should be normed
- */
-Bool SCIPisCutViolated(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             cutactivity,        /**< activity of the cut */
-   Real             cutrhs              /**< right hand side value of the cut */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(scip->tree != NULL);
-   assert(scip->tree->actnode != NULL);
-
-   return SCIPsetIsCutViolated(scip->set, (SCIPnodeGetDepth(scip->tree->actnode) == 0), cutactivity, cutrhs);
 }
 
 /** checks, if relative difference of values is in range of epsilon */

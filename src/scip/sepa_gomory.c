@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.29 2004/09/01 16:53:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.30 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -41,7 +41,7 @@
 #define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          25 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of gomory cuts separated per separation round in root node */
-#define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 
 #define BOUNDSWITCH              0.9999
 #define USEVBDS                    TRUE
@@ -219,7 +219,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                debugMessage("  -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
-               if( success && SCIPisCutViolated(scip, cutact, cutrhs) )
+               if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
                {
                   COL** cutcols;
                   Real* cutvals;
@@ -264,9 +264,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   }
                   cutnorm = SQRT(cutsqrnorm);
 
-                  if( SCIPisPositive(scip, cutnorm)
-                     && SCIPisFeasGT(scip, cutact, cutrhs)
-                     && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
+                  if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
                   {
                      ROW* cut;
                      char cutname[MAXSTRLEN];
@@ -275,38 +273,26 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
                                     (depth > 0), FALSE, sepadata->dynamiccuts) );
-#if 0
-                     debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
-                        cutname, cutact, cutrhs, cutnorm);
-                     debug(SCIPprintRow(scip, cut, NULL));
-#endif
 
                      /* try to scale the cut to integral values */
                      CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, &success) );
+                     if( success && !SCIPisCutEfficacious(scip, cut) )
+                     {
+                        debugMessage(" -> gomory cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+                        debug(SCIPprintRow(scip, cut, NULL));
+                        success = FALSE;
+                     }
 
                      /* if scaling was successful, add the cut */
                      if( success )
                      {
-                        cutact = SCIPgetRowLPActivity(scip, cut);
-                        cutrhs = SCIProwGetRhs(cut);
-                        cutnorm = SCIProwGetNorm(cut);
-                        if( SCIPisPositive(scip, cutnorm)
-                           && SCIPisFeasGT(scip, cutact, cutrhs)
-                           && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
-                        {
-                           debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, viol=%f\n",
-                              cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
-                           debug(SCIPprintRow(scip, cut, NULL));
-                           CHECK_OKAY( SCIPaddCut(scip, cut, (cutact-cutrhs)/cutnorm/(cutlen+1)) );
-                           *result = SCIP_SEPARATED;
-                           ncuts++;
-                        }
-                        else
-                        {
-                           debugMessage(" -> gomory cut <%s> no longer violated: act=%f, rhs=%f, norm=%f, viol=%f\n",
-                              cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
-                           debug(SCIPprintRow(scip, cut, NULL));
-                        }
+                        debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                           cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+                        debug(SCIPprintRow(scip, cut, NULL));
+                        CHECK_OKAY( SCIPaddCut(scip, cut, 1.0) );
+                        *result = SCIP_SEPARATED;
+                        ncuts++;
                      }
 
                      /* release the row */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.26 2004/07/01 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.27 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -59,6 +59,17 @@ void SCIPsolvePrintStopReason(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+/** applies domain propagation on current node */
+extern
+RETCODE SCIPpropagateDomains(
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
 /** main solving loop */

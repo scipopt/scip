@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.107 2004/09/01 16:53:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.108 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -445,10 +445,9 @@ RETCODE nodeAssignParent(
 {
    assert(node != NULL);
    assert(node->parent == NULL);
-   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD);
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
    assert(node->conssetchg == NULL);
    assert(node->domchg == NULL);
-   assert(node->data.child.arraypos == -1);
    assert(SCIPsetIsInfinity(set, -node->lowerbound)); /* node was just created */
    assert(memhdr != NULL);
    assert(set != NULL);
@@ -471,12 +470,15 @@ RETCODE nodeAssignParent(
    debugMessage("assigning parent %p to node %p in depth %d\n", parent, node, node->depth);
 
    /* register node in the childlist of the active (the parent) node */
-   CHECK_OKAY( treeEnsureChildrenMem(tree, set, tree->nchildren+1) );
-   tree->children[tree->nchildren] = node;
-   tree->childrenprio[tree->nchildren] = nodeselprio;
-   node->data.child.arraypos = tree->nchildren;
-
-   tree->nchildren++;
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
+   {
+      assert(node->data.child.arraypos == -1);
+      CHECK_OKAY( treeEnsureChildrenMem(tree, set, tree->nchildren+1) );
+      tree->children[tree->nchildren] = node;
+      tree->childrenprio[tree->nchildren] = nodeselprio;
+      node->data.child.arraypos = tree->nchildren;
+      tree->nchildren++;
+   }
 
    return SCIP_OKAY;
 }
@@ -510,17 +512,20 @@ RETCODE nodeReleaseParent(
          /* nothing to do here, because tree->nchildren is updated in treeRemoveChild() */
          hasChildren = TRUE; /* don't kill the active node at this point */
          break;
+      case SCIP_NODETYPE_PROBINGNODE:
+         errorMessage("probing node cannot be a parent node\n");
+         abort();
       case SCIP_NODETYPE_SIBLING:
-         errorMessage("Sibling cannot be a parent node\n");
+         errorMessage("sibling cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_CHILD:
-         errorMessage("Child cannot be a parent node\n");
+         errorMessage("child cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_LEAF:
-         errorMessage("Leaf cannot be a parent node\n");
+         errorMessage("leaf cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_DEADEND:
-         errorMessage("Deadend cannot be a parent node\n");
+         errorMessage("deadend cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction.nchildren > 0);
@@ -540,7 +545,7 @@ RETCODE nodeReleaseParent(
          hasChildren = (parent->data.subroot->nchildren > 0);
          break;
       default:
-         errorMessage("Unknown node type\n");
+         errorMessage("unknown node type\n");
          abort();
       }
 
@@ -554,8 +559,30 @@ RETCODE nodeReleaseParent(
    return SCIP_OKAY;
 }
 
+/** creates a node data structure */
+static
+RETCODE nodeCreate(
+   NODE**           node,               /**< pointer to node data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(node != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, node) );
+   (*node)->parent = NULL;
+   (*node)->conssetchg = NULL;
+   (*node)->domchg = NULL;
+   (*node)->lowerbound = -set->infinity;
+   (*node)->depth = 0;
+   (*node)->active = FALSE;
+   (*node)->cutoff = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** creates a child node of the active node */
-RETCODE SCIPnodeCreate(
+RETCODE SCIPnodeCreateChild(
    NODE**           node,               /**< pointer to node data structure */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -570,36 +597,58 @@ RETCODE SCIPnodeCreate(
    assert(stat != NULL);
    assert(tree != NULL);
    assert(tree->pathlen == 0 || tree->path != NULL);
+   assert((tree->pathlen == 0) == (tree->actnode == NULL));
+   assert(tree->actnode == NULL || tree->actnode == tree->path[tree->pathlen-1]);
+   assert(tree->actnode == NULL || SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
 
    stat->ncreatednodes++;
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, node) );
-   (*node)->parent = NULL;
-   (*node)->conssetchg = NULL;
-   (*node)->domchg = NULL;
-   (*node)->lowerbound = -set->infinity;
-   (*node)->depth = 0;
+   /* create the node data structure */
+   CHECK_OKAY( nodeCreate(node, memhdr, set) );
+
+   /* mark node to be a child node */
    (*node)->nodetype = SCIP_NODETYPE_CHILD; /*lint !e641*/
    (*node)->data.child.arraypos = -1;
-   (*node)->active = FALSE;
-   (*node)->cutoff = FALSE;
 
-   if( tree->pathlen > 0 )
-   {
-      assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_ACTNODE);
-      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->path[tree->pathlen-1], nodeselprio) );
-   }
-   else
-   {
-      /* we created the root node */
-      assert(tree->actnode == NULL);
-      CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, NULL, nodeselprio) );
-   }
+   /* make active node the parent of the new child */
+   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->actnode, nodeselprio) );
 
    /* output node creation to VBC file */
    CHECK_OKAY( SCIPvbcNewChild(stat->vbc, stat, *node) );
 
    debugMessage("created child node %p at depth %d\n", *node, (*node)->depth);
+
+   return SCIP_OKAY;
+}
+
+/** creates a probing child node of the active node */
+static
+RETCODE nodeCreateProbingNode(
+   NODE**           node,               /**< pointer to node data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(node != NULL);
+   assert(memhdr != NULL);
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->pathlen > 0);
+   assert(tree->actnode != NULL);
+   assert(tree->actnode == tree->path[tree->pathlen-1]);
+   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+
+   /* create the node data structure */
+   CHECK_OKAY( nodeCreate(node, memhdr, set) );
+
+   /* mark node to be a probing child node */
+   (*node)->nodetype = SCIP_NODETYPE_PROBINGNODE; /*lint !e641*/
+
+   /* make active node the parent of the new probing child node */
+   CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->actnode, 0.0) );
+
+   debugMessage("created probing child node %p at depth %d\n", *node, (*node)->depth);
 
    return SCIP_OKAY;
 }
@@ -664,6 +713,8 @@ RETCODE SCIPnodeFree(
    LP*              lp                  /**< current LP data */
    )
 {
+   Bool isroot;
+
    assert(node != NULL);
    assert(*node != NULL);
    assert(!(*node)->active);
@@ -671,16 +722,20 @@ RETCODE SCIPnodeFree(
    assert(tree != NULL);
 
    debugMessage("free node %p at depth %d of type %d\n", *node, (*node)->depth, SCIPnodeGetType(*node));
+
    /* free nodetype specific data, and release no longer needed LPI states */
    switch( SCIPnodeGetType(*node) )
    {
    case SCIP_NODETYPE_ACTNODE:
+      assert(tree->probingnode == NULL);
       if( tree->actlpfork != NULL )
       {
          assert(SCIPnodeGetType(tree->actlpfork) == SCIP_NODETYPE_FORK
             || SCIPnodeGetType(tree->actlpfork) == SCIP_NODETYPE_SUBROOT);
          CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
       }
+      break;
+   case SCIP_NODETYPE_PROBINGNODE:
       break;
    case SCIP_NODETYPE_SIBLING:
       assert((*node)->data.sibling.arraypos >= 0);
@@ -719,9 +774,12 @@ RETCODE SCIPnodeFree(
       CHECK_OKAY( subrootFree(&((*node)->data.subroot), memhdr, set, lp) );
       break;
    default:
-      errorMessage("Unknown node type\n");
+      errorMessage("unknown node type\n");
       abort();
    }
+
+   /* check, if the node to be freed is the root node */
+   isroot = ((*node)->depth == 0);
 
    /* free common data */
    CHECK_OKAY( SCIPconssetchgFree(&(*node)->conssetchg, memhdr, set) );
@@ -729,6 +787,10 @@ RETCODE SCIPnodeFree(
    CHECK_OKAY( nodeReleaseParent(*node, memhdr, set, tree, lp) );
 
    freeBlockMemory(memhdr, node);
+
+   /* delete the tree's root node pointer, if the freed node was the root */
+   if( isroot )
+      tree->root = NULL;
 
    return SCIP_OKAY;
 }
@@ -757,7 +819,7 @@ RETCODE nodeDeactivate(
    LP*              lp                  /**< current LP data */
    )
 {
-   Bool hasChildren = TRUE;
+   Bool hasChildren;
 
    assert(node != NULL);
    assert(*node != NULL);
@@ -778,6 +840,14 @@ RETCODE nodeDeactivate(
          errorMessage("Cannot deactivate active node with children\n");
          abort();
       }
+      else if( tree->probingnode != NULL )
+      {
+         errorMessage("Cannot deactivate active node while in probing mode\n");
+         abort();
+      }
+      hasChildren = FALSE;
+      break;
+   case SCIP_NODETYPE_PROBINGNODE:
       hasChildren = FALSE;
       break;
    case SCIP_NODETYPE_SIBLING:
@@ -804,7 +874,7 @@ RETCODE nodeDeactivate(
       hasChildren = ((*node)->data.subroot->nchildren > 0);
       break;
    default:
-      errorMessage("Unknown node type\n");
+      errorMessage("unknown node type\n");
       abort();
    }
 
@@ -880,7 +950,7 @@ RETCODE SCIPnodeDisableCons(
    return SCIP_OKAY;
 }
 
-/** adds bound change with inference information to active node, child or sibling of active node;
+/** adds bound change with inference information to active node, child of active node, or probing node;
  *  if possible, adjusts bound to integral value
  */
 RETCODE SCIPnodeAddBoundinfer(
@@ -896,7 +966,8 @@ RETCODE SCIPnodeAddBoundinfer(
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
-   int              inferinfo           /**< user information for inference to help resolving the conflict */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    )
 {
    VAR* infervar;
@@ -904,9 +975,13 @@ RETCODE SCIPnodeAddBoundinfer(
    Real oldbound;
 
    assert(node != NULL);
+   assert(node->nodetype == SCIP_NODETYPE_ACTNODE
+      || node->nodetype == SCIP_NODETYPE_PROBINGNODE
+      || node->nodetype == SCIP_NODETYPE_CHILD);
    assert(tree != NULL);
    assert(var != NULL);
-   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_ACTNODE || infercons == NULL);
+   assert(node->active || infercons == NULL);
+   assert(node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
    debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
       node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
@@ -960,6 +1035,7 @@ RETCODE SCIPnodeAddBoundinfer(
    if( node->depth == 0 )
    {
       assert(node->active);
+      assert(node->nodetype != SCIP_NODETYPE_PROBINGNODE);
 
       debugMessage(" -> bound change in root node: perform global bound change\n");
       CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
@@ -971,18 +1047,18 @@ RETCODE SCIPnodeAddBoundinfer(
       return SCIP_OKAY;
    }
 
-   /* if the node is a child:
+   /* if the node is a child, or the bound is a temporary probing bound
     *  - the bound change is a branching decision
     *  - the child's lower bound can be updated due to the changed pseudo solution
     * otherwise:
     *  - the bound change is an inference
     */
-   if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || probingchange )
    {
       Real newpseudoobjval;
       Real lpsolval;
 
-      assert(!node->active);
+      assert(!node->active || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
@@ -1007,7 +1083,7 @@ RETCODE SCIPnodeAddBoundinfer(
          newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
-      SCIPnodeUpdateLowerbound(node, newpseudoobjval);
+      SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
 
       /* update the branching history */
       CHECK_OKAY( SCIPvarIncNBranchings(var, stat, node->depth, 
@@ -1045,7 +1121,7 @@ RETCODE SCIPnodeAddBoundinfer(
    return SCIP_OKAY;
 }
 
-/** adds bound change to active node, child or sibling of active node; if possible, adjusts bound to integral value */
+/** adds bound change to active node, or child of active node; if possible, adjusts bound to integral value */
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1057,16 +1133,17 @@ RETCODE SCIPnodeAddBoundchg(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    )
 {
    CHECK_OKAY( SCIPnodeAddBoundinfer(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, newbound, boundtype,
-                  NULL, 0) );
+         NULL, 0, probingchange) );
 
    return SCIP_OKAY;
 }
 
-/** adds hole change to active node, child or sibling of active node */
+/** adds hole change to active node, or child of active node */
 RETCODE SCIPnodeAddHolechg(
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1078,6 +1155,9 @@ RETCODE SCIPnodeAddHolechg(
    )
 {
    assert(node != NULL);
+   assert(node->nodetype == SCIP_NODETYPE_ACTNODE
+      || node->nodetype == SCIP_NODETYPE_PROBINGNODE
+      || node->nodetype == SCIP_NODETYPE_CHILD);
 
    debugMessage("adding holechange at node in depth %d: changed pointer at %p from %p to %p\n",
       node->depth, ptr, newlist, oldlist);
@@ -1089,6 +1169,24 @@ RETCODE SCIPnodeAddHolechg(
    /**@todo apply hole change on active nodes and issue event */
 
    return SCIP_OKAY;
+}
+
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+void SCIPnodeUpdateLowerbound(
+   NODE*            node,               /**< node to update lower bound for */
+   STAT*            stat,               /**< problem statistics */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   )
+{
+   assert(node != NULL);
+   assert(stat != NULL);
+
+   if( newbound > node->lowerbound )
+   {
+      node->lowerbound = newbound;
+      if( node->depth == 0 )
+         stat->rootlowerbound = newbound;
+   }
 }
 
 
@@ -1128,18 +1226,18 @@ Real SCIPnodeGetLowerbound(
    return node->lowerbound;
 }
 
-/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
-void SCIPnodeUpdateLowerbound(
-   NODE*            node,               /**< node to update lower bound for */
-   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+/** returns whether node is in the path to the current node */
+Bool SCIPnodeIsActive(
+   NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
 
-   node->lowerbound = MAX(node->lowerbound, newbound);
+   return node->active;
 }
 
 #endif
+
 
 
 
@@ -1185,6 +1283,10 @@ void treeUpdatePathLPSize(
       switch( SCIPnodeGetType(node) )
       {
       case SCIP_NODETYPE_ACTNODE:
+         assert(i == tree->pathlen-1
+            || (i == tree->pathlen-2 && SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE));
+         break;
+      case SCIP_NODETYPE_PROBINGNODE:
          assert(i == tree->pathlen-1);
          break;
       case SCIP_NODETYPE_SIBLING:
@@ -1212,7 +1314,7 @@ void treeUpdatePathLPSize(
          nrows = node->data.subroot->nrows;
          break;
       default:
-         errorMessage("Unknown node type\n");
+         errorMessage("unknown node type\n");
          abort();
       }
       tree->pathnlpcols[i] = ncols;
@@ -1557,10 +1659,14 @@ void treeCheckPath(
          nrows = node->data.subroot->nrows;
          break;
       case SCIP_NODETYPE_ACTNODE:
+         assert(d == tree->pathlen-1
+            || (d == tree->pathlen-2 && SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE));
+         break;
+      case SCIP_NODETYPE_PROBINGNODE:
          assert(d == tree->pathlen-1);
          break;
       default:
-         errorMessage("node in depth %d on active path has to be of type FORK, SUBROOT, or ACTNODE, but is %d\n",
+         errorMessage("node in depth %d on active path has to be of type FORK, SUBROOT, ACTNODE, or PROBINGNODE, but is %d\n",
             d, SCIPnodeGetType(node));
          abort();
       }  /*lint !e788*/
@@ -1591,7 +1697,7 @@ RETCODE SCIPtreeLoadLP(
    assert(tree->pathlen > 0);
    assert(tree->actnode != NULL);
    assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
-   assert((int)(tree->actnode->depth) == tree->pathlen-1);
+   assert(SCIPnodeGetDepth(tree->actnode) == tree->pathlen-1);
    assert(tree->actnode == tree->path[tree->pathlen-1]);
    assert(memhdr != NULL);
    assert(set != NULL);
@@ -1781,6 +1887,7 @@ RETCODE actnodeToDeadend(
 {
    assert(memhdr != NULL);
    assert(tree != NULL);
+   assert(tree->probingnode == NULL);
    assert(tree->actnode != NULL);
    assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
    assert(tree->actnode->active);
@@ -1809,6 +1916,7 @@ RETCODE actnodeToJunction(
    )
 {
    assert(tree != NULL);
+   assert(tree->probingnode == NULL);
    assert(tree->actnode != NULL);
    assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
    assert(tree->actnode->active);
@@ -1849,6 +1957,7 @@ RETCODE actnodeToFork(
 
    assert(memhdr != NULL);
    assert(tree != NULL);
+   assert(tree->probingnode == NULL);
    assert(tree->actnode != NULL);
    assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
    assert(tree->actnode->active);
@@ -1871,7 +1980,14 @@ RETCODE actnodeToFork(
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
       {
+         debugMessage("resolving LP after cleanup\n");
          CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
+
+         /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
       }
    }
    assert(lp->flushed);
@@ -1954,6 +2070,7 @@ RETCODE actnodeToSubroot(
 
    assert(memhdr != NULL);
    assert(tree != NULL);
+   assert(tree->probingnode == NULL);
    assert(tree->actnode != NULL);
    assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
    assert(tree->actnode->active);
@@ -1985,6 +2102,12 @@ RETCODE actnodeToSubroot(
       if( !lp->solved || !lp->flushed )
       {
          CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
+
+         /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
+         if( lp->validsollp == stat->lpcount-1 )
+            lp->validsollp = stat->lpcount;
+         if( lp->validfarkaslp == stat->lpcount-1 )
+            lp->validfarkaslp = stat->lpcount;
       }
    }
    assert(lp->flushed);
@@ -2145,6 +2268,7 @@ RETCODE SCIPnodeActivate(
    assert(node == NULL || !node->active);
    assert(memhdr != NULL);
    assert(tree != NULL);
+   assert(tree->probingnode == NULL);
    assert(lp != NULL);
 
    /* remember the current LP fork, which is also the LP fork for the siblings of the old active node */
@@ -2301,6 +2425,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->actsubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;
+   (*tree)->probingnode = NULL;
    (*tree)->childrenprio = NULL;
    (*tree)->siblingsprio = NULL;
    (*tree)->pathnlpcols = NULL;
@@ -2316,7 +2441,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->cutoffdelayed = FALSE;
 
    /* create root node */
-   CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, stat, *tree, 0.0) );
+   CHECK_OKAY( SCIPnodeCreateChild(&(*tree)->root, memhdr, set, stat, *tree, 0.0) );
    assert((*tree)->nchildren == 1);
 
    /* move root to the queue, convert it to LEAF */
@@ -2414,7 +2539,7 @@ RETCODE SCIPtreeCutoff(
     * would modify the currently unavailable (due to diving modifications) LP
     *  -> the cutoff must be delayed and executed after the diving ends
     */
-   if( lp->diving )
+   if( SCIPlpDiving(lp) )
    {
       tree->cutoffdelayed = TRUE;
       return SCIP_OKAY;
@@ -2516,24 +2641,24 @@ RETCODE SCIPtreeBranchVar(
       if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), fixval-1);
-         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, rootsolval - solval) );
+         CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, rootsolval - solval) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                        var, fixval-1, SCIP_BOUNDTYPE_UPPER) );
+               var, fixval-1, SCIP_BOUNDTYPE_UPPER, FALSE) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       }
                   
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, set->infinity) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, set->infinity) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                        var, fixval, SCIP_BOUNDTYPE_LOWER) );
+               var, fixval, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
       if( !SCIPsetIsEQ(set, SCIPvarGetUbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                        var, fixval, SCIP_BOUNDTYPE_UPPER) );
+               var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
       }
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
@@ -2541,9 +2666,9 @@ RETCODE SCIPtreeBranchVar(
       if( SCIPsetIsLE(set, fixval+1, SCIPvarGetUbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), fixval+1);
-         CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, solval - rootsolval) );
+         CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, solval - rootsolval) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                        var, fixval+1, SCIP_BOUNDTYPE_LOWER) );
+               var, fixval+1, SCIP_BOUNDTYPE_LOWER, FALSE) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       }
    }
@@ -2558,21 +2683,100 @@ RETCODE SCIPtreeBranchVar(
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, rootsolval - solval) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, rootsolval - solval) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                     var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER) );
+            var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER, FALSE) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetCeil(set, solval));
-      CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, stat, tree, solval - rootsolval) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, solval - rootsolval) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
-                     var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER) );
+                     var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER, FALSE) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
    }
 
    return SCIP_OKAY;
 }
+
+/** switches to probing mode */
+RETCODE SCIPtreeStartProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingnode == NULL);
+   assert(tree->actnode != NULL);
+   assert(tree->pathlen >= 1);
+   assert(tree->path[tree->pathlen-1] == tree->actnode);
+   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+
+   /* create temporary node for probing */
+   CHECK_OKAY( nodeCreateProbingNode(&tree->probingnode, memhdr, set, tree) );
+   assert(tree->probingnode != NULL);
+   assert(SCIPnodeGetType(tree->probingnode) == SCIP_NODETYPE_PROBINGNODE);
+   assert(SCIPnodeGetDepth(tree->probingnode) == tree->pathlen);
+
+   /* create the new active path */
+   CHECK_OKAY( treeEnsurePathMem(tree, set, tree->pathlen+1) );
+   tree->probingnode->active = TRUE;
+   tree->path[tree->pathlen] = tree->probingnode;
+   tree->pathlen++;
+
+   /* count the new LP sizes of the path */
+   treeUpdatePathLPSize(tree, tree->pathlen-1);
+
+   return SCIP_OKAY;
+}
+
+/** switches back from probing to normal operation mode, restores bounds of all variables and restores active constraints
+ *  arrays of active node
+ */
+RETCODE SCIPtreeEndProbing(
+   TREE*            tree,               /**< branch and bound tree */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingnode != NULL);
+   assert(tree->actnode != NULL);
+   assert(tree->probingnode->parent == tree->actnode);
+   assert(SCIPnodeGetDepth(tree->probingnode) == SCIPnodeGetDepth(tree->actnode)+1);
+   assert(tree->pathlen >= 2);
+   assert(tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->path[tree->pathlen-2] == tree->actnode);
+   assert(SCIPnodeGetType(tree->probingnode) == SCIP_NODETYPE_PROBINGNODE);
+   assert(SCIPnodeGetType(tree->actnode) == SCIP_NODETYPE_ACTNODE);
+
+   /* undo the domain and constraint set changes of the temporary probing node */
+   debugMessage("end probing: undo domain changes in probing node\n");
+   CHECK_OKAY( SCIPdomchgUndo(tree->probingnode->domchg, memhdr, set, stat, lp, branchcand, eventqueue) );
+   debugMessage("end probing: undo constraint set changed in probing node\n");
+   CHECK_OKAY( SCIPconssetchgUndo(tree->probingnode->conssetchg, memhdr, set, stat) );
+
+   /* shrink active path to the old active node and deactivate the probing node */
+   CHECK_OKAY( treeShrinkPath(tree, memhdr, set, lp, tree->actnode->depth) );
+   assert(tree->pathlen == tree->actnode->depth+1);
+
+   /* forget the probing node (it was already freed in treeShrinkPath()) */
+   tree->probingnode = NULL;
+
+   return SCIP_OKAY;
+}
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
 
 /** gets number of leaves */
 int SCIPtreeGetNLeaves(
@@ -2593,6 +2797,103 @@ int SCIPtreeGetNNodes(
 
    return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree);
 }
+
+/** gets active node of the tree */
+NODE* SCIPtreeGetActiveNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->actnode;
+}
+
+/** gets depth of active node in the tree */
+int SCIPtreeGetActiveDepth(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+
+   return tree->actnode != NULL ? tree->actnode->depth : -1;
+}
+
+/** returns, whether the LP was or is to be solved in the active node */
+Bool SCIPtreeHasActiveNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->actnodehaslp;
+}
+
+/** sets mark to solve or to ignore the LP while processing the active node */
+void SCIPtreeSetActiveNodeLP(
+   TREE*            tree,               /**< branch and bound tree */
+   Bool             solvelp             /**< should the LP be solved in active node? */
+   )
+{
+   assert(tree != NULL);
+
+   tree->actnodehaslp = solvelp;
+}
+
+/** gets current node of the tree */
+NODE* SCIPtreeGetCurrentNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->probingnode != NULL ? tree->probingnode : SCIPtreeGetActiveNode(tree);
+}
+
+/** gets depth of current node in the tree */
+int SCIPtreeGetCurrentDepth(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->probingnode != NULL ? tree->probingnode->depth : SCIPtreeGetActiveDepth(tree);
+}
+
+/** returns, whether the LP was or is to be solved in the current node */
+Bool SCIPtreeHasCurrentNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->probingnode != NULL ? FALSE : SCIPtreeHasActiveNodeLP(tree);
+}
+
+/** returns whether the current node is a temporary probing node */
+Bool SCIPtreeProbing(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
+
+   return (tree->probingnode != NULL);
+}
+
+/** returns the temporary probing node, or NULL if the current node is not the probing node */
+NODE* SCIPtreeGetProbingNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
+
+   return tree->probingnode;
+}
+
+#endif
+
 
 /** gets the best child of the active node w.r.t. the node selection priority assigned by the branching rule */
 NODE* SCIPtreeGetPrioChild(

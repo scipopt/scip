@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.31 2004/08/06 08:18:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.32 2004/09/07 18:22:17 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -468,7 +468,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActNodeLP(scip));
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 

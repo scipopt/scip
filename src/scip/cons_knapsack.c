@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.61 2004/08/24 11:57:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.62 2004/09/07 18:22:15 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -372,7 +372,7 @@ RETCODE addRelaxation(
    debugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
    debug( SCIProwPrint(consdata->row, NULL) );
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(SCIProwGetNNonz(consdata->row)+1)) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
 
    return SCIP_OKAY;
 }
@@ -821,7 +821,8 @@ RETCODE SCIPseparateKnapsackCardinality(
                covervars, noncovervars, ncovervars, nnoncovervars, ncovervars, &liftlpval) );
          
          /* check, if lifting yielded a violated cut */
-         if( SCIPisFeasNegative(scip, (ncovervars - activity - liftlpval)/sqrt(ncovervars + 1.0)) )
+         assert(ncovervars >= 1);
+         if( SCIPisEfficacious(scip, (activity + liftlpval - ncovervars)/sqrt(ncovervars)) )
          {
             ROW* row;
             Real cutnorm;
@@ -854,14 +855,12 @@ RETCODE SCIPseparateKnapsackCardinality(
             CHECK_OKAY( SCIPflushRowExtensions(scip, row) );
             
             /* check, if cut is violated enough */
-            cutnorm = SCIProwGetNorm(row);
-            cutfeas = SCIPgetRowLPFeasibility(scip, row);
-            if( SCIPisFeasNegative(scip, cutfeas/cutnorm) )
+            if( SCIPisCutEfficacious(scip, row) )
             {         
                debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
                debug(SCIProwPrint(row, NULL));
                CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-               CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
+               CHECK_OKAY( SCIPaddCut(scip, row, 1.0) );
                (*ncuts)++;
             }
             CHECK_OKAY( SCIPreleaseRow(scip, &row) );

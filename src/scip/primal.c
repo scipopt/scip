@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.44 2004/08/24 12:50:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.45 2004/09/07 18:22:18 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -472,7 +472,7 @@ RETCODE primalAddSol(
       insertpos, primal->nsols, primal->nsolsfound);
    
    /* change color of node in VBC output */
-   SCIPvbcFoundSolution(stat->vbc, stat, tree->actnode);
+   SCIPvbcFoundSolution(stat->vbc, stat, SCIPtreeGetCurrentNode(tree));
 
    /* check, if the global upper bound has to be updated */
    obj = SCIPsolGetObj(sol);
@@ -652,7 +652,7 @@ RETCODE SCIPprimalTrySol(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, tree->actnode == NULL ? -1 : tree->actnode->depth,
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree),
             checkintegrality, checklprows, &feasible) );
    }
    else
@@ -709,7 +709,7 @@ RETCODE SCIPprimalTrySolFree(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, tree->actnode == NULL ? -1 : tree->actnode->depth,
+      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree),
             checkintegrality, checklprows, &feasible) );
    }
    else

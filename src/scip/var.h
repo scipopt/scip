@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.73 2004/08/25 14:56:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.74 2004/09/07 18:22:22 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -325,6 +325,13 @@ RETCODE SCIPvarNegate(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR**            negvar              /**< pointer to store the negated variable */
+   );
+
+/** informs variable that its position in problem's vars array changed */
+extern
+void SCIPvarSetProbindex(
+   VAR*             var,                /**< problem variable */
+   int              probindex           /**< new problem index of variable */
    );
 
 /** changes type of variable; cannot be called, if var belongs to a problem */

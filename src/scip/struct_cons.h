@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.19 2004/08/24 11:58:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.20 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -63,8 +63,8 @@ struct Cons
    unsigned int     modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
    unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
-   unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
-   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
+   unsigned int     active:1;           /**< TRUE iff constraint is active in the current node */
+   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int     deleted:1;          /**< TRUE iff constraint was globally deleted */
    unsigned int     update:1;           /**< TRUE iff constraint has to be updated in update phase */

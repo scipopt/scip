@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.7 2004/08/10 15:00:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.8 2004/09/07 18:22:14 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -410,7 +410,7 @@ DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPhasActNodeLP(scip) )
+   if( SCIPhasCurrentNodeLP(scip) )
    {
       CHECK_OKAY( branch(scip, branchrule, result) );
    }

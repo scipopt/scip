@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.46 2004/07/09 08:11:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.47 2004/09/07 18:22:14 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -870,7 +870,7 @@ RETCODE SCIPbranchruleExecLPSol(
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexeclp != NULL
-      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPnodeGetDepth(tree->actnode)) )
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
    {
       Longint oldndomchgs;
       int oldncutsfound;
@@ -937,7 +937,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
 
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecps != NULL
-      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPnodeGetDepth(tree->actnode)) )
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
    {
       Longint oldndomchgs;
 

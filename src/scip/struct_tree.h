@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.11 2004/08/25 14:56:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.12 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -102,8 +102,8 @@ struct Node
    CONSSETCHG*      conssetchg;         /**< constraint set changes at this node or NULL */
    DOMCHG*          domchg;             /**< domain changes at this node or NULL */
    unsigned int     depth:16;           /**< depth in the tree */
-   unsigned int     nodetype:3;         /**< type of node */
-   unsigned int     active:1;           /**< is node in the path to the current active node? */
+   unsigned int     nodetype:4;         /**< type of node */
+   unsigned int     active:1;           /**< is node in the path to the current node? */
    unsigned int     cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
 };
 
@@ -113,11 +113,12 @@ struct Tree
    NODE*            root;               /**< root node of the tree */
    NODEPQ*          leaves;             /**< leaves of the tree */
    NODE**           path;               /**< array of fork/subtree nodes storing the active path from root to leaf */
-   NODE*            actnode;            /**< currently active node */
+   NODE*            actnode;            /**< active node */
    NODE*            actlpfork;          /**< fork/subroot node defining the LP state of the active node */
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
    NODE**           siblings;           /**< array with siblings of the active node */
+   NODE*            probingnode;        /**< temporary probing child node, or NULL if current node is the active node */
    Real*            childrenprio;       /**< array with node selection priorities of children */
    Real*            siblingsprio;       /**< array with node selection priorities of children */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
@@ -130,7 +131,7 @@ struct Tree
    int              pathlen;            /**< length of the current path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
-   Bool             actnodehaslp;       /**< is LP being processed in the currently active node? */
+   Bool             actnodehaslp;       /**< is LP being processed in the active node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
 

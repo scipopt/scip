@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.107 2004/08/31 14:42:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.108 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -117,6 +117,11 @@
 
 #define SCIP_DEFAULT_MAXSEPACUTS        100 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_MAXSEPACUTSROOT   2000 /**< maximal separated cuts at the root node */
+#define SCIP_DEFAULT_MINCUTEFFICACY    0.05 /**< minimal efficacy for a cut to enter the LP */
+#define SCIP_DEFAULT_MINCUTEFFICACYROOT 0.01 /**< minimal efficacy for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_MINCUTORTHO        0.5 /**< minimal orthogonality for a cut to enter the LP */
+#define SCIP_DEFAULT_MINCUTORTHOROOT    0.5 /**< minimal orthogonality for a cut to enter the LP in the root node */
+#define SCIP_DEFAULT_CUTORTHOFAC        1.0 /**< factor to scale orthogonality of cut in separation score calculation */
 #define SCIP_DEFAULT_CUTAGELIMIT        100 /**< maximum age a cut can reach before it is deleted from global pool, or -1 */
 #define SCIP_DEFAULT_CLEANUPROWS       TRUE /**< should new basic rows be removed after LP solving? */
 
@@ -352,16 +357,6 @@ RETCODE SCIPsetCreate(
          &(*set)->boundstreps, SCIP_DEFAULT_BOUNDSTREPS, machineeps*1e+03, SCIP_INVALID/10.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/cutvioleps",
-         "epsilon for deciding if a cut is violated",
-         &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-         "numerics/cutviolepsroot",
-         "epsilon for deciding if a cut is violated in the root node",
-         &(*set)->cutviolepsroot, 0.05*SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
-         NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
          "numerics/pseudocosteps",
          "minimal variable distance value to use for branching pseudo cost updates",
          &(*set)->pseudocosteps, SCIP_DEFAULT_PSEUDOCOSTEPS, machineeps*1e+03, 1.0,
@@ -465,6 +460,31 @@ RETCODE SCIPsetCreate(
          "separating/maxsepacutsroot",
          "maximal number of separated cuts at the root node (0: disable root node separation)",
          &(*set)->maxsepacutsroot, SCIP_DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/mincutefficacy",
+         "minimal efficacy for a cut to enter the LP",
+         &(*set)->mincutefficacy, SCIP_DEFAULT_MINCUTEFFICACY, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/mincutefficacyroot",
+         "minimal efficacy for a cut to enter the LP in the root node",
+         &(*set)->mincutefficacyroot, SCIP_DEFAULT_MINCUTEFFICACYROOT, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/mincutortho",
+         "minimal orthogonality for a cut to enter the LP",
+         &(*set)->mincutortho, SCIP_DEFAULT_MINCUTORTHO, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/mincutorthoroot",
+         "minimal orthogonality for a cut to enter the LP in the root node",
+         &(*set)->mincutorthoroot, SCIP_DEFAULT_MINCUTORTHOROOT, 0.0, 1.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+         "separating/cutorthofac",
+         "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
+         &(*set)->cutorthofac, SCIP_DEFAULT_CUTORTHOFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/cutagelimit",
@@ -2293,22 +2313,19 @@ Bool SCIPsetIsUbBetter(
    return EPSLT(ub1, ub2, set->boundstreps);
 }
 
-/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
- *  both, the activity and the rhs, should be normed
- */
-Bool SCIPsetIsCutViolated(
+/** checks, if the given cut's efficacy is larger than the minimal cut efficacy */
+Bool SCIPsetIsEfficacious(
    SET*             set,                /**< global SCIP settings */
-   Bool             root,               /**< should the root's cutvioleps be used? */
-   Real             cutactivity,        /**< activity of the cut */
-   Real             cutrhs              /**< right hand side value of the cut */
+   Bool             root,               /**< should the root's minimal cut efficacy be used? */
+   Real             efficacy            /**< efficacy of the cut */
    )
 {
    assert(set != NULL);
 
    if( root )
-      return EPSGT(cutactivity, cutrhs, set->cutviolepsroot);
+      return EPSP(efficacy, set->mincutefficacyroot);
    else
-      return EPSGT(cutactivity, cutrhs, set->cutvioleps);
+      return EPSP(efficacy, set->mincutefficacy);
 }
 
 /** checks, if relative difference of values is in range of epsilon */

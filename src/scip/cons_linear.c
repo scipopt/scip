@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.115 2004/08/26 08:32:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.116 2004/09/07 18:22:15 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1203,7 +1203,7 @@ Real consdataGetActivity(
 
    assert(consdata != NULL);
 
-   if( sol == NULL && !SCIPhasActNodeLP(scip) )
+   if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
    {
       /* for performance reasons, the pseudo activity is updated with each bound change, so we don't have to
        * recalculate it
@@ -2363,7 +2363,6 @@ RETCODE checkCons(
    CONS*            cons,               /**< linear constraint */
    SOL*             sol,                /**< solution to be checked, or NULL for current solution */
    Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
-   Real*            violation,          /**< pointer to store the constraint's violation, or NULL */
    Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -2384,7 +2383,7 @@ RETCODE checkCons(
    {
       if( !checklprows && SCIProwIsInLP(consdata->row) )
          return SCIP_OKAY;
-      else if( sol == NULL && !SCIPhasActNodeLP(scip) )
+      else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          feasibility = consdataGetPseudoFeasibility(scip, consdata);
       else
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
@@ -2392,9 +2391,9 @@ RETCODE checkCons(
    else
       feasibility = consdataGetFeasibility(scip, consdata, sol);
    
-   debugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hasactnodelp=%d)\n",
+   debugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
       feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
-      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasActNodeLP(scip));
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasCurrentNodeLP(scip));
 
    if( SCIPisFeasible(scip, feasibility) )
    {
@@ -2407,9 +2406,6 @@ RETCODE checkCons(
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
    }
 
-   if( violation != NULL )
-      *violation = -feasibility;
-   
    return SCIP_OKAY;
 }
 
@@ -2439,8 +2435,7 @@ RETCODE createRow(
 static
 RETCODE addRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< linear constraint */
-   Real             violation           /**< absolute violation of the constraint */
+   CONS*            cons                /**< linear constraint */
    )
 {
    CONSDATA* consdata;
@@ -2457,8 +2452,7 @@ RETCODE addRelaxation(
    assert(!SCIProwIsInLP(consdata->row));
    
    /* insert LP row as cut */
-   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 
-         violation/SCIProwGetNorm(consdata->row)/(SCIProwGetNNonz(consdata->row)+1)) );
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0) );
 
    return SCIP_OKAY;
 }
@@ -2704,7 +2698,6 @@ RETCODE separateCons(
    )
 {
    CONSDATA* consdata;
-   Real violation;
    Bool violated;
    int oldncuts;
 
@@ -2715,12 +2708,12 @@ RETCODE separateCons(
 
    oldncuts = *ncuts;
 
-   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violation, &violated) );
+   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violated) );
 
    if( violated )
    {
       /* insert LP row as cut */
-      CHECK_OKAY( addRelaxation(scip, cons, violation) );
+      CHECK_OKAY( addRelaxation(scip, cons) );
       (*ncuts)++;
    }
    else if( !SCIPconsIsModifiable(cons) )
@@ -3089,7 +3082,7 @@ DECL_CONSINITLP(consInitlpLinear)
    {
       if( SCIPconsIsInitial(conss[c]) )
       {
-         CHECK_OKAY( addRelaxation(scip, conss[c], 0.0) );
+         CHECK_OKAY( addRelaxation(scip, conss[c]) );
       }
    }
 
@@ -3155,7 +3148,6 @@ static
 DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
-   Real violation;
    Bool violated;
    int c;
 
@@ -3176,12 +3168,12 @@ DECL_CONSENFOLP(consEnfolpLinear)
    /* check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violation, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violated) );
       
       if( violated )
       {
          /* insert LP row as cut */
-         CHECK_OKAY( addRelaxation(scip, conss[c], violation) );
+         CHECK_OKAY( addRelaxation(scip, conss[c]) );
          *result = SCIP_SEPARATED;
       }
    }
@@ -3189,12 +3181,12 @@ DECL_CONSENFOLP(consEnfolpLinear)
    /* check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violation, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, FALSE, &violated) );
 
       if( violated )
       {
          /* insert LP row as cut */
-         CHECK_OKAY( addRelaxation(scip, conss[c], violation) );
+         CHECK_OKAY( addRelaxation(scip, conss[c]) );
          *result = SCIP_SEPARATED;
       }
    }
@@ -3227,7 +3219,7 @@ DECL_CONSENFOPS(consEnfopsLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      CHECK_OKAY( checkCons(scip, conss[c], NULL, TRUE, NULL, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, TRUE, &violated) );
    }
 
    if( violated )
@@ -3256,7 +3248,7 @@ DECL_CONSCHECK(consCheckLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      CHECK_OKAY( checkCons(scip, conss[c], sol, checklprows, NULL, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], sol, checklprows, &violated) );
    }
 
    if( violated )

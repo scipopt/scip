@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.25 2004/08/31 13:09:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.26 2004/09/07 18:22:21 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -56,8 +56,6 @@ struct Set
    Real             feastol;            /**< feasibility tolerance for constraints */
    Real             dualfeastol;        /**< feasibility tolerance for reduced costs */
    Real             boundstreps;        /**< minimal improve for strengthening bounds */
-   Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
-   Real             cutviolepsroot;     /**< epsilon for deciding if a cut is violated in the root node */
    Real             pseudocosteps;      /**< minimal variable distance value to use for pseudo cost updates */
    Real             pseudocostdelta;    /**< minimal objective distance value to use for pseudo cost updates */
    Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
@@ -66,6 +64,11 @@ struct Set
    Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
    Real             presolabortfac;     /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    Real             abortpricevarsfac;  /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+   Real             mincutefficacy;     /**< minimal efficacy for a cut to enter the LP */
+   Real             mincutefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
+   Real             mincutortho;        /**< minimal orthogonality for a cut to enter the LP */
+   Real             mincutorthoroot;    /**< minimal orthogonality for a cut to enter the LP in the root node */
+   Real             cutorthofac;        /**< factor to scale orthogonality of cut in separation score calculation */
    Real             maxconfvarsfac;     /**< maximal fraction of binary variables involved in a conflict clause */
    Real             timelimit;          /**< maximal time in seconds to run */
    Real             memlimit;           /**< maximal memory usage in MB */

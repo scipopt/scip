@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.46 2004/08/12 14:31:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.47 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -194,6 +194,7 @@ void SCIPstatResetCurrentRun(
 {
    assert(stat != NULL);
 
+   stat->rootlowerbound = REAL_MIN;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
    stat->nnodes = 0;

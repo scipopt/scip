@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.1 2004/07/14 14:05:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.2 2004/09/07 18:22:17 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -194,7 +194,7 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasActNodeLP(scip));
+   assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
 

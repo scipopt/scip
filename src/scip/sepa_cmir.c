@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.16 2004/09/01 16:53:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.17 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -40,7 +40,7 @@
 #define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXAGGRS              4 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per round in the root node */
-#define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
 #define DEFAULT_MINVIOLATION        0.2 /**< min. violation of unscaled c-MIR cut to be used */
 #define DEFAULT_MAXSLACK            0.1 /**< max. slack of rows to be used */
 #define DEFAULT_SLACKSCORE         1e-3 /**< weight of slack in the aggregation scoring of the rows */
@@ -139,9 +139,7 @@ RETCODE addCut(
    }
    cutnorm = SQRT(cutsqrnorm);
    
-   if( SCIPisPositive(scip, cutnorm)
-      && SCIPisFeasGT(scip, cutact, cutrhs)
-      && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
+   if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
    {
       ROW* cut;
       char cutname[MAXSTRLEN];
@@ -151,43 +149,19 @@ RETCODE addCut(
       CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
             (SCIPgetDepth(scip) > 0), FALSE, sepadata->dynamiccuts) );
 
-      debugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f\n",
-         cutname, cutact, cutrhs, cutnorm);
+      debugMessage(" -> found potential c-mir cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
+         cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
       debug(SCIPprintRow(scip, cut, NULL));
       
-#if 0 /*????????????????????*/
+#if 0
+      /* try to scale the cut to integral values */
+      CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, 1000, 10000.0, &success) );
+      if( success && !SCIPisCutEfficacious(scip, cut) )
       {
-         Longint maxdnom;
-         Real maxscale;
-         int maxdepth;
-         int depth;
-
-         /**@todo find better c-MIR cut settings */
-         depth = SCIPgetDepth(scip);
-         maxdepth = SCIPgetMaxDepth(scip);
-         if( depth == 0 )
-         {
-            maxdnom = 1000000;
-            maxscale = 10000000.0;
-         }
-         else if( depth <= maxdepth/4 )
-         {
-            maxdnom = 100;
-            maxscale = 1000.0;
-         }
-         else if( depth <= maxdepth/2 )
-         {
-            maxdnom = 10;
-            maxscale = 100.0;
-         }
-         else
-         {
-            maxdnom = 1;
-            maxscale = 10.0;
-         }
-
-         /* try to scale the cut to integral values */
-         CHECK_OKAY( SCIPmakeRowIntegral(scip, cut, maxdnom, maxscale, &success) );
+         debugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+         debug(SCIPprintRow(scip, cut, NULL));
+         success = FALSE;
       }
 #else
       success = TRUE;
@@ -196,25 +170,11 @@ RETCODE addCut(
       /* if scaling was successful, add the cut */
       if( success )
       {
-         cutact = SCIPgetRowLPActivity(scip, cut);
-         cutrhs = SCIProwGetRhs(cut);
-         cutnorm = SCIProwGetNorm(cut);
-         if( SCIPisPositive(scip, cutnorm)
-            && SCIPisFeasGT(scip, cutact, cutrhs)
-            && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
-         {
-            debugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, viol=%f\n",
-               cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
-            debug(SCIPprintRow(scip, cut, NULL));
-            CHECK_OKAY( SCIPaddCut(scip, cut, (cutact-cutrhs)/cutnorm/(cutlen+1)) );
-            (*ncuts)++;
-         }
-         else
-         {
-            debugMessage(" -> c-mir cut <%s> no longer violated: act=%f, rhs=%f, norm=%f, viol=%f\n",
-               cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
-            debug(SCIPprintRow(scip, cut, NULL));
-         }
+         debugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
+            cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut));
+         debug(SCIPprintRow(scip, cut, NULL));
+         CHECK_OKAY( SCIPaddCut(scip, cut, 1.0) );
+         (*ncuts)++;
       }
       
       /* release the row */

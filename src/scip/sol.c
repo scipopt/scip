@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.40 2004/08/10 14:19:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.41 2004/09/07 18:22:20 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -212,7 +212,7 @@ void solStamp(
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
-   sol->depth = (tree != NULL && tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
+   sol->depth = (tree == NULL ? -1 : SCIPtreeGetCurrentDepth(tree));
 }
 
 /** creates primal CIP solution, initialized to zero */
@@ -329,7 +329,7 @@ RETCODE SCIPsolCreateCurrentSol(
 {
    assert(tree != NULL);
 
-   if( tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(tree) )
    {
       CHECK_OKAY( SCIPsolCreateLPSol(sol, memhdr, set, stat, primal, tree, lp, heur) );
    }
@@ -376,7 +376,7 @@ RETCODE SCIPsolLinkLPSol(
    assert(tree != NULL);
    assert(lp != NULL);
    assert(lp->solved);
-   assert(lp->diving || !lp->divingobjchg);
+   assert(SCIPlpDiving(lp) || !SCIPlpDivingObjChanged(lp));
 
    debugMessage("linking solution to LP\n");
 
@@ -384,7 +384,7 @@ RETCODE SCIPsolLinkLPSol(
    CHECK_OKAY( solClearArrays(sol) );
 
    /* link solution to LP solution */
-   if( lp->divingobjchg )
+   if( SCIPlpDivingObjChanged(lp) )
    {
       /* the objective value has to be calculated manually, because the LP's value is invalid;
        * use objective values of variables, because columns objective values are changed to dive values
@@ -462,7 +462,7 @@ RETCODE SCIPsolLinkCurrentSol(
 
    debugMessage("linking solution to current solution\n");
 
-   if( tree->actnodehaslp )
+   if( SCIPtreeHasCurrentNodeLP(tree) )
    {
       CHECK_OKAY( SCIPsolLinkLPSol(sol, memhdr, set, stat, tree, lp) );
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.91 2004/08/24 11:57:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.92 2004/09/07 18:22:14 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1668,7 +1668,6 @@ RETCODE SCIPconshdlrEnforceLPSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert(tree->actnode != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
@@ -1746,7 +1745,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          SCIPclockStop(conshdlr->enfolptime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, tree->actnode->depth) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree)) );
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -1806,7 +1805,6 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert(tree->actnode != NULL);
    assert(tree->nchildren == 0);
    assert(result != NULL);
 
@@ -1880,7 +1878,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIPclockStop(conshdlr->enfopstime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, tree->actnode->depth) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree)) );
 
          /* evaluate result */
          if( *result != SCIP_DIDNOTRUN

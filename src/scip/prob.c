@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.54 2004/08/10 14:19:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.55 2004/09/07 18:22:19 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -227,7 +227,7 @@ RETCODE SCIPprobFree(
    for( v = 0; v < (*prob)->nvars; ++v )
    {
       assert((*prob)->vars[v]->probindex >= 0);
-      (*prob)->vars[v]->probindex = -1;
+      SCIPvarSetProbindex((*prob)->vars[v], -1);
       CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp) );
    }
    freeMemoryArrayNull(&(*prob)->vars);
@@ -368,7 +368,7 @@ void probInsertVar(
       if( insertpos > contstart )
       {
          prob->vars[insertpos] = prob->vars[contstart];
-         prob->vars[insertpos]->probindex = insertpos;
+         SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
          insertpos = contstart;
       }
       assert(insertpos == contstart);
@@ -380,7 +380,7 @@ void probInsertVar(
          if( insertpos > implstart )
          {
             prob->vars[insertpos] = prob->vars[implstart];
-            prob->vars[insertpos]->probindex = insertpos;
+            SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
             insertpos = implstart;
          }
          assert(insertpos == implstart);
@@ -393,7 +393,7 @@ void probInsertVar(
             if( insertpos > intstart )
             {
                prob->vars[insertpos] = prob->vars[intstart];
-               prob->vars[insertpos]->probindex = insertpos;
+               SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
                insertpos = intstart;
             }
             assert(insertpos == intstart);
@@ -412,7 +412,7 @@ void probInsertVar(
          && insertpos == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars - 1));
 
    prob->vars[insertpos] = var;
-   var->probindex = insertpos;
+   SCIPvarSetProbindex(var, insertpos);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -471,34 +471,34 @@ void probRemoveVar(
    {
       /* move last binary variable to free slot */
       prob->vars[freepos] = prob->vars[intstart-1];
-      prob->vars[freepos]->probindex = freepos;
+      SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = intstart-1;
    }
    if( freepos < implstart-1 )
    {
       /* move last integer variable to free slot */
       prob->vars[freepos] = prob->vars[implstart-1];
-      prob->vars[freepos]->probindex = freepos;
+      SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = implstart-1;
    }
    if( freepos < contstart-1 )
    {
       /* move last implicit integer variable to free slot */
       prob->vars[freepos] = prob->vars[contstart-1];
-      prob->vars[freepos]->probindex = freepos;
+      SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = contstart-1;
    }
    if( freepos < prob->nvars-1 )
    {
       /* move last implicit integer variable to free slot */
       prob->vars[freepos] = prob->vars[prob->nvars-1];
-      prob->vars[freepos]->probindex = freepos;
+      SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = prob->nvars-1;
    }
    assert(freepos == prob->nvars-1);
 
    prob->nvars--;
-   var->probindex = -1;
+   SCIPvarSetProbindex(var, -1);
 
    assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
 
