@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.126 2004/12/06 14:11:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.127 2004/12/07 14:36:28 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -39,6 +39,7 @@
 #include "primal.h"
 #include "scip.h"
 #include "cons.h"
+
 
 
 
@@ -4154,6 +4155,7 @@ RETCODE varProcessChgUbGlobal(
       switch( SCIPvarGetStatus(parentvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
+         /* do not change bounds across the border between transformed and original problem */
          break;
          
       case SCIP_VARSTATUS_COLUMN:

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.35 2004/11/01 13:48:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.36 2004/12/07 14:36:28 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1509,7 +1509,24 @@ RETCODE SCIPlpiGetBasisFeasibility(
    return SCIP_OKAY;
 }
 
-/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the primal ray
+ */
+Bool SCIPlpiExistsPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiExistsPrimalRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+}
+
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
+ *  and the solver knows and can return the primal ray
+ */
 Bool SCIPlpiHasPrimalRay(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1565,7 +1582,24 @@ Bool SCIPlpiIsPrimalFeasible(
    return (basestatus == SPxBasis::PRIMAL || basestatus == SPxBasis::OPTIMAL);
 }
 
-/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the dual ray
+ */
+Bool SCIPlpiExistsDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiExistsDualRay()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE);
+}
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
+ *  and the solver knows and can return the dual ray
+ */
 Bool SCIPlpiHasDualRay(
    LPI*             lpi                 /**< LP interface structure */
    )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.75 2004/10/20 15:52:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.76 2004/12/07 14:36:27 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2163,8 +2163,10 @@ RETCODE SCIPlpiGetBasisFeasibility(
    return SCIP_OKAY;
 }
 
-/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
-Bool SCIPlpiHasPrimalRay(
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the primal ray
+ */
+Bool SCIPlpiExistsPrimalRay(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -2174,6 +2176,21 @@ Bool SCIPlpiHasPrimalRay(
    assert(lpi->solstat >= 0);
 
    return (lpi->solstat == CPX_STAT_UNBOUNDED);
+}
+
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
+ *  and the solver knows and can return the primal ray
+ */
+Bool SCIPlpiHasPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   return (lpi->solstat == CPX_STAT_UNBOUNDED && CPXgetmethod(cpxenv, lpi->cpxlp) == CPX_ALG_PRIMAL);
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -2238,8 +2255,10 @@ Bool SCIPlpiIsPrimalFeasible(
    return primalfeasible;
 }
 
-/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
-Bool SCIPlpiHasDualRay(
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the dual ray
+ */
+Bool SCIPlpiExistsDualRay(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -2249,6 +2268,21 @@ Bool SCIPlpiHasDualRay(
    assert(lpi->solstat >= 0);
 
    return (lpi->solstat == CPX_STAT_INFEASIBLE);
+}
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
+ *  and the solver knows and can return the dual ray
+ */
+Bool SCIPlpiHasDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   return (lpi->solstat == CPX_STAT_UNBOUNDED && CPXgetmethod(cpxenv, lpi->cpxlp) == CPX_ALG_DUAL);
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */

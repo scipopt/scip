@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.164 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.165 2004/12/07 14:36:27 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9107,7 +9107,7 @@ RETCODE lpSolve(
       lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
       lp->lpobjval = SCIPsetInfinity(set);
    }
-   else if( SCIPlpiHasPrimalRay(lp->lpi) )
+   else if( SCIPlpiExistsPrimalRay(lp->lpi) )
    {
       lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
       lp->lpobjval = -SCIPsetInfinity(set);

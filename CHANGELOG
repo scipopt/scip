@@ -19,6 +19,10 @@ interface:
 - new methods SCIPgetRealarrayMinIdx(), SCIPgetRealarrayMaxIdx(), SCIPgetIntarrayMinIdx(), SCIPgetIntarrayMaxIdx(),
   SCIPgetBoolarrayMinIdx(), SCIPgetBoolarrayMaxIdx(), SCIPgetPtrarrayMinIdx(), and SCIPgetPtrarrayMaxIdx()
 - new methods SCIPbsortPtrInt(), and SCIPbsortPtrIntInt()
+- in LPI, the semantics of SCIPlpiHasPrimalRay() and SCIPlpiHasDualRay() changed:
+  methods return TRUE, if a ray exists and the solver can return it;
+  new methods SCIPlpiExistsPrimalRay() and SCIPlpiExistsDualRay() check whether a ray exists without checking, if
+  the solver knows and can return the ray
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

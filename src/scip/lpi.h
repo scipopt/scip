@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.44 2004/10/20 15:52:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.45 2004/12/07 14:36:27 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -405,8 +405,18 @@ RETCODE SCIPlpiGetBasisFeasibility(
    Bool*            dualfeasible        /**< stores dual feasibility status */
    );
 
-/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
-extern 
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the primal ray
+ */
+extern
+Bool SCIPlpiExistsPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
+ *  and the solver knows and can return the primal ray
+ */
+extern
 Bool SCIPlpiHasPrimalRay(
    LPI*             lpi                 /**< LP interface structure */
    );
@@ -429,8 +439,18 @@ Bool SCIPlpiIsPrimalFeasible(
    LPI*             lpi                 /**< LP interface structure */
    );
 
-/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the dual ray
+ */
 extern 
+Bool SCIPlpiExistsDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
+ *  and the solver knows and can return the dual ray
+ */
+extern
 Bool SCIPlpiHasDualRay(
    LPI*             lpi                 /**< LP interface structure */
    );
