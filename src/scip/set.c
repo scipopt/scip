@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.77 2003/12/01 16:14:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.78 2003/12/02 15:42:58 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -499,11 +499,7 @@ RETCODE SCIPsetFree(
    /* free variable pricers */
    for( i = 0; i < (*set)->npricers; ++i )
    {
-      errorMessage("pricers not implemented yet\n");
-      abort();
-#if 0
       CHECK_OKAY( SCIPpricerFree(&(*set)->pricers[i], (*set)->scip) );
-#endif
    }
    freeMemoryArrayNull(&(*set)->pricers);
 
