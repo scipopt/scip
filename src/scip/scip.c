@@ -698,6 +698,19 @@ RETCODE SCIPincludeReader(
    return SCIP_OKAY;
 }
 
+/** returns the reader of the given name, or NULL if not existing */
+READER* SCIPfindReader(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of constraint handler */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindReader", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindReader(scip->set, name);
+}
+
 /** creates a constraint handler and includes it in SCIP */
 RETCODE SCIPincludeConsHdlr(
    SCIP*            scip,               /**< SCIP data structure */
@@ -749,6 +762,43 @@ CONSHDLR* SCIPfindConsHdlr(
    CHECK_ABORT( checkStage(scip, "SCIPfindConsHdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetFindConsHdlr(scip->set, name);
+}
+
+/** creates a presolver and includes it in SCIP */
+RETCODE SCIPincludePresol(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of presolver */
+   const char*      desc,               /**< description of presolver */
+   int              priority,           /**< priority of the presolver */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialise presolver */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialise presolver */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   PRESOL* presol;
+
+   CHECK_OKAY( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPpresolCreate(&presol, name, desc, priority,
+                  presolfree, presolinit, presolexit, presolexec, presoldata) );
+   CHECK_OKAY( SCIPsetIncludePresol(scip->set, presol) );
+   
+   return SCIP_OKAY;
+}
+
+/** returns the presolver of the given name, or NULL if not existing */
+PRESOL* SCIPfindPresol(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of presolver */
+   )
+{
+   assert(name != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfindPresol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetFindPresol(scip->set, name);
 }
 
 /** creates a separator and includes it in SCIP */
@@ -1232,7 +1282,9 @@ RETCODE SCIPaddVar(
    }
 }
 
-/** gets variables of the problem along with the numbers of different variable types */
+/** gets variables of the problem along with the numbers of different variable types; data may become invalid after
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ */
 RETCODE SCIPgetVarsData(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           vars,               /**< pointer to store variables array or NULL if not needed */
@@ -1285,7 +1337,9 @@ RETCODE SCIPgetVarsData(
    }
 }
 
-/** gets array with active problem variables */
+/** gets array with active problem variables; data may become invalid after
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ */
 VAR** SCIPgetVars(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -2344,7 +2398,9 @@ RETCODE SCIPchgVarUbNode(
    return SCIP_OKAY;
 }
 
-/** changes type of variable in the problem */
+/** changes type of variable in the problem; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 RETCODE SCIPchgVarType(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
@@ -2392,7 +2448,9 @@ RETCODE SCIPchgVarType(
    }   
 }
 
-/** converts variable into fixed variable, changes bounds respectively */
+/** converts variable into fixed variable, changes bounds respectively; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to fix */
@@ -2423,7 +2481,9 @@ RETCODE SCIPfixVar(
    }
 }
 
-/** converts variable into aggregated variable */
+/** converts variable into aggregated variable; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 RETCODE SCIPaggregateVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable $x$ to aggregate */
@@ -2440,7 +2500,9 @@ RETCODE SCIPaggregateVar(
    return SCIP_OKAY;
 }
 
-/** converts variable into multi-aggregated variable */
+/** converts variable into multi-aggregated variable; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 RETCODE SCIPmultiaggregateVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable $x$ to aggregate */

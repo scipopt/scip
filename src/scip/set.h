@@ -352,12 +352,11 @@ RETCODE SCIPsetIncludeReader(
    READER*          reader              /**< file reader */
    );
 
-/** finds the file reader of the given name */
+/** returns the file reader of the given name, or NULL if not existing */
 extern
-RETCODE SCIPsetFindReader(
+READER* SCIPsetFindReader(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of file reader */
-   READER**         reader              /**< pointer for storing the file reader (returns NULL, if not found) */
+   const char*      name                /**< name of file reader */
    );
 
 /** inserts variable pricer in variable pricer list */
@@ -367,12 +366,11 @@ RETCODE SCIPsetIncludePricer(
    PRICER*          pricer              /**< variable pricer */
    );
 
-/** finds the variable pricer of the given name */
+/** returns the variable pricer of the given name, or NULL if not existing */
 extern
-RETCODE SCIPsetFindPricer(
+PRICER* SCIPsetFindPricer(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of variable pricer */
-   PRICER**         pricer              /**< pointer for storing the variable pricer (returns NULL, if not found) */
+   const char*      name                /**< name of variable pricer */
    );
 
 /** inserts constraint handler in constraint handler list */
@@ -396,12 +394,11 @@ RETCODE SCIPsetIncludePresol(
    PRESOL*          presol              /**< presolver */
    );
 
-/** finds the presolver of the given name */
+/** returns the presolver of the given name, or NULL if not existing */
 extern
-RETCODE SCIPsetFindPresol(
+PRESOL* SCIPsetFindPresol(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of presolver */
-   PRESOL**         presol              /**< pointer for storing the presolver (returns NULL, if not found) */
+   const char*      name                /**< name of presolver */
    );
 
 /** inserts separator in separator list */

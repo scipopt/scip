@@ -34,6 +34,7 @@
 #include "cons_setcover.h"
 #include "cons_setpack.h"
 #include "cons_setpart.h"
+#include "presol_dualfix.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
 #include "branch_fullstrong.h"
@@ -72,6 +73,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetpack(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetpart(scip) );
+   CHECK_OKAY( SCIPincludePresolDualfix(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/

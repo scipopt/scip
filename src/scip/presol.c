@@ -233,6 +233,8 @@ RETCODE SCIPpresolExec(
    assert(nchgsides != NULL);
    assert(result != NULL);
 
+   debugMessage("calling presolver <%s>\n", presol->name);
+
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the number of changes since last call */

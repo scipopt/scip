@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.30 2003/06/06 13:33:21 bzfpfend Exp $
+# $Id: Makefile,v 1.31 2003/06/19 14:31:39 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -114,6 +114,7 @@ LIBOBJ		=	branch.o \
 			nodesel_dfs.o \
 			paramset.o \
 			presol.o \
+			presol_dualfix.o \
 			price.o \
 			primal.o \
 			prob.o \

@@ -777,30 +777,24 @@ RETCODE SCIPsetIncludeReader(
    return SCIP_OKAY;
 }   
 
-/** finds the file reader of the given name */
-RETCODE SCIPsetFindReader(
+/** returns the file reader of the given name, or NULL if not existing */
+READER* SCIPsetFindReader(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of file reader */
-   READER**         reader              /**< pointer for storing the file reader (returns NULL, if not found) */
+   const char*      name                /**< name of file reader */
    )
 {
    int i;
 
    assert(set != NULL);
    assert(name != NULL);
-   assert(reader != NULL);
 
-   *reader = NULL;
    for( i = 0; i < set->nreaders; ++i )
    {
       if( strcmp(SCIPreaderGetName(set->readers[i]), name) == 0 )
-      {
-         *reader = set->readers[i];
-         return SCIP_OKAY;
-      }
+         return set->readers[i];
    }
 
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** inserts variable pricer in variable pricer list */
@@ -825,34 +819,28 @@ RETCODE SCIPsetIncludePricer(
    return SCIP_OKAY;
 }   
 
-/** finds the variable pricer of the given name */
-RETCODE SCIPsetFindPricer(
+/** returns the variable pricer of the given name, or NULL if not existing */
+PRICER* SCIPsetFindPricer(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of variable pricer */
-   PRICER**         pricer              /**< pointer for storing the variable pricer (returns NULL, if not found) */
+   const char*      name                /**< name of variable pricer */
    )
 {
    int i;
 
    assert(set != NULL);
    assert(name != NULL);
-   assert(pricer != NULL);
 
-   *pricer = NULL;
    for( i = 0; i < set->npricers; ++i )
    {
       errorMessage("pricers not yet implemented");
       abort();
 #if 0
       if( strcmp(SCIPpricerGetName(set->pricers[i]), name) == 0 )
-      {
-         *pricer = set->pricers[i];
-         return SCIP_OKAY;
-      }
+         return set->pricers[i];
 #endif
    }
 
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** inserts constraint handler in constraint handler list */
@@ -929,30 +917,24 @@ RETCODE SCIPsetIncludePresol(
    return SCIP_OKAY;
 }   
 
-/** finds the presolver of the given name */
-RETCODE SCIPsetFindPresol(
+/** returns the presolver of the given name, or NULL if not existing */
+PRESOL* SCIPsetFindPresol(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of presolver */
-   PRESOL**         presol              /**< pointer for storing the presolver (returns NULL, if not found) */
+   const char*      name                /**< name of presolver */
    )
 {
    int i;
 
    assert(set != NULL);
    assert(name != NULL);
-   assert(presol != NULL);
 
-   *presol = NULL;
    for( i = 0; i < set->npresols; ++i )
    {
       if( strcmp(SCIPpresolGetName(set->presols[i]), name) == 0 )
-      {
-         *presol = set->presols[i];
-         return SCIP_OKAY;
-      }
+         return set->presols[i];
    }
 
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** inserts separator in separator list */

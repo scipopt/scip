@@ -1329,6 +1329,7 @@ RETCODE SCIPvarFix(
    assert(var->glbdom.ub == var->actdom.ub);
    assert(SCIPsetIsLE(set, var->glbdom.lb, fixedval));
    assert(SCIPsetIsLE(set, fixedval, var->glbdom.ub));
+   assert(var->vartype == SCIP_VARTYPE_CONTINOUS || SCIPsetIsIntegral(set, fixedval));
 
    debugMessage("fix variable <%s> to %g\n", var->name, fixedval);
 

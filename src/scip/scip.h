@@ -61,6 +61,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "disp.h"
 #include "branch.h"
 #include "event.h"
+#include "presol.h"
 #include "sepa.h"
 #include "heur.h"
 #include "misc.h"
@@ -363,6 +364,13 @@ RETCODE SCIPincludeReader(
    READERDATA*      readerdata          /**< reader data */
    );
 
+/** returns the reader of the given name, or NULL if not existing */
+extern
+READER* SCIPfindReader(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of constraint handler */
+   );
+
 /** creates a constraint handler and includes it in SCIP */
 extern
 RETCODE SCIPincludeConsHdlr(
@@ -396,6 +404,27 @@ extern
 CONSHDLR* SCIPfindConsHdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of constraint handler */
+   );
+
+/** creates a presolver and includes it in SCIP */
+extern
+RETCODE SCIPincludePresol(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of presolver */
+   const char*      desc,               /**< description of presolver */
+   int              priority,           /**< priority of the presolver */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialise presolver */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialise presolver */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
+   PRESOLDATA*      presoldata          /**< presolver data */
+   );
+
+/** returns the presolver of the given name, or NULL if not existing */
+extern
+PRESOL* SCIPfindPresol(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name                /**< name of presolver */
    );
 
 /** creates a separator and includes it in SCIP */
@@ -603,7 +632,9 @@ RETCODE SCIPaddVar(
    VAR*             var                 /**< variable to add */
    );
 
-/** gets variables of the problem along with the numbers of different variable types */
+/** gets variables of the problem along with the numbers of different variable types; data may become invalid after
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ */
 extern
 RETCODE SCIPgetVarsData(
    SCIP*            scip,               /**< SCIP data structure */
@@ -615,7 +646,9 @@ RETCODE SCIPgetVarsData(
    int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
    );
 
-/** gets array with active problem variables */
+/** gets array with active problem variables; data may become invalid after
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ */
 extern
 VAR** SCIPgetVars(
    SCIP*            scip                /**< SCIP data structure */
@@ -875,7 +908,9 @@ RETCODE SCIPchgVarUbNode(
    Real             newbound            /**< new value for bound */
    );
 
-/** changes type of variable in the problem */
+/** changes type of variable in the problem; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 extern
 RETCODE SCIPchgVarType(
    SCIP*            scip,               /**< SCIP data structure */
@@ -883,7 +918,9 @@ RETCODE SCIPchgVarType(
    VARTYPE          vartype             /**< new type of variable */
    );
 
-/** converts variable into fixed variable, changes bounds respectively */
+/** converts variable into fixed variable, changes bounds respectively; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 extern
 RETCODE SCIPfixVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -891,7 +928,9 @@ RETCODE SCIPfixVar(
    Real             fixedval            /**< value to fix variable at */
    );
 
-/** converts variable into aggregated variable */
+/** converts variable into aggregated variable; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 extern
 RETCODE SCIPaggregateVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -901,7 +940,9 @@ RETCODE SCIPaggregateVar(
    Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
    );
 
-/** converts variable into multi-aggregated variable */
+/** converts variable into multi-aggregated variable; this changes the vars array returned from
+ *  SCIPgetVars() and SCIPgetVarsData()
+ */
 extern
 RETCODE SCIPmultiaggregateVar(
    SCIP*            scip,               /**< SCIP data structure */
