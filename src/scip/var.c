@@ -3357,13 +3357,13 @@ RETCODE SCIPvarAddToRow(
       assert(var->actdom.lb == var->actdom.ub);
       assert(var->actdom.lb == var->glbdom.lb);
       assert(!SCIPsetIsInfinity(set, ABS(var->actdom.lb)));
-      CHECK_OKAY( SCIProwAddConst(row, set, stat, lp, val * var->actdom.lb) );
+      CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, val * var->actdom.lb) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
       CHECK_OKAY( SCIPvarAddToRow(var->data.aggregate.var, memhdr, set, stat, lp, row, var->data.aggregate.scalar * val) );
-      CHECK_OKAY( SCIProwAddConst(row, set, stat, lp, var->data.aggregate.constant * val) );
+      CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.aggregate.constant * val) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -3375,7 +3375,7 @@ RETCODE SCIPvarAddToRow(
          CHECK_OKAY( SCIPvarAddToRow(var->data.multaggr.vars[i], memhdr, set, stat, lp, row, 
                         var->data.multaggr.scalars[i] * val) );
       }
-      CHECK_OKAY( SCIProwAddConst(row, set, stat, lp, var->data.multaggr.constant * val) );
+      CHECK_OKAY( SCIProwAddConstant(row, set, stat, lp, var->data.multaggr.constant * val) );
       return SCIP_OKAY;
 
    default:

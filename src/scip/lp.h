@@ -169,8 +169,8 @@ struct Row
    Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
-   unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
-   unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
+   unsigned int     lhschanged:1;       /**< was left hand side or constant changed, and has LP solver to be updated? */
+   unsigned int     rhschanged:1;       /**< was right hand side or constant changed, and has LP solver to be updated? */
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
    unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
@@ -542,14 +542,24 @@ RETCODE SCIProwIncCoeff(
    Real             incval              /**< value to add to the coefficient */
    );
 
-/** add constant value to a row, i.e. subtract value from lhs and rhs */
+/** changes constant value of a row */
 extern
-RETCODE SCIProwAddConst(
+RETCODE SCIProwChgConstant(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   Real             constant            /**< constant value to add to the row */
+   Real             constant            /**< new constant value */
+   );
+
+/** add constant value to a row */
+extern
+RETCODE SCIProwAddConstant(
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
+   Real             addval              /**< constant value to add to the row */
    );
 
 /** changes left hand side of LP row */
@@ -575,6 +585,7 @@ extern
 RETCODE SCIProwMakeRational(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Bool*            success             /**< stores whether row could be made rational */

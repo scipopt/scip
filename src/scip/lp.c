@@ -1829,6 +1829,7 @@ static
 RETCODE rowScale(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    Real             scaleval,           /**< value to scale row with */
    Real             roundtol            /**< rounding tolerance, upto which values are rounded to next integer */
@@ -1876,6 +1877,9 @@ RETCODE rowScale(
       /* mark the coefficient changed */
       coefChanged(row, col, lp);
    }
+
+   /* scale the row constant */
+   CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, row->constant * scaleval) );
 
    /* scale the row sides */
    if( !SCIPsetIsInfinity(set, -row->lhs) )
@@ -2365,13 +2369,13 @@ RETCODE SCIProwIncCoeff(
    return SCIP_OKAY;
 }
 
-/** add constant value to a row, i.e. subtract value from lhs and rhs */
-RETCODE SCIProwAddConst(
+/** changes constant value of a row */
+RETCODE SCIProwChgConstant(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
-   Real             constant            /**< constant value to add to the row */
+   Real             constant            /**< new constant value */
    )
 {
    assert(row != NULL);
@@ -2381,21 +2385,19 @@ RETCODE SCIProwAddConst(
    assert(lp != NULL);
    assert(!lp->diving);
 
-   if( !SCIPsetIsZero(set, constant) )
+   if( !SCIPsetIsEQ(set, constant, row->constant) )
    {
-      row->constant += constant;
-
       if( row->validpsactivitybdchg == stat->nboundchanges )
       {
          assert(row->pseudoactivity < SCIP_INVALID);
-         row->pseudoactivity += constant;
+         row->pseudoactivity += constant - row->constant;
       }
       if( row->validactivitybdsbdchg == stat->nboundchanges )
       {
          assert(row->minactivity < SCIP_INVALID);
          assert(row->maxactivity < SCIP_INVALID);
-         row->minactivity += constant;
-         row->maxactivity += constant;
+         row->minactivity += constant - row->constant;
+         row->maxactivity += constant - row->constant;
       }
 
       if( !SCIPsetIsInfinity(set, -row->lhs) )
@@ -2405,6 +2407,262 @@ RETCODE SCIProwAddConst(
       if( !SCIPsetIsInfinity(set, row->rhs) )
       {
          CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+      }
+
+      row->constant = constant;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** add constant value to a row */
+RETCODE SCIProwAddConstant(
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
+   Real             addval              /**< constant value to add to the row */
+   )
+{
+   assert(row != NULL);
+   assert(row->lhs <= row->rhs);
+   assert(!SCIPsetIsInfinity(set, ABS(addval)));
+   assert(stat != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
+
+   if( !SCIPsetIsZero(set, addval) )
+   {
+      CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, row->constant + addval) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes left hand side of LP row */
+RETCODE SCIProwChgLhs(
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             lhs                 /**< new left hand side */
+   )
+{
+   assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
+
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) )
+   {
+      row->lhs = lhs;
+      CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes right hand side of LP row */
+RETCODE SCIProwChgRhs(
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             rhs                 /**< new right hand side */
+   )
+{
+   assert(row != NULL);
+   assert(lp != NULL);
+   assert(!lp->diving);
+
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) )
+   {
+      row->rhs = rhs;
+      CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+#define  DIVTOL      1.0E-03
+#define  TWOMULTTOL  1.0E-06
+
+/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+RETCODE SCIProwMakeRational(
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< actual LP data */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Bool*            success             /**< stores whether row could be made rational */
+   )
+{
+   COL* col;
+   Real val;
+   Real minval;
+   Real maxval;
+   Real onedivminval;
+   Bool contvars;
+   Bool fractional;
+   int c;
+
+   assert(row != NULL);
+   assert(row->len == 0 || row->cols != NULL);
+   assert(row->len == 0 || row->cols_probindex != NULL);
+   assert(row->len == 0 || row->vals != NULL);
+   assert(maxdnom >= 1);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* nothing to do, if row is empty */
+   if( row->len == 0 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* get minimal and maximal non-zero coefficient of row */
+   minval = SCIProwGetMinval(row, set);
+   maxval = SCIProwGetMaxval(row, set);
+   assert(SCIPsetIsPositive(set, minval));
+   assert(SCIPsetIsPositive(set, maxval));
+   onedivminval = 1.0/minval;
+
+   /* check, if there are fractional coefficients and continous variables in the row */
+   contvars = FALSE;
+   fractional = FALSE;
+   for( c = 0; c < row->len; ++c )
+   {
+      col = row->cols[c];
+      assert(col != NULL);
+      assert(col->var != NULL);
+      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(col->var->data.col == col);
+      val = row->vals[c];
+      assert(!SCIPsetIsZero(set, val));
+      
+      contvars |= (col->var->vartype == SCIP_VARTYPE_CONTINOUS);
+      fractional |= !SCIPsetIsIntegral(set, val);
+   }
+
+   /* if fractional coefficients exist, try to find a rational representation */
+   if( fractional )
+   {
+      Bool divisible;
+      Bool twomult;
+      Longint twomultval;
+
+      /* try, if row coefficients can be made integral by dividing them by the smallest coefficient or by multiplying
+       * them by a multiple of 2
+       */
+      divisible = TRUE;
+      twomult = TRUE;
+      twomultval = 1;
+      for( c = 0; c < row->len && (divisible || twomult); ++c )
+      {
+         val = row->vals[c];
+         divisible &= EPSISINT(val * onedivminval, DIVTOL);
+         while( twomultval <= maxdnom && !EPSISINT(val * twomultval, TWOMULTTOL) )
+            twomultval <<= 1;
+         twomult &= (twomultval <= maxdnom);
+      }
+
+      if( divisible )
+      {
+         /* make row coefficients integral by dividing them by the smallest coefficient */
+         CHECK_OKAY( rowScale(row, set, stat, lp, onedivminval, DIVTOL) );
+         *success = TRUE;
+      }
+      else if( twomult )
+      {
+         /* make row coefficients integral by multiplying them with a multiple of 2 */
+         CHECK_OKAY( rowScale(row, set, stat, lp, twomultval, TWOMULTTOL) );
+         *success = TRUE;
+      }
+      else
+      {
+         Longint scm;
+         Longint nominator;
+         Longint denominator;
+         Bool rational;
+         
+         /* convert each coefficient into a rational number, calculate the smallest common multiple of the
+          * denominators
+          */
+         scm = 1;
+         rational = TRUE;
+         for( c = 0; c < row->len && rational; ++c )
+         {
+            val = row->vals[c];
+            rational = SCIPsetRealToRational(set, val, maxdnom, &nominator, &denominator);
+            if( rational )
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+            rational &= (scm <= maxdnom);
+         }
+
+         /* convert row sides and constant into rational numbers,
+          * update the smallest common multiple of the denominators
+          */
+         if( rational )
+         {
+            rational = SCIPsetRealToRational(set, row->constant, maxdnom, &nominator, &denominator);
+            if( rational )
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+            rational &= (scm <= maxdnom);
+         }
+         if( rational && !SCIPsetIsInfinity(set, -row->lhs) )
+         {
+            rational = SCIPsetRealToRational(set, row->lhs, maxdnom, &nominator, &denominator);
+            if( rational )
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+            rational &= (scm <= maxdnom);
+         }
+         if( rational && !SCIPsetIsInfinity(set, row->rhs) )
+         {
+            rational = SCIPsetRealToRational(set, row->rhs, maxdnom, &nominator, &denominator);
+            if( rational )
+               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+            rational &= (scm <= maxdnom);
+         }
+
+         if( rational )
+         {
+            /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
+            CHECK_OKAY( rowScale(row, set, stat, lp, (Real)scm, set->feastol) );
+            *success = TRUE;
+         }
+      }
+   }
+   else
+   {
+      /* all coefficients are integral: we have nothing to do */
+      *success = TRUE;
+   }
+
+   /* clean up the row sides */
+   if( *success )
+   {
+      /* move the constant to the row's sides */
+      if( !SCIPsetIsInfinity(set, -row->lhs) )
+         row->lhs -= row->constant;
+      if( !SCIPsetIsInfinity(set, row->rhs) )
+         row->rhs -= row->constant;
+      row->constant = 0.0;
+      if( !contvars )
+      {
+         /* no continous variables exist in the row, all coefficients of the new row are integral -> round sides */
+         if( !SCIPsetIsInfinity(set, -row->lhs) )
+            row->lhs = SCIPsetCeil(set, row->lhs);
+         if( !SCIPsetIsInfinity(set, row->rhs) )
+            row->rhs = SCIPsetFloor(set, row->rhs);
+      }
+      else
+      {
+         /* the sides may be fractional, but if they are very close to integral, round them */
+         if( !SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsIntegral(set, row->lhs) )
+            row->lhs = SCIPsetFloor(set, row->lhs);
+         if( !SCIPsetIsInfinity(set, row->rhs) && SCIPsetIsIntegral(set, row->rhs) )
+            row->rhs = SCIPsetFloor(set, row->rhs);
       }
    }
 
@@ -2717,220 +2975,6 @@ Real SCIProwGetMinval(
    return row->minval;
 }
 
-/** changes left hand side of LP row */
-RETCODE SCIProwChgLhs(
-   ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real             lhs                 /**< new left hand side */
-   )
-{
-   assert(row != NULL);
-   assert(lp != NULL);
-   assert(!lp->diving);
-
-   if( !SCIPsetIsEQ(set, row->lhs, lhs) )
-   {
-      row->lhs = lhs;
-      CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** changes right hand side of LP row */
-RETCODE SCIProwChgRhs(
-   ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Real             rhs                 /**< new right hand side */
-   )
-{
-   assert(row != NULL);
-   assert(lp != NULL);
-   assert(!lp->diving);
-
-   if( !SCIPsetIsEQ(set, row->rhs, rhs) )
-   {
-      row->rhs = rhs;
-      CHECK_OKAY( rowSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
-#define  DIVTOL      1.0E-03
-#define  TWOMULTTOL  1.0E-06
-
-/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
-RETCODE SCIProwMakeRational(
-   ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
-   Bool*            success             /**< stores whether row could be made rational */
-   )
-{
-   COL* col;
-   Real val;
-   Real minval;
-   Real maxval;
-   Real onedivminval;
-   Bool contvars;
-   Bool fractional;
-   int c;
-
-   assert(row != NULL);
-   assert(row->len == 0 || row->cols != NULL);
-   assert(row->len == 0 || row->cols_probindex != NULL);
-   assert(row->len == 0 || row->vals != NULL);
-   assert(maxdnom >= 1);
-   assert(success != NULL);
-
-   *success = FALSE;
-
-   /* nothing to do, if row is empty */
-   if( row->len == 0 )
-   {
-      *success = TRUE;
-      return SCIP_OKAY;
-   }
-
-   /* get minimal and maximal non-zero coefficient of row */
-   minval = SCIProwGetMinval(row, set);
-   maxval = SCIProwGetMaxval(row, set);
-   assert(SCIPsetIsPositive(set, minval));
-   assert(SCIPsetIsPositive(set, maxval));
-   onedivminval = 1.0/minval;
-
-   /* check, if there are fractional coefficients and continous variables in the row */
-   contvars = FALSE;
-   fractional = FALSE;
-   for( c = 0; c < row->len; ++c )
-   {
-      col = row->cols[c];
-      assert(col != NULL);
-      assert(col->var != NULL);
-      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-      assert(col->var->data.col == col);
-      val = row->vals[c];
-      assert(!SCIPsetIsZero(set, val));
-      
-      contvars |= (col->var->vartype == SCIP_VARTYPE_CONTINOUS);
-      fractional |= !SCIPsetIsIntegral(set, val);
-   }
-
-   /* if fractional coefficients exist, try to find a rational representation */
-   if( fractional )
-   {
-      Bool divisible;
-      Bool twomult;
-      Longint twomultval;
-
-      /* try, if row coefficients can be made integral by dividing them by the smallest coefficient or by multiplying
-       * them by a multiple of 2
-       */
-      divisible = TRUE;
-      twomult = TRUE;
-      twomultval = 1;
-      for( c = 0; c < row->len && (divisible || twomult); ++c )
-      {
-         val = row->vals[c];
-         divisible &= EPSISINT(val * onedivminval, DIVTOL);
-         while( twomultval <= maxdnom && !EPSISINT(val * twomultval, TWOMULTTOL) )
-            twomultval <<= 1;
-         twomult &= (twomultval <= maxdnom);
-      }
-
-      if( divisible )
-      {
-         /* make row coefficients integral by dividing them by the smallest coefficient */
-         CHECK_OKAY( rowScale(row, set, lp, onedivminval, DIVTOL) );
-         *success = TRUE;
-      }
-      else if( twomult )
-      {
-         /* make row coefficients integral by multiplying them with a multiple of 2 */
-         CHECK_OKAY( rowScale(row, set, lp, twomultval, TWOMULTTOL) );
-         *success = TRUE;
-      }
-      else
-      {
-         Longint scm;
-         Longint nominator;
-         Longint denominator;
-         Bool rational;
-         
-         /* convert each coefficient into a rational number, calculate the smallest common multiple of the
-          * denominators
-          */
-         scm = 1;
-         rational = TRUE;
-         for( c = 0; c < row->len && rational; ++c )
-         {
-            val = row->vals[c];
-            rational = SCIPsetRealToRational(set, val, maxdnom, &nominator, &denominator);
-            if( rational )
-               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
-         }
-
-         /* convert row sides into rational numbers, and update the smallest common multiple of the denominators */
-         if( rational && !SCIPsetIsInfinity(set, -row->lhs) )
-         {
-            rational = SCIPsetRealToRational(set, row->lhs, maxdnom, &nominator, &denominator);
-            if( rational )
-               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
-         }
-         if( rational && !SCIPsetIsInfinity(set, row->rhs) )
-         {
-            rational = SCIPsetRealToRational(set, row->rhs, maxdnom, &nominator, &denominator);
-            if( rational )
-               scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
-         }
-
-         if( rational )
-         {
-            /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
-            CHECK_OKAY( rowScale(row, set, lp, (Real)scm, set->feastol) );
-            *success = TRUE;
-         }
-      }
-   }
-   else
-   {
-      /* all coefficients are integral: we have nothing to do */
-      *success = TRUE;
-   }
-
-   /* clean up the row sides */
-   if( *success )
-   {
-      if( !contvars )
-      {
-         /* no continous variables exist in the row, all coefficients of the new row are integral -> round sides */
-         if( !SCIPsetIsInfinity(set, -row->lhs) )
-            row->lhs = SCIPsetCeil(set, row->lhs);
-         if( !SCIPsetIsInfinity(set, row->rhs) )
-            row->rhs = SCIPsetFloor(set, row->rhs);
-      }
-      else
-      {
-         /* the sides may be fractional, but if they are very close to integral, round them */
-         if( !SCIPsetIsInfinity(set, -row->lhs) && SCIPsetIsIntegral(set, row->lhs) )
-            row->lhs = SCIPsetFloor(set, row->lhs);
-         if( !SCIPsetIsInfinity(set, row->rhs) && SCIPsetIsIntegral(set, row->rhs) )
-            row->rhs = SCIPsetFloor(set, row->rhs);
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 
 
 
@@ -3090,6 +3134,9 @@ void SCIProwPrint(
       assert(row->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
       fprintf(file, "%+f%s ", row->vals[c], row->cols[c]->var->name);
    }
+
+   /* print constant */
+   fprintf(file, "%+fs ", row->constant);
 
    /* print right hand side */
    fprintf(file, "<= %+f\n", row->rhs);
@@ -4204,12 +4251,12 @@ void sumMIRRow(
             if( rowactivity < (row->lhs + row->rhs)/2.0 )
             {
                slacksign[r] = -1;
-               *mirrhs += weights[r] * row->lhs;
+               *mirrhs += weights[r] * (row->lhs - row->constant);
             }
             else
             {
                slacksign[r] = +1;
-               *mirrhs += weights[r] * row->rhs;
+               *mirrhs += weights[r] * (row->rhs - row->constant);
             }
 
             /* add the row coefficients to the sum */
@@ -4449,9 +4496,9 @@ void substituteMIRRow(
                mircoef[idx] -= mul * row->vals[i];
             }
             if( slacksign[r] == +1 )
-               *mirrhs -= mul * row->rhs;
+               *mirrhs -= mul * (row->rhs - row->constant);
             else
-               *mirrhs -= mul * row->lhs;
+               *mirrhs -= mul * (row->lhs - row->constant);
          }
       }
    }

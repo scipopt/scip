@@ -3119,7 +3119,7 @@ RETCODE SCIPmakeRowRational(
 {
    CHECK_OKAY( checkStage(scip, "SCIPmakeRowRational", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIProwMakeRational(row, scip->set, scip->lp, maxdnom, success) );
+   CHECK_OKAY( SCIProwMakeRational(row, scip->set, scip->stat, scip->lp, maxdnom, success) );
 
    return SCIP_OKAY;
 }
