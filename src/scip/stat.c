@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.27 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.28 2004/01/07 13:14:14 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -31,12 +31,14 @@
 #include "stat.h"
 #include "clock.h"
 #include "mem.h"
+#include "history.h"
 
 
 
 /** creates problem statistics data */
 RETCODE SCIPstatCreate(
    STAT**           stat,               /**< pointer to problem statistics data */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
@@ -55,6 +57,8 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
+   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glblphistory, memhdr) );
+
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
@@ -66,7 +70,8 @@ RETCODE SCIPstatCreate(
 
 /** frees problem statistics data */
 RETCODE SCIPstatFree(
-   STAT**           stat                /**< pointer to problem statistics data */
+   STAT**           stat,               /**< pointer to problem statistics data */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    assert(stat != NULL);
@@ -81,6 +86,8 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->redcoststrtime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
+
+   SCIPhistoryFree(&(*stat)->glblphistory, memhdr);
 
    freeMemory(stat);
 
@@ -125,6 +132,8 @@ void SCIPstatReset(
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->redcoststrtime);
    SCIPclockReset(stat->nodeactivationtime);
+
+   SCIPhistoryReset(stat->glblphistory);
 
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.79 2003/12/08 11:51:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.80 2004/01/07 13:14:14 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -300,6 +300,11 @@ RETCODE SCIPsetCreate(
                   "numerics/cutviolepsroot",
                   "epsilon for deciding if a cut is violated in the root node",
                   &(*set)->cutviolepsroot, 0.05*SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "numerics/historyeps",
+                  "minimal distance value to use for branching history updates",
+                  &(*set)->historyeps, SCIP_DEFAULT_HISTORYEPS, machineeps*1e+03, 1.0,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
                   "memory/memsavefac",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.9 2003/12/15 17:45:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.10 2004/01/07 13:14:13 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -31,7 +31,7 @@
 
 #define BRANCHRULE_NAME          "fullstrong"
 #define BRANCHRULE_DESC          "full strong branching"
-#define BRANCHRULE_PRIORITY      200
+#define BRANCHRULE_PRIORITY      1000
 
 
 
@@ -62,6 +62,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(result != NULL);
 
    debugMessage("Execlp method of fullstrong branching\n");
+
+   *result = SCIP_DIDNOTRUN;
 
    /* get current lower objective bound of the local sub problem */
    lowerbound = SCIPgetLocalLowerbound(scip);
@@ -119,7 +121,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          }
       }
 
-      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound) + 1.0;
+      score = SCIPgetBranchScore(scip, down - lowerbound, up - lowerbound) + 1e-6; /* no gain -> use fractionalities */
       score *= SCIPvarGetBranchingPriority(lpcands[i]);
       debugMessage("   -> var <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
          SCIPvarGetName(lpcands[i]), lpcandssol[i], down, up, SCIPvarGetBranchingPriority(lpcands[i]), score);
@@ -166,11 +168,6 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
-
-#if 0
-      /* perform the branching */
-      CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );
-#endif
 
       *result = SCIP_BRANCHED;
    }

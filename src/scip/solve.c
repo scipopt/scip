@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.78 2003/12/23 12:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.79 2004/01/07 13:14:14 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -130,6 +130,155 @@ RETCODE propagateDomains(
    return SCIP_OKAY;
 }
 
+/** returns whether the given variable with the old LP solution value should lead to an update of the history entry */
+static
+Bool isHistoryUpdateValid(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real             oldlpsolval         /**< solution value of variable in old LP */
+   )
+{
+   Real newlpsolval;
+
+   assert(var != NULL);
+
+   /* if the old LP solution value is unknown, the history update cannot be performed */
+   if( oldlpsolval >= SCIP_INVALID )
+      return FALSE;
+
+   /* the bound change on the given variable was responsible for the gain in the dual bound, if the variable's
+    * old solution value is outside the current bounds, and the new solution value is equal to the bound
+    * closest to the old solution value
+    */
+
+   /* find out, which of the current bounds is violated by the old LP solution value */
+   if( SCIPsetIsLT(set, oldlpsolval, SCIPvarGetLbLocal(var)) )
+   {
+      newlpsolval = SCIPvarGetLPSol(var);
+      return SCIPsetIsEQ(set, newlpsolval, SCIPvarGetLbLocal(var));
+   }
+   else if( SCIPsetIsGT(set, oldlpsolval, SCIPvarGetUbLocal(var)) )
+   {
+      newlpsolval = SCIPvarGetLPSol(var);
+      return SCIPsetIsEQ(set, newlpsolval, SCIPvarGetUbLocal(var));
+   }
+   else
+      return FALSE;
+}
+
+/** history flag stored in the variables to mark them for the history update */
+enum HistoryFlag
+{
+   HISTORY_NONE     = 0,                /**< variable's bounds were not changed */
+   HISTORY_IGNORE   = 1,                /**< bound changes on variable should be ignored for history updates */
+   HISTORY_UPDATE   = 2                 /**< history value of variable should be updated */
+};
+
+/** updates the variable's history values after the node's initial LP was solved */
+static
+RETCODE updateHistory(
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp                  /**< LP data */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->actnode != NULL);
+   assert(tree->actnode->active);
+   assert(tree->path != NULL);
+   assert(tree->path[tree->actnode->depth] == tree->actnode);
+   assert(lp != NULL);
+
+   if( lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && tree->actlpfork != NULL )
+   {
+      BOUNDCHG** updates;
+      NODE* node;
+      VAR* var;
+      Real weight;
+      Real lpgain;
+      int nupdates;
+      int nvalidupdates;
+      int d;
+      int i;
+
+      assert(tree->actlpfork->active);
+      assert(tree->path[tree->actlpfork->depth] == tree->actlpfork);
+
+      /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
+       * current node and LP fork
+       */
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &updates, tree->actnode->depth - tree->actlpfork->depth) );
+      nupdates = 0;
+      nvalidupdates = 0;
+
+      /* search the nodes from LP fork down to current node for bound changes in between; move in this direction, 
+       * because the bound changes closer to the LP fork are more likely to have a valid LP solution information
+       * attached; collect the bound changes for history value updates and mark the corresponding variables such
+       * that they are not updated twice in case of more than one bound change on the same variable
+       */
+      for( d = tree->actlpfork->depth+1; d <= tree->actnode->depth; ++d )
+      {
+         node = tree->path[d];
+
+         if( node->domchg != NULL )
+         {
+            BOUNDCHG* boundchgs;
+            int nboundchgs;
+
+            boundchgs = node->domchg->domchgbound.boundchgs;
+            nboundchgs = node->domchg->domchgbound.nboundchgs;
+            for( i = 0; i < nboundchgs; ++i )
+            {
+               if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+               {
+                  var = boundchgs[i].var;
+                  if( var->historyflag == HISTORY_NONE )
+                  {
+                     /* remember the bound change and mark the variable */
+                     CHECK_OKAY( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
+                     updates[nupdates] = &boundchgs[i];
+                     nupdates++;
+
+                     /* check, if the bound change would lead to a valid history update */
+                     if( isHistoryUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval) )
+                     {
+                        var->historyflag = HISTORY_UPDATE;
+                        nvalidupdates++;
+                     }
+                     else
+                        var->historyflag = HISTORY_IGNORE;
+                  }
+               }
+            }
+         }
+      }
+
+      /* update the history values and reset the variables' flags; assume, that the responsibility for the dual gain
+       * is equally spread on all bound changes that lead to valid history updates
+       */
+      weight = nvalidupdates > 0 ? 1.0 / (Real)nvalidupdates : 1.0;
+      lpgain = tree->actnode->lowerbound - tree->actlpfork->lowerbound;
+      for( i = 0; i < nupdates; ++i )
+      {
+         assert(updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
+         var = updates[i]->var;
+         assert(var->historyflag != HISTORY_NONE);
+         if( var->historyflag == HISTORY_UPDATE )
+         {
+            SCIPvarUpdateLPHistory(var, set, stat, 
+               SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
+         }
+         var->historyflag = HISTORY_NONE;
+      }
+
+      /* free the buffer for the collected bound changes */
+      SCIPsetFreeBufferArray(set, &updates);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** constructs the LP of the root node */
 static
 RETCODE initRootLP(
@@ -215,7 +364,7 @@ RETCODE solveNodeInitialLP(
 
    /* load the LP into the solver and load the LP state */
    debugMessage("loading LP\n");
-   CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, lp) );
+   CHECK_OKAY( SCIPtreeLoadLP(tree, memhdr, set, stat, lp) );
    
    /* init root node LP */
    if( SCIPnodeGetDepth(tree->actnode) == 0 )
@@ -235,6 +384,9 @@ RETCODE solveNodeInitialLP(
    CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
    CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
    CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
+
+   /* update history values */
+   CHECK_OKAY( updateHistory(set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }

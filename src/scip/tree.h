@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.46 2003/12/23 12:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.47 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -204,6 +204,7 @@ RETCODE SCIPtreeLoadLP(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< actual LP data */
    );
 

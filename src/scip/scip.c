@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.115 2003/12/23 12:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.116 2004/01/07 13:14:14 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1742,7 +1742,7 @@ RETCODE SCIPcreateProb(
 
    scip->stage = SCIP_STAGE_PROBLEM;
    
-   CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->set) );
+   CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
    CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelorig, probtrans, probdeltrans, probdata, FALSE) );
    
    return SCIP_OKAY;
@@ -1821,7 +1821,7 @@ RETCODE SCIPfreeProb(
 
       /* free problem and problem statistics datastructures */
       CHECK_OKAY( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->lp) );
-      CHECK_OKAY( SCIPstatFree(&scip->stat) );
+      CHECK_OKAY( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
       /* switch stage to INIT */
       scip->stage = SCIP_STAGE_INIT;
@@ -6382,6 +6382,69 @@ RETCODE SCIPdropVarEvent(
    CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
    
    return SCIP_OKAY;
+}
+
+/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ */
+RETCODE SCIPupdateVarLPHistory(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   Real             weight              /**< weight in (0,1] of this update in history sum */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPupdateVarLPHistory", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   SCIPvarUpdateLPHistory(var, scip->set, scip->stat, solvaldelta, objdelta, weight);
+
+   return SCIP_OKAY;
+}
+
+/** gets the variable's branching history value for the given direction */
+Real SCIPgetVarLPHistory(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistory", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPvarGetLPHistory(var, scip->stat, solvaldelta);
+}
+
+/** gets the variable's (possible fractional) number of history updates for the given direction */
+Real SCIPgetVarLPHistoryCount(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistoryCount", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPvarGetLPHistoryCount(var, dir);
+}
+
+/** gets the variable's history score value at it's current LP solution */
+Real SCIPgetVarLPHistoryScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real lpsolval;
+   Real frac;
+   Real histdown;
+   Real histup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarLPHistoryScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   lpsolval = SCIPvarGetLPSol(var);
+   frac = lpsolval - SCIPsetFloor(scip->set, lpsolval);
+   histdown = SCIPvarGetLPHistory(var, scip->stat, -frac);
+   histup = SCIPvarGetLPHistory(var, scip->stat, 1.0-frac);
+
+   return SCIPbranchGetScore(scip->set, histdown, histup);
 }
 
 

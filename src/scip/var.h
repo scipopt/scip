@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.48 2003/12/23 12:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.49 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -128,7 +128,7 @@ RETCODE SCIPdomchgAddBoundchg(
    BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    NODE*            node,               /**< node where this bound change appears */
-   Real             solval,             /**< current solution value of variable */
+   Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
    CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
    );
@@ -516,6 +516,35 @@ RETCODE SCIPvarDropEvent(
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
+
+/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ */
+extern
+void SCIPvarUpdateLPHistory(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   Real             weight              /**< weight in (0,1] of this update in history sum */
+   );
+
+/** gets the variable's branching history value for the given step size "solvaldelta" in the variable's LP solution value */
+extern
+Real SCIPvarGetLPHistory(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the variable's (possible fractional) number of history updates for the given direction */
+extern
+Real SCIPvarGetLPHistoryCount(
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   );
+
 
 
 

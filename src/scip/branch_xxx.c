@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.2 2003/11/27 17:48:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.3 2004/01/07 13:14:13 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -127,7 +127,7 @@ DECL_BRANCHEXECLP(branchExeclpXxx)
 /** branching execution method for not completely fixed pseudo solutions */
 #if 0
 static
-DECL_BRANCHEXECLP(branchExecpsXxx)
+DECL_BRANCHEXECPS(branchExecpsXxx)
 {  /*lint --e{715}*/
    errorMessage("method of xxx branching rule not implemented yet\n");
    abort(); /*lint --e{527}*/

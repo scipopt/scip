@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.27 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.28 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -28,6 +28,7 @@
 
 
 #include "def.h"
+#include "memory.h"
 #include "type_retcode.h"
 #include "type_set.h"
 #include "type_stat.h"
@@ -41,13 +42,15 @@
 extern
 RETCODE SCIPstatCreate(
    STAT**           stat,               /**< pointer to problem statistics data */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 
 /** frees problem statistics data */
 extern
 RETCODE SCIPstatFree(
-   STAT**           stat                /**< pointer to problem statistics data */
+   STAT**           stat,               /**< pointer to problem statistics data */
+   MEMHDR*          memhdr              /**< block memory */
    );
 
 /** marks statistics to be able to reset them when solving process is freed */

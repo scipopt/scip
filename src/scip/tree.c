@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.71 2003/12/23 12:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.72 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -918,16 +918,27 @@ RETCODE SCIPnodeAddBoundchg(
    if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD )
    {
       Real newpseudoobjval;
-      Real solval;
+      Real lpsolval;
 
       assert(!node->active);
       
-      /* get the variable's current solution value */
-      solval = SCIPvarGetSol(var, tree->actnodehaslp);
+      /* get the solution value of variable in last solved LP on the active path:
+       *  - if the LP was solved at the current node, the LP values of the columns are valid
+       *  - if the last solved LP was the one in the current lpfork, the LP value in the columns are still valid
+       *  - otherwise, the LP values are invalid
+       */
+      if( tree->actnodehaslp
+         || (tree->actlpforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
+      {
+         lpsolval = SCIPvarGetLPSol(var);
+      }
+      else
+         lpsolval = SCIP_INVALID;
 
-      /* remember the bound change as branching decision */
+      /* remember the bound change as branching decision (infervar/infercons are not important: use NULL) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
-                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, node, solval, NULL, NULL) );
+                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, node,
+                     lpsolval, NULL, NULL) );
       
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
@@ -935,9 +946,10 @@ RETCODE SCIPnodeAddBoundchg(
    }
    else
    {
-      /* remember the bound change as inference (solval is not important: use 0.0) */
+      /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
-                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, node, 0.0, infervar, infercons) );
+                     var, newbound, oldbound, boundtype, SCIP_BOUNDCHGTYPE_INFERENCE, node, 
+                     0.0, infervar, infercons) );
    }
 
    assert(node->domchg != NULL);
@@ -1285,6 +1297,10 @@ RETCODE treeSwitchPath(
       CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue) );
    }
 
+   /* if the LP fork changed, the lpcount information for the new LP fork is unknown */
+   if( tree->actlpfork != lpfork )
+      tree->actlpforklpcount = -1;
+
    /* remember LP defining fork and subroot */
    assert(subroot == NULL || (lpfork != NULL && subroot->depth <= lpfork->depth));
    tree->actlpfork = lpfork;
@@ -1426,6 +1442,7 @@ RETCODE SCIPtreeLoadLP(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    LP*              lp                  /**< actual LP data */
    )
 {
@@ -1521,19 +1538,27 @@ RETCODE SCIPtreeLoadLP(
    /* load LP state, if existing */
    if( lpfork != NULL )
    {
-      if( SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK )
+      if( tree->actlpforklpcount != stat->lpcount )
       {
-         assert(lpfork->data.fork != NULL);
-         CHECK_OKAY( SCIPlpSetState(lp, memhdr, set, lpfork->data.fork->lpistate) );
+         if( SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK )
+         {
+            assert(lpfork->data.fork != NULL);
+            CHECK_OKAY( SCIPlpSetState(lp, memhdr, set, lpfork->data.fork->lpistate) );
+         }
+         else
+         {
+            assert(SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
+            assert(lpfork->data.subroot != NULL);
+            CHECK_OKAY( SCIPlpSetState(lp, memhdr, set, lpfork->data.subroot->lpistate) );
+         }
+         assert(lp->primalfeasible);
+         assert(lp->dualfeasible);
       }
       else
       {
-         assert(SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
-         assert(lpfork->data.subroot != NULL);
-         CHECK_OKAY( SCIPlpSetState(lp, memhdr, set, lpfork->data.subroot->lpistate) );
+         lp->primalfeasible = TRUE;
+         lp->dualfeasible = TRUE;
       }
-      assert(lp->primalfeasible);
-      assert(lp->dualfeasible);
 
       /* check the path from LP fork to active node for domain changes (destroying primal feasibility of LP basis) */
       for( d = lpforkdepth; d < (int)(tree->actnode->depth) && lp->primalfeasible; ++d )
@@ -1578,16 +1603,6 @@ RETCODE nodeToLeaf(
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK
       || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
 
-#if 0
-   /* find the lpfork for the node */
-   lpfork = tree->actlpfork;
-   if( node->parent != NULL )
-   {
-      if( SCIPnodeGetType(node->parent) == SCIP_NODETYPE_FORK || SCIPnodeGetType(node->parent) == SCIP_NODETYPE_SUBROOT )
-         lpfork = node->parent;
-   }
-#endif
-   
    /* convert node into leaf */
    debugMessage("convert node %p at depth %d to leaf with lpfork %p at depth %d\n",
       node, node->depth, lpfork, lpfork == NULL ? -1 : (int)(lpfork->depth));
@@ -1740,6 +1755,11 @@ RETCODE actnodeToFork(
    /* set new actual LP fork */
    tree->actlpfork = tree->actnode;
 
+   /* remember the current LP number to be able to recognize later if the current LP solution is still the solution
+    * of the actual LP fork
+    */
+   tree->actlpforklpcount = stat->lpcount;
+
    /* make the domain change data static to save memory */
    CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
 
@@ -1829,6 +1849,11 @@ RETCODE actnodeToSubroot(
    /* set new actual LP fork and actual subroot */
    tree->actlpfork = tree->actnode;
    tree->actsubroot = tree->actnode;
+
+   /* remember the current LP number to be able to recognize later if the current LP solution is still the solution
+    * of the actual LP fork
+    */
+   tree->actlpforklpcount = stat->lpcount;
 
    /* make the domain change data static to save memory */
    CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr, set) );
@@ -1986,8 +2011,15 @@ RETCODE SCIPnodeActivate(
          /* remove selected sibling from the siblings array */
          treeRemoveSibling(tree, node);
 
-         /* reinstall the old LP fork, because this is the correct LP fork of the sibling */
-         tree->actlpfork = oldlpfork;
+         /* reinstall the old LP fork, because this is the correct LP fork of the sibling;
+          * if the LP fork changed (because the old active node was converted into a fork or subroot),
+          * the lpcount information of the new LP fork is now unknown
+          */
+         if( tree->actlpfork != oldlpfork )
+         {
+            tree->actlpfork = oldlpfork;
+            tree->actlpforklpcount = -1;
+         }
          
          break;
          
@@ -2061,6 +2093,7 @@ RETCODE SCIPtreeCreate(
    (*tree)->path = NULL;
    (*tree)->actnode = NULL;
    (*tree)->actlpfork = NULL;
+   (*tree)->actlpforklpcount = -1;
    (*tree)->actsubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;

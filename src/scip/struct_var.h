@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.3 2003/12/23 12:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.4 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -28,6 +28,7 @@
 
 
 #include "def.h"
+#include "type_history.h"
 #include "type_event.h"
 #include "type_var.h"
 #include "type_cons.h"
@@ -58,7 +59,7 @@ struct HoleChg
 /** data for branching decision bound changes */
 struct BranchingData
 {
-   Real             solval;             /**< solution value of variable prior to changing the bound */
+   Real             lpsolval;           /**< sol val of var in last LP prior to bound change, or SCIP_INVALID if unknown */
 };
 
 /** data for inferred bound changes */
@@ -172,6 +173,7 @@ struct Var
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    VAR*             infervar;           /**< variable that was assigned (parent of var, or var itself) */
    CONS*            infercons;          /**< constraint that deduced the assignment (binary variables only), or NULL */
+   HISTORY*         lphistory;          /**< branching history information for downwards and upwards branching on LP */
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              actdom;             /**< domain of variable in actual subproblem */
    Real             obj;                /**< objective function value of variable */
@@ -193,6 +195,7 @@ struct Var
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
+   unsigned int     historyflag:2;      /**< temporary flag used in branching history update */
 };
 
 

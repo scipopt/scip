@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.32 2003/12/15 17:45:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.33 2004/01/07 13:14:13 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -723,7 +723,7 @@ Real SCIPbranchGetScore(
 {
    assert(set != NULL);
 
-   if( downgain < upgain )
+   if( downgain > upgain )
       return set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
    else
       return set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;

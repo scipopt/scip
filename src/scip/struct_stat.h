@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.1 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.2 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -30,6 +30,7 @@
 #include "def.h"
 #include "type_stat.h"
 #include "type_clock.h"
+#include "type_history.h"
 
 
 /** problem and runtime specific statistics */
@@ -44,6 +45,7 @@ struct Stat
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
+   HISTORY*         glblphistory;       /**< average branching history for downwards and upwards branching on LP */
    Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */

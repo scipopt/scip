@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.63 2003/12/23 12:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.64 2004/01/07 13:14:15 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -31,12 +31,14 @@
 #include "message.h"
 #include "set.h"
 #include "stat.h"
+#include "history.h"
 #include "event.h"
 #include "lp.h"
 #include "var.h"
 #include "prob.h"
 #include "scip.h"
 #include "cons.h"
+
 
 
 
@@ -680,7 +682,7 @@ RETCODE SCIPdomchgAddBoundchg(
    BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    NODE*            node,               /**< node where this bound change appears */
-   Real             solval,             /**< current solution value of variable (for branching decisions) */
+   Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
    )
@@ -724,7 +726,7 @@ RETCODE SCIPdomchgAddBoundchg(
    switch( boundchgtype )
    {
    case SCIP_BOUNDCHGTYPE_BRANCHING:
-      boundchg->data.branchingdata.solval = solval;
+      boundchg->data.branchingdata.lpsolval = lpsolval;
       break;
    case SCIP_BOUNDCHGTYPE_INFERENCE:
       boundchg->data.inferencedata.var = infervar;
@@ -894,11 +896,15 @@ RETCODE varCreate(
    (*var)->initial = initial;
    (*var)->removeable = removeable;
    (*var)->vartype = vartype; /*lint !e641*/
+   (*var)->historyflag = FALSE;
 
    /* adjust bounds, if variable is integral */
    SCIPvarAdjustLb(*var, set, &lb);
    SCIPvarAdjustUb(*var, set, &ub);
    assert(lb <= ub);
+
+   /* create branching history entries */
+   CHECK_OKAY( SCIPhistoryCreate(&(*var)->lphistory, memhdr) );
 
    return SCIP_OKAY;
 }
@@ -1139,6 +1145,9 @@ RETCODE varFree(
       CHECK_OKAY( SCIPeventfilterFree(&(*var)->eventfilter, memhdr, set) );
    }
    assert((*var)->eventfilter == NULL);
+
+   /* free branching history entries */
+   SCIPhistoryFree(&(*var)->lphistory, memhdr);
 
    /* free variable data structure */
    freeBlockMemoryArray(memhdr, &(*var)->name, strlen((*var)->name)+1);
@@ -4724,6 +4733,57 @@ RETCODE SCIPvarDropEvent(
    CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata) );
 
    return SCIP_OKAY;
+}
+
+/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ */
+void SCIPvarUpdateLPHistory(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   Real             weight              /**< weight in (0,1] of this update in history sum */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   /* update variable's and global history values */
+   SCIPhistoryUpdate(var->lphistory, set, solvaldelta, objdelta, weight);
+   SCIPhistoryUpdate(stat->glblphistory, set, solvaldelta, objdelta, weight);
+}
+
+/** gets the variable's branching history value for the given step size "solvaldelta" in the variable's LP solution value */
+Real SCIPvarGetLPHistory(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   int dir;
+
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   dir = (solvaldelta >= 0.0 ? 1 : 0);
+
+   return SCIPhistoryGetCount(var->lphistory, dir) > 0.0
+      ? SCIPhistoryGetValue(var->lphistory, solvaldelta)
+      : SCIPhistoryGetValue(stat->glblphistory, solvaldelta);
+}
+
+/** gets the variable's (possible fractional) number of history updates for the given direction */
+Real SCIPvarGetLPHistoryCount(
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   )
+{
+   assert(var != NULL);
+   assert(dir == 0 || dir == 1);
+
+   return SCIPhistoryGetCount(var->lphistory, dir);
 }
 
 

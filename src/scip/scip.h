@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.96 2003/12/23 12:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.97 2004/01/07 13:14:14 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2579,6 +2579,41 @@ RETCODE SCIPdropVarEvent(
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   );
+
+/** updates the branching history of the given variable and the global history after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ */
+extern
+RETCODE SCIPupdateVarLPHistory(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   Real             weight              /**< weight in (0,1] of this update in history sum */
+   );
+
+/** gets the variable's branching history value for the given direction */
+extern
+Real SCIPgetVarLPHistory(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the variable's (possible fractional) number of history updates for the given direction */
+extern
+Real SCIPgetVarLPHistoryCount(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   );
+
+/** gets the variable's history score value at it's current LP solution */
+extern
+Real SCIPgetVarLPHistoryScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
    );
 
 /**@} */
