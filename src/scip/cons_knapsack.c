@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.16 2004/03/10 10:19:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.17 2004/03/10 17:00:19 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -265,21 +265,19 @@ RETCODE separateCovers(
    Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
+   CONSDATA* consdata;
+   VAR** fixedones;
    VAR** items;
    int* weights;
    Real* profits;
-   CONSDATA* consdata;
-   int i;
-   int nitems;
-   VAR** fixedones;
-   int nfixedones;
-   int capacity;
-   VAR** covervars;
-   int ncovervars;
    Real infeasibility;
    Real solval;
    Real solvalsum;
    Real transsol;
+   int nitems;
+   int nfixedones;
+   int capacity;
+   int i;
 
    assert(separated != NULL);
 
@@ -326,6 +324,9 @@ RETCODE separateCovers(
 
    if( capacity >= 0)
    {
+      VAR** covervars;
+      int ncovervars;
+
       /* solve separation knapsack with dynamic programming */
       CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, nitems+nfixedones) );
       CHECK_OKAY( dynProgKnapsack(scip, nitems, items, weights, profits, capacity, 
@@ -350,13 +351,15 @@ RETCODE separateCovers(
             CHECK_OKAY( SCIPaddVarToRow(scip, row, fixedones[i], 1.0) );
          }
          
-         CHECK_OKAY( SCIPprintRow(scip, row, NULL) );
+         debugMessage("found cover cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
+         debug(SCIProwPrint(row, NULL));
          CHECK_OKAY( SCIPaddCut(scip, row, infeasibility/(SCIProwGetNNonz(row)+1)) );
          CHECK_OKAY( SCIPreleaseRow(scip, &row) );
       }
    
       CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
    }
+
    /* free temporary data */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedones) );
    CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
@@ -554,7 +557,7 @@ DECL_CONSCHECK(consCheckKnapsack)
 
    for( i = 0; i < nconss; i++ )
    {
-      if( !checkCons(scip, conss[i], sol, TRUE) )
+      if( !checkCons(scip, conss[i], sol, checklprows) )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;

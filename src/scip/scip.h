@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.110 2004/03/08 18:05:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.111 2004/03/10 17:00:21 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -73,6 +73,7 @@
 #include "pub_pricer.h"
 #include "pub_reader.h"
 #include "pub_sepa.h"
+#include "pub_sol.h"
 #include "pub_tree.h"
 #include "pub_var.h"
 
@@ -2499,9 +2500,9 @@ RETCODE SCIPgetSolVals(
    Real*            vals                /**< array to store solution values of variables */
    );
 
-/** returns objective value of primal CIP solution, or current LP/pseudo objective value */
+/** returns objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value */
 extern
-Real SCIPgetSolObj(
+Real SCIPgetSolOrigObj(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    );
@@ -2606,8 +2607,8 @@ extern
 RETCODE SCIPtrySol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
@@ -2616,8 +2617,8 @@ extern
 RETCODE SCIPtrySolFree(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
 

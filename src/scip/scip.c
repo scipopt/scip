@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.130 2004/03/08 18:05:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.131 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6239,20 +6239,21 @@ RETCODE SCIPgetSolVals(
    return SCIP_OKAY;
 }
 
-/** returns objective value of primal CIP solution, or current LP/pseudo objective value */
-Real SCIPgetSolObj(
+/** returns objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value */
+Real SCIPgetSolOrigObj(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetSolObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetSolOrigObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( sol != NULL )
       return SCIPprobExternObjval(scip->origprob, scip->set, 
          SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol)));
    else
    {
-      CHECK_ABORT( checkStage(scip, "SCIPgetSolObj(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+      CHECK_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", 
+                      FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
       if( scip->tree->actnodehaslp )
          return SCIPprobExternObjval(scip->origprob, scip->set,
             SCIPprobExternObjval(scip->transprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set)));
@@ -6513,15 +6514,15 @@ RETCODE SCIPaddSolFree(
 RETCODE SCIPtrySol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalTrySol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
+                  scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -6530,15 +6531,15 @@ RETCODE SCIPtrySol(
 RETCODE SCIPtrySolFree(
    SCIP*            scip,               /**< SCIP data structure */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalTrySolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
+                  scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }

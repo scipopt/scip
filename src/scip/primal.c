@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.29 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.30 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -381,8 +381,8 @@ RETCODE SCIPprimalTrySol(
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
@@ -399,7 +399,7 @@ RETCODE SCIPprimalTrySol(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, chckintegrality, chcklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;
@@ -433,8 +433,8 @@ RETCODE SCIPprimalTrySolFree(
    LP*              lp,                 /**< current LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
@@ -454,7 +454,7 @@ RETCODE SCIPprimalTrySolFree(
    if( insertpos < set->maxsol )
    {
       /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, prob, chckintegrality, chcklprows, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(*sol, memhdr, set, prob, checkintegrality, checklprows, &feasible) );
    }
    else
       feasible = FALSE;

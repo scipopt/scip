@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.4 2004/02/05 14:12:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.5 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -383,7 +383,7 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 
          if( success )
          {
-            debugMessage("coefdiving found roundable primal solution: obj=%g\n", SCIPgetSolObj(scip, heurdata->sol));
+            debugMessage("coefdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
          
             /* try to add solution to SCIP */
             CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
@@ -466,7 +466,7 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 
       /* create solution from diving LP */
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );
-      debugMessage("coefdiving found primal solution: obj=%g\n", SCIPgetSolObj(scip, heurdata->sol));
+      debugMessage("coefdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
       CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );

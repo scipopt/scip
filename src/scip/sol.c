@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.31 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.32 2004/03/10 17:00:21 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -630,8 +630,8 @@ RETCODE SCIPsolCheck(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */
    )
 {
@@ -647,7 +647,7 @@ RETCODE SCIPsolCheck(
    *feasible = TRUE;
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, prob, sol, chckintegrality, chcklprows, &result) );
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, prob, sol, checkintegrality, checklprows, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
    }
 
@@ -719,7 +719,50 @@ RETCODE SCIPsolRound(
    return SCIP_OKAY;
 }
 
-/** gets objective value of primal CIP solution */
+/** outputs non-zero elements of solution to file stream */
+RETCODE SCIPsolPrint(
+   SOL*             sol,                /**< primal CIP solution */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< problem data */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   Real solval;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      assert(prob->vars[v] != NULL);
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, prob->vars[v], &solval) );
+      if( !SCIPsetIsZero(set, solval) )
+      {
+         if( SCIPsetIsInfinity(set, solval) )
+            fprintf(file, "%-32s +infinity\n", SCIPvarGetName(prob->vars[v]));
+         else if( SCIPsetIsInfinity(set, -solval) )
+            fprintf(file, "%-32s -infinity\n", SCIPvarGetName(prob->vars[v]));
+         else
+            fprintf(file, "%-32s %f \t(obj:%g)\n", SCIPvarGetName(prob->vars[v]), solval, SCIPvarGetObj(prob->vars[v]));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets objective value of primal CIP solution in transformed problem */
 Real SCIPsolGetObj(
    SOL*             sol                 /**< primal CIP solution */
    )
@@ -769,39 +812,4 @@ HEUR* SCIPsolGetHeur(
    return sol->heur;
 }
 
-/** outputs non-zero elements of solution to file stream */
-RETCODE SCIPsolPrint(
-   SOL*             sol,                /**< primal CIP solution */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< problem data */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   Real solval;
-   int v;
-
-   assert(sol != NULL);
-   assert(prob != NULL);
-
-   if( file == NULL )
-      file = stdout;
-
-   for( v = 0; v < prob->nvars; ++v )
-   {
-      assert(prob->vars[v] != NULL);
-      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, prob->vars[v], &solval) );
-      if( !SCIPsetIsZero(set, solval) )
-      {
-         if( SCIPsetIsInfinity(set, solval) )
-            fprintf(file, "%-32s +infinity\n", SCIPvarGetName(prob->vars[v]));
-         else if( SCIPsetIsInfinity(set, -solval) )
-            fprintf(file, "%-32s -infinity\n", SCIPvarGetName(prob->vars[v]));
-         else
-            fprintf(file, "%-32s %f \t(obj:%g)\n", SCIPvarGetName(prob->vars[v]), solval, SCIPvarGetObj(prob->vars[v]));
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
+#endif

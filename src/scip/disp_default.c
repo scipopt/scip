@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.37 2004/03/01 09:54:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.38 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -232,7 +232,7 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
    sol = SCIPgetBestSol(scip);
    if( sol != NULL
       && SCIPgetSolNodenum(scip, sol) == SCIPgetNodenum(scip)
-      && SCIPisEQ(scip, SCIPgetSolObj(scip, sol), SCIPgetPrimalbound(scip)) )
+      && SCIPisEQ(scip, SCIPgetSolOrigObj(scip, sol), SCIPgetPrimalbound(scip)) )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPgetSolHeur(scip, sol)));
    }

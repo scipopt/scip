@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.4 2004/02/05 14:12:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.5 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -375,7 +375,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
          if( success )
          {
-            debugMessage("fracdiving found roundable primal solution: obj=%g\n", SCIPgetSolObj(scip, heurdata->sol));
+            debugMessage("fracdiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
          
             /* try to add solution to SCIP */
             CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );
@@ -458,7 +458,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
       /* create solution from diving LP */
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->sol) );
-      debugMessage("fracdiving found primal solution: obj=%g\n", SCIPgetSolObj(scip, heurdata->sol));
+      debugMessage("fracdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
       CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, &success) );

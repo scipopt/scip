@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.22 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.23 2004/03/10 17:00:21 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -40,6 +40,7 @@
 #include "type_sol.h"
 #include "type_tree.h"
 #include "type_heur.h"
+#include "pub_sol.h"
 
 
 
@@ -192,8 +193,8 @@ RETCODE SCIPsolCheck(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            feasible            /**< stores whether solution is feasible */
    );
 
@@ -206,36 +207,6 @@ RETCODE SCIPsolRound(
    PROB*            prob,               /**< problem data */
    TREE*            tree,               /**< branch-and-bound tree */
    Bool*            success             /**< pointer to store whether rounding was successful */
-   );
-
-/** gets objective value of primal CIP solution */
-extern
-Real SCIPsolGetObj(
-   SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** gets clock time, when this solution was found */
-extern
-Real SCIPsolGetTime(
-   SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** gets node number, where this solution was found */
-extern
-Longint SCIPsolGetNodenum(
-   SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** gets node's depth, where this solution was found */
-extern
-int SCIPsolGetDepth(
-   SOL*             sol                 /**< primal CIP solution */
-   );
-
-/** gets heuristic, that found this solution (or NULL if it's from the tree) */
-extern
-HEUR* SCIPsolGetHeur(
-   SOL*             sol                 /**< primal CIP solution */
    );
 
 /** outputs non-zero elements of solution to file stream */

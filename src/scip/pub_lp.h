@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.5 2004/02/05 14:12:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.6 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   lp.h
- * @brief  internal methods for LP management
+ * @brief  public methods for LP management
  * @author Tobias Achterberg
  */
 

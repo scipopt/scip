@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.19 2004/02/05 14:12:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.20 2004/03/10 17:00:20 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -147,11 +147,15 @@ RETCODE updateActivities(
    return SCIP_OKAY;
 }
 
-/** returns a variable, that pushes activity of the row in the given direction */
+/** returns a variable, that pushes activity of the row in the given direction with minimal negative impact on other rows;
+ *  if variables have equal impact, chooses the one with best objective value improvement in corresponding direction;
+ *  rounding in a direction is forbidden, if this forces the objective value over the upper bound
+ */
 static
 RETCODE selectRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
+   Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
    ROW*             row,                /**< LP row */
    int              direction,          /**< should the activity be increased (+1) or decreased (-1)? */
    VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
@@ -165,6 +169,10 @@ RETCODE selectRounding(
    COL** rowcols;
    Real* rowvals;
    Real solval;
+   Real roundval;
+   Real obj;
+   Real deltaobj;
+   Real bestdeltaobj;
    VARTYPE vartype;
    int nrowcols;
    int nlocks;
@@ -176,12 +184,15 @@ RETCODE selectRounding(
    assert(oldsolval != NULL);
    assert(newsolval != NULL);
 
+   /* get row entries */
    rowcols = SCIProwGetCols(row);
    rowvals = SCIProwGetVals(row);
    nrowcols = SCIProwGetNNonz(row);
-   minnlocks = INT_MAX;
-   *roundvar = NULL;
 
+   /* select rounding variable */
+   minnlocks = INT_MAX;
+   bestdeltaobj = SCIPinfinity(scip);
+   *roundvar = NULL;
    for( c = 0; c < nrowcols; ++c )
    {
       col = rowcols[c];
@@ -195,28 +206,43 @@ RETCODE selectRounding(
          if( !SCIPisIntegral(scip, solval) )
          {
             val = rowvals[c];
-         
-            if( direction * val > 0.0 )
+            obj = SCIPvarGetObj(var);
+
+            if( direction * val < 0.0 )
             {
-               nlocks = SCIPvarGetNLocksUp(var);
-               if( nlocks < minnlocks )
+               /* rounding down */
+               nlocks = SCIPvarGetNLocksDown(var);
+               if( nlocks <= minnlocks )
                {
-                  minnlocks = nlocks;
-                  *roundvar = var;
-                  *oldsolval = solval;
-                  *newsolval = SCIPceil(scip, solval);
+                  roundval = SCIPfloor(scip, solval);
+                  deltaobj = obj * (roundval - solval);
+                  if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetUpperbound(scip) )
+                  {
+                     minnlocks = nlocks;
+                     bestdeltaobj = deltaobj;
+                     *roundvar = var;
+                     *oldsolval = solval;
+                     *newsolval = roundval;
+                  }
                }
             }
             else
             {
-               assert(direction * val < 0.0);
-               nlocks = SCIPvarGetNLocksDown(var);
-               if( nlocks < minnlocks )
+               /* rounding up */
+               assert(direction * val > 0.0);
+               nlocks = SCIPvarGetNLocksUp(var);
+               if( nlocks <= minnlocks )
                {
-                  minnlocks = nlocks;
-                  *roundvar = var;
-                  *oldsolval = solval;
-                  *newsolval = SCIPfloor(scip, solval);
+                  roundval = SCIPceil(scip, solval);
+                  deltaobj = obj * (roundval - solval);
+                  if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetUpperbound(scip) )
+                  {
+                     minnlocks = nlocks;
+                     bestdeltaobj = deltaobj;
+                     *roundvar = var;
+                     *oldsolval = solval;
+                     *newsolval = roundval;
+                  }
                }
             }
          }
@@ -231,13 +257,14 @@ static
 RETCODE selectIncreaseRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
+   Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
    ROW*             row,                /**< LP row */
    VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
    Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
    Real*            newsolval           /**< new (rounded) solution value of rounding variable */
    )
 {
-   return selectRounding(scip, sol, row, +1, roundvar, oldsolval, newsolval);
+   return selectRounding(scip, sol, minobj, row, +1, roundvar, oldsolval, newsolval);
 }
 
 /** returns a variable, that decreases the activity of the row */
@@ -245,20 +272,26 @@ static
 RETCODE selectDecreaseRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
+   Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
    ROW*             row,                /**< LP row */
    VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
    Real*            oldsolval,          /**< old (fractional) solution value of rounding variable */
    Real*            newsolval           /**< new (rounded) solution value of rounding variable */
    )
 {
-   return selectRounding(scip, sol, row, -1, roundvar, oldsolval, newsolval);
+   return selectRounding(scip, sol, minobj, row, -1, roundvar, oldsolval, newsolval);
 }
 
-/** returns a variable, that has most impact on rows in opposite direction */
+/** returns a fractional variable, that has most impact on rows in opposite direction, i.e. that is most crucial to
+ *  fix in the other direction;
+ *  if variables have equal impact, chooses the one with best objective value improvement in corresponding direction;
+ *  rounding in a direction is forbidden, if this forces the objective value over the upper bound
+ */
 static
 RETCODE selectEssentialRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
+   Real             minobj,             /**< minimal objective value possible after rounding remaining fractional vars */
    VAR**            lpcands,            /**< fractional variables in LP */
    int              nlpcands,           /**< number of fractional variables in LP */
    VAR**            roundvar,           /**< pointer to store the rounding variable, returns NULL if impossible */
@@ -267,8 +300,11 @@ RETCODE selectEssentialRounding(
    )
 {
    VAR* var;
-   VARTYPE vartype;
    Real solval;
+   Real roundval;
+   Real obj;
+   Real deltaobj;
+   Real bestdeltaobj;
    int maxnlocks;
    int nlocks;
    int v;
@@ -277,34 +313,49 @@ RETCODE selectEssentialRounding(
    assert(oldsolval != NULL);
    assert(newsolval != NULL);
 
+   /* select rounding variable */
    maxnlocks = -1;
+   bestdeltaobj = SCIPinfinity(scip);
    *roundvar = NULL;
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-
-      vartype = SCIPvarGetType(var);
-      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      
+      solval = SCIPgetSolVal(scip, sol, var);
+      if( !SCIPisIntegral(scip, solval) )
       {
-         solval = SCIPgetSolVal(scip, sol, var);
-         
-         if( !SCIPisIntegral(scip, solval) )
+         obj = SCIPvarGetObj(var);
+
+         /* rounding down */
+         nlocks = SCIPvarGetNLocksUp(var);
+         if( nlocks >= maxnlocks )
          {
-            nlocks = SCIPvarGetNLocksDown(var);
-            if( nlocks > maxnlocks )
+            roundval = SCIPfloor(scip, solval);
+            deltaobj = obj * (roundval - solval);
+            if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetUpperbound(scip) )
             {
                maxnlocks = nlocks;
+               bestdeltaobj = deltaobj;
                *roundvar = var;
                *oldsolval = solval;
-               *newsolval = SCIPceil(scip, solval);
+               *newsolval = roundval;
             }
-            nlocks = SCIPvarGetNLocksUp(var);
-            if( nlocks > maxnlocks )
+         }
+
+         /* rounding up */
+         nlocks = SCIPvarGetNLocksDown(var);
+         if( nlocks >= maxnlocks )
+         {
+            roundval = SCIPceil(scip, solval);
+            deltaobj = obj * (roundval - solval);
+            if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetUpperbound(scip) )
             {
                maxnlocks = nlocks;
+               bestdeltaobj = deltaobj;
                *roundvar = var;
                *oldsolval = solval;
-               *newsolval = SCIPfloor(scip, solval);
+               *newsolval = roundval;
             }
          }
       }
@@ -375,6 +426,9 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    Real* activities;
    ROW** violrows;
    int* violrowpos;
+   Real obj;
+   Real bestroundval;
+   Real minobj;
    Bool aborted;
    int nlpcands;
    int nlprows;
@@ -384,6 +438,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    int r;
 
    /**@todo try to shift continuous variables to stay feasible */
+   /**@todo improve rounding heuristic */
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -444,51 +499,16 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    /* copy the current LP solution to the working solution */
    CHECK_OKAY( SCIPlinkLPSol(scip, sol) );
 
-   /* first step: round all roundable fractional columns in the corresponding direction */
+   /* calculate the minimal objective value possible after rounding fractional variables */
+   minobj = SCIPsolGetObj(sol);
    for( c = 0; c < nlpcands; ++c )
    {
-      VAR* var;
-      Real oldsolval;
-      Real newsolval;
-      Bool mayrounddown;
-      Bool mayroundup;
-
-      oldsolval = lpcandssol[c];
-      assert(!SCIPisIntegral(scip, oldsolval));
-      var = lpcands[c];
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-      mayrounddown = SCIPvarMayRoundDown(var);
-      mayroundup = SCIPvarMayRoundUp(var);
-      debugMessage("rounding heuristic step 1: var <%s>, val=%g, rounddown=%d, roundup=%d\n",
-         SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
-      if( mayrounddown || mayroundup )
-      {
-         /* choose rounding direction */
-         if( mayrounddown && mayroundup )
-         {
-            /* we can round in both directions: round in objective function direction */
-            if( SCIPvarGetObj(var) >= 0.0 )
-               newsolval = SCIPfloor(scip, oldsolval);
-            else
-               newsolval = SCIPceil(scip, oldsolval);
-         }
-         else if( mayrounddown )
-            newsolval = SCIPfloor(scip, oldsolval);
-         else
-            newsolval = SCIPceil(scip, oldsolval);
-
-         /* update row activities of globally valid rows */
-         CHECK_OKAY( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
-                        var, oldsolval, newsolval) );
-
-         /* store new solution value and decrease fractionality counter */
-         CHECK_OKAY( SCIPsetSolVal(scip, sol, var, newsolval) );
-         nfrac--;
-      }
-      debugMessage(" -> nfrac=%d, nviolrows=%d\n", nfrac, nviolrows);
+      obj = SCIPvarGetObj(lpcands[c]);
+      bestroundval = obj > 0.0 ? SCIPfloor(scip, lpcandssol[c]) : SCIPceil(scip, lpcandssol[c]);
+      minobj += obj * (bestroundval - lpcandssol[c]);
    }
 
-   /* second step: try to round remaining variables in order to become/stay feasible */
+   /* try to round remaining variables in order to become/stay feasible */
    aborted = FALSE;
    while( nfrac > 0 && !aborted )
    {
@@ -496,11 +516,14 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       Real oldsolval;
       Real newsolval;
          
+      assert(minobj < SCIPgetUpperbound(scip)); /* otherwise, the rounding variable selection should have returned NULL */
+
       /* choose next variable to process:
        *  - if a violated row exists, round a variable decreasing the violation, that has least impact on other rows
        *  - otherwise, round a variable, that has strongest devastating impact on rows in opposite direction
        */
-      debugMessage("rounding heuristic step 2: nfrac=%d, nviolrows=%d\n", nfrac, nviolrows);
+      debugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+         nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
       if( nviolrows > 0 )
       {
          ROW* row;
@@ -511,30 +534,36 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
          assert(0 <= rowpos && rowpos < nlprows);
          assert(violrowpos[rowpos] == nviolrows-1);
 
+         debugMessage("rounding heuristic: try to fix violated row <%s>: %g <= %g <= %g\n",
+            SCIProwGetName(row), SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row));
          if( SCIPisFeasLT(scip, activities[rowpos], SCIProwGetLhs(row)) )
          {
             /* lhs is violated: select a variable rounding, that increases the activity */
-            CHECK_OKAY( selectIncreaseRounding(scip, sol, row, &roundvar, &oldsolval, &newsolval) );
+            CHECK_OKAY( selectIncreaseRounding(scip, sol, minobj, row, &roundvar, &oldsolval, &newsolval) );
          }
          else
          {
             assert(SCIPisFeasGT(scip, activities[rowpos], SCIProwGetRhs(row)));
             /* rhs is violated: select a variable rounding, that decreases the activity */
-            CHECK_OKAY( selectDecreaseRounding(scip, sol, row, &roundvar, &oldsolval, &newsolval) );
+            CHECK_OKAY( selectDecreaseRounding(scip, sol, minobj, row, &roundvar, &oldsolval, &newsolval) );
          }
       }
       else
       {
-         CHECK_OKAY( selectEssentialRounding(scip, sol, lpcands, nlpcands, &roundvar, &oldsolval, &newsolval) );
+         debugMessage("rounding heuristic: search rounding variable and try to stay feasible\n");
+         CHECK_OKAY( selectEssentialRounding(scip, sol, minobj, lpcands, nlpcands, &roundvar, &oldsolval, &newsolval) );
       }
 
       /* check, whether rounding was possible */
       if( roundvar == NULL )
+      {
+         debugMessage("rounding heuristic:  -> didn't find a rounding variable\n");
          aborted = TRUE;
+      }
       else
       {
-         debugMessage("rounding heuristic step 2: var <%s>, oldval=%g, newval=%g\n",
-            SCIPvarGetName(roundvar), oldsolval, newsolval);
+         debugMessage("rounding heuristic:  -> round var <%s>, oldval=%g, newval=%g, obj=%g\n",
+            SCIPvarGetName(roundvar), oldsolval, newsolval, SCIPvarGetObj(roundvar));
          
          /* update row activities of globally valid rows */
          CHECK_OKAY( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
@@ -543,8 +572,17 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
          /* store new solution value and decrease fractionality counter */
          CHECK_OKAY( SCIPsetSolVal(scip, sol, roundvar, newsolval) );
          nfrac--;
+
+         /* update minimal objective value possible after rounding remaining variables */
+         obj = SCIPvarGetObj(roundvar);
+         if( obj > 0.0 && newsolval > oldsolval )
+            minobj += obj;
+         else if( obj < 0.0 && newsolval < oldsolval )
+            minobj -= obj;
+
+         debugMessage("rounding heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+            nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
       }
-      debugMessage(" -> nfrac=%d, nviolrows=%d\n", nfrac, nviolrows);
    }
 
    /* check, if the new solution is feasible */
