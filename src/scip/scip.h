@@ -146,6 +146,9 @@ STAGE SCIPstage(
  * parameter settings
  */
 
+/**@name Parameter Methods */
+/**@{ */
+
 /** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
 extern
 RETCODE SCIPaddBoolParam(
@@ -335,6 +338,8 @@ RETCODE SCIPwriteParams(
    const char*      filename,           /**< file name, or NULL for stdout */
    Bool             comments            /**< should parameter descriptions be written as comments? */
    );
+
+/**@} */
 
 
 
@@ -822,6 +827,14 @@ RETCODE SCIPchgVarObj(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the objective value for */
    Real             newobj              /**< new objective value */
+   );
+
+/** adds value to variable's objective value */
+extern
+RETCODE SCIPaddVarObj(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             addobj              /**< additional objective value */
    );
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;

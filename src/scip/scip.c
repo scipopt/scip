@@ -2168,6 +2168,42 @@ RETCODE SCIPchgVarObj(
    return SCIP_OKAY;
 }
 
+/** adds value to variable's objective value */
+RETCODE SCIPaddVarObj(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the objective value for */
+   Real             addobj              /**< additional objective value */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->origprob, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, addobj) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+      if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+      {
+         errorMessage("cannot add value to objective value of original variables while presolving the problem");
+         return SCIP_INVALIDCALL;
+      }
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->transprob, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, addobj) );
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }   
+
+   return SCIP_OKAY;
+}
+
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
  *  if possible, adjust bound to integral value
  */
