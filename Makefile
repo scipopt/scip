@@ -14,21 +14,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.90 2004/10/29 12:44:22 bzfpfend Exp $
+# $Id: Makefile,v 1.91 2004/11/01 13:48:06 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 
-# Several symlinks are nesseccary:
-#
-# lib/cpxinc                                        -> directory with cplex.h
-# lib/spxinc                                        -> directory with SoPlex's *.h
-# lib/libcplex.$(OSTYPE).$(ARCH).a                  -> libcplex.a
-# lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT).a  -> libsoplex.a
-#
-#
 .PHONY:		depend clean lint doc test testcplex
 
 ARCH            :=      $(shell uname -m | \
@@ -69,7 +61,7 @@ DOXY		=	doxygen
 FLAGS		=	-I$(SRCDIR)
 CFLAGS		=	
 CXXFLAGS	=	
-LDFLAGS		=	-lpthread -lm -lz
+LDFLAGS		=	-lpthread -lm
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
@@ -105,20 +97,6 @@ include make/make.$(BASE)
 
 
 #-----------------------------------------------------------------------------
-# Main Program
-#-----------------------------------------------------------------------------
-
-MAINNAME	=	scip
-MAINOBJ		=	cmain.o
-
-MAIN		=	$(MAINNAME).$(BASE).$(LPS)
-MAINFILE	=	$(BINDIR)/$(MAIN)
-MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
-MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	src/depend.main.$(OPT)
-
-
-#-----------------------------------------------------------------------------
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
@@ -126,7 +104,7 @@ LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/cpxinc
-LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH)
+LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	lpi_cpx.o bitencode.o memory.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
@@ -134,7 +112,7 @@ endif
 ifeq ($(LPS),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
-LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH)
+LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	lpi_spx.o bitencode.o memory.o
 LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
 endif
@@ -142,7 +120,7 @@ endif
 ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
-LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH)
+LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	lpi_spx.o bitencode.o memory.o
 LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
 endif
@@ -150,7 +128,7 @@ endif
 ifeq ($(LPS),spx121)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spx121inc 
-LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH)
+LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	lpi_spx121.o bitencode.o memory.o
 LPILIBSRC	=	src/lpi_spx121.cpp src/bitencode.c
 endif
@@ -158,7 +136,7 @@ endif
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH) -lcoin.$(OSTYPE).$(ARCH)
+LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP) -lcoin.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	lpi_clp.o bitencode.o memory.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.cpp))
 endif
@@ -166,7 +144,7 @@ endif
 ifeq ($(LPS),clpdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH) -lcoindbg.$(OSTYPE).$(ARCH)
+LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
 LPILIBOBJ	=	lpi_clp.o bitencode.o memory.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.cpp))
 endif
@@ -295,6 +273,27 @@ OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a
 OBJSCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
 OBJSCIPLIBDEP	=	src/depend.objsciplib.$(OPT)
+
+
+#-----------------------------------------------------------------------------
+# Main Program
+#-----------------------------------------------------------------------------
+
+MAINNAME	=	scip
+
+ifeq ($(LINKER),C)
+MAINOBJ		=	cmain.o
+MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
+endif
+ifeq ($(LINKER),CPP)
+MAINOBJ		=	cppmain.o
+MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
+endif
+
+MAIN		=	$(MAINNAME).$(BASE).$(LPS)
+MAINFILE	=	$(BINDIR)/$(MAIN)
+MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+MAINDEP		=	src/depend.main.$(OPT)
 
 
 #-----------------------------------------------------------------------------

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.158 2004/10/29 13:19:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.159 2004/11/01 13:48:07 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10579,7 +10579,7 @@ RETCODE lpRemoveObsoleteCols(
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( lp->nremoveablecols == 0 )
+   if( lp->nremoveablecols == 0 || set->lp_colagelimit == -1 )
       return SCIP_OKAY;
 
    ncols = lp->ncols;
@@ -10650,7 +10650,7 @@ RETCODE lpRemoveObsoleteRows(
    assert(set != NULL);
    assert(stat != NULL);
 
-   if( lp->nremoveablerows == 0 )
+   if( lp->nremoveablerows == 0 || set->lp_rowagelimit == -1 )
       return SCIP_OKAY;
 
    nrows = lp->nrows;

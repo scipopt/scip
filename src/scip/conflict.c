@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.73 2004/11/01 09:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.74 2004/11/01 13:48:07 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1006,7 +1006,7 @@ RETCODE conflictAddClause(
       for( b = 0; b < nboundchgs; ++b )
       {
          var = boundchgs[b].var;
-         boundchgtype = boundchgs[b].boundchgtype;
+         boundchgtype = (BOUNDCHGTYPE)boundchgs[b].boundchgtype;
          if( boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
             break;
          if( var->conflictsetcount != conflict->count )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.4 2004/10/28 14:30:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.5 2004/11/01 13:48:07 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -34,13 +34,6 @@
 #define BRANCHRULE_PRIORITY      2000
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
-
-
-
-/** branching rule data */
-struct BranchruleData
-{
-};
 
 
 

@@ -1,6 +1,6 @@
-#--- $Id: make.osf1.alpha.gnu.opt,v 1.5 2004/07/13 15:03:48 bzfpfend Exp $
-FLAGS		+=      -DNDEBUG -O6 -mcpu=ev6 -g # -DWITH_READLINE
+#--- $Id: make.osf1.alpha.gnu.opt,v 1.6 2004/11/01 13:48:07 bzfpfend Exp $
+FLAGS		+=      -DROUNDING_FE -DNDEBUG -O6 -mcpu=ev6 -g # -DWITH_READLINE
 CFLAGS		+=	
 CXXFLAGS	+=	
 ARFLAGS		=	crs
-LDFLAGS		+=	-lcurses -pthread -static # -lreadline
+LDFLAGS		+=	-lz -lncurses # -lreadline -static

@@ -51,28 +51,28 @@ Here is what you have to do to get SCIP running:
    (a) to use CPLEX (Version >= 8.0)
        - ln -s <path to directory of cplex.h> lib/cpxinc
          (e.g. "ln -s /cplex90/include/ilcplex lib/cpxinc")
-       - ln -s <file libcplex.a> lib/libcplex.$(OSTYPE).$(ARCH).a
+       - ln -s <file libcplex.a> lib/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
-         (e.g. "ln -s /cplex90/lib/i86_linux2_glibc2.3_gcc3.2/static_pic/libcplex.a lib/libcplex.linux.x86.a")
+         (e.g. "ln -s /cplex90/lib/i86_linux2_glibc2.3_gcc3.2/static_pic/libcplex.a lib/libcplex.linux.x86.gnu.a")
    (b) to use SOPLEX (Version >= 1.2.2)
        - ln -s <path to SOPLEX' *.h files> lib/spxinc
-       - ln -s <file libsoplex.[...].a> lib/libsoplex.$(OSTYPE).$(ARCH).a
+       - ln -s <file libsoplex.[...].a> lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.a")
+         (e.g. "ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
    (c) to use SOPLEX (Version <= 1.2.1)
        - ln -s <path to SOPLEX' *.h files> lib/spx121inc
-       - ln -s <file libsoplex.[...].a> lib/libsoplex121.$(OSTYPE).$(ARCH).a
+       - ln -s <file libsoplex.[...].a> lib/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.a")
+         (e.g. "ln -s /soplex121/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex121.linux.x86.gnu.a")
    (d) to use CLP
        - ln -s <path to CLP's and COIN's *.h files> lib/clpinc
          (e.g. "ln -s /COIN/include lib/clpinc")
-       - ln -s <file libClp.a> lib/libclp.$(OSTYPE).$(ARCH).a
+       - ln -s <file libClp.a> lib/libclp.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "ln -s /COIN/lib/libClp.a lib/libclp.linux.x86.a")
-       - ln -s <file libCoin.a> lib/libcoin.$(OSTYPE).$(ARCH).a
+         (e.g. "ln -s /COIN/lib/libClp.a lib/libclp.linux.x86.gnu.a")
+       - ln -s <file libCoin.a> lib/libcoin.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.a")
+         (e.g. "ln -s /COIN/lib/libCoin.a lib/libcoin.linux.x86.gnu.a")
 
 2. Compile the library and the solver program:
    In your SCIP main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
