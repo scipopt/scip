@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.54 2004/08/25 15:40:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.55 2004/08/26 08:32:01 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2425,7 +2425,7 @@ RETCODE undoBdchgsDualsol(
          {
 #ifndef NDEBUG
             varredcosts[v] = SCIPcolCalcRedcost(col, dualsols);
-            assert(SCIPsetIsFeasEQ(set, varredcosts[v], redcosts[c]));
+            assert(SCIPsetIsFeasEQ(set, varredcosts[v]/10.0, redcosts[c]/10.0)); /* LP solver can be quite unexact */
 #endif
             varredcosts[v] = redcosts[c];
          }
@@ -2505,6 +2505,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    VAR* var;
    int nvars;
    int v;
+   int nbdchgs;
 
    assert(prob != NULL);
    assert(lbchginfoposs != NULL);
@@ -2520,9 +2521,12 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    /* initialize conflict data */
    CHECK_OKAY( SCIPconflictInit(conflict) );
    
-   /* add remaining bound changes to conflict queue */
+   /* add remaining bound changes to conflict queue; don't try to analyse the conflict, if the initial number of
+    * remaining bound changes is too large (10 times larger than maximal conflict size)
+    */
    debugMessage("initial conflict set after undoing bound changes:\n");
-   for( v = 0; v < nvars; ++v )
+   nbdchgs = 0;
+   for( v = 0; v < nvars && nbdchgs < 10*maxsize; ++v )
    {
       var = vars[v];
       assert(var != NULL);
@@ -2546,6 +2550,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
          /* put variable into the conflict set */
          debugMessage("   fixed: <%s> == %g [dive/strong]\n", SCIPvarGetName(var), SCIPvarGetLbLP(var));
          CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var) );
+         nbdchgs++;
       }
       else
       {
@@ -2558,6 +2563,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
                SCIPbdchginfoGetPos(&var->lbchginfos[lbchginfoposs[v]]),
                SCIPbdchginfoGetChgtype(&var->lbchginfos[lbchginfoposs[v]]));
             CHECK_OKAY( conflictAddBdchginfo(conflict, &var->lbchginfos[lbchginfoposs[v]]) );
+            nbdchgs++;
          }
          if( ubchginfoposs[v] >= 0 )
          {
@@ -2567,12 +2573,16 @@ RETCODE conflictAnalyzeRemainingBdchgs(
                SCIPbdchginfoGetPos(&var->ubchginfos[ubchginfoposs[v]]),
                SCIPbdchginfoGetChgtype(&var->ubchginfos[ubchginfoposs[v]]));
             CHECK_OKAY( conflictAddBdchginfo(conflict, &var->ubchginfos[ubchginfoposs[v]]) );
+            nbdchgs++;
          }
       }
    }
 
-   /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
+   if( v == nvars )
+   {
+      /* analyze the conflict set, and create a conflict constraint on success */
+      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, success) );
+   }
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.105 2004/08/25 15:01:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.106 2004/08/26 08:32:02 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1429,7 +1429,7 @@ RETCODE treeSwitchPath(
       tree->path[i]->cutoff = cutoff;
 #ifndef NDEBUG
       if( cutoff )
-         printf/*??????????????????????debugMessage*/("switch path: cutoff node in depth %d\n", i);
+         debugMessage("switch path: cutoff node in depth %d\n", i);
 #endif
    }
 
