@@ -163,13 +163,13 @@ Real SCIPsepaGetTime(
 
 /** gets the number of times, the separator was called and tried to find a solution */
 extern
-int SCIPsepaGetNCalls(
+Longint SCIPsepaGetNCalls(
    SEPA*            sepa                /**< separator */
    );
 
 /** gets the number of cutting planes found by this separator */
 extern
-int SCIPsepaGetNCutsFound(
+Longint SCIPsepaGetNCutsFound(
    SEPA*            sepa                /**< separator */
    );
 

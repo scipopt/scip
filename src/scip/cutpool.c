@@ -49,9 +49,9 @@ struct Cutpool
    int              agelimit;           /**< maximum age a cut can reach before it is deleted from the pool */
    int              processedlp;        /**< last LP that has been processed */
    int              firstunprocessed;   /**< first cut that has not been processed in the last LP */
-   int              ncalls;             /**< number of times, the cutpool was separated */
-   int              ncutsfound;         /**< total number of cuts that were separated from the pool */
    int              maxncuts;           /**< maximal number of cuts stored in the pool at the same time */
+   Longint          ncalls;             /**< number of times, the cutpool was separated */
+   Longint          ncutsfound;         /**< total number of cuts that were separated from the pool */
 };
 
 
@@ -258,9 +258,9 @@ RETCODE SCIPcutpoolCreate(
    (*cutpool)->agelimit = agelimit;
    (*cutpool)->processedlp = -1;
    (*cutpool)->firstunprocessed = 0;
+   (*cutpool)->maxncuts = 0;
    (*cutpool)->ncalls = 0;
    (*cutpool)->ncutsfound = 0;
-   (*cutpool)->maxncuts = 0;
 
    return SCIP_OKAY;
 }
@@ -548,6 +548,16 @@ int SCIPcutpoolGetNCuts(
    return cutpool->ncuts;
 }
 
+/** get maximum number of cuts that were stored in the cut pool at the same time */
+int SCIPcutpoolGetMaxNCuts(
+   CUTPOOL*         cutpool             /**< cut pool */
+   )
+{
+   assert(cutpool != NULL);
+
+   return cutpool->maxncuts;
+}
+
 /** gets time in seconds used for separating cuts from the pool */
 Real SCIPcutpoolGetTime(
    CUTPOOL*         cutpool             /**< cut pool */
@@ -559,7 +569,7 @@ Real SCIPcutpoolGetTime(
 }
 
 /** get number of times, the cut pool was separated */
-int SCIPcutpoolGetNCalls(
+Longint SCIPcutpoolGetNCalls(
    CUTPOOL*         cutpool             /**< cut pool */
    )
 {
@@ -569,22 +579,12 @@ int SCIPcutpoolGetNCalls(
 }
 
 /** get total number of cuts that were separated from the cut pool */
-int SCIPcutpoolGetNCutsFound(
+Longint SCIPcutpoolGetNCutsFound(
    CUTPOOL*         cutpool             /**< cut pool */
    )
 {
    assert(cutpool != NULL);
 
    return cutpool->ncutsfound;
-}
-
-/** get maximum number of cuts that were stored in the cut pool at the same time */
-int SCIPcutpoolGetMaxNCuts(
-   CUTPOOL*         cutpool             /**< cut pool */
-   )
-{
-   assert(cutpool != NULL);
-
-   return cutpool->maxncuts;
 }
 

@@ -101,6 +101,12 @@ int SCIPcutpoolGetNCuts(
    CUTPOOL*         cutpool             /**< cut pool */
    );
 
+/** get maximum number of cuts that were stored in the cut pool at the same time */
+extern
+int SCIPcutpoolGetMaxNCuts(
+   CUTPOOL*         cutpool             /**< cut pool */
+   );
+
 /** gets time in seconds used for separating cuts from the pool */
 extern
 Real SCIPcutpoolGetTime(
@@ -109,19 +115,13 @@ Real SCIPcutpoolGetTime(
 
 /** get number of times, the cut pool was separated */
 extern
-int SCIPcutpoolGetNCalls(
+Longint SCIPcutpoolGetNCalls(
    CUTPOOL*         cutpool             /**< cut pool */
    );
 
 /** get total number of cuts that were separated from the cut pool */
 extern
-int SCIPcutpoolGetNCutsFound(
-   CUTPOOL*         cutpool             /**< cut pool */
-   );
-
-/** get maximum number of cuts that were stored in the cut pool at the same time */
-extern
-int SCIPcutpoolGetMaxNCuts(
+Longint SCIPcutpoolGetNCutsFound(
    CUTPOOL*         cutpool             /**< cut pool */
    );
 

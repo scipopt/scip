@@ -602,31 +602,31 @@ Real SCIPconshdlrGetPropTime(
 
 /** gets number of calls to the constraint handler's separation method */
 extern
-int SCIPconshdlrGetNSepaCalls(
+Longint SCIPconshdlrGetNSepaCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of calls to the constraint handler's LP enforcing method */
 extern
-int SCIPconshdlrGetNEnfoLPCalls(
+Longint SCIPconshdlrGetNEnfoLPCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 extern
-int SCIPconshdlrGetNEnfoPSCalls(
+Longint SCIPconshdlrGetNEnfoPSCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets number of calls to the constraint handler's propagation method */
 extern
-int SCIPconshdlrGetNPropCalls(
+Longint SCIPconshdlrGetNPropCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** gets total number of cuts found by this constraint handler */
 extern
-int SCIPconshdlrGetNCutsFound(
+Longint SCIPconshdlrGetNCutsFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

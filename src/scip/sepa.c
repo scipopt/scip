@@ -42,8 +42,8 @@ struct Sepa
    DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
    SEPADATA*        sepadata;           /**< separators local data */
    CLOCK*           clock;              /**< separation time */
-   int              ncalls;             /**< number of times, this separator was called */
-   int              ncutsfound;         /**< number of cutting planes found so far by this separator */
+   Longint          ncalls;             /**< number of times, this separator was called */
+   Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
    unsigned int     initialized:1;      /**< is separator initialized? */
 };
 
@@ -281,7 +281,7 @@ Real SCIPsepaGetTime(
 }
 
 /** gets the number of times, the separator was called and tried to find a solution */
-int SCIPsepaGetNCalls(
+Longint SCIPsepaGetNCalls(
    SEPA*            sepa                /**< separator */
    )
 {
@@ -291,7 +291,7 @@ int SCIPsepaGetNCalls(
 }
 
 /** gets the number of cutting planes found by this separator */
-int SCIPsepaGetNCutsFound(
+Longint SCIPsepaGetNCutsFound(
    SEPA*            sepa                /**< separator */
    )
 {

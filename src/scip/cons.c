@@ -84,11 +84,11 @@ struct ConsHdlr
    CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
-   int              nsepacalls;         /**< number of times, the separator was called */
-   int              nenfolpcalls;       /**< number of times, the LP enforcer was called */
-   int              nenfopscalls;       /**< number of times, the pseudo enforcer was called */
-   int              npropcalls;         /**< number of times, the propagator was called */
-   int              ncutsfound;         /**< total number of cuts found by this constraint handler */
+   Longint          nsepacalls;         /**< number of times, the separator was called */
+   Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
+   Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
+   Longint          npropcalls;         /**< number of times, the propagator was called */
+   Longint          ncutsfound;         /**< total number of cuts found by this constraint handler */
    Longint          nbranchings;        /**< number of times, the constraint handler performed a branching */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
@@ -1927,7 +1927,7 @@ Real SCIPconshdlrGetPropTime(
 }
 
 /** gets number of calls to the constraint handler's separation method */
-int SCIPconshdlrGetNSepaCalls(
+Longint SCIPconshdlrGetNSepaCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -1937,7 +1937,7 @@ int SCIPconshdlrGetNSepaCalls(
 }
 
 /** gets number of calls to the constraint handler's LP enforcing method */
-int SCIPconshdlrGetNEnfoLPCalls(
+Longint SCIPconshdlrGetNEnfoLPCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -1947,7 +1947,7 @@ int SCIPconshdlrGetNEnfoLPCalls(
 }
 
 /** gets number of calls to the constraint handler's pseudo enforcing method */
-int SCIPconshdlrGetNEnfoPSCalls(
+Longint SCIPconshdlrGetNEnfoPSCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -1957,7 +1957,7 @@ int SCIPconshdlrGetNEnfoPSCalls(
 }
 
 /** gets number of calls to the constraint handler's propagation method */
-int SCIPconshdlrGetNPropCalls(
+Longint SCIPconshdlrGetNPropCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -1967,7 +1967,7 @@ int SCIPconshdlrGetNPropCalls(
 }
 
 /** gets total number of cuts found by this constraint handler */
-int SCIPconshdlrGetNCutsFound(
+Longint SCIPconshdlrGetNCutsFound(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {

@@ -38,6 +38,24 @@ typedef struct Stat STAT;               /**< problem and runtime specific statis
 /** problem and runtime specific statistics */
 struct Stat
 {
+   CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
+   CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
+   CLOCK*           primallptime;       /**< primal LP solution time */
+   CLOCK*           duallptime;         /**< dual LP solution time */
+   CLOCK*           strongbranchtime;   /**< strong branching time */
+   CLOCK*           lppricingtime;      /**< LP pricing time */
+   CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
+   CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
+   Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
+   Longint          nprimallpiterations;/**< number of iterations in primal simplex */
+   Longint          nduallpiterations;  /**< number of iterations in dual simplex */
+   Longint          nlppricings;        /**< number of times, the problem variables were priced */
+   Longint          nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
+   Longint          nnodes;             /**< number of nodes processed (including active node) */
+   Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
+   Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
+   Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
+   Longint          lastdispnode;       /**< last node for which an information line was displayed */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */
    int              nrowidx;            /**< number of used row indices */
@@ -48,27 +66,11 @@ struct Stat
    int              nlps;               /**< number of LPs solved (primal + dual) with at least 1 iteration */
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */
-   int              nlpiterations;      /**< number of simplex iterations (primal + dual) */
-   int              nprimallpiterations;/**< number of iterations in primal simplex */
-   int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nstrongbranch;      /**< number of strong branching calls */
    int              nseparounds;        /**< number of separation rounds performed in actual node */
-   int              nlppricings;        /**< number of times, the problem variables were priced */
-   int              nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
-   Longint          nnodes;             /**< number of nodes processed (including active node) */
-   Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
-   Longint          lastdispnode;       /**< last node for which an information line was displayed */
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */
    int              plungedepth;        /**< actual plunging depth (successive times, a child was selected as next node) */
-   CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
-   CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
-   CLOCK*           primallptime;       /**< primal LP solution time */
-   CLOCK*           duallptime;         /**< dual LP solution time */
-   CLOCK*           strongbranchtime;   /**< strong branching time */
-   CLOCK*           lppricingtime;      /**< LP pricing time */
-   CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
-   CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
 };
 
 

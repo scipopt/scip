@@ -38,9 +38,6 @@ RETCODE SCIPstatCreate(
    assert(set != NULL);
 
    ALLOC_OKAY( allocMemory(stat) );
-   (*stat)->marked_nvaridx = 0;
-   (*stat)->marked_ncolidx = 0;
-   (*stat)->marked_nrowidx = 0;
 
    CHECK_OKAY( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -50,6 +47,10 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lppricingtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
+
+   (*stat)->marked_nvaridx = 0;
+   (*stat)->marked_ncolidx = 0;
+   (*stat)->marked_nrowidx = 0;
 
    SCIPstatReset(*stat);
 
@@ -107,6 +108,15 @@ void SCIPstatReset(
    assert(stat->marked_ncolidx >= 0);
    assert(stat->marked_nrowidx >= 0);
    
+   SCIPclockReset(stat->solvingtime);
+   SCIPclockReset(stat->presolvingtime);
+   SCIPclockReset(stat->primallptime);
+   SCIPclockReset(stat->duallptime);
+   SCIPclockReset(stat->strongbranchtime);
+   SCIPclockReset(stat->lppricingtime);
+   SCIPclockReset(stat->lpsoltime);
+   SCIPclockReset(stat->pseudosoltime);
+
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
@@ -123,19 +133,12 @@ void SCIPstatReset(
    stat->nlppricingvars = 0;
    stat->nnodes = 0;
    stat->nboundchanges = 0;
+   stat->nlpsolsfound = 0;
+   stat->npssolsfound = 0;
    stat->lastdispnode = 0;
    stat->ndisplines = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
-
-   SCIPclockReset(stat->solvingtime);
-   SCIPclockReset(stat->presolvingtime);
-   SCIPclockReset(stat->primallptime);
-   SCIPclockReset(stat->duallptime);
-   SCIPclockReset(stat->strongbranchtime);
-   SCIPclockReset(stat->lppricingtime);
-   SCIPclockReset(stat->lpsoltime);
-   SCIPclockReset(stat->pseudosoltime);
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;

@@ -43,8 +43,8 @@ struct Heur
    DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
    HEURDATA*        heurdata;           /**< primal heuristics local data */
    CLOCK*           clock;              /**< heuristic execution time */
-   int              ncalls;             /**< number of times, this heuristic was called */
-   int              nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
+   Longint          ncalls;             /**< number of times, this heuristic was called */
+   Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
    unsigned int     pseudonodes:1;      /**< call heuristic at nodes where only a pseudo solution exist? */
    unsigned int     initialized:1;      /**< is primal heuristic initialized? */
 };
@@ -304,7 +304,7 @@ int SCIPheurGetFreq(
 }
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
-int SCIPheurGetNCalls(
+Longint SCIPheurGetNCalls(
    HEUR*            heur                /**< primal heuristic */
    )
 {
@@ -314,7 +314,7 @@ int SCIPheurGetNCalls(
 }
 
 /** gets the number of primal feasible solutions found by this heuristic */
-int SCIPheurGetNSolsFound(
+Longint SCIPheurGetNSolsFound(
    HEUR*            heur                /**< primal heuristic */
    )
 {

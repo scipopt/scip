@@ -2211,8 +2211,6 @@ RETCODE SCIPtreeCreate(
    (*tree)->nchildren = 0;
    (*tree)->siblingssize = 0;
    (*tree)->nsiblings = 0;
-   (*tree)->nlpsolsfound = 0;
-   (*tree)->npssolsfound = 0;
    (*tree)->actnodehaslp = FALSE;
    (*tree)->cutoffdelayed = FALSE;
 

@@ -4472,7 +4472,7 @@ int SCIPgetNLPs(
 }
 
 /** gets total number of simplex iterations used so far */
-int SCIPgetNLPIterations(
+Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -4863,7 +4863,7 @@ void printConstraintStatistics(
       if( maxnconss > 0 || !SCIPconshdlrNeedsCons(conshdlr) )
       {
          fprintf(file, "  %-17.17s:", SCIPconshdlrGetName(conshdlr));
-         fprintf(file, " %12d %12d %12d %12d %12d %12d %12lld\n",
+         fprintf(file, " %12d %12lld %12lld %12lld %12lld %12lld %12lld\n",
             maxnconss,
             SCIPconshdlrGetNSepaCalls(conshdlr), 
             SCIPconshdlrGetNPropCalls(conshdlr), 
@@ -4910,14 +4910,14 @@ void printSeparatorStatistics(
    assert(file != NULL);
 
    fprintf(file, "Separators         :         Time        Calls         Cuts\n");
-   fprintf(file, "  cut pool         : %12.2f %12d %12d   (maximal pool size: %d)\n",
+   fprintf(file, "  cut pool         : %12.2f %12lld %12lld   (maximal pool size: %d)\n",
       SCIPcutpoolGetTime(scip->cutpool), 
       SCIPcutpoolGetNCalls(scip->cutpool), 
       SCIPcutpoolGetNCutsFound(scip->cutpool),
       SCIPcutpoolGetMaxNCuts(scip->cutpool));
 
    for( i = 0; i < scip->set->nsepas; ++i )
-      fprintf(file, "  %-17.17s: %12.2f %12d %12d\n",
+      fprintf(file, "  %-17.17s: %12.2f %12lld %12lld\n",
          SCIPsepaGetName(scip->set->sepas[i]),
          SCIPsepaGetTime(scip->set->sepas[i]),
          SCIPsepaGetNCalls(scip->set->sepas[i]),
@@ -4937,7 +4937,7 @@ void printPricerStatistics(
    assert(file != NULL);
 
    fprintf(file, "Pricers            :         Time        Calls         Vars\n");
-   fprintf(file, "  LP pricing       : %12.2f %12d %12d\n",
+   fprintf(file, "  LP pricing       : %12.2f %12lld %12lld\n",
       SCIPclockGetTime(scip->stat->lppricingtime), 
       scip->stat->nlppricings,
       scip->stat->nlppricingvars);
@@ -4959,15 +4959,15 @@ void printHeuristicStatistics(
    assert(file != NULL);
 
    fprintf(file, "Primal Heuristics  :         Time        Calls        Found\n");
-   fprintf(file, "  LP solutions     : %12.2f            - %12d\n",
+   fprintf(file, "  LP solutions     : %12.2f            - %12lld\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
-      scip->tree->nlpsolsfound);
-   fprintf(file, "  pseudo solutions : %12.2f            - %12d\n",
+      scip->stat->nlpsolsfound);
+   fprintf(file, "  pseudo solutions : %12.2f            - %12lld\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
-      scip->tree->npssolsfound);
+      scip->stat->npssolsfound);
 
    for( i = 0; i < scip->set->nheurs; ++i )
-      fprintf(file, "  %-17.17s: %12.2f %12d %12d\n",
+      fprintf(file, "  %-17.17s: %12.2f %12lld %12lld\n",
          SCIPheurGetName(scip->set->heurs[i]),
          SCIPheurGetTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
@@ -4986,7 +4986,7 @@ void printLPStatistics(
    assert(file != NULL);
 
    fprintf(file, "LP                 :         Time        Calls   Iterations    Iter/call     Iter/sec\n");
-   fprintf(file, "  primal LP        : %12.2f %12d %12d %12.2f",
+   fprintf(file, "  primal LP        : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->primallptime),
       scip->stat->nprimallps,
       scip->stat->nprimallpiterations,
@@ -4995,7 +4995,7 @@ void printLPStatistics(
       fprintf(file, " %12.2f\n", (Real)scip->stat->nprimallpiterations/SCIPclockGetTime(scip->stat->primallptime));
    else
       fprintf(file, "            -\n");
-   fprintf(file, "  dual LP          : %12.2f %12d %12d %12.2f",
+   fprintf(file, "  dual LP          : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nduallps, 
       scip->stat->nduallpiterations,
@@ -5004,7 +5004,7 @@ void printLPStatistics(
       fprintf(file, " %12.2f\n", (Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
    else
       fprintf(file, "            -\n");
-   fprintf(file, "  total            : %12.2f %12d %12d %12.2f",
+   fprintf(file, "  total            : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->primallptime) + SCIPclockGetTime(scip->stat->duallptime),
       scip->stat->nlps,
       scip->stat->nlpiterations,

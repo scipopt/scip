@@ -163,13 +163,13 @@ int SCIPheurGetFreq(
 
 /** gets the number of times, the heuristic was called and tried to find a solution */
 extern
-int SCIPheurGetNCalls(
+Longint SCIPheurGetNCalls(
    HEUR*            heur                /**< primal heuristic */
    );
 
 /** gets the number of primal feasible solutions found by this heuristic */
 extern
-int SCIPheurGetNSolsFound(
+Longint SCIPheurGetNSolsFound(
    HEUR*            heur                /**< primal heuristic */
    );
 

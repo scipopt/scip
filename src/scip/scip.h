@@ -1938,7 +1938,7 @@ int SCIPgetNLPs(
 
 /** gets total number of simplex iterations used so far */
 extern
-int SCIPgetNLPIterations(
+Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 
