@@ -1818,6 +1818,8 @@ RETCODE SCIPcolGetStrongbranch(
    Real*            up                  /**< stores dual bound after branching column up */
    )
 {
+   int iter;
+
    assert(col != NULL);
    assert(col->var != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
@@ -1848,10 +1850,21 @@ RETCODE SCIPcolGetStrongbranch(
       stat->nstrongbranch++;
       col->validstronglp = stat->lpcount;
       col->strongitlim = itlim;
-      CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim, &col->strongdown, &col->strongup) );
+      CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, &col->primsol, 1, itlim,
+                     &col->strongdown, &col->strongup, &iter) );
       col->strongdown = MIN(col->strongdown, upperbound);
       col->strongup = MIN(col->strongup, upperbound);
-      
+
+      /* update strong branching statistics */
+      if( iter == -1 )
+      {
+         /* calculate avergate iteration number */
+         iter = stat->nlps > 0 ? 2*stat->nlpiterations / stat->nlps : 0;
+         if( iter/2 >= itlim )
+            iter = 2*itlim;
+      }
+      stat->nsblpiterations += iter;
+
       /* start timing */
       SCIPclockStop(stat->strongbranchtime, set);
    }

@@ -31,7 +31,7 @@
 
 /** creates the handler for eqknapsack constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrEqknapsack(
+RETCODE SCIPincludeConshdlrEqknapsack(
    SCIP*            scip                /**< SCIP data structure */
    );
 

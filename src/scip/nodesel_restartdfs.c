@@ -153,7 +153,7 @@ RETCODE SCIPincludeNodeselRestartdfs(
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "nodesel/restartdfs/selectbestfreq",
+                  "nodeselection/restartdfs/selectbestfreq",
                   "frequency for selecting the best node instead of the deepest one (0: never)",
                   &nodeseldata->selectbestfreq, SELECTBESTFREQ, 0, INT_MAX, NULL, NULL) );
 

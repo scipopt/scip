@@ -139,6 +139,12 @@ const char* SCIPsepaGetName(
    SEPA*            sepa                /**< separator */
    );
 
+/** gets description of separator */
+extern
+const char* SCIPsepaGetDesc(
+   SEPA*            sepa                /**< separator */
+   );
+
 /** gets user data of separator */
 extern
 SEPADATA* SCIPsepaGetData(

@@ -30,7 +30,7 @@
 
 
 /** event handler */
-struct EventHdlr
+struct Eventhdlr
 {
    char*            name;               /**< name of event handler */
    char*            desc;               /**< description of event handler */

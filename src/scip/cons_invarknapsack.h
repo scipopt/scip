@@ -31,7 +31,7 @@
 
 /** creates the handler for invarknapsack constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrInvarknapsack(
+RETCODE SCIPincludeConshdlrInvarknapsack(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -407,8 +407,9 @@ RETCODE SCIPlpiStrongbranch(
    Real*            psol,               /**< array with current primal solution values of candidates */
    int              ncand,              /**< size of candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
-   Real*            down,               /**< stores dual bound after branching candidate down */
-   Real*            up                  /**< stores dual bound after branching candidate up */
+   Real*            down,               /**< stores dual bounds after branching candidate down */
+   Real*            up,                 /**< stores dual bounds after branching candidate up */
+   int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    );
 
 /**@} */

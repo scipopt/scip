@@ -396,27 +396,27 @@ RETCODE SCIPincludeHeurDiving(
 
    /* diving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristic/diving/divestartdepth", 
+                  "heuristics/diving/divestartdepth", 
                   "minimal relative depth to start diving",
                   &heurdata->divestartdepth, DEFAULT_DIVESTARTDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristic/diving/maxlpiterquot", 
+                  "heuristics/diving/maxlpiterquot", 
                   "maximal fraction of diving LP iterations compared to total iteration number",
                   &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristic/diving/maxdiveubquot",
+                  "heuristics/diving/maxdiveubquot",
                   "maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
                   &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristic/diving/maxdiveavgquot", 
+                  "heuristics/diving/maxdiveavgquot", 
                   "maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
                   &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_INVALID, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristic/diving/maxdiveubquotnosol", 
+                  "heuristics/diving/maxdiveubquotnosol", 
                   "maximal UBQUOT when no solution was found yet",
                   &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristic/diving/maxdiveavgquotnosol", 
+                  "heuristics/diving/maxdiveavgquotnosol", 
                   "maximal AVGQUOT when no solution was found yet",
                   &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_INVALID, NULL, NULL) );
    

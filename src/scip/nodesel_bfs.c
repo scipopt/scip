@@ -202,15 +202,15 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* add node selector parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "nodesel/bfs/minplungedepth",
+                  "nodeselection/bfs/minplungedepth",
                   "minimal plunging depth, before new best node may be selected",
                   &nodeseldata->minplungedepth, MINPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "nodesel/bfs/maxplungedepth",
+                  "nodeselection/bfs/maxplungedepth",
                   "maximal plunging depth, before new best node is forced to be selected",
                   &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "nodesel/bfs/maxplungequot",
+                  "nodeselection/bfs/maxplungequot",
                   "maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed",
                   &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, REAL_MAX, NULL, NULL) );
    

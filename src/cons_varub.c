@@ -406,7 +406,7 @@ DECL_LINCONSUPGD(linconsUpgdVarub)
  */
 
 /** creates the handler for varub constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrVarub(
+RETCODE SCIPincludeConshdlrVarub(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -417,7 +417,7 @@ RETCODE SCIPincludeConsHdlrVarub(
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeVarub, consInitVarub, consExitVarub, consSolstartVarub,
@@ -466,7 +466,7 @@ RETCODE SCIPcreateConsVarub(
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the varub constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("varub constraint handler not found");

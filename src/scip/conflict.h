@@ -26,8 +26,8 @@
 #define __CONFLICT_H__
 
 
-typedef struct ConflictHdlr CONFLICTHDLR; /**< conflict handler to process conflict sets */
-typedef struct ConflictHdlrData CONFLICTHDLRDATA; /**< conflict handler data */
+typedef struct Conflicthdlr CONFLICTHDLR; /**< conflict handler to process conflict sets */
+typedef struct ConflicthdlrData CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct Conflict CONFLICT;       /**< conflict analysis data structure for propagation conflicts */
 typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure for infeasible LP conflicts */
 

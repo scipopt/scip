@@ -107,11 +107,11 @@ DECL_CONSCHECK(consCheckIntegral)
  */
 
 /** creates the handler for integrality constraint and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrIntegral(
+RETCODE SCIPincludeConshdlrIntegral(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,

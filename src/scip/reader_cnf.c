@@ -187,8 +187,8 @@ RETCODE readCnf(
    }
 
    /* get parameter values */
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reader/cnf/dynamiccols", &dynamiccols) );
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reader/cnf/dynamicrows", &dynamicrows) );
+   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnf/dynamiccols", &dynamiccols) );
+   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnf/dynamicrows", &dynamicrows) );
 
    /* get temporary memory */
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &vars, nvars) );
@@ -381,10 +381,10 @@ RETCODE SCIPincludeReaderCnf(
 
    /* add cnf reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader/cnf/dynamiccols", "should columns be added and removed dynamically to the LP?",
+                  "reading/cnf/dynamiccols", "should columns be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader/cnf/dynamicrows", "should rows be added and removed dynamically to the LP?",
+                  "reading/cnf/dynamicrows", "should rows be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;

@@ -106,7 +106,7 @@ struct EventData
 };
 
 /** constraint handler data */
-struct ConsHdlrData
+struct ConshdlrData
 {
    EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    LINCONSUPGRADE** linconsupgrades;    /**< linear constraint upgrade methods for specializing linear constraints */
@@ -241,7 +241,7 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->tightenboundsfreq = TIGHTENBOUNDSFREQ;
 
    /* get event handler for updating linear constraint activity bounds */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
       errorMessage("event handler for linear constraints not found");
@@ -4296,20 +4296,20 @@ DECL_CONFLICTEXEC(conflictExecLinear)
  */
 
 /** creates the handler for linear constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrLinear(
+RETCODE SCIPincludeConshdlrLinear(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for bound change events */
-   CHECK_OKAY( SCIPincludeEventHdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecLinear,
                   NULL) );
 
    /* create conflict handler for linear constraints */
-   CHECK_OKAY( SCIPincludeConflictHdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+   CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
                   NULL, NULL, NULL, conflictExecLinear,
                   NULL) );
 
@@ -4317,7 +4317,7 @@ RETCODE SCIPincludeConsHdlrLinear(
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler in SCIP */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_SEPAFREQ,
                   CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeLinear, consInitLinear, consExitLinear, consSolstartLinear,
@@ -4331,11 +4331,11 @@ RETCODE SCIPincludeConsHdlrLinear(
 
    /* add linear constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr/linear/tightenboundsfreq",
+                  "constraints/linear/tightenboundsfreq",
                   "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
                   &conshdlrdata->tightenboundsfreq, TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "conshdlr/linear/maxaggrnormscale",
+                  "constraints/linear/maxaggrnormscale",
                   "maximal allowed relative gain in maximum norm for constraint aggregation",
                   &conshdlrdata->maxaggrnormscale, MAXAGGRNORMSCALE, 0.0, REAL_MAX, NULL, NULL) );
 
@@ -4356,7 +4356,7 @@ RETCODE SCIPincludeLinconsUpgrade(
    assert(linconsupgd != NULL);
 
    /* find the linear constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("linear constraint handler not found");
@@ -4399,7 +4399,7 @@ RETCODE SCIPcreateConsLinear(
    CONSDATA* consdata;
 
    /* find the linear constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("linear constraint handler not found");

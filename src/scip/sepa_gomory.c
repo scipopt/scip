@@ -319,19 +319,19 @@ RETCODE SCIPincludeSepaGomory(
 
    /* add separator parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separator/gomory/maxrounds",
+                  "separating/gomory/maxrounds",
                   "maximal number of gomory separation rounds per node",
                   &sepadata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separator/gomory/maxroundsroot",
+                  "separating/gomory/maxroundsroot",
                   "maximal number of gomory separation rounds in the root node",
                   &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separator/gomory/maxsepacuts",
+                  "separating/gomory/maxsepacuts",
                   "maximal number of gomory cuts separated per separation round",
                   &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "separator/gomory/maxsepacutsroot",
+                  "separating/gomory/maxsepacutsroot",
                   "maximal number of gomory cuts separated per separation round in the root node",
                   &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 

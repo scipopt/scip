@@ -30,20 +30,18 @@
 
 
 
-/** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
-DECL_DIALOGEXEC(SCIPdialogExecMenu)
+/** executes a menu dialog */
+static
+RETCODE dialogExecMenu(
+   SCIP*            scip,               /**< SCIP data structure */
+   DIALOG*          dialog,             /**< dialog menu */
+   DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   DIALOG**         nextdialog          /**< pointer to store next dialog to execute */
+   )
 {
    const char* command;
    Bool again;
    int nfound;
-
-   /* if remaining command string is empty, display menu of available options */
-   if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
-   {
-      printf("\n");
-      CHECK_OKAY( SCIPdialogDisplayMenu(dialog, scip) );
-      printf("\n");
-   }
 
    do
    {
@@ -55,6 +53,7 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu)
       /* exit to the root dialog, if command is empty */
       if( command[0] == '\0' )
       {
+         CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
          *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
          return SCIP_OKAY;
       }
@@ -90,46 +89,26 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu)
    return SCIP_OKAY;
 }
 
+/** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
+DECL_DIALOGEXEC(SCIPdialogExecMenu)
+{
+   /* if remaining command string is empty, display menu of available options */
+   if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
+   {
+      printf("\n");
+      CHECK_OKAY( SCIPdialogDisplayMenu(dialog, scip) );
+      printf("\n");
+   }
+
+   CHECK_OKAY( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
+
+   return SCIP_OKAY;
+}
+
 /** standard menu dialog execution method, that doesn't display it's help screen */
 DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 {
-   const char* command;
-   int nfound;
-
-   /* get the next word of the command string */
-   command = SCIPdialoghdlrGetWord(dialoghdlr, dialog, NULL);
-
-   /* exit to the root dialog, if command is empty */
-   if( command[0] == '\0' )
-   {
-      *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-      return SCIP_OKAY;
-   }
-   else if( strcmp(command, "..") == 0 )
-   {
-      *nextdialog = SCIPdialogGetParent(dialog);
-      if( *nextdialog == NULL )
-         *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-      return SCIP_OKAY;
-   }
-
-   /* find command in dialog */
-   nfound = SCIPdialogFindEntry(dialog, command, nextdialog);
-
-   /* check result */
-   if( nfound == 0 )
-   {
-      printf("command <%s> not available\n", command);
-      SCIPdialoghdlrClearBuffer(dialoghdlr);
-      *nextdialog = dialog;
-   }
-   else if( nfound >= 2 )
-   {
-      printf("possible completions:\n");
-      CHECK_OKAY( SCIPdialogDisplayCompletions(dialog, scip, command) );
-      SCIPdialoghdlrClearBuffer(dialoghdlr);
-      *nextdialog = dialog;
-   }
+   CHECK_OKAY( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
 
    return SCIP_OKAY;
 }
@@ -137,6 +116,8 @@ DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 /** dialog execution method for the display statistics command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 {
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
    printf("\n");
    CHECK_OKAY( SCIPprintStatistics(scip, NULL) );
    printf("\n");
@@ -149,6 +130,8 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 /** dialog execution method for the help command */
 DECL_DIALOGEXEC(SCIPdialogExecHelp)
 {
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
    printf("\n");
    CHECK_OKAY( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
    printf("\n");
@@ -161,6 +144,8 @@ DECL_DIALOGEXEC(SCIPdialogExecHelp)
 /** dialog execution method for the free command */
 DECL_DIALOGEXEC(SCIPdialogExecFree)
 {
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
    CHECK_OKAY( SCIPfreeProb(scip) );
 
    *nextdialog = SCIPdialogGetParent(dialog);
@@ -171,11 +156,13 @@ DECL_DIALOGEXEC(SCIPdialogExecFree)
 /** dialog execution method for the optimize command */
 DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 {
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
    printf("\n");
    switch( SCIPstage(scip) )
    {
    case SCIP_STAGE_INIT:
-      printf("no problem exists.\n");
+      printf("no problem exists\n");
       break;
 
    case SCIP_STAGE_PROBLEM:
@@ -185,7 +172,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
       break;
 
    case SCIP_STAGE_SOLVED:
-      printf("problem already solved.\n");
+      printf("problem is already solved\n");
       break;
 
    case SCIP_STAGE_INITSOLVE:
@@ -205,11 +192,13 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 /** dialog execution method for the presolve command */
 DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 {
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
    printf("\n");
    switch( SCIPstage(scip) )
    {
    case SCIP_STAGE_INIT:
-      printf("no problem exists.\n");
+      printf("no problem exists\n");
       break;
 
    case SCIP_STAGE_PROBLEM:
@@ -218,11 +207,11 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      printf("problem already presolved.\n");
+      printf("problem is already presolved\n");
       break;
 
    case SCIP_STAGE_SOLVED:
-      printf("problem already solved.\n");
+      printf("problem is already solved\n");
       break;
 
    case SCIP_STAGE_INITSOLVE:
@@ -254,9 +243,10 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
    if( filename[0] != '\0' )
    {
-      printf("\n");
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPfreeProb(scip) );
@@ -267,7 +257,6 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
          printf("file <%s> not found\n", filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
-      printf("\n");
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -282,9 +271,10 @@ DECL_DIALOGEXEC(SCIPdialogExecSetRead)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
    if( filename[0] != '\0' )
    {
-      printf("\n");
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPreadParams(scip, filename) );
@@ -295,7 +285,6 @@ DECL_DIALOGEXEC(SCIPdialogExecSetRead)
          printf("file <%s> not found\n", filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
-      printf("\n");
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -310,12 +299,12 @@ DECL_DIALOGEXEC(SCIPdialogExecSetWrite)
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
 
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
    if( filename[0] != '\0' )
    {
-      printf("\n");
       CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE) );
       printf("written parameter file <%s>\n", filename);
-      printf("\n");
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -323,7 +312,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetWrite)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set parameter command */
+/** dialog execution method for the set <parameter> command */
 DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 {
    RETCODE retcode;
@@ -347,6 +336,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
          SCIPparamGetBool(param) ? "TRUE" : "FALSE");
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -378,6 +368,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
          SCIPparamGetInt(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -397,6 +388,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %lld, new value [%lld,%lld]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -416,6 +408,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       snprintf(prompt, MAXSTRLEN, "current value: %g, new value [%g,%g]: ",
          SCIPparamGetReal(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -434,6 +427,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_CHAR:
       snprintf(prompt, MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
@@ -452,16 +446,9 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    case SCIP_PARAMTYPE_STRING:
       snprintf(prompt, MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
       valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
       if( valuestr[0] == '\0' )
-      {
-         if( strlen(SCIPparamGetString(param)) > 0 )
-         {
-            valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "replace current value with empty string [y,n]? ");
-            if( valuestr[0] != 'y' && valuestr[0] != 'Y' )
-               return SCIP_OKAY;
-            valuestr[0] = '\0';
-         }
-      }
+         return SCIP_OKAY;
 
       retcode = SCIPparamSetString(param, scip, valuestr);
       if( retcode != SCIP_PARAMETERWRONGVAL )
@@ -479,7 +466,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    return SCIP_OKAY;
 }
 
-/** dialog description method for the set parameter command */
+/** dialog description method for the set <parameter> command */
 DECL_DIALOGDESC(SCIPdialogDescSetParam)
 {
    PARAM* param;
@@ -508,7 +495,7 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
 
    case SCIP_PARAMTYPE_REAL:
       sprintf(valuestr, "%g", SCIPparamGetReal(param));
-      if( strchr(valuestr, '.') == NULL )
+      if( strchr(valuestr, '.') == NULL && strchr(valuestr, 'e') == NULL )
          sprintf(valuestr, "%.1f", SCIPparamGetReal(param));
       break;
 
@@ -535,6 +522,22 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+/** dialog execution method for the debug memory command */
+DECL_DIALOGEXEC(SCIPdialogExecDebugMemory)
+{
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   printf("\n");
+   SCIPdebugMemory(scip);
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** includes the default dialog menus in SCIP */
 RETCODE SCIPincludeDialogDefault(
    SCIP*            scip                /**< SCIP data structure */
@@ -542,8 +545,10 @@ RETCODE SCIPincludeDialogDefault(
 {
    DIALOG* root;
    DIALOG* menu;
+   DIALOG* submenu;
    DIALOG* dialog;
-   
+   int i;
+
    /* root menu */
    CHECK_OKAY( SCIPcreateDialog(scip, &root, SCIPdialogExecMenuLazy, NULL,
                   "SCIP", "SCIP's main menu", NULL) );
@@ -554,10 +559,12 @@ RETCODE SCIPincludeDialogDefault(
    CHECK_OKAY( SCIPcreateDialog(scip, &menu, SCIPdialogExecMenu, NULL,
                   "display", "display information", NULL) );
    CHECK_OKAY( SCIPaddDialogEntry(scip, NULL, menu) );
+
    CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayStatistics, NULL,
                   "statistics", "display solution statistics", NULL) );
    CHECK_OKAY( SCIPaddDialogEntry(scip, menu, dialog) );
    CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+
    CHECK_OKAY( SCIPreleaseDialog(scip, &menu) );
    
    /* free */
@@ -600,15 +607,206 @@ RETCODE SCIPincludeDialogDefault(
    CHECK_OKAY( SCIPcreateDialog(scip, &menu, SCIPdialogExecMenu, NULL,
                   "set", "read/write/change parameters", NULL) );
    CHECK_OKAY( SCIPaddDialogEntry(scip, NULL, menu) );
+
    CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetRead, NULL,
                   "read", "read parameter settings from a file", NULL) );
    CHECK_OKAY( SCIPaddDialogEntry(scip, menu, dialog) );
    CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+
    CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetWrite, NULL,
                   "write", "save parameter settings to a file", NULL) );
    CHECK_OKAY( SCIPaddDialogEntry(scip, menu, dialog) );
    CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+
+   /* set branching */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "branching", "change parameters for branching rules", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNBranchrules(scip); ++i )
+   {
+      BRANCHRULE* branchrule = SCIPgetBranchrules(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPbranchruleGetName(branchrule), SCIPbranchruleGetDesc(branchrule), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set constraints */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "constraints", "change parameters for constraint handlers", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
+   {
+      CONSHDLR* conshdlr = SCIPgetConshdlrs(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPconshdlrGetName(conshdlr), SCIPconshdlrGetDesc(conshdlr), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set display */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "display", "change parameters for display columns", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNDisps(scip); ++i )
+   {
+      DISP* disp = SCIPgetDisps(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPdispGetName(disp), SCIPdispGetDesc(disp), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set heuristics */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "heuristics", "change parameters for primal heuristics", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNHeurs(scip); ++i )
+   {
+      HEUR* heur = SCIPgetHeurs(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPheurGetName(heur), SCIPheurGetDesc(heur), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set limits */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "limits", "change parameters for time, memory, and other limits", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set lp */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "lp", "change parameters for linear programming relaxations", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set memory */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "memory", "change parameters for memory management", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set nodeselection */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "nodeselection", "change parameters for node selectors", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNNodesels(scip); ++i )
+   {
+      NODESEL* nodesel = SCIPgetNodesels(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPnodeselGetName(nodesel), SCIPnodeselGetDesc(nodesel), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set numerics */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "numerics", "change parameters for numerical values", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set presolving */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "presolving", "change parameters for presolving", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNPresols(scip); ++i )
+   {
+      PRESOL* presol = SCIPgetPresols(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPpresolGetName(presol), SCIPpresolGetDesc(presol), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set pricing */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "pricing", "change parameters for pricing variables", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   todoMessage("include pricers in standard set dialog");
+#if 0
+   for( i = 0; i < SCIPgetNPricers(scip); ++i )
+   {
+      PRICER* pricer = SCIPgetPricers(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPpricerGetName(pricer), SCIPpricerGetDesc(pricer), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+#endif
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set reading */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "reading", "change parameters for problem file readers", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNReaders(scip); ++i )
+   {
+      READER* reader = SCIPgetReaders(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPreaderGetName(reader), SCIPreaderGetDesc(reader), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set separating */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "separating", "change parameters for cut separators", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   for( i = 0; i < SCIPgetNSepas(scip); ++i )
+   {
+      SEPA* sepa = SCIPgetSepas(scip)[i];
+
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL,
+                     SCIPsepaGetName(sepa), SCIPsepaGetDesc(sepa), NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set timing */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "timing", "change parameters for timing issues", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
+   /* set misc */
+   CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+                  "misc", "change parameters for miscellaneous stuff", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, submenu) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+
    CHECK_OKAY( SCIPreleaseDialog(scip, &menu) );
+
+#ifndef NDEBUG
+   /* debug */
+   CHECK_OKAY( SCIPcreateDialog(scip, &menu, SCIPdialogExecMenu, NULL,
+                  "debug", "debugging information", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, NULL, menu) );
+
+   CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDebugMemory, NULL,
+                  "memory", "display memory diagnostics", NULL) );
+   CHECK_OKAY( SCIPaddDialogEntry(scip, menu, dialog) );
+   CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+
+   CHECK_OKAY( SCIPreleaseDialog(scip, &menu) );
+#endif
 
    return SCIP_OKAY;
 }

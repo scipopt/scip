@@ -38,13 +38,55 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu);
 extern
 DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
 
+/** dialog execution method for the display statistics command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
+
 /** dialog execution method for the help command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecHelp);
 
+/** dialog execution method for the free command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecFree);
+
+/** dialog execution method for the optimize command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecOptimize);
+
+/** dialog execution method for the presolve command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecPresolve);
+
 /** dialog execution method for the quit command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecQuit);
+
+/** dialog execution method for the read command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecRead);
+
+/** dialog execution method for the set read command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetRead);
+
+/** dialog execution method for the set write command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetWrite);
+
+/** dialog execution method for the set <parameter> command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetParam);
+
+/** dialog description method for the set <parameter> command */
+extern
+DECL_DIALOGDESC(SCIPdialogDescSetParam);
+
+#ifndef NDEBUG
+/** dialog execution method for the debug memory command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDebugMemory);
+#endif
 
 /** includes the default dialog menus in SCIP */
 extern

@@ -26,9 +26,9 @@
 #define __CONS_H__
 
 
-typedef struct ConsHdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
+typedef struct Conshdlr CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct Cons CONS;               /**< constraint data structure */
-typedef struct ConsHdlrData CONSHDLRDATA; /**< constraint handler data */
+typedef struct ConshdlrData CONSHDLRDATA; /**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
 typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
 
@@ -759,6 +759,12 @@ void SCIPconshdlrResetEnfo(
 /** gets name of constraint handler */
 extern
 const char* SCIPconshdlrGetName(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets description of constraint handler */
+extern
+const char* SCIPconshdlrGetDesc(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

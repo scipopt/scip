@@ -315,6 +315,16 @@ const char* SCIPpresolGetName(
    return presol->name;
 }
 
+/** gets description of presolver */
+const char* SCIPpresolGetDesc(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->desc;
+}
+
 /** gets priority of presolver */
 int SCIPpresolGetPriority(
    PRESOL*          presol              /**< presolver */

@@ -210,6 +210,16 @@ const char* SCIPdispGetName(
    return disp->name;
 }
 
+/** gets description of display column */
+const char* SCIPdispGetDesc(
+   DISP*            disp                /**< display column */
+   )
+{
+   assert(disp != NULL);
+
+   return disp->desc;
+}
+
 /** gets user data of display column */
 DISPDATA* SCIPdispGetData(
    DISP*            disp                /**< display column */

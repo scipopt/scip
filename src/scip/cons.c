@@ -30,7 +30,7 @@
 
 
 /** constraint handler */
-struct ConsHdlr
+struct Conshdlr
 {
    char*            name;               /**< name of constraint handler */
    char*            desc;               /**< description of constraint handler */
@@ -1183,12 +1183,12 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->delayupdates = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "conshdlr/%s/sepafreq", name);
+   sprintf(paramname, "constraints/%s/sepafreq", name);
    sprintf(paramdesc, "frequency for separating cuts of constraint handler <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*conshdlr)->sepafreq, sepafreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "conshdlr/%s/propfreq", name);
+   sprintf(paramname, "constraints/%s/propfreq", name);
    sprintf(paramdesc, "frequency for propagating domains of constraint handler <%s> (-1: never, 0: only in root node)",
       name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
@@ -1984,6 +1984,16 @@ const char* SCIPconshdlrGetName(
    assert(conshdlr != NULL);
 
    return conshdlr->name;
+}
+
+/** gets description of constraint handler */
+const char* SCIPconshdlrGetDesc(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->desc;
 }
 
 /** gets user data of constraint handler */

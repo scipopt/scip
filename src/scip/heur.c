@@ -96,7 +96,7 @@ RETCODE SCIPheurCreate(
    (*heur)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "heuristic/%s/freq", name);
+   sprintf(paramname, "heuristics/%s/freq", name);
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
@@ -270,6 +270,16 @@ const char* SCIPheurGetName(
    assert(heur != NULL);
 
    return heur->name;
+}
+
+/** gets description of primal heuristic */
+const char* SCIPheurGetDesc(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->desc;
 }
 
 /** gets display character of primal heuristic */

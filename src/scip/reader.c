@@ -157,6 +157,16 @@ const char* SCIPreaderGetName(
    return reader->name;
 }
 
+/** gets description of reader */
+const char* SCIPreaderGetDesc(
+   READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return reader->desc;
+}
+
 /** gets user data of reader */
 READERDATA* SCIPreaderGetData(
    READER*          reader              /**< reader */

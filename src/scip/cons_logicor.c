@@ -58,7 +58,7 @@
 
 
 /** constraint handler data */
-struct ConsHdlrData
+struct ConshdlrData
 {
    INTARRAY*        posvaruses;         /**< number of positive literal of a variable in the active logic or constraints */
    INTARRAY*        negvaruses;         /**< number of negative literal of a variable in the active logic or constraints */
@@ -106,7 +106,7 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
    /* get event handler for catching bound tighten events on watched variables */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
       errorMessage("event handler for logic or constraints not found");
@@ -2111,20 +2111,20 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
  */
 
 /** creates the handler for logic or constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrLogicor(
+RETCODE SCIPincludeConshdlrLogicor(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for bound tighten events on watched variables */
-   CHECK_OKAY( SCIPincludeEventHdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecLogicor,
                   NULL) );
 
    /* create conflict handler for logic or constraints */
-   CHECK_OKAY( SCIPincludeConflictHdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+   CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
                   NULL, NULL, NULL, conflictExecLogicor,
                   NULL) );
 
@@ -2132,7 +2132,7 @@ RETCODE SCIPincludeConsHdlrLogicor(
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
@@ -2151,15 +2151,15 @@ RETCODE SCIPincludeConsHdlrLogicor(
 
    /* logic or constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr/logicor/npseudobranches", 
+                  "constraints/logicor/npseudobranches", 
                   "number of children created in pseudo branching",
                   &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "conshdlr/logicor/maxvarusefac", 
+                  "constraints/logicor/maxvarusefac", 
                   "branching factor to weigh maximum of positive and negative variable uses",
                   &conshdlrdata->maxvarusefac, DEFAULT_MAXVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "conshdlr/logicor/minvarusefac", 
+                  "constraints/logicor/minvarusefac", 
                   "branching factor to weigh minimum of positive and negative variable uses",
                   &conshdlrdata->minvarusefac, DEFAULT_MINVARUSEFAC, REAL_MIN, REAL_MAX, NULL, NULL) );
    
@@ -2190,7 +2190,7 @@ RETCODE SCIPcreateConsLogicor(
    assert(scip != NULL);
 
    /* find the logicor constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("logic or constraint handler not found");

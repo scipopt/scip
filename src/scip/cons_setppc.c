@@ -63,7 +63,7 @@ enum SetppcType
 typedef enum SetppcType SETPPCTYPE;
 
 /** constraint handler data */
-struct ConsHdlrData
+struct ConshdlrData
 {
    EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    INTARRAY*        varuses;            /**< number of times a var is used in the active set ppc constraints */
@@ -104,7 +104,7 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
    /* get event handler for bound change events */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
+   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
       errorMessage("event handler for set partitioning / packing / covering constraints not found");
@@ -2166,7 +2166,7 @@ RETCODE createConsSetppc(
    assert(scip != NULL);
 
    /* find the set partitioning constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("set partitioning / packing / covering constraint handler not found");
@@ -2426,20 +2426,20 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
  */
 
 /** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrSetppc(
+RETCODE SCIPincludeConshdlrSetppc(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for bound change events */
-   CHECK_OKAY( SCIPincludeEventHdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
                   NULL, eventExecSetppc,
                   NULL) );
 
    /* create conflict handler for setppc constraints */
-   CHECK_OKAY( SCIPincludeConflictHdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+   CHECK_OKAY( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
                   NULL, NULL, NULL, conflictExecSetppc,
                   NULL) );
 
@@ -2447,7 +2447,7 @@ RETCODE SCIPincludeConsHdlrSetppc(
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
@@ -2465,7 +2465,7 @@ RETCODE SCIPincludeConsHdlrSetppc(
 
    /* set partitioning constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr/setppc/npseudobranches", 
+                  "constraints/setppc/npseudobranches", 
                   "number of children created in pseudo branching",
                   &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
    

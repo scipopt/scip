@@ -217,7 +217,7 @@ RETCODE paramCheckReal(
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
 
-   if( value < param->data.realparam.minvalue || value > param->data.realparam.maxvalue )
+   if( !(value >= param->data.realparam.minvalue && value <= param->data.realparam.maxvalue) )
    {
       char s[MAXSTRLEN];
       sprintf(s, "Invalid real parameter value <%g>. Must be in range [%g,%g].",
@@ -500,7 +500,7 @@ RETCODE SCIPparamSetBool(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY( paramCheckBool(param, value) );
+   CHECK_OKAY_QUIET( paramCheckBool(param, value) );
 
    /* set the actual parameter's value */
    if( param->data.boolparam.valueptr != NULL )
@@ -527,7 +527,7 @@ RETCODE SCIPparamSetInt(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY( paramCheckInt(param, value) );
+   CHECK_OKAY_QUIET( paramCheckInt(param, value) );
 
    /* set the actual parameter's value */
    if( param->data.intparam.valueptr != NULL )
@@ -554,7 +554,7 @@ RETCODE SCIPparamSetLongint(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY( paramCheckLongint(param, value) );
+   CHECK_OKAY_QUIET( paramCheckLongint(param, value) );
 
    /* set the actual parameter's value */
    if( param->data.longintparam.valueptr != NULL )
@@ -581,7 +581,7 @@ RETCODE SCIPparamSetReal(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY( paramCheckReal(param, value) );
+   CHECK_OKAY_QUIET( paramCheckReal(param, value) );
 
    /* set the actual parameter's value */
    if( param->data.realparam.valueptr != NULL )
@@ -608,7 +608,7 @@ RETCODE SCIPparamSetChar(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY( paramCheckChar(param, value) );
+   CHECK_OKAY_QUIET( paramCheckChar(param, value) );
 
    /* set the actual parameter's value */
    if( param->data.charparam.valueptr != NULL )
@@ -635,7 +635,7 @@ RETCODE SCIPparamSetString(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter */
-   CHECK_OKAY( paramCheckString(param, value) );
+   CHECK_OKAY_QUIET( paramCheckString(param, value) );
 
    /* set the actual parameter's value */
    if( param->data.stringparam.valueptr != NULL )

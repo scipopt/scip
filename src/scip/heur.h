@@ -139,6 +139,12 @@ const char* SCIPheurGetName(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** gets description of primal heuristic */
+extern
+const char* SCIPheurGetDesc(
+   HEUR*            heur                /**< primal heuristic */
+   );
+
 /** gets display character of primal heuristic */
 extern
 char SCIPheurGetDispchar(

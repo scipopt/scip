@@ -405,28 +405,28 @@ PRICER* SCIPsetFindPricer(
 
 /** inserts constraint handler in constraint handler list */
 extern
-RETCODE SCIPsetIncludeConsHdlr(
+RETCODE SCIPsetIncludeConshdlr(
    SET*             set,                /**< global SCIP settings */
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
 extern
-CONSHDLR* SCIPsetFindConsHdlr(
+CONSHDLR* SCIPsetFindConshdlr(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of constraint handler */
    );
 
 /** inserts conflict handler in conflict handler list */
 extern
-RETCODE SCIPsetIncludeConflictHdlr(
+RETCODE SCIPsetIncludeConflicthdlr(
    SET*             set,                /**< global SCIP settings */
    CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** returns the conflict handler of the given name, or NULL if not existing */
 extern
-CONFLICTHDLR* SCIPsetFindConflictHdlr(
+CONFLICTHDLR* SCIPsetFindConflicthdlr(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of conflict handler */
    );
@@ -475,14 +475,14 @@ HEUR* SCIPsetFindHeur(
 
 /** inserts event handler in event handler list */
 extern
-RETCODE SCIPsetIncludeEventHdlr(
+RETCODE SCIPsetIncludeEventhdlr(
    SET*             set,                /**< global SCIP settings */
    EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
 /** returns the event handler of the given name, or NULL if not existing */
 extern
-EVENTHDLR* SCIPsetFindEventHdlr(
+EVENTHDLR* SCIPsetFindEventhdlr(
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< name of event handler */
    );

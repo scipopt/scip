@@ -31,7 +31,7 @@
 
 /** creates the handler for varlb constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrVarlb(
+RETCODE SCIPincludeConshdlrVarlb(
    SCIP*            scip                /**< SCIP data structure */
    );
 

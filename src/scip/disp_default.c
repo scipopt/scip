@@ -471,7 +471,7 @@ DECL_DISPOUTPUT(SCIPdispOutputGap)
 
    if( SCIPisInfinity(scip, gap) )
       fprintf(file, "    Inf ");
-   else if( gap >= 10000.00 )
+   else if( gap >= 100.00 )
       fprintf(file, "  Large ");
    else
       fprintf(file, "%7.2f%%", 100.0*gap);

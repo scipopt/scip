@@ -413,7 +413,7 @@ DECL_LINCONSUPGD(linconsUpgdBinpack)
  */
 
 /** creates the handler for binpack constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrBinpack(
+RETCODE SCIPincludeConshdlrBinpack(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -424,7 +424,7 @@ RETCODE SCIPincludeConsHdlrBinpack(
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeBinpack, consInitBinpack, consExitBinpack, consSolstartBinpack,
@@ -473,7 +473,7 @@ RETCODE SCIPcreateConsBinpack(
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the binpack constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("binpack constraint handler not found");

@@ -61,7 +61,7 @@ struct ConsData
 };
 
 /** constraint handler data */
-struct ConsHdlrData
+struct ConshdlrData
 {
 };
 
@@ -405,7 +405,7 @@ DECL_LINCONSUPGD(linconsUpgdXxx)
  */
 
 /** creates the handler for xxx constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrXxx(
+RETCODE SCIPincludeConshdlrXxx(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -416,7 +416,7 @@ RETCODE SCIPincludeConsHdlrXxx(
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeXxx, consInitXxx, consExitXxx, consSolstartXxx,
@@ -468,7 +468,7 @@ RETCODE SCIPcreateConsXxx(
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the xxx constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("xxx constraint handler not found");

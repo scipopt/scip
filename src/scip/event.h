@@ -83,8 +83,8 @@
 
 typedef unsigned int EVENTTYPE;         /**< type of event (bit field) */
 
-typedef struct EventHdlr EVENTHDLR;     /**< event handler for a specific events */
-typedef struct EventHdlrData EVENTHDLRDATA; /**< event handler data */
+typedef struct Eventhdlr EVENTHDLR;     /**< event handler for a specific events */
+typedef struct EventhdlrData EVENTHDLRDATA; /**< event handler data */
 typedef struct Event EVENT;             /**< event data structure */
 typedef struct EventObjChg EVENTOBJCHG; /**< data for objective value change events */
 typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */

@@ -387,7 +387,7 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
  */
 
 /** creates the handler for knapsack constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrKnapsack(
+RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -398,7 +398,7 @@ RETCODE SCIPincludeConsHdlrKnapsack(
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeKnapsack, consInitKnapsack, consExitKnapsack, consSolstartKnapsack,
@@ -448,7 +448,7 @@ RETCODE SCIPcreateConsKnapsack(
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the knapsack constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("knapsack constraint handler not found");

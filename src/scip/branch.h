@@ -210,6 +210,12 @@ const char* SCIPbranchruleGetName(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** gets description of branching rule */
+extern
+const char* SCIPbranchruleGetDesc(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
 /** gets priority of branching rule */
 extern
 int SCIPbranchruleGetPriority(

@@ -770,8 +770,28 @@ READER* SCIPfindReader(
    return SCIPsetFindReader(scip->set, name);
 }
 
+/** returns the array of currently available readers */
+READER** SCIPgetReaders(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetReaders", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->readers;
+}
+
+/** returns the number of currently available readers */
+int SCIPgetNReaders(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNReaders", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nreaders;
+}
+
 /** creates a constraint handler and includes it in SCIP */
-RETCODE SCIPincludeConsHdlr(
+RETCODE SCIPincludeConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
@@ -806,33 +826,53 @@ RETCODE SCIPincludeConsHdlr(
 {
    CONSHDLR* conshdlr;
 
-   CHECK_OKAY( checkStage(scip, "SCIPincludeConsHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
                   name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
                   consfree, consinit, consexit, conssolstart, consdelete, constrans, consinitlp,
                   conssepa, consenfolp, consenfops, conscheck, consprop, conspresol, consrescvar,
                   conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
-   CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
+   CHECK_OKAY( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
 }
 
 /** returns the constraint handler of the given name, or NULL if not existing */
-CONSHDLR* SCIPfindConsHdlr(
+CONSHDLR* SCIPfindConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of constraint handler */
    )
 {
    assert(name != NULL);
 
-   CHECK_ABORT( checkStage(scip, "SCIPfindConsHdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPfindConshdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return SCIPsetFindConsHdlr(scip->set, name);
+   return SCIPsetFindConshdlr(scip->set, name);
+}
+
+/** returns the array of currently available constraint handlers */
+CONSHDLR** SCIPgetConshdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetConshdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->conshdlrs;
+}
+
+/** returns the number of currently available constraint handlers */
+int SCIPgetNConshdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConshdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nconshdlrs;
 }
 
 /** creates a conflict handler and includes it in SCIP */
-RETCODE SCIPincludeConflictHdlr(
+RETCODE SCIPincludeConflicthdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
@@ -846,27 +886,47 @@ RETCODE SCIPincludeConflictHdlr(
 {
    CONFLICTHDLR* conflicthdlr;
 
-   CHECK_OKAY( checkStage(scip, "SCIPincludeConflictHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, name, desc, priority, 
                   conflictfree, conflictinit, conflictexit, conflictexec,
                   conflicthdlrdata) );
-   CHECK_OKAY( SCIPsetIncludeConflictHdlr(scip->set, conflicthdlr) );
+   CHECK_OKAY( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
    
    return SCIP_OKAY;
 }
 
 /** returns the conflict handler of the given name, or NULL if not existing */
-CONFLICTHDLR* SCIPfindConflictHdlr(
+CONFLICTHDLR* SCIPfindConflicthdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of conflict handler */
    )
 {
    assert(name != NULL);
 
-   CHECK_ABORT( checkStage(scip, "SCIPfindConflictHdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPfindConflicthdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return SCIPsetFindConflictHdlr(scip->set, name);
+   return SCIPsetFindConflicthdlr(scip->set, name);
+}
+
+/** returns the array of currently available conflict handlers */
+CONFLICTHDLR** SCIPgetConflicthdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetConflicthdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->conflicthdlrs;
+}
+
+/** returns the number of currently available conflict handlers */
+int SCIPgetNConflicthdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConflicthdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nconflicthdlrs;
 }
 
 /** creates a presolver and includes it in SCIP */
@@ -906,6 +966,26 @@ PRESOL* SCIPfindPresol(
    return SCIPsetFindPresol(scip->set, name);
 }
 
+/** returns the array of currently available presolvers */
+PRESOL** SCIPgetPresols(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPresols", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->presols;
+}
+
+/** returns the number of currently available presolvers */
+int SCIPgetNPresols(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPresols", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->npresols;
+}
+
 /** creates a separator and includes it in SCIP */
 RETCODE SCIPincludeSepa(
    SCIP*            scip,               /**< SCIP data structure */
@@ -943,6 +1023,26 @@ SEPA* SCIPfindSepa(
    CHECK_ABORT( checkStage(scip, "SCIPfindSepa", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetFindSepa(scip->set, name);
+}
+
+/** returns the array of currently available separators */
+SEPA** SCIPgetSepas(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetSepas", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->sepas;
+}
+
+/** returns the number of currently available separators */
+int SCIPgetNSepas(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNSepas", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nsepas;
 }
 
 /** creates a primal heuristic and includes it in SCIP */
@@ -986,8 +1086,28 @@ HEUR* SCIPfindHeur(
    return SCIPsetFindHeur(scip->set, name);
 }
 
+/** returns the array of currently available primal heuristics */
+HEUR** SCIPgetHeurs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetHeurs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->heurs;
+}
+
+/** returns the number of currently available primal heuristics */
+int SCIPgetNHeurs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNHeurs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nheurs;
+}
+
 /** creates an event handler and includes it in SCIP */
-RETCODE SCIPincludeEventHdlr(
+RETCODE SCIPincludeEventhdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
@@ -1001,27 +1121,47 @@ RETCODE SCIPincludeEventHdlr(
 {
    EVENTHDLR* eventhdlr;
 
-   CHECK_OKAY( checkStage(scip, "SCIPincludeEventHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPeventhdlrCreate(&eventhdlr, name, desc, 
                   eventfree, eventinit, eventexit, eventdelete, eventexec,
                   eventhdlrdata) );
-   CHECK_OKAY( SCIPsetIncludeEventHdlr(scip->set, eventhdlr) );
+   CHECK_OKAY( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
    
    return SCIP_OKAY;
 }
 
 /** returns the event handler of the given name, or NULL if not existing */
-EVENTHDLR* SCIPfindEventHdlr(
+EVENTHDLR* SCIPfindEventhdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of event handler */
    )
 {
    assert(name != NULL);
 
-   CHECK_ABORT( checkStage(scip, "SCIPfindEventHdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPfindEventhdlr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   return SCIPsetFindEventHdlr(scip->set, name);
+   return SCIPsetFindEventhdlr(scip->set, name);
+}
+
+/** returns the array of currently available event handlers */
+EVENTHDLR** SCIPgetEventhdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetEventhdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->eventhdlrs;
+}
+
+/** returns the number of currently available event handlers */
+int SCIPgetNEventhdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNEventhdlrs", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->neventhdlrs;
 }
 
 /** creates a node selector and includes it in SCIP */
@@ -1062,8 +1202,28 @@ NODESEL* SCIPfindNodesel(
    return SCIPsetFindNodesel(scip->set, name);
 }
 
+/** returns the array of currently available node selectors */
+NODESEL** SCIPgetNodesels(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNodesels", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nodesels;
+}
+
+/** returns the number of currently available node selectors */
+int SCIPgetNNodesels(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNNodesels", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nnodesels;
+}
+
 /** returns the currently used node selector */
-NODESEL* SCIPgetNodesel(
+NODESEL* SCIPgetActNodesel(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -1138,6 +1298,26 @@ BRANCHRULE* SCIPfindBranchrule(
    return SCIPsetFindBranchrule(scip->set, name);
 }
 
+/** returns the array of currently available branching rules */
+BRANCHRULE** SCIPgetBranchrules(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetBranchrules", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->branchrules;
+}
+
+/** returns the number of currently available branching rules */
+int SCIPgetNBranchrules(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNBranchrules", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->nbranchrules;
+}
+
 /** sets the priority of a branching rule */
 RETCODE SCIPsetBranchrulePriority(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1193,6 +1373,26 @@ DISP* SCIPfindDisp(
    CHECK_ABORT( checkStage(scip, "SCIPfindDisp", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetFindDisp(scip->set, name);
+}
+
+/** returns the array of currently available display columns */
+DISP** SCIPgetDisps(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetDisps", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->disps;
+}
+
+/** returns the number of currently available display columns */
+int SCIPgetNDisps(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNDisps", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return scip->set->ndisps;
 }
 
 
@@ -1362,7 +1562,7 @@ RETCODE SCIPreadProb(
          sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
             scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
             scip->origprob->nconss);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
 #if 0
          printf(" var names :  ");
          SCIPhashtablePrintStatistics(scip->origprob->varnames);
@@ -2318,7 +2518,7 @@ RETCODE SCIPpresolve(
       sprintf(s, "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
          scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
          scip->transprob->ncont, scip->transprob->nconss);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
 
       for( h = 0; h < scip->set->nconshdlrs; ++h )
       {
@@ -2386,6 +2586,7 @@ RETCODE SCIPsolve(
       if( scip->stage == SCIP_STAGE_SOLVED )
          return SCIP_OKAY;
       assert(scip->stage == SCIP_STAGE_PRESOLVED);
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "");
 
       /*lint -fallthrough*/
 
@@ -2396,8 +2597,10 @@ RETCODE SCIPsolve(
       /*lint -fallthrough*/
 
    case SCIP_STAGE_SOLVING:
+      /* reset display */
+      SCIPstatResetDisplay(scip->stat);
+
       /* continue solution process */
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "");
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                      scip->lp, scip->price, scip->sepastore, scip->branchcand, scip->cutpool, scip->lpconflict,
                      scip->primal, scip->eventfilter, scip->eventqueue) );
@@ -2405,29 +2608,26 @@ RETCODE SCIPsolve(
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
       {
-         char s[MAXSTRLEN];
-            
          /* tree is empty, and no active node exists -> problem is solved */
          scip->stage = SCIP_STAGE_SOLVED;
+      }
 
-         /* display most relevant statistics */
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "");
-         if( scip->primal->nsols == 0 )
-         {
-            sprintf(s, "Solution Status    : infeasible");
-         }
+      /* display most relevant statistics */
+      if( scip->set->verblevel >= SCIP_VERBLEVEL_NORMAL )
+      {
+         printf("\n");
+         printf("SCIP Status        : ");
+         CHECK_OKAY( SCIPprintStatus(scip, NULL) );
+         printf("\n");
+         printf("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+         printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
+         printf("Primal Bound       : %.19e (%lld solutions)\n", SCIPgetPrimalBound(scip), scip->primal->nsolsfound);
+         printf("Dual Bound         : %.19e\n", SCIPgetDualBound(scip));
+         printf("Gap                : ");
+         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
+            printf("infinite\n");
          else
-            sprintf(s, "Solution Status    : optimal");
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-         sprintf(s, "Solution Nodes     : %lld", scip->stat->nnodes);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-         sprintf(s, "Solution Time      : %.2f", SCIPclockGetTime(scip->stat->solvingtime));
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-         if( scip->primal->nsols > 0 )
-         {
-            sprintf(s, "Objective          : %25.19e", SCIPgetPrimalBound(scip));
-            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-         }
+            printf("%.2f%%\n", SCIPgetGap(scip));
       }
       break;
 
@@ -5968,7 +6168,7 @@ int SCIPgetNLPs(
    return scip->stat->nlps;
 }
 
-/** gets total number of simplex iterations used so far */
+/** gets total number of simplex iterations used so far in primal and dual simplex */
 Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -5986,6 +6186,16 @@ Longint SCIPgetNDivingLPIterations(
    CHECK_ABORT( checkStage(scip, "SCIPgetNDivingLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->ndivinglpiterations;
+}
+
+/** gets total number of simplex iterations used so far in strong branching */
+Longint SCIPgetNStrongbranchLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNStrongbranchLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nsblpiterations;
 }
 
 /** gets number of separation rounds performed so far at the current node */
@@ -6546,8 +6756,6 @@ void printLPStatistics(
    FILE*            file                /**< output file */
    )
 {
-   Longint strongbranchiter;
-
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
@@ -6585,17 +6793,13 @@ void printLPStatistics(
       fprintf(file, "            -\n");
 #endif
    /*fprintf(file, "  strong branching : %12.2f %12d            -            -            -\n",*/
-   if( scip->stat->nlps > 0 )
-      strongbranchiter = 2 * scip->stat->nstrongbranch * scip->stat->nlpiterations / scip->stat->nlps;
-   else
-      strongbranchiter = 0.0;
-   fprintf(file, "  strong branching : %12.2f %12d (%11lld)           -",
+   fprintf(file, "  strong branching : %12.2f %12d %12lld %12.2f",
       SCIPclockGetTime(scip->stat->strongbranchtime),
       scip->stat->nstrongbranch,
-      strongbranchiter
-      );
+      scip->stat->nsblpiterations,
+      scip->stat->nstrongbranch > 0 ? (Real)scip->stat->nsblpiterations/(Real)scip->stat->nstrongbranch : 0.0);
    if( SCIPclockGetTime(scip->stat->strongbranchtime) >= 0.01 )
-      fprintf(file, " (%11.2f)\n", (Real)strongbranchiter/SCIPclockGetTime(scip->stat->strongbranchtime));
+      fprintf(file, " %12.2f\n", (Real)scip->stat->nsblpiterations/SCIPclockGetTime(scip->stat->strongbranchtime));
    else
       fprintf(file, "            -\n");
 }

@@ -508,7 +508,7 @@ RETCODE SCIPbranchruleCreate(
    (*branchrule)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "branchrule/%s/priority", name);
+   sprintf(paramname, "branching/%s/priority", name);
    sprintf(paramdesc, "priority of branching rule <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
@@ -663,6 +663,16 @@ const char* SCIPbranchruleGetName(
    assert(branchrule != NULL);
 
    return branchrule->name;
+}
+
+/** gets description of branching rule */
+const char* SCIPbranchruleGetDesc(
+   BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->desc;
 }
 
 /** gets priority of branching rule */

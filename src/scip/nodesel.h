@@ -257,6 +257,12 @@ const char* SCIPnodeselGetName(
    NODESEL*         nodesel             /**< node selector */
    );
 
+/** gets description of node selector */
+extern
+const char* SCIPnodeselGetDesc(
+   NODESEL*         nodesel             /**< node selector */
+   );
+
 /** gets user data of node selector */
 extern
 NODESELDATA* SCIPnodeselGetData(

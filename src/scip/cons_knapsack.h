@@ -31,7 +31,7 @@
 
 /** creates the handler for knapsack constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrKnapsack(
+RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*            scip                /**< SCIP data structure */
    );
 

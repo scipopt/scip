@@ -31,7 +31,7 @@
 
 /** creates the handler for varub constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrVarub(
+RETCODE SCIPincludeConshdlrVarub(
    SCIP*            scip                /**< SCIP data structure */
    );
 

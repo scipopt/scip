@@ -803,6 +803,16 @@ const char* SCIPnodeselGetName(
    return nodesel->name;
 }
 
+/** gets description of node selector */
+const char* SCIPnodeselGetDesc(
+   NODESEL*         nodesel             /**< node selector */
+   )
+{
+   assert(nodesel != NULL);
+
+   return nodesel->desc;
+}
+
 /** gets user data of node selector */
 NODESELDATA* SCIPnodeselGetData(
    NODESEL*         nodesel             /**< node selector */

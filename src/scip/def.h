@@ -33,9 +33,21 @@
 
 
 
-#define SCIP_VERSION                 51 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                 60 /**< SCIP version number (multiplied by 100 to get integer number) */
 
 
+
+#define CHECK_ABORT_QUIET(x) { if( (x) != SCIP_OKAY ) abort(); }
+#define CHECK_OKAY_QUIET(x)  { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
+#define ALLOC_OKAY_QUIET(x)  { if( NULL == (x) ) return SCIP_NOMEMORY; }
+
+#define CHECK_ABORT(x) { RETCODE _restat_;                                                                   \
+                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                         {                                                                                   \
+                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
+                           abort();                                                                          \
+                         }                                                                                   \
+                       }
 
 #ifndef NDEBUG
 #define CHECK_OKAY(x)  { RETCODE _restat_;                                                                   \
@@ -52,17 +64,9 @@
                          }                                                                                   \
                        }
 #else
-#define CHECK_OKAY(x)  { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
-#define ALLOC_OKAY(x)  { if( NULL == (x) ) return SCIP_NOMEMORY; }
+#define CHECK_OKAY(x)  CHECK_OKAY_QUIET(x)
+#define ALLOC_OKAY(x)  ALLOC_OKAY_QUIET(x)
 #endif
-
-#define CHECK_ABORT(x) { RETCODE _restat_;                                                                   \
-                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
-                         {                                                                                   \
-                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
-                           abort();                                                                          \
-                         }                                                                                   \
-                       }
 
 
 #ifndef SQR

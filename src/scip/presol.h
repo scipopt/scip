@@ -166,6 +166,12 @@ const char* SCIPpresolGetName(
    PRESOL*          presol              /**< presolver */
    );
 
+/** gets description of presolver */
+extern
+const char* SCIPpresolGetDesc(
+   PRESOL*          presol              /**< presolver */
+   );
+
 /** gets priority of presolver */
 extern
 int SCIPpresolGetPriority(

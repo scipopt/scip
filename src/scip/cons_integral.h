@@ -31,7 +31,7 @@
 
 /** creates the handler for the integrality constraint and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrIntegral(
+RETCODE SCIPincludeConshdlrIntegral(
    SCIP*            scip                /**< SCIP data structure */
    );
 

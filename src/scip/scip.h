@@ -397,9 +397,21 @@ READER* SCIPfindReader(
    const char*      name                /**< name of constraint handler */
    );
 
+/** returns the array of currently available readers */
+extern
+READER** SCIPgetReaders(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available readers */
+extern
+int SCIPgetNReaders(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** creates a constraint handler and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlr(
+RETCODE SCIPincludeConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
@@ -434,14 +446,26 @@ RETCODE SCIPincludeConsHdlr(
 
 /** returns the constraint handler of the given name, or NULL if not existing */
 extern
-CONSHDLR* SCIPfindConsHdlr(
+CONSHDLR* SCIPfindConshdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of constraint handler */
    );
 
+/** returns the array of currently available constraint handlers */
+extern
+CONSHDLR** SCIPgetConshdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available constraint handlers */
+extern
+int SCIPgetNConshdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** creates a conflict handler and includes it in SCIP */
 extern
-RETCODE SCIPincludeConflictHdlr(
+RETCODE SCIPincludeConflicthdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of conflict handler */
    const char*      desc,               /**< description of conflict handler */
@@ -455,9 +479,21 @@ RETCODE SCIPincludeConflictHdlr(
 
 /** returns the conflict handler of the given name, or NULL if not existing */
 extern
-CONFLICTHDLR* SCIPfindConflictHdlr(
+CONFLICTHDLR* SCIPfindConflicthdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of conflict handler */
+   );
+
+/** returns the array of currently available conflict handlers */
+extern
+CONFLICTHDLR** SCIPgetConflicthdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available conflict handlers */
+extern
+int SCIPgetNConflicthdlrs(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** creates a presolver and includes it in SCIP */
@@ -481,6 +517,18 @@ PRESOL* SCIPfindPresol(
    const char*      name                /**< name of presolver */
    );
 
+/** returns the array of currently available presolvers */
+extern
+PRESOL** SCIPgetPresols(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available presolvers */
+extern
+int SCIPgetNPresols(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** creates a separator and includes it in SCIP */
 extern
 RETCODE SCIPincludeSepa(
@@ -501,6 +549,18 @@ extern
 SEPA* SCIPfindSepa(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of separator */
+   );
+
+/** returns the array of currently available separators */
+extern
+SEPA** SCIPgetSepas(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available separators */
+extern
+int SCIPgetNSepas(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** creates a primal heuristic and includes it in SCIP */
@@ -527,9 +587,21 @@ HEUR* SCIPfindHeur(
    const char*      name                /**< name of primal heuristic */
    );
 
+/** returns the array of currently available primal heuristics */
+extern
+HEUR** SCIPgetHeurs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available primal heuristics */
+extern
+int SCIPgetNHeurs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** creates an event handler and includes it in SCIP */
 extern
-RETCODE SCIPincludeEventHdlr(
+RETCODE SCIPincludeEventhdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
@@ -543,9 +615,21 @@ RETCODE SCIPincludeEventHdlr(
 
 /** returns the event handler of the given name, or NULL if not existing */
 extern
-EVENTHDLR* SCIPfindEventHdlr(
+EVENTHDLR* SCIPfindEventhdlr(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of event handler */
+   );
+
+/** returns the array of currently available event handlers */
+extern
+EVENTHDLR** SCIPgetEventhdlrs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available event handlers */
+extern
+int SCIPgetNEventhdlrs(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** creates a node selector and includes it in SCIP */
@@ -570,9 +654,21 @@ NODESEL* SCIPfindNodesel(
    const char*      name                /**< name of event handler */
    );
 
+/** returns the array of currently available node selectors */
+extern
+NODESEL** SCIPgetNodesels(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available node selectors */
+extern
+int SCIPgetNNodesels(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** returns the currently used node selector */
 extern
-NODESEL* SCIPgetNodesel(
+NODESEL* SCIPgetActNodesel(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -612,6 +708,18 @@ BRANCHRULE* SCIPfindBranchrule(
    const char*      name                /**< name of event handler */
    );
 
+/** returns the array of currently available branching rules */
+extern
+BRANCHRULE** SCIPgetBranchrules(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available branching rules */
+extern
+int SCIPgetNBranchrules(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** sets the priority of a branching rule */
 extern
 RETCODE SCIPsetBranchrulePriority(
@@ -644,6 +752,18 @@ extern
 DISP* SCIPfindDisp(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name                /**< name of event handler */
+   );
+
+/** returns the array of currently available display columns */
+extern
+DISP** SCIPgetDisps(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available display columns */
+extern
+int SCIPgetNDisps(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /**@} */
@@ -2416,7 +2536,7 @@ int SCIPgetNLPs(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets total number of simplex iterations used so far */
+/** gets total number of simplex iterations used so far in primal and dual simplex */
 extern
 Longint SCIPgetNLPIterations(
    SCIP*            scip                /**< SCIP data structure */
@@ -2425,6 +2545,12 @@ Longint SCIPgetNLPIterations(
 /** gets total number of simplex iterations used so far during diving */
 extern
 Longint SCIPgetNDivingLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far in strong branching */
+extern
+Longint SCIPgetNStrongbranchLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 

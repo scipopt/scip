@@ -55,7 +55,7 @@ struct ConsData
 };
 
 /** constraint handler data */
-struct ConsHdlrData
+struct ConshdlrData
 {
 };
 
@@ -487,7 +487,7 @@ DECL_CONSUNLOCK(consUnlockAnd)
  */
 
 /** creates the handler for and constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrAnd(
+RETCODE SCIPincludeConshdlrAnd(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -497,7 +497,7 @@ RETCODE SCIPincludeConsHdlrAnd(
    conshdlrdata = NULL;
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeAnd, consInitAnd, consExitAnd, consSolstartAnd,
@@ -529,7 +529,7 @@ RETCODE SCIPcreateConsAnd(
    CONSDATA* consdata;
 
    /* find the and constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("and constraint handler not found");

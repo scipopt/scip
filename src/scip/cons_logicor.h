@@ -31,7 +31,7 @@
 
 /** creates the handler for logic or constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrLogicor(
+RETCODE SCIPincludeConshdlrLogicor(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -387,7 +387,7 @@ DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
  */
 
 /** creates the handler for invarknapsack constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrInvarknapsack(
+RETCODE SCIPincludeConshdlrInvarknapsack(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -398,7 +398,7 @@ RETCODE SCIPincludeConsHdlrInvarknapsack(
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeInvarknapsack, consInitInvarknapsack, consExitInvarknapsack, consSolstartInvarknapsack,
@@ -447,7 +447,7 @@ RETCODE SCIPcreateConsInvarknapsack(
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the invarknapsack constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("invarknapsack constraint handler not found");

@@ -407,7 +407,7 @@ DECL_LINCONSUPGD(linconsUpgdVarlb)
  */
 
 /** creates the handler for varlb constraints and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrVarlb(
+RETCODE SCIPincludeConshdlrVarlb(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -418,7 +418,7 @@ RETCODE SCIPincludeConsHdlrVarlb(
    /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
-   CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
+   CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeVarlb, consInitVarlb, consExitVarlb, consSolstartVarlb,
@@ -467,7 +467,7 @@ RETCODE SCIPcreateConsVarlb(
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the varlb constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("varlb constraint handler not found");

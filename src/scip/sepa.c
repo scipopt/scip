@@ -96,7 +96,7 @@ RETCODE SCIPsepaCreate(
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "separator/%s/freq", name);
+   sprintf(paramname, "separating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
@@ -273,6 +273,16 @@ const char* SCIPsepaGetName(
    assert(sepa != NULL);
 
    return sepa->name;
+}
+
+/** gets description of separator */
+const char* SCIPsepaGetDesc(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->desc;
 }
 
 /** gets user data of separator */

@@ -28,7 +28,7 @@
 
 typedef struct Dialog DIALOG;           /**< user interface dialog */
 typedef struct DialogData DIALOGDATA;   /**< user defined dialog data */
-typedef struct DialogHdlr DIALOGHDLR;   /**< dialog handler */
+typedef struct Dialoghdlr DIALOGHDLR;   /**< dialog handler */
 
 
 /** execution method of dialog
@@ -122,11 +122,14 @@ const char* SCIPdialoghdlrGetWord(
    const char*      prompt              /**< prompt to display, or NULL to display the current dialog's path */
    );
 
-/** adds the path to the given dialog and the remaining command in the buffer to the command history */
+/** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
+ *  by the dialog's command path; if no command is given, only the path to the dialog is added to the command history
+ */
 extern
 RETCODE SCIPdialoghdlrAddHistory(
    DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog              /**< current dialog */
+   DIALOG*          dialog,             /**< current dialog, or NULL */
+   const char*      command             /**< command string to add to the command history, or NULL */
    );
 
 

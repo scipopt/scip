@@ -634,7 +634,7 @@ RETCODE SCIPlpiAddRows(
 
    SPxSCIP* spx = lpi->spx;
    LPRowSet rows(nrows);
-   DSVector rowVector();
+   DSVector rowVector;
    int last;
    int i;
    int j;
@@ -1231,7 +1231,8 @@ RETCODE SCIPlpiStrongbranch(
    int              ncand,              /**< size of candidate list */
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching candidate down */
-   Real*            up                  /**< stores dual bound after branching candidate up */
+   Real*            up,                 /**< stores dual bound after branching candidate up */
+   int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
    SPxSCIP* spx;
@@ -1257,7 +1258,10 @@ RETCODE SCIPlpiStrongbranch(
    spx->getBasis(rowstat, colstat);    
    spx->setTerminationIter(itlim);
    spx->setType(SoPlex::LEAVE);        
-   
+
+   if( iter != NULL )
+      *iter = 0;
+
    for( c = 0; c < ncand && !error; ++c )
    {
       /* down branch */
@@ -1281,6 +1285,8 @@ RETCODE SCIPlpiStrongbranch(
          error = true;
          break;
       }
+      if( iter != NULL )
+         (*iter) += spx->iterations();
       spx->changeUpper(cand[c], oldBound);
       spx->setBasis(rowstat, colstat);
 
@@ -1309,6 +1315,8 @@ RETCODE SCIPlpiStrongbranch(
          error = true;
          break;
       }
+      if( iter != NULL )
+         (*iter) += spx->iterations();
       spx->changeLower(cand[c], oldBound);
       spx->setBasis(rowstat, colstat);
    }

@@ -58,19 +58,19 @@ RETCODE SCIPincludeDefaultPlugins(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeConsHdlrAnd(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrLogicor(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrSetppc(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrAnd(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrIntegral(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrLogicor(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrSetppc(scip) );
 
 #if 0
-   CHECK_OKAY( SCIPincludeConsHdlrKnapsack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrEqknapsack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrInvarknapsack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrBinpack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrVarlb(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrVarub(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrEqknapsack(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrInvarknapsack(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrBinpack(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrVarlb(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrVarub(scip) );
 #endif
 
    CHECK_OKAY( SCIPincludeReaderCnf(scip) );

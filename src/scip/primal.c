@@ -195,6 +195,7 @@ RETCODE primalAddSol(
    for( pos = primal->nsols-1; pos > insertpos; --pos )
       primal->sols[pos] = primal->sols[pos-1];
 
+   assert(0 <= insertpos && insertpos < primal->nsols);
    primal->sols[insertpos] = sol;
    primal->nsolsfound++;
    debugMessage(" -> stored at position %d of %d solutions, found %lld solutions\n", 

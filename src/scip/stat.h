@@ -52,6 +52,7 @@ struct Stat
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
    Longint          ndivinglpiterations;/**< number of iterations in diving */
+   Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    Longint          nlppricings;        /**< number of times, the problem variables were priced */
    Longint          nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
@@ -102,6 +103,12 @@ void SCIPstatMark(
 /** reset statistics to the data before solving started */
 extern
 void SCIPstatReset(
+   STAT*            stat                /**< problem statistics data */
+   );
+
+/** resets display statistics, such that a new header line is displayed before the next display line */
+extern
+void SCIPstatResetDisplay(
    STAT*            stat                /**< problem statistics data */
    );
 

@@ -52,7 +52,7 @@ struct Dialog
 };
 
 /** dialog handler */
-struct DialogHdlr
+struct Dialoghdlr
 {
    DIALOG*          rootdialog;         /**< main (root) dialog */
    char*            buffer;             /**< command buffer */
@@ -294,7 +294,7 @@ const char* SCIPdialoghdlrGetWord(
       /* insert command in command history */
       if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
       {
-         CHECK_ABORT( SCIPdialoghdlrAddHistory(dialoghdlr, dialog) );
+         CHECK_ABORT( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos]) );
       }
    }
 
@@ -324,30 +324,39 @@ const char* SCIPdialoghdlrGetWord(
    return firstword;
 }
 
-/** adds the path to the given dialog and the remaining command in the buffer to the command history */
+/** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
+ *  by the dialog's command path; if no command is given, only the path to the dialog is added to the command history
+ */
 RETCODE SCIPdialoghdlrAddHistory(
    DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
-   DIALOG*          dialog              /**< current dialog */
+   DIALOG*          dialog,             /**< current dialog, or NULL */
+   const char*      command             /**< command string to add to the command history, or NULL */
    )
 {
    char s[MAXSTRLEN];
    char h[MAXSTRLEN];
 
    assert(dialoghdlr != NULL);
-   assert(dialog != NULL);
 
-   strncpy(h, &dialoghdlr->buffer[dialoghdlr->bufferpos], MAXSTRLEN);
+   s[MAXSTRLEN-1] = '\0';
    h[MAXSTRLEN-1] = '\0';
 
-   while( dialog != dialoghdlr->rootdialog && dialog != NULL )
+   if( command != NULL )
+      strncpy(h, command, MAXSTRLEN-1);
+   else
+      h[0] = '\0';
+
+   while( dialog != NULL && dialog != dialoghdlr->rootdialog )
    {
-      snprintf(s, MAXSTRLEN, "%s %s", dialog->name, h);
-      (void)strncpy(h, s, MAXSTRLEN);
-      h[MAXSTRLEN-1] = '\0';
+      snprintf(s, MAXSTRLEN-1, "%s %s", dialog->name, h);
+      (void)strncpy(h, s, MAXSTRLEN-1);
       dialog = dialog->parent;
    }
 
-   CHECK_OKAY( addHistory(h) );
+   if( h[0] != '\0' )
+   {
+      CHECK_OKAY( addHistory(h) );
+   }
 
    return SCIP_OKAY;
 }
@@ -616,6 +625,9 @@ RETCODE SCIPdialogDisplayMenu(
    {
       CHECK_OKAY( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
    }
+
+   if( dialog->nsubdialogs == 0 )
+      printf("<no options available>\n");
 
    return SCIP_OKAY;
 }

@@ -31,7 +31,7 @@
 
 /** creates the handler for and constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrAnd(
+RETCODE SCIPincludeConshdlrAnd(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -103,7 +103,7 @@
 
 
 /** conflict handler */
-struct ConflictHdlr
+struct Conflicthdlr
 {
    char*            name;               /**< name of conflict handler */
    char*            desc;               /**< description of conflict handler */

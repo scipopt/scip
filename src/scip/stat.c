@@ -134,6 +134,7 @@ void SCIPstatReset(
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->ndivinglpiterations = 0;
+   stat->nsblpiterations = 0;
    stat->nstrongbranch = 0;
    stat->nseparounds = 0;
    stat->nlppricings = 0;
@@ -153,6 +154,17 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+}
+
+/** resets display statistics, such that a new header line is displayed before the next display line */
+void SCIPstatResetDisplay(
+   STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->lastdispnode = 0;
+   stat->ndisplines = 0;
 }
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */

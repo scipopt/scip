@@ -31,7 +31,7 @@
 
 /** creates the handler for binpack constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrBinpack(
+RETCODE SCIPincludeConshdlrBinpack(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -99,6 +99,12 @@ const char* SCIPreaderGetName(
    READER*          reader              /**< reader */
    );
 
+/** gets description of reader */
+extern
+const char* SCIPreaderGetDesc(
+   READER*          reader              /**< reader */
+   );
+
 /** gets user data of reader */
 extern
 READERDATA* SCIPreaderGetData(

@@ -137,6 +137,12 @@ const char* SCIPdispGetName(
    DISP*            disp                /**< display column */
    );
 
+/** gets description of display column */
+extern
+const char* SCIPdispGetDesc(
+   DISP*            disp                /**< display column */
+   );
+
 /** gets user data of display column */
 extern
 DISPDATA* SCIPdispGetData(

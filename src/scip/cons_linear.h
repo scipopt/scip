@@ -80,7 +80,7 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
 
 /** creates the handler for linear constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrLinear(
+RETCODE SCIPincludeConshdlrLinear(
    SCIP*            scip                /**< SCIP data structure */
    );
 

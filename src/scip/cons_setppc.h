@@ -31,7 +31,7 @@
 
 /** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrSetppc(
+RETCODE SCIPincludeConshdlrSetppc(
    SCIP*            scip                /**< SCIP data structure */
    );
 

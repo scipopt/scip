@@ -691,7 +691,7 @@ RETCODE readRows(
          if( cons != NULL )
             break;
 
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reader/mps/dynamicrows", &dynamicrows) );
+         CHECK_OKAY( SCIPgetBoolParam(scip, "reading/mps/dynamicrows", &dynamicrows) );
 
          switch(*mpsinputField1(mpsi))
          {
@@ -770,7 +770,7 @@ RETCODE readCols(
 
          strcpy(colname, mpsinputField1(mpsi));
 
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reader/mps/dynamiccols", &dynamiccols) );
+         CHECK_OKAY( SCIPgetBoolParam(scip, "reading/mps/dynamiccols", &dynamiccols) );
 
          if( mpsinputIsInteger(mpsi) )
          {
@@ -1339,10 +1339,10 @@ RETCODE SCIPincludeReaderMps(
 
    /* add mps reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader/mps/dynamiccols", "should columns be added and removed dynamically to the LP?",
+                  "reading/mps/dynamiccols", "should columns be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader/mps/dynamicrows", "should rows be added and removed dynamically to the LP?",
+                  "reading/mps/dynamicrows", "should rows be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
