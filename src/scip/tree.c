@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.133 2005/02/09 10:10:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.134 2005/02/09 15:20:03 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1257,6 +1257,7 @@ RETCODE SCIPnodeAddBoundinfer(
       || node->nodetype == SCIP_NODETYPE_PROBINGNODE
       || node->nodetype == SCIP_NODETYPE_CHILD
       || node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
+   assert(set != NULL);
    assert(tree != NULL);
    assert(var != NULL);
    assert(node->active || (infercons == NULL && inferprop == NULL));
@@ -1316,8 +1317,11 @@ RETCODE SCIPnodeAddBoundinfer(
       CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
       CHECK_OKAY( SCIPvarChgBdLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound, boundtype) );
 
-      stat->nrootboundchgs++;
-      stat->nrootboundchgsrun++;
+      if( set->stage == SCIP_STAGE_SOLVING )
+      {
+         stat->nrootboundchgs++;
+         stat->nrootboundchgsrun++;
+      }
 
       return SCIP_OKAY;
    }
