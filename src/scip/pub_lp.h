@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.7 2004/04/27 15:50:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.8 2004/05/03 16:59:29 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -96,6 +96,12 @@ VAR* SCIPcolGetVar(
    COL*             col                 /**< LP column */
    );
 
+/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+extern
+Bool SCIPcolIsIntegral(
+   COL*             col                 /**< LP column */
+   );
+
 /** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
 extern
 Bool SCIPcolIsRemoveable(
@@ -152,6 +158,7 @@ Longint SCIPcolGetStrongbranchNode(
 #define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
 #define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
 #define SCIPcolGetVar(col)              ((col)->var)
+#define SCIPcolIsIntegral(col)          ((col)->integral)
 #define SCIPcolIsRemoveable(col)        ((col)->removeable)
 #define SCIPcolGetLPPos(col)            ((col)->lppos)
 #define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
@@ -254,6 +261,12 @@ int SCIProwGetIndex(
    ROW*             row                 /**< LP row */
    );
 
+/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+extern
+Bool SCIProwIsIntegral(
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns TRUE iff row is only valid locally */
 extern
 Bool SCIProwIsLocal(
@@ -300,6 +313,7 @@ Bool SCIProwIsInLP(
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
 #define SCIProwGetName(row)             ((row)->name)
 #define SCIProwGetIndex(row)            ((row)->index)
+#define SCIProwIsIntegral(row)          ((row)->integral)
 #define SCIProwIsLocal(row)             ((row)->local)
 #define SCIProwIsModifiable(row)        ((row)->modifiable)
 #define SCIProwIsRemoveable(row)        ((row)->removeable)

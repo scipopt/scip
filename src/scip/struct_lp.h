@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.13 2004/04/19 17:08:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.14 2004/05/03 16:59:30 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -96,6 +96,7 @@ struct Col
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
+   unsigned int     integral:1;         /**< TRUE iff associated variable is of integral type */
    unsigned int     removeable:1;       /**< TRUE iff column is removeable from the LP (due to aging or cleanup) */
 };
 
@@ -141,6 +142,7 @@ struct Row
    unsigned int     lhschanged:1;       /**< was left hand side or constant changed, and has LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side or constant changed, and has LP solver to be updated? */
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
+   unsigned int     integral:1;         /**< is activity (without constant) of row always integral in feasible solution? */
    unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int     removeable:1;       /**< TRUE iff row is removeable from the LP (due to aging or cleanup) */

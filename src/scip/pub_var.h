@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.16 2004/05/03 13:35:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.17 2004/05/03 16:59:29 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -286,6 +286,12 @@ VARTYPE SCIPvarGetType(
    VAR*             var                 /**< problem variable */
    );
 
+/** returns whether variable is of integral type (binary, integer, or implicit integer) */
+extern
+Bool SCIPvarIsIntegral(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** returns whether variable's column should be present in the initial root LP */
 extern
 Bool SCIPvarIsInitial(
@@ -542,6 +548,7 @@ Real* SCIPvarGetVubConstants(
       && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((VARTYPE)((var)->vartype))
+#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemoveable(var)        (var)->removeable
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)

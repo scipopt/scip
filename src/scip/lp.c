@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.113 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.114 2004/05/03 16:59:28 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -915,6 +915,7 @@ RETCODE rowAddCoeff(
    row->cols_probindex[row->len] = col->var_probindex;
    row->vals[row->len] = val;
    row->linkpos[row->len] = linkpos;
+   row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
    if( linkpos == -1 )
       row->nunlinked++;
    row->len++;
@@ -1020,6 +1021,7 @@ RETCODE rowChgCoeffPos(
       /* change existing coefficient */
       rowDelNorms(row, set, -1, row->vals[pos]);
       row->vals[pos] = val;
+      row->integral = row->integral && SCIPsetIsIntegral(set, val);
       rowAddNorms(row, set, -1, row->vals[pos]);
       coefChanged(row, row->cols[pos], lp);
    }
@@ -1578,6 +1580,7 @@ RETCODE SCIPcolCreate(
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
+   (*col)->integral = SCIPvarIsIntegral(var);
    (*col)->removeable = removeable;
 
    /* check, if column is sorted
@@ -2111,7 +2114,8 @@ RETCODE colStrongbranch(
    int iter;
 
    assert(col != NULL);
-   assert(SCIPvarGetType(col->var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPcolIsIntegral(col));
+   assert(SCIPvarIsIntegral(col->var));
    assert(stat != NULL);
    assert(lp != NULL);
    assert(lperror != NULL);
@@ -2175,7 +2179,8 @@ RETCODE SCIPcolGetStrongbranch(
 {
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(SCIPvarGetType(col->var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPcolIsIntegral(col));
+   assert(SCIPvarIsIntegral(col->var));
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
    assert(col->primsol < SCIP_INVALID);
@@ -2346,6 +2351,17 @@ VAR* SCIPcolGetVar(
    return col->var;
 }
 
+/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+Bool SCIPcolIsIntegral(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert(SCIPvarIsIntegral(col->var) == col->integral);
+
+   return col->integral;
+}
+
 /** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
 Bool SCIPcolIsRemoveable(
    COL*             col                 /**< LP column */
@@ -2489,7 +2505,8 @@ RETCODE rowScale(
 
    debugMessage("scale row <%s> with %g (tolerance=%g)\n", row->name, scaleval, roundtol);
 
-   /* scale the row coefficients */
+   /* scale the row coefficients, thereby recalculating whether the row's activity is always integral */
+   row->integral = TRUE;
    for( c = 0; c < row->len; ++c )
    {
       col = row->cols[c];
@@ -2500,6 +2517,7 @@ RETCODE rowScale(
          newval = EPSFLOOR(newval, roundtol);
 
       row->vals[c] = newval;
+      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, newval);
 
       /* update the norms of the row */
       rowDelNorms(row, set, -1, val);
@@ -2550,8 +2568,8 @@ RETCODE SCIProwCreate(
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
-   COL**            col,                /**< array with columns of row entries */
-   Real*            val,                /**< array with coefficients of row entries */
+   COL**            cols,               /**< array with columns of row entries */
+   Real*            vals,               /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */
@@ -2563,25 +2581,28 @@ RETCODE SCIProwCreate(
    assert(memhdr != NULL);
    assert(stat != NULL);
    assert(len >= 0);
-   assert(len == 0 || (col != NULL && val != NULL));
+   assert(len == 0 || (cols != NULL && vals != NULL));
    assert(lhs <= rhs);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, row) );
 
+   (*row)->integral = TRUE;
    if( len > 0 )
    {
+      VAR* var;
       int i;
 
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->cols, col, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->cols, cols, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->cols_probindex, len) );
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->vals, val, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->vals, vals, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->linkpos, len) );
       for( i = 0; i < len; ++i )
       {
-         assert(col[i]->var != NULL);
-         assert(col[i]->var_probindex == SCIPvarGetProbindex(col[i]->var));
-         (*row)->cols_probindex[i] = col[i]->var_probindex;
+         var = cols[i]->var;
+         assert(cols[i]->var_probindex == SCIPvarGetProbindex(var));
+         (*row)->cols_probindex[i] = cols[i]->var_probindex;
          (*row)->linkpos[i] = -1;
+         (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, vals[i]);
       }
    }
    else
@@ -3096,7 +3117,7 @@ RETCODE SCIProwMakeRational(
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
       
-      contvars = contvars || (SCIPvarGetType(col->var) == SCIP_VARTYPE_CONTINUOUS);
+      contvars = contvars || !SCIPcolIsIntegral(col);
       fractional = fractional || !SCIPsetIsIntegral(set, val);
    }
 
@@ -3311,7 +3332,7 @@ void rowMerge(
       SCIProwSort(row);
       assert(row->sorted);
       
-      /* merge equal columns */
+      /* merge equal columns, thereby recalculating whether the row's activity is always integral */
       cols = row->cols;
       cols_probindex = row->cols_probindex;
       vals = row->vals;
@@ -3320,6 +3341,7 @@ void rowMerge(
       assert(vals != NULL);
       
       t = 0;
+      row->integral = TRUE;
       assert(!SCIPsetIsZero(set, vals[0]));
       for( s = 1; s < row->len; ++s )
       {
@@ -3336,14 +3358,20 @@ void rowMerge(
          {
             /* go to the next entry, overwriting current entry if coefficient is zero */
             if( !SCIPsetIsZero(set, vals[t]) )
+            {
+               row->integral = row->integral && SCIPvarIsIntegral(cols[t]->var) && SCIPsetIsIntegral(set, vals[t]);
                t++;
+            }
             cols[t] = cols[s];
             cols_probindex[t] = cols_probindex[s];
             vals[t] = vals[s];
          }
       }
       if( !SCIPsetIsZero(set, vals[t]) )
+      {
+         row->integral = row->integral && SCIPvarIsIntegral(cols[t]->var) && SCIPsetIsIntegral(set, vals[t]);
          t++;
+      }
       assert(t <= row->len);
       row->len = t;
       row->nunlinked = t;
@@ -3454,6 +3482,7 @@ void rowCalcPseudoActivity(
       row->pseudoactivity += SCIPcolGetBestBound(row->cols[i]) * row->vals[i];
    }
    row->validpsactivitybdchg = stat->nboundchanges;
+   assert(!row->integral || EPSISINT(row->pseudoactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
 }
 
 /** returns the pseudo activity of a row in the current pseudo solution */
@@ -3591,6 +3620,9 @@ void rowCalcActivityBounds(
    if( maxinfinite )
       row->maxactivity = set->infinity;
    row->validactivitybdsbdchg = stat->nboundchanges;
+
+   assert(!row->integral || mininfinite || EPSISINT(row->minactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
+   assert(!row->integral || maxinfinite || EPSISINT(row->maxactivity - row->constant, SCIP_DEFAULT_SUMEPSILON));
 }
 
 /** returns the minimal activity of a row w.r.t. the column's bounds */
@@ -3811,6 +3843,16 @@ int SCIProwGetIndex(
    assert(row != NULL);
 
    return row->index;
+}
+
+/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+Bool SCIProwIsIntegral(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->integral;
 }
 
 /** returns TRUE iff row is only valid locally */
@@ -4611,6 +4653,7 @@ RETCODE SCIPlpAddCol(
    assert(col->var != NULL);
    assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetCol(col->var) == col);
+   assert(SCIPvarIsIntegral(col->var) == col->integral);
    
    debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
@@ -5016,10 +5059,10 @@ void sumMIRRow(
 
 #define BOUNDSWITCH 0.9999
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
- *    a*x' == b, 0 <= x' <= ub'.
+ *    a'*x' == b, 0 <= x' <= ub'.
  *  Transform variables:
- *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       if x^_j is closer to lb
- *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
+ *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       a'_j =  a_j,      if x^_j is closer to lb
+ *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       a'_j = -a_j,      if x^_j is closer to ub
  *  and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
  */
 static
@@ -5109,16 +5152,16 @@ void transformMIRRow(
    }
 }
 
-/** Calculate fractionalities  f_0 := b - down(b), f_j := a_j - down(a_j) , and derive MIR cut
+/** Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
  *    a~*x' <= down(b)
- *  integers : a~_j = down(a_j)                      , if f_j <= f0
- *             a~_j = down(a_j) + (f_j - f0)/(1 - f0), if f_j >  f0
- *  continuous: a~_j = 0                              , if a_j >= 0
- *             a~_j = a_j/(1 - f0)                   , if a_j <  0
- *  Keep in mind, that the varsign has to be implicitly incorporated into a~_j.
+ *  integers :  a~_j = down(a'_j)                      , if f_j <= f0
+ *              a~_j = down(a'_j) + (f_j - f0)/(1 - f0), if f_j >  f0
+ *  continuous: a~_j = 0                               , if a'_j >= 0
+ *              a~_j = a'_j/(1 - f0)                   , if a'_j <  0
+ *
  *  Transform inequality back to a°*x <= down(b):
- *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       if x^_j is closer to lb
- *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
+ *    x'_j := x_j - lb_j,       x_j == x'_j + lb_j,       a'_j =  a_j,      if x^_j is closer to lb
+ *    x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       a'_j = -a_j,      if x^_j is closer to ub
  *    a°_j :=  a~_j, if x^_j is closer to lb
  *    a°_j := -a~_j, if x^_j is closer to ub
  *  and move the constant terms
@@ -5207,13 +5250,19 @@ void roundMIRRow(
    }
 }
 
-/** substitute negatively aggregated slack variables:
- *  - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continuous
- *    slack variable is a_j > 0, which leads to a°_j = 0, so we can ignore the slack variable in
- *    the resulting cut
- *  - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continuous
- *    slack variable is a_j < 0, which leads to a°_j = a_j/(1 - f0), so we have to subtract 
- *    a°_j times the row from the cut to eliminate the slack variable
+/** substitute aggregated slack variables:
+ *
+ *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
+ *  variable only appears in its own row:
+ *     a'_r = weight[r] * slacksign[r].
+ *
+ *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+ *    integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
+ *                a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+ *    continuous: a°_r = a~_r = 0                               , if a'_r >= 0
+ *                a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+ *
+ *  Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
  */
 static
 void substituteMIRRow(
@@ -5231,6 +5280,11 @@ void substituteMIRRow(
 {
    ROW* row;
    Real onedivoneminusf0;
+   Real ar;
+   Real downar;
+   Real cutar;
+   Real fr;
+
    Real mul;
    int idx;
    int r;
@@ -5248,46 +5302,85 @@ void substituteMIRRow(
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    for( r = 0; r < lp->nrows; ++r )
    {
-      if( slacksign[r] != 0 )
+      /* unused rows can be ignored */
+      if( slacksign[r] == 0 )
+         continue;
+
+      assert(!SCIPsetIsZero(set, weights[r]));
+
+      row = lp->rows[r];
+      assert(row != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->cols_probindex != NULL);
+      assert(row->len == 0 || row->vals != NULL);
+
+      /* get the slack's coefficient a'_r in the aggregated row */
+      ar = slacksign[r] * scale * weights[r];
+
+      /* calculate slack variable's coefficient a°_r in the cut */
+      if( row->integral
+         && ((slacksign[r] == +1 && SCIPsetIsIntegral(set, row->rhs - row->constant))
+            || (slacksign[r] == -1 && SCIPsetIsIntegral(set, row->lhs - row->constant))) )
       {
-         assert(!SCIPsetIsZero(set, weights[r]));
-         if( SCIPsetIsNegative(set, slacksign[r] * scale * weights[r]) )
-         {
-            row = lp->rows[r];
-            assert(row != NULL);
-            assert(row->len == 0 || row->cols != NULL);
-            assert(row->len == 0 || row->cols_probindex != NULL);
-            assert(row->len == 0 || row->vals != NULL);
+         /* slack variable is always integral:
+          *    a°_r = a~_r = down(a'_r)                      , if f_r <= f0
+          *    a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+          */
+         downar = SCIPsetFloor(set, ar);
+         fr = ar - downar;
+         if( SCIPsetIsLE(set, fr, f0) )
+            cutar = downar;
+         else
+            cutar = downar + (fr - f0) * onedivoneminusf0;
+      }
+      else
+      {
+         /* slack variable is continuous:
+          *    a°_r = a~_r = 0                               , if a'_r >= 0
+          *    a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+          */
+         if( !SCIPsetIsNegative(set, ar) )
+            continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
+         else
+            cutar = ar * onedivoneminusf0;
+      }
 
-            mul = scale * weights[r] * onedivoneminusf0;
+      /* if the coefficient was reduced to zero, ignore the slack variable */
+      if( SCIPsetIsZero(set, cutar) )
+         continue;
 
-            /* subtract the row coefficients multiplied with a°_j from the cut */
-            for( i = 0; i < row->len; ++i )
-            {
-               assert(row->cols[i] != NULL);
-               assert(row->cols[i]->var != NULL);
-               assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-               assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-               assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-               assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
-               idx = row->cols_probindex[i];
-               mircoef[idx] -= mul * row->vals[i];
-            }
+      /* depending on the slack's sign, we have
+       *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
+       * substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+       */
+      mul = -slacksign[r] * cutar;
 
-            /* update right hand side and activity of cut:
-             * depending on the slacksign, the slack is defined as  a*x - s == lhs, or  a*x + s == rhs
-             */
-            if( slacksign[r] == +1 )
-            {
-               (*mirrhs) -= mul * (row->rhs - row->constant);
-               (*cutactivity) += mul * (row->rhs - row->constant - SCIProwGetLPActivity(row, stat, lp));
-            }
-            else
-            {
-               (*mirrhs) -= mul * (row->lhs - row->constant);
-               (*cutactivity) += mul * (SCIProwGetLPActivity(row, stat, lp) - (row->lhs - row->constant));
-            }
-         }
+      /* add the slack's definition multiplied with a°_j to the cut */
+      for( i = 0; i < row->len; ++i )
+      {
+         assert(row->cols[i] != NULL);
+         assert(row->cols[i]->var != NULL);
+         assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
+         assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
+         assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols_probindex[i]);
+         idx = row->cols_probindex[i];
+         mircoef[idx] += mul * row->vals[i];
+      }
+
+      /* update the activity: we have to add  mul * a*x^  to the cut's activity (row activity = a*x^ + c) */
+      (*cutactivity) += mul * (SCIProwGetLPActivity(row, stat, lp) - row->constant);
+
+      /* move slack's constant to the right hand side */
+      if( slacksign[r] == +1 )
+      {
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a°_r * (rhs - c) to the right hand side */
+         (*mirrhs) -= cutar * (row->rhs - row->constant);
+      }
+      else
+      {
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a°_r * (c - lhs) to the right hand side */
+         (*mirrhs) -= cutar * (row->constant - row->lhs);
       }
    }
 

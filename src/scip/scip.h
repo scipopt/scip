@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.130 2004/05/03 13:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.131 2004/05/03 16:59:29 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2280,8 +2280,8 @@ RETCODE SCIPcreateRow(
    ROW**            row,                /**< pointer to row */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
-   COL**            col,                /**< array with columns of row entries */
-   Real*            val,                /**< array with coefficients of row entries */
+   COL**            cols,               /**< array with columns of row entries */
+   Real*            vals,               /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */

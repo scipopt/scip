@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.75 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.76 2004/05/03 16:59:29 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -213,8 +213,8 @@ RETCODE SCIProwCreate(
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
-   COL**            col,                /**< array with columns of row entries */
-   Real*            val,                /**< array with coefficients of row entries */
+   COL**            cols,               /**< array with columns of row entries */
+   Real*            vals,               /**< array with coefficients of row entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */

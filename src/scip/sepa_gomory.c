@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.21 2004/04/28 14:59:02 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.22 2004/05/03 16:59:30 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -207,6 +207,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
                CHECK_OKAY( SCIPcalcMIR(scip, 0.05, binvrow, 1.0, cutcoef, &cutrhs, &cutact, &success) );
+               debugMessage("  -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
                if( success && SCIPisCutViolated(scip, cutact, cutrhs) )

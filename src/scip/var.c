@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.89 2004/05/03 13:35:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.90 2004/05/03 16:59:30 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4825,6 +4825,16 @@ VARTYPE SCIPvarGetType(
    assert(var != NULL);
 
    return (VARTYPE)(var->vartype);
+}
+
+/** returns whether variable is of integral type (binary, integer, or implicit integer) */
+Bool SCIPvarIsIntegral(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->vartype != SCIP_VARTYPE_CONTINUOUS);
 }
 
 /** returns whether variable's column should be present in the initial root LP */
