@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.44 2003/10/15 11:14:39 bzfpfend Exp $
+# $Id: Makefile,v 1.45 2003/10/15 12:30:09 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -161,7 +161,7 @@ SCIPOBJ		=	branch.o \
 			reader.o \
 			retcode.o \
 			scip.o \
-			scipdefcomp.o \
+			scipdefplugins.o \
 			sepa.o \
 			sepastore.o \
 			set.o \

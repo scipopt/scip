@@ -15,23 +15,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scipdefcomp.h
- * @brief  default SCIP components
+/**@file   scipdefplugins.h
+ * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIPDEFCOMP_H__
-#define __SCIPDEFCOMP_H__
+#ifndef __SCIPDEFPLUGINS_H__
+#define __SCIPDEFPLUGINS_H__
 
 
 #include "scip.h"
 
 
-/** includes default SCIP components into SCIP */
+/** includes default SCIP plugins into SCIP */
 extern
-RETCODE SCIPincludeDefaultComponents(
+RETCODE SCIPincludeDefaultPlugins(
    SCIP*            scip                /**< SCIP data structure */
    );
 

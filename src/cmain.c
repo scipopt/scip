@@ -27,7 +27,7 @@
 #include <assert.h>
 
 #include "scip.h"
-#include "scipdefcomp.h"
+#include "scipdefplugins.h"
 
 
 
@@ -51,8 +51,8 @@ RETCODE runSCIP(
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
 
-   /* include default SCIP components */
-   CHECK_OKAY( SCIPincludeDefaultComponents(scip) );
+   /* include default SCIP plugins */
+   CHECK_OKAY( SCIPincludeDefaultPlugins(scip) );
 
 
 

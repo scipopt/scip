@@ -15,14 +15,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scipdefcomp.c
- * @brief  default SCIP components
+/**@file   scipdefplugins.c
+ * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scipdefcomp.h"
+#include "scipdefplugins.h"
 #include "reader_cnf.h"
 #include "reader_mps.h"
 #include "disp_default.h"
@@ -52,8 +52,8 @@
 
 
 
-/** includes default SCIP components into SCIP */
-RETCODE SCIPincludeDefaultComponents(
+/** includes default SCIP plugins into SCIP */
+RETCODE SCIPincludeDefaultPlugins(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
