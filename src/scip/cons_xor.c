@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.3 2004/08/24 14:07:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.4 2004/08/24 14:24:19 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -271,6 +271,23 @@ RETCODE consdataCreate(
    return SCIP_OKAY;
 }
 
+/** releases LP row of constraint data */
+static
+RETCODE consdataFreeRows(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata            /**< constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->row != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees constraint data for xor constraint */
 static
 RETCODE consdataFree(
@@ -293,15 +310,14 @@ RETCODE consdataFree(
       assert((*consdata)->watchedvar2 == -1);
    }
 
-   /* release LP row and internal variable */
-   assert(((*consdata)->intvar == NULL) == ((*consdata)->row == NULL));
-   if( (*consdata)->row != NULL )
+   /* release LP row */
+   CHECK_OKAY( consdataFreeRows(scip, *consdata) );
+
+   /* release internal variable */
+   if( (*consdata)->intvar != NULL )
    {
       CHECK_OKAY( SCIPreleaseVar(scip, &(*consdata)->intvar) );
-      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
-   assert((*consdata)->intvar == NULL);
-   assert((*consdata)->row == NULL);
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -462,14 +478,16 @@ RETCODE createRelaxation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->intvar == NULL);
    assert(consdata->row == NULL);
 
-   /* create internal variable */
-   sprintf(varname, "%s_int", SCIPconsGetName(cons));
-   CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, SCIPfloor(scip, consdata->nvars/2.0), 0.0,
-         SCIP_VARTYPE_INTEGER, SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
-   CHECK_OKAY( SCIPaddVar(scip, consdata->intvar) );
+   /* create internal variable, if not yet existing */
+   if( consdata->intvar == NULL )
+   {
+      sprintf(varname, "%s_int", SCIPconsGetName(cons));
+      CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, SCIPfloor(scip, consdata->nvars/2.0), 0.0,
+            SCIP_VARTYPE_INTEGER, SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
+      CHECK_OKAY( SCIPaddVar(scip, consdata->intvar) );
+   }
 
    /* create LP row (resultant variable is also stored in vars array) */
    CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 0.0, 0.0,
@@ -853,7 +871,21 @@ DECL_CONSFREE(consFreeXor)
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#define consExitsolXor NULL
+static
+DECL_CONSEXITSOL(consExitsolXor)
+{  /*lint --e{715}*/
+   CONSDATA* consdata;
+   int c;
+
+   /* release and free the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      CHECK_OKAY( consdataFreeRows(scip, consdata) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** frees specific constraint data */
