@@ -5253,13 +5253,14 @@ RETCODE SCIPcatchEvent(
 /** drops a global event (stops to track event) */
 RETCODE SCIPdropEvent(
    SCIP*            scip,               /**< SCIP data structure */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPdropEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPeventfilterDel(scip->eventfilter, scip->mem->solvemem, scip->set, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPeventfilterDel(scip->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
    
    return SCIP_OKAY;
 }
@@ -5296,6 +5297,7 @@ RETCODE SCIPcatchVarEvent(
 RETCODE SCIPdropVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to drop event for */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
@@ -5308,7 +5310,7 @@ RETCODE SCIPdropVarEvent(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
    
    return SCIP_OKAY;
 }

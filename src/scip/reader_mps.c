@@ -1277,7 +1277,7 @@ RETCODE readMps(
    mpsinputFree(scip, &mpsi);
 
    if( error )
-      return SCIP_READERROR;
+      return SCIP_PARSEERROR;
    else
       return SCIP_OKAY;
 }

@@ -680,7 +680,7 @@ RETCODE SCIPaddVar(
    );
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
- *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
 extern
 RETCODE SCIPgetVarsData(
@@ -694,7 +694,7 @@ RETCODE SCIPgetVarsData(
    );
 
 /** gets array with active problem variables; data may become invalid after
- *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVar(), and SCIPmultiaggregateVar()
+ *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
 extern
 VAR** SCIPgetVars(
@@ -1182,7 +1182,7 @@ RETCODE SCIPaddConflictVar(
    VAR*             var                 /**< conflict variable to add to conflict candidate queue */
    );
 
-/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and returns a conflict set, that
+/** analyzes conflict variables that were added with calls to SCIPaddConflictVar(), and returns a conflict set, that
  *  can be used to create a conflict constraint; the variables in the conflict set lead to a conflict (i.e. an
  *  infeasibility) when all set to FALSE; thus, a feasible conflict constraint must demand, that at least one of
  *  the variables in the conflict set is set to TRUE; the method stores the reference to the buffer with the
@@ -2112,6 +2112,7 @@ RETCODE SCIPcatchEvent(
 extern
 RETCODE SCIPdropEvent(
    SCIP*            scip,               /**< SCIP data structure */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );
@@ -2131,6 +2132,7 @@ extern
 RETCODE SCIPdropVarEvent(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to drop event for */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    );

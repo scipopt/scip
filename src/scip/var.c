@@ -3532,7 +3532,7 @@ int SCIPvarCmp(
    }
 }
 
-/** gets corresponding active problem variable of a variable */
+/** gets corresponding active problem variable of a variable; returns NULL for fixed variables */
 VAR* SCIPvarGetProbvar(
    VAR*             var                 /**< problem variable */
    )
@@ -3556,15 +3556,14 @@ VAR* SCIPvarGetProbvar(
       return var;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("fixed variable has no corresponding active problem variable");
       return NULL;
 
    case SCIP_VARSTATUS_AGGREGATED:
       return SCIPvarGetProbvar(var->data.aggregate.var);
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("multiple aggregated variable has no single corresponding active problem variable");
-      return NULL;
+      errorMessage("multi-aggregated variable has no single active problem variable");
+      abort();
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetProbvar(var->negatedvar);
@@ -4334,6 +4333,7 @@ RETCODE SCIPvarDropEvent(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    )
@@ -4344,7 +4344,7 @@ RETCODE SCIPvarDropEvent(
 
    debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
 
-   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata) );
 
    return SCIP_OKAY;
 }

@@ -684,6 +684,7 @@ RETCODE eventfilterEnsureMem(
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventtypes, eventfilter->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventhdlrs, eventfilter->size, newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventdatas, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventnuses, eventfilter->size, newsize) );
       eventfilter->size = newsize;
    }
    assert(num <= eventfilter->size);
@@ -704,6 +705,7 @@ RETCODE SCIPeventfilterCreate(
    (*eventfilter)->eventtypes = NULL;
    (*eventfilter)->eventhdlrs = NULL;
    (*eventfilter)->eventdatas = NULL;
+   (*eventfilter)->eventnuses = NULL;
    (*eventfilter)->size = 0;
    (*eventfilter)->len = 0;
    (*eventfilter)->eventmask = SCIP_EVENTTYPE_DISABLED;
@@ -741,6 +743,7 @@ RETCODE SCIPeventfilterFree(
    freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventtypes, (*eventfilter)->size);
    freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventhdlrs, (*eventfilter)->size);
    freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventdatas, (*eventfilter)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventnuses, (*eventfilter)->size);
    freeBlockMemory(memhdr, eventfilter);
 
    return SCIP_OKAY;
@@ -769,7 +772,9 @@ RETCODE SCIPeventfilterAdd(
    debugMessage("adding event handler %p with data %p for type mask 0x%x to event filter %p\n",
       eventhdlr, eventdata, eventtype, eventfilter);
 
-   /* binary search the insert position, such that elements are sorted by eventhdlr and eventdata pointers */
+   /* binary search the insert position, such that elements are sorted by eventhdlr pointers, eventdata pointers,
+    * and type mask
+    */
    left = -1;
    right = eventfilter->len;
    while( left < right-1 )
@@ -777,39 +782,55 @@ RETCODE SCIPeventfilterAdd(
       middle = (left+right)/2;
       assert(left < middle && middle < right);
       assert(0 <= middle && middle < eventfilter->len);
-      if( eventhdlr < eventfilter->eventhdlrs[middle]
-         || (eventhdlr == eventfilter->eventhdlrs[middle] && eventdata < eventfilter->eventdatas[middle]) )
-      {
+      if( eventhdlr < eventfilter->eventhdlrs[middle] )
          right = middle;
-      }
+      else if( eventhdlr > eventfilter->eventhdlrs[middle] )
+         left = middle;
+      else if( eventdata < eventfilter->eventdatas[middle] )
+         right = middle;
+      else if( eventdata > eventfilter->eventdatas[middle] )
+         left = middle;
+      else if( eventtype < eventfilter->eventtypes[middle] )
+         right = middle;
+      else if( eventtype > eventfilter->eventtypes[middle] )
+         left = middle;
       else
       {
-         assert(eventhdlr > eventfilter->eventhdlrs[middle]
-            || (eventhdlr == eventfilter->eventhdlrs[middle] && eventdata > eventfilter->eventdatas[middle]));
          left = middle;
+         right = middle;
       }
    }
-   assert(left == right-1);
+   assert(left == right || left == right-1);
    assert(0 <= right && right <= eventfilter->len);
 
-   /* insert event catch at position 'right' */
-   CHECK_OKAY( eventfilterEnsureMem(eventfilter, memhdr, set, eventfilter->len+1) );
-   eventfilter->len++;
-   for( i = eventfilter->len-1; i > right; --i )
+   if( left == right )
    {
-      eventfilter->eventtypes[i] = eventfilter->eventtypes[i-1];
-      eventfilter->eventhdlrs[i] = eventfilter->eventhdlrs[i-1];
-      eventfilter->eventdatas[i] = eventfilter->eventdatas[i-1];
+      /* the eventhdlr/eventdata/eventtype triple is already existing in the filter: increase the number of uses */
+      eventfilter->eventnuses[right]++;
+      debugMessage(" -> additional entry (%d) at position %d\n", eventfilter->eventnuses[right], right);
    }
-   eventfilter->eventtypes[right] = eventtype;
-   eventfilter->eventhdlrs[right] = eventhdlr;
-   eventfilter->eventdatas[right] = eventdata;
+   else
+   {
+      /* the eventhdlr/eventdata pair is not existing in the filter: insert event catch at position 'right' */
+      CHECK_OKAY( eventfilterEnsureMem(eventfilter, memhdr, set, eventfilter->len+1) );
+      eventfilter->len++;
+      for( i = eventfilter->len-1; i > right; --i )
+      {
+         eventfilter->eventtypes[i] = eventfilter->eventtypes[i-1];
+         eventfilter->eventhdlrs[i] = eventfilter->eventhdlrs[i-1];
+         eventfilter->eventdatas[i] = eventfilter->eventdatas[i-1];
+         eventfilter->eventnuses[i] = eventfilter->eventnuses[i-1];
+      }
+      eventfilter->eventtypes[right] = eventtype;
+      eventfilter->eventhdlrs[right] = eventhdlr;
+      eventfilter->eventdatas[right] = eventdata;
+      eventfilter->eventnuses[right] = 1;
+      debugMessage(" -> first entry at position %d\n", right);
+   }
 
    /* update eventfilter mask */
    eventfilter->eventmask |= eventtype;
-
-   debugMessage(" -> new mask of event filter %p: 0x%x\n",
-      eventfilter, eventfilter->eventmask);
+   debugMessage(" -> new mask of event filter %p: 0x%x\n", eventfilter, eventfilter->eventmask);
 
    return SCIP_OKAY;
 }
@@ -818,6 +839,7 @@ RETCODE SCIPeventfilterAdd(
 static
 int eventfilterSearch(
    EVENTFILTER*     eventfilter,        /**< event filter */
+   EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    )
@@ -837,20 +859,20 @@ int eventfilterSearch(
       middle = (left+right)/2;
       assert(left <= middle && middle <= right);
       assert(0 <= middle && middle < eventfilter->len);
-      if( eventhdlr < eventfilter->eventhdlrs[middle]
-         || (eventhdlr == eventfilter->eventhdlrs[middle] && eventdata < eventfilter->eventdatas[middle]) )
-      {
+      if( eventhdlr < eventfilter->eventhdlrs[middle] )
          right = middle-1;
-      }
-      else if( eventhdlr > eventfilter->eventhdlrs[middle]
-         || (eventhdlr == eventfilter->eventhdlrs[middle] && eventdata > eventfilter->eventdatas[middle]) )
-      {
+      else if( eventhdlr > eventfilter->eventhdlrs[middle] )
          left = middle+1;
-      }
+      else if( eventdata < eventfilter->eventdatas[middle] )
+         right = middle-1;
+      else if( eventdata > eventfilter->eventdatas[middle] )
+         left = middle+1;
+      else if( eventtype < eventfilter->eventtypes[middle] )
+         right = middle-1;
+      else if( eventtype > eventfilter->eventtypes[middle] )
+         left = middle+1;
       else
-      {
          return middle;
-      }
    }
 
    return -1;
@@ -861,6 +883,7 @@ RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    )
@@ -876,26 +899,36 @@ RETCODE SCIPeventfilterDel(
    debugMessage("deleting event handler %p with data %p from event filter %p\n",
       eventhdlr, eventdata, eventfilter);
 
-   pos = eventfilterSearch(eventfilter, eventhdlr, eventdata);
+   pos = eventfilterSearch(eventfilter, eventtype, eventhdlr, eventdata);
    if( pos == -1 )
    {
       char s[MAXSTRLEN];
-      sprintf(s, "no event for event handler %p with data %p found in event filter %p\n",
-         eventhdlr, eventdata, eventfilter);
+      sprintf(s, "no event for event handler %p with data %p and event mask 0x%x found in event filter %p\n",
+         eventhdlr, eventdata, eventtype, eventfilter);
       errorMessage(s);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < eventfilter->len);
+   assert(eventfilter->eventtypes[pos] == eventtype);
    assert(eventfilter->eventhdlrs[pos] == eventhdlr);
    assert(eventfilter->eventdatas[pos] == eventdata);
+   assert(eventfilter->eventnuses[pos] >= 1);
 
-   /* move remaining events to fill the empty slot */
-   eventfilter->len--;
-   for( i = pos; i < eventfilter->len; ++i )
+   /* decrease number of uses of this event catch */
+   eventfilter->eventnuses[pos]--;
+
+   /* if usage counter is zero, delete event catch from the filter */
+   if( eventfilter->eventnuses[pos] == 0 )
    {
-      eventfilter->eventtypes[i] = eventfilter->eventtypes[i+1];
-      eventfilter->eventhdlrs[i] = eventfilter->eventhdlrs[i+1];
-      eventfilter->eventdatas[i] = eventfilter->eventdatas[i+1];
+      /* move remaining events to fill the empty slot */
+      eventfilter->len--;
+      for( i = pos; i < eventfilter->len; ++i )
+      {
+         eventfilter->eventtypes[i] = eventfilter->eventtypes[i+1];
+         eventfilter->eventhdlrs[i] = eventfilter->eventhdlrs[i+1];
+         eventfilter->eventdatas[i] = eventfilter->eventdatas[i+1];
+         eventfilter->eventnuses[i] = eventfilter->eventnuses[i+1];
+      }
    }
 
    return SCIP_OKAY;

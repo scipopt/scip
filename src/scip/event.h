@@ -185,6 +185,7 @@ struct EventFilter
    EVENTTYPE*       eventtypes;         /**< array with types of event to process */
    EVENTHDLR**      eventhdlrs;         /**< array with event handlers to process the event */
    EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
+   int*             eventnuses;         /**< array with number of times, the eventhandler/data was added to the filter */
    int              size;               /**< size of filter arrays (available slots in arrays) */
    int              len;                /**< number entries in filter arrays */
    unsigned int     eventmask;          /**< mask for events that are handled by any event handler in the filter */
@@ -426,6 +427,7 @@ RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );

@@ -349,7 +349,8 @@ RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->consdata == consdata);
    assert(consdata->eventdatas[pos]->varpos == pos);
    
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], eventhdlr, consdata->eventdatas[pos]) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr,
+                  consdata->eventdatas[pos]) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
 

@@ -242,21 +242,25 @@ RETCODE SCIPconflictAddVar(
 
    /* get active problem variable */
    var = SCIPvarGetProbvar(var);
-   assert(var != NULL);
-   assert(var->vartype == SCIP_VARTYPE_BINARY);
-   assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-   /* choose between variable or its negation, such that the literal is fixed to FALSE */
-   if( SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), 1.0) )
+   /* we can ignore fixed variables */
+   if( var != NULL )
    {
-      /* variable is fixed to TRUE -> use the negation */
-      CHECK_OKAY( SCIPvarGetNegated(var, memhdr, set, stat, &var) );
+      assert(var->vartype == SCIP_VARTYPE_BINARY);
+      assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+      
+      /* choose between variable or its negation, such that the literal is fixed to FALSE */
+      if( SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), 1.0) )
+      {
+         /* variable is fixed to TRUE -> use the negation */
+         CHECK_OKAY( SCIPvarGetNegated(var, memhdr, set, stat, &var) );
+      }
+      debugMessage(" -> active conflict candidate is <%s>[%g,%g] [status:%d]\n",
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var));
+      
+      /* put candidate in priority queue */
+      CHECK_OKAY( SCIPpqueueInsert(conflict->varqueue, (void*)var) );
    }
-   debugMessage(" -> active conflict candidate is <%s>[%g,%g] [status:%d]\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var));
-
-   /* put candidate in priority queue */
-   CHECK_OKAY( SCIPpqueueInsert(conflict->varqueue, (void*)var) );
 
    return SCIP_OKAY;
 }

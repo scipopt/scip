@@ -2173,7 +2173,12 @@ RETCODE SCIPtreeBranchVar(
    /* get the corresponding active problem variable */
    var = SCIPvarGetProbvar(var);
 
-   assert(var != NULL);
+   if( var == NULL )
+   {
+      errorMessage("cannot branch on a fixed variable");
+      return SCIP_INVALIDDATA;
+   }
+
    assert(var->probindex >= 0);
    assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(var->vartype == SCIP_VARTYPE_BINARY

@@ -812,7 +812,7 @@ int SCIPvarCmp(
    VAR*             var2                /**< second problem variable */
    );
 
-/** gets corresponding active problem variable of a variable */
+/** gets corresponding active problem variable of a variable; returns NULL for fixed variables */
 extern
 VAR* SCIPvarGetProbvar(
    VAR*             var                 /**< problem variable */
@@ -1084,6 +1084,7 @@ RETCODE SCIPvarDropEvent(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );

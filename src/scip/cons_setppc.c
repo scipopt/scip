@@ -241,7 +241,7 @@ RETCODE consdataDropEvent(
    assert(var != NULL);
    
    /* drop events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, var, eventhdlr, (EVENTDATA*)consdata) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)consdata) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )

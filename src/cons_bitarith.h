@@ -27,13 +27,14 @@
 
 
 /** type of arithmetic bit operation */
-#define SCIP_NBITARITHTYPES   4         /**< number of different arithmetic bit operations defined */
+#define SCIP_NBITARITHTYPES   5         /**< number of different arithmetic bit operations defined */
 enum BitarithType
 {
    SCIP_BITARITHTYPE_ADD    = 0,        /**< truncated addition:    z  =  (x + y) % len(z)     */
-   SCIP_BITARITHTYPE_SHL    = 1,        /**< truncated shift left:  z  =  (x << y) % len(z)    */
-   SCIP_BITARITHTYPE_EQ     = 2,        /**< equality operator:     z <-> (x == y)             */
-   SCIP_BITARITHTYPE_NOT    = 3,        /**< bitwise not operator:  z  =  ~x                   */
+   SCIP_BITARITHTYPE_SUB    = 1,        /**< truncated subtraction: z  =  (x - y) % len(z)     */
+   SCIP_BITARITHTYPE_SHL    = 2,        /**< truncated shift left:  z  =  (x << y) % len(z)    */
+   SCIP_BITARITHTYPE_EQ     = 3,        /**< equality operator:     z <-> (x == y)             */
+   SCIP_BITARITHTYPE_NOT    = 4         /**< bitwise not operator:  z  =  ~x                   */
 };
 typedef enum BitarithType BITARITHTYPE;
 

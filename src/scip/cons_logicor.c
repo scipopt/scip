@@ -201,8 +201,8 @@ RETCODE consdataCatchEvent(
    assert(0 <= pos && pos < consdata->nvars);
 
    /* catch bound tighten events on variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, 
-                  eventhdlr, (EVENTDATA*)consdata) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                  (EVENTDATA*)consdata) );
    
    return SCIP_OKAY;
 }
@@ -222,7 +222,8 @@ RETCODE consdataDropEvent(
    assert(0 <= pos && pos < consdata->nvars);
 
    /* drop events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], eventhdlr, (EVENTDATA*)consdata) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                  (EVENTDATA*)consdata) );
 
    return SCIP_OKAY;
 }

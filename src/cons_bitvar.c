@@ -313,7 +313,8 @@ RETCODE consdataFree(
       /* if we are in the transformed problem, drop bound tighten events on variable */
       if( SCIPvarIsTransformed((*consdata)->bits[i]) )
       {
-         CHECK_OKAY( SCIPdropVarEvent(scip, (*consdata)->bits[i], eventhdlr, (EVENTDATA*)(*consdata)) );
+         CHECK_OKAY( SCIPdropVarEvent(scip, (*consdata)->bits[i], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)(*consdata)) );
       }
 
       /* release variable */
@@ -326,7 +327,8 @@ RETCODE consdataFree(
       /* if we are in the transformed problem, drop bound tighten events on variable */
       if( SCIPvarIsTransformed((*consdata)->words[i]) )
       {
-         CHECK_OKAY( SCIPdropVarEvent(scip, (*consdata)->words[i], eventhdlr, (EVENTDATA*)(*consdata)) );
+         CHECK_OKAY( SCIPdropVarEvent(scip, (*consdata)->words[i], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+                        (EVENTDATA*)(*consdata)) );
       }
 
       /* release variable */
@@ -820,6 +822,84 @@ RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
+/** aggregates words in a bit variable, if they consist of only a single unfixed bit */
+static
+RETCODE aggregateSingleBitWords(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< bitvar constraint */
+   int*             naggrvars,          /**< pointer to add up the number of aggregated variables */
+   Bool*            infeasible          /**< pointer to store whether the constraint is infeasible in current bounds */
+   )
+{
+   CONSDATA* consdata;
+   int nbits;
+   int nunfixedbits;
+   int unfixedbit;
+   int unfixedb;
+   int bitval;
+   int fixedval;
+   int bit;
+   int b;
+   int w;
+
+   assert(naggrvars != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->bits != NULL);
+   assert(consdata->words != NULL);
+
+   /* check, if the constraint is already propagated */
+   if( consdata->propagated )
+      return SCIP_OKAY;
+
+   /* process all words in the bit variable and look for single bit words */
+   bit = 0;
+   for( w = 0; w < consdata->nwords && !(*infeasible); ++w )
+   {
+      nbits = wordSize(consdata, w);
+      nunfixedbits = 0;
+      unfixedbit = -1;
+      unfixedb = -1;
+      fixedval = 0;
+      for( b = 0, bitval = 1; b < nbits && nunfixedbits <= 1; ++b, ++bit, bitval <<= 1 )
+      {
+         if( SCIPvarGetLbLocal(consdata->bits[bit]) > 0.5 )
+            fixedval |= bitval;
+         else if( SCIPvarGetUbLocal(consdata->bits[bit]) > 0.5 )
+         {
+            nunfixedbits++;
+            unfixedbit = bit;
+            unfixedb = b;
+         }
+      }
+
+      if( nunfixedbits == 1 ) /* nunfixedbits == 0 is handled in propagateCons() */
+      {
+         Bool redundant;
+         Bool aggregated;
+
+         assert(0 <= unfixedb && unfixedb < nbits);
+         assert(0 <= unfixedbit && unfixedbit < consdata->nbits);
+
+         debugMessage("bitvar <%s> word %d: aggregating single bit word <%s> = %d<%s> + %d\n",
+            SCIPconsGetName(cons), w, SCIPvarGetName(consdata->words[w]), 1 << unfixedb, 
+            SCIPvarGetName(consdata->bits[unfixedbit]), fixedval);
+
+         /* aggregate the word variable: word = fixedval + bit*(2^bitnumber) */
+         CHECK_OKAY( SCIPaggregateVars(scip, consdata->words[w], consdata->bits[unfixedbit],
+                        1.0, -(Real)(1 << unfixedb), (Real)fixedval, infeasible, &redundant, &aggregated) );
+         if( aggregated )
+            (*naggrvars)++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1166,6 +1246,7 @@ DECL_CONSPRESOL(consPresolBitvar)
 {
    Bool infeasible;
    int nactfixedvars;
+   int nactaggrvars;
    int nactchgbds;
    int nactdelconss;
    int c;
@@ -1178,21 +1259,27 @@ DECL_CONSPRESOL(consPresolBitvar)
 
    /* propagate all bitvar constraints */
    nactfixedvars = 0;
+   nactaggrvars = 0;
    nactchgbds = 0;
    nactdelconss = 0;
    infeasible = FALSE;
    for( c = 0; c < nconss && !infeasible; ++c )
    {
+      /* if a word is only a single bit, aggregate word and bit variable */
+      CHECK_OKAY( aggregateSingleBitWords(scip, conss[c], &nactaggrvars, &infeasible) );
+
+      /* propagate constraint */
       CHECK_OKAY( propagateCons(scip, conss[c], &nactfixedvars, &nactchgbds, &nactdelconss, &infeasible) );
    }
 
    /* adjust the result */
    if( infeasible )
       *result = SCIP_CUTOFF;
-   else if( nactfixedvars > 0 || nactchgbds > 0 || nactdelconss > 0 )
+   else if( nactfixedvars > 0 || nactaggrvars > 0 || nactchgbds > 0 || nactdelconss > 0 )
    {
       *result = SCIP_SUCCESS;
       (*nfixedvars) += nactfixedvars;
+      (*naggrvars) += nactaggrvars;
       (*nchgbds) += nactchgbds;
       (*ndelconss) += nactdelconss;
    }
