@@ -6342,6 +6342,8 @@ void printLPStatistics(
    FILE*            file                /**< output file */
    )
 {
+   Longint strongbranchiter;
+
    assert(scip != NULL);
    assert(scip->stat != NULL);
    assert(scip->lp != NULL);
@@ -6378,9 +6380,20 @@ void printLPStatistics(
    else
       fprintf(file, "            -\n");
 #endif
-   fprintf(file, "  strong branching : %12.2f %12d            -            -            -\n",
+   /*fprintf(file, "  strong branching : %12.2f %12d            -            -            -\n",*/
+   if( scip->stat->nlps > 0 )
+      strongbranchiter = 2 * scip->stat->nstrongbranch * scip->stat->nlpiterations / scip->stat->nlps;
+   else
+      strongbranchiter = 0.0;
+   fprintf(file, "  strong branching : %12.2f %12d (%11lld)           -",
       SCIPclockGetTime(scip->stat->strongbranchtime),
-      scip->stat->nstrongbranch);
+      scip->stat->nstrongbranch,
+      strongbranchiter
+      );
+   if( SCIPclockGetTime(scip->stat->strongbranchtime) >= 0.01 )
+      fprintf(file, " (%11.2f)\n", (Real)strongbranchiter/SCIPclockGetTime(scip->stat->strongbranchtime));
+   else
+      fprintf(file, "            -\n");
 }
 
 static
