@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.18 2004/04/29 15:20:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.19 2004/07/29 09:01:56 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -181,6 +181,7 @@ RETCODE sepastoreAddCut(
    assert(sepastore != NULL);
    assert(set != NULL);
    assert(cut != NULL);
+   assert(!SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /**@todo don't add redundant cuts to the separation store */
@@ -281,6 +282,7 @@ RETCODE SCIPsepastoreAddCut(
 {
    assert(sepastore != NULL);
    assert(cut != NULL);
+   assert(!SCIProwIsInLP(cut));
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* update statistics of total number of found cuts */
@@ -439,17 +441,21 @@ RETCODE SCIPsepastoreApplyCuts(
    /* apply cuts stored as LP rows */
    for( i = 0; i < sepastore->ncuts; ++i )
    {
-      debugMessage("apply cut: ");
-      debug( SCIProwPrint(sepastore->cuts[i], NULL) );
-
-      /* add cut to the LP and capture it */
-      CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[i]) );
-
-      /* release the row */
-      CHECK_OKAY( SCIProwRelease(&sepastore->cuts[i], memhdr, set, lp) );
-
-      if( !sepastore->initiallp )
-         sepastore->ncutsapplied++;
+      /* a row could have been added twice to the separation store; add it only once! */
+      if( !SCIProwIsInLP(sepastore->cuts[i]) )
+      {
+         debugMessage("apply cut: ");
+         debug( SCIProwPrint(sepastore->cuts[i], NULL) );
+         
+         /* add cut to the LP and capture it */
+         CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[i]) );
+         
+         /* release the row */
+         CHECK_OKAY( SCIProwRelease(&sepastore->cuts[i], memhdr, set, lp) );
+         
+         if( !sepastore->initiallp )
+            sepastore->ncutsapplied++;
+      }
    }
 
    /* clear the separation storage */

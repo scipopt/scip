@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.130 2004/07/13 15:03:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.131 2004/07/29 09:01:56 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -936,6 +936,13 @@ void rowSwapCoeffs(
 
 
 #if 0
+
+#ifdef NDEBUG
+#define ASSERT(x) do { if( !(x) ) abort(); } while( FALSE )
+#else
+#define ASSERT(x) assert(x)
+#endif
+
 static Bool msgdisp = FALSE;
 
 static
@@ -948,7 +955,7 @@ void checkLinks(
    int i;
    int j;
 
-   assert(lp != NULL);
+   ASSERT(lp != NULL);
 
    if( !msgdisp )
    {
@@ -959,41 +966,44 @@ void checkLinks(
    for( i = 0; i < lp->ncols; ++i )
    {
       col = lp->cols[i];
-      assert(col != NULL);
-      assert(col->lppos >= 0 || col->primsol == 0.0);
-      assert(col->lppos >= 0 || col->farkas == 0.0);
-      assert(col->nlprows <= col->len);
+      ASSERT(col != NULL);
+      ASSERT(!lp->flushed || col->lppos >= 0 || col->primsol == 0.0);
+      ASSERT(!lp->flushed || col->lppos >= 0 || col->farkas == 0.0);
+      ASSERT(col->nlprows <= col->len);
 
       for( j = 0; j < col->len; ++j )
       {
          row = col->rows[j];
-         assert(row != NULL);
-         assert(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
-         assert(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
-         assert(col->linkpos[j] == -1 || EPSEQ(row->vals[col->linkpos[j]], col->vals[j], 1e-6));
-         assert((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
+         ASSERT(row != NULL);
+         ASSERT(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
+         ASSERT(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
+         ASSERT(col->linkpos[j] == -1 || EPSEQ(row->vals[col->linkpos[j]], col->vals[j], 1e-6));
+         ASSERT((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
       }
    }
 
    for( i = 0; i < lp->nrows; ++i )
    {
       row = lp->rows[i];
-      assert(row != NULL);
-      assert(row->lppos >= 0 || row->dualsol == 0.0);
-      assert(row->lppos >= 0 || row->dualfarkas == 0.0);
-      assert(row->nlpcols <= row->len);
+      ASSERT(row != NULL);
+      ASSERT(!lp->flushed || row->lppos >= 0 || row->dualsol == 0.0);
+      ASSERT(!lp->flushed || row->lppos >= 0 || row->dualfarkas == 0.0);
+      ASSERT(row->nlpcols <= row->len);
       
       for( j = 0; j < row->len; ++j )
       {
          col = row->cols[j];
-         assert(col != NULL);
-         assert(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
-         assert(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
-         assert(row->linkpos[j] == -1 || EPSEQ(col->vals[row->linkpos[j]], row->vals[j], 1e-6));
-         assert((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
+         ASSERT(col != NULL);
+         ASSERT(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
+         ASSERT(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
+         ASSERT(row->linkpos[j] == -1 || EPSEQ(col->vals[row->linkpos[j]], row->vals[j], 1e-6));
+         ASSERT((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
       }
    }
 }
+
+#undef ASSERT
+
 #else
 #define checkLinks(lp) /**/
 #endif
@@ -5312,6 +5322,7 @@ void rowUpdateDelLP(
    int pos;
 
    assert(row != NULL);
+   assert(row->lppos == -1);
 
    /* update row arrays of all linked columns */
    for( i = 0; i < row->len; ++i )
@@ -5321,9 +5332,9 @@ void rowUpdateDelLP(
       {
          col = row->cols[i];
          assert(col != NULL);
+         assert(0 <= pos && pos < col->nlprows);
          assert(col->linkpos[pos] == i);
          assert(col->rows[pos] == row);
-         assert(0 <= pos && pos < col->nlprows);
 
          col->nlprows--;
          colSwapCoeffs(col, pos, col->nlprows);
@@ -5490,6 +5501,8 @@ RETCODE SCIPlpAddCol(
    /* update column arrays of all linked rows */
    colUpdateAddLP(col);
 
+   checkLinks(lp);
+
    return SCIP_OKAY;
 }
 
@@ -5526,6 +5539,8 @@ RETCODE SCIPlpAddRow(
 
    /* update row arrays of all linked columns */
    rowUpdateAddLP(row);
+
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
@@ -5578,6 +5593,8 @@ RETCODE SCIPlpShrinkCols(
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->flushed = FALSE;
+
+      checkLinks(lp);
    }
    assert(lp->nremoveablecols <= lp->ncols);
 
@@ -5632,6 +5649,8 @@ RETCODE SCIPlpShrinkRows(
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lp->flushed = FALSE;
+
+      checkLinks(lp);
    }
    assert(lp->nremoveablerows <= lp->nrows);
 
@@ -8402,6 +8421,8 @@ RETCODE lpDelColset(
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
 
+   checkLinks(lp);
+
    return SCIP_OKAY;
 }
 
@@ -8445,9 +8466,10 @@ RETCODE lpDelRowset(
          markRowDeleted(row);
          rowUpdateDelLP(row);
 
+         CHECK_OKAY( SCIProwRelease(&lp->lpirows[r], memhdr, set, lp) );
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
+         assert(lp->lpirows[r] == NULL);
          assert(lp->rows[r] == NULL);
-         lp->lpirows[r] = NULL;
          lp->nrows--;
          lp->nremoveablerows--;
          lp->nlpirows--;
@@ -8480,6 +8502,8 @@ RETCODE lpDelRowset(
       lp->lpobjval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
+
+   checkLinks(lp);
 
    return SCIP_OKAY;
 }
