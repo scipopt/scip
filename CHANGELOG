@@ -50,8 +50,8 @@ known bugs (still not fixed):
 - air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?
 
 
-current SCIP version
-====================
+SCIP version 0.77
+=================
 
 installation:
 - the file names in the archive file are now preceeded with a directory "scip-<version>/"
@@ -76,3 +76,5 @@ fixed bugs:
 - missing SCIPlpiIsPrimalFeasible() and SCIPlpiIsDualFeasible() implemented in lpi_spx.cpp and lpi_spx121.cpp
 - removed preprocessing of linear constraint pairs with modifiable constraints
 - removed wrong assert "assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000)" from event.c
+- removed wrong assert in conflict analysis (appeared on analysing diving LP conflicts with both bounds of a non-binary
+  variable changed)
