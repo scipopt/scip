@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.6 2004/10/28 15:26:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.7 2004/12/08 15:43:32 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1527,7 +1527,27 @@ RETCODE SCIPlpiGetBasisFeasibility(
 }
 
 
-/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point) */
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the primal ray
+ */
+Bool SCIPlpiExistsPrimalRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiExistsPrimalRay()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   // Clp seems to have a primal ray whenever it concludes "dual infeasible", 
+   // (but is not necessarily primal feasible), see ClpModel::unboundedRay
+   return ( lpi->clp->status() == 2);      // status = 2  is "dual infeasible"
+}
+
+
+/** returns TRUE iff LP is proven to have a primal unbounded ray (but not necessary a primal feasible point),
+ *  and the solver knows and can return the primal ray
+ */
 Bool SCIPlpiHasPrimalRay(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1585,8 +1605,28 @@ Bool SCIPlpiIsPrimalFeasible(
 }
 
 
-/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point) */
-extern 
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
+ *  this does not necessarily mean, that the solver knows and can return the dual ray
+ */
+Bool SCIPlpiExistsDualRay(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiExistsDualRay()\n");
+
+   assert(lpi != 0);
+   assert(lpi->clp != 0);
+
+   // Clp assumes to have a dual ray whenever it concludes "primal infeasible", 
+   // (but is not necessarily dual feasible), see ClpModel::infeasibilityRay
+
+   return ( lpi->clp->status() == 1 && ! lpi->clp->secondaryStatus() ); // status = 1  is "primal infeasible"
+}
+
+
+/** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
+ *  and the solver knows and can return the dual ray
+ */
 Bool SCIPlpiHasDualRay(
    LPI*             lpi                 /**< LP interface structure */
    )
@@ -1820,7 +1860,7 @@ RETCODE SCIPlpiGetPrimalRay(
    memcpy((void *) ray, clpray, lpi->clp->numberColumns() * sizeof(double));
    delete [] clpray;
    
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /** gets dual farkas proof for infeasibility */
@@ -1839,12 +1879,11 @@ RETCODE SCIPlpiGetDualfarkas(
    memcpy((void *) dualfarkas, dualray, lpi->clp->numberRows() * sizeof(double));
    delete [] dualray;
    
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 
 /** gets the number of LP iterations of the last solve call */
-extern
 RETCODE SCIPlpiGetIterations(
    LPI*             lpi,                /**< LP interface structure */
    int*             iterations          /**< pointer to store the number of iterations of the last solve call */
