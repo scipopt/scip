@@ -14,6 +14,9 @@ interface:
   feasibility tolerance anymore (default: 1e-06); instead, they are using epsilon (default: 1e-09);
   instead, for handling integrality of a variable "in feasibility tolerances", new methods SCIPisFeasIntegral(),
   SCIPisFeasFracIntegral(), SCIPfeasFloor(), SCIPfeasCeil(), and SCIPfeasFrac() should be used
+- new methods SCIPgetRealarrayMinIdx(), SCIPgetRealarrayMaxIdx(), SCIPgetIntarrayMinIdx(), SCIPgetIntarrayMaxIdx(),
+  SCIPgetBoolarrayMinIdx(), SCIPgetBoolarrayMaxIdx(), SCIPgetPtrarrayMinIdx(), and SCIPgetPtrarrayMaxIdx()
+- new method SCIPbsortPtrInt()
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

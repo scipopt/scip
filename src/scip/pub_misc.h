@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.7 2004/11/17 15:53:58 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.8 2004/11/30 16:23:39 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -245,6 +245,15 @@ extern
 void SCIPbsortPtrReal(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            realarray,          /**< Real array to be permuted in the same way */
+   int              len,                /**< length of arrays */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   );
+
+/** bubble sort of two joint arrays of pointers/ints, sorted by first array */
+extern
+void SCIPbsortPtrInt(
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int*             intarray,           /**< int array to be permuted in the same way */
    int              len,                /**< length of arrays */
    DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    );

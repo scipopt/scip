@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.30 2004/11/17 16:07:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.31 2004/11/30 16:23:39 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1264,6 +1264,25 @@ RETCODE SCIPrealarrayIncVal(
    return SCIPrealarraySetVal(realarray, set, idx, SCIPrealarrayGetVal(realarray, idx) + incval);
 }
 
+/** returns the minimal index of all stored non-zero elements */
+int SCIPrealarrayGetMinIdx(
+   REALARRAY*       realarray           /**< dynamic real array */
+   )
+{
+   assert(realarray != NULL);
+
+   return realarray->minusedidx;
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPrealarrayGetMaxIdx(
+   REALARRAY*       realarray           /**< dynamic real array */
+   )
+{
+   assert(realarray != NULL);
+
+   return realarray->maxusedidx;
+}
 
 /** creates a dynamic array of int values */
 RETCODE SCIPintarrayCreate(
@@ -1287,9 +1306,9 @@ RETCODE SCIPintarrayCreate(
 
 /** creates a copy of a dynamic array of int values */
 RETCODE SCIPintarrayCopy(
-   INTARRAY**       intarray,           /**< pointer to store the copied real array */
+   INTARRAY**       intarray,           /**< pointer to store the copied int array */
    MEMHDR*          memhdr,             /**< block memory */
-   INTARRAY*        sourceintarray      /**< dynamic real array to copy */
+   INTARRAY*        sourceintarray      /**< dynamic int array to copy */
    )
 {
    assert(intarray != NULL);
@@ -1604,6 +1623,26 @@ RETCODE SCIPintarrayIncVal(
    return SCIPintarraySetVal(intarray, set, idx, SCIPintarrayGetVal(intarray, idx) + incval);
 }
 
+/** returns the minimal index of all stored non-zero elements */
+int SCIPintarrayGetMinIdx(
+   INTARRAY*        intarray            /**< dynamic int array */
+   )
+{
+   assert(intarray != NULL);
+
+   return intarray->minusedidx;
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPintarrayGetMaxIdx(
+   INTARRAY*        intarray            /**< dynamic int array */
+   )
+{
+   assert(intarray != NULL);
+
+   return intarray->maxusedidx;
+}
+
 
 /** creates a dynamic array of bool values */
 RETCODE SCIPboolarrayCreate(
@@ -1627,9 +1666,9 @@ RETCODE SCIPboolarrayCreate(
 
 /** creates a copy of a dynamic array of bool values */
 RETCODE SCIPboolarrayCopy(
-   BOOLARRAY**      boolarray,          /**< pointer to store the copied real array */
+   BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
    MEMHDR*          memhdr,             /**< block memory */
-   BOOLARRAY*       sourceboolarray     /**< dynamic real array to copy */
+   BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
    )
 {
    assert(boolarray != NULL);
@@ -1934,10 +1973,30 @@ RETCODE SCIPboolarraySetVal(
    return SCIP_OKAY;
 }
 
+/** returns the minimal index of all stored non-zero elements */
+int SCIPboolarrayGetMinIdx(
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   )
+{
+   assert(boolarray != NULL);
+
+   return boolarray->minusedidx;
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPboolarrayGetMaxIdx(
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   )
+{
+   assert(boolarray != NULL);
+
+   return boolarray->maxusedidx;
+}
+
 
 /** creates a dynamic array of pointer values */
 RETCODE SCIPptrarrayCreate(
-   PTRARRAY**       ptrarray,           /**< pointer to store the int array */
+   PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
    MEMHDR*          memhdr              /**< block memory */
    )
 {
@@ -1957,9 +2016,9 @@ RETCODE SCIPptrarrayCreate(
 
 /** creates a copy of a dynamic array of pointer values */
 RETCODE SCIPptrarrayCopy(
-   PTRARRAY**       ptrarray,           /**< pointer to store the copied real array */
+   PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
    MEMHDR*          memhdr,             /**< block memory */
-   PTRARRAY*        sourceptrarray      /**< dynamic real array to copy */
+   PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
    )
 {
    assert(ptrarray != NULL);
@@ -1980,7 +2039,7 @@ RETCODE SCIPptrarrayCopy(
 
 /** frees a dynamic array of pointer values */
 RETCODE SCIPptrarrayFree(
-   PTRARRAY**       ptrarray            /**< pointer to the int array */
+   PTRARRAY**       ptrarray            /**< pointer to the ptr array */
    )
 {
    assert(ptrarray != NULL);
@@ -1994,7 +2053,7 @@ RETCODE SCIPptrarrayFree(
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 RETCODE SCIPptrarrayExtend(
-   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
    SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -2144,7 +2203,7 @@ RETCODE SCIPptrarrayExtend(
 
 /** clears a dynamic pointer array */
 RETCODE SCIPptrarrayClear(
-   PTRARRAY*        ptrarray            /**< dynamic int array */
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
    )
 {
    assert(ptrarray != NULL);
@@ -2177,7 +2236,7 @@ RETCODE SCIPptrarrayClear(
 
 /** gets value of entry in dynamic array */
 void* SCIPptrarrayGetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
    int              idx                 /**< array index to get value for */
    )
 {
@@ -2198,7 +2257,7 @@ void* SCIPptrarrayGetVal(
 
 /** sets value of entry in dynamic array */
 RETCODE SCIPptrarraySetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
    SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    void*            val                 /**< value to set array index to */
@@ -2261,6 +2320,26 @@ RETCODE SCIPptrarraySetVal(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns the minimal index of all stored non-zero elements */
+int SCIPptrarrayGetMinIdx(
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   )
+{
+   assert(ptrarray != NULL);
+
+   return ptrarray->minusedidx;
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPptrarrayGetMaxIdx(
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   )
+{
+   assert(ptrarray != NULL);
+
+   return ptrarray->maxusedidx;
 }
 
 
@@ -2482,6 +2561,83 @@ void SCIPbsortPtrReal(
          while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
          realarray[pos] = tmpreal;
+         sortpos = pos;
+         pos--;
+      }
+      firstpos = sortpos+1;
+   }
+}
+
+/** bubble sort of two joint arrays of pointers/ints, sorted by first array */
+void SCIPbsortPtrInt(
+   void**           ptrarray,           /**< pointer array to be sorted */
+   int*             intarray,           /**< int array to be permuted in the same way */
+   int              len,                /**< length of arrays */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   )
+{
+   int firstpos;
+   int lastpos;
+   int pos;
+   int sortpos;
+   void* tmpptr;
+   int tmpint;
+
+   assert(len == 0 || ptrarray != NULL);
+   assert(len == 0 || intarray != NULL);
+   assert(ptrcomp != NULL);
+
+   firstpos = 0;
+   lastpos = len-1;
+   while( firstpos < lastpos )
+   {
+      /* bubble from left to right */
+      pos = firstpos;
+      sortpos = firstpos;
+      while( pos < lastpos )
+      {
+         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+            pos++;
+         if( pos >= lastpos )
+            break;
+         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpint = intarray[pos];
+         do
+         {
+            ptrarray[pos] = ptrarray[pos+1];
+            intarray[pos] = intarray[pos+1];
+            pos++;
+         }
+         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
+         ptrarray[pos] = tmpptr;
+         intarray[pos] = tmpint;
+         sortpos = pos;
+         pos++;
+      }
+      lastpos = sortpos-1;
+
+      /* bubble from right to left */
+      pos = lastpos;
+      sortpos = lastpos;
+      while( pos > firstpos )
+      {
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+            pos--;
+         if( pos <= firstpos )
+            break;
+         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         tmpptr = ptrarray[pos];
+         tmpint = intarray[pos];
+         do
+         {
+            ptrarray[pos] = ptrarray[pos-1];
+            intarray[pos] = intarray[pos-1];
+            pos--;
+         }
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
+         ptrarray[pos] = tmpptr;
+         intarray[pos] = tmpint;
          sortpos = pos;
          pos--;
       }

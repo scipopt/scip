@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.186 2004/11/29 12:17:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.187 2004/11/30 16:23:39 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4979,6 +4979,20 @@ RETCODE SCIPincRealarrayVal(
    Real             incval              /**< value to increase array index */
    );
 
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPgetRealarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   REALARRAY*       realarray           /**< dynamic real array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPgetRealarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   REALARRAY*       realarray           /**< dynamic real array */
+   );
+
 /** creates a dynamic array of int values */
 extern
 RETCODE SCIPcreateIntarray(
@@ -5035,6 +5049,20 @@ RETCODE SCIPincIntarrayVal(
    int              incval              /**< value to increase array index */
    );
 
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPgetIntarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   INTARRAY*        intarray            /**< dynamic int array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPgetIntarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   INTARRAY*        intarray            /**< dynamic int array */
+   );
+
 /** creates a dynamic array of bool values */
 extern
 RETCODE SCIPcreateBoolarray(
@@ -5080,6 +5108,20 @@ RETCODE SCIPsetBoolarrayVal(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */
+   );
+
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPgetBoolarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPgetBoolarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
    );
 
 /** creates a dynamic array of pointers */
@@ -5129,55 +5171,63 @@ RETCODE SCIPsetPtrarrayVal(
    void*            val                 /**< value to set array index to */
    );
 
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPgetPtrarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPgetPtrarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
  * speed up the algorithms.
  */
 
-#define SCIPcreateRealarray(scip, realarray) SCIPrealarrayCreate(realarray, SCIPmemhdr(scip))
-#define SCIPfreeRealarray(scip, realarray)   SCIPrealarrayFree(realarray)
-#define SCIPextendRealarray(scip, realarray, minidx, maxidx) \
-                                             SCIPrealarrayExtend(realarray, (scip)->set, minidx, maxidx)
-#define SCIPclearRealarray(scip, realarray)  SCIPrealarrayClear(realarray)
-#define SCIPgetRealarrayVal(scip, realarray, idx) \
-                                             SCIPrealarrayGetVal(realarray, idx)
-#define SCIPsetRealarrayVal(scip, realarray, idx, val) \
-                                             SCIPrealarraySetVal(realarray, (scip)->set, idx, val)
-#define SCIPincRealarrayVal(scip, realarray, idx, incval) \
-                                             SCIPrealarrayIncVal(realarray, scip->set, idx, incval)
+#define SCIPcreateRealarray(scip, realarray)                    SCIPrealarrayCreate(realarray, SCIPmemhdr(scip))
+#define SCIPfreeRealarray(scip, realarray)                      SCIPrealarrayFree(realarray)
+#define SCIPextendRealarray(scip, realarray, minidx, maxidx)    SCIPrealarrayExtend(realarray, (scip)->set, minidx, maxidx)
+#define SCIPclearRealarray(scip, realarray)                     SCIPrealarrayClear(realarray)
+#define SCIPgetRealarrayVal(scip, realarray, idx)               SCIPrealarrayGetVal(realarray, idx)
+#define SCIPsetRealarrayVal(scip, realarray, idx, val)          SCIPrealarraySetVal(realarray, (scip)->set, idx, val)
+#define SCIPincRealarrayVal(scip, realarray, idx, incval)       SCIPrealarrayIncVal(realarray, scip->set, idx, incval)
+#define SCIPgetRealarrayMinIdx(scip, realarray)                 SCIPrealarrayGetMinIdx(realarray)
+#define SCIPgetRealarrayMaxIdx(scip, realarray)                 SCIPrealarrayGetMaxIdx(realarray)
 
-#define SCIPcreateIntarray(scip, intarray)   SCIPintarrayCreate(intarray, SCIPmemhdr(scip))
-#define SCIPfreeIntarray(scip, intarray)     SCIPintarrayFree(intarray)
-#define SCIPextendIntarray(scip, intarray, minidx, maxidx) \
-                                             SCIPintarrayExtend(intarray, (scip)->set, minidx, maxidx)
-#define SCIPclearIntarray(scip, intarray)    SCIPintarrayClear(intarray)
-#define SCIPgetIntarrayVal(scip, intarray, idx) \
-                                             SCIPintarrayGetVal(intarray, idx)
-#define SCIPsetIntarrayVal(scip, intarray, idx, val) \
-                                             SCIPintarraySetVal(intarray, (scip)->set, idx, val)
-#define SCIPincIntarrayVal(scip, intarray, idx, incval) \
-                                             SCIPintarrayIncVal(intarray, scip->set, idx, incval)
+#define SCIPcreateIntarray(scip, intarray)                      SCIPintarrayCreate(intarray, SCIPmemhdr(scip))
+#define SCIPfreeIntarray(scip, intarray)                        SCIPintarrayFree(intarray)
+#define SCIPextendIntarray(scip, intarray, minidx, maxidx)      SCIPintarrayExtend(intarray, (scip)->set, minidx, maxidx)
+#define SCIPclearIntarray(scip, intarray)                       SCIPintarrayClear(intarray)
+#define SCIPgetIntarrayVal(scip, intarray, idx)                 SCIPintarrayGetVal(intarray, idx)
+#define SCIPsetIntarrayVal(scip, intarray, idx, val)            SCIPintarraySetVal(intarray, (scip)->set, idx, val)
+#define SCIPincIntarrayVal(scip, intarray, idx, incval)         SCIPintarrayIncVal(intarray, scip->set, idx, incval)
+#define SCIPgetIntarrayMinIdx(scip, intarray)                   SCIPintarrayGetMinIdx(intarray)
+#define SCIPgetIntarrayMaxIdx(scip, intarray)                   SCIPintarrayGetMaxIdx(intarray)
 
-#define SCIPcreateBoolarray(scip, boolarray) SCIPboolarrayCreate(boolarray, SCIPmemhdr(scip))
-#define SCIPfreeBoolarray(scip, boolarray)   SCIPboolarrayFree(boolarray)
-#define SCIPextendBoolarray(scip, boolarray, minidx, maxidx) \
-                                             SCIPboolarrayExtend(boolarray, (scip)->set, minidx, maxidx)
-#define SCIPclearBoolarray(scip, boolarray)  SCIPboolarrayClear(boolarray)
-#define SCIPgetBoolarrayVal(scip, boolarray, idx) \
-                                             SCIPboolarrayGetVal(boolarray, idx)
-#define SCIPsetBoolarrayVal(scip, boolarray, idx, val) \
-                                             SCIPboolarraySetVal(boolarray, (scip)->set, idx, val)
+#define SCIPcreateBoolarray(scip, boolarray)                    SCIPboolarrayCreate(boolarray, SCIPmemhdr(scip))
+#define SCIPfreeBoolarray(scip, boolarray)                      SCIPboolarrayFree(boolarray)
+#define SCIPextendBoolarray(scip, boolarray, minidx, maxidx)    SCIPboolarrayExtend(boolarray, (scip)->set, minidx, maxidx)
+#define SCIPclearBoolarray(scip, boolarray)                     SCIPboolarrayClear(boolarray)
+#define SCIPgetBoolarrayVal(scip, boolarray, idx)               SCIPboolarrayGetVal(boolarray, idx)
+#define SCIPsetBoolarrayVal(scip, boolarray, idx, val)          SCIPboolarraySetVal(boolarray, (scip)->set, idx, val)
+#define SCIPgetBoolarrayMinIdx(scip, boolarray)                 SCIPboolarrayGetMinIdx(boolarray)
+#define SCIPgetBoolarrayMaxIdx(scip, boolarray)                 SCIPboolarrayGetMaxIdx(boolarray)
 
-#define SCIPcreatePtrarray(scip, ptrarray)   SCIPptrarrayCreate(ptrarray, SCIPmemhdr(scip))
-#define SCIPfreePtrarray(scip, ptrarray)     SCIPptrarrayFree(ptrarray)
-#define SCIPextendPtrarray(scip, ptrarray, minidx, maxidx) \
-                                             SCIPptrarrayExtend(ptrarray, (scip)->set, minidx, maxidx)
-#define SCIPclearPtrarray(scip, ptrarray)    SCIPptrarrayClear(ptrarray)
-#define SCIPgetPtrarrayVal(scip, ptrarray, idx) \
-                                             SCIPptrarrayGetVal(ptrarray, idx)
-#define SCIPsetPtrarrayVal(scip, ptrarray, idx, val) \
-                                             SCIPptrarraySetVal(ptrarray, (scip)->set, idx, val)
+#define SCIPcreatePtrarray(scip, ptrarray)                      SCIPptrarrayCreate(ptrarray, SCIPmemhdr(scip))
+#define SCIPfreePtrarray(scip, ptrarray)                        SCIPptrarrayFree(ptrarray)
+#define SCIPextendPtrarray(scip, ptrarray, minidx, maxidx)      SCIPptrarrayExtend(ptrarray, (scip)->set, minidx, maxidx)
+#define SCIPclearPtrarray(scip, ptrarray)                       SCIPptrarrayClear(ptrarray)
+#define SCIPgetPtrarrayVal(scip, ptrarray, idx)                 SCIPptrarrayGetVal(ptrarray, idx)
+#define SCIPsetPtrarrayVal(scip, ptrarray, idx, val)            SCIPptrarraySetVal(ptrarray, (scip)->set, idx, val)
+#define SCIPgetPtrarrayMinIdx(scip, ptrarray)                   SCIPptrarrayGetMinIdx(ptrarray)
+#define SCIPgetPtrarrayMaxIdx(scip, ptrarray)                   SCIPptrarrayGetMaxIdx(ptrarray)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.15 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.16 2004/11/30 16:23:39 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -101,6 +101,18 @@ RETCODE SCIPrealarrayIncVal(
    Real             incval              /**< value to increase array index */
    );
 
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPrealarrayGetMinIdx(
+   REALARRAY*       realarray           /**< dynamic real array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPrealarrayGetMaxIdx(
+   REALARRAY*       realarray           /**< dynamic real array */
+   );
+
 /** creates a dynamic array of int values */
 extern
 RETCODE SCIPintarrayCreate(
@@ -111,9 +123,9 @@ RETCODE SCIPintarrayCreate(
 /** creates a copy of a dynamic array of int values */
 extern
 RETCODE SCIPintarrayCopy(
-   INTARRAY**       intarray,           /**< pointer to store the copied real array */
+   INTARRAY**       intarray,           /**< pointer to store the copied int array */
    MEMHDR*          memhdr,             /**< block memory */
-   INTARRAY*        sourceintarray      /**< dynamic real array to copy */
+   INTARRAY*        sourceintarray      /**< dynamic int array to copy */
    );
 
 /** frees a dynamic array of int values */
@@ -162,6 +174,18 @@ RETCODE SCIPintarrayIncVal(
    int              incval              /**< value to increase array index */
    );
 
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPintarrayGetMinIdx(
+   INTARRAY*        intarray            /**< dynamic int array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPintarrayGetMaxIdx(
+   INTARRAY*        intarray            /**< dynamic int array */
+   );
+
 /** creates a dynamic array of bool values */
 extern
 RETCODE SCIPboolarrayCreate(
@@ -172,9 +196,9 @@ RETCODE SCIPboolarrayCreate(
 /** creates a copy of a dynamic array of bool values */
 extern
 RETCODE SCIPboolarrayCopy(
-   BOOLARRAY**      boolarray,          /**< pointer to store the copied real array */
+   BOOLARRAY**      boolarray,          /**< pointer to store the copied bool array */
    MEMHDR*          memhdr,             /**< block memory */
-   BOOLARRAY*       sourceboolarray     /**< dynamic real array to copy */
+   BOOLARRAY*       sourceboolarray     /**< dynamic bool array to copy */
    );
 
 /** frees a dynamic array of bool values */
@@ -214,31 +238,43 @@ RETCODE SCIPboolarraySetVal(
    Bool             val                 /**< value to set array index to */
    );
 
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPboolarrayGetMinIdx(
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPboolarrayGetMaxIdx(
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   );
+
 /** creates a dynamic array of pointer values */
 extern
 RETCODE SCIPptrarrayCreate(
-   PTRARRAY**       ptrarray,           /**< pointer to store the int array */
+   PTRARRAY**       ptrarray,           /**< pointer to store the ptr array */
    MEMHDR*          memhdr              /**< block memory */
    );
 
 /** creates a copy of a dynamic array of pointer values */
 extern
 RETCODE SCIPptrarrayCopy(
-   PTRARRAY**       ptrarray,           /**< pointer to store the copied real array */
+   PTRARRAY**       ptrarray,           /**< pointer to store the copied ptr array */
    MEMHDR*          memhdr,             /**< block memory */
-   PTRARRAY*        sourceptrarray      /**< dynamic real array to copy */
+   PTRARRAY*        sourceptrarray      /**< dynamic ptr array to copy */
    );
 
 /** frees a dynamic array of pointer values */
 extern
 RETCODE SCIPptrarrayFree(
-   PTRARRAY**       ptrarray            /**< pointer to the int array */
+   PTRARRAY**       ptrarray            /**< pointer to the ptr array */
    );
 
 /** extends dynamic array to be able to store indices from minidx to maxidx */
 extern
 RETCODE SCIPptrarrayExtend(
-   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
    SET*             set,                /**< global SCIP settings */
    int              minidx,             /**< smallest index to allocate storage for */
    int              maxidx              /**< largest index to allocate storage for */
@@ -247,23 +283,35 @@ RETCODE SCIPptrarrayExtend(
 /** clears a dynamic pointer array */
 extern
 RETCODE SCIPptrarrayClear(
-   PTRARRAY*        ptrarray            /**< dynamic int array */
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
 /** gets value of entry in dynamic array */
 extern
 void* SCIPptrarrayGetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
    int              idx                 /**< array index to get value for */
    );
 
 /** sets value of entry in dynamic array */
 extern
 RETCODE SCIPptrarraySetVal(
-   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   PTRARRAY*        ptrarray,           /**< dynamic ptr array */
    SET*             set,                /**< global SCIP settings */
    int              idx,                /**< array index to set value for */
    void*            val                 /**< value to set array index to */
+   );
+
+/** returns the minimal index of all stored non-zero elements */
+extern
+int SCIPptrarrayGetMinIdx(
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   );
+
+/** returns the maximal index of all stored non-zero elements */
+extern
+int SCIPptrarrayGetMaxIdx(
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
 

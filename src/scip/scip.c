@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.232 2004/11/29 12:17:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.233 2004/11/30 16:23:39 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11943,6 +11943,28 @@ RETCODE SCIPincRealarrayVal(
    return SCIP_OKAY;
 }
 
+/** returns the minimal index of all stored non-zero elements */
+int SCIPgetRealarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   REALARRAY*       realarray           /**< dynamic real array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetRealarrayMinIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPrealarrayGetMinIdx(realarray);
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPgetRealarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   REALARRAY*       realarray           /**< dynamic real array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetRealarrayMaxIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPrealarrayGetMaxIdx(realarray);
+}
+
 /** creates a dynamic array of int values */
 RETCODE SCIPcreateIntarray(
    SCIP*            scip,               /**< SCIP data structure */
@@ -12039,6 +12061,28 @@ RETCODE SCIPincIntarrayVal(
    return SCIP_OKAY;
 }
 
+/** returns the minimal index of all stored non-zero elements */
+int SCIPgetIntarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   INTARRAY*        intarray            /**< dynamic int array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetIntarrayMinIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPintarrayGetMinIdx(intarray);
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPgetIntarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   INTARRAY*        intarray            /**< dynamic int array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetIntarrayMaxIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPintarrayGetMaxIdx(intarray);
+}
+
 /** creates a dynamic array of bool values */
 RETCODE SCIPcreateBoolarray(
    SCIP*            scip,               /**< SCIP data structure */
@@ -12120,6 +12164,28 @@ RETCODE SCIPsetBoolarrayVal(
    return SCIP_OKAY;
 }
 
+/** returns the minimal index of all stored non-zero elements */
+int SCIPgetBoolarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetBoolarrayMinIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPboolarrayGetMinIdx(boolarray);
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPgetBoolarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   BOOLARRAY*       boolarray           /**< dynamic bool array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetBoolarrayMaxIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPboolarrayGetMaxIdx(boolarray);
+}
+
 /** creates a dynamic array of pointers */
 RETCODE SCIPcreatePtrarray(
    SCIP*            scip,               /**< SCIP data structure */
@@ -12199,6 +12265,28 @@ RETCODE SCIPsetPtrarrayVal(
    CHECK_OKAY( SCIPptrarraySetVal(ptrarray, scip->set, idx, val) );
    
    return SCIP_OKAY;
+}
+
+/** returns the minimal index of all stored non-zero elements */
+int SCIPgetPtrarrayMinIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPtrarrayMinIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPptrarrayGetMinIdx(ptrarray);
+}
+
+/** returns the maximal index of all stored non-zero elements */
+int SCIPgetPtrarrayMaxIdx(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPtrarrayMaxIdx", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPptrarrayGetMaxIdx(ptrarray);
 }
 
 #endif
