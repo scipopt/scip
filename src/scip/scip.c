@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.240 2005/01/17 12:45:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.241 2005/01/17 15:28:55 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7041,7 +7041,7 @@ RETCODE SCIPaddConsLocks(
    int              nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConsLocks", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsLocks", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPconsAddLocks(cons, scip->set, nlockspos, nlocksneg) );
 

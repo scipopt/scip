@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.52 2005/01/17 12:45:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.53 2005/01/17 15:28:55 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -291,7 +291,11 @@ RETCODE primalSetUpperbound(
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
    if( SCIPprobIsObjIntegral(prob) )
    {
-      primal->cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - 10.0*SCIPsetFeastol(set));
+      Real delta;
+
+      delta = 100.0*SCIPsetFeastol(set);
+      delta = MIN(delta, 0.1);
+      primal->cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
    }
    else
       primal->cutoffbound = upperbound;
@@ -432,7 +436,7 @@ RETCODE primalAddSol(
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
-   debugMessage("insert primal solution at position %d:", insertpos);
+   debugMessage("insert primal solution %p with obj %g at position %d:\n", sol, SCIPsolGetObj(sol), insertpos);
    debug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL) );
 
 #if 0
