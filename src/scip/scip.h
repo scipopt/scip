@@ -567,7 +567,8 @@ RETCODE SCIPcreateVar(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    );
 
 /** increases usage counter of variable */
@@ -808,7 +809,8 @@ RETCODE SCIPcreateRow(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** increases usage counter of LP row */
@@ -1032,6 +1034,14 @@ RETCODE SCIPgetPseudoBranchCands(
 extern
 int SCIPgetNPseudoBranchCands(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** calculates the branching score out of the downward and upward gain prediction */
+extern
+Real SCIPgetBranchScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             downgain,           /**< prediction of objective gain for branching downwards */
+   Real             upgain              /**< prediction of objective gain for branching upwards */
    );
 
 /** creates a child node of the active node */
@@ -1373,6 +1383,14 @@ NODE* SCIPgetBestNode(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+extern
+RETCODE SCIPupdateNodeLowerBound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to update lower bound for */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
 /**@} */
 
 
@@ -1478,6 +1496,12 @@ Real SCIPgetPrimalBound(
 /** gets global upper (primal) bound in transformed problem */
 extern
 Real SCIPgetTransUpperBound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets number of feasible primal solutions found so far */
+extern
+int SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

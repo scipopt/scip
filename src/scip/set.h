@@ -63,12 +63,13 @@ struct Set
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             feastol;            /**< LP feasibility tolerance */
-   Real             memGrowFac;         /**< memory growing factor for dynamically allocated arrays */
-   int              memGrowInit;        /**< initial size of dynamically allocated arrays */
-   Real             treeGrowFac;        /**< memory growing factor for tree array */
-   int              treeGrowInit;       /**< initial size of tree array */
-   Real             pathGrowFac;        /**< memory growing factor for path array */
-   int              pathGrowInit;       /**< initial size of path array */
+   Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
+   int              memgrowinit;        /**< initial size of dynamically allocated arrays */
+   Real             treegrowfac;        /**< memory growing factor for tree array */
+   int              treegrowinit;       /**< initial size of tree array */
+   Real             pathgrowfac;        /**< memory growing factor for path array */
+   int              pathgrowinit;       /**< initial size of path array */
+   Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
    BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
    READER**         readers;            /**< file readers */
    int              nreaders;           /**< number of file readers */

@@ -36,14 +36,20 @@
  * Default parameter settings
  */
 
-#define SCIP_DEFAULT_MAXPLUNGEDEPTH  10 /**< maximal plunging depth, before new best node is forced to be selected */
+#define SCIP_DEFAULT_MAXPLUNGEQUOT       1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                              *   where plunging is performed */
+#define SCIP_DEFAULT_MAXPLUNGEDEPTH  INT_MAX /**< maximal plunging depth, before new best node is forced to be selected */
+#define SCIP_DEFAULT_MINPLUNGEDEPTH       10 /**< minimal plunging depth, before new best node may be selected */
 
 
 
 /** node selector data for best first search node selection */
 struct NodeselData
 {
+   Real             maxplungequot;      /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                         *   where plunging is performed */
    int              maxplungedepth;     /**< maximal plunging depth, before new best node is forced to be selected */
+   int              minplungedepth;     /**< minimal plunging depth, before new best node may be selected */
 };
 
 
@@ -74,6 +80,11 @@ static
 DECL_NODESELSELECT(SCIPnodeselSelectBfs)
 {
    NODESELDATA* nodeseldata;
+   Real actlowerbound;
+   Real avglowerbound;
+   Real lowerbound;
+   Real maxplungequot;
+   int plungedepth;
 
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -86,8 +97,20 @@ DECL_NODESELSELECT(SCIPnodeselSelectBfs)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 
+   /* if no solution was found yet, double maxplungequot */
+   maxplungequot = nodeseldata->maxplungequot;
+   if( SCIPgetNSolsFound(scip) == 0 )
+      maxplungequot *= 2;
+
    /* check, if we want to plunge once more */
-   if( SCIPgetPlungeDepth(scip) < nodeseldata->maxplungedepth )
+   actlowerbound = SCIPgetActTransLowerBound(scip);
+   avglowerbound = SCIPgetAvgTransLowerBound(scip);
+   lowerbound = SCIPgetTransLowerBound(scip);
+   plungedepth = SCIPgetPlungeDepth(scip);
+   if( plungedepth < nodeseldata->minplungedepth
+      || (plungedepth < nodeseldata->maxplungedepth
+         && (SCIPisEQ(scip, avglowerbound, lowerbound)
+            || (actlowerbound - lowerbound)/(avglowerbound - lowerbound) < maxplungequot)) )
    {
       /* we want to plunge again: prefer children over siblings, and siblings over leaves */
       *selnode = SCIPgetBestChild(scip);
@@ -174,7 +197,9 @@ RETCODE SCIPincludeNodeselBfs(
 
    /* allocate and initialise node selector data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
+   nodeseldata->maxplungequot = SCIP_DEFAULT_MAXPLUNGEQUOT;
    nodeseldata->maxplungedepth = SCIP_DEFAULT_MAXPLUNGEDEPTH;
+   nodeseldata->minplungedepth = SCIP_DEFAULT_MINPLUNGEDEPTH;
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC,

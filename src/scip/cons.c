@@ -1359,6 +1359,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
             && *result != SCIP_BRANCHED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_CONSADDED
+            && *result != SCIP_SOLVELP
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
          {

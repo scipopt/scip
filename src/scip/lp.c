@@ -1250,7 +1250,8 @@ RETCODE SCIPcolCreate(
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
-   Real*            val                 /**< array with coefficients of column entries */
+   Real*            val,                /**< array with coefficients of column entries */
+   Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
    )
 {
    int i;
@@ -1297,12 +1298,15 @@ RETCODE SCIPcolCreate(
    (*col)->strongup = SCIP_INVALID;
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
+   (*col)->validstronglp = -1;
    (*col)->strongitlim = -1;
    (*col)->age = 0;
+   (*col)->obsoletenode = -1;
    (*col)->sorted = TRUE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
+   (*col)->removeable = removeable;
 
    /* check, if column is sorted
     */
@@ -1799,10 +1803,11 @@ RETCODE SCIPcolGetStrongbranch(
    assert(down != NULL);
    assert(up != NULL);
 
-   if( itlim > col->strongitlim )
+   if( col->validstronglp != stat->nlp || itlim > col->strongitlim )
    {
       debugMessage("calling strong branching for variable <%s> with %d iterations\n", col->var->name, itlim);
       stat->nstrongbranch++;
+      col->validstronglp = stat->nlp;
       col->strongitlim = itlim;
       CHECK_OKAY( SCIPlpiStrongbranch(lp->lpi, &col->lpipos, 1, itlim, &col->strongdown, &col->strongup) );
       col->strongdown = MIN(col->strongdown, upperbound);
@@ -1961,7 +1966,8 @@ RETCODE SCIProwCreate(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    assert(row != NULL);
@@ -2016,6 +2022,7 @@ RETCODE SCIProwCreate(
    (*row)->nummaxval = 0;
    (*row)->validactivitylp = -1;
    (*row)->age = 0;
+   (*row)->obsoletenode = -1;
    (*row)->sorted = FALSE;
    (*row)->validpsactivity = FALSE;
    (*row)->validactivitybds = FALSE;
@@ -2026,6 +2033,7 @@ RETCODE SCIProwCreate(
    (*row)->local = local;
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
+   (*row)->removeable = removeable;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
    rowCalcNorms(*row, set);
@@ -4534,6 +4542,7 @@ RETCODE lpDelColset(
       lp->cols[c]->lppos = coldstat[c];
       if( coldstat[c] == -1 )
       {
+         assert(lp->cols[c]->removeable);
          markColDeleted(lp->cols[c]);
          lp->cols[c] = NULL;
          lp->lpicols[c] = NULL;
@@ -4600,6 +4609,7 @@ RETCODE lpDelRowset(
       lp->rows[r]->lppos = rowdstat[r];
       if( rowdstat[r] == -1 )
       {
+         assert(lp->rows[r]->removeable);
          markRowDeleted(lp->rows[r]);
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
          assert(lp->rows[r] == NULL);
@@ -4643,6 +4653,7 @@ RETCODE lpRemoveObsoleteCols(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    int              firstcol            /**< first column to check for clean up */
    )
 {
@@ -4658,6 +4669,7 @@ RETCODE lpRemoveObsoleteCols(
    assert(lp->ncols == lp->nlpicols);
    assert(set != NULL);
    assert(set->usepricing);
+   assert(stat != NULL);
 
    ncols = lp->ncols;
    cols = lp->cols;
@@ -4674,10 +4686,14 @@ RETCODE lpRemoveObsoleteCols(
       assert(cols[c] == lpicols[c]);
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
-      if( cols[c]->age > set->colagelimit )
+      if( cols[c]->removeable
+         && cols[c]->obsoletenode != stat->nnodes /* don't remove a column a second time from same node (avoid cycling) */
+         && cols[c]->age > set->colagelimit
+         && SCIPsetIsZero(set, SCIPvarGetBestBound(cols[c]->var)) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
          ndelcols++;
+         cols[c]->obsoletenode = stat->nnodes;
       }
    }
 
@@ -4702,6 +4718,7 @@ RETCODE lpRemoveObsoleteRows(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    int              firstrow            /**< first row to check for clean up */
    )
 {
@@ -4715,6 +4732,8 @@ RETCODE lpRemoveObsoleteRows(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->nrows == lp->nlpirows);
+   assert(set != NULL);
+   assert(stat != NULL);
 
    nrows = lp->nrows;
    rows = lp->rows;
@@ -4731,10 +4750,13 @@ RETCODE lpRemoveObsoleteRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( rows[r]->age > set->rowagelimit )
+      if( rows[r]->removeable
+         && rows[r]->obsoletenode != stat->nnodes  /* don't remove a row a second time from same node (avoid cycling) */
+         && rows[r]->age > set->rowagelimit )
       {
          rowdstat[r] = 1;
          ndelrows++;
+         rows[r]->obsoletenode = stat->nnodes;
       }
    }
 
@@ -4757,7 +4779,8 @@ RETCODE lpRemoveObsoleteRows(
 RETCODE SCIPlpRemoveObsoletes(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(lp != NULL);
@@ -4768,11 +4791,11 @@ RETCODE SCIPlpRemoveObsoletes(
 
    if( set->usepricing && lp->firstnewcol < lp->ncols )
    {
-      CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, lp->firstnewcol) );
+      CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, stat, lp->firstnewcol) );
    }
    if( lp->firstnewrow < lp->nrows )
    {
-      CHECK_OKAY( lpRemoveObsoleteRows(lp, memhdr, set, lp->firstnewrow) );
+      CHECK_OKAY( lpRemoveObsoleteRows(lp, memhdr, set, stat, lp->firstnewrow) );
    }
 
    return SCIP_OKAY;
@@ -4816,7 +4839,9 @@ RETCODE lpCleanupCols(
       assert(cols[c] == lpicols[c]);
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
-      if( SCIPsetIsZero(set, lpicols[c]->primsol) )
+      if( lpicols[c]->removeable
+         && SCIPsetIsZero(set, lpicols[c]->primsol)
+         && SCIPsetIsZero(set, SCIPvarGetBestBound(cols[c]->var)) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
          ndelcols++;
@@ -4875,7 +4900,8 @@ RETCODE lpCleanupRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
+      if( lpirows[r]->removeable
+         && SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
          && SCIPsetIsLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
       {
          rowdstat[r] = 1;

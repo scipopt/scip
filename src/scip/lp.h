@@ -115,12 +115,15 @@ struct Col
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              validredcostlp;     /**< lp number for which reduced cost value is valid */
    int              validfarkaslp;      /**< lp number for which farkas value is valid */
+   int              validstronglp;      /**< lp number for which strong branching values are valid */
    int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
+   Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
+   unsigned int     removeable:1;       /**< TRUE iff column is removeable from the LP (due to aging or cleanup) */
 };
 
 /** row of the LP */
@@ -157,6 +160,7 @@ struct Row
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
    int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
+   Longint          obsoletenode;       /**< last node where this row was removed due to aging */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
    unsigned int     validpsactivity:1;  /**< is the pseudo activity valid? */
    unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
@@ -166,7 +170,8 @@ struct Row
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
    unsigned int     local:1;            /**< is row only valid locally? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int     nlocks:23;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int     removeable:1;       /**< TRUE iff row is removeable from the LP (due to aging or cleanup) */
+   unsigned int     nlocks:22;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** actual LP data */
@@ -219,7 +224,8 @@ RETCODE SCIPcolCreate(
    VAR*             var,                /**< variable, this column represents */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
-   Real*            val                 /**< array with coefficients of column entries */
+   Real*            val,                /**< array with coefficients of column entries */
+   Bool             removeable          /**< should the column be removed from the LP due to aging or cleanup? */
    );
 
 /** frees an LP column */
@@ -394,7 +400,8 @@ RETCODE SCIProwCreate(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** frees an LP row */
@@ -947,7 +954,8 @@ extern
 RETCODE SCIPlpRemoveObsoletes(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** removes all columns at 0.0 and rows not at their bound in the part of the LP created at the current node */

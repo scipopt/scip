@@ -52,6 +52,10 @@
 #define SCIP_DEFAULT_PATHGROWINIT      256
 
 
+/* Branching */
+#define SCIP_DEFAULT_BRANCHSCOREFAC  0.167 /**< branching score factor to weigh downward and upward gain prediction */
+
+
 /* LP Solving */
 
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes */
@@ -93,7 +97,7 @@
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ            1 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -139,12 +143,13 @@ RETCODE SCIPsetCreate(
    (*set)->sumepsilon = SCIP_DEFAULT_SUMEPSILON;
    (*set)->infinity = SCIP_DEFAULT_INFINITY;
    (*set)->feastol = SCIP_DEFAULT_FEASTOL;
-   (*set)->memGrowFac = SCIP_DEFAULT_MEMGROWFAC;
-   (*set)->memGrowInit = SCIP_DEFAULT_MEMGROWINIT;
-   (*set)->treeGrowFac = SCIP_DEFAULT_TREEGROWFAC;
-   (*set)->treeGrowInit = SCIP_DEFAULT_TREEGROWINIT;
-   (*set)->pathGrowFac = SCIP_DEFAULT_PATHGROWFAC;
-   (*set)->pathGrowInit = SCIP_DEFAULT_PATHGROWINIT;
+   (*set)->memgrowfac = SCIP_DEFAULT_MEMGROWFAC;
+   (*set)->memgrowinit = SCIP_DEFAULT_MEMGROWINIT;
+   (*set)->treegrowfac = SCIP_DEFAULT_TREEGROWFAC;
+   (*set)->treegrowinit = SCIP_DEFAULT_TREEGROWINIT;
+   (*set)->pathgrowfac = SCIP_DEFAULT_PATHGROWFAC;
+   (*set)->pathgrowinit = SCIP_DEFAULT_PATHGROWINIT;
+   (*set)->branchscorefac = SCIP_DEFAULT_BRANCHSCOREFAC;
 
    CHECK_OKAY( SCIPbufferCreate(&(*set)->buffer) );
 
@@ -691,7 +696,7 @@ int SCIPsetCalcMemGrowSize(
    int              num                 /**< minimum number of entries to store */
    )
 {
-   return calcGrowSize(set->memGrowInit, set->memGrowFac, num);
+   return calcGrowSize(set->memgrowinit, set->memgrowfac, num);
 }
 
 /** calculate memory size for tree array */
@@ -700,7 +705,7 @@ int SCIPsetCalcTreeGrowSize(
    int              num                 /**< minimum number of entries to store */
    )
 {
-   return calcGrowSize(set->treeGrowInit, set->treeGrowFac, num);
+   return calcGrowSize(set->treegrowinit, set->treegrowfac, num);
 }
 
 /** calculate memory size for path array */
@@ -709,7 +714,7 @@ int SCIPsetCalcPathGrowSize(
    int              num                 /**< minimum number of entries to store */
    )
 {
-   return calcGrowSize(set->pathGrowInit, set->pathGrowFac, num);
+   return calcGrowSize(set->pathgrowinit, set->pathgrowfac, num);
 }
 
 /** sets verbosity level for message output */

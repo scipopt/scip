@@ -1246,7 +1246,6 @@ RETCODE SCIPlpiSolvePrimal(
       default:
          return SCIP_LPERROR;
       }
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
 
       lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
       debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
@@ -1256,6 +1255,8 @@ RETCODE SCIPlpiSolvePrimal(
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          errorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off");
       }
+
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
    }
 
    return SCIP_OKAY;
@@ -1309,7 +1310,6 @@ RETCODE SCIPlpiSolveDual(
       default:
          return SCIP_LPERROR;
       }
-      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
 
       lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
       debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
@@ -1319,6 +1319,8 @@ RETCODE SCIPlpiSolveDual(
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off");
       }
+
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
    }
 
    return SCIP_OKAY;
@@ -1337,7 +1339,7 @@ RETCODE SCIPlpiStrongbranch(
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
-
+   
    CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, cand, ncand, down, up, itlim) );
 
    return SCIP_OKAY;

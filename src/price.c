@@ -358,6 +358,28 @@ RETCODE SCIPpriceVars(
             Real feasibility;
             Bool added;
    
+#if 1
+            added = FALSE;
+
+            /* add variable, if zero is not feasible within the bounds */
+            if( SCIPsetIsPositive(set, var->dom.lb) || SCIPsetIsNegative(set, var->dom.ub) )
+            {
+               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, branchcand, eventqueue, var) );
+               added = TRUE;
+            }
+            else
+            {
+               Real bestbound;
+
+               /* if zero is not best bound w.r.t. objective function */
+               bestbound = SCIPvarGetBestBound(var);
+               if( !SCIPsetIsZero(set, bestbound) )
+               {
+                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, var->obj * var->dom.lb, root) );
+                  added = TRUE;
+               }
+            }
+#else
             /* add variable, if zero is not best bound w.r.t. objective function */
             added = FALSE;
             if( SCIPsetIsNegative(set, var->dom.lb) )
@@ -386,6 +408,7 @@ RETCODE SCIPpriceVars(
                   added = TRUE;
                }
             }
+#endif
             
             if( !added )
             {

@@ -15,35 +15,24 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   result.h
- * @brief  result codes for SCIP callback methods
+/**@file   branch_fullstrong.h
+ * @brief  full strong LP branching rule
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __RESULT_H__
-#define __RESULT_H__
-
-/** result codes for SCIP callback methods */
-enum Result
-{
-   SCIP_DIDNOTRUN   =   0,            /**< the method was not executed */
-   SCIP_DIDNOTFIND  =   1,            /**< the method was executed, but did not have success to find anything */
-   SCIP_FEASIBLE    =   2,            /**< no infeasibility could be found */
-   SCIP_INFEASIBLE  =   3,            /**< an infeasibility was detected */
-   SCIP_UNBOUNDED   =   4,            /**< an unboundness was detected */
-   SCIP_CUTOFF      =   5,            /**< the current node is infeasible and can be cut off */
-   SCIP_SEPARATED   =   6,            /**< the method added a cutting plane */
-   SCIP_CONSADDED   =   7,            /**< the method added a constraint */
-   SCIP_REDUCEDDOM  =   8,            /**< the method reduced the domain of a variable */
-   SCIP_BRANCHED    =   9,            /**< the method created a branching */
-   SCIP_SOLVELP     =  10,            /**< the current node's LP must be solved */
-   SCIP_FOUNDSOL    =  11,            /**< the method found a feasible primal solution */
-   SCIP_SUCCESS     =  12             /**< the method was successfully executed */  
-};
-typedef enum Result RESULT;           /**< result codes for SCIP callback methods */
+#ifndef __BRANCH_FULLSTRONG_H__
+#define __BRANCH_FULLSTRONG_H__
 
 
+#include "scip.h"
+
+
+/** creates the full strong LP braching rule and includes it in SCIP */
+extern
+RETCODE SCIPincludeBranchruleFullstrong(
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 #endif

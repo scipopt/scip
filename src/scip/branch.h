@@ -232,4 +232,19 @@ Bool SCIPbranchruleIsInitialized(
    );
 
 
+
+
+/*
+ * branching methods
+ */
+
+/** calculates the branching score out of the downward and upward gain prediction */
+extern
+Real SCIPbranchGetScore(
+   const SET*       set,                /**< global SCIP settings */
+   Real             downgain,           /**< prediction of objective gain for branching downwards */
+   Real             upgain              /**< prediction of objective gain for branching upwards */
+   );
+
+
 #endif

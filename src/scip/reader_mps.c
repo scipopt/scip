@@ -695,15 +695,15 @@ RETCODE readRows(
          {
          case 'G' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+                           0.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
             break;
          case 'E' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
-                           0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+                           0.0, 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
             break;
          case 'L' :
             CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
-                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
@@ -769,12 +769,12 @@ RETCODE readCols(
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER, TRUE) );
          }
          else
          {
             /* for continous variables, default bounds are 0 <= x, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS, TRUE) );
          }
       }
       assert(var != NULL);

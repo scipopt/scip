@@ -178,6 +178,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
  *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
  *    SCIP_CONSADDED  : at least one constraint is infeasible, and a constraint was generated to resolve infeasibility
+ *    SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */

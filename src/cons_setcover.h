@@ -47,7 +47,8 @@ RETCODE SCIPcreateConsSetcover(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             local,              /**< is set covering constraint only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 #endif

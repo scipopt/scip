@@ -65,6 +65,7 @@ struct SetcoverCons
    int              nfixedones;         /**< actual number of variables fixed to one in the constraint */
    unsigned int     local:1;            /**< is constraint only valid locally? */
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
+   unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the constraint data belongs to the transformed problem? */
 };
 typedef struct SetcoverCons SETCOVERCONS; /**< set covering constraint data */
@@ -171,7 +172,8 @@ RETCODE setcoverconsCreate(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< variables of the constraint */
    Bool             local,              /**< is constraint only locally valid? */
-   Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    assert(setcovercons != NULL);
@@ -194,6 +196,7 @@ RETCODE setcoverconsCreate(
    (*setcovercons)->nfixedones = 0;
    (*setcovercons)->local = local;
    (*setcovercons)->modifiable = modifiable;
+   (*setcovercons)->removeable = removeable;
    (*setcovercons)->transformed = FALSE;
 
    return SCIP_OKAY;
@@ -207,7 +210,8 @@ RETCODE setcoverconsCreateTransformed(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< variables of the constraint */
    Bool             local,              /**< is constraint only locally valid? */
-   Bool             modifiable          /**< is constraint modifiable (subject to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    EVENTHDLR* eventhdlr;
@@ -216,7 +220,7 @@ RETCODE setcoverconsCreateTransformed(
    assert(setcovercons != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   CHECK_OKAY( setcoverconsCreate(scip, setcovercons, nvars, vars, local, modifiable) );
+   CHECK_OKAY( setcoverconsCreate(scip, setcovercons, nvars, vars, local, modifiable, removeable) );
    (*setcovercons)->transformed = TRUE;
 
    /* find the bound change event handler */
@@ -296,7 +300,7 @@ RETCODE setcoverconsToRow(
    assert(row != NULL);
 
    CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, 1.0, SCIPinfinity(scip),
-                  setcovercons->local, setcovercons->modifiable) );
+                  setcovercons->local, setcovercons->modifiable, setcovercons->removeable) );
    
    for( v = 0; v < setcovercons->nvars; ++v )
    {
@@ -380,7 +384,7 @@ DECL_CONSTRANS(consTransSetcover)
    setcovercons = sourcedata->setcovercons;
 
    CHECK_OKAY( setcoverconsCreateTransformed(scip, &targetdata->setcovercons, setcovercons->nvars, setcovercons->vars,
-                  setcovercons->local, setcovercons->modifiable) );
+                  setcovercons->local, setcovercons->modifiable, setcovercons->removeable) );
    targetdata->row = NULL;
 
    /* create target constraint */
@@ -417,14 +421,27 @@ RETCODE separate(
 
    if( setcovercons->nfixedzeros == setcovercons->nvars )
    {
-      /* the constraint cannot be feasible, because all variables are fixed to zero */
       if( setcovercons->modifiable )
       {
-         errorMessage("modifiable infeasible set covering constraint detected; pricing on pseudo solution not implemented yet");
-         abort();
+         /* the constraint cannot be feasible with the active variable set, but due to additional pricing,
+          * it may be feasible after the next pricing loop -> just insert it as a cut
+          */
+
+         /* convert set covering constraint data into LP row */
+         CHECK_OKAY( setcoverconsToRow(scip, setcovercons, SCIPconsGetName(cons), &consdata->row) );
+         assert(consdata->row != NULL);
+         assert(!SCIProwIsInLP(consdata->row));
+         
+         /* insert LP row as cut */
+         CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(setcovercons->nvars+1)) );
+         *result = SCIP_SEPARATED;
+      }
+      else
+      {
+         /* the constraint cannot be feasible, because all variables are fixed to zero */
+         *result = SCIP_CUTOFF;
       }
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      *result = SCIP_CUTOFF;
    }
    else if( setcovercons->nfixedones >= 1 )
    {
@@ -661,7 +678,7 @@ RETCODE branchLP(
          sprintf(name, "SCB%lld", SCIPgetNodenum(scip));
 
          CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                        TRUE, TRUE, FALSE, TRUE, FALSE) );
+                        TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
          CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
          CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
       }
@@ -857,14 +874,19 @@ DECL_CONSENFOPS(consEnfopsSetcover)
       
       if( setcovercons->nfixedzeros == setcovercons->nvars )
       {
-         /* the constraint cannot be feasible, because all variables are fixed to zero */
          if( setcovercons->modifiable )
          {
-            errorMessage("modifiable infeasible set covering constraint detected; pricing on pseudo solution not implemented yet");
-            abort();
+            /* the constraint is infeasible with the current variable set, but it may be feasible after pricing in
+             * additional variables -> the LP has to be solved to price in new variables
+             */
+            *result = SCIP_SOLVELP;
+         }
+         else
+         {
+            /* the constraint cannot be feasible, because all variables are fixed to zero */
+            *result = SCIP_CUTOFF;
          }
          CHECK_OKAY( SCIPresetConsAge(scip, conss[c]) );
-         *result = SCIP_CUTOFF;
       }
       else if( setcovercons->nfixedones >= 1 )
       {
@@ -1075,7 +1097,7 @@ DECL_LINCONSUPGD(linconsUpgdSetcover)
       /* create the set covering constraint (an automatically upgraded constraint is always unmodifiable) */
       CHECK_OKAY( SCIPcreateConsSetcover(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     local, FALSE) );
+                     local, FALSE, removeable) );
       *upgraded = TRUE;
    }
    else
@@ -1186,7 +1208,8 @@ RETCODE SCIPcreateConsSetcover(
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             local,              /**< is set covering constraint only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -1213,12 +1236,13 @@ RETCODE SCIPcreateConsSetcover(
       }
 
       /* create constraint in original problem */
-      CHECK_OKAY( setcoverconsCreate(scip, &consdata->setcovercons, nvars, vars, local, modifiable) );
+      CHECK_OKAY( setcoverconsCreate(scip, &consdata->setcovercons, nvars, vars, local, modifiable, removeable) );
    }
    else
    {
       /* create constraint in transformed problem */
-      CHECK_OKAY( setcoverconsCreateTransformed(scip, &consdata->setcovercons, nvars, vars, local, modifiable) );
+      CHECK_OKAY( setcoverconsCreateTransformed(scip, &consdata->setcovercons, nvars, vars, 
+                     local, modifiable, removeable) );
    }
    consdata->row = NULL;
 

@@ -90,6 +90,7 @@ struct LinConsData
    int              nvars;              /**< number of nonzeros in constraint */
    unsigned int     local:1;            /**< is linear constraint only valid locally? */
    unsigned int     modifiable:1;       /**< is data modifiable during node processing (subject to column generation)? */
+   unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the linear constraint data belongs to the transformed problem? */
    unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
 };
@@ -372,7 +373,8 @@ RETCODE linconsdataCreate(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable          /**< is data modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is data modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    int i;
@@ -416,6 +418,7 @@ RETCODE linconsdataCreate(
    (*linconsdata)->nvars = nvars;
    (*linconsdata)->local = local;
    (*linconsdata)->modifiable = modifiable;
+   (*linconsdata)->removeable = removeable;
    (*linconsdata)->transformed = FALSE;
    (*linconsdata)->validactivitybds = FALSE;
 
@@ -434,7 +437,8 @@ RETCODE linconsdataCreateTransformed(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    EVENTHDLR* eventhdlr;
@@ -443,7 +447,7 @@ RETCODE linconsdataCreateTransformed(
    assert(linconsdata != NULL);
 
    /* create linear constraint data */
-   CHECK_OKAY( linconsdataCreate(scip, linconsdata, name, nvars, vars, vals, lhs, rhs, local, modifiable) );
+   CHECK_OKAY( linconsdataCreate(scip, linconsdata, name, nvars, vars, vals, lhs, rhs, local, modifiable, removeable) );
 
    /* allocate the additional needed eventdatas array */
    assert((*linconsdata)->eventdatas == NULL);
@@ -642,7 +646,7 @@ RETCODE linconsdataToRow(
    assert(row != NULL);
 
    CHECK_OKAY( SCIPcreateRow(scip, row, linconsdata->name, 0, NULL, NULL, linconsdata->lhs, linconsdata->rhs,
-                  linconsdata->local, linconsdata->modifiable) );
+                  linconsdata->local, linconsdata->modifiable, linconsdata->removeable) );
    
    for( v = 0; v < linconsdata->nvars; ++v )
    {
@@ -949,7 +953,8 @@ RETCODE SCIPlinconsCreate(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable          /**< is constraint modifiable during node processing (sbj. to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (sbj. to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    assert(lincons != NULL);
@@ -969,13 +974,13 @@ RETCODE SCIPlinconsCreate(
 
       /* create constraint in original problem */
       CHECK_OKAY( linconsdataCreate(scip, &(*lincons)->data.linconsdata, name, len, var, val, lhs, rhs,
-                     local, modifiable) );
+                     local, modifiable, removeable) );
    }
    else
    {
       /* create constraint in transformed problem */
       CHECK_OKAY( linconsdataCreateTransformed(scip, &(*lincons)->data.linconsdata, name, len, var, val, lhs, rhs, 
-                     local, modifiable) );
+                     local, modifiable, removeable) );
    }
 
    /* forbid rounding of variables */
@@ -1904,7 +1909,7 @@ DECL_CONSTRANS(consTransLinear)
 
    CHECK_OKAY( SCIPlinconsCreate(scip, &targetdata->lincons, linconsdata->name, 
                   linconsdata->nvars, linconsdata->vars, linconsdata->vals, linconsdata->lhs, linconsdata->rhs,
-                  linconsdata->local, linconsdata->modifiable) );
+                  linconsdata->local, linconsdata->modifiable, linconsdata->removeable) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -2238,7 +2243,8 @@ RETCODE SCIPcreateConsLinear(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    CONSHDLR* conshdlr;
@@ -2256,7 +2262,8 @@ RETCODE SCIPcreateConsLinear(
 
    /* create the constraint specific data */
    CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
-   CHECK_OKAY( SCIPlinconsCreate(scip, &consdata->lincons, name, nvars, vars, vals, lhs, rhs, local, modifiable) );
+   CHECK_OKAY( SCIPlinconsCreate(scip, &consdata->lincons, name, nvars, vars, vals, lhs, rhs, 
+                  local, modifiable, removeable) );
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, propagate) );
@@ -2558,7 +2565,8 @@ RETCODE SCIPupgradeConsLinear(
    for( i = 0; i < conshdlrdata->nlinconsupgrades && !upgraded; ++i )
    {
       CHECK_OKAY( conshdlrdata->linconsupgrades[i]->linconsupgd(scip, *cons, linconsdata->nvars, 
-                     linconsdata->vars, linconsdata->vals, linconsdata->lhs, linconsdata->rhs, linconsdata->local,
+                     linconsdata->vars, linconsdata->vals, linconsdata->lhs, linconsdata->rhs, 
+                     linconsdata->local, linconsdata->removeable,
                      nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
                      ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac, integral,
                      &upgdcons, &upgraded) );

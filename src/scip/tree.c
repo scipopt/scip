@@ -1001,6 +1001,17 @@ RETCODE SCIPnodeAddBoundchg(
    }
 }
 
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+void SCIPnodeUpdateLowerBound(
+   NODE*            node,               /**< node to update lower bound for */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   )
+{
+   assert(node != NULL);
+
+   node->lowerbound = MAX(node->lowerbound, newbound);
+}
+
 
 #ifndef NDEBUG
 
@@ -2109,8 +2120,6 @@ RETCODE SCIPtreeCreate(
 
    assert(tree != NULL);
    assert(set != NULL);
-   assert(set->treeGrowInit >= 0);
-   assert(set->treeGrowFac >= 1.0);
    assert(lp != NULL);
    assert(prob != NULL);
 

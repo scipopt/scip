@@ -133,6 +133,7 @@ struct Var
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
+   unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
 };
 
 
@@ -260,7 +261,8 @@ RETCODE SCIPvarCreate(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    );
 
 /** creates and captures a loose variable belonging to the transformed problem */
@@ -274,7 +276,8 @@ RETCODE SCIPvarCreateTransformed(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    );
 
 /** increases usage counter of variable */
@@ -541,6 +544,12 @@ Real SCIPvarGetLb(
 /** gets upper bound of variable */
 extern
 Real SCIPvarGetUb(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets best bound of variable with respect to the objective function */
+extern
+Real SCIPvarGetBestBound(
    VAR*             var                 /**< problem variable */
    );
 

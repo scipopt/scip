@@ -34,6 +34,7 @@
 #include "cons_setcover.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
+#include "branch_fullstrong.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
 #include "heur_rounding.h"
@@ -250,6 +251,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );

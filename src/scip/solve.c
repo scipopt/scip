@@ -106,17 +106,21 @@ RETCODE solveLP(
 
          /* update ages and remove obsolete columns and rows from LP */
          CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
-         CHECK_OKAY( SCIPlpRemoveObsoletes(lp, memhdr, set) );
+         CHECK_OKAY( SCIPlpRemoveObsoletes(lp, memhdr, set, stat) );
          
          if( !lp->solved )
          {
             /* resolve LP after removing obsolete columns and rows */
             debugMessage("remove obsoletes: resolve LP again\n");
+            debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
+               lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
             CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
             assert(lp->solved);
             assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
          }
+
+         debugMessage(" -> LP objective value: %g\n", lp->objval);
          break;
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
@@ -412,7 +416,7 @@ RETCODE pseudoBranch(
        * - if no continous variables exist, the infeasible pseudo solution is completely fixed, and the node is infeasible
        * - if at least one continous variable exist, we cannot resolve the infeasibility by branching -> solve LP
        */
-      if( prob->ncont == 0 )
+      if( prob->ncont == 0 && !set->usepricing )
          *result = SCIP_CUTOFF;
       else
          *result = SCIP_DIDNOTRUN;
@@ -569,6 +573,17 @@ RETCODE enforceConstraints(
             resolved = TRUE;
             break;
 
+         case SCIP_SOLVELP:
+            assert(!tree->actnodehaslp);
+            assert(tree->nchildren == 0);
+            assert(SCIPsepaGetNCuts(sepa) == 0);
+            assert(!enforceagain);
+            *infeasible = TRUE;
+            *solveagain = TRUE;
+            resolved = TRUE;
+            tree->actnodehaslp = TRUE; /* the node's LP must be solved */
+            break;
+
          default:
             {
                char s[255];
@@ -618,8 +633,8 @@ RETCODE enforceConstraints(
          resolved = TRUE;
          break;
       case SCIP_DIDNOTRUN:
-         /* we didn't resolve the infeasibility, but the node may be feasible due to contious variables
-          * (this can only happen, if the LP was not solved)
+         /* we didn't resolve the infeasibility, but the node may be feasible due to contious variables or additional
+          * priced variables (this can only happen, if the LP was not solved)
           *  -> we have no other possibility than solving the LP
           */
          assert(tree->nchildren == 0);
@@ -671,6 +686,7 @@ RETCODE SCIPsolveCIP(
    Bool infeasible;
    Bool solveagain;
    Bool propagain;
+   Bool initiallpsolved;
    int h;
 
    assert(set != NULL);
@@ -781,16 +797,8 @@ RETCODE SCIPsolveCIP(
          /* don't solve the node if its cut off by the pseudo objective value anyway */
          tree->actnodehaslp &= SCIPsetIsLT(set, tree->actpseudoobjval, primal->upperbound);
          
-         /* check, if we want to solve the LP at this node */
-         if( tree->actnodehaslp )
-         {
-            /* load and solve the initial LP of the node */
-            CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, eventfilter) );
-            assert(lp->solved);
-         }
-         assert(SCIPsepaGetNCuts(sepa) == 0);
-
          /* external node solving loop */
+         initiallpsolved = FALSE;
          do
          {
             solveagain = FALSE;
@@ -799,6 +807,15 @@ RETCODE SCIPsolveCIP(
             /* check, if we want to solve the LP at this node */
             if( tree->actnodehaslp )
             {
+               if( !initiallpsolved )
+               {
+                  /* load and solve the initial LP of the node */
+                  CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, eventfilter) );
+                  assert(lp->solved);
+                  initiallpsolved = TRUE;
+               }
+               assert(SCIPsepaGetNCuts(sepa) == 0);
+
                /* continue solving the LP with price and cut */
                CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, branchcand, 
                               eventfilter, eventqueue, conshdlrs_sepa) );

@@ -253,6 +253,13 @@ RETCODE SCIPnodeAddBoundchg(
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+extern
+void SCIPnodeUpdateLowerBound(
+   NODE*            node,               /**< node to update lower bound for */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure

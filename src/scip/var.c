@@ -690,7 +690,8 @@ RETCODE varCreate(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    )
 {
    assert(var != NULL);
@@ -717,6 +718,7 @@ RETCODE varCreate(
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
    (*var)->vartype = vartype;
+   (*var)->removeable = removeable;
 
    return SCIP_OKAY;
 }
@@ -731,7 +733,8 @@ RETCODE SCIPvarCreate(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    )
 {
    assert(var != NULL);
@@ -739,7 +742,7 @@ RETCODE SCIPvarCreate(
    assert(stat != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype) );
+   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, removeable) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL;
@@ -761,14 +764,15 @@ RETCODE SCIPvarCreateTransformed(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    )
 {
    assert(var != NULL);
    assert(memhdr != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype) );
+   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, removeable) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE;
@@ -1001,7 +1005,7 @@ RETCODE SCIPvarTransform(
    /* create transformed variable */
    sprintf(name, "t_%s", origvar->name);
    CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
-                  name, origvar->dom.lb, origvar->dom.ub, objsense * origvar->obj, vartype) );
+                  name, origvar->dom.lb, origvar->dom.ub, objsense * origvar->obj, vartype, origvar->removeable) );
 
    CHECK_OKAY( holelistDuplicate(&(*transvar)->dom.holelist, memhdr, set, origvar->dom.holelist) );
 
@@ -1032,7 +1036,7 @@ RETCODE SCIPvarColumn(
 
    var->varstatus = SCIP_VARSTATUS_COLUMN;
 
-   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, stat, lp, var, 0, NULL, NULL) );
+   CHECK_OKAY( SCIPcolCreate(&var->data.col, memhdr, set, stat, lp, var, 0, NULL, NULL, var->removeable) );
 
    return SCIP_OKAY;
 }
@@ -2075,8 +2079,7 @@ Real SCIPvarGetUb(
 }
 
 /** gets best bound of variable with respect to the objective function */
-static
-Real varGetBestBound(
+Real SCIPvarGetBestBound(
    VAR*             var                 /**< problem variable */
    )
 {
@@ -2155,7 +2158,7 @@ Real SCIPvarGetPseudoSol(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return varGetBestBound(var);
+      return SCIPvarGetBestBound(var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->dom.lb == var->dom.ub);

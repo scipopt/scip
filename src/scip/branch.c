@@ -580,3 +580,24 @@ Bool SCIPbranchruleIsInitialized(
    return branchrule->initialized;
 }
 
+
+
+
+/*
+ * branching methods
+ */
+
+/** calculates the branching score out of the downward and upward gain prediction */
+Real SCIPbranchGetScore(
+   const SET*       set,                /**< global SCIP settings */
+   Real             downgain,           /**< prediction of objective gain for branching downwards */
+   Real             upgain              /**< prediction of objective gain for branching upwards */
+   )
+{
+   assert(set != NULL);
+
+   if( downgain < upgain )
+      return set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
+   else
+      return set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;
+}

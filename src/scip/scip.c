@@ -1456,7 +1456,8 @@ RETCODE SCIPcreateVar(
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
    Real             obj,                /**< objective function value */
-   VARTYPE          vartype             /**< type of variable */
+   VARTYPE          vartype,            /**< type of variable */
+   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
    )
 {
    assert(var != NULL);
@@ -1468,13 +1469,14 @@ RETCODE SCIPcreateVar(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarCreate(var, scip->mem->probmem, scip->set, scip->stat, name, lb, ub, obj, vartype) );
+      CHECK_OKAY( SCIPvarCreate(var, scip->mem->probmem, scip->set, scip->stat, name, lb, ub, obj, vartype, removeable) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat, name, lb, ub, obj, vartype) );
+      CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat, name, lb, ub, obj, vartype,
+                     removeable) );
       return SCIP_OKAY;
 
    default:
@@ -2018,7 +2020,8 @@ RETCODE SCIPcreateRow(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is row only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    assert(row != NULL);
@@ -2026,7 +2029,7 @@ RETCODE SCIPcreateRow(
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                  name, len, col, val, lhs, rhs, local, modifiable) );
+                  name, len, col, val, lhs, rhs, local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -2483,6 +2486,18 @@ int SCIPgetNPseudoBranchCands(
    CHECK_ABORT( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->transprob, NULL, &npseudocands) );
 
    return npseudocands;
+}
+
+/** calculates the branching score out of the downward and upward gain prediction */
+Real SCIPgetBranchScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             downgain,           /**< prediction of objective gain for branching downwards */
+   Real             upgain              /**< prediction of objective gain for branching upwards */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetBranchScore", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPbranchGetScore(scip->set, downgain, upgain);
 }
 
 /** creates a child node of the active node */
@@ -3176,6 +3191,20 @@ NODE* SCIPgetBestNode(
    return SCIPtreeGetBestNode(scip->tree, scip->set);
 }
 
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+RETCODE SCIPupdateNodeLowerBound(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to update lower bound for */
+   Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPupdateNodeLowerBound", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   SCIPnodeUpdateLowerBound(node, newbound);
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -3363,6 +3392,16 @@ Real SCIPgetTransUpperBound(
    CHECK_ABORT( checkStage(scip, "SCIPgetTransUpperBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    return scip->primal->upperbound;
+}
+
+/** gets number of feasible primal solutions found so far */
+int SCIPgetNSolsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNSolsFound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return scip->primal->nsolsfound;
 }
 
 

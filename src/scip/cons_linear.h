@@ -42,6 +42,7 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
  *    lhs             : left hand side of linear constraint
  *    rhs             : right hand side of linear constraint
  *    local           : TRUE iff linear constraint is only locally valid
+ *    removeable      : TRUE iff separated rows of linear constraint should be removed from LP due to aging or cleanup
  *    nposbin         : number of binary variables with positive coefficient
  *    nnegbin         : number of binary variables with negative coefficient
  *    nposint         : number of integer variables with positive coefficient
@@ -65,7 +66,7 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
  *    SCIP_SUCCESS    : the linear constraint data was upgraded to the more specific constraint stored in *upgdcons
  */
 #define DECL_LINCONSUPGD(x) RETCODE x (SCIP* scip, CONS* cons, int nvars, VAR** vars, Real* vals, Real lhs, Real rhs, \
-            Bool local, \
+            Bool local, Bool removeable, \
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
             int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
             Bool integral, CONS** upgdcons, Bool* upgraded)
@@ -91,7 +92,8 @@ RETCODE SCIPlinconsCreate(
    Real             lhs,                /**< left hand side of row */
    Real             rhs,                /**< right hand side of row */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable          /**< is constraint modifiable during node processing (sbj. to column generation)? */
+   Bool             modifiable,         /**< is constraint modifiable during node processing (sbj. to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** frees a linear constraint object */
@@ -250,7 +252,8 @@ RETCODE SCIPcreateConsLinear(
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is linear constraint only valid locally? */
-   Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    );
 
 /** adds coefficient in linear constraint */
