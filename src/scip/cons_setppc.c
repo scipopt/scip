@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.47 2004/06/30 14:58:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.48 2004/07/01 10:35:33 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -39,6 +39,7 @@
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
+#define CONSHDLR_MAXPREROUNDS        -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define LINCONSUPGD_PRIORITY    +700000
@@ -2584,7 +2585,7 @@ RETCODE SCIPincludeConshdlrSetppc(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
-         CONSHDLR_NEEDSCONS,
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeSetppc, consInitSetppc, consExitSetppc, 
          consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
          consDeleteSetppc, consTransSetppc, 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.59 2004/06/01 16:40:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.60 2004/07/01 10:35:36 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -158,6 +158,18 @@ RETCODE SCIPnodeAddBoundchg(
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
+/** adds hole change to active node, child or sibling of active node */
+extern
+RETCODE SCIPnodeAddHolechg(
+   NODE*            node,               /**< node to add bound change to */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   HOLELIST**       ptr,                /**< changed list pointer */
+   HOLELIST*        newlist,            /**< new value of list pointer */
+   HOLELIST*        oldlist             /**< old value of list pointer */
    );
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.21 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.22 2004/07/01 10:35:36 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -117,6 +117,8 @@ struct Set
    int              dispwidth;          /**< maximal number of characters in a node information line */
    int              dispfreq;           /**< frequency for displaying node information lines */
    int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
+   int              restartbdchgs;      /**< number of root node bound changes triggering a restart with preprocessing
+                                         *   (-1: no restart, 0: restart only after complete root node evaluation) */
    int              maxpresolrounds;    /**< maximal number of presolving rounds (-1: unlimited) */
    int              maxproprounds;      /**< maximal number of propagation rounds per node (-1: unlimited) */
    int              maxproproundsroot;  /**< maximal number of propagation rounds in the root node (-1: unlimited) */

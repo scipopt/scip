@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.5 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.6 2004/07/01 10:35:35 bzfpfend Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -46,6 +46,7 @@ struct Presol
    PRESOLDATA*      presoldata;         /**< presolver data */
    CLOCK*           clock;              /**< presolving time */
    int              priority;           /**< priority of the presolver */
+   int              maxrounds;          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
    int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
    int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */

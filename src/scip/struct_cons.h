@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.12 2004/06/24 15:34:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.13 2004/07/01 10:35:35 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -142,6 +142,7 @@ struct Conshdlr
    int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq;          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int              maxprerounds;       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    int              consssize;          /**< size of conss array */
    int              nconss;             /**< total number of active constraints */
    int              maxnconss;          /**< maximal number of active constraints existing at the same time */

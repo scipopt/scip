@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.116 2004/06/30 10:40:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.117 2004/07/01 10:35:35 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1272,20 +1272,26 @@ RETCODE solveNode(
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers for separating constraints, sorted by priority */
    CONSHDLR**       conshdlrs_enfo,     /**< constraint handlers for enforcing constraints, sorted by priority */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   Bool*            infeasible          /**< pointer to store whether the current node's solution is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether the current node's solution is infeasible */
+   Bool*            restart             /**< should solving process be started again with presolving? */
    )
 {
    Bool initiallpsolved;
    Bool solveagain;
    int nlperrors;
+   int actdepth;
 
    assert(set != NULL);
+   assert(stat != NULL);
    assert(prob != NULL);
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(primal != NULL);
    assert(cutoff != NULL);
    assert(infeasible != NULL);
+   assert(restart != NULL);
+
+   *restart = FALSE;
 
    debugMessage("current pseudosolution: obj=%g", SCIPlpGetPseudoObjval(lp, set));
    debug(SCIPprobPrintPseudoSol(prob, set));
@@ -1308,6 +1314,7 @@ RETCODE solveNode(
    nlperrors = 0;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
+   actdepth = SCIPnodeGetDepth(tree->actnode);
    do
    {
       Real pseudoobjval;
@@ -1411,18 +1418,27 @@ RETCODE solveNode(
          }
       }
       assert(!solveagain || !(*cutoff));
+
+      /* check for immediate restart */
+      if( actdepth == 0 && set->restartbdchgs > 0 && stat->nrootboundchgsrun >= set->restartbdchgs )
+         *restart = TRUE;
    }
-   while( solveagain && nlperrors < MAXNLPERRORS );
+   while( solveagain && nlperrors < MAXNLPERRORS && !(*restart) );
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
+   /* check for too many LP errors */
    if( nlperrors >= MAXNLPERRORS )
    {
       errorMessage("(node %lld) unresolved numerical troubles in LP %d -- aborting\n", stat->nnodes, stat->nlps);
       return SCIP_LPERROR;
    }
 
+   /* check for final restart */
+   if( actdepth == 0 && set->restartbdchgs >= 0 && stat->nrootboundchgsrun > 0 )
+      *restart = TRUE;
+
    /* remember root LP solution */
-   if( SCIPnodeGetDepth(tree->actnode) == 0 )
+   if( actdepth == 0 && !(*restart) )
    {
       SCIPprobStoreRootSol(prob, tree->actnodehaslp);
    }
@@ -1568,7 +1584,8 @@ RETCODE SCIPsolveCIP(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            restart             /**< should solving process be started again with presolving? */
    )
 {
    CONSHDLR** conshdlrs_sepa;
@@ -1595,6 +1612,9 @@ RETCODE SCIPsolveCIP(
    assert(primal != NULL);
    assert(eventfilter != NULL);
    assert(eventqueue != NULL);
+   assert(restart != NULL);
+
+   *restart = FALSE;
 
    /* sort constraint handlers by priorities */
    ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_sepa, set->conshdlrs, set->nconshdlrs) );
@@ -1697,9 +1717,13 @@ RETCODE SCIPsolveCIP(
       else
       {
          CHECK_OKAY( solveNode(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
-                        conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible) );
+               conflict, eventfilter, eventqueue, conshdlrs_sepa, conshdlrs_enfo, &cutoff, &infeasible, restart) );
       }
       assert(!cutoff || infeasible);
+
+      /* check for restart */
+      if( *restart )
+         break;
 
       /* change color of node in VBC output */
       SCIPvbcSolvedNode(stat->vbc, stat, tree->actnode);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.143 2004/06/30 14:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.144 2004/07/01 10:35:35 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -88,6 +88,7 @@
 #ifdef NDEBUG
 #include "struct_scip.h"
 #include "set.h"
+#include "misc.h"
 #endif
 
 
@@ -502,6 +503,7 @@ RETCODE SCIPincludeConshdlr(
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -597,6 +599,7 @@ RETCODE SCIPincludePresol(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
+   int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */

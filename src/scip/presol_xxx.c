@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.9 2004/06/29 17:55:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.10 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   presol_xxx.c
  * @brief  xxx presolver
@@ -31,6 +31,7 @@
 #define PRESOL_NAME            "xxx"
 #define PRESOL_DESC            "presolver template"
 #define PRESOL_PRIORITY        0
+#define PRESOL_MAXROUNDS       -1
 
 
 
@@ -169,7 +170,7 @@ RETCODE SCIPincludePresolXxx(
    /* TODO: (optional) create presolver specific data here */
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY,
+   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          presolFreeXxx, presolInitXxx, presolExitXxx, 
          presolInitpreXxx, presolExitpreXxx, presolExecXxx,
          presoldata) );

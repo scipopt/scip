@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.101 2004/06/30 14:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.102 2004/07/01 10:35:36 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -768,8 +768,6 @@ RETCODE SCIPdomchgAddBoundchg(
    /* capture branching and inference data associated with the bound changes */
    CHECK_OKAY( boundchgCaptureData(boundchg) );
 
-   stat->nboundchgs++;
-
    return SCIP_OKAY;
 }
 
@@ -811,8 +809,6 @@ RETCODE SCIPdomchgAddHolechg(
    holechg->newlist = newlist;
    holechg->oldlist = oldlist;
    (*domchg)->domchgdyn.nholechgs++;
-
-   stat->nholechgs++;
 
    return SCIP_OKAY;
 }

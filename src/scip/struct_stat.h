@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.15 2004/06/08 20:55:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.16 2004/07/01 10:35:36 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -54,6 +54,7 @@ struct Stat
    Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */
    Longint          lastdivenode;       /**< last node where LP diving was applied */
+   Longint          nrootboundchgs;     /**< total number of bound changes generated in the root node */
    Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
@@ -71,6 +72,7 @@ struct Stat
    VBC*             vbc;                /**< VBC Tool information */
    BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int              nruns;              /**< number of branch and bound runs on current problem, including current run */
+   int              nrootboundchgsrun;  /**< total number of bound changes generated in the root node of current run */
    int              nvaridx;            /**< number of used variable indices */
    int              ncolidx;            /**< number of used column indices */
    int              nrowidx;            /**< number of used row indices */

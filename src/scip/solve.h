@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.25 2004/04/30 11:16:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.26 2004/07/01 10:35:35 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -78,7 +78,8 @@ RETCODE SCIPsolveCIP(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            restart             /**< should solving process be started again with presolving? */
    );
 
 

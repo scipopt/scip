@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.14 2004/06/29 17:55:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.15 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -265,5 +265,6 @@ RETCODE SCIPptrarraySetVal(
    int              idx,                /**< array index to set value for */
    void*            val                 /**< value to set array index to */
    );
+
 
 #endif

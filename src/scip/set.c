@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.100 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.101 2004/07/01 10:35:35 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -80,6 +80,8 @@
 
 
 /* Presolving */
+#define SCIP_DEFAULT_RESTARTBDCHGS      100 /**< number of root node bound changes triggering a restart with preprocessing
+                                             *   (-1: no restart, 0: restart only after complete root node evaluation) */
 #define SCIP_DEFAULT_MAXPRESOLROUNDS     -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOLABORTFAC   1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
 
@@ -403,6 +405,11 @@ RETCODE SCIPsetCreate(
          "branching/preferbinbranch",
          "should branching on binary variables be prefered?",
          &(*set)->preferbinbranch, SCIP_DEFAULT_PREFERBINBRANCH,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+         "presolving/restartbdchgs",
+         "number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)",
+         &(*set)->restartbdchgs, SCIP_DEFAULT_RESTARTBDCHGS, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
          "presolving/maxpresolrounds",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.5 2004/06/29 17:55:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.6 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -183,7 +183,8 @@ RETCODE SCIPincludeObjPresol(
    presoldata->deleteobject = deleteobject;
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, objpresol->scip_priority_,
+   CHECK_OKAY( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
+         objpresol->scip_priority_, objpresol->scip_maxrounds_,
          presolFreeObj, presolInitObj, presolExitObj, 
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) );

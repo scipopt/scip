@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.97 2004/06/30 14:17:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.98 2004/07/01 10:35:36 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -937,6 +937,8 @@ RETCODE SCIPnodeAddBoundinfer(
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, SCIPvarGetObj(var));
 
+   stat->nboundchgs++;
+
    /* if the node is the root node: change local and global bound immediately */
    if( node->depth == 0 )
    {
@@ -946,6 +948,9 @@ RETCODE SCIPnodeAddBoundinfer(
       CHECK_OKAY( SCIPvarSetBdGlobal(var, set, newbound, boundtype) );
       CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, newbound, boundtype,
                      NULL, NULL, 0, 0, -1, SCIP_BOUNDCHGTYPE_INFERENCE) );
+
+      stat->nrootboundchgs++;
+      stat->nrootboundchgsrun++;
 
       return SCIP_OKAY;
    }
@@ -1041,6 +1046,31 @@ RETCODE SCIPnodeAddBoundchg(
 {
    CHECK_OKAY( SCIPnodeAddBoundinfer(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, var, newbound, boundtype,
                   NULL, 0) );
+
+   return SCIP_OKAY;
+}
+
+/** adds hole change to active node, child or sibling of active node */
+RETCODE SCIPnodeAddHolechg(
+   NODE*            node,               /**< node to add bound change to */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   HOLELIST**       ptr,                /**< changed list pointer */
+   HOLELIST*        newlist,            /**< new value of list pointer */
+   HOLELIST*        oldlist             /**< old value of list pointer */
+   )
+{
+   assert(node != NULL);
+
+   debugMessage("adding holechange at node in depth %d: changed pointer at %p from %p to %p\n",
+      node->depth, ptr, newlist, oldlist);
+
+   stat->nholechgs++;
+
+   CHECK_OKAY( SCIPdomchgAddHolechg(&node->domchg, memhdr, set, stat, ptr, newlist, oldlist) );
+
+   /**@todo apply hole change on active nodes and issue event */
 
    return SCIP_OKAY;
 }

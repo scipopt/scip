@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.7 2004/06/29 17:55:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.8 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -49,15 +49,20 @@ public:
    /** default priority of the presolver */
    const int scip_priority_;
 
+   /** default maximal number of presolving rounds the presolver participates in (-1: no limit) */
+   const int scip_maxrounds_;
+
    /** default constructor */
    ObjPresol(
       const char*   name,               /**< name of presolver */
       const char*   desc,               /**< description of presolver */
-      int           priority            /**< priority of the presolver */
+      int           priority,           /**< priority of the presolver */
+      int           maxrounds           /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
       )
       : scip_name_(name),
         scip_desc_(desc),
-        scip_priority_(priority)
+        scip_priority_(priority),
+        scip_maxrounds_(maxrounds)
    {
    }
 

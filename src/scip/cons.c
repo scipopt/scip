@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.82 2004/06/24 15:34:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.83 2004/07/01 10:35:32 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1025,6 +1025,7 @@ RETCODE SCIPconshdlrCreate(
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1054,7 +1055,6 @@ RETCODE SCIPconshdlrCreate(
    )
 {
    char paramname[MAXSTRLEN];
-   char paramdesc[MAXSTRLEN];
 
    assert(conshdlr != NULL);
    assert(name != NULL);
@@ -1072,6 +1072,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->sepafreq = sepafreq;
    (*conshdlr)->propfreq = propfreq;
    (*conshdlr)->eagerfreq = eagerfreq;
+   (*conshdlr)->maxprerounds = maxprerounds;
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;
@@ -1166,21 +1167,24 @@ RETCODE SCIPconshdlrCreate(
 
    /* add parameters */
    sprintf(paramname, "constraints/%s/sepafreq", name);
-   sprintf(paramdesc, "frequency for separating cuts of constraint handler <%s> (-1: never, 0: only in root node)", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*conshdlr)->sepafreq, sepafreq, -1, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
+         "frequency for separating cuts (-1: never, 0: only in root node)",
+         &(*conshdlr)->sepafreq, sepafreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/propfreq", name);
-   sprintf(paramdesc, "frequency for propagating domains of constraint handler <%s> (-1: never, 0: only in root node)",
-      name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*conshdlr)->propfreq, propfreq, -1, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
+         "frequency for propagating domains (-1: never, 0: only in root node)",
+         &(*conshdlr)->propfreq, propfreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/eagerfreq", name);
-   sprintf(paramdesc, "frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <%s> (-1: never, 0: only in first evaluation)",
-      name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*conshdlr)->eagerfreq, eagerfreq, -1, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
+         "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
+         &(*conshdlr)->eagerfreq, eagerfreq, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "constraints/%s/maxprerounds", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
+         "maximal number of presolving rounds the constraint handler participates in (-1: no limit)",
+         &(*conshdlr)->maxprerounds, maxprerounds, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2004,7 +2008,8 @@ RETCODE SCIPconshdlrPresolve(
    *result = SCIP_DIDNOTRUN;
 
    if( conshdlr->conspresol != NULL
-      && (!conshdlr->needscons || conshdlr->nconss > 0) )
+      && (!conshdlr->needscons || conshdlr->nconss > 0)
+      && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds) )
    {
       int nnewfixedvars;
       int nnewaggrvars;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.179 2004/06/30 14:24:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.180 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1003,6 +1003,7 @@ RETCODE SCIPincludeConshdlr(
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+   int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1036,7 +1037,7 @@ RETCODE SCIPincludeConshdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
-         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, needscons, 
+         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, needscons, 
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
          consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
          consrescvar, conslock, consunlock, consactive, consdeactive, consenable, consdisable, consprint,
@@ -1159,6 +1160,7 @@ RETCODE SCIPincludePresol(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
+   int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -1172,7 +1174,7 @@ RETCODE SCIPincludePresol(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority,
+   CHECK_OKAY( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority, maxrounds,
          presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata) );
    CHECK_OKAY( SCIPsetIncludePresol(scip->set, presol) );
    
@@ -3449,6 +3451,8 @@ RETCODE SCIPsolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   Bool restart;
+
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    /* check, if a node selector exists */
@@ -3457,87 +3461,106 @@ RETCODE SCIPsolve(
       errorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   
-   /* start solving timer */
-   SCIPclockStart(scip->stat->solvingtime, scip->set);
 
-   switch( scip->stage )
+   /* automatic restarting loop */
+   do
    {
-   case SCIP_STAGE_PROBLEM:
-   case SCIP_STAGE_TRANSFORMED:
-      /* initialize solving data structures, transform and problem */
-      CHECK_OKAY( SCIPpresolve(scip) );
-      if( scip->stage == SCIP_STAGE_SOLVED )
-         return SCIP_OKAY;
-      assert(scip->stage == SCIP_STAGE_PRESOLVED);
+      restart = FALSE;
 
-      /*lint -fallthrough*/
+      /* start solving timer */
+      SCIPclockStart(scip->stat->solvingtime, scip->set);
 
-   case SCIP_STAGE_PRESOLVED:
-      /* initialize solving process data structures */
-      CHECK_OKAY( initSolve(scip) );
-      assert(scip->stage == SCIP_STAGE_SOLVING);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
+      switch( scip->stage )
+      {
+      case SCIP_STAGE_PROBLEM:
+      case SCIP_STAGE_TRANSFORMED:
+         /* initialize solving data structures, transform and problem */
+         CHECK_OKAY( SCIPpresolve(scip) );
+         if( scip->stage == SCIP_STAGE_SOLVED )
+            break;
+         assert(scip->stage == SCIP_STAGE_PRESOLVED);
+
+         /*lint -fallthrough*/
+
+      case SCIP_STAGE_PRESOLVED:
+         /* initialize solving process data structures */
+         CHECK_OKAY( initSolve(scip) );
+         assert(scip->stage == SCIP_STAGE_SOLVING);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
       
-      /*lint -fallthrough*/
+         /*lint -fallthrough*/
 
-   case SCIP_STAGE_SOLVING:
-      /* reset display */
-      SCIPstatResetDisplay(scip->stat);
+      case SCIP_STAGE_SOLVING:
+         /* reset display */
+         SCIPstatResetDisplay(scip->stat);
 
-      /* capture the CTRL-C interrupt */
-      if( scip->set->catchctrlc )
-         SCIPinterruptCapture(scip->interrupt);
+         /* capture the CTRL-C interrupt */
+         if( scip->set->catchctrlc )
+            SCIPinterruptCapture(scip->interrupt);
 
-      /* continue solution process */
-      CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob,
-                     scip->primal, scip->tree, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
-                     scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
+         /* continue solution process */
+         CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob,
+               scip->primal, scip->tree, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
+               scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
 
-      /* release the CTRL-C interrupt */
-      if( scip->set->catchctrlc )
-         SCIPinterruptRelease(scip->interrupt);
+         /* release the CTRL-C interrupt */
+         if( scip->set->catchctrlc )
+            SCIPinterruptRelease(scip->interrupt);
 
-      /* detect, whether problem is solved */
-      if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
-      {
-         /* tree is empty, and no active node exists -> problem is solved */
-         scip->stage = SCIP_STAGE_SOLVED;
-      }
-
-      /* display most relevant statistics */
-      if( scip->set->verblevel >= SCIP_VERBLEVEL_NORMAL )
-      {
-         printf("\n");
-         printf("SCIP Status        : ");
-         CHECK_OKAY( SCIPprintStatus(scip, NULL) );
-         printf("\n");
-         printf("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
-         if( scip->stat->nruns > 1 )
-            printf("Solving Nodes      : %lld (total of %lld nodes in %d runs)\n", 
-               scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
+         /* check for restart */
+         if( restart )
+         {
+            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+               "\nrestarting after %d root node bound changes in current run %d\n\n",
+               scip->stat->nrootboundchgsrun, scip->stat->nruns);
+            CHECK_OKAY( SCIPfreeSolve(scip) );
+            assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+         }
          else
-            printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
-         printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
-         printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
-         printf("Gap                : ");
-         if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
-            printf("infinite\n");
-         else
-            printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
-      }
-      break;
+         {
+            /* detect, whether problem is solved */
+            if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
+            {
+               /* tree is empty, and no active node exists -> problem is solved */
+               scip->stage = SCIP_STAGE_SOLVED;
+            }
+         }
+         break;
 
-   case SCIP_STAGE_SOLVED:
-      break;
+      case SCIP_STAGE_SOLVED:
+         break;
 
-   default:
-      errorMessage("invalid SCIP stage\n");
-      return SCIP_ERROR;
-   }  /*lint !e788*/
+      default:
+         errorMessage("invalid SCIP stage\n");
+         return SCIP_ERROR;
+      }  /*lint !e788*/
 
-   /* stop solving timer */
-   SCIPclockStop(scip->stat->solvingtime, scip->set);
+      /* stop solving timer */
+      SCIPclockStop(scip->stat->solvingtime, scip->set);
+   }
+   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat) );
+
+   /* display most relevant statistics */
+   if( scip->set->verblevel >= SCIP_VERBLEVEL_NORMAL )
+   {
+      printf("\n");
+      printf("SCIP Status        : ");
+      CHECK_OKAY( SCIPprintStatus(scip, NULL) );
+      printf("\n");
+      printf("Solving Time (sec) : %.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
+      if( scip->stat->nruns > 1 )
+         printf("Solving Nodes      : %lld (total of %lld nodes in %d runs)\n", 
+            scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
+      else
+         printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
+      printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+      printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
+      printf("Gap                : ");
+      if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
+         printf("infinite\n");
+      else
+         printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
+   }
 
    return SCIP_OKAY;
 }
@@ -4470,7 +4493,7 @@ RETCODE SCIPchgVarBranchFactor(
    Real             branchfactor        /**< factor to weigh variable's branching score with */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchFactor", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarChgBranchFactor(var, scip->set, branchfactor);
 
@@ -4484,7 +4507,7 @@ RETCODE SCIPscaleVarBranchFactor(
    Real             scale               /**< factor to scale variable's branching factor with */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPscaleVarBranchFactor", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPscaleVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarChgBranchFactor(var, scip->set, scale * SCIPvarGetBranchFactor(var));
 
@@ -4498,7 +4521,7 @@ RETCODE SCIPaddVarBranchFactor(
    Real             addfactor           /**< value to add to the branch factor of the variable */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchFactor", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarChgBranchFactor(var, scip->set, addfactor + SCIPvarGetBranchFactor(var));
 
@@ -4514,7 +4537,7 @@ RETCODE SCIPchgVarBranchPriority(
    int              branchpriority      /**< branch priority of the variable */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarChgBranchPriority(var, scip->set, branchpriority);
 
@@ -4528,7 +4551,7 @@ RETCODE SCIPupdateVarBranchPriority(
    int              branchpriority      /**< new branch priority of the variable, if it is larger than current priority */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPupdateVarBranchPriority", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPupdateVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( branchpriority > SCIPvarGetBranchPriority(var) )
       SCIPvarChgBranchPriority(var, scip->set, branchpriority);
@@ -4543,7 +4566,7 @@ RETCODE SCIPaddVarBranchPriority(
    int              addpriority         /**< value to add to the branch priority of the variable */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarChgBranchPriority(var, scip->set, addpriority + SCIPvarGetBranchPriority(var));
 
@@ -8293,6 +8316,10 @@ void printPresolverStatistics(
       }
    }
 
+   /* root node bound changes */
+   fprintf(file, "  root node        :          -          -          - %10lld          -          -          -          -\n",
+      scip->stat->nrootboundchgs);
+
 #if 0
    /* print total */
    fprintf(file, "  total            :");
@@ -8601,19 +8628,11 @@ void printTreeStatistics(
    assert(file != NULL);
 
    fprintf(file, "B&B Tree           :\n");
-   if( scip->stat->nruns > 1 )
-   {
-      fprintf(file, "  number of runs   : %10d\n", scip->stat->nruns);
-      fprintf(file, "  nodes            : %10lld\n", scip->stat->nnodes);
-      fprintf(file, "  nodes (total)    : %10lld\n", scip->stat->ntotalnodes);
-      fprintf(file, "  max depth        : %10d\n", scip->stat->maxdepth);
-      fprintf(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
-   }
-   else
-   {
-      fprintf(file, "  nodes            : %10lld\n", scip->stat->nnodes);
-      fprintf(file, "  max depth        : %10d\n", scip->stat->maxdepth);
-   }
+   fprintf(file, "  number of runs   : %10d\n", scip->stat->nruns);
+   fprintf(file, "  nodes            : %10lld\n", scip->stat->nnodes);
+   fprintf(file, "  nodes (total)    : %10lld\n", scip->stat->ntotalnodes);
+   fprintf(file, "  max depth        : %10d\n", scip->stat->maxdepth);
+   fprintf(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
    fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 
@@ -8782,7 +8801,7 @@ RETCODE SCIPprintStatistics(
       fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
-      fprintf(file, "Transformed Problem:\n");
+      fprintf(file, "Presolved Problem  :\n");
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
@@ -8796,7 +8815,7 @@ RETCODE SCIPprintStatistics(
       fprintf(file, "Solving Time       : %10.2f\n", SCIPclockGetTime(scip->stat->solvingtime));
       fprintf(file, "Original Problem   :\n");
       SCIPprobPrintStatistics(scip->origprob, file);
-      fprintf(file, "Transformed Problem:\n");
+      fprintf(file, "Presolved Problem  :\n");
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);

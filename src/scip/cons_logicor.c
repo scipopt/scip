@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.45 2004/06/24 15:34:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.46 2004/07/01 10:35:33 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -39,6 +39,7 @@
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
+#define CONSHDLR_MAXPREROUNDS        -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define LINCONSUPGD_PRIORITY    +800000
@@ -2167,7 +2168,7 @@ RETCODE SCIPincludeConshdlrLogicor(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeLogicor, consInitLogicor, consExitLogicor, 
          consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
          consDeleteLogicor, consTransLogicor, 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.104 2004/06/30 14:17:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.105 2004/07/01 10:35:33 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -59,7 +59,8 @@
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             5
 #define CONSHDLR_EAGERFREQ          100
-#define CONSHDLR_NEEDSCONS         TRUE /**< the constraint handler should only be called, if linear constraints exist */
+#define CONSHDLR_MAXPREROUNDS        -1
+#define CONSHDLR_NEEDSCONS         TRUE
 
 #define DEFAULT_TIGHTENBOUNDSFREQ     1 /**< multiplier on propagation frequency, how often the bounds are tightened */
 #define DEFAULT_MAXAGGRNORMSCALE    5.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation */
@@ -4581,7 +4582,7 @@ RETCODE SCIPincludeConshdlrLinear(
    /* include constraint handler in SCIP */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeLinear, consInitLinear, consExitLinear, 
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
          consDeleteLinear, consTransLinear, 

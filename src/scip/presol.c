@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.19 2004/06/29 17:55:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.20 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -71,6 +71,7 @@ RETCODE SCIPpresolCreate(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
+   int              maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -105,8 +106,12 @@ RETCODE SCIPpresolCreate(
    sprintf(paramname, "presolving/%s/priority", name);
    sprintf(paramdesc, "priority of presolver <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*presol)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdPresolPriority, (PARAMDATA*)(*presol)) ); /*lint !e740*/
+         &(*presol)->priority, priority, INT_MIN, INT_MAX, 
+         paramChgdPresolPriority, (PARAMDATA*)(*presol)) ); /*lint !e740*/
+   sprintf(paramname, "presolving/%s/maxrounds", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname,
+         "maximal number of presolving rounds the presolver participates in (-1: no limit)",
+         &(*presol)->maxrounds, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -307,9 +312,13 @@ RETCODE SCIPpresolExec(
    assert(nchgsides != NULL);
    assert(result != NULL);
 
-   debugMessage("calling presolver <%s>\n", presol->name);
-
    *result = SCIP_DIDNOTRUN;
+
+   /* check number of presolving rounds */
+   if( presol->maxrounds >= 0 && nrounds >= presol->maxrounds )
+      return SCIP_OKAY;
+
+   debugMessage("calling presolver <%s>\n", presol->name);
 
    /* calculate the number of changes since last call */
    nnewfixedvars = *nfixedvars - presol->lastnfixedvars;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.16 2004/06/24 15:34:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.17 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -66,6 +66,9 @@ public:
    /** default frequency of the constraint handler for eager evaluations in separation, propagation and enforcement */
    const int scip_eagerfreq_;
 
+   /** maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   const Bool scip_maxprerounds_;
+
    /** should the constraint handler be skipped, if no constraints are available? */
    const Bool scip_needscons_;
 
@@ -80,6 +83,7 @@ public:
       int           propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
       int           eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+      int           maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
       Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
       : scip_name_(name),
@@ -90,6 +94,7 @@ public:
         scip_sepafreq_(sepafreq),
         scip_propfreq_(propfreq),
         scip_eagerfreq_(eagerfreq),
+        scip_maxprerounds_(maxprerounds),
         scip_needscons_(needscons)
    {
    }

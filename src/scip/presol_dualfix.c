@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.12 2004/06/29 17:55:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.13 2004/07/01 10:35:34 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -31,7 +31,8 @@
 
 #define PRESOL_NAME            "dualfix"
 #define PRESOL_DESC            "roundable variables dual fixing"
-#define PRESOL_PRIORITY         +100000
+#define PRESOL_PRIORITY        +100000
+#define PRESOL_MAXROUNDS       -1
 
 
 
@@ -145,7 +146,7 @@ RETCODE SCIPincludePresolDualfix(
    presoldata = NULL;
 
    /* include presolver */
-   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY,
+   CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          presolFreeDualfix, presolInitDualfix, presolExitDualfix, 
          presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
          presoldata) );

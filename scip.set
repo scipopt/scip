@@ -19,35 +19,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
+# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
+# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -85,6 +85,10 @@ memory/pathgrowinit = 256
 # branching score factor to weigh downward and upward gain prediction
 # [type: real, range: [0,1], default: 0.167]
 branching/branchscorefac = 0.167
+
+# should branching on binary variables be prefered?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+branching/preferbinbranch = TRUE
 
 # maximal number of presolving rounds (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -230,7 +234,7 @@ timing/clocktype = 1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 timing/clocksenabled = TRUE
 
-# should the CTRL-C interrupt be catched by SCIP?
+# should the CTRL-C interrupt be caught by SCIP?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/catchctrlc = TRUE
 
@@ -242,17 +246,21 @@ misc/vbcfilename = "-"
 # [type: int, range: [-2147483648,2147483647], default: -1000000]
 conflict/linear/priority = -1000000
 
-# frequency for separating cuts of constraint handler <linear> (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/sepafreq = 5
 
-# frequency for propagating domains of constraint handler <linear> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/propfreq = 5
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <linear> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/linear/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linear/maxprerounds = -1
 
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -262,53 +270,69 @@ constraints/linear/tightenboundsfreq = 1
 # [type: real, range: [0,1.79769313486232e+308], default: 5]
 constraints/linear/maxaggrnormscale = 5
 
-# frequency for separating cuts of constraint handler <and> (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 1
 
-# frequency for propagating domains of constraint handler <and> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <and> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/and/eagerfreq = 100
 
-# frequency for separating cuts of constraint handler <conjunction> (-1: never, 0: only in root node)
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/and/maxprerounds = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = -1
 
-# frequency for propagating domains of constraint handler <conjunction> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/propfreq = -1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <conjunction> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/conjunction/eagerfreq = 100
 
-# frequency for separating cuts of constraint handler <integral> (-1: never, 0: only in root node)
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/conjunction/maxprerounds = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1
 
-# frequency for propagating domains of constraint handler <integral> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <integral> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/eagerfreq = -1
 
-# frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/integral/maxprerounds = -1
+
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 constraints/knapsack/sepafreq = 10
 
-# frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <knapsack> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/knapsack/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/knapsack/maxprerounds = -1
 
 # maximal number of separation rounds per node
 # [type: int, range: [0,2147483647], default: 5]
@@ -330,17 +354,21 @@ constraints/knapsack/maxsepacutsroot = 200
 # [type: int, range: [-2147483648,2147483647], default: 800000]
 conflict/logicor/priority = 800000
 
-# frequency for separating cuts of constraint handler <logicor> (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/logicor/sepafreq = 5
 
-# frequency for propagating domains of constraint handler <logicor> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/logicor/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <logicor> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/logicor/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/logicor/maxprerounds = -1
 
 # number of children created in pseudo branching (0: disable pseudo branching)
 # [type: int, range: [0,2147483647], default: 2]
@@ -354,49 +382,61 @@ constraints/logicor/maxvarusefac = 1
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: -0.2]
 constraints/logicor/minvarusefac = -0.2
 
-# frequency for separating cuts of constraint handler <or> (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/sepafreq = 1
 
-# frequency for propagating domains of constraint handler <or> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <or> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/or/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/or/maxprerounds = -1
 
 # priority of conflict handler <setppc>
 # [type: int, range: [-2147483648,2147483647], default: 700000]
 conflict/setppc/priority = 700000
 
-# frequency for separating cuts of constraint handler <setppc> (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/setppc/sepafreq = 5
 
-# frequency for propagating domains of constraint handler <setppc> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <setppc> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/setppc/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/setppc/maxprerounds = -1
 
 # number of children created in pseudo branching (0: disable pseudo branching)
 # [type: int, range: [0,2147483647], default: 2]
 constraints/setppc/npseudobranches = 2
 
-# frequency for separating cuts of constraint handler <varbound> (-1: never, 0: only in root node)
+# frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/sepafreq = 1
 
-# frequency for propagating domains of constraint handler <varbound> (-1: never, 0: only in root node)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/propfreq = 1
 
-# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <varbound> (-1: never, 0: only in first evaluation)
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
 constraints/varbound/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/varbound/maxprerounds = -1
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -418,9 +458,17 @@ reading/mpsreader/dynamicrows = FALSE
 # [type: int, range: [-2147483648,2147483647], default: 100000]
 presolving/dualfix/priority = 100000
 
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/dualfix/maxrounds = -1
+
 # priority of presolver <trivial>
 # [type: int, range: [-2147483648,2147483647], default: 9000000]
 presolving/trivial/priority = 9000000
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/trivial/maxrounds = -1
 
 # priority of branching rule <bfs> in standard mode
 # [type: int, range: [-2147483648,2147483647], default: 100000]
