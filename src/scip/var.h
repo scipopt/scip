@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.53 2004/02/25 16:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.54 2004/03/08 18:05:35 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -133,7 +133,8 @@ RETCODE SCIPdomchgAddBoundchg(
    BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   int              inferinfo           /**< user information for inference to help resolving the conflict */
    );
 
 /** adds hole change to domain changes */
@@ -396,6 +397,7 @@ RETCODE SCIPvarChgLbLocal(
    Real             newbound,           /**< new bound for variable */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
    int              inferdepth,         /**< depth in the tree, where this bound change took place, or -1 */
    int              inferindex,         /**< bound change index for each node representing the order of changes, or -1 */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
@@ -416,6 +418,7 @@ RETCODE SCIPvarChgUbLocal(
    Real             newbound,           /**< new bound for variable */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
    int              inferdepth,         /**< depth in the tree, where this bound change took place, or -1 */
    int              inferindex,         /**< bound change index for each node representing the order of changes, or -1 */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */
@@ -437,6 +440,7 @@ RETCODE SCIPvarChgBdLocal(
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
    CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
    int              inferdepth,         /**< depth in the tree, where this bound change took place */
    int              inferindex,         /**< bound change index for each node representing the order of changes */
    BOUNDCHGTYPE     boundchgtype        /**< bound change type (branching or inference) of binary variable's fixing */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.30 2004/02/25 16:49:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.31 2004/03/08 18:05:30 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -904,7 +904,7 @@ RETCODE lpGenerateAltLP(
             ++cnt;
          }
          if( row->local )
-            obj = 2000.0;
+            obj = 1000.0;
          else
             obj = 0.0;
          lb = 0.0;
@@ -932,7 +932,7 @@ RETCODE lpGenerateAltLP(
             ++cnt;
          }
          if( row->local )
-            obj = 3000.0;
+            obj = 1000.0;
          else
             obj = 0.0;
          lb = 0.0;
@@ -993,7 +993,7 @@ RETCODE lpGenerateAltLP(
          if( !SCIPsetIsEQ(set, SCIPvarGetLbGlobal(col->var), col->lb) )
          {
             if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
-               obj = 1.0;
+               obj = 1.0 + SCIPvarGetInferDepth(col->var);
             else
                obj = 1000.0;
          }
@@ -1025,7 +1025,7 @@ RETCODE lpGenerateAltLP(
          if( !SCIPsetIsEQ(set, SCIPvarGetUbGlobal(col->var), col->ub) )
          {
             if( SCIPvarGetType(col->var) == SCIP_VARTYPE_BINARY )
-               obj = 1.0;
+               obj = 1.0 + SCIPvarGetInferDepth(col->var);
             else
                obj = 1000.0;
          }

@@ -218,14 +218,6 @@ timing/clocksenabled = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 misc/catchctrlc = TRUE
 
-# frequency for separating cuts of constraint handler <and> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/and/sepafreq = -1
-
-# frequency for propagating domains of constraint handler <and> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/and/propfreq = -1
-
 # frequency for separating cuts of constraint handler <integral> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1

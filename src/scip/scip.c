@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.129 2004/03/01 09:54:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.130 2004/03/08 18:05:33 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3597,7 +3597,7 @@ RETCODE SCIPchgVarLb(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
       return SCIP_OKAY;
 
    default:
@@ -3636,7 +3636,7 @@ RETCODE SCIPchgVarUb(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL) );
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
       return SCIP_OKAY;
 
    default:
@@ -3661,7 +3661,7 @@ RETCODE SCIPchgVarLbNode(
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
+                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
    
    return SCIP_OKAY;
 }
@@ -3682,7 +3682,7 @@ RETCODE SCIPchgVarUbNode(
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL ) );
+                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
    
    return SCIP_OKAY;
 }
@@ -3738,7 +3738,7 @@ RETCODE SCIPtightenVarLb(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
       break;
 
    default:
@@ -3803,7 +3803,7 @@ RETCODE SCIPtightenVarUb(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL) );
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
       break;
 
    default:
@@ -3826,15 +3826,45 @@ RETCODE SCIPinferBinVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< binary variable, that is deduced to a fixed value */
    Bool             fixedval,           /**< value to fix binary variable to */
-   CONS*            infercons           /**< constraint that deduced the fixing */
+   CONS*            infercons,          /**< constraint that deduced the fixing */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
 {
-   Bool infeasible;
+   Real lb;
+   Real ub;
 
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(fixedval == TRUE || fixedval == FALSE);
+   assert(infeasible != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPinferBinVar", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   *infeasible = FALSE;
+
+   /* get current bounds */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPsetIsEQ(scip->set, lb, 0.0) || SCIPsetIsEQ(scip->set, lb, 1.0));
+   assert(SCIPsetIsEQ(scip->set, ub, 0.0) || SCIPsetIsEQ(scip->set, ub, 1.0));
+   assert(SCIPsetIsLE(scip->set, lb, ub));
+
+   /* check, if variable is already fixed */
+   if( (lb > 0.5) || (ub < 0.5) )
+   {
+      if( fixedval == (lb > 0.5) )
+      {
+         if( tightened != NULL )
+            *tightened = FALSE;
+      }
+      else
+         *infeasible = TRUE;
+
+      return SCIP_OKAY;
+   }
+
+   /* apply the fixing */
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -3847,32 +3877,38 @@ RETCODE SCIPinferBinVar(
       {
          CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
       }
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->eventqueue, (Real)fixedval, &infeasible) );
-      assert(!infeasible);
-      return SCIP_OKAY;
+                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+      break;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       if( fixedval == TRUE )
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                        scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons) );
+         CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                        scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
+                        infercons, inferinfo) );
       }
       else
       {
-         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                        scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons) );
+         CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                        scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
+                        infercons, inferinfo) );
       }
-      return SCIP_OKAY;
+      break;
 
    default:
       errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }  /*lint !e788*/
+
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
@@ -5503,7 +5539,7 @@ Real SCIPgetRowLPActivity(
    return SCIProwGetLPActivity(row, scip->stat, scip->lp);
 }
 
-/** returns the feasibility of a row in the last LP solution */
+/** returns the feasibility of a row in the last LP solution: negative value means infeasibility */
 Real SCIPgetRowLPFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */
@@ -5525,7 +5561,7 @@ Real SCIPgetRowPseudoActivity(
    return SCIProwGetPseudoActivity(row, scip->stat);
 }
 
-/** returns the feasibility of a row for the current pseudo solution */
+/** returns the feasibility of a row for the current pseudo solution: negative value means infeasibility */
 Real SCIPgetRowPseudoFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row                 /**< LP row */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.12 2004/02/04 17:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.13 2004/03/08 18:05:32 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -80,7 +80,7 @@ struct ConshdlrData
  * Callback methods of constraint handler
  */
 
-/* TODO: Implement all necessary constraint handler methods. The methods with an #if 0 ... #else #define ... are optional */
+/* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 0
@@ -443,9 +443,9 @@ RETCODE SCIPcreateConsXxx(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              len,                /**< number of nonzeros in the constraint */
+   int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
+   Real*            coefs,              /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.32 2004/03/01 09:54:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.33 2004/03/08 18:05:32 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -238,7 +238,7 @@ RETCODE consdataDropEvent(
    return SCIP_OKAY;
 }
 
-/** locks rounding for variable at given position in transformed logic or constraint */
+/** locks rounding for variable in transformed logic or constraint */
 static
 void lockRounding(
    VAR*             var,                /**< problem variable */
@@ -252,7 +252,7 @@ void lockRounding(
    SCIPvarLock(var, nlockspos, nlocksneg);
 }
 
-/** unlocks rounding for variable at given position in transformed logic or constraint */
+/** unlocks rounding for variable in transformed logic or constraint */
 static
 void unlockRounding(
    VAR*             var,                /**< problem variable */
@@ -300,6 +300,53 @@ void consdataUnlockAllRoundings(
       unlockRounding(consdata->vars[i], nunlockspos, nunlocksneg);
 }
 
+/** stores the given variable numbers as watched variables, and updates the event processing */
+static
+RETCODE consdataSwitchWatchedvars(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< logic or constraint data */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   int              watchedvar1,        /**< new first watched variable */
+   int              watchedvar2         /**< new second watched variable */
+   )
+{
+   assert(consdata != NULL);
+   assert(watchedvar1 == -1 || watchedvar1 != watchedvar2);
+   assert(watchedvar1 != -1 || watchedvar2 == -1);
+   assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
+   assert(watchedvar1 == -1 || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[watchedvar1]), 0.0));
+   assert(watchedvar1 == -1 || SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[watchedvar1]), 1.0));
+   assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
+   assert(watchedvar2 == -1 || SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[watchedvar2]), 0.0));
+   assert(watchedvar2 == -1 || SCIPisEQ(scip, SCIPvarGetUbLocal(consdata->vars[watchedvar2]), 1.0));
+
+   /* drop events on old watched variables */
+   if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
+   {
+      CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, consdata->watchedvar1) );
+   }
+   if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar1 && consdata->watchedvar2 != watchedvar2 )
+   {
+      CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, consdata->watchedvar2) );
+   }
+
+   /* catch events on new watched variables */
+   if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 && watchedvar1 != consdata->watchedvar2 )
+   {
+      CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, watchedvar1) );
+   }
+   if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar1 && watchedvar2 != consdata->watchedvar2 )
+   {
+      CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, watchedvar2) );
+   }
+
+   /* set the new watched variables */
+   consdata->watchedvar1 = watchedvar1;
+   consdata->watchedvar2 = watchedvar2;
+
+   return SCIP_OKAY;
+}
+
 /** creates a logic or constraint data object */
 static
 RETCODE consdataCreate(
@@ -333,29 +380,14 @@ RETCODE consdataCreate(
    (*consdata)->watchedsolvar = -1;
    (*consdata)->propagated = FALSE;
 
+   /* get transformed variables, if we are in the transformed problem */
+   if( SCIPisTransformed(scip) )
+   {
+      CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+   }
+
    return SCIP_OKAY;
 }   
-
-/** creates a transformed logic or constraint data object */
-static
-RETCODE consdataCreateTransformed(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to store the logic or constraint data */
-   int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars                /**< variables of the constraint */
-   )
-{
-   assert(consdata != NULL);
-   assert(nvars == 0 || vars != NULL);
-
-   /* create constraint data */
-   CHECK_OKAY( consdataCreate(scip, consdata, nvars, vars) );
-
-   /* transform the variables */
-   CHECK_OKAY( SCIPgetTransformedVars(scip, nvars, (*consdata)->vars, (*consdata)->vars) );
-
-   return SCIP_OKAY;
-}
 
 /** frees a logic or constraint data */
 static
@@ -369,24 +401,13 @@ RETCODE consdataFree(
    assert(*consdata != NULL);
    assert(eventhdlr != NULL);
 
+   /* drop bound tighten events for watched variables */
+   CHECK_OKAY( consdataSwitchWatchedvars(scip, *consdata, eventhdlr, -1, -1) );
+
    /* release the row */
    if( (*consdata)->row != NULL )
    {
       CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
-   }
-
-   /* drop bound tighten events for watched variables */
-   if( (*consdata)->watchedvar1 != -1 )
-   {
-      assert(0 <= (*consdata)->watchedvar1 && (*consdata)->watchedvar1 < (*consdata)->nvars);
-      assert(SCIPvarIsTransformed((*consdata)->vars[(*consdata)->watchedvar1]));
-      CHECK_OKAY( consdataDropEvent(scip, *consdata, eventhdlr, (*consdata)->watchedvar1) );
-   }
-   if( (*consdata)->watchedvar2 != -1 )
-   {
-      assert(0 <= (*consdata)->watchedvar2 && (*consdata)->watchedvar2 < (*consdata)->nvars);
-      assert(SCIPvarIsTransformed((*consdata)->vars[(*consdata)->watchedvar2]));
-      CHECK_OKAY( consdataDropEvent(scip, *consdata, eventhdlr, (*consdata)->watchedvar2) );
    }
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -452,15 +473,11 @@ RETCODE delCoefPos(
       /* if the position is watched, drop bound tighten events and stop watching the position */
       if( pos == consdata->watchedvar1 )
       {
-         assert(pos != consdata->watchedvar2);
-         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, pos) );
-         consdata->watchedvar1 = -1;
+         CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar2, -1) );
       }
       if( pos == consdata->watchedvar2 )
       {
-         assert(pos != consdata->watchedvar1);
-         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, pos) );
-         consdata->watchedvar2 = -1;
+         CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, consdata->watchedvar1, -1) );
       }
       if( pos == consdata->watchedfeasvar )
          consdata->watchedfeasvar = -1;
@@ -506,13 +523,15 @@ RETCODE applyFixings(
    while( v < consdata->nvars )
    {
       var = consdata->vars[v];
-      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 1.0) )
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+      if( SCIPvarGetLbGlobal(var) > 0.5 )
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          *redundant = TRUE;
          return SCIP_OKAY;
       }
-      else if( SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 0.0) )
+      else if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
          assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
          CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
@@ -571,6 +590,7 @@ RETCODE processWatchedVars(
    int watchedvar1;
    int watchedvar2;
    int v;
+   Bool infeasible;
 
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
@@ -610,7 +630,7 @@ RETCODE processWatchedVars(
    if( consdata->watchedfeasvar >= 0 )
    {
       lb = SCIPvarGetLbLocal(vars[consdata->watchedfeasvar]);
-      if( SCIPisEQ(scip, lb, 1.0) )
+      if( lb > 0.5 )
       {
          /* the watched feasible variable is fixed to one, making the constraint redundant;
           * we can disable it and don't have to check it for feasibility
@@ -624,9 +644,9 @@ RETCODE processWatchedVars(
    {
       lb = SCIPvarGetLbLocal(vars[watchedvar1]);
       ub = SCIPvarGetUbLocal(vars[watchedvar1]);
-      if( SCIPisEQ(scip, lb, ub) )
+      if( (lb > 0.5) == (ub > 0.5) )
       {
-         if( SCIPisEQ(scip, lb, 1.0) )
+         if( lb > 0.5 )
          {
             /* the variable is fixed to one, making the constraint redundant;
              * remember the variable and disable the constraint
@@ -648,9 +668,9 @@ RETCODE processWatchedVars(
    {
       lb = SCIPvarGetLbLocal(vars[watchedvar2]);
       ub = SCIPvarGetUbLocal(vars[watchedvar2]);
-      if( SCIPisEQ(scip, lb, ub) )
+      if( (lb > 0.5) == (ub > 0.5) )
       {
-         if( SCIPisEQ(scip, lb, 1.0) )
+         if( lb > 0.5 )
          {
             /* the variable is fixed to one, making the constraint redundant;
              * remember the variable and disable the constraint
@@ -701,9 +721,9 @@ RETCODE processWatchedVars(
       /* check, if the variable is fixed */
       lb = SCIPvarGetLbLocal(vars[v]);
       ub = SCIPvarGetUbLocal(vars[v]);
-      if( SCIPisEQ(scip, lb, ub) )
+      if( (lb > 0.5) == (ub > 0.5) )
       {
-         if( SCIPisEQ(scip, lb, 1.0) )
+         if( lb > 0.5 )
          {
             /* the variable is fixed to one, making the constraint redundant;
              * remember the variable and disable the constraint
@@ -763,7 +783,8 @@ RETCODE processWatchedVars(
          /* fixed remaining variable to one and disable constraint */
          debugMessage("single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
             SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetDepth(scip));
-         CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons) ); /* provide cons for conflict analysis */
+         CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons, 0, &infeasible, NULL) );
+         assert(!infeasible);
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          *reduceddom = TRUE;
@@ -771,44 +792,15 @@ RETCODE processWatchedVars(
    }
    else
    {
+      /* switch to the new watched variables */
+      CHECK_OKAY( consdataSwitchWatchedvars(scip, consdata, eventhdlr, watchedvar1, watchedvar2) );
+
       /* there are at least two unfixed variables -> the constraint must be checked manually */
-      assert(watchedvar1 != watchedvar2);
-      assert(0 <= watchedvar1 && watchedvar1 < nvars);
-      assert(0 <= watchedvar2 && watchedvar2 < nvars);
-      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar1]), 0.0));
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar1]), 1.0));
-      assert(SCIPisEQ(scip, SCIPvarGetLbLocal(vars[watchedvar2]), 0.0));
-      assert(SCIPisEQ(scip, SCIPvarGetUbLocal(vars[watchedvar2]), 1.0));
       *mustcheck = TRUE;
 
-      /* drop events on old watched variables */
-      if( consdata->watchedvar1 != -1
-         && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
-      {
-         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, consdata->watchedvar1) );
-      }
-      if( consdata->watchedvar2 != -1
-         && consdata->watchedvar2 != watchedvar1 && consdata->watchedvar2 != watchedvar2 )
-      {
-         CHECK_OKAY( consdataDropEvent(scip, consdata, eventhdlr, consdata->watchedvar2) );
-      }
-
-      /* catch events on new watched variables */
-      if( watchedvar1 != consdata->watchedvar1 && watchedvar1 != consdata->watchedvar2 )
-      {
-         CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, watchedvar1) );
-      }
-      if( watchedvar2 != consdata->watchedvar1 && watchedvar2 != consdata->watchedvar2 )
-      {
-         CHECK_OKAY( consdataCatchEvent(scip, consdata, eventhdlr, watchedvar2) );
-      }
-
-      /* remember the two watched variables for next time */
-      consdata->watchedvar1 = watchedvar1;
-      consdata->watchedvar2 = watchedvar2;
-      consdata->propagated = TRUE;
-
+      /* mark the constraint propagated, and increase its age */
       CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * nvars) );
+      consdata->propagated = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1128,7 +1120,7 @@ DECL_CONSTRANS(consTransLogicor)
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
 
    /* create constraint data for target constraint */
-   CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
+   CHECK_OKAY( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1175,8 +1167,6 @@ DECL_CONSSEPA(consSepaLogicor)
 
    debugMessage("separating %d/%d logic or constraints\n", nusefulconss, nconss);
 
-   *result = SCIP_DIDNOTFIND;
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -1209,6 +1199,8 @@ DECL_CONSSEPA(consSepaLogicor)
       *result = SCIP_SEPARATED;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -1699,8 +1691,6 @@ DECL_CONSPROP(consPropLogicor)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   *result = SCIP_DIDNOTFIND;
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -1729,6 +1719,8 @@ DECL_CONSPROP(consPropLogicor)
       *result = SCIP_CUTOFF;
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -1844,6 +1836,7 @@ DECL_CONSRESCVAR(consRescvarLogicor)
    {
       if( consdata->vars[v] != infervar )
       {
+         assert(SCIPvarWasFixedEarlier(consdata->vars[v], infervar));
          assert(SCIPvarGetUbLocal(consdata->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
          CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[v]) );
       }
@@ -2206,16 +2199,7 @@ RETCODE SCIPcreateConsLogicor(
    }
 
    /* create the constraint specific data */
-   if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
-   {
-      /* create constraint in original problem */
-      CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars) );
-   }
-   else
-   {
-      /* create constraint in transformed problem */
-      CHECK_OKAY( consdataCreateTransformed(scip, &consdata, nvars, vars) );
-   }
+   CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars) );
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,

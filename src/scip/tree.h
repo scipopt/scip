@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.53 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.54 2004/03/08 18:05:35 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -120,7 +120,27 @@ RETCODE SCIPnodeDisableCons(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** adds bound change to current node, child or sibling of current node; if possible, adjusts bound to integral value */
+/** adds bound change with inference information to active node, child or sibling of active node;
+ *  if possible, adjusts bound to integral value
+ */
+extern
+RETCODE SCIPnodeAddBoundinfer(
+   NODE*            node,               /**< node to add bound change to */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var,                /**< variable to change the bounds for */
+   Real             newbound,           /**< new value for bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   int              inferinfo           /**< user information for inference to help resolving the conflict */
+   );
+
+/** adds bound change to active node, child or sibling of active node; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
@@ -133,9 +153,9 @@ RETCODE SCIPnodeAddBoundchg(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
+
 
 #ifndef NDEBUG
 

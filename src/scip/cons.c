@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.67 2004/03/01 09:54:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.68 2004/03/08 18:05:31 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3320,7 +3320,7 @@ RETCODE SCIPconsResolveConflictVar(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( cons->conshdlr->consrescvar(set->scip, cons->conshdlr, cons, var) );
+   CHECK_OKAY( cons->conshdlr->consrescvar(set->scip, cons->conshdlr, cons, var, SCIPvarGetInferInfo(var)) );
 
    return SCIP_OKAY;
 }

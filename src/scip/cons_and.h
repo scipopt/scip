@@ -14,39 +14,37 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.h,v 1.7 2004/03/08 18:05:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.h,v 1.9 2004/03/08 18:05:31 bzfpfend Exp $"
 
-/**@file   cons_xxx.h
- * @brief  constraint handler for xxx constraints
+/**@file   cons_and.h
+ * @brief  constraint handler for and constraints
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __CONS_XXX_H__
-#define __CONS_XXX_H__
+#ifndef __CONS_AND_H__
+#define __CONS_AND_H__
 
 
 #include "scip.h"
 
 
-/** creates the handler for xxx constraints and includes it in SCIP */
+/** creates the handler for and constraints and includes it in SCIP */
 extern
-RETCODE SCIPincludeConshdlrXxx(
+RETCODE SCIPincludeConshdlrAnd(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** creates and captures a xxx constraint */
+/** creates and captures a and constraint */
 extern
-RETCODE SCIPcreateConsXxx(
+RETCODE SCIPcreateConsAnd(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            coefs,              /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
-   Real             rhs,                /**< right hand side of constraint */
+   VAR*             resvar,             /**< resultant variable of the operation */
+   int              nvars,              /**< number of operator variables in the constraint */
+   VAR**            vars,               /**< array with operator variables of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */

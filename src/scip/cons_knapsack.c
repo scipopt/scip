@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.12 2004/03/03 17:07:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.13 2004/03/08 18:05:31 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -63,7 +63,7 @@ struct ConsData
 
 /** creates knapsack constraint data */
 static
-RETCODE createConsdata(
+RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA**       consdata,           /**< pointer to store constraint data */
    int              nvars,              /**< number of variables in knapsack */
@@ -94,13 +94,11 @@ RETCODE createConsdata(
 
 /** frees knapsack constraint data */
 static
-RETCODE freeConsdata(
+RETCODE consdataFree(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata            /**< pointer to store constraint data */
+   CONSDATA**       consdata            /**< pointer to the constraint data */
    )
 {
-   int i;
-
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -116,42 +114,9 @@ RETCODE freeConsdata(
    return SCIP_OKAY;
 }
 
-/** checks knapsack constraint for feasibility of given solution */
-static
-RETCODE checkCons(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< constraint to check */
-   SOL*             sol,                /**< solution to check, NULL for current solution */
-   Bool             checklprows,        /**< should LP rows be checked? */
-   Bool*            violated            /**< pointer to store whether constraint is violated */
-   )
-{
-   CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
-   {
-      Real sum;
-      int i;
-
-      sum = 0.0;
-      for( i = 0; i < consdata->nvars && sum <= consdata->capacity+0.1; i++ )
-      {
-         sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
-      }
-      *violated = !SCIPisFeasLE(scip, sum, consdata->capacity);
-   }
-   else
-      *violated = FALSE;
-
-   return SCIP_OKAY;
-}
-
 /** creates LP row corresponding to knapsack constraint */
 static 
-RETCODE createRow(
+RETCODE createRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint to check */
    )
@@ -171,7 +136,7 @@ RETCODE createRow(
 
 /** adds linear relaxation of knapsack constraint to the LP */
 static 
-RETCODE addRow(
+RETCODE addRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint to check */
    )
@@ -183,12 +148,44 @@ RETCODE addRow(
 
    if( consdata->row == NULL )
    {
-      CHECK_OKAY( createRow(scip, cons) );
+      CHECK_OKAY( createRelaxation(scip, cons) );
    }
    CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(SCIProwGetNNonz(consdata->row)+1)) );
 
    return SCIP_OKAY;
 }
+
+/** checks knapsack constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
+static
+Bool checkCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to check */
+   SOL*             sol,                /**< solution to check, NULL for current solution */
+   Bool             checklprows         /**< should LP rows be checked? */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
+   {
+      Real sum;
+      int i;
+
+      sum = 0.0;
+      for( i = 0; i < consdata->nvars && sum <= consdata->capacity+0.1; i++ )
+      {
+         sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
+      }
+      return SCIPisFeasLE(scip, sum, consdata->capacity);
+   }
+   else
+      return TRUE;
+}
+
+
 
 
 /*
@@ -261,7 +258,7 @@ DECL_CONSSOLSTART(consSolstartKnapsack)
 static
 DECL_CONSDELETE(consDeleteKnapsack)
 {  /*lint --e{715}*/
-   CHECK_OKAY( freeConsdata(scip, consdata) );
+   CHECK_OKAY( consdataFree(scip, consdata) );
    
    return SCIP_OKAY;
 }
@@ -278,7 +275,7 @@ DECL_CONSTRANS(consTransKnapsack)
    assert(sourcedata != NULL);
 
    /* create target constraint data */
-   CHECK_OKAY( createConsdata(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->weights, 
+   CHECK_OKAY( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->weights, 
                   sourcedata->capacity) ); 
 
    /* create target constraint */
@@ -286,7 +283,6 @@ DECL_CONSTRANS(consTransKnapsack)
                   SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
                   SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
                   SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
-
 
    return SCIP_OKAY;
 }
@@ -296,14 +292,13 @@ DECL_CONSTRANS(consTransKnapsack)
 static
 DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
-
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
       if( SCIPconsIsInitial(conss[i]) )
       {
-         CHECK_OKAY( addRow(scip, conss[i]) );
+         CHECK_OKAY( addRelaxation(scip, conss[i]) );
       }
    }
 
@@ -330,13 +325,11 @@ DECL_CONSSEPA(consSepaKnapsack)
 static
 DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
-   Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
-      if( violated )
+      if( !checkCons(scip, conss[i], NULL, FALSE) )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -352,13 +345,11 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
 static
 DECL_CONSENFOPS(consEnfopsKnapsack)
 {  /*lint --e{715}*/
-   Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
-      if( violated )
+      if( !checkCons(scip, conss[i], NULL, TRUE) )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -374,13 +365,11 @@ DECL_CONSENFOPS(consEnfopsKnapsack)
 static
 DECL_CONSCHECK(consCheckKnapsack)
 {  /*lint --e{715}*/
-   Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], sol, TRUE, &violated) );
-      if( violated )
+      if( !checkCons(scip, conss[i], sol, TRUE) )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -643,7 +632,7 @@ RETCODE SCIPcreateConsKnapsack(
    }
 
    /* create constraint data */
-   CHECK_OKAY( createConsdata(scip, &consdata, len, vars, vals, rhs) );
+   CHECK_OKAY( consdataCreate(scip, &consdata, len, vars, vals, rhs) );
         
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,

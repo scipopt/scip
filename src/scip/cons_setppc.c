@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.36 2004/02/25 16:49:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.37 2004/03/08 18:05:32 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -831,6 +831,8 @@ RETCODE processFixings(
             VAR* var;
             Bool fixedonefound;
             Bool fixed;
+            Bool infeasible;
+            Bool tightened;
             int nvars;
             int v;
 
@@ -846,11 +848,9 @@ RETCODE processFixings(
                assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
                if( SCIPvarGetLbLocal(var) < 0.5 )
                {
-                  if( SCIPvarGetUbLocal(var) > 0.5 )
-                  {
-                     CHECK_OKAY( SCIPinferBinVar(scip, var, FALSE, cons) ); /* provide cons for conflict analysis */
-                     fixed = TRUE;
-                  }
+                  CHECK_OKAY( SCIPinferBinVar(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
+                  assert(!infeasible);
+                  fixed = fixed || tightened;
                }
                else
                   fixedonefound = TRUE;
@@ -925,27 +925,29 @@ RETCODE processFixings(
       {
          VAR** vars;
          VAR* var;
-         Bool fixed;
+         Bool infeasible;
+         Bool tightened;
          int nvars;
          int v;
          
          /* search the single variable that can be fixed */
          vars = consdata->vars;
          nvars = consdata->nvars;
-         fixed = FALSE;
-         for( v = 0; v < nvars && !fixed; ++v )
+         for( v = 0; v < nvars; ++v )
          {
             var = vars[v];
             assert(SCIPisZero(scip, SCIPvarGetLbLocal(var)));
             assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
-               CHECK_OKAY( SCIPinferBinVar(scip, var, TRUE, cons) ); /* provide cons for conflict analysis */
-               fixed = TRUE;
+               CHECK_OKAY( SCIPinferBinVar(scip, var, TRUE, cons, 0, &infeasible, &tightened) );
+               assert(!infeasible);
+               assert(tightened);
+               break;
             }
          }
-         assert(fixed);
-         
+         assert(v < nvars);
+
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          *reduceddom = TRUE;
       }

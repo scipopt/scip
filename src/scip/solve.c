@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.89 2004/02/25 16:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.90 2004/03/08 18:05:34 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -292,7 +292,8 @@ RETCODE initRootLP(
    PRICESTORE*      pricestore,         /**< pricing storage */
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    VAR* var;
@@ -305,6 +306,9 @@ RETCODE initRootLP(
    assert(SCIPlpGetNRows(lp) == 0);
    assert(lp->nremoveablecols == 0);
    assert(lp->nremoveablerows == 0);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
 
    /* inform pricing and separation storage, that LP is now filled with initial data */
    SCIPpricestoreStartInitialLP(pricestore);
@@ -331,7 +335,7 @@ RETCODE initRootLP(
    {
       CHECK_OKAY( SCIPconshdlrInitLP(set->conshdlrs[h], memhdr, set, prob) );
    }
-   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+   CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
    /* inform pricing and separation storage, that initial LP setup is now finished */
    SCIPpricestoreEndInitialLP(pricestore);
@@ -353,7 +357,8 @@ RETCODE solveNodeInitialLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    EVENT event;
@@ -362,6 +367,9 @@ RETCODE solveNodeInitialLP(
    assert(tree != NULL);
    assert(tree->actnode != NULL);
    assert(lp != NULL);
+   assert(cutoff != NULL);
+
+   *cutoff = FALSE;
 
    /* load the LP into the solver and load the LP state */
    debugMessage("loading LP\n");
@@ -371,7 +379,7 @@ RETCODE solveNodeInitialLP(
    if( SCIPnodeGetDepth(tree->actnode) == 0 )
    {
       assert(stat->lpcount == 0);
-      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue) );
+      CHECK_OKAY( initRootLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, branchcand, eventqueue, cutoff) );
    }
 
    /* only the bounds and the constraint list may have been changed since the LP state node
@@ -615,22 +623,25 @@ RETCODE solveNodeLP(
             oldnboundchanges = stat->nboundchanges;
 
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
-
-            /* if at least one of the cut was a bound change, propagate domains again */
-            if( stat->nboundchanges != oldnboundchanges )
-            {
-               CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, cutoff) );
-            }
-
-            mustprice = mustprice || !lp->solved;
-            mustsepar = !lp->solved;
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, cutoff) );
 
             if( !(*cutoff) )
             {
-               /* solve LP (with dual simplex) */
-               debugMessage("separation: solve LP\n");
-               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
+               /* if at least one of the cut was a bound change, propagate domains again */
+               if( stat->nboundchanges != oldnboundchanges )
+               {
+                  CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, cutoff) );
+               }
+               
+               mustprice = mustprice || !lp->solved;
+               mustsepar = !lp->solved;
+               
+               if( !(*cutoff) )
+               {
+                  /* solve LP (with dual simplex) */
+                  debugMessage("separation: solve LP\n");
+                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
+               }
             }
          }
          assert(*cutoff || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
@@ -750,7 +761,7 @@ RETCODE redcostStrengthening(
                   debugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->cutoffbound, lpobjval, redcost);
                   CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                                 var, newbd, SCIP_BOUNDTYPE_UPPER, NULL) );
+                                 var, newbd, SCIP_BOUNDTYPE_UPPER) );
                   stat->nredcoststrfound++;
                }
             }
@@ -783,7 +794,7 @@ RETCODE redcostStrengthening(
                   debugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->cutoffbound, lpobjval, redcost);
                   CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                                 var, newbd, SCIP_BOUNDTYPE_LOWER, NULL) );
+                                 var, newbd, SCIP_BOUNDTYPE_LOWER) );
                   stat->nredcoststrfound++;
                }
             }
@@ -840,6 +851,7 @@ RETCODE enforceConstraints(
    Bool resolved;
    Bool enforceagain;
    Bool objinfeasible;
+   Bool cutoff;
    int h;
 
    assert(set != NULL);
@@ -946,10 +958,10 @@ RETCODE enforceConstraints(
             assert(SCIPsepastoreGetNCuts(sepastore) > 0);
 
             /* apply found cuts */
-            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+            CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, stat, tree, lp, branchcand, eventqueue, &cutoff) );
 
             *infeasible = TRUE;
-            *solveagain = TRUE;
+            *solveagain = !cutoff;
             resolved = TRUE;
             break;
 
@@ -1269,49 +1281,53 @@ RETCODE SCIPsolveCIP(
                {
                   /* load and solve the initial LP of the node */
                   CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, 
-                                 branchcand, eventfilter, eventqueue) );
+                                 branchcand, eventfilter, eventqueue, &cutoff) );
                   assert(lp->solved);
                   initiallpsolved = TRUE;
                }
                assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
-               /* solve-redcost-propagate loop */
-               do
+               if( !cutoff )
                {
-                  /* continue solving the LP with price and cut */
-                  CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
-                                 conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
-                                 &cutoff) );
-                  assert(cutoff || lp->solved);
-                  
-                  /* reduced cost bound strengthening */
-                  if( !cutoff
-                     && ((set->redcostfreq == 0 && actnode->depth == 0)
-                        || (set->redcostfreq >= 1 && (actnode->depth % set->redcostfreq) == 0))
-                     && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
-                     && !SCIPsetIsInfinity(set, primal->cutoffbound)
-                     && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) )
+                  /* solve-redcost-propagate loop */
+                  do
                   {
-                     Longint oldnboundchanges;
+                     /* continue solving the LP with price and cut */
+                     CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
+                                    conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
+                                    &cutoff) );
+                     assert(cutoff || lp->solved);
                      
-                     oldnboundchanges = stat->nboundchanges;
-
-                     /* apply reduced cost bound strengthening */
-                     CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue) );
-
-                     /* apply further domain propagation, if addional bounds have been changed */
-                     if( stat->nboundchanges != oldnboundchanges )
+                     /* reduced cost bound strengthening */
+                     if( !cutoff
+                        && ((set->redcostfreq == 0 && actnode->depth == 0)
+                           || (set->redcostfreq >= 1 && (actnode->depth % set->redcostfreq) == 0))
+                        && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+                        && !SCIPsetIsInfinity(set, primal->cutoffbound)
+                        && SCIPsetIsLT(set, SCIPlpGetObjval(lp, set), primal->cutoffbound) )
                      {
-                        CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, &cutoff) );
-                        if( cutoff )
+                        Longint oldnboundchanges;
+                        
+                        oldnboundchanges = stat->nboundchanges;
+                        
+                        /* apply reduced cost bound strengthening */
+                        CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, tree, lp, branchcand, primal, 
+                                       eventqueue) );
+                        
+                        /* apply further domain propagation, if addional bounds have been changed */
+                        if( stat->nboundchanges != oldnboundchanges )
                         {
-                           debugMessage("redcost domain propagation determined that node is infeasible\n");
-                           SCIPnodeUpdateLowerbound(tree->actnode, primal->cutoffbound);
+                           CHECK_OKAY( propagateDomains(memhdr, set, stat, prob, tree, &cutoff) );
+                           if( cutoff )
+                           {
+                              debugMessage("redcost domain propagation determined that node is infeasible\n");
+                              SCIPnodeUpdateLowerbound(tree->actnode, primal->cutoffbound);
+                           }
                         }
                      }
                   }
+                  while( !cutoff && !lp->solved );
                }
-               while( !cutoff && !lp->solved );
             }
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             

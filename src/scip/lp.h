@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.67 2004/02/05 14:12:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.68 2004/03/08 18:05:33 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -373,7 +373,7 @@ Real SCIProwGetLPActivity(
    LP*              lp                  /**< current LP data */
    );
 
-/** returns the feasibility of a row in the current LP solution */
+/** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
 extern
 Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
@@ -388,7 +388,7 @@ Real SCIProwGetPseudoActivity(
    STAT*            stat                /**< problem statistics */
    );
 
-/** returns the pseudo feasibility of a row in the current pseudo solution */
+/** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
 extern
 Real SCIProwGetPseudoFeasibility(
    ROW*             row,                /**< LP row */

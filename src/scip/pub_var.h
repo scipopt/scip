@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.7 2004/02/25 16:49:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.8 2004/03/08 18:05:33 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -395,6 +395,12 @@ CONS* SCIPvarGetInferCons(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets user information for inference to help resolving the conflict */
+extern
+int SCIPvarGetInferInfo(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** gets inference depth level of binary variable (depth in the tree at which variable was fixed), or -1 if unfixed */
 extern
 int SCIPvarGetInferDepth(
@@ -405,6 +411,13 @@ int SCIPvarGetInferDepth(
 extern
 int SCIPvarGetInferIndex(
    VAR*             var                 /**< problem variable */
+   );
+
+/** returns TRUE iff first variable was fixed earlier than second variable */
+extern
+Bool SCIPvarWasFixedEarlier(
+   VAR*             var1,               /**< first problem variable */
+   VAR*             var2                /**< second problem variable */
    );
 
 /** gets type of bound change of fixed binary variable (fixed due to branching or due to inference) */
@@ -458,8 +471,14 @@ Real SCIPvarGetBranchingPriority(
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
 #define SCIPvarGetInferVar(var)         (var)->infervar
 #define SCIPvarGetInferCons(var)        (var)->infercons
+#define SCIPvarGetInferInfo(var)        (var)->inferinfo
 #define SCIPvarGetInferDepth(var)       (var)->inferdepth
 #define SCIPvarGetInferIndex(var)       (var)->inferindex
+#define SCIPvarWasFixedEarlier(var1,var2) ((var1)->inferdepth >= 0                            \
+                                            && ((var2)->inferdepth == -1                      \
+                                              || (var1)->inferdepth < (var2)->inferdepth      \
+                                              || ((var1)->inferdepth == (var2)->inferdepth    \
+                                                && (var1)->inferindex < (var2)->inferindex)))
 #define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
 #define SCIPvarGetBranchingPriority(var) (var)->branchingpriority
 

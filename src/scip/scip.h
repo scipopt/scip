@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.109 2004/03/01 09:54:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.110 2004/03/08 18:05:34 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1542,7 +1542,10 @@ RETCODE SCIPinferBinVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< binary variable, that is deduced to a fixed value */
    Bool             fixedval,           /**< value to fix binary variable to */
-   CONS*            infercons           /**< constraint that deduced the fixing */
+   CONS*            infercons,          /**< constraint that deduced the fixing */
+   int              inferinfo,          /**< user information for inference to help resolving the conflict */
+   Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
 /** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
@@ -2189,7 +2192,7 @@ Real SCIPgetRowLPActivity(
    ROW*             row                 /**< LP row */
    );
 
-/** returns the feasibility of a row in the last LP solution */
+/** returns the feasibility of a row in the last LP solution: negative value means infeasibility */
 extern
 Real SCIPgetRowLPFeasibility(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2203,7 +2206,7 @@ Real SCIPgetRowPseudoActivity(
    ROW*             row                 /**< LP row */
    );
 
-/** returns the feasibility of a row for the current pseudo solution */
+/** returns the feasibility of a row for the current pseudo solution: negative value means infeasibility */
 extern
 Real SCIPgetRowPseudoFeasibility(
    SCIP*            scip,               /**< SCIP data structure */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.7 2004/02/04 17:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.8 2004/03/08 18:05:34 bzfpfend Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -86,7 +86,8 @@ RETCODE SCIPsepastoreApplyCuts(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
 /** clears the separation storage without adding the cuts to the LP */

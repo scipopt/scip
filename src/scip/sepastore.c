@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.12 2004/02/04 17:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.13 2004/03/08 18:05:34 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -360,7 +360,8 @@ RETCODE SCIPsepastoreApplyCuts(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
    VAR* var;
@@ -371,12 +372,14 @@ RETCODE SCIPsepastoreApplyCuts(
    assert(set != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
+   assert(cutoff != NULL);
 
    /**@todo avoid applying redundant cuts */
    debugMessage("applying %d bound changes and %d cuts\n", sepastore->nbdchgs, sepastore->ncuts);
 
    /* apply cuts stored as bound changes */
-   for( i = 0; i < sepastore->nbdchgs; ++i )
+   *cutoff = FALSE;
+   for( i = 0; i < sepastore->nbdchgs && !(*cutoff); ++i )
    {
       var = sepastore->bdchgvars[i];
       val = sepastore->bdchgvals[i];
@@ -387,8 +390,13 @@ RETCODE SCIPsepastoreApplyCuts(
             debugMessage("apply bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val, SCIPvarGetUbLocal(var));
 
-            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                           var, val, SCIP_BOUNDTYPE_LOWER, NULL) );
+            if( SCIPsetIsLE(set, val, SCIPvarGetUbLocal(var)) )
+            {
+               CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                              var, val, SCIP_BOUNDTYPE_LOWER) );
+            }
+            else
+               *cutoff = TRUE;
 
             if( !sepastore->initiallp )
                sepastore->ncutsapplied++;
@@ -401,8 +409,13 @@ RETCODE SCIPsepastoreApplyCuts(
             debugMessage("apply bound change: <%s>: [%g,%g] -> [%g,%g]\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), val);
 
-            CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                           var, val, SCIP_BOUNDTYPE_UPPER, NULL) );
+            if( SCIPsetIsGE(set, val, SCIPvarGetLbLocal(var)) )
+            {
+               CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
+                              var, val, SCIP_BOUNDTYPE_UPPER) );
+            }
+            else
+               *cutoff = TRUE;
 
             if( !sepastore->initiallp )
                sepastore->ncutsapplied++;

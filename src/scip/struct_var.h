@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.7 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.8 2004/03/08 18:05:34 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -67,6 +67,7 @@ struct InferenceData
 {
    VAR*             var;                /**< variable that was changed (parent of var, or var itself) */
    CONS*            cons;               /**< constraint that inferred this bound change, or NULL */
+   int              info;               /**< user information for inference to help resolving the conflict */
 };
 
 /** change in one bound of a variable */
@@ -187,6 +188,7 @@ struct Var
    int              nuses;              /**< number of times, this variable is referenced */
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
+   int              inferinfo;          /**< user information for inference to help resolving the conflict */
    int              inferdepth;         /**< depth in the tree, where the binary variable was fixed, or -1 */
    int              inferindex;         /**< index of the binary variable's fixing in its depth level, or -1 */
    int              conflictsetcount;   /**< number of last conflict set, this variable was member of */

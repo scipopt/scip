@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.4 2004/02/05 14:12:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.5 2004/03/08 18:05:35 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -348,8 +348,9 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that deduced the assignment of the conflict variable
  *  - infervar        : the binary conflict variable that has to be resolved
+ *  - inferinfo       : the user information passed to the corresponding SCIPinferBinVar() call
  */
-#define DECL_CONSRESCVAR(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar)
+#define DECL_CONSRESCVAR(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar, int inferinfo)
 
 /** variable rounding lock method of constraint handler
  *
