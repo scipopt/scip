@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.107 2003/11/27 17:48:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.108 2003/12/01 14:41:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -26,14 +26,39 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "mem.h"
+#include "def.h"
+#include "retcode.h"
 #include "set.h"
-#include "interrupt.h"
-#include "prob.h"
 #include "stat.h"
-#include "solve.h"
+#include "clock.h"
+#include "interrupt.h"
 #include "lpi.h"
+#include "mem.h"
+#include "misc.h"
+#include "event.h"
+#include "lp.h"
+#include "var.h"
+#include "prob.h"
+#include "sol.h"
+#include "primal.h"
+#include "tree.h"
+#include "pricestore.h"
+#include "sepastore.h"
+#include "cutpool.h"
+#include "solve.h"
 #include "scip.h"
+
+#include "branch.h"
+#include "conflict.h"
+#include "cons.h"
+#include "dialog.h"
+#include "disp.h"
+#include "heur.h"
+#include "nodesel.h"
+#include "reader.h"
+#include "presol.h"
+#include "pricer.h"
+#include "sepa.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -42,7 +67,7 @@
  * are implemented as defines for performance reasons (e.g. the numerical comparisons)
  */
 #ifndef NDEBUG
-#include "scipstruct.h"
+#include "struct_scip.h"
 #endif
 
 
@@ -2751,7 +2776,8 @@ RETCODE SCIPsolve(
    }
    
    /* capture the CTRL-C interrupt */
-   SCIPinterruptCapture(scip->interrupt, scip->set);
+   if( scip->set->catchctrlc )
+      SCIPinterruptCapture(scip->interrupt);
 
    /* start solving timer */
    SCIPclockStart(scip->stat->solvingtime, scip->set);
@@ -2779,7 +2805,7 @@ RETCODE SCIPsolve(
       SCIPstatResetDisplay(scip->stat);
 
       /* continue solution process */
-      CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+      CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob, scip->tree, 
                      scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->cutpool, scip->lpconflict,
                      scip->primal, scip->eventfilter, scip->eventqueue) );
 
@@ -2821,7 +2847,8 @@ RETCODE SCIPsolve(
    SCIPclockStop(scip->stat->solvingtime, scip->set);
 
    /* release the CTRL-C interrupt */
-   SCIPinterruptRelease(scip->interrupt, scip->set);
+   if( scip->set->catchctrlc )
+      SCIPinterruptRelease(scip->interrupt);
 
    return SCIP_OKAY;
 }
@@ -8069,24 +8096,7 @@ Longint SCIPgetMemUsed(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
-   {  /*lint --e{788}*/
-   case SCIP_STAGE_INIT:
-   case SCIP_STAGE_PROBLEM:
-      return getBlockMemoryUsed(scip->mem->probmem);
-
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_FREESOLVE:
-      return getBlockMemoryUsed(scip->mem->probmem) + getBlockMemoryUsed(scip->mem->solvemem);
-
-   default:
-      errorMessage("Unknown SCIP stage\n");
-      abort();
-   }
+   return SCIPmemGetUsed(scip->mem);
 }
 
 /** calculate memory size for dynamically allocated arrays */

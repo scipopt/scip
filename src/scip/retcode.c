@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.c,v 1.12 2003/11/21 10:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: retcode.c,v 1.13 2003/12/01 14:41:30 bzfpfend Exp $"
 
 /**@file   retcode.c
- * @brief  return codes for SCIP methods
+ * @brief  methods for return codes for SCIP methods
  * @author Tobias Achterberg
  */
 

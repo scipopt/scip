@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.71 2003/11/27 17:48:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.72 2003/12/01 14:41:32 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -25,12 +25,32 @@
 
 #include <assert.h>
 
-#include "var.h"
-#include "cons.h"
-#include "disp.h"
+#include "def.h"
+#include "set.h"
+#include "stat.h"
 #include "clock.h"
 #include "interrupt.h"
+#include "misc.h"
+#include "event.h"
+#include "lp.h"
+#include "var.h"
+#include "prob.h"
+#include "sol.h"
+#include "primal.h"
+#include "tree.h"
+#include "pricestore.h"
+#include "sepastore.h"
+#include "cutpool.h"
 #include "solve.h"
+#include "scip.h"
+#include "conflict.h"
+#include "cons.h"
+#include "disp.h"
+#include "heur.h"
+#include "nodesel.h"
+#include "pricer.h"
+#include "sepa.h"
+
 
 
 /** returns whether the solving process will be / was stopped before proving optimality */
@@ -719,7 +739,6 @@ RETCODE enforceConstraints(
                return SCIP_INVALIDRESULT;
             }
          }
-         assert(set->buffer->firstfree == 0);
          debugMessage("enforcing of <%s> returned result %d\n", SCIPconshdlrGetName(conshdlrs_enfo[h]), result);
 
          switch( result )
@@ -811,7 +830,6 @@ RETCODE enforceConstraints(
    }
    while( enforceagain );
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-   assert(set->buffer->firstfree == 0);
 
    if( *infeasible && !resolved )
    {
@@ -828,7 +846,6 @@ RETCODE enforceConstraints(
    
       /* branch on pseudo solution */
       CHECK_OKAY( SCIPbranchPseudo(set->scip, &result) );
-      assert(set->buffer->firstfree == 0);
 
       switch( result )
       {  /*lint --e{788}*/
@@ -920,6 +937,7 @@ RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
+   MEM*             mem,                /**< block memory pools */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
@@ -968,10 +986,8 @@ RETCODE SCIPsolveCIP(
 
    while( !SCIPsolveIsStopped(set, stat) )
    {
-      assert(set->buffer->firstfree == 0);
-
       /* update the memory saving flag, switch algorithms respectively */
-      SCIPstatUpdateMemsaveMode(stat, set);
+      SCIPstatUpdateMemsaveMode(stat, set, mem);
 
       /* get the current node selector */
       nodesel = SCIPsetGetActNodesel(set, stat);
@@ -981,7 +997,6 @@ RETCODE SCIPsolveCIP(
 
       /* select next node to process */
       CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &actnode) );
-      assert(set->buffer->firstfree == 0);
 
       if( actnode != NULL )
       {
@@ -1013,16 +1028,13 @@ RETCODE SCIPsolveCIP(
 
       /* delay events in node activation */
       CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
-      assert(set->buffer->firstfree == 0);
 
       /* activate selected node */
       CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
       assert(tree->actnode == actnode);
-      assert(set->buffer->firstfree == 0);
 
       /* process the delayed events */
       CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, tree, lp, branchcand, eventfilter) );
-      assert(set->buffer->firstfree == 0);
 
       /* issue NODEACTIVATED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
@@ -1128,7 +1140,6 @@ RETCODE SCIPsolveCIP(
                while( !cutoff && !lp->solved );
             }
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-            assert(set->buffer->firstfree == 0);
             
             /* update lower bound w.r.t. the pseudo solution */
             actpsobjval = SCIPtreeGetActPseudoobjval(tree, set);
@@ -1177,7 +1188,6 @@ RETCODE SCIPsolveCIP(
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
             CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
             CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-            assert(set->buffer->firstfree == 0);
                
             /* found a feasible solution */
             oldnsolsfound = primal->nsolsfound;
@@ -1225,16 +1235,13 @@ RETCODE SCIPsolveCIP(
          }
          CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
          CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-         assert(set->buffer->firstfree == 0);
       }
 
       /* call primal heuristics */
       CHECK_OKAY( primalHeuristics(set, tree, primal, &foundsol) );
-      assert(set->buffer->firstfree == 0);
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(actnode) == 0) && infeasible && !foundsol) );
-      assert(set->buffer->firstfree == 0);
       
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
          SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));

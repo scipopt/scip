@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.2 2003/11/27 17:48:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.3 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   pricestore.c
- * @brief  methods and datastructures for storing priced variables
+ * @brief  methods for storing priced variables
  * @author Tobias Achterberg
  */
 
@@ -25,28 +25,18 @@
 
 #include <assert.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "clock.h"
+#include "lp.h"
+#include "var.h"
+#include "prob.h"
+#include "tree.h"
 #include "pricestore.h"
 
+#include "struct_pricestore.h"
 
-/** storage for priced variables */
-struct Pricestore
-{
-   CLOCK*           probpricingtime;    /**< time needed to price existing problem variables */
-   VAR**            vars;               /**< array with priced variables with violated reduced costs sorted by score */
-   Real*            scores;             /**< score for each priced variable (e.g. |redcost|/#nonzeros) */
-   VAR**            bdviolvars;         /**< variables where zero violates the bounds */
-   Real*            bdviolvarslb;       /**< lower bounds of bdviolvars */
-   Real*            bdviolvarsub;       /**< upper bounds of bdbiolvars */
-   int              varssize;           /**< size of vars and score arrays */
-   int              nvars;              /**< number of priced variables (max. is set->maxpricevars) */
-   int              bdviolvarssize;     /**< size of bdviolvars, bdviolvarslb, and bdviolvarsub arrays */
-   int              nbdviolvars;        /**< number of variables, where zero violates the bounds */
-   int              naddedbdviolvars;   /**< number of bound violated variables already added to the LP */
-   int              nprobpricings;      /**< total number of calls to problem variable pricing */
-   int              nprobvarsfound;     /**< total number of problem variables, that were added (and evtl. thrown away) */
-   int              nvarsfound;         /**< total number of variables, that were added (and evtl. thrown away) */
-   int              nvarsapplied;       /**< total number of variables, that were added to the LP */
-};
 
 
 /*

@@ -13,10 +13,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.19 2003/11/27 17:48:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.20 2003/12/01 14:41:22 bzfpfend Exp $"
 
 /**@file   branch.h
- * @brief  methods and datastructures for branching methods
+ * @brief  internal methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  */
 
@@ -26,77 +26,25 @@
 #define __BRANCH_H__
 
 
-typedef struct BranchCand BRANCHCAND;   /**< branching candidate storage */
-typedef struct Branchrule BRANCHRULE;   /**< branching method data structure */
-typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific data */
+#include "def.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_result.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_misc.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_scip.h"
+#include "type_branch.h"
+#include "pub_branch.h"
 
 
-/** destructor of branching method to free user data (called when SCIP is exiting)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - branchrule      : the branching rule itself
+
+/*
+ * branching candidate storage methods
  */
-#define DECL_BRANCHFREE(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
-
-/** initialization method of branching rule (called when problem solving starts)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - branchrule      : the branching rule itself
- */
-#define DECL_BRANCHINIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
-
-/** deinitialization method of branching rule (called when problem solving exits)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - branchrule      : the branching rule itself
- */
-#define DECL_BRANCHEXIT(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule)
-
-/** branching execution method for fractional LP solutions
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - branchrule      : the branching rule itself
- *  - result          : pointer to store the result of the branching call
- *
- *  possible return values for *result:
- *  - SCIP_CUTOFF     : the current node was detected to be infeasible
- *  - SCIP_BRANCHED   : branching was applied
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual LP solution infeasible
- *  - SCIP_SEPARATED  : a cutting plane was generated
- *  - SCIP_DIDNOTRUN  : the branching rule was skipped
- */
-#define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
-
-/** branching execution method for not completely fixed pseudo solutions
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - branchrule      : the branching rule itself
- *  - result          : pointer to store the result of the branching call
- *
- *  possible return values for *result:
- *  - SCIP_CUTOFF     : the current node was detected to be infeasible
- *  - SCIP_BRANCHED   : branching was applied
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the actual pseudo solution infeasible
- *  - SCIP_DIDNOTRUN  : the branching rule was skipped
- */
-#define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, RESULT* result)
-
-
-
-#include "scip.h"
-#include "retcode.h"
-#include "set.h"
-#include "var.h"
-
-
-
-/* branching candidate storage methods */
-
 
 /** creates a branching candidate storage */
 extern
@@ -144,11 +92,9 @@ RETCODE SCIPbranchcandUpdateVar(
 
 
 
-/* branching rules */
-
-/** compares two branching rules w. r. to their priority */
-extern
-DECL_SORTPTRCOMP(SCIPbranchruleComp);
+/*
+ * branching rules
+ */
 
 /** creates a branching rule */
 extern
@@ -202,37 +148,6 @@ RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
-   );
-
-/** gets user data of branching rule */
-extern
-BRANCHRULEDATA* SCIPbranchruleGetData(
-   BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
-/** sets user data of branching rule; user has to free old data in advance! */
-extern
-void SCIPbranchruleSetData(
-   BRANCHRULE*      branchrule,         /**< branching rule */
-   BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
-   );
-
-/** gets name of branching rule */
-extern
-const char* SCIPbranchruleGetName(
-   BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
-/** gets description of branching rule */
-extern
-const char* SCIPbranchruleGetDesc(
-   BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
-/** gets priority of branching rule */
-extern
-int SCIPbranchruleGetPriority(
-   BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /** sets priority of branching rule */

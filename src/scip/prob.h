@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.23 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.24 2003/12/01 14:41:29 bzfpfend Exp $"
 
 /**@file   prob.h
- * @brief  Methods and datastructures for storing and manipulating the main problem
+ * @brief  internal methods for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
 
@@ -27,76 +27,20 @@
 #define __PROB_H__
 
 
-/** objective sense: minimization or maximization */
-enum Objsense
-{
-   SCIP_OBJSENSE_MAXIMIZE = -1,         /**< maximization of objective function */
-   SCIP_OBJSENSE_MINIMIZE = +1          /**< minimization of objective function (the default) */
-};
-typedef enum Objsense OBJSENSE;
-
-typedef struct Prob PROB;               /**< main problem to solve */
-typedef struct ProbData PROBDATA;       /**< user problem data set by the reader */
-
-
-/** frees user problem data
- *
- *  input:
- *    scip            : SCIP main data structure
- *    probdata        : pointer to the user problem data to free
- */
-#define DECL_PROBDELETE(x) RETCODE x (SCIP* scip, PROBDATA** probdata)
-
-/** transforms user problem data into data belonging to the transformed problem
- *
- *  input:
- *    scip            : SCIP main data structure
- *    sourcedata      : source problem data to transform
- *    targetdata      : pointer to store created transformed problem data
- */
-#define DECL_PROBTRANS(x) RETCODE x (SCIP* scip, PROBDATA* sourcedata, PROBDATA** targetdata)
-
-
-
+#include "def.h"
 #include "memory.h"
-#include "retcode.h"
-#include "cons.h"
-#include "tree.h"
-#include "lp.h"
-#include "var.h"
-#include "stat.h"
-#include "branch.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_tree.h"
+#include "type_branch.h"
+#include "type_cons.h"
 
+#include "struct_prob.h"
 
-/** main problem to solve */
-struct Prob
-{
-   char*            name;               /**< problem name */
-   DECL_PROBDELETE  ((*probdelete));    /**< frees user problem data */
-   DECL_PROBTRANS   ((*probtrans));     /**< transforms user problem data into data belonging to the transformed problem */
-   PROBDATA*        probdata;           /**< user problem data set by the reader */
-   VAR**            fixedvars;          /**< array with fixed and aggregated variables */
-   VAR**            vars;               /**< array with active variables ordered binary, integer, implicit, continuous */
-   HASHTABLE*       varnames;           /**< hash table storing variable's names */
-   CONS**           conss;              /**< array with constraints of the problem */
-   HASHTABLE*       consnames;          /**< hash table storing constraints' names */
-   OBJSENSE         objsense;           /**< objective sense */
-   Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
-   Real             objlim;             /**< objective limit as external value */
-   int              fixedvarssize;      /**< available slots in fixedvars array */
-   int              nfixedvars;         /**< number of fixed and aggregated variables in the problem */
-   int              varssize;           /**< available slots in vars array */
-   int              nvars;              /**< number of mutable variables in the problem (used slots in vars array) */
-   int              nbin;               /**< number of binary variables */
-   int              nint;               /**< number of general integer variables */
-   int              nimpl;              /**< number of implicit integer variables */
-   int              ncont;              /**< number of continuous variables */
-   int              consssize;          /**< available slots in conss array */
-   int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
-   int              maxnconss;          /**< maximum number of constraints existing at the same time */
-   int              startnconss;        /**< number of constraints existing when problem solving started */
-   unsigned int     transformed:1;      /**< TRUE iff problem is the transformed problem */
-};
 
 
 /*

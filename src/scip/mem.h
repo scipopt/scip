@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.h,v 1.11 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.h,v 1.12 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   mem.h
- * @brief  block memory pools and memory buffers
+ * @brief  methods and datastructures for block memory pools and memory buffers
  * @author Tobias Achterberg
  */
 
@@ -27,13 +27,10 @@
 #define __MEM_H__
 
 
-typedef struct Mem MEM;
-
-
 #include "def.h"
 #include "memory.h"
-#include "retcode.h"
-#include "set.h"
+#include "type_retcode.h"
+#include "type_mem.h"
 
 
 /** various block memory buffers */
@@ -56,6 +53,12 @@ RETCODE SCIPmemCreate(
 extern
 RETCODE SCIPmemFree(
    MEM**            mem                 /**< pointer to block memory structure */
+   );
+
+/** returns the total number of bytes used in block memory */
+extern
+Longint SCIPmemGetUsed(
+   MEM*             mem                 /**< pointer to block memory structure */
    );
 
 

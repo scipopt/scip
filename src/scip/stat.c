@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.26 2003/11/26 16:09:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.27 2003/12/01 14:41:33 bzfpfend Exp $"
 
 /**@file   stat.c
- * @brief  problem statistics
+ * @brief  methods for problem statistics
  * @author Tobias Achterberg
  */
 
@@ -25,8 +25,13 @@
 
 #include <assert.h>
 
+#include "def.h"
 #include "memory.h"
+#include "set.h"
 #include "stat.h"
+#include "clock.h"
+#include "mem.h"
+
 
 
 /** creates problem statistics data */
@@ -167,7 +172,8 @@ void SCIPstatResetDisplay(
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */
 void SCIPstatUpdateMemsaveMode(
    STAT*            stat,               /**< problem statistics data */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   MEM*             mem                 /**< block memory pools */
    )
 {
    assert(stat != NULL);
@@ -177,7 +183,7 @@ void SCIPstatUpdateMemsaveMode(
    {
       Longint memused;
 
-      memused = SCIPgetMemUsed(set->scip);
+      memused = SCIPmemGetUsed(mem);
       if( !stat->memsavemode && memused >= set->memsavefac * set->memlimit * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */

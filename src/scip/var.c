@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.58 2003/11/21 10:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.59 2003/12/01 14:41:38 bzfpfend Exp $"
 
 /**@file   var.c
- * @brief  Methods and datastructures for problem variables
+ * @brief  methods for problem variables
  * @author Tobias Achterberg
  */
 
@@ -27,8 +27,17 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "stat.h"
+#include "event.h"
+#include "lp.h"
 #include "var.h"
-
+#include "prob.h"
+#include "tree.h"
+#include "scip.h"
+#include "cons.h"
 
 
 

@@ -13,10 +13,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.28 2003/11/27 17:48:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.29 2003/12/01 14:41:22 bzfpfend Exp $"
 
 /**@file   branch.c
- * @brief  methods and datastructures for branching methods
+ * @brief  methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  */
 
@@ -25,42 +25,18 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "memory.h"
+#include "set.h"
+#include "stat.h"
+#include "paramset.h"
+#include "lp.h"
+#include "var.h"
+#include "prob.h"
+#include "scip.h"
 #include "branch.h"
 
-
-/** branching candidate storage */
-struct BranchCand
-{
-   VAR**            lpcands;            /**< candidates for branching on LP solution (fractional integer variables) */
-   Real*            lpcandssol;         /**< solution values of LP candidates */
-   Real*            lpcandsfrac;        /**< fractionalities of LP candidates */
-   VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
-   int              lpcandssize;        /**< number of available slots in lpcands array */
-   int              nlpcands;           /**< number of candidates for branching on LP solution */
-   int              pseudocandssize;    /**< number of available slots in pseudocands array */
-   int              npseudocands;       /**< number of candidates for branching on pseudo solution */
-   int              npseudobins;        /**< number of binary candidates for branching on pseudo solution */
-   int              npseudoints;        /**< number of integer candidates for branching on pseudo solution */
-   int              npseudoimpls;       /**< number of implicit integer candidates for branching on pseudo solution */
-   int              validlpcandslp;     /**< lp number for which lpcands are valid */
-};
-
-
-/** branching rule */
-struct Branchrule
-{
-   char*            name;               /**< name of branching rule */
-   char*            desc;               /**< description of branching rule */
-   int              priority;           /**< priority of the branching rule */
-   DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
-   DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
-   DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */
-   DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional LP solutions */
-   DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
-   BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
-   unsigned int     initialized:1;      /**< is branching rule initialized? */
-};
-
+#include "struct_branch.h"
 
 
 

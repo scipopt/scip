@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.75 2003/11/27 17:48:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.76 2003/12/01 14:41:31 bzfpfend Exp $"
 
 /**@file   set.c
- * @brief  global SCIP settings
+ * @brief  methods for global SCIP settings
  * @author Tobias Achterberg
  */
 
@@ -27,9 +27,25 @@
 #include <string.h>
 #include <math.h>
 
-#include "memory.h"
-#include "tree.h"
+#include "def.h"
 #include "set.h"
+#include "stat.h"
+#include "misc.h"
+#include "event.h"
+#include "lp.h"
+#include "paramset.h"
+#include "scip.h"
+#include "branch.h"
+#include "conflict.h"
+#include "cons.h"
+#include "disp.h"
+#include "heur.h"
+#include "nodesel.h"
+#include "presol.h"
+#include "pricer.h"
+#include "reader.h"
+#include "sepa.h"
+
 
 
 /*

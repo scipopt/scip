@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.27 2003/11/26 16:09:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.28 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   nodesel.c
- * @brief  methods and datastructures for node selectors
+ * @brief  methods for node selectors
  * @author Tobias Achterberg
  */
 
@@ -26,44 +26,15 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "paramset.h"
+#include "tree.h"
+#include "scip.h"
 #include "nodesel.h"
 
-
-
-/** node priority queue data structure;
- *  the fields lowerboundnode, lowerbound, nlowerbounds and validlowerbound are only used for node selection rules,
- *  that don't store the lowest bound node in the first slot of the queue
- */
-struct NodePQ
-{
-   NODESEL*         nodesel;            /**< node selector used for sorting the nodes in the queue */
-   NODE**           slots;              /**< array of element slots */
-   int              len;                /**< number of used element slots */
-   int              size;               /**< total number of available element slots */
-   NODE*            lowerboundnode;     /**< node with minimal lower bound, or NULL if not available */
-   Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
-   Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
-   int              nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
-   unsigned int     validlowerbound:1;  /**< is lower bound value valid? */
-};
-
-/** node selector */
-struct Nodesel
-{
-   char*            name;               /**< name of node selector */
-   char*            desc;               /**< description of node selector */
-   int              stdpriority;        /**< priority of the node selector in standard mode */
-   int              memsavepriority;    /**< priority of the node selector in memory saving mode */
-   DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
-   DECL_NODESELINIT ((*nodeselinit));   /**< initialize node selector */
-   DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialize node selector */
-   DECL_NODESELSELECT((*nodeselselect));/**< node selection method */
-   DECL_NODESELCOMP ((*nodeselcomp));   /**< node comparison method */
-   NODESELDATA*     nodeseldata;        /**< node selector data */
-   unsigned int     lowestboundfirst:1; /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
-   unsigned int     initialized:1;      /**< is node selector initialized? */
-};
-
+#include "struct_nodesel.h"
 
 
 

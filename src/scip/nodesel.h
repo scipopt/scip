@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.24 2003/11/28 10:05:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.25 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   nodesel.h
- * @brief  methods and datastructures for node selectors
+ * @brief  internal methods for node selectors and node priority queues
  * @author Tobias Achterberg
  */
 
@@ -27,71 +27,14 @@
 #define __NODESEL_H__
 
 
-typedef struct NodePQ NODEPQ;           /**< node priority queue */
-typedef struct Nodesel NODESEL;         /**< node selector data structure */
-typedef struct NodeselData NODESELDATA; /**< node selector specific data */
-
-
-/** destructor of node selector to free user data (called when SCIP is exiting)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - nodesel         : the node selector itself
- */
-#define DECL_NODESELFREE(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
-
-/** initialization method of node selector (called when problem solving starts)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - nodesel         : the node selector itself
- */
-#define DECL_NODESELINIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
-
-/** deinitialization method of node selector (called when problem solving exits)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - nodesel         : the node selector itself
- */
-#define DECL_NODESELEXIT(x) RETCODE x (SCIP* scip, NODESEL* nodesel)
-
-/** node selection method of node selector
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - nodesel         : the node selector itself
- *  - selnode         : pointer to store the selected node
- *
- *  possible return values for *selnode:
- *  - NULL    : problem is solved, because tree is empty
- *  - non-NULL: node to be solved next
- */
-#define DECL_NODESELSELECT(x) RETCODE x (SCIP* scip, NODESEL* nodesel, NODE** selnode)
-
-/** node comparison method of node selector
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - nodesel         : the node selector itself
- *  - node1           : first node to compare
- *  - node2           : second node to compare
- *
- *  possible return values:
- *  - value < 0: node1 comes before (is better than) node2
- *  - value = 0: both nodes are equally good
- *  - value > 0: node2 comes after (is worse than) node2
- */
-#define DECL_NODESELCOMP(x) int x (SCIP* scip, NODESEL* nodesel, NODE* node1, NODE* node2)
-
-
-
-
-#include "scip.h"
-#include "retcode.h"
-#include "set.h"
-#include "tree.h"
-#include "lp.h"
+#include "def.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_lp.h"
+#include "type_tree.h"
+#include "type_scip.h"
+#include "pub_nodesel.h"
 
 
 
@@ -266,24 +209,6 @@ int SCIPnodeselCompare(
    NODE*            node2               /**< second node to compare */
    );
 
-/** gets name of node selector */
-extern
-const char* SCIPnodeselGetName(
-   NODESEL*         nodesel             /**< node selector */
-   );
-
-/** gets description of node selector */
-extern
-const char* SCIPnodeselGetDesc(
-   NODESEL*         nodesel             /**< node selector */
-   );
-
-/** gets priority of node selector in standard mode */
-extern
-int SCIPnodeselGetStdPriority(
-   NODESEL*         nodesel             /**< node selector */
-   );
-
 /** sets priority of node selector in standard mode */
 extern
 void SCIPnodeselSetStdPriority(
@@ -292,37 +217,12 @@ void SCIPnodeselSetStdPriority(
    int              priority            /**< new priority of the node selector */
    );
 
-/** gets priority of node selector in memory saving mode */
-extern
-int SCIPnodeselGetMemsavePriority(
-   NODESEL*         nodesel             /**< node selector */
-   );
-
 /** sets priority of node selector in memory saving mode */
 extern
 void SCIPnodeselSetMemsavePriority(
    NODESEL*         nodesel,            /**< node selector */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the node selector */
-   );
-
-/** gets user data of node selector */
-extern
-NODESELDATA* SCIPnodeselGetData(
-   NODESEL*         nodesel             /**< node selector */
-   );
-
-/** sets user data of node selector; user has to free old data in advance! */
-extern
-void SCIPnodeselSetData(
-   NODESEL*         nodesel,            /**< node selector */
-   NODESELDATA*     nodeseldata         /**< new node selector user data */
-   );
-
-/** is node selector initialized? */
-extern
-Bool SCIPnodeselIsInitialized(
-   NODESEL*         nodesel             /**< node selector */
    );
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.15 2003/11/27 17:48:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.16 2003/12/01 14:41:23 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -97,53 +97,20 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
 #include "message.h"
+#include "set.h"
+#include "clock.h"
+#include "lpi.h"
 #include "misc.h"
+#include "paramset.h"
+#include "var.h"
+#include "prob.h"
+#include "scip.h"
 #include "conflict.h"
+#include "cons.h"
 
-
-
-/** conflict handler */
-struct Conflicthdlr
-{
-   char*            name;               /**< name of conflict handler */
-   char*            desc;               /**< description of conflict handler */
-   int              priority;           /**< priority of the conflict handler */
-   DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
-   DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
-   DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */
-   DECL_CONFLICTEXEC((*conflictexec));  /**< conflict processing method of conflict handler */
-   CONFLICTHDLRDATA* conflicthdlrdata;  /**< conflict handler data */
-   Bool             initialized;        /**< is conflict handler initialized? */
-};
-
-/** conflict analysis data structure for propagation conflicts */
-struct Conflict
-{
-   CLOCK*           analyzetime;        /**< time used for propagation conflict analysis */
-   PQUEUE*          varqueue;           /**< unprocessed conflict variables */
-   VAR**            conflictvars;       /**< variables resembling the conflict clause */
-   int              conflictvarssize;   /**< size of conflictvars array */
-   int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
-   Longint          ncalls;             /**< number of calls to propagation conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in propagation conflict analysis */
-};
-
-/** conflict analysis data structure for infeasible LP conflicts */
-struct LPConflict
-{
-   /* ????? MARC: hier kannst Du Deine "permanent" gehaltenen Daten unterbringen, z.B. wie das folgende;
-    *             beachte, dass Du das in SCIPlpconflictCreate() und SCIPlpconflictFree() initialisierst bzw. freigibst
-    */
-   CLOCK*           analyzetime;        /**< time used for infeasible LP conflict analysis */
-   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
-   VAR**            conflictvars;       /**< variables resembling the conflict clause */
-   int              conflictvarssize;   /**< size of conflictvars array */
-   int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
-   Longint          ncalls;             /**< number of calls to infeasible LP conflict analysis */
-   Longint          nconflicts;         /**< number of valid conflicts detected in infeasible LP conflict analysis */
-};
-
+#include "struct_conflict.h"
 
 
 

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.2 2003/11/27 17:48:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.3 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   pricer.c
- * @brief  methods and datastructures for variable pricers
+ * @brief  methods for variable pricers
  * @author Tobias Achterberg
  */
 
@@ -26,27 +26,17 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
 #include "clock.h"
+#include "paramset.h"
+#include "lp.h"
+#include "prob.h"
+#include "scip.h"
 #include "pricer.h"
 
-
-/** variable pricers data */
-struct Pricer
-{
-   char*            name;               /**< name of variable pricer */
-   char*            desc;               /**< description of variable pricer */
-   int              priority;           /**< priority of the variable pricer */
-   DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
-   DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
-   DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */
-   DECL_PRICERREDCOST((*pricerredcost));/**< reduced cost pricing method of variable pricer for feasible LPs */
-   DECL_PRICERFARKAS((*pricerfarkas));  /**< farkas pricing method of variable pricer for infeasible LPs */
-   PRICERDATA*      pricerdata;         /**< variable pricers local data */
-   CLOCK*           clock;              /**< pricer execution time */
-   int              ncalls;             /**< number of times, this pricer was called */
-   int              nvarsfound;         /**< number of variables priced in found so far by this pricer */
-   unsigned int     initialized:1;      /**< is variable pricer initialized? */
-};
+#include "struct_pricer.h"
 
 
 

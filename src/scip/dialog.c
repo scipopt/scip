@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.7 2003/11/27 17:48:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.8 2003/12/01 14:41:25 bzfpfend Exp $"
 
 /**@file   dialog.c
- * @brief  user interface dialog
+ * @brief  methods for user interface dialog
  * @author Tobias Achterberg
  */
 
@@ -33,35 +33,13 @@
 #include <readline/history.h>
 #endif
 
+#include "def.h"
+#include "message.h"
 #include "memory.h"
+#include "set.h"
 #include "dialog.h"
 
-
-
-/** user interface dialog */
-struct Dialog
-{
-   DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
-   DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
-   char*            name;               /**< name of dialog: command name appearing in parent's dialog menu */
-   char*            desc;               /**< description of dialog used if description output method is NULL */
-   Bool             issubmenu;          /**< is the dialog a submenu? */
-   DIALOG*          parent;             /**< parent dialog of dialog */
-   DIALOG**         subdialogs;         /**< sub dialogs of dialog */
-   int              nsubdialogs;        /**< number of sub dialogs */
-   int              subdialogssize;     /**< size of subdialogs array */
-   int              nuses;              /**< number of times, the dialog is used */
-   DIALOGDATA*      dialogdata;         /**< user defined dialog data */
-};
-
-/** dialog handler */
-struct Dialoghdlr
-{
-   DIALOG*          rootdialog;         /**< main (root) dialog */
-   char*            buffer;             /**< command buffer */
-   int              buffersize;         /**< size of command buffer */
-   int              bufferpos;          /**< position of first unprocessed character in buffer */
-};
+#include "struct_dialog.h"
 
 
 

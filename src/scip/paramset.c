@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.14 2003/11/27 17:48:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.15 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   paramset.c
- * @brief  methods and datastructures for handling parameter settings
+ * @brief  methods for handling parameter settings
  * @author Tobias Achterberg
  */
 
@@ -25,104 +25,13 @@
 
 #include <assert.h>
 #include <string.h>
-/*???????????????????? #include <strings.h>*/
 
+#include "def.h"
 #include "message.h"
-#include "memory.h"
 #include "misc.h"
 #include "paramset.h"
 
-
-
-/** data for Bool parameters */
-struct BoolParam
-{
-   Bool*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Bool             actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
-   Bool             defaultvalue;       /**< default value of the parameter */
-};
-typedef struct BoolParam BOOLPARAM;
-
-/** data for int parameters */
-struct IntParam
-{
-   int*             valueptr;           /**< pointer to store the current parameter value, or NULL */
-   int              actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
-   int              defaultvalue;       /**< default value of the parameter */
-   int              minvalue;           /**< minimum value for parameter */
-   int              maxvalue;           /**< maximum value for parameter */
-};
-typedef struct IntParam INTPARAM;
-
-/** data for Longint parameters */
-struct LongintParam
-{
-   Longint*         valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Longint          actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
-   Longint          defaultvalue;       /**< default value of the parameter */
-   Longint          minvalue;           /**< minimum value for parameter */
-   Longint          maxvalue;           /**< maximum value for parameter */
-};
-typedef struct LongintParam LONGINTPARAM;
-
-/** data for Real parameters */
-struct RealParam
-{
-   Real*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   Real             actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
-   Real             defaultvalue;       /**< default value of the parameter */
-   Real             minvalue;           /**< minimum value for parameter */
-   Real             maxvalue;           /**< maximum value for parameter */
-};
-typedef struct RealParam REALPARAM;
-
-/** data for char parameters */
-struct CharParam
-{
-   char*            valueptr;           /**< pointer to store the current parameter value, or NULL */
-   char             actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
-   char             defaultvalue;       /**< default value of the parameter */
-   char*            allowedvalues;      /**< array with possible parameter values, or NULL if not restricted */
-};
-typedef struct CharParam CHARPARAM;
-
-/** data for char* parameters */
-struct StringParam
-{
-   char**           valueptr;           /**< pointer to store the current parameter value, or NULL */
-   char*            actvalue;           /**< stores the actual parameter value if it is not stored in *valueptr */
-   char*            defaultvalue;       /**< default value of the parameter */
-};
-typedef struct StringParam STRINGPARAM;
-
-/** single parameter */
-struct Param
-{
-   union
-   {
-      BOOLPARAM     boolparam;          /**< data for Bool parameters */
-      INTPARAM      intparam;           /**< data for int parameters */
-      LONGINTPARAM  longintparam;       /**< data for Longint parameters */
-      REALPARAM     realparam;          /**< data for Real parameters */
-      CHARPARAM     charparam;          /**< data for char parameters */
-      STRINGPARAM   stringparam;        /**< data for char* parameters */
-   } data;
-   char*            name;               /**< name of the parameter */
-   char*            desc;               /**< description of the parameter */
-   DECL_PARAMCHGD   ((*paramchgd));     /**< change information method of parameter */
-   PARAMDATA*       paramdata;          /**< locally defined parameter specific data */
-   PARAMTYPE        paramtype;          /**< type of this parameter */
-};
-
-/** set of parameters */
-struct ParamSet
-{
-   HASHTABLE*       hashtable;          /**< hash table to store the parameters */
-   PARAM**          params;             /**< array with parameters */
-   int              nparams;            /**< number of parameters */
-   int              paramssize;         /**< size of params array */
-};
-
+#include "struct_paramset.h"
 
 
 

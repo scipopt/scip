@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.64 2003/11/27 17:48:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.65 2003/12/01 14:41:34 bzfpfend Exp $"
 
 /**@file   tree.c
- * @brief  branch-and-bound tree datastructures and operations
+ * @brief  methods for branch-and-bound tree
  * @author Tobias Achterberg
  */
 
@@ -26,7 +26,15 @@
 #include <assert.h>
 
 #include "def.h"
+#include "message.h"
+#include "set.h"
+#include "stat.h"
+#include "lpi.h"
+#include "lp.h"
+#include "var.h"
 #include "tree.h"
+#include "cons.h"
+#include "nodesel.h"
 
 
 #define MAXDEPTH   65535  /**< maximal depth level for nodes, must correspond to node data structure */

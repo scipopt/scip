@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.2 2003/11/27 17:48:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.3 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   pricestore.h
- * @brief  methods and datastructures for storing priced variables
+ * @brief  internal methods for storing priced variables
  * @author Tobias Achterberg
  */
 
@@ -27,20 +27,19 @@
 #define __PRICESTORE_H__
 
 
-typedef struct Pricestore PRICESTORE;   /**< storage for priced variables */
-
-
 #include "def.h"
-#include "retcode.h"
-#include "mem.h"
-#include "set.h"
-#include "stat.h"
-#include "prob.h"
-#include "tree.h"
-#include "lp.h"
-#include "var.h"
-#include "branch.h"
-#include "event.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_event.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_tree.h"
+#include "type_pricestore.h"
+#include "type_branch.h"
+
 
 
 /** creates pricing storage */

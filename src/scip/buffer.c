@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.10 2003/11/27 17:48:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.11 2003/12/01 14:41:22 bzfpfend Exp $"
 
 /**@file   buffer.c
- * @brief  memory buffer for temporary objects
+ * @brief  methods for memory buffers for temporary objects
  * @author Tobias Achterberg
  */
 
@@ -25,8 +25,13 @@
 
 #include <assert.h>
 
+#include "def.h"
+#include "message.h"
 #include "memory.h"
+#include "set.h"
 #include "buffer.h"
+
+#include "struct_buffer.h"
 
 
 

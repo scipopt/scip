@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.28 2003/11/27 17:48:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.29 2003/12/01 14:41:31 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -26,30 +26,17 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "stat.h"
 #include "clock.h"
+#include "paramset.h"
+#include "sepastore.h"
+#include "scip.h"
 #include "sepa.h"
 
-
-/** separators data */
-struct Sepa
-{
-   char*            name;               /**< name of separator */
-   char*            desc;               /**< description of separator */
-   int              priority;           /**< priority of the separator */
-   int              freq;               /**< frequency for calling separator */
-   DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
-   DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
-   DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */
-   DECL_SEPAEXEC    ((*sepaexec));      /**< execution method of separator */
-   SEPADATA*        sepadata;           /**< separators local data */
-   CLOCK*           clock;              /**< separation time */
-   Longint          lastsepanode;       /**< last node where this separator was called */
-   Longint          ncalls;             /**< number of times, this separator was called */
-   Longint          ncutsfound;         /**< number of cutting planes found so far by this separator */
-   int              ncallsatnode;       /**< number of times, this separator was called at the current node */
-   int              ncutsfoundatnode;   /**< number of cutting planes found at the current node */
-   unsigned int     initialized:1;      /**< is separator initialized? */
-};
+#include "struct_sepa.h"
 
 
 

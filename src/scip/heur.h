@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.20 2003/11/28 10:05:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.21 2003/12/01 14:41:26 bzfpfend Exp $"
 
 /**@file   heur.h
- * @brief  methods and datastructures for primal heuristics
+ * @brief  internal methods for primal heuristics
  * @author Tobias Achterberg
  */
 
@@ -27,58 +27,16 @@
 #define __HEUR_H__
 
 
-typedef struct Heur HEUR;               /**< primal heuristic */
-typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic data */
-
-
-
-/** destructor of primal heuristic to free user data (called when SCIP is exiting)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - heur            : the primal heuristic itself
- */
-#define DECL_HEURFREE(x) RETCODE x (SCIP* scip, HEUR* heur)
-
-/** initialization method of primal heuristic (called when problem solving starts)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - heur            : the primal heuristic itself
- */
-#define DECL_HEURINIT(x) RETCODE x (SCIP* scip, HEUR* heur)
-
-/** deinitialization method of primal heuristic (called when problem solving exits)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - heur            : the primal heuristic itself
- */
-#define DECL_HEUREXIT(x) RETCODE x (SCIP* scip, HEUR* heur)
-
-/** execution method of primal heuristic
- *
- *  Searches for feasible primal solutions. The method is called in the node processing loop.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - heur            : the primal heuristic itself
- *  - result          : pointer to store the result of the heuristic call
- *
- *  possible return values for *result:
- *  - SCIP_FOUNDSOL   : at least one feasible primal solution was found
- *  - SCIP_DIDNOTFIND : the heuristic searched, but didn't found a feasible solution
- *  - SCIP_DIDNOTRUN  : the heuristic was skipped
- */
-#define DECL_HEUREXEC(x) RETCODE x (SCIP* scip, HEUR* heur, RESULT* result)
-
-
-
-
-#include "scip.h"
 #include "def.h"
-#include "retcode.h"
-#include "primal.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_result.h"
+#include "type_set.h"
+#include "type_misc.h"
+#include "type_primal.h"
+#include "type_scip.h"
+#include "type_heur.h"
+#include "pub_heur.h"
 
 
 
@@ -138,79 +96,12 @@ RETCODE SCIPheurExec(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** gets user data of primal heuristic */
-extern
-HEURDATA* SCIPheurGetData(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** sets user data of primal heuristic; user has to free old data in advance! */
-extern
-void SCIPheurSetData(
-   HEUR*            heur,               /**< primal heuristic */
-   HEURDATA*        heurdata            /**< new primal heuristic user data */
-   );
-
-/** gets name of primal heuristic */
-extern
-const char* SCIPheurGetName(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets description of primal heuristic */
-extern
-const char* SCIPheurGetDesc(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets display character of primal heuristic */
-extern
-char SCIPheurGetDispchar(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets priority of primal heuristic */
-extern
-int SCIPheurGetPriority(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
 /** sets priority of primal heuristic */
 extern
 void SCIPheurSetPriority(
    HEUR*            heur,               /**< primal heuristic */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the primal heuristic */
-   );
-
-/** gets frequency of primal heuristic */
-extern
-int SCIPheurGetFreq(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets the number of times, the heuristic was called and tried to find a solution */
-extern
-Longint SCIPheurGetNCalls(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets the number of primal feasible solutions found by this heuristic */
-extern
-Longint SCIPheurGetNSolsFound(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** is primal heuristic initialized? */
-extern
-Bool SCIPheurIsInitialized(
-   HEUR*            heur                /**< primal heuristic */
-   );
-
-/** gets time in seconds used in this heuristic */
-extern
-Real SCIPheurGetTime(
-   HEUR*            heur                /**< primal heuristic */
    );
 
 

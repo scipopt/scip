@@ -14,17 +14,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: result.h,v 1.11 2003/11/21 10:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_result.h,v 1.1 2003/12/01 14:41:37 bzfpfend Exp $"
 
-/**@file   result.h
+/**@file   type_result.h
  * @brief  result codes for SCIP callback methods
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __RESULT_H__
-#define __RESULT_H__
+#ifndef __TYPE_RESULT_H__
+#define __TYPE_RESULT_H__
 
 /** result codes for SCIP callback methods */
 enum Result

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.26 2003/11/27 17:48:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.27 2003/12/01 14:41:26 bzfpfend Exp $"
 
 /**@file   heur.c
- * @brief  methods and datastructures for primal heuristics
+ * @brief  methods for primal heuristics
  * @author Tobias Achterberg
  */
 
@@ -26,29 +26,16 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
 #include "clock.h"
+#include "paramset.h"
+#include "primal.h"
+#include "scip.h"
 #include "heur.h"
 
-
-/** primal heuristics data */
-struct Heur
-{
-   char*            name;               /**< name of primal heuristic */
-   char*            desc;               /**< description of primal heuristic */
-   char             dispchar;           /**< display character of primal heuristic */
-   int              priority;           /**< priority of the primal heuristic */
-   int              freq;               /**< frequency for calling primal heuristic */
-   DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
-   DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
-   DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */
-   DECL_HEUREXEC    ((*heurexec));      /**< execution method of primal heuristic */
-   HEURDATA*        heurdata;           /**< primal heuristics local data */
-   CLOCK*           clock;              /**< heuristic execution time */
-   Longint          ncalls;             /**< number of times, this heuristic was called */
-   Longint          nsolsfound;         /**< number of feasible primal solutions found so far by this heuristic */
-   unsigned int     pseudonodes:1;      /**< call heuristic at nodes where only a pseudo solution exist? */
-   unsigned int     initialized:1;      /**< is primal heuristic initialized? */
-};
+#include "struct_heur.h"
 
 
 

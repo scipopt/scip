@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.4 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.5 2003/12/01 14:41:31 bzfpfend Exp $"
 
 /**@file   sepastore.h
- * @brief  methods and datastructures for storing separated cuts
+ * @brief  internal methods for storing separated cuts
  * @author Tobias Achterberg
  */
 
@@ -27,15 +27,17 @@
 #define __SEPASTORE_H__
 
 
-typedef struct SepaStore SEPASTORE;     /**< storage for separated variables */
-
-
 #include "def.h"
-#include "retcode.h"
-#include "set.h"
-#include "mem.h"
-#include "lp.h"
-#include "tree.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_event.h"
+#include "type_lp.h"
+#include "type_tree.h"
+#include "type_sepastore.h"
+#include "type_branch.h"
+
 
 
 /** creates separation storage */

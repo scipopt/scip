@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.12 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.13 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -25,6 +25,8 @@
 
 #include <assert.h>
 
+#include "def.h"
+#include "message.h"
 #include "mem.h"
 
 
@@ -65,3 +67,12 @@ RETCODE SCIPmemFree(
    return SCIP_OKAY;
 }
 
+/** returns the total number of bytes used in block memory */
+Longint SCIPmemGetUsed(
+   MEM*             mem                 /**< pointer to block memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return getBlockMemoryUsed(mem->setmem) + getBlockMemoryUsed(mem->probmem) + getBlockMemoryUsed(mem->solvemem);
+}

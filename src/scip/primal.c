@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.23 2003/11/27 17:48:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.24 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   primal.c
- * @brief  methods and datastructures for collecting primal CIP solutions and primal informations
+ * @brief  methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
 
@@ -25,8 +25,16 @@
 
 #include <assert.h>
 
-#include "disp.h"
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "event.h"
+#include "lp.h"
+#include "prob.h"
+#include "sol.h"
 #include "primal.h"
+#include "tree.h"
+#include "disp.h"
 
 
 

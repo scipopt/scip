@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.55 2003/11/28 10:05:45 bzfpfend Exp $
+# $Id: Makefile,v 1.56 2003/12/01 14:41:22 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -115,7 +115,7 @@ MAIN		=	$(MAINNAME).$(BASE).$(LPS)
 MAINFILE	=	$(BINDIR)/$(MAIN)
 MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	src/depend.main
+MAINDEP		=	src/depend.main.$(OPT)
 
 
 #-----------------------------------------------------------------------------
@@ -150,7 +150,7 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).a
 LPILIBXXX	=	$(addprefix $(OBJDIR)/,$(LPILIBOBJ))
-LPILIBDEP	=	src/depend.lpilib.$(LPS)
+LPILIBDEP	=	src/depend.lpilib.$(LPS).$(OPT)
 
 
 #-----------------------------------------------------------------------------
@@ -224,7 +224,7 @@ SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a
 SCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
-SCIPLIBDEP	=	src/depend.sciplib
+SCIPLIBDEP	=	src/depend.sciplib.$(OPT)
 
 
 #-----------------------------------------------------------------------------
@@ -245,7 +245,7 @@ OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a
 OBJSCIPLIBXXX	=	$(addprefix $(OBJDIR)/,$(OBJSCIPLIBOBJ))
 OBJSCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(OBJSCIPLIBOBJ:.o=.cpp))
-OBJSCIPLIBDEP	=	src/depend.objsciplib
+OBJSCIPLIBDEP	=	src/depend.objsciplib.$(OPT)
 
 
 #-----------------------------------------------------------------------------

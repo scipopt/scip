@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.7 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.8 2003/12/01 14:41:22 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -146,7 +146,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          SCIPvarGetBranchingPriority(lpcands[bestcand]), bestscore);
 
       /* create child node with x <= floor(x') */
-      debugMessage(" -> creating child: <%s> <= %g\n", lpcands[bestcand]->name, SCIPfloor(scip, lpcandssol[bestcand]));
+      debugMessage(" -> creating child: <%s> <= %g\n",
+         SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       if( allvarsinlp )
@@ -156,7 +157,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       
       /* create child node with x >= ceil(x') */
-      debugMessage(" -> creating child: <%s> >= %g\n", lpcands[bestcand]->name, SCIPceil(scip, lpcandssol[bestcand]));
+      debugMessage(" -> creating child: <%s> >= %g\n", 
+         SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node) );
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
       if( allvarsinlp )

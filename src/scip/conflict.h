@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.7 2003/11/25 10:24:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.8 2003/12/01 14:41:23 bzfpfend Exp $"
 
 /**@file   conflict.h
- * @brief  methods and datastructures for conflict analysis
+ * @brief  internal methods for conflict analysis
  * @author Tobias Achterberg
  */
 
@@ -27,73 +27,17 @@
 #define __CONFLICT_H__
 
 
-typedef struct Conflicthdlr CONFLICTHDLR; /**< conflict handler to process conflict sets */
-typedef struct ConflicthdlrData CONFLICTHDLRDATA; /**< conflict handler data */
-typedef struct Conflict CONFLICT;       /**< conflict analysis data structure for propagation conflicts */
-typedef struct LPConflict LPCONFLICT;   /**< conflict analysis data structure for infeasible LP conflicts */
-
-
-/** destructor of conflict handler to free conflict handler data (called when SCIP is exiting)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conflicthdlr    : the conflict handler itself
- */
-#define DECL_CONFLICTFREE(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
-
-/** initialization method of conflict handler (called when problem solving starts)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conflicthdlr    : the conflict handler itself
- */
-#define DECL_CONFLICTINIT(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
-
-/** deinitialization method of conflict handler (called when problem solving exits)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conflicthdlr    : the conflict handler itself
- */
-#define DECL_CONFLICTEXIT(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr)
-
-/** conflict processing method of conflict handler (called when conflict was found)
- *
- *  This method is called, when the conflict analysis found a conflict on binary variable assignments.
- *  The conflict handler may update its data accordingly and create a constraint out of the conflict.
- *  If the parameter "resolved" is set, the conflict handler should not create a constraint, because
- *  a different conflict handler with higher priority already created a constraint.
- *  The variables in the conflict set lead to a conflict (i.e. an infeasibility) when all set to FALSE.
- *  Thus, a feasible conflict constraint must demand, that at least one of the variables in the conflict
- *  set is set to TRUE.
- *  The given "conflictvars" array representing the conflict set is only a reference to an internal
- *  buffer, that may be modified at any time by SCIP. The user must copy the needed information from the
- *  "conflictvars" array to its own data structures, if he wants to use the information later.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conflicthdlr    : the conflict handler itself
- *  - conflictvars    : array with binary variables in the conflict set
- *  - nconflictvars   : number of binary variables in the conflict set
- *  - resolved        : is the conflict set already used to create a constraint?
- *  - result          : pointer to store the result of the conflict processing call
- *
- *  possible return values for *result:
- *  - SCIP_CONSADDED  : the conflict handler created a constraint out of the conflict set
- *  - SCIP_DIDNOTFIND : the conflict handler could not create a constraint out of the conflict set
- *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
- */
-#define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, VAR** conflictvars, int nconflictvars, \
-                                        Bool resolved, RESULT* result)
-
-
-
 #include "def.h"
-#include "retcode.h"
 #include "memory.h"
-#include "set.h"
-#include "stat.h"
-#include "var.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_conflict.h"
+#include "type_scip.h"
+#include "pub_conflict.h"
 
 
 
@@ -153,43 +97,12 @@ RETCODE SCIPconflicthdlrExec(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** gets user data of conflict handler */
-extern
-CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
-   );
-
-/** sets user data of conflict handler; user has to free old data in advance! */
-extern
-void SCIPconflicthdlrSetData(
-   CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
-   CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
-   );
-
-/** gets name of conflict handler */
-extern
-const char* SCIPconflicthdlrGetName(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
-   );
-
-/** gets priority of conflict handler */
-extern
-int SCIPconflicthdlrGetPriority(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
-   );
-
 /** sets priority of conflict handler */
 extern
 void SCIPconflicthdlrSetPriority(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the conflict handler */
-   );
-
-/** is conflict handler initialized? */
-extern
-Bool SCIPconflicthdlrIsInitialized(
-   CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 
@@ -306,5 +219,6 @@ extern
 Longint SCIPlpconflictGetNConflicts(
    LPCONFLICT*      lpconflict          /**< LP conflict analysis data */
    );
+
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.h,v 1.2 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.h,v 1.3 2003/12/01 14:41:26 bzfpfend Exp $"
 
 /**@file   interrupt.h
  * @brief  methods for catching the user CTRL-C interrupt
@@ -27,12 +27,10 @@
 #define __INTERRUPT_H__
 
 
-typedef struct Interrupt INTERRUPT;     /**< CTRL-C interrupt data */
-
-
 #include "def.h"
-#include "retcode.h"
-#include "set.h"
+#include "type_retcode.h"
+#include "type_interrupt.h"
+
 
 
 /** creates a CTRL-C interrupt data */
@@ -50,15 +48,13 @@ void SCIPinterruptFree(
 /** captures the CTRL-C interrupt to call the SCIP's own interrupt handler */
 extern
 void SCIPinterruptCapture(
-   INTERRUPT*       interrupt,          /**< CTRL-C interrupt data */
-   const SET*       set                 /**< global SCIP settings */
+   INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    );
 
 /** releases the CTRL-C interrupt and restores the old interrupt handler */
 extern
 void SCIPinterruptRelease(
-   INTERRUPT*       interrupt,          /**< CTRL-C interrupt data */
-   const SET*       set                 /**< global SCIP settings */
+   INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    );
 
 /** returns whether the user interrupted by pressing CTRL-C */

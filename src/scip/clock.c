@@ -14,24 +14,33 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.6 2003/11/27 17:48:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.7 2003/12/01 14:41:22 bzfpfend Exp $"
 
 /**@file   clock.c
- * @brief  methods and datastructures for taking timings
+ * @brief  methods for clocks and timing issues
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <sys/times.h>
+#include <sys/time.h>
+#include <time.h>
 
-#include "memory.h"
+#include "def.h"
 #include "message.h"
+#include "memory.h"
+#include "set.h"
 #include "clock.h"
+
+#include "struct_clock.h"
 
 
 /*lint -esym(*,timeval)*/
 /*lint -esym(*,gettimeofday)*/
+
+
 
 /** sets the clock's type and converts the clock timer accordingly */
 static

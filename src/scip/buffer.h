@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.5 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.6 2003/12/01 14:41:22 bzfpfend Exp $"
 
 /**@file   buffer.h
- * @brief  memory buffer for temporary objects
+ * @brief  internal methods for memory buffers for temporary objects
  * @author Tobias Achterberg
  */
 
@@ -27,24 +27,10 @@
 #define __BUFFER_H__
 
 
-typedef struct Buffer BUFFER;
-
-
 #include "def.h"
-#include "retcode.h"
-#include "set.h"
-
-
-/** memory buffer storage for temporary objects */
-struct Buffer
-{
-   void**           data;               /**< allocated memory chunks for arbitrary data */
-   int*             size;               /**< sizes of buffers in bytes */
-   Bool*            used;               /**< TRUE iff corresponding buffer is in use */
-   int              ndata;              /**< number of memory chunks */
-   int              firstfree;          /**< first unused memory chunk */
-};
-
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_buffer.h"
 
 
 /** creates memory buffer storage */

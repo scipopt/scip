@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.4 2003/11/21 10:35:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.5 2003/12/01 14:41:23 bzfpfend Exp $"
 
 /**@file   clock.h
- * @brief  methods and datastructures for taking timings
+ * @brief  internal methods for clocks and timing issues
  * @author Tobias Achterberg
  */
 
@@ -26,53 +26,11 @@
 #ifndef __CLOCK_H__
 #define __CLOCK_H__
 
-enum ClockType
-{
-   SCIP_CLOCKTYPE_DEFAULT = 0,          /**< use default clock type */
-   SCIP_CLOCKTYPE_CPU     = 1,          /**< use CPU clock */
-   SCIP_CLOCKTYPE_WALL    = 2           /**< use wall clock */
-};
-typedef enum ClockType CLOCKTYPE;       /**< clock type to use */
-
-typedef struct Clock CLOCK;             /**< clock timer */
-typedef struct CPUClock CPUCLOCK;       /**< CPU clock counter */
-typedef struct WallClock WALLCLOCK;     /**< wall clock counter */
-
-#include <sys/times.h>
-#include <sys/time.h>
-#include <time.h>
 
 #include "def.h"
-#include "retcode.h"
-#include "set.h"
-
-
-/** CPU clock counter */
-struct CPUClock
-{
-   clock_t          user;               /**< clock ticks for user CPU time */
-};
-
-/** wall clock counter */
-struct WallClock
-{
-   long             sec;                /**< seconds counter */
-   long             usec;               /**< microseconds counter */
-};
-
-/** clock timer */
-struct Clock
-{
-   union
-   {
-      CPUCLOCK      cpuclock;           /**< CPU clock counter */
-      WALLCLOCK     wallclock;          /**< wall clock counter */
-   } data;
-   CLOCKTYPE        clocktype;          /**< current type of clock used */
-   Bool             usedefault;         /**< should the clock's type be overruled by the default clock type? */
-   Bool             enabled;            /**< should the clock be used? */
-   int              nruns;              /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
-};
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_clock.h"
 
 
 /** creates a clock and initializes it */

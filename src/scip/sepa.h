@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.21 2003/11/25 10:24:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.22 2003/12/01 14:41:31 bzfpfend Exp $"
 
 /**@file   sepa.h
- * @brief  methods and datastructures for separators
+ * @brief  internal methods for separators
  * @author Tobias Achterberg
  */
 
@@ -27,61 +27,17 @@
 #define __SEPA_H__
 
 
-typedef struct Sepa SEPA;               /**< separator */
-typedef struct SepaData SEPADATA;       /**< locally defined separator data */
-
-
-
-/** destructor of separator to free user data (called when SCIP is exiting)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - sepa            : the separator itself
- */
-#define DECL_SEPAFREE(x) RETCODE x (SCIP* scip, SEPA* sepa)
-
-/** initialization method of separator (called when problem solving starts)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - sepa            : the separator itself
- */
-#define DECL_SEPAINIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
-
-/** deinitialization method of separator (called when problem solving exits)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - sepa            : the separator itself
- */
-#define DECL_SEPAEXIT(x) RETCODE x (SCIP* scip, SEPA* sepa)
-
-/** execution method of separator
- *
- *  Searches for cutting planes. The method is called in the LP solving loop.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - sepa            : the separator itself
- *  - result          : pointer to store the result of the separation call
- *
- *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one unmodifiable row is infeasible in the variable's bounds -> node is infeasible
- *  - SCIP_SEPARATED  : a cutting plane was generated
- *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
- *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *  - SCIP_DIDNOTFIND : the separator searched, but didn't found a feasible cutting plane
- *  - SCIP_DIDNOTRUN  : the separator was skipped
- */
-#define DECL_SEPAEXEC(x) RETCODE x (SCIP* scip, SEPA* sepa, RESULT* result)
-
-
-
-
-#include "scip.h"
 #include "def.h"
-#include "retcode.h"
-#include "sepastore.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_result.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_misc.h"
+#include "type_sepastore.h"
+#include "type_scip.h"
+#include "type_sepa.h"
+#include "pub_sepa.h"
 
 
 
@@ -138,37 +94,6 @@ RETCODE SCIPsepaExec(
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
-/** gets user data of separator */
-extern
-SEPADATA* SCIPsepaGetData(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** sets user data of separator; user has to free old data in advance! */
-extern
-void SCIPsepaSetData(
-   SEPA*            sepa,               /**< separator */
-   SEPADATA*        sepadata            /**< new separator user data */
-   );
-
-/** gets name of separator */
-extern
-const char* SCIPsepaGetName(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets description of separator */
-extern
-const char* SCIPsepaGetDesc(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets priority of separator */
-extern
-int SCIPsepaGetPriority(
-   SEPA*            sepa                /**< separator */
-   );
-
 /** sets priority of separator */
 extern
 void SCIPsepaSetPriority(
@@ -176,48 +101,5 @@ void SCIPsepaSetPriority(
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the separator */
    );
-
-/** gets frequency of separator */
-extern
-int SCIPsepaGetFreq(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets time in seconds used in this separator */
-extern
-Real SCIPsepaGetTime(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets the total number of times, the separator was called */
-extern
-Longint SCIPsepaGetNCalls(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets the number of times, the separator was called at the current node */
-extern
-int SCIPsepaGetNCallsAtNode(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets the total number of cutting planes found by this separator */
-extern
-Longint SCIPsepaGetNCutsFound(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** gets the number of cutting planes found by this separator at the current node */
-extern
-Longint SCIPsepaGetNCutsFoundAtNode(
-   SEPA*            sepa                /**< separator */
-   );
-
-/** is separator initialized? */
-extern
-Bool SCIPsepaIsInitialized(
-   SEPA*            sepa                /**< separator */
-   );
-
 
 #endif

@@ -14,36 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.56 2003/11/27 17:48:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.57 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   lp.h
- * @brief  LP management methods and datastructures
+ * @brief  internal methods for LP management
  * @author Tobias Achterberg
- *
- *  In SCIP, the LP is defined as follows:
- *
- *   min       obj * x
- *      lhs <=   A * x + const <= rhs
- *      lb  <=       x         <= ub
- *
- *  The row activities are defined as 
- *     activity = A * x + const
- *  and must therefore be in the range of [lhs,rhs].
- *
- *  The reduced costs are defined as
- *     redcost = obj - A^T * y
- *  and must be   nonnegative, if the corresponding lb is nonnegative,
- *                zero,        if the corresponging lb is negative.
- *
- *  The main datastructures for storing an LP are the rows and the columns.
- *  A row can live on its own (if it was created by a separator), or as LP
- *  relaxation of a constraint. Thus, it has a nuses-counter, and is
- *  deleted, if not needed any more.
- *  A column cannot live on its own. It is always connected to a problem
- *  variable. Because pricing is always problem specific, it cannot create
- *  LP columns without introducing new variables. Thus, each column is
- *  connected to exactly one variable, and is deleted, if the variable
- *  is deleted.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,177 +29,20 @@
 
 #include <stdio.h>
 
-
-/** solution status after solving LP */
-enum LPSolStat
-{
-   SCIP_LPSOLSTAT_NOTSOLVED  = 0,       /**< LP was not solved, no solution exists */
-   SCIP_LPSOLSTAT_OPTIMAL    = 1,       /**< LP was solved to optimality */
-   SCIP_LPSOLSTAT_INFEASIBLE = 2,       /**< LP is primal infeasible */
-   SCIP_LPSOLSTAT_UNBOUNDED  = 3,       /**< LP is primal unbounded */
-   SCIP_LPSOLSTAT_OBJLIMIT   = 4,       /**< objective limit was reached during optimization */
-   SCIP_LPSOLSTAT_ITERLIMIT  = 5,       /**< iteration limit was reached during optimization */
-   SCIP_LPSOLSTAT_TIMELIMIT  = 6,       /**< time limit was reached during optimization */
-   SCIP_LPSOLSTAT_ERROR      = 7        /**< an error occured during optimization */
-};
-typedef enum LPSolStat LPSOLSTAT;
-
-/** type of variable bound: lower or upper bound */
-enum BoundType
-{
-   SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
-   SCIP_BOUNDTYPE_UPPER = 1             /**< upper bound */
-};
-typedef enum BoundType BOUNDTYPE;
-
-/** type of row side: left hand or right hand side */
-enum SideType
-{
-   SCIP_SIDETYPE_LEFT  = 0,             /**< left hand side */
-   SCIP_SIDETYPE_RIGHT = 1              /**< right hand side */
-};
-typedef enum SideType SIDETYPE;
-
-typedef struct Col COL;                 /**< column of an LP */
-typedef struct Row ROW;                 /**< row of an LP */
-typedef struct Lp LP;                   /**< actual LP data */
-
-
-
 #include "def.h"
-#include "mem.h"
-#include "set.h"
-#include "stat.h"
-#include "lpi.h"
-#include "var.h"
-#include "cons.h"
-#include "sol.h"
-#include "clock.h"
+#include "memory.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_lpi.h"
+#include "type_misc.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_sol.h"
+#include "pub_lp.h"
 
+#include "struct_lp.h"
 
-
-/** variable of the problem and corresponding LP column */
-struct Col
-{
-   VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
-   ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
-   Real*            vals;               /**< coefficients of column entries */
-   int*             linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
-   Real             obj;                /**< current objective value of column in LP */
-   Real             lb;                 /**< current lower bound of column in LP */
-   Real             ub;                 /**< current upper bound of column in LP */
-   Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
-   Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
-   Real             farkas;             /**< value in dual farkas infeasibility proof */
-   Real             strongdown;         /**< strong branching information for downwards branching */
-   Real             strongup;           /**< strong branching information for upwards branching */
-   Longint          obsoletenode;       /**< last node where this column was removed due to aging */
-   int              index;              /**< consecutively numbered column identifier */
-   int              size;               /**< size of the row- and val-arrays */
-   int              len;                /**< number of nonzeros in column */
-   int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
-   int              lppos;              /**< column position number in actual LP, or -1 if not in actual LP */
-   int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
-   int              validredcostlp;     /**< lp number for which reduced cost value is valid */
-   int              validfarkaslp;      /**< lp number for which farkas value is valid */
-   int              validstronglp;      /**< lp number for which strong branching values are valid */
-   int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
-   int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
-   int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
-   unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
-   unsigned int     objchanged:1;       /**< TRUE iff objective value changed, and data of LP solver has to be updated */
-   unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
-   unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
-   unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     removeable:1;       /**< TRUE iff column is removeable from the LP (due to aging or cleanup) */
-};
-
-/** row of the LP */
-struct Row
-{
-   char*            name;               /**< name of the row */
-   COL**            cols;               /**< columns of row entries, that may have a nonzero primal solution value */
-   int*             cols_probindex;     /**< copy of cols[i]->var->probindex for avoiding expensive dereferencing */
-   Real*            vals;               /**< coefficients of row entries */
-   int*             linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
-   Real             constant;           /**< constant shift c in row lhs <= ax + c <= rhs */
-   Real             lhs;                /**< left hand side of row */
-   Real             rhs;                /**< right hand side of row */
-   Real             sqrnorm;            /**< squared euclidean norm of row vector */
-   Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
-   Real             minval;             /**< minimal absolute non-zero value of row vector, only valid if numminval > 0 */
-   Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
-   Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
-   Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
-   Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
-   Real             minactivity;        /**< minimal activity value w.r.t. the column's bounds, or SCIP_INVALID */
-   Real             maxactivity;        /**< maximal activity value w.r.t. the column's bounds, or SCIP_INVALID */
-   Longint          validpsactivitybdchg; /**< bound change number for which pseudo activity value is valid */
-   Longint          validactivitybdsbdchg;/**< bound change number for which activity bound values are valid */
-   Longint          obsoletenode;       /**< last node where this row was removed due to aging */
-   int              index;              /**< consecutively numbered row identifier */
-   int              size;               /**< size of the col- and val-arrays */
-   int              len;                /**< number of nonzeros in row */
-   int              nunlinked;          /**< number of row entries, where the columns don't know about the row */
-   int              nuses;              /**< number of times, this row is referenced */
-   int              lppos;              /**< row position number in actual LP, or -1 if not in actual LP */
-   int              lpipos;             /**< row position number in LP solver, or -1 if not in LP solver */
-   int              minidx;             /**< minimal column index of row entries */
-   int              maxidx;             /**< maximal column index of row entries */
-   int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
-   int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
-   int              validactivitylp;    /**< lp number for which activity value is valid */
-   int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
-   unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
-   unsigned int     delaysort:1;        /**< should the row sorting be delayed and done in a lazy fashion? */
-   unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
-   unsigned int     lhschanged:1;       /**< was left hand side or constant changed, and has LP solver to be updated? */
-   unsigned int     rhschanged:1;       /**< was right hand side or constant changed, and has LP solver to be updated? */
-   unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
-   unsigned int     local:1;            /**< is row only valid locally? */
-   unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int     removeable:1;       /**< TRUE iff row is removeable from the LP (due to aging or cleanup) */
-   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
-};
-
-/** actual LP data */
-struct Lp
-{
-   LPI*             lpi;                /**< LP solver interface */
-   LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
-   COL**            lpicols;            /**< array with columns actually stored in the LP solver */
-   ROW**            lpirows;            /**< array with rows actually stored in the LP solver */
-   COL**            chgcols;            /**< array of changed columns not yet applied to the LP solver */
-   ROW**            chgrows;            /**< array of changed rows not yet applied to the LP solver */
-   COL**            cols;               /**< array with actual LP columns in correct order */
-   ROW**            rows;               /**< array with actual LP rows in correct order */
-   LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
-   Real             objval;             /**< objective value of LP, or SCIP_INVALID */
-   Real             upperbound;         /**< upper objective limit of LP solver (copy of primal->upperbound) */
-   int              lpicolssize;        /**< available slots in lpicols vector */
-   int              nlpicols;           /**< number of columns in the LP solver */
-   int              lpirowssize;        /**< available slots in lpirows vector */
-   int              nlpirows;           /**< number of rows in the LP solver */
-   int              lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
-   int              lpifirstchgrow;     /**< first row of the LP which differs from the row in the LP solver */
-   int              chgcolssize;        /**< available slots in chgcols vector */
-   int              nchgcols;           /**< actual number of chgcols (number of used slots in chgcols vector) */
-   int              chgrowssize;        /**< available slots in chgrows vector */
-   int              nchgrows;           /**< actual number of chgrows (number of used slots in chgrows vector) */
-   int              colssize;           /**< available slots in cols vector */
-   int              ncols;              /**< actual number of LP columns (number of used slots in cols vector) */
-   int              rowssize;           /**< available slots in rows vector */
-   int              nrows;              /**< actual number of LP rows (number of used slots in rows vector) */
-   int              firstnewcol;        /**< first column added at the active node */
-   int              firstnewrow;        /**< first row added at the active node */
-   int              nremoveablecols;    /**< number of removeable columns in the LP */
-   int              nremoveablerows;    /**< number of removeable rows in the LP */
-   unsigned int     flushed:1;          /**< are all cached changes applied to the LP solver? */
-   unsigned int     solved:1;           /**< is current LP solved? */
-   unsigned int     primalfeasible:1;   /**< is actual LP basis primal feasible? */
-   unsigned int     dualfeasible:1;     /**< is actual LP basis dual feasible? */
-   unsigned int     diving:1;           /**< LP is used for diving: col bounds and obj don't corresond to variables */
-};
 
 
 /*
@@ -363,105 +181,6 @@ RETCODE SCIPcolGetStrongbranch(
    Real*            up                  /**< stores dual bound after branching column up */
    );
 
-/** output column to file stream */
-extern
-void SCIPcolPrint(
-   COL*             col,                /**< LP column */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** gets lower bound of column */
-extern
-Real SCIPcolGetLb(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets upper bound of column */
-extern
-Real SCIPcolGetUb(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets best bound of column with respect to the objective function */
-extern
-Real SCIPcolGetBestBound(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets the primal LP solution of a column */
-extern
-Real SCIPcolGetPrimsol(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets variable this column represents */
-extern
-VAR* SCIPcolGetVar(
-   COL*             col                 /**< LP column */
-   );
-
-/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
-extern
-Bool SCIPcolIsRemoveable(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets position of column in actual LP, or -1 if it is not in LP */
-extern
-int SCIPcolGetLPPos(
-   COL*             col                 /**< LP column */
-   );
-
-/** returns TRUE iff column is member of actual LP */
-extern
-Bool SCIPcolIsInLP(
-   COL*             col                 /**< LP column */
-   );
-
-/** get number of nonzero entries in column vector */
-extern
-int SCIPcolGetNNonz(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets array with rows of nonzero entries */
-extern
-ROW** SCIPcolGetRows(
-   COL*             col                 /**< LP column */
-   );
-
-/** gets array with coefficients of nonzero entries */
-extern
-Real* SCIPcolGetVals(
-   COL*             col                 /**< LP column */
-   );
-
-#else
-
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
- * speed up the algorithms.
- */
-
-#define SCIPcolGetLb(col)               ((col)->lb)
-#define SCIPcolGetUb(col)               ((col)->ub)
-#define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)
-#define SCIPcolGetPrimsol(col)          ((col)->lppos >= 0 ? (col)->primsol : 0.0)
-#define SCIPcolGetVar(col)              ((col)->var)
-#define SCIPcolIsRemoveable(col)        ((col)->removeable)
-#define SCIPcolGetLPPos(col)            ((col)->lppos)
-#define SCIPcolIsInLP(col)              ((col)->lppos >= 0)
-#define SCIPcolGetNNonz(col)            ((col)->len)
-#define SCIPcolGetRows(col)             ((col)->rows)
-#define SCIPcolGetVals(col)             ((col)->vals)
-
-#endif
-
 
 
 
@@ -518,18 +237,6 @@ RETCODE SCIProwRelease(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
-   );
-
-/** locks an unmodifiable row, which forbids further changes */
-extern
-RETCODE SCIProwLock(
-   ROW*             row                 /**< LP row */
-   );
-
-/** unlocks a lock of a row; a row with no sealed lock may be modified */
-extern
-RETCODE SCIProwUnlock(
-   ROW*             row                 /**< LP row */
    );
 
 /** sorts row entries by column index */
@@ -719,133 +426,6 @@ Real SCIProwGetMinval(
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
-
-/** output row to file stream */
-extern
-void SCIProwPrint(
-   ROW*             row,                /**< LP row */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   );
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** get number of nonzero entries in row vector */
-extern
-int SCIProwGetNNonz(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets array with columns of nonzero entries */
-extern
-COL** SCIProwGetCols(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets array with coefficients of nonzero entries */
-extern
-Real* SCIProwGetVals(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets constant shift of row */
-extern
-Real SCIProwGetConstant(
-   ROW*             row                 /**< LP row */
-   );
-
-/** get euclidean norm of row vector */
-extern
-Real SCIProwGetNorm(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns the left hand side of the row */
-extern
-Real SCIProwGetLhs(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns the right hand side of the row */
-extern
-Real SCIProwGetRhs(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets the dual LP solution of a row */
-extern
-Real SCIProwGetDualsol(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns the name of the row */
-extern
-const char* SCIProwGetName(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets unique index of row */
-extern
-int SCIProwGetIndex(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is only valid locally */
-extern
-Bool SCIProwIsLocal(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is modifiable during node processing (subject to column generation) */
-extern
-Bool SCIProwIsModifiable(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
-extern
-Bool SCIProwIsRemoveable(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets position of row in actual LP, or -1 if it is not in LP */
-extern
-int SCIProwGetLPPos(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is member of actual LP */
-extern
-Bool SCIProwIsInLP(
-   ROW*             row                 /**< LP row */
-   );
-
-#else
-
-/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
- * speed up the algorithms.
- */
-
-#define SCIProwGetNNonz(row)            ((row)->len)
-#define SCIProwGetCols(row)             ((row)->cols)
-#define SCIProwGetVals(row)             ((row)->vals)
-#define SCIProwGetConstant(row)         ((row)->constant)
-#define SCIProwGetNorm(row)             (sqrt((row)->sqrnorm))
-#define SCIProwGetLhs(row)              ((row)->lhs)
-#define SCIProwGetRhs(row)              ((row)->rhs)
-#define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)
-#define SCIProwGetName(row)             ((row)->name)
-#define SCIProwGetIndex(row)            ((row)->index)
-#define SCIProwIsLocal(row)             ((row)->local)
-#define SCIProwIsModifiable(row)        ((row)->modifiable)
-#define SCIProwIsRemoveable(row)        ((row)->removeable)
-#define SCIProwGetLPPos(row)            ((row)->lppos)
-#define SCIProwIsInLP(row)              ((row)->lppos >= 0)
-
-#endif
 
 
 

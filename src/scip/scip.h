@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.91 2003/11/26 16:09:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.92 2003/12/01 14:41:31 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -27,61 +27,69 @@
 #define __SCIP_H__
 
 
-/** SCIP operation stage */
-enum Stage
-{
-   SCIP_STAGE_INIT       = 0,           /**< SCIP datastructures are initialized, no problem exists */
-   SCIP_STAGE_PROBLEM    = 1,           /**< the problem is being created and modified */
-   SCIP_STAGE_INITSOLVE  = 2,           /**< the solving process data is being initialized */
-   SCIP_STAGE_PRESOLVING = 3,           /**< the problem is being presolved */
-   SCIP_STAGE_PRESOLVED  = 4,           /**< the problem was presolved */
-   SCIP_STAGE_SOLVING    = 5,           /**< the problem is being solved */
-   SCIP_STAGE_SOLVED     = 6,           /**< the problem was solved */
-   SCIP_STAGE_FREESOLVE  = 7            /**< the solving process data is being freed */
-};
-typedef enum Stage STAGE;
-
-
-typedef struct Scip SCIP;               /**< SCIP main data structure */
-
-
-
-
 #include <stdio.h>
 
 #include "def.h"
-#include "retcode.h"
-#include "result.h"
-#include "memory.h"
 #include "message.h"
-#include "reader.h"
-#include "pricer.h"
-#include "cons.h"
-#include "var.h"
-#include "conflict.h"
-#include "lp.h"
-#include "tree.h"
-#include "nodesel.h"
-#include "disp.h"
-#include "branch.h"
-#include "event.h"
-#include "presol.h"
-#include "sepa.h"
-#include "heur.h"
-#include "misc.h"
-#include "paramset.h"
-#include "clock.h"
-#include "dialog.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_result.h"
+#include "type_clock.h"
+#include "type_misc.h"
+#include "type_paramset.h"
+#include "type_event.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_tree.h"
+#include "type_scip.h"
+
+#include "type_branch.h"
+#include "type_conflict.h"
+#include "type_cons.h"
+#include "type_dialog.h"
+#include "type_disp.h"
+#include "type_heur.h"
+#include "type_nodesel.h"
+#include "type_presol.h"
+#include "type_pricer.h"
+#include "type_reader.h"
+#include "type_sepa.h"
+
+/* include public interfaces, s.t. the user only needs to include scip.h */
+#include "pub_branch.h"
+#include "pub_conflict.h"
+#include "pub_cons.h"
+#include "pub_cutpool.h"
+#include "pub_dialog.h"
+#include "pub_disp.h"
+#include "pub_event.h"
+#include "pub_heur.h"
+#include "pub_lp.h"
+#include "pub_misc.h"
+#include "pub_nodesel.h"
+#include "pub_paramset.h"
+#include "pub_presol.h"
+#include "pub_pricer.h"
+#include "pub_reader.h"
+#include "pub_sepa.h"
+#include "pub_tree.h"
+#include "pub_var.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
  * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
+ * are implemented as defines for performance reasons (e.g. the numerical comparisons).
+ * Additionally, the internal "set.h" is included, such that the defines in set.h are
+ * available in optimized mode.
  */
 #ifdef NDEBUG
-#include "scipstruct.h"
+#include "struct_scip.h"
+#include "set.h"
 #endif
+
+
 
 
 /*

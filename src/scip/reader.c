@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.17 2003/11/27 17:48:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.18 2003/12/01 14:41:30 bzfpfend Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -25,26 +25,16 @@
 
 #include <assert.h>
 #include <string.h>
-/*?????????????????????#include <strings.h>*/
 
+#include "def.h"
+#include "memory.h"
+#include "set.h"
+#include "misc.h"
 #include "reader.h"
 
+#include "struct_reader.h"
 
 
-/** input file reader */
-struct Reader
-{
-   const char*      name;               /**< name of reader */
-   const char*      desc;               /**< description of reader */
-   const char*      extension;          /**< file extension that reader processes */
-   DECL_READERFREE  ((*readerfree));    /**< destructor of reader */
-   DECL_READERREAD  ((*readerread));    /**< read method */
-   READERDATA*      readerdata;         /**< reader data */
-};
-
-
-
-/* reader methods */
 
 /** creates a reader */
 RETCODE SCIPreaderCreate(

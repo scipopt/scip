@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.24 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.25 2003/12/01 14:41:32 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -25,31 +25,20 @@
 
 #include <assert.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "stat.h"
+#include "clock.h"
+#include "misc.h"
+#include "lp.h"
+#include "var.h"
+#include "prob.h"
 #include "sol.h"
+#include "tree.h"
+#include "cons.h"
 
-
-
-/** primal CIP solution
- *  For reasons of efficiency, a working solution only stores values that have been accessed at least once,
- *  or that have been changed from the value in the solution's source.
- *  The user has to call SCIPsolUnlink() in order to retrieve all non-cached elements from the solution's source
- *  and to store the values in the solution's own array. This changes the solution's origin to SCIP_SOLORIGIN_ZERO.
- *  A linked solution with origin SCIP_SOLORIGIN_LPSOL or SCIP_SOLORIGIN_PSEUDOSOL becomes invalid after the
- *  next node is activated (i.e. the LP and pseudo solutions changed) and cannot be accessed anymore.
- */
-struct Sol
-{
-   REALARRAY*       vals;               /**< solution values for variables */
-   BOOLARRAY*       valid;              /**< for solutions originating from LPSOL or PSEUDOSOL: TRUE iff variable's val
-                                         *   is valid; otherwise the value has to be retrieved from the origin */
-   HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
-   Real             obj;                /**< objective value of solution */
-   Real             time;               /**< clock time, when the solution was discovered */
-   Longint          nodenum;            /**< last node number, where this solution was modified */
-   SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
-   int              depth;              /**< depth at which the solution was found */
-};
-
+#include "struct_sol.h"
 
 
 

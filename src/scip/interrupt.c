@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.c,v 1.9 2003/11/27 17:48:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: interrupt.c,v 1.10 2003/12/01 14:41:26 bzfpfend Exp $"
 
 /**@file   interrupt.c
- * @brief  methods for catching the user CTRL-C interrupt
+ * @brief  methods and datastructures for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */
 
@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#include "def.h"
 #include "memory.h"
 #include "interrupt.h"
 
@@ -85,43 +86,37 @@ void SCIPinterruptFree(
 
 /** captures the CTRL-C interrupt to call the SCIP's own interrupt handler */
 void SCIPinterruptCapture(
-   INTERRUPT*       interrupt,          /**< CTRL-C interrupt data */
-   const SET*       set                 /**< global SCIP settings */
+   INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    )
 {
    assert(interrupt != NULL);
    assert(interrupt->nuses >= 0);
-   assert(set != NULL);
 
-   if( set->catchctrlc )
+   if( interrupt->nuses == 0 )
    {
-      if( interrupt->nuses == 0 )
-      {
-         struct sigaction newaction;
-
-         /* initialize new signal action */
-         newaction.sa_handler = interruptHandler;
-         newaction.sa_flags = 0;
-         (void)sigemptyset(&newaction.sa_mask);
+      struct sigaction newaction;
       
-         /* set new signal action, and remember old one */
-         (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
-         ninterrupts = 0;
-      }
-      interrupt->nuses++;
+      /* initialize new signal action */
+      newaction.sa_handler = interruptHandler;
+      newaction.sa_flags = 0;
+      (void)sigemptyset(&newaction.sa_mask);
+      
+      /* set new signal action, and remember old one */
+      (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+      ninterrupts = 0;
    }
+   interrupt->nuses++;
 }
 
 /** releases the CTRL-C interrupt and restores the old interrupt handler */
 void SCIPinterruptRelease(
-   INTERRUPT*       interrupt,          /**< CTRL-C interrupt data */
-   const SET*       set                 /**< global SCIP settings */
+   INTERRUPT*       interrupt           /**< CTRL-C interrupt data */
    )
 {
    assert(interrupt != NULL);
-   assert(!set->catchctrlc || interrupt->nuses >= 1);
+   assert(interrupt->nuses >= 1);
 
-   if( set->catchctrlc || interrupt->nuses > 0 )
+   if( interrupt->nuses > 0 )
    {
       interrupt->nuses--;
       if( interrupt->nuses == 0 )

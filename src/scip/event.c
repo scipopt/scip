@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.21 2003/11/27 17:48:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.22 2003/12/01 14:41:26 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -26,32 +26,15 @@
 #include <assert.h>
 #include <string.h>
 
-#include "var.h"
+#include "def.h"
+#include "message.h"
+#include "set.h"
 #include "event.h"
+#include "lp.h"
+#include "var.h"
+#include "tree.h"
+#include "branch.h"
 
-
-/** event handler */
-struct Eventhdlr
-{
-   char*            name;               /**< name of event handler */
-   char*            desc;               /**< description of event handler */
-   DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
-   DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
-   DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */
-   DECL_EVENTDELETE ((*eventdelete));   /**< free specific event data */
-   DECL_EVENTEXEC   ((*eventexec));     /**< execute event handler */
-   EVENTHDLRDATA*   eventhdlrdata;      /**< event handler data */
-   unsigned int     initialized:1;      /**< is event handler initialized? */
-};
-
-/** event queue to cache events and process them later */
-struct EventQueue
-{
-   EVENT**          events;             /**< array with queued events */
-   int              eventssize;         /**< number of available slots in events array */
-   int              nevents;            /**< number of events in queue (used slots if events array) */
-   unsigned int     delayevents:1;      /**< should the events be delayed and processed later? */
-};
 
 
 
@@ -174,7 +157,6 @@ RETCODE SCIPeventhdlrExec(
    assert(eventhdlr != NULL);
    assert(eventhdlr->eventexec != NULL);
    assert(set != NULL);
-   assert(set->scip != NULL);
    assert(event != NULL);
 
    debugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, event, event->eventtype);

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.15 2003/11/27 17:48:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.16 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   misc.c
- * @brief  miscellaneous methods and datastructures
+ * @brief  miscellaneous methods
  * @author Tobias Achterberg
  */
 
@@ -27,11 +27,12 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "memory.h"
+#include "def.h"
 #include "message.h"
-#include "retcode.h"
+#include "set.h"
 #include "misc.h"
 
+#include "struct_misc.h"
 
 
 
@@ -42,25 +43,6 @@
 #define PQ_PARENT(q) (((q)+1)/2-1)
 #define PQ_LEFTCHILD(p) (2*(p)+1)
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
-
-
-/** priority queue data structure
- *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
- *  The ordering is done through a pointer comparison function.
- *  The array is organized as follows. The root element (that is the "best" element $r$ with $r <= x$ for all $x$)
- *  is stored in position 0. The children of an element at position $p$ are stored at positions $q_1 = 2*p+1$ and
- *  $q_2 = 2*p+2$. That means, the parent of the element at position $q$ is at position $p = (q-1)/2$.
- *  At any time, the condition holds that $p <= q$ for each parent $p$ and its children $q$.
- *  Insertion and removal of single elements needs time $O(log n)$.
- */
-struct PQueue
-{
-   int              len;                /**< number of used element slots */
-   int              size;               /**< total number of available element slots */
-   Real             sizefac;            /**< memory growing factor */
-   void**           slots;              /**< array of element slots */
-   DECL_SORTPTRCOMP((*ptrcmp));         /**< compares two data elements */
-};
 
 
 /** resizes element memory to hold at least the given number of elements */
@@ -237,26 +219,6 @@ void** SCIPpqueueElems(
 /*
  * Hash Table
  */
-
-typedef struct HashList HASHLIST;       /**< element list to store in a hash table */
-
-/** element list to store in a hash table */
-struct HashList
-{
-   void*            element;            /**< this element */
-   HASHLIST*        next;               /**< rest of the hash list */
-};
-
-/** hash table data structure */
-struct HashTable
-{
-   HASHLIST**       lists;              /**< hash lists of the hash table */
-   int              nlists;             /**< number of lists stored in the hash table */
-   DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
-   DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
-   DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
-};
-
 
 /** appends element to the hash list */
 static
@@ -614,17 +576,6 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
  * Dynamic Arrays
  */
 
-/** dynamic array for storing real values */
-struct RealArray
-{
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
-   Real*            vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
-};
-
 /** creates a dynamic array of real values */
 RETCODE SCIPrealarrayCreate(
    REALARRAY**      realarray,          /**< pointer to store the real array */
@@ -962,17 +913,6 @@ RETCODE SCIPrealarrayIncVal(
 }
 
 
-/** dynamic array for storing int values */
-struct IntArray
-{
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
-   int*             vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
-};
-
 /** creates a dynamic array of int values */
 RETCODE SCIPintarrayCreate(
    INTARRAY**       intarray,           /**< pointer to store the int array */
@@ -1309,17 +1249,6 @@ RETCODE SCIPintarrayIncVal(
    return SCIPintarraySetVal(intarray, set, idx, SCIPintarrayGetVal(intarray, idx) + incval);
 }
 
-
-/** dynamic array for storing bool values */
-struct BoolArray
-{
-   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
-   Bool*            vals;               /**< array values */
-   int              valssize;           /**< size of vals array */
-   int              firstidx;           /**< index of first element in vals array */
-   int              minusedidx;         /**< index of first non zero element in vals array */
-   int              maxusedidx;         /**< index of last non zero element in vals array */
-};
 
 /** creates a dynamic array of bool values */
 RETCODE SCIPboolarrayCreate(

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.14 2003/11/27 17:48:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.15 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   presol.c
- * @brief  methods and datastructures for presolvers
+ * @brief  methods for presolvers
  * @author Tobias Achterberg
  */
 
@@ -26,43 +26,15 @@
 #include <assert.h>
 #include <string.h>
 
+#include "def.h"
+#include "memory.h"
+#include "set.h"
 #include "clock.h"
+#include "paramset.h"
+#include "scip.h"
 #include "presol.h"
 
-
-/** presolver */
-struct Presol
-{
-   char*            name;               /**< name of presolver */
-   char*            desc;               /**< description of presolver */
-   int              priority;           /**< priority of the presolver */
-   DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit));    /**< initialize presolver */
-   DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec));    /**< presolver execution method */
-   PRESOLDATA*      presoldata;         /**< presolver data */
-   CLOCK*           clock;              /**< presolving time */
-   unsigned int     initialized:1;      /**< is presolver initialized? */
-   int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
-   int              lastnaggrvars;      /**< number of variables aggregated before the last call to the presolver */
-   int              lastnchgvartypes;   /**< number of variable type changes before the last call to the presolver */
-   int              lastnchgbds;        /**< number of variable bounds tightend before the last call to the presolver */
-   int              lastnaddholes;      /**< number of domain holes added before the last call to the presolver */
-   int              lastndelconss;      /**< number of deleted constraints before the last call to the presolver */
-   int              lastnupgdconss;     /**< number of upgraded constraints before the last call to the presolver */
-   int              lastnchgcoefs;      /**< number of changed coefficients before the last call to the presolver */
-   int              lastnchgsides;      /**< number of changed left or right hand sides before the last call */
-   int              nfixedvars;         /**< total number of variables fixed by this presolver */
-   int              naggrvars;          /**< total number of variables aggregated by this presolver */
-   int              nchgvartypes;       /**< total number of variable type changes by this presolver */
-   int              nchgbds;            /**< total number of variable bounds tightend by this presolver */
-   int              naddholes;          /**< total number of domain holes added by this presolver */
-   int              ndelconss;          /**< total number of deleted constraints by this presolver */
-   int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
-   int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
-   int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
-};
-
+#include "struct_presol.h"
 
 
 

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.17 2003/11/21 10:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.18 2003/12/01 14:41:32 bzfpfend Exp $"
 
 /**@file   sol.h
- * @brief  methods and datastructures for storing primal CIP solutions
+ * @brief  internal methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
 
@@ -27,27 +27,19 @@
 #define __SOL_H__
 
 
-/** origin of solution: where to retrieve uncached elements */
-enum SolOrigin
-{
-   SCIP_SOLORIGIN_ZERO      = 0,        /**< all non-cached elements in solution are equal to zero */
-   SCIP_SOLORIGIN_LPSOL     = 1,        /**< all non-cached elements in solution are equal to actual LP solution */
-   SCIP_SOLORIGIN_PSEUDOSOL = 2         /**< all non-cached elements in solution are equal to actual pseudo solution */
-};
-typedef enum SolOrigin SOLORIGIN;
-
-typedef struct Sol SOL;                 /**< primal CIP solution */
-
+#include <stdio.h>
 
 #include "def.h"
-#include "retcode.h"
 #include "memory.h"
-#include "misc.h"
-#include "stat.h"
-#include "var.h"
-#include "heur.h"
-#include "prob.h"
-#include "tree.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_sol.h"
+#include "type_tree.h"
+#include "type_heur.h"
 
 
 

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.13 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.14 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   primal.h
- * @brief  methods and datastructures for collecting primal CIP solutions and primal informations
+ * @brief  internal methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
 
@@ -27,29 +27,20 @@
 #define __PRIMAL_H__
 
 
-typedef struct Primal PRIMAL;           /**< primal data */
-
-
 #include "def.h"
-#include "retcode.h"
 #include "memory.h"
-#include "set.h"
-#include "var.h"
-#include "lp.h"
-#include "prob.h"
-#include "tree.h"
-#include "event.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_event.h"
+#include "type_lp.h"
+#include "type_var.h"
+#include "type_prob.h"
+#include "type_sol.h"
+#include "type_primal.h"
+#include "type_tree.h"
 
+#include "struct_primal.h"
 
-/** primal data and solution storage */
-struct Primal
-{
-   SOL**            sols;               /**< primal CIP solutions */
-   int              solssize;           /**< size of sols array */
-   int              nsols;              /**< number of primal CIP solutions stored in sols array */
-   Longint          nsolsfound;         /**< number of primal CIP solutions found up to now */
-   Real             upperbound;         /**< upper (primal) bound of CIP: objective value of best solution or user bound */
-};
 
 
 /** creates primal data */

@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.18 2003/11/26 16:09:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.19 2003/12/01 14:41:32 bzfpfend Exp $"
 
 /**@file   solve.h
- * @brief  main solving loop and node processing
+ * @brief  internal methods for main solving loop and node processing
  * @author Tobias Achterberg
  */
 
@@ -27,18 +27,23 @@
 #define __SOLVE_H__
 
 
+#include <stdio.h>
+
 #include "def.h"
-#include "retcode.h"
-#include "set.h"
-#include "mem.h"
-#include "stat.h"
-#include "prob.h"
-#include "tree.h"
-#include "lp.h"
-#include "pricestore.h"
-#include "sepastore.h"
-#include "cutpool.h"
-#include "primal.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_set.h"
+#include "type_stat.h"
+#include "type_event.h"
+#include "type_lp.h"
+#include "type_prob.h"
+#include "type_primal.h"
+#include "type_tree.h"
+#include "type_pricestore.h"
+#include "type_sepastore.h"
+#include "type_cutpool.h"
+#include "type_conflict.h"
+
 
 
 /** returns whether the solving process will be / was stopped before proving optimality */
@@ -62,6 +67,7 @@ RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
+   MEM*             mem,                /**< block memory pools */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */

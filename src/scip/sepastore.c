@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.8 2003/11/27 17:48:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.9 2003/12/01 14:41:31 bzfpfend Exp $"
 
 /**@file   sepastore.c
- * @brief  methods and datastructures for storing separated cuts
+ * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  */
 
@@ -25,32 +25,15 @@
 
 #include <assert.h>
 
-#include "prob.h"
-#include "stat.h"
-#include "var.h"
+#include "def.h"
+#include "set.h"
 #include "lp.h"
-#include "scip.h"
+#include "var.h"
+#include "tree.h"
 #include "sepastore.h"
 
+#include "struct_sepastore.h"
 
-/** storage for separated cuts
- *  cuts with only one variable are treated specifically as bound changes, and they are not counted for exceeding the
- *  separation limit
- */
-struct SepaStore
-{
-   ROW**            cuts;               /**< array with separated cuts sorted by score */
-   Real*            score;              /**< score for each separated cut (e.g. violation/(eucnorm * #nonzeros)) */
-   VAR**            bdchgvars;          /**< variables to change bound for */
-   Real*            bdchgvals;          /**< new bounds of variables */
-   BOUNDTYPE*       bdchgtypes;         /**< type of bounds to change */
-   int              cutssize;           /**< size of cuts and score arrays */
-   int              ncuts;              /**< number of separated cuts (max. is set->maxsepacuts) */
-   int              bdchgssize;         /**< size of bdchgvars, bdchgvals, and bdchgtypes arrays */
-   int              nbdchgs;            /**< number of bound changes */
-   int              ncutsfound;         /**< total number of cuts (and bound changes) found so far */
-   int              ncutsapplied;       /**< total number of cuts (and bound changes) applied to the LPs */
-};
 
 
 /*

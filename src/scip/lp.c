@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.82 2003/11/27 17:48:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.83 2003/12/01 14:41:26 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -34,9 +34,17 @@
 #include <limits.h>
 #include <string.h>
 
+#include "def.h"
+#include "message.h"
+#include "set.h"
+#include "stat.h"
+#include "clock.h"
+#include "lpi.h"
 #include "misc.h"
 #include "lp.h"
-
+#include "var.h"
+#include "prob.h"
+#include "sol.h"
 
 
 

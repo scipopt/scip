@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.5 2003/11/21 10:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.6 2003/12/01 14:41:28 bzfpfend Exp $"
 
 /**@file   paramset.h
- * @brief  methods and datastructures for handling parameter settings
+ * @brief  internal methods for handling parameter settings
  * @author Tobias Achterberg
  */
 
@@ -27,198 +27,14 @@
 #define __PARAMSET_H__
 
 
-/** possible parameter types */
-enum ParamType
-{
-   SCIP_PARAMTYPE_BOOL    = 0,           /**< bool values: TRUE or FALSE */
-   SCIP_PARAMTYPE_INT     = 1,           /**< integer values */
-   SCIP_PARAMTYPE_LONGINT = 2,           /**< long integer values */
-   SCIP_PARAMTYPE_REAL    = 3,           /**< real values */
-   SCIP_PARAMTYPE_CHAR    = 4,           /**< characters */
-   SCIP_PARAMTYPE_STRING  = 5            /**< strings: arrays of characters */
-};
-typedef enum ParamType PARAMTYPE;
-
-typedef struct Param PARAM;             /**< single parameter */
-typedef struct ParamData PARAMDATA;     /**< locally defined parameter specific data */
-typedef struct ParamSet PARAMSET;       /**< set of parameters */
-
-
-/** information method for changes in the parameter
- *
- *  Method is called if the parameter was changed through a SCIPparamsetSetXxx() call
- *  (which is called by SCIPsetXxxParam()).
- *  It will not be called, if the parameter was changed directly by changing the value
- *  in the memory location.
- *
- *  input:
- *    scip            : SCIP main data structure
- *    param           : the changed parameter (already set to its new value)
- */
-#define DECL_PARAMCHGD(x) RETCODE x (SCIP* scip, PARAM* param)
-
-
-
-#include <math.h>
-
 #include "def.h"
-#include "retcode.h"
+#include "memory.h"
+#include "type_retcode.h"
+#include "type_paramset.h"
+#include "type_scip.h"
+#include "pub_paramset.h"
 
 
-
-/*
- * Parameter methods
- */
-
-/** returns type of parameter */
-extern
-PARAMTYPE SCIPparamGetType(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns name of parameter */
-extern
-const char* SCIPparamGetName(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns description of parameter */
-extern
-const char* SCIPparamGetDesc(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns locally defined parameter specific data */
-extern
-PARAMDATA* SCIPparamGetData(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns value of Bool parameter */
-extern
-Bool SCIPparamGetBool(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns value of int parameter */
-extern
-int SCIPparamGetInt(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns minimal value of int parameter */
-extern
-int SCIPparamGetIntMin(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns maximal value of int parameter */
-extern
-int SCIPparamGetIntMax(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns value of Longint parameter */
-extern
-Longint SCIPparamGetLongint(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns minimal value of longint parameter */
-extern
-Longint SCIPparamGetLongintMin(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns maximal value of longint parameter */
-extern
-Longint SCIPparamGetLongintMax(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns value of Real parameter */
-extern
-Real SCIPparamGetReal(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns minimal value of real parameter */
-extern
-Real SCIPparamGetRealMin(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns maximal value of real parameter */
-extern
-Real SCIPparamGetRealMax(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns value of char parameter */
-extern
-char SCIPparamGetChar(
-   PARAM*           param               /**< parameter */
-   );
-
-/** returns value of string parameter */
-extern
-char* SCIPparamGetString(
-   PARAM*           param               /**< parameter */
-   );
-
-/** sets value of Bool parameter */
-RETCODE SCIPparamSetBool(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Bool             value               /**< new value of the parameter */
-   );
-
-/** sets value of int parameter */
-extern
-RETCODE SCIPparamSetInt(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   int              value               /**< new value of the parameter */
-   );
-
-/** sets value of Longint parameter */
-extern
-RETCODE SCIPparamSetLongint(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Longint          value               /**< new value of the parameter */
-   );
-
-/** sets value of Real parameter */
-extern
-RETCODE SCIPparamSetReal(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   Real             value               /**< new value of the parameter */
-   );
-
-/** sets value of char parameter */
-extern
-RETCODE SCIPparamSetChar(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   char             value               /**< new value of the parameter */
-   );
-
-/** sets value of string parameter */
-extern
-RETCODE SCIPparamSetString(
-   PARAM*           param,              /**< parameter */
-   SCIP*            scip,               /**< SCIP data structure, or NULL if paramchgd method should not be called */   
-   const char*      value               /**< new value of the parameter */
-   );
-
-
-
-
-/*
- * Parameter set methods
- */
 
 /** creates parameter set */
 extern

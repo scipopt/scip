@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.10 2003/11/21 10:35:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.11 2003/12/01 14:41:27 bzfpfend Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -65,7 +65,9 @@ typedef enum VerbLevel VERBLEVEL;
 #endif
 
 
+#include <stdio.h>
 #include <stdarg.h>
+
 
 
 /** prints a message depending on the verbosity level */
