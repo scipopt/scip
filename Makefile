@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.35 2003/07/09 13:19:50 bzfpfend Exp $
+# $Id: Makefile,v 1.36 2003/07/17 14:00:41 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -93,9 +93,15 @@ LIBOBJ		=	branch.o \
 			buffer.o \
 			clock.o \
 			cons.o \
+			cons_binpack.o \
+			cons_eqknapsack.o \
 			cons_integral.o \
 			cons_linear.o \
+			cons_invarknapsack.o \
+			cons_knapsack.o \
 			cons_setppc.o \
+			cons_varlb.o \
+			cons_varub.o \
 			cutpool.o \
 			disp.o \
 			disp_default.o \

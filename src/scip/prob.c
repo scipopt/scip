@@ -329,7 +329,7 @@ void SCIPprobSetData(
    prob->probdata = probdata;
 }
 
-/** insert var at the correct position in vars array, depending on its type */
+/** inserts variable at the correct position in vars array, depending on its type */
 static
 void probInsertVar(
    PROB*            prob,               /**< problem data */
@@ -346,6 +346,9 @@ void probInsertVar(
    assert(prob->nvars < prob->varssize);
    assert(var != NULL);
    assert(var->probindex == -1);
+   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL
+      || var->varstatus == SCIP_VARSTATUS_LOOSE
+      || var->varstatus == SCIP_VARSTATUS_COLUMN);
 
    /* insert variable in array */
    insertpos = prob->nvars;

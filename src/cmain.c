@@ -32,6 +32,12 @@
 #include "cons_integral.h"
 #include "cons_linear.h"
 #include "cons_setppc.h"
+#include "cons_knapsack.h"
+#include "cons_eqknapsack.h"
+#include "cons_invarknapsack.h"
+#include "cons_binpack.h"
+#include "cons_varlb.h"
+#include "cons_varub.h"
 #include "presol_dualfix.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
@@ -42,6 +48,7 @@
 #include "heur_diving.h"
 #include "heur_rounding.h"
 #include "sepa_gomory.h"
+
 
 
 static
@@ -70,6 +77,16 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetppc(scip) );
+
+#if 0
+   CHECK_OKAY( SCIPincludeConsHdlrKnapsack(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrEqknapsack(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrInvarknapsack(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrBinpack(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrVarlb(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrVarub(scip) );
+#endif
+
    CHECK_OKAY( SCIPincludePresolDualfix(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );

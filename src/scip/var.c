@@ -717,6 +717,7 @@ RETCODE varCreate(
    }
    (*var)->parentvars = NULL;
    (*var)->eventfilter = NULL;
+   (*var)->negatedvar = NULL;
    (*var)->glbdom.holelist = NULL;
    (*var)->glbdom.lb = lb;
    (*var)->glbdom.ub = ub;
@@ -1054,6 +1055,64 @@ RETCODE SCIPvarTransform(
    (*transvar)->nlocksup = origvar->nlocksup;
 
    debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
+
+   return SCIP_OKAY;
+}
+
+/** gets negated variable x' = lb + ub - x of problem variable x */
+RETCODE SCIPvarNegate(
+   VAR**            negvar,             /**< pointer to store the negated variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var                 /**< problem variable to negate */
+   )
+{
+   assert(negvar != NULL);
+   assert(var != NULL);
+
+   /* check, if we already created the negated variable */
+   if( var->negatedvar == NULL )
+   {
+      char negvarname[MAXSTRLEN];
+      Bool infeasible;
+
+      debugMessage("creating negated variable of <%s>\n", var->name);
+      
+      /* negation is only possible for bounded variables */
+      if( SCIPsetIsInfinity(set, -var->glbdom.lb) || SCIPsetIsInfinity(set, var->glbdom.ub) )
+      {
+         errorMessage("cannot negate unbounded variable");
+         return SCIP_INVALIDDATA;
+      }
+      
+      /* create negated variable */
+      sprintf(negvarname, "%s_neg", var->name);
+      CHECK_OKAY( SCIPvarCreateTransformed(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub,
+                     0.0, var->vartype, var->removeable) );
+      
+      /* aggregate negated variable with x' = lb + ub - x */
+      CHECK_OKAY( SCIPvarAggregate(*negvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
+                     var, -1.0, var->glbdom.lb + var->glbdom.ub, &infeasible) );
+      assert(!infeasible);
+
+      /* link the variables together */
+      var->negatedvar = *negvar;
+      (*negvar)->negatedvar = var;
+
+      /* release the negated variable (it is now a parent of the problem variable, and is freed together with var) */
+      CHECK_OKAY( SCIPvarRelease(negvar, memhdr, set, lp) );
+
+   }
+   assert(var->negatedvar != NULL);
+
+   /* return the negated variable */
+   *negvar = var->negatedvar;
 
    return SCIP_OKAY;
 }

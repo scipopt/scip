@@ -2340,6 +2340,21 @@ RETCODE SCIPreleaseVar(
    }
 }
 
+/** gets negated variable x' = lb + ub - x of variable x */
+RETCODE SCIPgetNegatedVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to negate */
+   VAR**            negvar              /**< pointer to store the negated variable */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetNegatedVar", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPvarNegate(negvar, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+                  scip->branchcand, scip->eventqueue, var) );
+
+   return SCIP_OKAY;
+}
+
 /** gets solution value for variable in active node */
 Real SCIPgetVarSol(
    SCIP*            scip,               /**< SCIP data structure */

@@ -919,6 +919,14 @@ RETCODE SCIPreleaseVar(
    VAR**            var                 /**< pointer to variable */
    );
 
+/** gets negated variable x' = lb + ub - x of variable x */
+extern
+RETCODE SCIPgetNegatedVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to negate */
+   VAR**            negvar              /**< pointer to store the negated variable */
+   );
+
 /** gets solution value for variable in active node */
 extern
 Real SCIPgetVarSol(

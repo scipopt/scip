@@ -1924,6 +1924,115 @@ DECL_CONSDISABLE(consDisableSetppc)
    return SCIP_OKAY;
 }
 
+/** creates and captures a set partitioning / packing / covering constraint */
+static
+RETCODE createConsSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*      name,               /**< name of constraint */
+   int              nvars,              /**< number of variables in the constraint */
+   VAR**            vars,               /**< array with variables of constraint entries */
+   SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             local,              /**< is set partitioning constraint only valid locally? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   CONSHDLR* conshdlr;
+   CONSDATA* consdata;
+
+   assert(scip != NULL);
+
+   /* find the set partitioning constraint handler */
+   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      errorMessage("set partitioning / packing / covering constraint handler not found");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* create the constraint specific data */
+   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
+   if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
+   {
+      if( local )
+      {
+         errorMessage("problem constraint cannot be local");
+         return SCIP_INVALIDDATA;
+      }
+
+      /* create constraint in original problem */
+      CHECK_OKAY( setppcconsCreate(scip, &consdata->setppccons, nvars, vars, setppctype,
+                     modifiable, removeable) );
+   }
+   else
+   {
+      /* create constraint in transformed problem */
+      CHECK_OKAY( setppcconsCreateTransformed(scip, &consdata->setppccons, nvars, vars, setppctype,
+                     local, modifiable, removeable) );
+   }
+   consdata->row = NULL;
+
+   /* create constraint (propagation is never used for set partitioning / packing / covering constraints) */
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a normalized (with all coefficients +1) setppc constraint */
+static
+RETCODE createNormalizedSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*      name,               /**< name of constraint */
+   int              nvars,              /**< number of variables in the constraint */
+   VAR**            vars,               /**< array with variables of constraint entries */
+   Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
+   int              mult,               /**< multiplier on the coefficients(+1 or -1) */
+   SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
+   Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             local,              /**< is set partitioning constraint only valid locally? */
+   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   VAR** transvars;
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+   assert(mult == +1 || mult == -1);
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &transvars, nvars) );
+
+   /* negate positive or negative variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( mult * vals[v] > 0.0 )
+         transvars[v] = vars[v];
+      else
+      {
+         CHECK_OKAY( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
+      }
+      assert(transvars[v] != NULL);
+   }
+
+   /* create the constraint */
+   CHECK_OKAY( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
+      separate, enforce, check, local, modifiable, removeable) );
+
+   /* release temporary memory */
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_LINCONSUPGD(linconsUpgdSetppc)
 {
@@ -1931,37 +2040,61 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
 
    /* check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint
     * - all set partitioning / packing / covering constraints consist only of binary variables with a
-    *   coefficient of +1.0
+    *   coefficient of +1.0 or -1.0 (variables with -1.0 coefficients can be negated):
+    *        lhs     <= x1 + ... + xp - y1 - ... - yn <= rhs
+    * - negating all variables y = (1-Y) with negative coefficients gives:
+    *        lhs + n <= x1 + ... + xp + Y1 + ... + Yn <= rhs + n
+    * - negating all variables x = (1-X) with positive coefficients and multiplying with -1 gives:
+    *        p - rhs <= X1 + ... + Xp + y1 + ... + yn <= p - lhs
     * - a set partitioning constraint has left hand side of +1.0, and right hand side of +1.0 : x(S) == 1.0
+    *    -> without negations:  lhs == rhs == 1 - n  or  lhs == rhs == p - 1
     * - a set packing constraint has left hand side of -infinity, and right hand side of +1.0 : x(S) <= 1.0
+    *    -> without negations:  (lhs == -inf  and  rhs == 1 - n)  or  (lhs == p - 1  and  rhs = +inf)
     * - a set covering constraint has left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
+    *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
-   if( nposbin == nvars && ncoeffspone == nvars )
+   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars )
    {
-      if( SCIPisEQ(scip, lhs, 1.0) && SCIPisEQ(scip, rhs, 1.0) )
+      int mult;
+
+      if( SCIPisEQ(scip, lhs, rhs) && (SCIPisEQ(scip, lhs, 1 - ncoeffsnone) || SCIPisEQ(scip, lhs, ncoeffspone - 1)) )
       {
          debugMessage("upgrading constraint <%s> to set partitioning constraint\n", SCIPconsGetName(cons));
          
+         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
+         mult = SCIPisEQ(scip, lhs, 1 - ncoeffsnone) ? +1 : -1;
+
          /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
-         CHECK_OKAY( SCIPcreateConsSetpart(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
+         CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
+                        SCIP_SETPPCTYPE_PARTITIONING,
                         SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                         local, FALSE, removeable) );
       }
-      else if( SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0) )
+      else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1 - ncoeffsnone))
+         || (SCIPisEQ(scip, lhs, ncoeffspone - 1) && SCIPisInfinity(scip, rhs)) )
       {
          debugMessage("upgrading constraint <%s> to set packing constraint\n", SCIPconsGetName(cons));
          
-         /* create the set packing constraint (an automatically upgraded constraint is always unmodifiable) */
-         CHECK_OKAY( SCIPcreateConsSetpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
+         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
+         mult = SCIPisInfinity(scip, -lhs) ? +1 : -1;
+
+         /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
+         CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
+                        SCIP_SETPPCTYPE_PACKING,
                         SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                         local, FALSE, removeable) );
       }
-      else if( SCIPisEQ(scip, lhs, 1.0) && SCIPisInfinity(scip, rhs) )
+      else if( (SCIPisEQ(scip, lhs, 1 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
+         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1)) )
       {
          debugMessage("upgrading constraint <%s> to set covering constraint\n", SCIPconsGetName(cons));
          
-         /* create the set covering constraint (an automatically upgraded constraint is always unmodifiable) */
-         CHECK_OKAY( SCIPcreateConsSetcover(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
+         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
+         mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
+
+         /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
+         CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
+                        SCIP_SETPPCTYPE_COVERING,
                         SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                         local, FALSE, removeable) );
       }
@@ -2069,64 +2202,6 @@ RETCODE SCIPincludeConsHdlrSetppc(
    return SCIP_OKAY;
 }
 
-
-/** creates and captures a set partitioning / packing / covering constraint */
-static
-RETCODE createConsSetppc(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*      name,               /**< name of constraint */
-   int              nvars,              /**< number of variables in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   Bool             separate,           /**< should the constraint be separated during LP processing? */
-   Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             local,              /**< is set partitioning constraint only valid locally? */
-   Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
-   )
-{
-   CONSHDLR* conshdlr;
-   CONSDATA* consdata;
-
-   assert(scip != NULL);
-
-   /* find the set partitioning constraint handler */
-   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
-   if( conshdlr == NULL )
-   {
-      errorMessage("set partitioning / packing / covering constraint handler not found");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* create the constraint specific data */
-   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
-   if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
-   {
-      if( local )
-      {
-         errorMessage("problem constraint cannot be local");
-         return SCIP_INVALIDDATA;
-      }
-
-      /* create constraint in original problem */
-      CHECK_OKAY( setppcconsCreate(scip, &consdata->setppccons, nvars, vars, setppctype,
-                     modifiable, removeable) );
-   }
-   else
-   {
-      /* create constraint in transformed problem */
-      CHECK_OKAY( setppcconsCreateTransformed(scip, &consdata->setppccons, nvars, vars, setppctype,
-                     local, modifiable, removeable) );
-   }
-   consdata->row = NULL;
-
-   /* create constraint (propagation is never used for set partitioning / packing / covering constraints) */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, FALSE) );
-
-   return SCIP_OKAY;
-}
 
 /** creates and captures a set partitioning constraint */
 RETCODE SCIPcreateConsSetpart(

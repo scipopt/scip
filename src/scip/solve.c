@@ -289,10 +289,11 @@ RETCODE solveNodeLP(
          for( h = 0; h < set->nconshdlrs; ++h )
             SCIPconshdlrResetSepa(set->conshdlrs[h]);
          
-         /* try separating constraints until the cut pool is at least half full */
+         /* separate constraints */
          separateagain = TRUE;
-         while( !cutoff && separateagain && !enoughcuts )
+         while( !cutoff && separateagain )
          {
+            /* try separating constraints of the constraint handlers until the cut pool is at least half full */
             while( !cutoff && separateagain && !enoughcuts )
             {
                separateagain = FALSE;
@@ -306,13 +307,16 @@ RETCODE solveNodeLP(
                }
             }
             
-            /* separate LP, if the cut pool is less than half full */
-            for( s = 0; s < set->nsepas && !cutoff && !separateagain && !enoughcuts; ++s )
+            /* separate LP, if no cuts have been found by the constraint handlers */
+            if( SCIPsepastoreGetNCuts(sepastore) == 0 )
             {
-               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, tree->actnode->depth, &result) );
-               cutoff |= (result == SCIP_CUTOFF);
-               separateagain |= (result == SCIP_CONSADDED);
-               enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               for( s = 0; s < set->nsepas && !cutoff && !separateagain && !enoughcuts; ++s )
+               {
+                  CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, tree->actnode->depth, &result) );
+                  cutoff |= (result == SCIP_CUTOFF);
+                  separateagain |= (result == SCIP_CONSADDED);
+                  enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               }
             }
          }
 

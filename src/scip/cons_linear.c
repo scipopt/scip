@@ -1974,10 +1974,11 @@ void linconsScale(
  *  - multiplication with +1 or -1:
  *      Apply the following rules in the given order, until the sign of the factor is determined. Later rules only apply,
  *      if the actual rule doesn't determine the sign):
- *        1. the number of positive coefficients must not be smaller than the number of negative coefficients
+ *        1. the right hand side must not be negative
  *        2. the right hand side must not be infinite
  *        3. the absolute value of the right hand side must be greater than that of the left hand side
- *        4. multiply with +1
+ *        4. the number of positive coefficients must not be smaller than the number of negative coefficients
+ *        5. multiply with +1
  *  - rationals to integrals
  *      Try to identify a rational representation of the fractional coefficients, and multiply all coefficients
  *      by the smallest common multiple of all denominators to get integral coefficients.
@@ -2034,19 +2035,10 @@ RETCODE linconsNormalize(
    
    if( mult == 0 )
    {
-      /* 1. the number of positive coefficients must not be smaller than the number of negative coefficients */
-      nposcoeffs = 0;
-      nnegcoeffs = 0;
-      for( i = 0; i < nvars; ++i )
-      {
-         if( vals[i] > 0.0 )
-            nposcoeffs++;
-         else
-            nnegcoeffs++;
-      }
-      if( nposcoeffs > nnegcoeffs )
+      /* 1. the right hand side must not be negative */
+      if( SCIPisPositive(scip, lincons->lhs) )
          mult = +1;
-      else if( nposcoeffs < nnegcoeffs )
+      else if( SCIPisNegative(scip, lincons->rhs) )
          mult = -1;
    }
 
@@ -2070,7 +2062,25 @@ RETCODE linconsNormalize(
    
    if( mult == 0 )
    {
-      /* 4. multiply with +1 */
+      /* 4. the number of positive coefficients must not be smaller than the number of negative coefficients */
+      nposcoeffs = 0;
+      nnegcoeffs = 0;
+      for( i = 0; i < nvars; ++i )
+      {
+         if( vals[i] > 0.0 )
+            nposcoeffs++;
+         else
+            nnegcoeffs++;
+      }
+      if( nposcoeffs > nnegcoeffs )
+         mult = +1;
+      else if( nposcoeffs < nnegcoeffs )
+         mult = -1;
+   }
+
+   if( mult == 0 )
+   {
+      /* 5. multiply with +1 */
       mult = +1;
    }
 

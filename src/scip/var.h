@@ -119,6 +119,7 @@ struct Var
    } data;
    char*            name;               /**< name of the variable */
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
+   VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              actdom;             /**< domain of variable in actual subproblem */
@@ -307,6 +308,21 @@ RETCODE SCIPvarTransform(
    STAT*            stat,               /**< problem statistics */
    OBJSENSE         objsense,           /**< objective sense of original problem; transformed is always MINIMIZE */
    VAR*             origvar             /**< original problem variable */
+   );
+
+/** gets negated variable x' = lb + ub - x of problem variable x */
+extern
+RETCODE SCIPvarNegate(
+   VAR**            negvar,             /**< pointer to store the negated variable */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var                 /**< problem variable to negate */
    );
 
 /** increases lock number for rounding down; tells variable, that rounding its value down will make the solution
