@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.100 2004/11/12 13:03:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.101 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1868,9 +1868,9 @@ RETCODE SCIPconshdlrSeparate(
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
-            && *result != SCIP_SEPARATED
-            && *result != SCIP_REDUCEDDOM
             && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
             && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
          {
@@ -1998,10 +1998,10 @@ RETCODE SCIPconshdlrEnforceLPSol(
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
-            && *result != SCIP_BRANCHED
+            && *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_SEPARATED
-            && *result != SCIP_CONSADDED
+            && *result != SCIP_BRANCHED
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
          {
@@ -2130,14 +2130,14 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree)) );
 
          /* evaluate result */
-         if( *result != SCIP_DIDNOTRUN
-            && *result != SCIP_CUTOFF
-            && *result != SCIP_BRANCHED
-            && *result != SCIP_REDUCEDDOM
+         if( *result != SCIP_CUTOFF
             && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_BRANCHED
             && *result != SCIP_SOLVELP
             && *result != SCIP_INFEASIBLE
-            && *result != SCIP_FEASIBLE )
+            && *result != SCIP_FEASIBLE
+            && *result != SCIP_DIDNOTRUN )
          {
             errorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n", 
                conshdlr->name, *result);

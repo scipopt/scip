@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.1 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.2 2004/11/19 17:27:24 bzfpfend Exp $"
 
 /**@file   type_relax.h
  * @brief  type definitions for relaxators
@@ -66,11 +66,11 @@ typedef struct RelaxData RELAXDATA;     /**< locally defined relaxator data */
  *  - relax           : the relaxator itself
  *  - result          : pointer to store the result of the relaxation call
  *
- *  possible return values for *result:
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
- *  - SCIP_REDUCEDDOM : a variable's domain was reduced
- *  - SCIP_SEPARATED  : a linear cutting plane was generated
  *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_SUCCESS    : the relaxator solved the relaxation and should not be called again on the same relaxation
  *  - SCIP_SUSPENDED  : the relaxator interrupted its solving process to wait for additional input (e.g. cutting
  *                      planes); however, it is able to continue the solving in order to improve the dual bound

@@ -6,6 +6,8 @@ interface:
 - new methods SCIPgetLPColumnObjval() and SCIPgetLPLooseObjval()
 - new method SCIPcalcIntegralScalar() with arbitrary array of Real values
 - new plugin class for relaxators (external relaxations, that can be used in parallel with LP relaxations)
+- if more than one result code applies to a plugin's execution, it should return the one that is higher in the
+  call's documentation list
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
@@ -21,6 +23,7 @@ fixed bugs:
   is equal to the fixed value of the variable
 - implemented missing case in solve.c with branching rules that add constraints
 - solving loop is now immediately aborted, if a node on the active path is marked to be cut off
+- removed bug in resolving an interrupted problem, after the last solved node was cut off
 
 
 SCIP version 0.77

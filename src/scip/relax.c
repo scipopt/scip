@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.2 2004/11/19 14:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.3 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -230,9 +230,9 @@ RETCODE SCIPrelaxExec(
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
+         && *result != SCIP_CONSADDED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_SEPARATED
-         && *result != SCIP_CONSADDED
          && *result != SCIP_SUCCESS
          && *result != SCIP_SUSPENDED
          && *result != SCIP_DIDNOTRUN )

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.5 2004/09/21 12:08:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.6 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -64,13 +64,13 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *                      current solution instead of creating a branching?
  *  - result          : pointer to store the result of the branching call
  *
- *  possible return values for *result:
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
- *  - SCIP_BRANCHED   : branching was applied
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
- *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
  *                      returned, if allowaddcons is FALSE
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define DECL_BRANCHEXECLP(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, Bool allowaddcons, RESULT* result)
@@ -84,12 +84,12 @@ typedef struct BranchruleData BRANCHRULEDATA; /**< branching method specific dat
  *                      current solution instead of creating a branching?
  *  - result          : pointer to store the result of the branching call
  *
- *  possible return values for *result:
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the current node was detected to be infeasible
- *  - SCIP_BRANCHED   : branching was applied
- *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
  *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
  *                      returned, if allowaddcons is FALSE
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
+ *  - SCIP_BRANCHED   : branching was applied
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define DECL_BRANCHEXECPS(x) RETCODE x (SCIP* scip, BRANCHRULE* branchrule, Bool allowaddcons, RESULT* result)

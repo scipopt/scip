@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.22 2004/10/21 14:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.23 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -269,12 +269,12 @@ public:
     *  method should process only the useful constraints in most runs, and only occasionally the remaining
     *  nconss - nusefulconss constraints.
     *
-    *  possible return values for *result:
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
-    *  - SCIP_SEPARATED  : at least one cutting plane was generated
-    *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
-    *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
-    *  - SCIP_DIDNOTFIND : the separator searched, but did not find a cutting plane
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_CONSADDED  : an additional constraint was generated
+    *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+    *  - SCIP_SEPARATED  : a cutting plane was generated
+    *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
     *  - SCIP_DIDNOTRUN  : the separator was skipped
     */
    virtual RETCODE scip_sepa(
@@ -312,11 +312,11 @@ public:
     *  method should process the useful constraints first. The other nconss - nusefulconss constraints should only
     *  be enforced, if no violation was found in the useful constraints.
     *
-    *  possible return values for *result:
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
-    *  - SCIP_SEPARATED  : a cutting plane was generated to resolve an infeasibility
-    *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced to resolve an infeasibility
-    *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but a constraint was generated to resolve an infeasibility
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_CONSADDED  : an additional constraint was generated
+    *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+    *  - SCIP_SEPARATED  : a cutting plane was generated
     *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
     *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
@@ -350,15 +350,15 @@ public:
     *  and the enforcing method may skip it's check and set *result to SCIP_DIDNOTRUN. However, it can also process
     *  its constraints and return any other possible result code.
     *
-    *  possible return values for *result:
-    *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
-    *  - SCIP_REDUCEDDOM : at least one domain was reduced to resolve an infeasibility
-    *  - SCIP_CONSADDED  : no domain reductions, but a constraint was generated to resolve an infeasibility
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+    *  - SCIP_CONSADDED  : an additional constraint was generated
+    *  - SCIP_REDUCEDDOM : a variable's domain was reduced
     *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
     *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
     *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
     *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
+    *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
     */
    virtual RETCODE scip_enfops(
       SCIP*         scip,               /**< SCIP data structure */
@@ -409,7 +409,7 @@ public:
     *  nconss - nusefulconss constraints.
     *
     *  possible return values for *result:
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible for the current domains -> node is infeasible
+    *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
     *  - SCIP_REDUCEDDOM : at least one domain reduction was found
     *  - SCIP_DIDNOTFIND : the propagator searched, but did not find any domain reductions
     *  - SCIP_DIDNOTRUN  : the propagator was skipped

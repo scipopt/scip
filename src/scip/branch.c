@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.53 2004/10/19 18:36:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.54 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -914,10 +914,10 @@ RETCODE SCIPbranchruleExecLPSol(
       
          /* evaluate result */
          if( *result != SCIP_CUTOFF
-            && *result != SCIP_BRANCHED
+            && *result != SCIP_CONSADDED
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_SEPARATED
-            && *result != SCIP_CONSADDED
+            && *result != SCIP_BRANCHED
             && *result != SCIP_DIDNOTRUN )
          {
             errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
@@ -998,9 +998,9 @@ RETCODE SCIPbranchruleExecPseudoSol(
       
          /* evaluate result */
          if( *result != SCIP_CUTOFF
-            && *result != SCIP_BRANCHED
-            && *result != SCIP_REDUCEDDOM
             && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_BRANCHED
             && *result != SCIP_DIDNOTRUN )
          {
             errorMessage("branching rule <%s> returned invalid result code <%d> from pseudo solution branching\n",

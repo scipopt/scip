@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.5 2004/11/17 12:42:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.6 2004/11/19 17:27:24 bzfpfend Exp $"
 
 /**@file   type_sepa.h
  * @brief  type definitions for separators
@@ -65,11 +65,11 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *  - sepa            : the separator itself
  *  - result          : pointer to store the result of the separation call
  *
- *  possible return values for *result:
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_SEPARATED  : a cutting plane was generated
- *  - SCIP_CONSADDED  : an additional constraint was generated
  *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.37 2004/09/23 15:46:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.38 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -246,9 +246,9 @@ RETCODE SCIPsepaExec(
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF
-         && *result != SCIP_SEPARATED
-         && *result != SCIP_REDUCEDDOM
          && *result != SCIP_CONSADDED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.11 2004/10/05 11:01:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.12 2004/11/19 17:27:23 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -112,11 +112,13 @@ public:
    
    /** branching execution method for fractional LP solutions
     *
-    *  possible return values for *result:
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the current node was detected to be infeasible
-    *  - SCIP_BRANCHED   : branching was applied
+    *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+    *                      returned, if allowaddcons is FALSE
     *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current LP solution infeasible
     *  - SCIP_SEPARATED  : a cutting plane was generated
+    *  - SCIP_BRANCHED   : branching was applied
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped
     */
    virtual RETCODE scip_execlp(
@@ -133,10 +135,12 @@ public:
    
    /** branching execution method for not completely fixed pseudo solutions
     *
-    *  possible return values for *result:
+    *  possible return values for *result (if more than one applies, the first in the list should be used):
     *  - SCIP_CUTOFF     : the current node was detected to be infeasible
-    *  - SCIP_BRANCHED   : branching was applied
+    *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict clause) was generated; this result code must not be
+    *                      returned, if allowaddcons is FALSE
     *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
+    *  - SCIP_BRANCHED   : branching was applied
     *  - SCIP_DIDNOTRUN  : the branching rule was skipped
     */
    virtual RETCODE scip_execps(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.18 2004/10/26 07:30:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.19 2004/11/19 17:27:24 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -192,12 +192,12 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - nusefulconss    : number of useful (non-obsolete) constraints to process
  *  - result          : pointer to store the result of the separation call
  *
- *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
- *  - SCIP_SEPARATED  : at least one cutting plane was generated
- *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
- *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
- *  - SCIP_DIDNOTFIND : the separator searched, but did not find a cutting plane
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
  */
 #define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
@@ -232,11 +232,11 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - nusefulconss    : number of useful (non-obsolete) constraints to process
  *  - result          : pointer to store the result of the enforcing call
  *
- *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
- *  - SCIP_SEPARATED  : a cutting plane was generated to resolve an infeasibility
- *  - SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced to resolve an infeasibility
- *  - SCIP_CONSADDED  : no cutting plane or domain reductions, but a constraint was generated to resolve an infeasibility
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
@@ -273,15 +273,15 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - objinfeasible   : is the solution infeasible anyway due to violating lower objective bound?
  *  - result          : pointer to store the result of the enforcing call
  *
- *  possible return values for *result:
- *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
- *  - SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
- *  - SCIP_REDUCEDDOM : at least one domain was reduced to resolve an infeasibility
- *  - SCIP_CONSADDED  : no domain reductions, but a constraint was generated to resolve an infeasibility
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
  *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
+ *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
  */
 #define DECL_CONSENFOPS(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
       Bool objinfeasible, RESULT* result)
@@ -335,7 +335,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - result          : pointer to store the result of the propagation call
  *
  *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one constraint is infeasible for the current domains -> node is infeasible
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
  *  - SCIP_REDUCEDDOM : at least one domain reduction was found
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
