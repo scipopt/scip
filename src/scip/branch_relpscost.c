@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.14 2004/10/19 18:36:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.15 2004/10/20 10:55:36 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -404,8 +404,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
        * search best strong branching candidate
        */
-      maxlookahead = (Real)branchruledata->maxlookahead;
-      maxlookahead = MIN(maxlookahead, 2.0*branchruledata->maxlookahead);
+      maxlookahead = (Real)branchruledata->maxlookahead * (1.0 + (Real)nuninitcands/(Real)nlpcands);
       inititer = branchruledata->inititer;
       if( inititer == 0 )
       {
