@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.129 2004/05/03 08:13:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.130 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1376,7 +1376,7 @@ RETCODE SCIPfreeTransform(
 /**@name Variable Methods */
 /**@{ */
 
-/** create and capture problem variable; if variable is of integral type, fractional bounds are automatically rounded */
+/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded */
 extern
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1387,7 +1387,11 @@ RETCODE SCIPcreateVar(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    );
 
 /** increases usage counter of variable */
@@ -1812,6 +1816,13 @@ Real SCIPgetVarAvgInferences(
 /** returns the variable's average inference score value */
 extern
 Real SCIPgetVarAvgInferenceScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets user data for given variable */
+extern
+VARDATA* SCIPgetVarData(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< problem variable */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.13 2004/05/03 08:28:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.14 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -181,6 +181,10 @@ struct Var
       NEGATE        negate;             /**< negation information (for negated variables) */
    } data;
    char*            name;               /**< name of the variable */
+   DECL_VARDELORIG  ((*vardelorig));    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans));      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans));   /**< frees user data of transformed variable */
+   VARDATA*         vardata;            /**< user data for this specific variable */
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.88 2004/05/03 08:28:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.89 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -975,7 +975,11 @@ RETCODE varCreate(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
    assert(var != NULL);
@@ -1034,6 +1038,10 @@ RETCODE varCreate(
    (*var)->removeable = removeable;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
+   (*var)->vardelorig = vardelorig;
+   (*var)->vartrans = vartrans;
+   (*var)->vardeltrans = vardeltrans;
+   (*var)->vardata = vardata;
 
    /* adjust bounds, if variable is integral */
    SCIPvarAdjustLb(*var, set, &lb);
@@ -1058,7 +1066,11 @@ RETCODE SCIPvarCreateOriginal(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
    assert(var != NULL);
@@ -1066,7 +1078,8 @@ RETCODE SCIPvarCreateOriginal(
    assert(stat != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable) );
+   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable,
+                  vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
@@ -1090,14 +1103,19 @@ RETCODE SCIPvarCreateTransformed(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
    assert(var != NULL);
    assert(memhdr != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable) );
+   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable,
+                  vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
@@ -1248,7 +1266,7 @@ RETCODE varFree(
    assert((*var)->probindex == -1);
 
    debugMessage("free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
-   switch( SCIPvarGetStatus(*var) )
+   switch( (*var)->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert((*var)->data.transvar == NULL);  /* cannot free variable, if transformed variable is still existing */
@@ -1274,6 +1292,22 @@ RETCODE varFree(
 
    /* release all parent variables and free the parentvars array */
    CHECK_OKAY( varFreeParents(var, memhdr, set, lp) );
+
+   /* free user data */
+   if( (*var)->varstatus == SCIP_VARSTATUS_ORIGINAL )
+   {
+      if( (*var)->vardelorig != NULL )
+      {
+         CHECK_OKAY( (*var)->vardelorig(set->scip, *var, &(*var)->vardata) );
+      }
+   }
+   else
+   {
+      if( (*var)->vardeltrans != NULL )
+      {
+         CHECK_OKAY( (*var)->vardeltrans(set->scip, *var, &(*var)->vardata) );
+      }
+   }
 
    /* free event filter */
    if( (*var)->eventfilter != NULL )
@@ -1742,9 +1776,10 @@ RETCODE SCIPvarTransform(
       
       /* create transformed variable */
       sprintf(name, "t_%s", origvar->name);
-      CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
-                     name, origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
-                     vartype, origvar->initial, origvar->removeable) );
+      CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat, name,
+                     origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
+                     vartype, origvar->initial, origvar->removeable,
+                     NULL, NULL, origvar->vardeltrans, origvar->vardata) );
       
       /* copy the branch factor and priority */
       (*transvar)->branchfactor = origvar->branchfactor;
@@ -1763,6 +1798,12 @@ RETCODE SCIPvarTransform(
       (*transvar)->nlocksup = origvar->nlocksup;
       assert((*transvar)->nlocksdown >= 0);
       assert((*transvar)->nlocksup >= 0);
+
+      /* transform user data */
+      if( origvar->vartrans != NULL )
+      {
+         CHECK_OKAY( origvar->vartrans(set->scip, origvar, origvar->vardata, *transvar, &(*transvar)->vardata) );
+      }
    }
 
    debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
@@ -2514,7 +2555,7 @@ RETCODE SCIPvarNegate(
 
       /* create negated variable */
       CHECK_OKAY( varCreate(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
-                     SCIPvarGetType(var), var->initial, var->removeable) );
+                     SCIPvarGetType(var), var->initial, var->removeable, NULL, NULL, NULL, NULL) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          (*negvar)->data.negate.constant = 1.0;
@@ -4720,6 +4761,16 @@ const char* SCIPvarGetName(
    assert(var != NULL);
 
    return var->name;
+}
+
+/** returns the user data of the variable */
+VARDATA* SCIPvarGetData(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vardata;
 }
 
 /** gets status of variable */

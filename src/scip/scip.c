@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.160 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.161 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3548,7 +3548,7 @@ RETCODE SCIPfreeTransform(
  * variable methods
  */
 
-/** create and capture problem variable; if variable is of integral type, fractional bounds are automatically rounded */
+/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded */
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            var,                /**< pointer to variable object */
@@ -3558,7 +3558,11 @@ RETCODE SCIPcreateVar(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
    assert(var != NULL);
@@ -3570,7 +3574,7 @@ RETCODE SCIPcreateVar(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat, 
-                     name, lb, ub, obj, vartype, initial, removeable) );
+                     name, lb, ub, obj, vartype, initial, removeable, vardelorig, vartrans, vardeltrans, vardata) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -3578,7 +3582,7 @@ RETCODE SCIPcreateVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat,
-                     name, lb, ub, obj, vartype, initial, removeable) );
+                     name, lb, ub, obj, vartype, initial, removeable, NULL, NULL, vardeltrans, vardata) );
       break;
 
    default:
@@ -4695,8 +4699,8 @@ RETCODE aggregateActiveIntVars(
    sprintf(aggvarname, "agg%d", scip->stat->nvaridx);
    CHECK_OKAY( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->set, scip->stat,
                   aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
-                  SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary),
-                  SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary) ) );
+                  SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary),
+                  NULL, NULL, NULL, NULL) );
    CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
                   scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -5052,6 +5056,17 @@ Real SCIPgetVarAvgInferenceScore(
    inferup = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
+}
+
+/** gets user data for given variable */
+VARDATA* SCIPgetVarData(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPvarGetData(var);
 }
 
 

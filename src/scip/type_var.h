@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.5 2004/04/07 14:48:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.6 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables
@@ -84,6 +84,51 @@ typedef struct Aggregate AGGREGATE;     /**< aggregation information */
 typedef struct Multaggr MULTAGGR;       /**< multiple aggregation information */
 typedef struct Negate NEGATE;           /**< negation information */
 typedef struct Var VAR;                 /**< variable of the problem */
+typedef struct VarData VARDATA;         /**< user variable data */
 
+
+/** frees user data of original variable (called when the original variable is freed)
+ *
+ *  This method should free the user data of the original variable.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    var             : original variable the data to free is belonging to
+ *    vardata         : pointer to the user variable data to free
+ */
+#define DECL_VARDELORIG(x) RETCODE x (SCIP* scip, VAR* var, VARDATA** vardata)
+
+/** creates transformed variable for original user variable
+ *
+ *  Because the original variable and the user data of the original variable should not be
+ *  modified during the solving process, a transformed variable is created as a copy of
+ *  the original variable. If the user variable data is never modified during the solving
+ *  process anyways, it is enough to simple copy the user data's pointer. This is the
+ *  default implementation, which is used when a NULL is given as VARTRANS method.
+ *  If the user data may be modified during the solving process (e.g. during preprocessing),
+ *  the VARTRANS method must be given and has to copy the user variable data to a different
+ *  memory location.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    sourcevar       : original variable
+ *    sourcedata      : source variable data to transform
+ *    targetvar       : transformed variable
+ *    targetdata      : pointer to store created transformed variable data
+ */
+#define DECL_VARTRANS(x) RETCODE x (SCIP* scip, VAR* sourcevar, VARDATA* sourcedata, VAR* targetvar, VARDATA** targetdata)
+
+/** frees user data of transformed variable (called when the transformed variable is freed)
+ *
+ *  This method has to be implemented, if the VARTRANS method is not a simple pointer
+ *  copy operation like in the default VARTRANS implementation. It should free the
+ *  user data of the transformed variable, that was created in the VARTRANS method.
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    var             : transformed variable the data to free is belonging to
+ *    vardata         : pointer to the user variable data to free
+ */
+#define DECL_VARDELTRANS(x) RETCODE x (SCIP* scip, VAR* var, VARDATA** vardata)
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.42 2004/04/27 15:50:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.43 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -783,13 +783,14 @@ RETCODE readCols(
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
+                           NULL, NULL, NULL, NULL) );
          }
          else
          {
             /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, 
-                           !dynamiccols, dynamiccols) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
+                           !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL) );
          }
       }
       assert(var != NULL);

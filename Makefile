@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.74 2004/04/19 17:08:25 bzfpfend Exp $
+# $Id: Makefile,v 1.75 2004/05/03 13:35:24 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -263,7 +263,8 @@ OBJSCIPLIBOBJ	=	objbranchrule.o \
 			objpricer.o \
 			objprobdata.o \
 			objreader.o \
-			objsepa.o
+			objsepa.o \
+			objvardata.o
 
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
 OBJSCIPLIBFILE	=	$(LIBDIR)/lib$(OBJSCIPLIB).a

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.15 2004/05/03 08:28:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.16 2004/05/03 13:35:24 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -247,6 +247,12 @@ Real SCIPvarGetAvgBranchdepth(
 /** get name of variable */
 extern
 const char* SCIPvarGetName(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the user data of the variable */
+extern
+VARDATA* SCIPvarGetData(
    VAR*             var                 /**< problem variable */
    );
 
@@ -528,6 +534,7 @@ Real* SCIPvarGetVubConstants(
  */
 
 #define SCIPvarGetName(var)             (var)->name
+#define SCIPvarGetData(var)             (var)->vardata
 #define SCIPvarGetStatus(var)           (VARSTATUS)((var)->varstatus)
 #define SCIPvarIsOriginal(var)          ((var)->varstatus == SCIP_VARSTATUS_ORIGINAL \
       || ((var)->varstatus == SCIP_VARSTATUS_NEGATED && (var)->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL))

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.16 2004/04/27 15:50:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.17 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   reader_cnf.c
  * @brief  cnf file reader
@@ -194,7 +194,8 @@ RETCODE readCnf(
    for( v = 0; v < nvars; ++v )
    {
       sprintf(varname, "x%d", v+1);
-      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols) );
+      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
+                     NULL, NULL, NULL, NULL) );
       CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.2 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.3 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -130,8 +130,8 @@ RETCODE createObjRow(
       nvars = SCIPgetNVars(scip);
 
       /* create and add objective value variable */
-      CHECK_OKAY( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, 
-                     SCIP_VARTYPE_IMPLINT, FALSE, TRUE) );
+      CHECK_OKAY( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+                     SCIP_VARTYPE_IMPLINT, FALSE, TRUE, NULL, NULL, NULL, NULL) );
       CHECK_OKAY( SCIPaddVar(scip, sepadata->objvar) );
 
       /* create objective value equality */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.64 2004/04/30 11:16:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.65 2004/05/03 13:35:25 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -171,7 +171,11 @@ RETCODE SCIPvarCreateOriginal(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    );
 
 /** creates and captures a loose variable belonging to the transformed problem */
@@ -187,7 +191,11 @@ RETCODE SCIPvarCreateTransformed(
    Real             obj,                /**< objective function value */
    VARTYPE          vartype,            /**< type of variable */
    Bool             initial,            /**< should var's column be present in the initial root LP? */
-   Bool             removeable          /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   Bool             removeable,         /**< is var's column removeable from the LP (due to aging or cleanup)? */
+   DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   VARDATA*         vardata             /**< user data for this specific variable */
    );
 
 /** increases usage counter of variable */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.6 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.7 2004/05/03 13:35:24 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -71,8 +71,8 @@ public:
     *  (called after problem was transformed)
     *
     *  The user has two possibilities to implement this method:
-    *   1. Return the pointer to the original problem data object as pointer to the transformed problem data object.
-    *      The user may modify some internal attributes, but he has to make sure, that these modifications are
+    *   1. Return the pointer to the original problem data object (this) as pointer to the transformed problem data
+    *      object. The user may modify some internal attributes, but he has to make sure, that these modifications are
     *      reversed in the scip_deltrans() method, such that the original problem data is restored. In this case,
     *      he should set *deleteobject to FALSE, because the problem data must not be destructed by SCIP after the
     *      solving process is terminated.
