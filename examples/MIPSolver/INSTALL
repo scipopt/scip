@@ -1,0 +1,78 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*                                                                           *
+*                  This file is part of the program and library             *
+*         SCIP --- Solving Constraint Integer Programs                      *
+*                                                                           *
+*    Copyright (C) 2002-2004 Tobias Achterberg                              *
+*                                                                           *
+*                  2002-2004 Konrad-Zuse-Zentrum                            *
+*                            fuer Informationstechnik Berlin                *
+*                                                                           *
+*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
+*                                                                           *
+*  You should have received a copy of the SCIP Academic License             *
+*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*                                                                           *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+In the following, some of the names depend on your machine and your
+compilation settings:
+
+- $(OSTYPE): the operating system
+             the string returned by "uname -s" in lower case
+
+- $(ARCH):   the architecture
+             the string returned by "uname -m", modified by the following
+             rules to subsume some architectures:
+              - "sun??" is replaced by "sparc"
+              - "i?86" is replaced by "x86"
+              - "IP??" is replaced by "mips"
+              - "9000????" is replaced by "hppa"
+              - "00??????????" is replaced by "pwr4"
+
+- $(COMP):   the compiler
+             "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
+
+- $(OPT):    the optimization level of compilation
+             "dbg", "opt", or "prf"
+
+For example, if you want to install SCIP on a Linux system with a x86 processor
+using the gnu compiler in debug mode, you would have the following names:
+- $(OSTYPE) = linux
+- $(ARCH)   = x86
+- $(COMP)   = gnu
+- $(OPT)    = dbg
+
+-----------------------------------------------------------------------------
+
+Here is what you have to do to get the C++ example project using SCIP as a library
+running:
+
+1. Install and compile SCIP as described in the INSTALL file of SCIP's main 
+   directory, and make sure to create the necessary softlinks in SCIP's lib 
+   directory
+
+2. Create necessary softlink to SCIP in lib/ directory:
+   - ln -s <path to SCIP> lib/scip
+
+3. Compile the example project:
+   In the example main directory, enter "make OPT=<...> LPS=<...> COMP=<...>" with
+   the following options:
+   - "OPT=dbg"  to use debug compilation mode (default)
+   - "OPT=opt"  to use optimized compilation mode
+   - "OPT=prf"  to use performance analysis compilation mode
+   - "LPS=cpx"  to use CPLEX as LP solver (default)
+   - "LPS=spx"  to use SOPLEX as LP solver
+   - "COMP=gnu" to use GNU c/c++ compiler (default)
+   - other compilers are available (see make/ directory)
+
+3. To run the program enter "bin/example.$(OSTYPE).$(ARCH).$(COMP).$(OPT)"
+   (e.g. "bin/example.linux.x86.gnu.dbg.cpx")
+
+4. To generate the documentation, you need to have doxygen installed, and
+   enter "make doc"
+
+5. To check the code with lint, you need to have flexelint installed, and
+   enter "make lint"
+
+On some machines, you should use gmake instead of make.
