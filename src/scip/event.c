@@ -954,9 +954,9 @@ RETCODE SCIPeventqueueAdd(
                qevent->data.boundchange.newbound);
 
             qevent->data.boundchange.newbound = (*event)->data.boundchange.newbound;
-            if( SCIPsetIsL(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            if( SCIPsetIsLT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_LBRELAXED;
-            else if( SCIPsetIsG(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            else if( SCIPsetIsGT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_LBTIGHTENED;
             else
             {
@@ -1000,9 +1000,9 @@ RETCODE SCIPeventqueueAdd(
                qevent->data.boundchange.newbound);
 
             qevent->data.boundchange.newbound = (*event)->data.boundchange.newbound;
-            if( SCIPsetIsL(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            if( SCIPsetIsLT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;
-            else if( SCIPsetIsG(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
+            else if( SCIPsetIsGT(set, qevent->data.boundchange.newbound, qevent->data.boundchange.oldbound) )
                qevent->eventtype = SCIP_EVENTTYPE_UBRELAXED;
             else
             {

@@ -622,7 +622,7 @@ void rowAddNorms(
    /* update maximum norm */
    if( row->nummaxval > 0 )
    {
-      if( SCIPsetIsG(set, absval, row->maxval) )
+      if( SCIPsetIsGT(set, absval, row->maxval) )
       {
          row->maxval = absval;
          row->nummaxval = 1;

@@ -71,9 +71,9 @@
 #endif
 
 #define EPSEQ(x,y,eps) (ABS((x)-(y)) <= (eps))
-#define EPSL(x,y,eps)  ((x)-(y) < -(eps))
+#define EPSLT(x,y,eps) ((x)-(y) < -(eps))
 #define EPSLE(x,y,eps) ((x)-(y) <= (eps))
-#define EPSG(x,y,eps)  ((x)-(y) > (eps))
+#define EPSGT(x,y,eps) ((x)-(y) > (eps))
 #define EPSGE(x,y,eps) ((x)-(y) >= -(eps))
 #define EPSZ(x,eps)    (ABS(x) <= (eps))
 #define EPSP(x,eps)    ((x) > (eps))

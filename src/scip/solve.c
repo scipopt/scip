@@ -627,7 +627,7 @@ RETCODE SCIPsolveCIP(
          /* solve at least the root LP, if there are continous variables present */
          tree->actnodehaslp |= (actnode->depth == 0 && prob->ncont > 0);
          /* don't solve the node if its cut off by the pseudo objective value anyway */
-         tree->actnodehaslp &= SCIPsetIsL(set, tree->actpseudoobjval, primal->upperbound);
+         tree->actnodehaslp &= SCIPsetIsLT(set, tree->actpseudoobjval, primal->upperbound);
          
          /* external node solving loop */
          do

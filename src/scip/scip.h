@@ -1217,7 +1217,7 @@ Bool SCIPisEQ(
 
 /** checks, if val1 is (more than epsilon) lower than val2 */
 extern
-Bool SCIPisL(
+Bool SCIPisLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1233,7 +1233,7 @@ Bool SCIPisLE(
 
 /** checks, if val1 is (more than epsilon) greater than val2 */
 extern
-Bool SCIPisG(
+Bool SCIPisGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1278,7 +1278,7 @@ Bool SCIPisSumEQ(
 
 /** checks, if val1 is (more than sumepsilon) lower than val2 */
 extern
-Bool SCIPisSumL(
+Bool SCIPisSumLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1294,7 +1294,7 @@ Bool SCIPisSumLE(
 
 /** checks, if val1 is (more than sumepsilon) greater than val2 */
 extern
-Bool SCIPisSumG(
+Bool SCIPisSumGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1339,7 +1339,7 @@ Bool SCIPisFeasEQ(
 
 /** checks, if val1 is (more than feasibility tolerance) lower than val2 */
 extern
-Bool SCIPisFeasL(
+Bool SCIPisFeasLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1355,7 +1355,7 @@ Bool SCIPisFeasLE(
 
 /** checks, if val1 is (more than feasibility tolerance) greater than val2 */
 extern
-Bool SCIPisFeasG(
+Bool SCIPisFeasGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1400,7 +1400,7 @@ Bool SCIPisRelEQ(
 
 /** checks, if relative difference of val1 and val2 is lower than epsilon */
 extern
-Bool SCIPisRelL(
+Bool SCIPisRelLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1416,7 +1416,7 @@ Bool SCIPisRelLE(
 
 /** checks, if relative difference of val1 and val2 is greater than epsilon */
 extern
-Bool SCIPisRelG(
+Bool SCIPisRelGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1440,7 +1440,7 @@ Bool SCIPisSumRelEQ(
 
 /** checks, if rel. difference of val1 and val2 is lower than sumepsilon */
 extern
-Bool SCIPisSumRelL(
+Bool SCIPisSumRelLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1456,7 +1456,7 @@ Bool SCIPisSumRelLE(
 
 /** checks, if rel. difference of val1 and val2 is greater than sumepsilon */
 extern
-Bool SCIPisSumRelG(
+Bool SCIPisSumRelGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */

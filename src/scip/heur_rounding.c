@@ -143,8 +143,8 @@ RETCODE updateActivities(
          /* update row violation arrays */
          lhs = SCIProwGetLhs(row);
          rhs = SCIProwGetRhs(row);
-         oldviol = (SCIPisFeasL(scip, oldactivity, lhs) || SCIPisFeasG(scip, oldactivity, rhs));
-         newviol = (SCIPisFeasL(scip, newactivity, lhs) || SCIPisFeasG(scip, newactivity, rhs));
+         oldviol = (SCIPisFeasLT(scip, oldactivity, lhs) || SCIPisFeasGT(scip, oldactivity, rhs));
+         newviol = (SCIPisFeasLT(scip, newactivity, lhs) || SCIPisFeasGT(scip, newactivity, rhs));
          if( oldviol != newviol )
          {
             int violpos;
@@ -491,14 +491,14 @@ DECL_HEUREXEC(SCIPheurExecRounding)
          assert(0 <= rowpos && rowpos < nlprows);
          assert(violrowpos[rowpos] == nviolrows-1);
 
-         if( SCIPisFeasL(scip, activities[rowpos], SCIProwGetLhs(row)) )
+         if( SCIPisFeasLT(scip, activities[rowpos], SCIProwGetLhs(row)) )
          {
             /* lhs is violated: select a variable rounding, that increases the activity */
             CHECK_OKAY( selectIncreaseRounding(scip, sol, row, &roundvar, &oldsolval, &newsolval) );
          }
          else
          {
-            assert(SCIPisFeasG(scip, activities[rowpos], SCIProwGetRhs(row)));
+            assert(SCIPisFeasGT(scip, activities[rowpos], SCIProwGetRhs(row)));
             /* rhs is violated: select a variable rounding, that decreases the activity */
             CHECK_OKAY( selectDecreaseRounding(scip, sol, row, &roundvar, &oldsolval, &newsolval) );
          }

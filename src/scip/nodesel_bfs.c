@@ -125,9 +125,9 @@ DECL_NODESELCOMP(SCIPnodeselCompBfs)
 
    lowerbound1 = SCIPnodeGetLowerBound(node1);
    lowerbound2 = SCIPnodeGetLowerBound(node2);
-   if( SCIPisL(scip, lowerbound1, lowerbound2) )
+   if( SCIPisLT(scip, lowerbound1, lowerbound2) )
       return -1;
-   else if( SCIPisG(scip, lowerbound1, lowerbound2) )
+   else if( SCIPisGT(scip, lowerbound1, lowerbound2) )
       return +1;
    else
    {

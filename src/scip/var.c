@@ -183,7 +183,7 @@ RETCODE holelistCreate(
 {
    assert(holelist != NULL);
    assert(memhdr != NULL);
-   assert(SCIPsetIsL(set, left, right));
+   assert(SCIPsetIsLT(set, left, right));
 
    ALLOC_OKAY( allocBlockMemory(memhdr, holelist) );
    (*holelist)->hole.left = left;
@@ -282,7 +282,7 @@ RETCODE domMerge(
 
    while( *holelistptr != NULL )
    {
-      assert(SCIPsetIsL(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right));
+      assert(SCIPsetIsLT(set, (*holelistptr)->hole.left, (*holelistptr)->hole.right));
 
       if( SCIPsetIsGE(set, (*holelistptr)->hole.left, dom->ub) )
       {
@@ -290,14 +290,14 @@ RETCODE domMerge(
          holelistFree(holelistptr, memhdr);
          assert(*holelistptr == NULL);
       }
-      else if( SCIPsetIsG(set, (*holelistptr)->hole.right, dom->ub) )
+      else if( SCIPsetIsGT(set, (*holelistptr)->hole.right, dom->ub) )
       {
          /* the hole overlaps the upper bound: decrease upper bound, kill this and all remaining holes */
          dom->ub = (*holelistptr)->hole.left;
          holelistFree(holelistptr, memhdr);
          assert(*holelistptr == NULL);
       }
-      else if( SCIPsetIsG(set, *lastrightptr, (*holelistptr)->hole.left) )
+      else if( SCIPsetIsGT(set, *lastrightptr, (*holelistptr)->hole.left) )
       {
          /* the right bound of the last hole is greater than the left bound of this hole:
           * increase the right bound of the last hole, delete this hole

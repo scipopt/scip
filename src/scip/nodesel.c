@@ -457,9 +457,9 @@ RETCODE SCIPnodepqBound(
           * lower bound than the cut off value
           */
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
-            || SCIPsetIsL(set, nodepq->slots[PQ_LEFTCHILD(pos)]->lowerbound, upperbound));
+            || SCIPsetIsLT(set, nodepq->slots[PQ_LEFTCHILD(pos)]->lowerbound, upperbound));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
-            || SCIPsetIsL(set, nodepq->slots[PQ_RIGHTCHILD(pos)]->lowerbound, upperbound));
+            || SCIPsetIsLT(set, nodepq->slots[PQ_RIGHTCHILD(pos)]->lowerbound, upperbound));
 
          /* free the slot in the node PQ */
          parentfelldown = nodepqDelPos(nodepq, set, pos);

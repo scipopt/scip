@@ -231,7 +231,7 @@ RETCODE linconsdataCreate(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
-   if( SCIPisG(scip, lhs, rhs) )
+   if( SCIPisGT(scip, lhs, rhs) )
    {
       char s[255];
       errorMessage("left hand side of linear constraint greater than right hand side");
@@ -1320,13 +1320,13 @@ RETCODE tightenVarBounds(
       if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
       {
          newub = (rhs - minresactivity)/val;
-         if( SCIPisSumL(scip, newub, ub) )
+         if( SCIPisSumLT(scip, newub, ub) )
          {
             /* tighten upper bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
             debugMessage("  -> newub=%f\n", newub);
-            if( SCIPisSumL(scip, newub, lb) )
+            if( SCIPisSumLT(scip, newub, lb) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, newub);
                *result = SCIP_CUTOFF;
@@ -1341,13 +1341,13 @@ RETCODE tightenVarBounds(
       if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
       {
          newlb = (lhs - maxresactivity)/val;
-         if( SCIPisSumG(scip, newlb, lb) )
+         if( SCIPisSumGT(scip, newlb, lb) )
          {
             /* tighten lower bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
             debugMessage("  -> newlb=%f\n", newlb);
-            if( SCIPisSumG(scip, newlb, ub) )
+            if( SCIPisSumGT(scip, newlb, ub) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), newlb, ub);
                *result = SCIP_CUTOFF;
@@ -1366,13 +1366,13 @@ RETCODE tightenVarBounds(
       if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
       {
          newlb = (rhs - minresactivity)/val;
-         if( SCIPisSumG(scip, newlb, lb) )
+         if( SCIPisSumGT(scip, newlb, lb) )
          {
             /* tighten lower bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
             debugMessage("  -> newlb=%f\n", newlb);
-            if( SCIPisSumG(scip, newlb, ub) )
+            if( SCIPisSumGT(scip, newlb, ub) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), newlb, ub);
                *result = SCIP_CUTOFF;
@@ -1387,13 +1387,13 @@ RETCODE tightenVarBounds(
       if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
       {
          newub = (lhs - maxresactivity)/val;
-         if( SCIPisSumL(scip, newub, ub) )
+         if( SCIPisSumLT(scip, newub, ub) )
          {
             /* tighten upper bound */
             debugMessage("linear constraint: tighten <%s>, old bds=[%f,%f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
                SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
             debugMessage("  -> newub=%f\n", newub);
-            if( SCIPisSumL(scip, newub, lb) )
+            if( SCIPisSumLT(scip, newub, lb) )
             {
                debugMessage("linear constraint: cutoff  <%s>, new bds=[%f,%f]\n", SCIPvarGetName(var), lb, newub);
                *result = SCIP_CUTOFF;
@@ -1902,7 +1902,7 @@ DECL_CONSPROP(consPropLinear)
       CHECK_OKAY( SCIPlinconsGetLhs(consdata->lincons, &lhs) );
       CHECK_OKAY( SCIPlinconsGetRhs(consdata->lincons, &rhs) );
 
-      if( SCIPisG(scip, minactivity, rhs) || SCIPisL(scip, maxactivity, lhs) )
+      if( SCIPisGT(scip, minactivity, rhs) || SCIPisLT(scip, maxactivity, lhs) )
       {
          debugMessage("linear constraint <%s> is infeasible: activitybounds=[%g,%g], sides=[%g,%g]\n",
             SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);

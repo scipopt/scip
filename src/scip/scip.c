@@ -2852,7 +2852,7 @@ Bool SCIPisEQ(
 }
 
 /** checks, if val1 is (more than epsilon) lower than val2 */
-Bool SCIPisL(
+Bool SCIPisLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -2861,7 +2861,7 @@ Bool SCIPisL(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsL(scip->set, val1, val2);
+   return SCIPsetIsLT(scip->set, val1, val2);
 }
 
 /** checks, if val1 is not (more than epsilon) greater than val2 */
@@ -2878,7 +2878,7 @@ Bool SCIPisLE(
 }
 
 /** checks, if val1 is (more than epsilon) greater than val2 */
-Bool SCIPisG(
+Bool SCIPisGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -2887,7 +2887,7 @@ Bool SCIPisG(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsG(scip->set, val1, val2);
+   return SCIPsetIsGT(scip->set, val1, val2);
 }
 
 /** checks, if val1 is not (more than epsilon) lower than val2 */
@@ -2953,7 +2953,7 @@ Bool SCIPisSumEQ(
 }
 
 /** checks, if val1 is (more than sumepsilon) lower than val2 */
-Bool SCIPisSumL(
+Bool SCIPisSumLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -2962,7 +2962,7 @@ Bool SCIPisSumL(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsSumL(scip->set, val1, val2);
+   return SCIPsetIsSumLT(scip->set, val1, val2);
 }
 
 /** checks, if val1 is not (more than sumepsilon) greater than val2 */
@@ -2979,7 +2979,7 @@ Bool SCIPisSumLE(
 }
 
 /** checks, if val1 is (more than sumepsilon) greater than val2 */
-Bool SCIPisSumG(
+Bool SCIPisSumGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -2988,7 +2988,7 @@ Bool SCIPisSumG(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsSumG(scip->set, val1, val2);
+   return SCIPsetIsSumGT(scip->set, val1, val2);
 }
 
 /** checks, if val1 is not (more than sumepsilon) lower than val2 */
@@ -3054,7 +3054,7 @@ Bool SCIPisFeasEQ(
 }
 
 /** checks, if val1 is (more than feasibility tolerance) lower than val2 */
-Bool SCIPisFeasL(
+Bool SCIPisFeasLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -3063,7 +3063,7 @@ Bool SCIPisFeasL(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsFeasL(scip->set, val1, val2);
+   return SCIPsetIsFeasLT(scip->set, val1, val2);
 }
 
 /** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
@@ -3080,7 +3080,7 @@ Bool SCIPisFeasLE(
 }
 
 /** checks, if val1 is (more than feasibility tolerance) greater than val2 */
-Bool SCIPisFeasG(
+Bool SCIPisFeasGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -3089,7 +3089,7 @@ Bool SCIPisFeasG(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsFeasG(scip->set, val1, val2);
+   return SCIPsetIsFeasGT(scip->set, val1, val2);
 }
 
 /** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
@@ -3155,7 +3155,7 @@ Bool SCIPisRelEQ(
 }
 
 /** checks, if relative difference of val1 and val2 is lower than epsilon */
-Bool SCIPisRelL(
+Bool SCIPisRelLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -3164,7 +3164,7 @@ Bool SCIPisRelL(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsRelL(scip->set, val1, val2);
+   return SCIPsetIsRelLT(scip->set, val1, val2);
 }
 
 /** checks, if relative difference of val1 and val2 is not greater than epsilon */
@@ -3181,7 +3181,7 @@ Bool SCIPisRelLE(
 }
 
 /** checks, if relative difference of val1 and val2 is greater than epsilon */
-Bool SCIPisRelG(
+Bool SCIPisRelGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -3190,7 +3190,7 @@ Bool SCIPisRelG(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsRelG(scip->set, val1, val2);
+   return SCIPsetIsRelGT(scip->set, val1, val2);
 }
 
 /** checks, if relative difference of val1 and val2 is not lower than -epsilon */
@@ -3220,7 +3220,7 @@ Bool SCIPisSumRelEQ(
 }
 
 /** checks, if rel. difference of val1 and val2 is lower than sumepsilon */
-Bool SCIPisSumRelL(
+Bool SCIPisSumRelLT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -3229,7 +3229,7 @@ Bool SCIPisSumRelL(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsSumRelL(scip->set, val1, val2);
+   return SCIPsetIsSumRelLT(scip->set, val1, val2);
 }
 
 /** checks, if rel. difference of val1 and val2 is not greater than sumepsilon */
@@ -3246,7 +3246,7 @@ Bool SCIPisSumRelLE(
 }
 
 /** checks, if rel. difference of val1 and val2 is greater than sumepsilon */
-Bool SCIPisSumRelG(
+Bool SCIPisSumRelGT(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -3255,7 +3255,7 @@ Bool SCIPisSumRelG(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return SCIPsetIsSumRelG(scip->set, val1, val2);
+   return SCIPsetIsSumRelGT(scip->set, val1, val2);
 }
 
 /** checks, if rel. difference of val1 and val2 is not lower than -sumepsilon */
