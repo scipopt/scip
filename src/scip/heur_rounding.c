@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.26 2004/05/04 19:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.27 2004/05/04 19:46:04 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -141,11 +141,7 @@ RETCODE updateActivities(
    colvals = SCIPcolGetVals(col);
    ncolrows = SCIPcolGetNLPNonz(col);
    assert(ncolrows == 0 || (colrows != NULL && colvals != NULL));
-   /**@todo This is awfully slow, because the loop runs over ALL non-zero coefficients of the column, not only the
-    *       ones that are currently in the LP. Solution: implement a SCIPcolGetLPRowInds() call, that returns an
-    *       int array with the positions of the LP rows in the column's rows- and vals- arrays. This array
-    *       should be cached and declared invalid if the LP is modified. (analoguosly for SCIProwGetLPColInds())
-    */
+
    for( r = 0; r < ncolrows; ++r )
    {
       ROW* row;
