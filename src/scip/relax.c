@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.1 2004/11/17 13:09:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.2 2004/11/19 14:45:12 bzfpfend Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -67,7 +67,7 @@ RETCODE SCIPrelaxCreate(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of relaxator */
    const char*      desc,               /**< description of relaxator */
-   int              priority,           /**< priority of the relaxator */
+   int              priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int              freq,               /**< frequency for calling relaxator */
    DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
@@ -97,6 +97,7 @@ RETCODE SCIPrelaxCreate(
    (*relax)->relaxdata = relaxdata;
    CHECK_OKAY( SCIPclockCreate(&(*relax)->clock, SCIP_CLOCKTYPE_DEFAULT) );
    (*relax)->ncalls = 0;
+   (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
 
    /* add parameters */
@@ -193,6 +194,7 @@ RETCODE SCIPrelaxExit(
 RETCODE SCIPrelaxExec(
    RELAX*           relax,              /**< relaxator */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    int              depth,              /**< depth of current node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -204,6 +206,14 @@ RETCODE SCIPrelaxExec(
    assert(set->scip != NULL);
    assert(depth >= 0);
    assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* check, if the relaxation is already solved */
+   if( relax->lastsolvednode == stat->ntotalnodes )
+      return SCIP_OKAY;
+
+   relax->lastsolvednode = stat->ntotalnodes;
 
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
@@ -232,11 +242,13 @@ RETCODE SCIPrelaxExec(
          return SCIP_INVALIDRESULT;
       }
       if( *result != SCIP_DIDNOTRUN )
+      {
          relax->ncalls++;
+         if( *result == SCIP_SUSPENDED )
+            SCIPrelaxMarkUnsolved(relax);
+      }
    }
-   else
-      *result = SCIP_DIDNOTRUN;
-   
+
    return SCIP_OKAY;
 }
 
@@ -344,3 +356,26 @@ Bool SCIPrelaxIsInitialized(
 
    return relax->initialized;
 }
+
+/** returns whether the relaxation was completely solved at the current node */
+Bool SCIPrelaxIsSolved(
+   RELAX*           relax,              /**< relaxator */
+   STAT*            stat                /**< dynamic problem statistics */
+   )
+{
+   assert(relax != NULL);
+   assert(stat != NULL);
+
+   return (relax->lastsolvednode == stat->ntotalnodes);
+}
+
+/** marks the current relaxation unsolved, s.t. the relaxator is called again in the next solving round */
+void SCIPrelaxMarkUnsolved(
+   RELAX*           relax               /**< relaxator */
+   )
+{
+   assert(relax != NULL);
+
+   relax->lastsolvednode = -1;
+}
+

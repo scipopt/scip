@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.121 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.122 2004/11/19 14:45:13 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8327,11 +8327,11 @@ Bool SCIPvarWasFixedEarlier(
    var1 = SCIPvarGetProbvar(var1);
    var2 = SCIPvarGetProbvar(var2);
 
-   /* check, if variables are fixed */
-   if( var1 == NULL )
-      return (var2 != NULL);
-   if( var2 == NULL )
+   /* check, if variables are globally fixed */
+   if( var2 == NULL || var2->glbdom.lb > 0.5 || var2->glbdom.ub < 0.5 )
       return FALSE;
+   if( var1 == NULL || var1->glbdom.lb > 0.5 || var1->glbdom.ub < 0.5 )
+      return TRUE;
 
    assert(var1 != NULL);
    assert(var2 != NULL);

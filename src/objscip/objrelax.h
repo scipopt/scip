@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.1 2004/11/17 13:09:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.2 2004/11/19 14:45:12 bzfpfend Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -46,7 +46,7 @@ public:
    /** description of the relaxator */
    const char* const scip_desc_;
    
-   /** default priority of the relaxator */
+   /** default priority of the relaxator (negative: call after LP, non-negative: call before LP) */
    const int scip_priority_;
 
    /** frequency for calling relaxator */
@@ -56,7 +56,7 @@ public:
    ObjRelax(
       const char*   name,               /**< name of relaxator */
       const char*   desc,               /**< description of relaxator */
-      int           priority,           /**< priority of the relaxator */
+      int           priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
       int           freq                /**< frequency for calling relaxator */
       )
       : scip_name_(name),

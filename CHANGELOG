@@ -5,6 +5,7 @@ interface:
 - new method SCIPvarIsInLP()
 - new methods SCIPgetLPColumnObjval() and SCIPgetLPLooseObjval()
 - new method SCIPcalcIntegralScalar() with arbitrary array of Real values
+- new plugin class for relaxators (external relaxations, that can be used in parallel with LP relaxations)
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

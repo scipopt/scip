@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.227 2004/11/17 15:53:58 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.228 2004/11/19 14:45:12 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1393,7 +1393,7 @@ RETCODE SCIPincludeRelax(
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of relaxator */
    const char*      desc,               /**< description of relaxator */
-   int              priority,           /**< priority of the relaxator */
+   int              priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int              freq,               /**< frequency for calling relaxator */
    DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */

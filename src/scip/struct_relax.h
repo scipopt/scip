@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_relax.h,v 1.1 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_relax.h,v 1.2 2004/11/19 14:45:13 bzfpfend Exp $"
 
 /**@file   struct_relax.h
  * @brief  datastructures for relaxators
@@ -36,6 +36,7 @@
 struct Relax
 {
    Longint          ncalls;             /**< number of times, this relaxator was called */
+   Longint          lastsolvednode;     /**< last total nodes counter, where the current relaxation was solved */
    char*            name;               /**< name of relaxator */
    char*            desc;               /**< description of relaxator */
    DECL_RELAXFREE   ((*relaxfree));     /**< destructor of relaxator */

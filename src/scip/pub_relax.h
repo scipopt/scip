@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_relax.h,v 1.1 2004/11/17 13:09:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_relax.h,v 1.2 2004/11/19 14:45:12 bzfpfend Exp $"
 
 /**@file   pub_relax.h
  * @brief  public methods for relaxators
@@ -89,6 +89,12 @@ Longint SCIPrelaxGetNCalls(
 /** is relaxator initialized? */
 extern
 Bool SCIPrelaxIsInitialized(
+   RELAX*           relax               /**< relaxator */
+   );
+
+/** marks the current relaxation unsolved, s.t. the relaxator is called again in the next solving round */
+extern
+void SCIPrelaxMarkUnsolved(
    RELAX*           relax               /**< relaxator */
    );
 
