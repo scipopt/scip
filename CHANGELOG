@@ -1,6 +1,49 @@
-SCIP version 0.75
+current version
+===============
+
+interface:
+- new method SCIPvarIsInLP()
+- new methods SCIPgetLPColumnObjval() and SCIPgetLPLooseObjval()
+
+fixed bugs:
+- removed bug in knapsack constraint handler that appears if a variable is fixed to zero in knapsack presolving,
+  which triggers a variable of the same knapsack to be fixed to one due to aggregation
+- fixed bugs in consdataSwitchWatchedVars() of "or" and "and" constraint handlers
+- fixed bug in all-fullstrong branching with getting strong branching information for columns not in current LP
+- assigning a value to a fixed variable in a solution with SCIPsetSolVal() does not return an error anymore, if the value
+  is equal to the fixed value of the variable
+- implemented missing case in solve.c with branching rules that add constraints
+- solving loop is now immediately aborted, if a node on the active path is marked to be cut off
+
+
+SCIP version 0.77
 =================
-- started change log
+
+installation:
+- the file names in the archive file are now preceeded with a directory "scip-<version>/"
+- the compiler is now also represented in the LP solver library names
+  (e.g. you have to rename the softlink "libcplex.linux.x86.a" to "libcplex.linux.x86.gnu.a")
+
+interface:
+- added methods SCIPgetVarsLogicor() and SCIPgetNVarsLogicor() in logic or constraint handler
+- methode SCIPgetGap() and SCIPgetTransGap() now return infinity, if primal and dual bound have opposite sign
+  (this removes the oddness with the gap increasing while the dual bound approaches zero)
+
+parameters:
+- lp/colagelimit and lp/rowagelimit may now be set to -1 to disable deletion of columns/rows due to aging
+
+features:
+- infeasible LPs in diving now produce conflict clauses (if LP conflict analysis is enabled)
+- conflict analysis was slightly modified
+- slightly changed aging strategy of logic or constraint handler
+
+fixed bugs:
+- removed bug in conflict analysis that appears if the conflict is only active at the current depth level
+- missing SCIPlpiIsPrimalFeasible() and SCIPlpiIsDualFeasible() implemented in lpi_spx.cpp and lpi_spx121.cpp
+- removed preprocessing of linear constraint pairs with modifiable constraints
+- removed wrong assert "assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000)" from event.c
+- removed wrong assert in conflict analysis (appeared on analysing diving LP conflicts with both bounds of a non-binary
+  variable changed)
 
 
 SCIP version 0.76
@@ -50,31 +93,6 @@ known bugs (still not fixed):
 - air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?
 
 
-SCIP version 0.77
+SCIP version 0.75
 =================
-
-installation:
-- the file names in the archive file are now preceeded with a directory "scip-<version>/"
-- the compiler is now also represented in the LP solver library names
-  (e.g. you have to rename the softlink "libcplex.linux.x86.a" to "libcplex.linux.x86.gnu.a")
-
-interface:
-- added methods SCIPgetVarsLogicor() and SCIPgetNVarsLogicor() in logic or constraint handler
-- methode SCIPgetGap() and SCIPgetTransGap() now return infinity, if primal and dual bound have opposite sign
-  (this removes the oddness with the gap increasing while the dual bound approaches zero)
-
-parameters:
-- lp/colagelimit and lp/rowagelimit may now be set to -1 to disable deletion of columns/rows due to aging
-
-features:
-- infeasible LPs in diving now produce conflict clauses (if LP conflict analysis is enabled)
-- conflict analysis was slightly modified
-- slightly changed aging strategy of logic or constraint handler
-
-fixed bugs:
-- removed bug in conflict analysis that appears if the conflict is only active at the current depth level
-- missing SCIPlpiIsPrimalFeasible() and SCIPlpiIsDualFeasible() implemented in lpi_spx.cpp and lpi_spx121.cpp
-- removed preprocessing of linear constraint pairs with modifiable constraints
-- removed wrong assert "assert(eventfilter->len == 0 || eventfilter->eventmask != 0x00000000)" from event.c
-- removed wrong assert in conflict analysis (appeared on analysing diving LP conflicts with both bounds of a non-binary
-  variable changed)
+- started change log
