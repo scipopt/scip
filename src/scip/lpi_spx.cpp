@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.23 2004/09/28 11:09:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.24 2004/09/28 11:46:41 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -39,6 +39,19 @@
 #include "spxsteeppr.h"
 #include "spxfastrt.h"
 
+/* reset the defines to its original SCIP values */
+#undef DEBUG
+#undef NDEBUG
+#ifdef ___DEBUG
+#define DEBUG
+#undef ___DEBUG
+#endif
+#ifdef ___NDEBUG
+#undef ___NDEBUG
+#define NDEBUG
+#endif
+
+#include <cassert>
 
 
 /********************************************************************/
@@ -203,17 +216,6 @@ public:
    }
 };
 
-/* reset the defines to its original SCIP values */
-#undef DEBUG
-#undef NDEBUG
-#ifdef ___DEBUG
-#define DEBUG
-#undef ___DEBUG
-#endif
-#ifdef ___NDEBUG
-#undef ___NDEBUG
-#define NDEBUG
-#endif
 
 
 

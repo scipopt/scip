@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.7 2004/09/28 11:09:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.8 2004/09/28 11:46:41 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -23,8 +23,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <cassert>
-#include <fstream>
 
 /* include SOPLEX in optimized mode */
 #ifdef DEBUG
@@ -42,6 +40,20 @@
 #include "spxsteeppr.h"
 #include "spxfastrt.h"
 
+/* reset the defines to its original SCIP values */
+#undef DEBUG
+#undef NDEBUG
+#ifdef ___DEBUG
+#define DEBUG
+#undef ___DEBUG
+#endif
+#ifdef ___NDEBUG
+#undef ___NDEBUG
+#define NDEBUG
+#endif
+
+#include <cassert>
+#include <fstream>
 
 
 /********************************************************************/
@@ -207,18 +219,6 @@ public:
 };
 
 
-/* reset the defines to its original SCIP values */
-#undef DEBUG
-#undef NDEBUG
-#ifdef ___DEBUG
-#define DEBUG
-#undef ___DEBUG
-#endif
-#ifdef ___NDEBUG
-#undef ___NDEBUG
-#define NDEBUG
-#endif
-
 
 
 /********************************************************************/
@@ -230,7 +230,6 @@ extern "C"
 #include "lpi.h"
 #include "bitencode.h"
 #include "message.h"
-#include "pub_misc.h"
 }
 
 
@@ -1842,8 +1841,8 @@ RETCODE SCIPlpiGetSol(
 
 /** gets primal ray for unbounded LPs */
 RETCODE SCIPlpiGetPrimalRay(
-   LPI*             /*lpi*/,            /**< LP interface structure */
-   Real*            /*ray*/             /**< primal ray */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            ray                 /**< primal ray */
    )
 {
    debugMessage("calling SCIPlpiGetPrimalRay()\n");
@@ -1858,8 +1857,8 @@ RETCODE SCIPlpiGetPrimalRay(
 
 /** gets dual farkas proof for infeasibility */
 RETCODE SCIPlpiGetDualfarkas(
-   LPI*             /*lpi*/,            /**< LP interface structure */
-   Real*            /*dualfarkas*/      /**< dual farkas row multipliers */
+   LPI*             lpi,                /**< LP interface structure */
+   Real*            dualfarkas          /**< dual farkas row multipliers */
    )
 {
    debugMessage("calling SCIPlpiGetDualfarkas()\n");
@@ -2203,7 +2202,7 @@ RETCODE SCIPlpiSetState(
 
 /** frees LPi state information */
 RETCODE SCIPlpiFreeState(
-   LPI*             /*lpi*/,            /**< LP interface structure */
+   LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
