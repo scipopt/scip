@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.71 2004/11/23 16:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.72 2004/11/24 15:29:53 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -67,6 +67,7 @@
 /** constraint handler data */
 struct ConshdlrData
 {
+   EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    int              sepacardfreq;       /**< multiplier on separation frequency, how often cardinality cuts are separated */
    int              maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int              maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -86,8 +87,9 @@ struct ConsData
    Longint          capacity;           /**< capacity of knapsack */
    Longint          weightsum;          /**< sum of all weights */
    Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
-   unsigned int     sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int     propagated:1;       /**< is the knapsack constraint already propagated? */
+   unsigned int     sorted:1;           /**< are the knapsack items sorted by weight? */
+   unsigned int     merged:1;           /**< are the constraint's equal variables already merged? */
 };
 
 /** event data for bound changes events */
@@ -169,22 +171,19 @@ void sortItems(
 static
 RETCODE catchEvents(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< constraint data */
+   CONSDATA*        consdata,           /**< constraint data */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
-   EVENTHDLR* eventhdlr;
    
    assert(consdata != NULL);
-
-   eventhdlr = SCIPfindEventhdlr (scip, EVENTHDLR_NAME);
-   assert(eventhdlr != NULL);
 
    for( i = 0; i < consdata->nvars; i++)
    {
       CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
-      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-            consdata->eventdatas[i], NULL) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+            eventhdlr, consdata->eventdatas[i], NULL) );
    }
 
    return SCIP_OKAY;
@@ -194,23 +193,52 @@ RETCODE catchEvents(
 static
 RETCODE dropEvents(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata            /**< constraint data */
+   CONSDATA*        consdata,           /**< constraint data */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    int i;
-   EVENTHDLR* eventhdlr;
    
    assert(consdata != NULL);
 
-   eventhdlr = SCIPfindEventhdlr (scip, EVENTHDLR_NAME);
-   assert(eventhdlr != NULL);
-
    for( i = 0; i < consdata->nvars; i++)
    {
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-            consdata->eventdatas[i], -1) );
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+            eventhdlr, consdata->eventdatas[i], -1) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that vars and vals arrays can store at least num entries */
+static
+RETCODE consdataEnsureVarsSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA*        consdata,           /**< linear constraint data */
+   int              num,                /**< minimum number of entries to store */
+   Bool             transformed         /**< is constraint from transformed problem? */
+   )
+{
+   assert(consdata != NULL);
+   assert(consdata->nvars <= consdata->varssize);
+   
+   if( num > consdata->varssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->vars, consdata->varssize, newsize) );
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->varssize, newsize) );
+      if( transformed )
+      {
+         CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->varssize, newsize) );
+      }
+      else
+         assert(consdata->eventdatas == NULL);
+      consdata->varssize = newsize;
+   }
+   assert(num <= consdata->varssize);
 
    return SCIP_OKAY;
 }
@@ -220,6 +248,7 @@ static
 RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA**       consdata,           /**< pointer to store constraint data */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              nvars,              /**< number of variables in knapsack */
    VAR**            vars,               /**< variables of knapsack */
    Longint*         weights,            /**< weights of knapsack items */
@@ -231,8 +260,16 @@ RETCODE consdataCreate(
    assert(consdata != NULL);
 
    CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
-   CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
-   CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
+   if( nvars > 0 )
+   {
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
+   }
+   else
+   {
+      (*consdata)->vars = NULL;
+      (*consdata)->weights = NULL;
+   }
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
    (*consdata)->capacity = capacity;
@@ -240,8 +277,9 @@ RETCODE consdataCreate(
    (*consdata)->eventdatas = NULL;
    (*consdata)->weightsum = 0;
    (*consdata)->onesweightsum = 0;
-   (*consdata)->sorted = FALSE;
    (*consdata)->propagated = FALSE;
+   (*consdata)->sorted = FALSE;
+   (*consdata)->merged = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -250,7 +288,7 @@ RETCODE consdataCreate(
 
       /* catch events for variables */
       CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, nvars) );
-      CHECK_OKAY( catchEvents(scip, *consdata) );
+      CHECK_OKAY( catchEvents(scip, *consdata, eventhdlr) );
    } 
 
    /* calculate sum of weights */
@@ -268,7 +306,8 @@ RETCODE consdataCreate(
 static
 RETCODE consdataFree(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata            /**< pointer to the constraint data */
+   CONSDATA**       consdata,           /**< pointer to the constraint data */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
    assert(consdata != NULL);
@@ -280,7 +319,7 @@ RETCODE consdataFree(
    }
    if( (*consdata)->eventdatas != NULL )
    {
-      CHECK_OKAY( dropEvents(scip, *consdata) );
+      CHECK_OKAY( dropEvents(scip, *consdata, eventhdlr) );
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize);
    }
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
@@ -1041,12 +1080,84 @@ RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
+/** adds coefficient to constraint data */
+static
+RETCODE addCoef(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   VAR*             var,                /**< variable to add to knapsack */
+   Longint          weight              /**< weight of variable in knapsack */
+   )
+{
+   CONSDATA* consdata;
+   Bool negated;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(weight > 0);
+
+   /* add the new coefficient to the LP row */
+   if( consdata->row != NULL )
+   {
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, var, (Real)weight) );
+   }
+
+   /* get binary representative of variable */
+   CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &var, &negated) );
+
+   /* check for fixed variable */
+   if( var == NULL )
+   {
+      /* variable is fixed: if it is fixed to one, reduce capacity */
+      if( negated )
+         consdata->capacity -= weight;
+   }
+   else
+   {
+      /* insert coefficient */
+      CHECK_OKAY( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1, SCIPconsIsTransformed(cons)) );
+      consdata->vars[consdata->nvars] = var;
+      consdata->weights[consdata->nvars] = weight;
+      consdata->nvars++;
+
+      /* if necessary, update the rounding locks of variable */
+      if( SCIPconsIsLocked(cons) )
+      {
+         assert(SCIPconsIsTransformed(cons));
+         SCIPvarLock(var, (int)SCIPconsIsLockedNeg(cons), (int)SCIPconsIsLockedPos(cons));
+      }
+
+      /* catch bound tighten events */
+      if( SCIPconsIsTransformed(cons) )
+      {
+         CONSHDLRDATA* conshdlrdata;
+
+         conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+         assert(conshdlrdata != NULL);
+         CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[consdata->nvars-1], consdata, weight) );
+         CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+               conshdlrdata->eventhdlr, consdata->eventdatas[consdata->nvars-1], NULL) );
+      }
+
+      /* update weight sums */
+      consdata->weightsum += weight;
+      if( SCIPvarGetLbLocal(var) > 0.5 )
+         consdata->onesweightsum += weight;
+
+      consdata->sorted = FALSE;
+      consdata->merged = FALSE;
+   }
+   consdata->propagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** deletes coefficient at given position from constraint data */
 static
 RETCODE delCoefPos(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< knapsack constraint */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              pos                 /**< position of coefficient to delete */
    )
 {
@@ -1057,6 +1168,12 @@ RETCODE delCoefPos(
    assert(0 <= pos && pos < consdata->nvars);
    assert(SCIPconsIsTransformed(cons) == SCIPvarIsTransformed(consdata->vars[pos]));
 
+   /* delete the coefficient from the LP row */
+   if( consdata->row != NULL )
+   {
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->vars[pos], -(Real)consdata->weights[pos]) );
+   }
+
    /* if necessary, update the rounding locks of variable */
    if( SCIPconsIsLocked(cons) )
    {
@@ -1064,11 +1181,15 @@ RETCODE delCoefPos(
       SCIPvarUnlock(consdata->vars[pos], (int)SCIPconsIsLockedNeg(cons), (int)SCIPconsIsLockedPos(cons));
    }
 
+   /* drop bound tighten events */
    if( SCIPconsIsTransformed(cons) )
    {
-      /* drop bound tighten events */
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-            consdata->eventdatas[pos], -1) );
+      CONSHDLRDATA* conshdlrdata;
+      
+      conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+      assert(conshdlrdata != NULL);
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_VARFIXED,
+            conshdlrdata->eventhdlr, consdata->eventdatas[pos], -1) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
 
@@ -1091,55 +1212,80 @@ RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
-#if 0 /*?????????????????????*/
-/** deletes all fixed variables from knapsack constraint */
+/** replaces multiple occurrences of a variable or its negation by a single coefficient */
 static
-RETCODE applyFixings(
+RETCODE mergeMultiples(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   CONS*            cons                /**< linear constraint */
    )
 {
    CONSDATA* consdata;
-   VAR* var;
    int v;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->nvars == 0 || consdata->vars != NULL);
 
-   /**@todo apply aggregations: x == y  or  x == 1-y  with both variables in knapsack -> replace with single weight */
-   v = 0;
-   while( v < consdata->nvars )
+   if( consdata->merged )
+      return SCIP_OKAY;
+
+   /* loop backwards through the items: deletion only affects rear items */
+   for( v = consdata->nvars-1; v >= 0; --v )
    {
+      VAR* var;
+      VAR* negvar;
+      int w;
+
       var = consdata->vars[v];
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+      negvar = SCIPvarGetNegatedVar(var);
+      assert(negvar == NULL || SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 
-      if( SCIPvarGetLbGlobal(var) > 0.5 )
+      for( w = v-1; w >= 0; --w )
       {
-         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
-         consdata->capacity -= consdata->weights[v];
-         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+         if( consdata->vars[w] == var )
+         {
+            /* variables v and w are equal: add weight of v to w, and delete v */
+            consdataChgWeight(consdata, w, consdata->weights[v] + consdata->weights[w]);
+            CHECK_OKAY( delCoefPos(scip, cons, v) );
+         }
+         else if( consdata->vars[w] == negvar )
+         {
+            /* variables v and w are opposite: subtract smaller weight from larger weight, reduce capacity,
+             * and delete item of smaller weight
+             */
+            if( consdata->weights[v] <= consdata->weights[w] )
+            {
+               consdata->capacity -= consdata->weights[v];
+               consdataChgWeight(consdata, w, consdata->weights[w] - consdata->weights[v]);
+               CHECK_OKAY( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
+               assert(consdata->vars[w] == negvar);
+               assert(consdata->weights[w] >= 0);
+               if( consdata->weights[w] == 0 )
+               {
+                  CHECK_OKAY( delCoefPos(scip, cons, w) );
+               }
+            }
+            else
+            {
+               consdata->capacity -= consdata->weights[w];
+               consdataChgWeight(consdata, v, consdata->weights[v] - consdata->weights[w]);
+               CHECK_OKAY( delCoefPos(scip, cons, w) ); /* this may move v, but does no harm */
+            }
+         }
       }
-      else if( SCIPvarGetUbGlobal(var) < 0.5 )
-      {
-         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
-      }
-      else
-         ++v;
    }
-   assert(consdata->onesweightsum == 0);
+
+   consdata->merged = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-/** deletes all fixed variables from knapsack constraint */
+
+/** deletes all fixed variables from knapsack constraint, and replaces variables with binary representatives */
 static
 RETCODE applyFixings(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< knapsack constraint */
-   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   CONS*            cons                /**< knapsack constraint */
    )
 {
    CONSDATA* consdata;
@@ -1161,31 +1307,53 @@ RETCODE applyFixings(
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          consdata->capacity -= consdata->weights[v];
-         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+         CHECK_OKAY( delCoefPos(scip, cons, v) );
       }
       else if( SCIPvarGetUbGlobal(var) < 0.5 )
       {
          assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
-         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+         CHECK_OKAY( delCoefPos(scip, cons, v) );
       }
       else
       {
          VAR* repvar;
+         Longint weight;
          Bool negated;
          
          /* get binary representative of variable */
          CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
          assert(repvar != NULL); /* fixed variables are already treated in the other cases above */
 
-         
-         ++v;
+         /* check, if the variable should be replaced with the representative */
+         if( repvar != var )
+         {
+            weight = consdata->weights[v];
+
+            /* delete old (aggregated) variable */
+            CHECK_OKAY( delCoefPos(scip, cons, v) );
+
+            /* add representative instead */
+            CHECK_OKAY( addCoef(scip, cons, repvar, weight) );
+         }
+         else
+            ++v;
       }
    }
    assert(consdata->onesweightsum == 0);
 
+   debugMessage("after fixings:\n");
+   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+
+   /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
+    * to clean up the constraint
+    */
+   CHECK_OKAY( mergeMultiples(scip, cons) );
+   
+   debugMessage("after merging:\n");
+   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+
    return SCIP_OKAY;
 }
-#endif
 
 /** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
 static
@@ -1419,7 +1587,18 @@ DECL_CONSEXITSOL(consExitsolKnapsack)
 static
 DECL_CONSDELETE(consDeleteKnapsack)
 {  /*lint --e{715}*/
-   CHECK_OKAY( consdataFree(scip, consdata) );
+   CONSHDLRDATA* conshdlrdata;
+   
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+   
+   /* free linear constraint */
+   CHECK_OKAY( consdataFree(scip, consdata, conshdlrdata->eventhdlr) );
    
    return SCIP_OKAY;
 }
@@ -1428,15 +1607,28 @@ DECL_CONSDELETE(consDeleteKnapsack)
 static
 DECL_CONSTRANS(consTransKnapsack)
 {  /*lint --e{715}*/
+   CONSHDLRDATA* conshdlrdata;
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
 
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
+   assert(sourcecons != NULL);
+   assert(targetcons != NULL);
+
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
+   assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
 
    /* create target constraint data */
-   CHECK_OKAY( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->weights, 
-         sourcedata->capacity) ); 
+   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+         sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) ); 
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1648,7 +1840,6 @@ DECL_CONSPROP(consPropKnapsack)
 static
 DECL_CONSPRESOL(consPresolKnapsack)
 {  /*lint --e{715}*/
-   EVENTHDLR* eventhdlr;
    CONSDATA* consdata;
    Bool cutoff;
    Bool redundant;
@@ -1665,33 +1856,34 @@ DECL_CONSPRESOL(consPresolKnapsack)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
 
-   /* get event handler for bound change events */
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   assert(eventhdlr != NULL);
-   
    for( i = 0; i < nconss; i++ )
    {
+      CONS* cons;
       int thisnfixedvars;
 
-      consdata = SCIPconsGetData(conss[i]);
+      cons = conss[i];
+      consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
          consdata->propagated = FALSE;
 
-      /* remove all fixed variables */
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
-      {
-         CHECK_OKAY( applyFixings(scip, conss[i], eventhdlr) );
-      }
-
       if( consdata->propagated )
          continue;
 
+      debugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+
+      /* remove all fixed variables */
+      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      {
+         CHECK_OKAY( applyFixings(scip, cons) );
+      }
+
       /* propagate constraint */
       thisnfixedvars = *nfixedvars;
-      CHECK_OKAY( propagateCons(scip, conss[i], &cutoff, &redundant, nfixedvars) );
+      CHECK_OKAY( propagateCons(scip, cons, &cutoff, &redundant, nfixedvars) );
       if( cutoff )
          break;
       if( redundant )
@@ -1703,16 +1895,16 @@ DECL_CONSPRESOL(consPresolKnapsack)
       /* remove again all fixed variables, if further fixings were found */
       if( *nfixedvars > thisnfixedvars )
       {
-         CHECK_OKAY( applyFixings(scip, conss[i], eventhdlr) );
+         CHECK_OKAY( applyFixings(scip, cons) );
       }
 
-      if( !SCIPconsIsModifiable(conss[i]) )
+      if( !SCIPconsIsModifiable(cons) )
       {
          /* divide weights by their greatest common divisor */
-         normalizeWeights(scip, conss[i], nchgcoefs, nchgsides);
+         normalizeWeights(scip, cons, nchgcoefs, nchgsides);
 
          /* tighten capacity and weights */
-         tightenWeights(scip, conss[i], nchgcoefs, nchgsides);
+         tightenWeights(scip, cons, nchgcoefs, nchgsides);
       }
    } 
 
@@ -1972,6 +2164,9 @@ DECL_EVENTEXEC(eventExecKnapsack)
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
       break;
+   case SCIP_EVENTTYPE_VARFIXED:
+      eventdata->consdata->propagated = FALSE;
+      break;
    default:
       errorMessage("invalid event type %x\n", SCIPeventGetType(event));
       return SCIP_INVALIDDATA;
@@ -1992,11 +2187,25 @@ RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CONSHDLRDATA* conshdlrdata;
    EVENTHDLRDATA* eventhdlrdata;
+   CONSHDLRDATA* conshdlrdata;
+
+   /* include event handler for bound change events */
+   eventhdlrdata = NULL;
+   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+         NULL, NULL, NULL, NULL, eventExecKnapsack,
+         eventhdlrdata) );
 
    /* create knapsack constraint handler data */
    CHECK_OKAY( SCIPallocMemory(scip, &conshdlrdata) );
+
+   /* get event handler for bound change events */
+   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   if( conshdlrdata->eventhdlr == NULL )
+   {
+      errorMessage("event handler for knapsack constraints not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -2013,12 +2222,6 @@ RETCODE SCIPincludeConshdlrKnapsack(
          consPrintKnapsack,
          conshdlrdata) );
   
-   /* include event handler for bound change events */
-   eventhdlrdata = NULL;
-   CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
-         NULL, NULL, NULL, NULL, eventExecKnapsack,
-         eventhdlrdata) );
-
    /* include the linear constraint upgrade in the linear constraint handler */
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
 
@@ -2066,6 +2269,7 @@ RETCODE SCIPcreateConsKnapsack(
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
+   CONSHDLRDATA* conshdlrdata;
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
@@ -2077,8 +2281,13 @@ RETCODE SCIPcreateConsKnapsack(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+
    /* create constraint data */
-   CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, weights, capacity) );
+   CHECK_OKAY( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
         
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -2086,3 +2295,25 @@ RETCODE SCIPcreateConsKnapsack(
 
    return SCIP_OKAY;
 }
+
+/** adds new item to knapsack constraint */
+RETCODE SCIPaddCoefKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint data */
+   VAR*             var,                /**< item variable */
+   Longint          weight              /**< item weight */
+   )
+{
+   assert(var != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not a knapsack constraint\n");
+      return SCIP_INVALIDDATA;
+   }
+   
+   CHECK_OKAY( addCoef(scip, cons, var, weight) );
+
+   return SCIP_OKAY;
+}
+

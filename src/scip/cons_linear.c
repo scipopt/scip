@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.132 2004/11/23 17:57:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.133 2004/11/24 15:29:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -574,6 +574,7 @@ static
 RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA**       consdata,           /**< pointer to linear constraint data */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              nvars,              /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
@@ -635,39 +636,21 @@ RETCODE consdataCreate(
    (*consdata)->sorted = (nvars <= 1);
    (*consdata)->merged = (nvars <= 1);
 
-   return SCIP_OKAY;
-}
-
-/** creates a linear constraint data of the transformed problem */
-static
-RETCODE consdataCreateTransformed(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA**       consdata,           /**< pointer to linear constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              nvars,              /**< number of nonzeros in the constraint */
-   VAR**            vars,               /**< array with variables of constraint entries */
-   Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of row */
-   Real             rhs                 /**< right hand side of row */
-   )
-{
-   assert(consdata != NULL);
-
-   /* create linear constraint data */
-   CHECK_OKAY( consdataCreate(scip, consdata, nvars, vars, vals, lhs, rhs) );
-
-   /* allocate the additional needed eventdatas array */
-   assert((*consdata)->eventdatas == NULL);
-   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
-
-   /* get transformed variables */
-   CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
-
-   /* initialize the eventdatas array */
-   clearMemoryArray((*consdata)->eventdatas, (*consdata)->nvars);
-
-   /* catch bound change events of variables */
-   CHECK_OKAY( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
+   if( SCIPisTransformed(scip) )
+   {
+      /* allocate the additional needed eventdatas array */
+      assert((*consdata)->eventdatas == NULL);
+      CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
+      
+      /* get transformed variables */
+      CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+      
+      /* initialize the eventdatas array */
+      clearMemoryArray((*consdata)->eventdatas, (*consdata)->nvars);
+      
+      /* catch bound change events of variables */
+      CHECK_OKAY( consdataCatchAllEvents(scip, *consdata, eventhdlr) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1685,6 +1668,12 @@ RETCODE delCoefPos(
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
 
+   /* delete coefficient from the LP row */
+   if( consdata->row != NULL )
+   {
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, var, -val) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1923,7 +1912,7 @@ RETCODE normalizeCons(
    {
       /* scale the constraint with -1 */
       debugMessage("multiply linear constraint with -1.0\n");
-      debug(consdataPrint(scip, consdata, NULL));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
       CHECK_OKAY( scaleCons(scip, cons, -1.0) );
    }
 
@@ -1947,7 +1936,7 @@ RETCODE normalizeCons(
    {
       /* scale the constraint with the smallest common multiple of all denominators */
       debugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
-      debug(consdataPrint(scip, consdata, NULL));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
       CHECK_OKAY( scaleCons(scip, cons, (Real)scm) );
    }
 
@@ -1970,7 +1959,7 @@ RETCODE normalizeCons(
       {
          /* divide the constaint by the greatest common divisor of the coefficients */
          debugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
-         debug(consdataPrint(scip, consdata, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
          CHECK_OKAY( scaleCons(scip, cons, 1.0/(Real)gcd) );
       }
    }
@@ -1978,8 +1967,8 @@ RETCODE normalizeCons(
    /* mark constraint to be normalized */
    consdata->normalized = TRUE;
 
-   debugMessage("normalized constraint: ");
-   debug(consdataPrint(scip, consdata, NULL));
+   debugMessage("normalized constraint:\n");
+   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
    return SCIP_OKAY;
 }
@@ -2125,16 +2114,16 @@ RETCODE applyFixings(
       }
    }
 
-   debugMessage("after fixings: ");
-   debug(consdataPrint(scip, consdata, NULL));
+   debugMessage("after fixings:\n");
+   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
     * to clean up the constraint
     */
    CHECK_OKAY( mergeMultiples(scip, cons) );
    
-   debugMessage("after merging: ");
-   debug(consdataPrint(scip, consdata, NULL));
+   debugMessage("after merging:\n");
+   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
    return SCIP_OKAY;
 }
@@ -2389,11 +2378,11 @@ RETCODE checkCons(
 
    assert(violated != NULL);
 
+   debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
+   debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
-   debug(consdataPrint(scip, consdata, NULL));
 
    *violated = FALSE;
 
@@ -3103,7 +3092,7 @@ DECL_CONSTRANS(consTransLinear)
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create linear constraint data for target constraint */
-   CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, conshdlrdata->eventhdlr,
+   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
          sourcedata->nvars, sourcedata->vars, sourcedata->vals, sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
@@ -3764,8 +3753,8 @@ RETCODE convertLongEquality(
    /* if all coefficients and variables are integral, the right hand side must also be integral */
    if( integral && !SCIPisIntegral(scip, consdata->rhs) )
    {
-      debugMessage("linear equality <%s> is integer infeasible:", SCIPconsGetName(cons));
-      debug(consdataPrint(scip, consdata, NULL));
+      debugMessage("linear equality <%s> is integer infeasible\n", SCIPconsGetName(cons));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -4134,10 +4123,8 @@ RETCODE aggregateConstraints(
       debugMessage("aggregate linear constraints <%s> := %g*<%s> + %g*<%s>  ->  nvars: %d -> %d, weight: %d -> %d\n",
          SCIPconsGetName(cons0), a, SCIPconsGetName(cons0), b, SCIPconsGetName(cons1),
          consdata0->nvars, bestnvars, commonidxweight + diffidx0minus1weight, bestvarweight);
-      debugMessage("<%s>: ", SCIPconsGetName(cons0));
-      debug(consdataPrint(scip, consdata0, NULL));
-      debugMessage("<%s>: ", SCIPconsGetName(cons1));
-      debug(consdataPrint(scip, consdata1, NULL));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
 
       /* get temporary memory for creating the new linear constraint */
       CHECK_OKAY( SCIPallocBufferArray(scip, &newvars, bestnvars) );
@@ -4221,8 +4208,8 @@ RETCODE aggregateConstraints(
       {
          CONS* upgdcons;
 
-         debugMessage(" -> aggregated to <%s>: ", SCIPconsGetName(newcons));
-         debug(consdataPrint(scip, SCIPconsGetData(newcons), NULL));
+         debugMessage(" -> aggregated to <%s>\n", SCIPconsGetName(newcons));
+         debug(CHECK_OKAY( SCIPprintCons(scip, newcons, NULL) ));
 
          /* update the statistics: we changed all coefficients */
          if( !consdata0->upgraded )
@@ -4502,8 +4489,8 @@ RETCODE preprocessConstraintPairs(
          /* left hand side is dominated by consdata1: delete left hand side of consdata0 */
          debugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         debug(consdataPrint(scip, consdata0, NULL));
-         debug(consdataPrint(scip, consdata1, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata1->lhs, consdata0->rhs) )
@@ -4524,8 +4511,9 @@ RETCODE preprocessConstraintPairs(
          /* left hand side is dominated by consdata0: delete left hand side of consdata1 */
          debugMessage("left hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         debug(consdataPrint(scip, consdata1, NULL));
-         debug(consdataPrint(scip, consdata0, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+
          /* check for infeasibility */
          if( SCIPisFeasGT(scip, consdata0->lhs, consdata1->rhs) )
          {
@@ -4545,8 +4533,8 @@ RETCODE preprocessConstraintPairs(
          /* right hand side is dominated by consdata1: delete right hand side of consdata0 */
          debugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         debug(consdataPrint(scip, consdata0, NULL));
-         debug(consdataPrint(scip, consdata1, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata1->rhs, consdata0->lhs) )
@@ -4567,8 +4555,8 @@ RETCODE preprocessConstraintPairs(
          /* right hand side is dominated by consdata0: delete right hand side of consdata1 */
          debugMessage("right hand side of linear constraint <%s> is dominated by <%s>:\n",
             SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         debug(consdataPrint(scip, consdata1, NULL));
-         debug(consdataPrint(scip, consdata0, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
 
          /* check for infeasibility */
          if( SCIPisFeasLT(scip, consdata0->rhs, consdata1->lhs) )
@@ -4592,8 +4580,9 @@ RETCODE preprocessConstraintPairs(
          /* the coefficients of both rows are equal: use best left and right hand sides in cons0, and delete cons1 */
          debugMessage("aggregate linear constraints <%s> and <%s> into single ranged row\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         debug(printf("cons0 : "); consdataPrint(scip, consdata0, NULL));
-         debug(printf("cons1 : "); consdataPrint(scip, consdata1, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+
          lhs = MAX(consdata0->lhs, consdata1->lhs);
          rhs = MIN(consdata0->rhs, consdata1->rhs);
          if( SCIPisFeasLT(scip, rhs, lhs) )
@@ -4628,7 +4617,8 @@ RETCODE preprocessConstraintPairs(
          }
          cons0isequality = SCIPisEQ(scip, lhs, rhs);
          cons1isequality = FALSE;
-         debug(printf("result: "); consdataPrint(scip, consdata0, NULL));
+
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
       }
       if( coefsnegated )
       {
@@ -4638,8 +4628,9 @@ RETCODE preprocessConstraintPairs(
          /* the coefficients of both rows are negations: use best left and right hand sides in cons0, and delete cons1 */
          debugMessage("aggregate negated linear constraints <%s> and <%s> into single ranged row\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         debug(printf("cons0 : "); consdataPrint(scip, consdata0, NULL));
-         debug(printf("cons1 : "); consdataPrint(scip, consdata1, NULL));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons1, NULL) ));
+
          lhs = MAX(consdata0->lhs, -consdata1->rhs);
          rhs = MIN(consdata0->rhs, -consdata1->lhs);
          if( SCIPisFeasLT(scip, rhs, lhs) )
@@ -4674,7 +4665,8 @@ RETCODE preprocessConstraintPairs(
          }
          cons0isequality = SCIPisEQ(scip, lhs, rhs);
          cons1isequality = FALSE;
-         debug(printf("result: "); consdataPrint(scip, consdata0, NULL));
+
+         debug(CHECK_OKAY( SCIPprintCons(scip, cons0, NULL) ));
       }
 
       /* check for now redundant constraints */
@@ -4806,8 +4798,8 @@ DECL_CONSPRESOL(consPresolLinear)
       consdata->propagated = TRUE;
       consdata->boundstightened = TRUE;
 
-      debugMessage("presolving linear constraint <%s>: ", SCIPconsGetName(cons));
-      debug(consdataPrint(scip, consdata, NULL));
+      debugMessage("presolving linear constraint <%s>\n", SCIPconsGetName(cons));
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
 
       /* incorporate fixings and aggregations in constraint */
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0
@@ -5302,6 +5294,7 @@ RETCODE SCIPcreateConsLinear(
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    )
 {
+   CONSHDLRDATA* conshdlrdata;
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
@@ -5313,24 +5306,13 @@ RETCODE SCIPcreateConsLinear(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* create the constraint specific data */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
-   {
-      /* create constraint in original problem */
-      CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, vals, lhs, rhs) );
-   }
-   else
-   {
-      CONSHDLRDATA* conshdlrdata;
-
-      /* get event handler */
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
-
-      /* create constraint in transformed problem */
-      CHECK_OKAY( consdataCreateTransformed(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, vals, lhs, rhs) );
-   }
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
+   
+   /* create constraint data */
+   CHECK_OKAY( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, vals, lhs, rhs) );
    assert(consdata != NULL);
 
    /* create constraint */
@@ -5340,7 +5322,7 @@ RETCODE SCIPcreateConsLinear(
    return SCIP_OKAY;
 }
 
-/** adds coefficient in linear constraint */
+/** adds coefficient to linear constraint */
 RETCODE SCIPaddCoefLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
@@ -5349,9 +5331,6 @@ RETCODE SCIPaddCoefLinear(
    )
 {
    assert(var != NULL);
-
-   /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", 
-     val, SCIPvarGetName(var), SCIPconsGetName(cons));*/
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

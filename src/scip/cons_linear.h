@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.31 2004/10/29 10:38:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.32 2004/11/24 15:29:53 bzfpfend Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -114,7 +114,7 @@ RETCODE SCIPcreateConsLinear(
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
-/** adds coefficient in linear constraint */
+/** adds coefficient to linear constraint */
 extern
 RETCODE SCIPaddCoefLinear(
    SCIP*            scip,               /**< SCIP data structure */

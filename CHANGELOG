@@ -8,6 +8,7 @@ interface:
 - new plugin class for relaxators (external relaxations, that can be used in parallel with LP relaxations)
 - if more than one result code applies to a plugin's execution, it should return the one that is higher in the
   call's documentation list
+- new method SCIPaddCoefKnapsack() in knapsack constraint handler
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm
@@ -15,6 +16,7 @@ features:
   integral coefficients instead of just rounding down all coefficients
 - improved presolving of linear constraint handler: aggregation of two constraints with equal coefficient vector
   into single constraint
+- improved presolving of knapsack constraint handler: aggregation of equal or negated variables in same constraint
 
 fixed bugs:
 - removed bug in knapsack constraint handler that appears if a variable is fixed to zero in knapsack presolving,
