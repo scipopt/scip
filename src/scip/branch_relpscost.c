@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.24 2005/02/14 13:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.25 2005/02/18 14:06:29 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -200,6 +200,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
    Real bestsbdown;
    Real bestsbup;
    Real provedbound;
+   Bool bestsbdownvalid;
+   Bool bestsbupvalid;
    Bool bestisstrongbranch;
    Bool allcolsinlp;
    Bool exactsolve;
@@ -240,6 +242,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
    bestisstrongbranch = FALSE;
    bestsbdown = SCIP_INVALID;
    bestsbup = SCIP_INVALID;
+   bestsbdownvalid = FALSE;
+   bestsbupvalid = FALSE;
    provedbound = lpobjval;
 
    if( nlpcands == 1 )
@@ -341,7 +345,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             Real upgain;
 
             /* use the score of the strong branching call at the current node */
-            CHECK_OKAY( SCIPgetVarStrongbranchLast(scip, lpcands[c], &down, &up, NULL, &lastlpobjval) );
+            CHECK_OKAY( SCIPgetVarStrongbranchLast(scip, lpcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
             score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
@@ -444,6 +448,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          Real downgain;
          Real upgain;
          Real score;
+         Bool downvalid;
+         Bool upvalid;
          Bool lperror;
          Bool downinf;
          Bool upinf;
@@ -462,7 +468,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
          /* use strong branching on candidate */
          CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, 
-               &down, &up, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* check for an error in strong branching */
          if( lperror )
@@ -478,13 +484,13 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
-         assert(!allcolsinlp || exactsolve || downinf == SCIPisGE(scip, down, cutoffbound));
-         assert(!allcolsinlp || exactsolve || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
          /* the minimal lower bound of both children is a proved lower bound of the current subtree */
-         if( allcolsinlp && !exactsolve )
+         if( allcolsinlp && !exactsolve && downvalid && upvalid )
          {
             Real minbound;
             
@@ -550,6 +556,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
                   bestsbscore = score;
                   bestsbdown = down;
                   bestsbup = up;
+                  bestsbdownvalid = downvalid;
+                  bestsbupvalid = upvalid;
                   bestsbfracscore = fracscore;
                   bestsbdomainscore = domainscore;
                   lookahead = 0.0;
@@ -658,8 +666,15 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       }
 
       /* calculate proved lower bounds for children */
-      proveddown = (bestisstrongbranch ? MAX(provedbound, bestsbdown) : provedbound);
-      provedup = (bestisstrongbranch ? MAX(provedbound, bestsbup) : provedbound);
+      proveddown = provedbound;
+      provedup = provedbound;
+      if( bestisstrongbranch )
+      {
+         if( bestsbdownvalid )
+            proveddown = MAX(provedbound, bestsbdown);
+         if( bestsbupvalid )
+            provedup = MAX(provedbound, bestsbup);
+      }
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",

@@ -1,6 +1,6 @@
-$(OBJDIR)/lpi_cpx.o: src/scip/lpi_cpx.c lib/cpxinc/cplex.h src/scip/bitencode.h \
+$(OBJDIR)/scip/lpi_cpx.o: src/scip/lpi_cpx.c lib/cpxinc/cplex.h src/scip/bitencode.h \
   src/scip/lpi.h src/scip/def.h src/scip/type_retcode.h src/scip/memory.h \
   src/scip/type_lpi.h src/scip/message.h
-$(OBJDIR)/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
+$(OBJDIR)/scip/bitencode.o: src/scip/bitencode.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/bitencode.h
-$(OBJDIR)/memory.o: src/scip/memory.c src/scip/memory.h
+$(OBJDIR)/scip/memory.o: src/scip/memory.c src/scip/memory.h

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.44 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.45 2005/02/18 14:06:30 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2
@@ -132,7 +132,6 @@ public:
    {
       if( getFromScratch() )
          SPxSolver::reLoad();
-
       m_stat = SPxSolver::solve();
 
       assert(rep() == COLUMN);
@@ -1309,6 +1308,7 @@ RETCODE spxSolve(
    case SPxSolver::UNBOUNDED:
    case SPxSolver::INFEASIBLE:
       return SCIP_OKAY;
+   case SPxSolver::ABORT_CYCLING:
    case SPxSolver::NO_PROBLEM:
    case SPxSolver::RUNNING:
    case SPxSolver::ERROR:
@@ -1356,6 +1356,10 @@ RETCODE SCIPlpiStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
    int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    )
 {
@@ -1376,6 +1380,8 @@ RETCODE SCIPlpiStrongbranch(
    assert(lpi->spx != NULL);
    assert(down != NULL);
    assert(up != NULL);
+   assert(downvalid != NULL);
+   assert(upvalid != NULL);
 
    /**@todo remember, whether the last solve call was strong branching, and save/restore basis only once */
    spx = lpi->spx;
@@ -1389,6 +1395,8 @@ RETCODE SCIPlpiStrongbranch(
    oldlb = spx->lower(col);
    oldub = spx->upper(col);
 
+   *downvalid = FALSE;
+   *upvalid = FALSE;
    if( iter != NULL )
       *iter = 0;
 
@@ -1406,14 +1414,19 @@ RETCODE SCIPlpiStrongbranch(
       status = spx->solve();
       switch( status )
       {
-      case SPxSolver::ABORT_TIME:
-      case SPxSolver::ABORT_ITER:
       case SPxSolver::OPTIMAL:
+         *down = spx->value();
+         *downvalid = TRUE;
+         break;
+      case SPxSolver::ABORT_TIME: /* Soplex does not return a proven dual bound, if it is aborted */
+      case SPxSolver::ABORT_ITER:
+      case SPxSolver::ABORT_CYCLING:
          *down = spx->value();
          break;
       case SPxSolver::ABORT_VALUE:
       case SPxSolver::INFEASIBLE:
          *down = spx->terminationValue();
+         *downvalid = TRUE;
          break;
       default:
          error = true;
@@ -1425,40 +1438,53 @@ RETCODE SCIPlpiStrongbranch(
       spx->setBasis(rowstat, colstat);
    }
    else
+   {
       *down = spx->terminationValue();
+      *downvalid = TRUE;
+   }
       
    /* up branch */
-   newlb = EPSFLOOR(psol+1.0, 1e-06);
-   if( !error && newlb <= oldub + 0.5 )
+   if( !error )
    {
-      debugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
-      
-      spx->changeLower(col, newlb);
-      
-      status = spx->solve();
-      switch( status )
+      newlb = EPSFLOOR(psol+1.0, 1e-06);
+      if( newlb <= oldub + 0.5 )
       {
-      case SPxSolver::ABORT_TIME:
-      case SPxSolver::ABORT_ITER:
-      case SPxSolver::OPTIMAL:
-         *up = spx->value();
-         break;
-      case SPxSolver::ABORT_VALUE:
-      case SPxSolver::INFEASIBLE:
-         *up = spx->terminationValue();
-         break;
-      case SPxSolver::UNBOUNDED:
-      default:
-         error = true;
-         break;
+         debugMessage("strong branching  up  on x%d (%g) with %d iterations\n", col, psol, itlim);
+      
+         spx->changeLower(col, newlb);
+      
+         status = spx->solve();
+         switch( status )
+         {
+         case SPxSolver::OPTIMAL:
+            *up = spx->value();
+            *upvalid = TRUE;
+            break;
+         case SPxSolver::ABORT_TIME: /* Soplex does not return a proven dual bound, if it is aborted */
+         case SPxSolver::ABORT_ITER:
+         case SPxSolver::ABORT_CYCLING:
+            *up = spx->value();
+            break;
+         case SPxSolver::ABORT_VALUE:
+         case SPxSolver::INFEASIBLE:
+            *up = spx->terminationValue();
+            *upvalid = TRUE;
+            break;
+         default:
+            error = true;
+            break;
+         }
+         if( iter != NULL )
+            (*iter) += spx->iterations();
+         spx->changeLower(col, oldlb);
+         spx->setBasis(rowstat, colstat);
       }
-      if( iter != NULL )
-         (*iter) += spx->iterations();
-      spx->changeLower(col, oldlb);
-      spx->setBasis(rowstat, colstat);
+      else
+      {
+         *up = spx->terminationValue();
+         *upvalid = TRUE;
+      }
    }
-   else
-      *up = spx->terminationValue();
    
    spx->setTerminationIter(oldItlim);
    

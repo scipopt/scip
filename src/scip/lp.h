@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.101 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.102 2005/02/18 14:06:29 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -207,6 +207,10 @@ RETCODE SCIPcolGetStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
@@ -219,6 +223,10 @@ void SCIPcolGetStrongbranchLast(
    COL*             col,                /**< LP column */
    Real*            down,               /**< stores dual bound after branching column down, or NULL */
    Real*            up,                 /**< stores dual bound after branching column up, or NULL */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
    Real*            solval,             /**< stores LP solution value of column at last strong branching call, or NULL */
    Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    );
@@ -546,6 +554,7 @@ extern
 RETCODE SCIPlpCreate(
    LP**             lp,                 /**< pointer to LP data object */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    const char*      name                /**< problem name */
    );
 
@@ -555,6 +564,17 @@ RETCODE SCIPlpFree(
    LP**             lp,                 /**< pointer to LP data object */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set                 /**< global SCIP settings */
+   );
+
+/** resets the LP to the empty LP by removing all columns and rows from LP, releasing all rows, and flushing the
+ *  changes to the LP solver
+ */
+extern
+RETCODE SCIPlpReset(
+   LP*              lp,                 /**< LP data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
    );
 
 /** adds a column to the LP and captures the variable */

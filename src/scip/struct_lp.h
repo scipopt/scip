@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.31 2005/02/14 13:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.32 2005/02/18 14:06:30 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -79,11 +79,11 @@ struct Col
    Real             farkascoef;         /**< coefficient in dual farkas infeasibility proof (== dualfarkas^T A_c) */
    Real             minprimsol;         /**< minimal LP solution value, this column ever assumed */
    Real             maxprimsol;         /**< maximal LP solution value, this column ever assumed */
-   Real             strongbranchdown;   /**< strong branching information for downwards branching */
-   Real             strongbranchup;     /**< strong branching information for upwards branching */
-   Real             strongbranchsolval; /**< LP solution value of column at last strong branching call */
-   Real             strongbranchlpobjval;/**< LP objective value at last strong branching call on the column */
-   Longint          strongbranchnode;   /**< node number of the last strong branching call on this column */
+   Real             sbdown;             /**< strong branching information for downwards branching */
+   Real             sbup;               /**< strong branching information for upwards branching */
+   Real             sbsolval;           /**< LP solution value of column at last strong branching call */
+   Real             sblpobjval;         /**< LP objective value at last strong branching call on the column */
+   Longint          sbnode;             /**< node number of the last strong branching call on this column */
    Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    ROW**            rows;               /**< rows of column entries, that may have a nonzero dual solution value */
@@ -99,8 +99,8 @@ struct Col
    int              lpdepth;            /**< depth level at which column entered the LP, or -1 if not in current LP */
    int              validredcostlp;     /**< LP number for which reduced cost value is valid */
    int              validfarkaslp;      /**< LP number for which farkas coefficient is valid */
-   int              validstrongbranchlp;/**< LP number for which strong branching values are valid */
-   int              strongbranchitlim;  /**< strong branching iteration limit used to get strongbranch values, or -1 */
+   int              validsblp;          /**< LP number for which strong branching values are valid */
+   int              sbitlim;            /**< strong branching iteration limit used to get strongbranch values, or -1 */
    int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    int              var_probindex;      /**< copy of var->probindex for avoiding expensive dereferencing */
    unsigned int     basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
@@ -112,6 +112,10 @@ struct Col
    unsigned int     coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
    unsigned int     integral:1;         /**< is associated variable of integral type? */
    unsigned int     removeable:1;       /**< is column removeable from the LP (due to aging or cleanup)? */
+   unsigned int     sbdownvalid:1;      /**< stores whether the stored strong branching down value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
+   unsigned int     sbupvalid:1;        /**< stores whether the stored strong branching up value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
 };
 
 /** LP row
@@ -239,6 +243,11 @@ struct Lp
    Bool             lpiscaling;         /**< current SCALING setting in LPI */
    Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
+   Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
+   Bool             lpihasdualfeastol;  /**< does the LPI support the DUALFEASTOL parameter? */
+   Bool             lpihasfastmip;      /**< does the LPI support the FASTMIP parameter? */
+   Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
+   Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    Bool             lastwasprimal;      /**< was the last simplex call a call to the primal simplex? */
 };
 

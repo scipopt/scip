@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.21 2005/02/14 13:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.22 2005/02/18 14:06:30 bzfpfend Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -198,7 +198,7 @@ BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetNLPNonz(col)          (col)->nlprows
 #define SCIPcolGetRows(col)             (col)->rows
 #define SCIPcolGetVals(col)             (col)->vals
-#define SCIPcolGetStrongbranchNode(col) (col)->strongbranchnode
+#define SCIPcolGetStrongbranchNode(col) (col)->sbnode
 #define SCIPboundtypeOpposite(boundtype) \
    ((boundtype) == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER)
 

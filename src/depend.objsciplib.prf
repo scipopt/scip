@@ -1,4 +1,4 @@
-$(OBJDIR)/objbranchrule.o: src/objscip/objbranchrule.cpp \
+$(OBJDIR)/objscip/objbranchrule.o: src/objscip/objbranchrule.cpp \
   src/objscip/objbranchrule.h src/scip/scip.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/memory.h \
   src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
@@ -25,7 +25,7 @@ $(OBJDIR)/objbranchrule.o: src/objscip/objbranchrule.cpp \
   src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
   src/scip/type_buffer.h src/scip/struct_set.h src/scip/misc.h \
   src/scip/tree.h
-$(OBJDIR)/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objconshdlr.h \
+$(OBJDIR)/objscip/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objconshdlr.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -51,7 +51,7 @@ $(OBJDIR)/objconshdlr.o: src/objscip/objconshdlr.cpp src/objscip/objconshdlr.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h src/scip/scip.h \
+$(OBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h src/scip/scip.h \
   src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
   src/scip/memory.h src/scip/type_result.h src/scip/type_clock.h \
   src/scip/type_misc.h src/scip/type_paramset.h src/scip/type_scip.h \
@@ -77,7 +77,7 @@ $(OBJDIR)/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h src/scip/scip
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnodesel.h \
+$(OBJDIR)/objscip/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnodesel.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -103,7 +103,7 @@ $(OBJDIR)/objnodesel.o: src/objscip/objnodesel.cpp src/objscip/objnodesel.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpresol.h \
+$(OBJDIR)/objscip/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpresol.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -129,7 +129,7 @@ $(OBJDIR)/objpresol.o: src/objscip/objpresol.cpp src/objscip/objpresol.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objpricer.o: src/objscip/objpricer.cpp src/objscip/objpricer.h \
+$(OBJDIR)/objscip/objpricer.o: src/objscip/objpricer.cpp src/objscip/objpricer.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -155,7 +155,7 @@ $(OBJDIR)/objpricer.o: src/objscip/objpricer.cpp src/objscip/objpricer.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
+$(OBJDIR)/objscip/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -181,7 +181,7 @@ $(OBJDIR)/objprobdata.o: src/objscip/objprobdata.cpp src/objscip/objprobdata.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objreader.o: src/objscip/objreader.cpp src/objscip/objreader.h \
+$(OBJDIR)/objscip/objreader.o: src/objscip/objreader.cpp src/objscip/objreader.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -207,7 +207,7 @@ $(OBJDIR)/objreader.o: src/objscip/objreader.cpp src/objscip/objreader.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h \
+$(OBJDIR)/objscip/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \
@@ -233,7 +233,7 @@ $(OBJDIR)/objrelax.o: src/objscip/objrelax.cpp src/objscip/objrelax.h \
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h src/scip/scip.h \
+$(OBJDIR)/objscip/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h src/scip/scip.h \
   src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
   src/scip/memory.h src/scip/type_result.h src/scip/type_clock.h \
   src/scip/type_misc.h src/scip/type_paramset.h src/scip/type_scip.h \
@@ -259,7 +259,7 @@ $(OBJDIR)/objsepa.o: src/objscip/objsepa.cpp src/objscip/objsepa.h src/scip/scip
   src/scip/type_pricestore.h src/scip/type_sepastore.h src/scip/set.h \
   src/scip/buffer.h src/scip/type_buffer.h src/scip/struct_set.h \
   src/scip/misc.h src/scip/tree.h
-$(OBJDIR)/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvardata.h \
+$(OBJDIR)/objscip/objvardata.o: src/objscip/objvardata.cpp src/objscip/objvardata.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
   src/scip/type_clock.h src/scip/type_misc.h src/scip/type_paramset.h \

@@ -38,6 +38,8 @@ interface:
 - method SCIPreadProb() does not free the current problem - this is done in SCIPcreateProb() now, which is usually
   called by a problem reader; in this way, a reader can generate "extra information" for the current problem, s.t.
   the full problem information can be distributed to different files read by different readers
+- methods SCIPgetVarStrongbranch() and SCIPgetVarStrongbranchLast() now have two additional parameters that can
+  be used to check, whether the returned values are correct dual bounds
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -106,6 +108,7 @@ fixed bugs:
   thereby reduced due to further domain propagation w.r.t. the objective function
 - fixed bug with unresolved numerical troubles in LP that don't render the LP useless at the current node
 - fixed bug in SCIPisObjIntegral()
+- LP error on forced LP resolve (due to 0 unfixed integers) now leads to an error (instead of accepting the pseudo solution as feasible)
 
 
 SCIP version 0.78

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.213 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.214 2005/02/18 14:06:30 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1701,6 +1701,10 @@ RETCODE SCIPgetVarStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
    Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
    Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
@@ -1720,6 +1724,10 @@ RETCODE SCIPgetVarStrongbranchLast(
    VAR*             var,                /**< variable to get last strong branching values for */
    Real*            down,               /**< stores dual bound after branching column down, or NULL */
    Real*            up,                 /**< stores dual bound after branching column up, or NULL */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
    Real*            solval,             /**< stores LP solution value of variable at last strong branching call, or NULL */
    Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    );

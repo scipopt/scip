@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.271 2005/02/16 17:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.272 2005/02/18 14:06:30 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3410,7 +3410,7 @@ RETCODE transformProb(
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
-   CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
+   CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, scip->stat, SCIPprobGetName(scip->origprob)) );
    CHECK_OKAY( SCIPprimalCreate(&scip->primal) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
@@ -3953,8 +3953,7 @@ RETCODE freeSolve(
    scip->set->stage = SCIP_STAGE_FREESOLVE;
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
-   CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
-   CHECK_OKAY( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
+   CHECK_OKAY( SCIPlpReset(scip->lp, scip->mem->solvemem, scip->set, scip->stat) );
    
    /* clear all row references in internal data structures */
    CHECK_OKAY( SCIPcutpoolClear(scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
@@ -4710,6 +4709,10 @@ RETCODE SCIPgetVarStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
    Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
    Bool*            downconflict,       /**< pointer to store whether a conflict clause was created for an infeasible
@@ -4725,6 +4728,10 @@ RETCODE SCIPgetVarStrongbranch(
 
    CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranch", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( downvalid != NULL )
+      *downvalid = FALSE;
+   if( upvalid != NULL )
+      *upvalid = FALSE;
    if( downinf != NULL )
       *downinf = FALSE;
    if( upinf != NULL )
@@ -4750,7 +4757,7 @@ RETCODE SCIPgetVarStrongbranch(
    }
 
    /* call strong branching for column */
-   CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, down, up, lperror) );
+   CHECK_OKAY( SCIPcolGetStrongbranch(col, scip->set, scip->stat, scip->lp, itlim, down, up, downvalid, upvalid, lperror) );
 
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough
     * declare the sub nodes infeasible
@@ -4760,8 +4767,8 @@ RETCODE SCIPgetVarStrongbranch(
       Bool downcutoff;
       Bool upcutoff;
 
-      downcutoff = SCIPsetIsGE(scip->set, col->strongbranchdown, scip->lp->cutoffbound);
-      upcutoff = SCIPsetIsGE(scip->set, col->strongbranchup, scip->lp->cutoffbound);
+      downcutoff = col->sbdownvalid && SCIPsetIsGE(scip->set, col->sbdown, scip->lp->cutoffbound);
+      upcutoff = col->sbupvalid && SCIPsetIsGE(scip->set, col->sbup, scip->lp->cutoffbound);
       if( downinf != NULL )
          *downinf = downcutoff;
       if( upinf != NULL )
@@ -4796,6 +4803,10 @@ RETCODE SCIPgetVarStrongbranchLast(
    VAR*             var,                /**< variable to get last strong branching values for */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
+                                         *   otherwise, it can only be used as an estimate value */
    Real*            solval,             /**< stores LP solution value of variable at the last strong branching call */
    Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    )
@@ -4808,7 +4819,7 @@ RETCODE SCIPgetVarStrongbranchLast(
       return SCIP_INVALIDDATA;
    }
 
-   SCIPcolGetStrongbranchLast(SCIPvarGetCol(var), down, up, solval, lpobjval);
+   SCIPcolGetStrongbranchLast(SCIPvarGetCol(var), down, up, downvalid, upvalid, solval, lpobjval);
 
    return SCIP_OKAY;
 }

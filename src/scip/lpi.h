@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.49 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.50 2005/02/18 14:06:29 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -382,6 +382,10 @@ RETCODE SCIPlpiStrongbranch(
    int              itlim,              /**< iteration limit for strong branchings */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
+   Bool*            downvalid,          /**< stores whether the returned down value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
+   Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound;
+                                         *   otherwise, it can only be used as an estimate value */
    int*             iter                /**< stores total number of strong branching iterations, or -1; may be NULL */
    );
 

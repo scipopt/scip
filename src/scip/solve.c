@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.171 2005/02/16 17:46:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.172 2005/02/18 14:06:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1222,7 +1222,8 @@ RETCODE priceAndCutLoop(
       }
    }
    debugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
-      SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
+      SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
+      *cutoff ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
 
    return SCIP_OKAY;
 }
@@ -1274,7 +1275,8 @@ RETCODE solveNodeLP(
             branchcand, eventfilter, eventqueue, cutoff, lperror) );
       assert(*cutoff || *lperror || (lp->flushed && lp->solved));
       debugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n", 
-         SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
+         SCIPlpGetSolstat(lp),
+         *cutoff ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set));
 
       /* update initial LP iteration counter */
       stat->ninitlps += stat->nlps - nlps;
@@ -1674,6 +1676,7 @@ RETCODE solveNode(
    Bool solvelpagain;
    Bool propagateagain;
    Bool branched;
+   Bool forcedlpsolve;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -1697,8 +1700,8 @@ RETCODE solveNode(
    actdepth = SCIPnodeGetDepth(focusnode);
 
    debugMessage("Processing node %lld in depth %d, %d siblings\n", stat->nnodes, actdepth, tree->nsiblings);
-   debugMessage("current pseudosolution: obj=%g", SCIPlpGetPseudoObjval(lp, set));
-   debug(SCIPprobPrintPseudoSol(prob, set));
+   debugMessage("current pseudosolution: obj=%g\n", SCIPlpGetPseudoObjval(lp, set));
+   /*debug(SCIPprobPrintPseudoSol(prob, set));*/
    
    /* check, if we want to solve the LP at the selected node:
     * - solve the LP, if the lp solve depth and frequency demand solving
@@ -1731,6 +1734,7 @@ RETCODE solveNode(
    solverelaxagain = TRUE;
    solvelpagain = TRUE;
    propagateagain = TRUE;
+   forcedlpsolve = FALSE;
    while( !(*cutoff) && (solverelaxagain || solvelpagain || propagateagain) && nlperrors < MAXNLPERRORS && !(*restart) )
    {
       Real pseudoobjval;
@@ -1789,7 +1793,8 @@ RETCODE solveNode(
                   initiallpsolved, cutoff, unbounded, &lperror) );
             initiallpsolved = TRUE;
             debugMessage(" -> LP status: %d, LP obj: %g, iter: %lld, count: %d\n", 
-               SCIPlpGetSolstat(lp), *cutoff ? SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
+               SCIPlpGetSolstat(lp),
+               *cutoff ? SCIPsetInfinity(set) : lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set),
                stat->nlpiterations, stat->lpcount);
             
             /* check, if the path was cutoff */
@@ -1798,13 +1803,19 @@ RETCODE solveNode(
             /* if an error occured during LP solving, switch to pseudo solution */
             if( lperror )
             {
+               if( forcedlpsolve )
+               {
+                  errorMessage("(node %lld) unresolved numerical troubles in LP %d cannot be dealt with\n", 
+                     stat->nnodes, stat->nlps);
+                  return SCIP_LPERROR;
+               }
                SCIPtreeSetFocusNodeLP(tree, FALSE);
                nlperrors++;
                infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                   "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n", 
                   stat->nnodes, stat->nlps, nlperrors);
             }
-               
+
             /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
              * we have to forget about the LP and use the pseudo solution instead
              */
@@ -1919,6 +1930,7 @@ RETCODE solveNode(
        * In LP branching, we cannot allow adding constraints, because this does not necessary change the LP and can
        * therefore lead to an infinite loop.
        */
+      forcedlpsolve = FALSE;
       if( *infeasible && !(*cutoff) && !(*unbounded) && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
          RESULT result;
@@ -2000,6 +2012,7 @@ RETCODE solveNode(
                /* solve the LP in the next loop */
                SCIPtreeSetFocusNodeLP(tree, TRUE);
                solvelpagain = TRUE;
+               forcedlpsolve = TRUE; /* this LP must be solved without error - otherwise we have to abort */
             }
             break;
          default:

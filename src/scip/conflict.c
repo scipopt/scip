@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.88 2005/02/16 17:46:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.89 2005/02/18 14:06:29 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -4043,9 +4043,9 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    assert(lp->solved);
    assert(SCIPprobAllColsInLP(prob, set, lp));
    assert(col != NULL);
-   assert((SCIPsetIsGE(set, col->strongbranchdown, lp->cutoffbound)
+   assert((col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound)
          && SCIPsetFeasCeil(set, col->primsol-1.0) >= col->lb - 0.5)
-      || (SCIPsetIsGE(set, col->strongbranchup, lp->cutoffbound)
+      || (col->sbupvalid && SCIPsetIsGE(set, col->sbup, lp->cutoffbound)
          && SCIPsetFeasFloor(set, col->primsol+1.0) <= col->ub + 0.5));
 
    if( downconflict != NULL )
@@ -4083,7 +4083,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    var = SCIPcolGetVar(col);
 
    /* is down branch infeasible? */
-   if( col->strongbranchdown >= lp->cutoffbound )
+   if( col->sbdownvalid && col->sbdown >= lp->cutoffbound )
    {
       newub = SCIPsetFeasCeil(set, col->primsol-1.0);
       if( newub >= col->lb - 0.5 )
@@ -4132,7 +4132,7 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    }
 
    /* is up branch infeasible? */
-   if( col->strongbranchup >= lp->cutoffbound )
+   if( col->sbupvalid && col->sbup >= lp->cutoffbound )
    {
       newlb = SCIPsetFeasFloor(set, col->primsol+1.0);
       if( newlb <= col->ub + 0.5 )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.19 2005/02/16 17:46:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.20 2005/02/18 14:06:29 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -61,6 +61,8 @@ RETCODE branch(
    Real bestup;
    Real bestscore;
    Real provedbound;
+   Bool bestdownvalid;
+   Bool bestupvalid;
    Bool allcolsinlp;
    Bool exactsolve;
    int npseudocands;
@@ -97,6 +99,8 @@ RETCODE branch(
    bestpseudocand = 0;
    bestdown = lpobjval;
    bestup = lpobjval;
+   bestdownvalid = TRUE;
+   bestupvalid = TRUE;
    bestscore = -SCIPinfinity(scip);
    provedbound = lpobjval;
    if( npseudocands > 1 )
@@ -109,6 +113,8 @@ RETCODE branch(
       Real score;
       Bool integral;
       Bool lperror;
+      Bool downvalid;
+      Bool upvalid;
       Bool downinf;
       Bool upinf;
       Bool downconflict;
@@ -136,7 +142,7 @@ RETCODE branch(
             SCIPvarGetUbLocal(pseudocands[c]), solval);
 
          CHECK_OKAY( SCIPgetVarStrongbranch(scip, pseudocands[c], INT_MAX, 
-               &down, &up, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* display node information line in root node */
          if( SCIPgetDepth(scip) == 0 && SCIPgetNStrongbranchs(scip) % 100 == 0 )
@@ -158,8 +164,8 @@ RETCODE branch(
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
-         assert(!allcolsinlp || exactsolve || downinf == SCIPisGE(scip, down, cutoffbound));
-         assert(!allcolsinlp || exactsolve || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
@@ -233,7 +239,7 @@ RETCODE branch(
                }
             }
          }
-         else if( allcolsinlp && !exactsolve )
+         else if( allcolsinlp && !exactsolve && downvalid && upvalid )
          {
             Real minbound;
                
@@ -262,6 +268,8 @@ RETCODE branch(
                bestpseudocand = c;
                bestdown = down;
                bestup = up;
+               bestdownvalid = downvalid;
+               bestupvalid = upvalid;
                bestscore = score;
             }
          }
@@ -340,7 +348,11 @@ RETCODE branch(
          CHECK_OKAY( SCIPchgVarUbNode(scip, node, var, newub) );
          if( allcolsinlp && !exactsolve )
          {
-            CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestdown)) );
+            CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, provedbound) );
+            if( bestdownvalid )
+            {
+               CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
+            }
          }
          debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       }
@@ -376,7 +388,11 @@ RETCODE branch(
          CHECK_OKAY( SCIPchgVarLbNode(scip, node, var, newlb) );
          if( allcolsinlp && !exactsolve )
          {
-            CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestup)) );
+            CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, provedbound) );
+            if( bestupvalid )
+            {
+               CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
+            }
          }
          debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.37 2005/02/16 17:46:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.38 2005/02/18 14:06:29 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -104,6 +104,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    Real bestup;
    Real bestscore;
    Real provedbound;
+   Bool bestdownvalid;
+   Bool bestupvalid;
    Bool allcolsinlp;
    Bool exactsolve;
    int nlpcands;
@@ -144,6 +146,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    bestcand = 0;
    bestdown = lpobjval;
    bestup = lpobjval;
+   bestdownvalid = TRUE;
+   bestupvalid = TRUE;
    bestscore = -SCIPinfinity(scip);
    provedbound = lpobjval;
    if( nlpcands > 1 )
@@ -154,6 +158,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       Real upgain;
       Real score;
       Bool lperror;
+      Bool downvalid;
+      Bool upvalid;
       Bool downinf;
       Bool upinf;
       Bool downconflict;
@@ -173,7 +179,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             SCIPvarGetName(lpcands[c]), lpcandssol[c]);
 
          CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], INT_MAX, 
-               &down, &up, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+               &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
 
          /* display node information line in root node */
          if( SCIPgetDepth(scip) == 0 && SCIPgetNStrongbranchs(scip) % 100 == 0 )
@@ -195,8 +201,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
-         assert(!allcolsinlp || exactsolve || downinf == SCIPisGE(scip, down, cutoffbound));
-         assert(!allcolsinlp || exactsolve || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
@@ -240,7 +246,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
                break; /* terminate initialization loop, because LP was changed */
             }
          }
-         else if( allcolsinlp && !exactsolve )
+         else if( allcolsinlp && !exactsolve && downvalid && upvalid )
          {
             Real minbound;
             
@@ -258,6 +264,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
                bestcand = c;
                bestdown = down;
                bestup = up;
+               bestdownvalid = downvalid;
+               bestupvalid = upvalid;
                bestscore = score;
             }
          }
@@ -317,7 +325,11 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
-         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestdown)) );
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, provedbound) );
+         if( bestdownvalid )
+         {
+            CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
+         }
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       
@@ -328,7 +340,11 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
-         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestup)) );
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, provedbound) );
+         if( bestupvalid )
+         {
+            CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
+         }
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
 
