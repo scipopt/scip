@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.151 2005/02/14 13:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.152 2005/02/16 17:46:17 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2223,6 +2223,7 @@ RETCODE resolvePropagation(
       *result = SCIP_SUCCESS;
       break;
 
+   case PROPRULE_INVALID:
    default:
       errorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;

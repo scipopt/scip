@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.177 2005/02/16 14:51:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.178 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1856,6 +1856,18 @@ RETCODE lpSetIntpar(
    return retcode;
 }
 
+/** sets parameter of type Bool in LP solver, ignoring unknown parameters */
+static
+RETCODE lpSetBoolpar(
+   LP*              lp,                 /**< current LP data */
+   LPPARAM          lpparam,            /**< LP parameter */
+   Bool             value,              /**< value to set parameter to */
+   Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   return lpSetIntpar(lp, lpparam, (int)value, success);
+}
+
 /** sets parameter of type Real in LP solver, ignoring unknown parameters */
 static
 RETCODE lpSetRealpar(
@@ -1909,6 +1921,17 @@ RETCODE lpCheckIntpar(
    return retcode;
 }
 
+/** checks, that parameter of type Bool in LP solver has the given value, ignoring unknown parameters */
+static
+RETCODE lpCheckBoolpar(
+   LP*              lp,                 /**< current LP data */
+   LPPARAM          lpparam,            /**< LP parameter */
+   Bool             value               /**< value parameter should have */
+   )
+{
+   return lpCheckIntpar(lp, lpparam, (int)value);
+}
+
 /** checks, that parameter of type Real in LP solver has the given value, ignoring unknown parameters */
 static
 RETCODE lpCheckRealpar(
@@ -1929,13 +1952,14 @@ RETCODE lpCheckRealpar(
       return SCIP_OKAY;
 
    /* check value */
-   if( lpivalue != value )
+   if( lpivalue != value ) /*lint !e777*/
       return SCIP_LPERROR;
 
    return retcode;
 }
 #else
 #define lpCheckIntpar(lp, lpparam, value) SCIP_OKAY
+#define lpCheckBoolpar(lp, lpparam, value) SCIP_OKAY
 #define lpCheckRealpar(lp, lpparam, value) SCIP_OKAY
 #endif
 
@@ -1956,7 +1980,7 @@ RETCODE lpSetUobjlim(
 
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
-   if( uobjlim != lp->lpiuobjlim )
+   if( uobjlim != lp->lpiuobjlim ) /*lint !e777*/
    {
       Bool success;
 
@@ -1989,7 +2013,7 @@ RETCODE lpSetFeastol(
 
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_FEASTOL, lp->lpifeastol) );
 
-   if( feastol != lp->lpifeastol )
+   if( feastol != lp->lpifeastol ) /*lint !e777*/
    {
       CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_FEASTOL, feastol, success) );
       if( *success )
@@ -2025,7 +2049,7 @@ RETCODE lpSetDualFeastol(
 
    CHECK_OKAY( lpCheckRealpar(lp, SCIP_LPPAR_DUALFEASTOL, lp->lpidualfeastol) );
 
-   if( dualfeastol != lp->lpidualfeastol )
+   if( dualfeastol != lp->lpidualfeastol ) /*lint !e777*/
    {
       CHECK_OKAY( lpSetRealpar(lp, SCIP_LPPAR_DUALFEASTOL, dualfeastol, success) );
       if( *success )
@@ -2058,11 +2082,11 @@ RETCODE lpSetFromscratch(
    assert(lp != NULL);
    assert(success != NULL);
 
-   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_FROMSCRATCH, lp->lpifromscratch) );
+   CHECK_OKAY( lpCheckBoolpar(lp, SCIP_LPPAR_FROMSCRATCH, lp->lpifromscratch) );
 
    if( fromscratch != lp->lpifromscratch )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, fromscratch, success) );
+      CHECK_OKAY( lpSetBoolpar(lp, SCIP_LPPAR_FROMSCRATCH, fromscratch, success) );
       if( *success )
          lp->lpifromscratch = fromscratch;
    }
@@ -2083,11 +2107,11 @@ RETCODE lpSetFastmip(
    assert(lp != NULL);
    assert(success != NULL);
 
-   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
+   CHECK_OKAY( lpCheckBoolpar(lp, SCIP_LPPAR_FASTMIP, lp->lpifastmip) );
 
    if( fastmip != lp->lpifastmip )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_FASTMIP, fastmip, success) );
+      CHECK_OKAY( lpSetBoolpar(lp, SCIP_LPPAR_FASTMIP, fastmip, success) );
       if( *success )
          lp->lpifastmip = fastmip;
    }
@@ -2108,11 +2132,11 @@ RETCODE lpSetScaling(
    assert(lp != NULL);
    assert(success != NULL);
 
-   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_SCALING, lp->lpiscaling) );
+   CHECK_OKAY( lpCheckBoolpar(lp, SCIP_LPPAR_SCALING, lp->lpiscaling) );
 
    if( scaling != lp->lpiscaling )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_SCALING, scaling, success) );
+      CHECK_OKAY( lpSetBoolpar(lp, SCIP_LPPAR_SCALING, scaling, success) );
       if( *success )
          lp->lpiscaling = scaling;
    }
@@ -2133,11 +2157,11 @@ RETCODE lpSetPresolving(
    assert(lp != NULL);
    assert(success != NULL);
 
-   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_PRESOLVING, lp->lpipresolving) );
+   CHECK_OKAY( lpCheckBoolpar(lp, SCIP_LPPAR_PRESOLVING, lp->lpipresolving) );
 
    if( presolving != lp->lpipresolving )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_PRESOLVING, presolving, success) );
+      CHECK_OKAY( lpSetBoolpar(lp, SCIP_LPPAR_PRESOLVING, presolving, success) );
       if( *success )
          lp->lpipresolving = presolving;
    }
@@ -2194,11 +2218,11 @@ RETCODE lpSetLPInfo(
 
    assert(lp != NULL);
 
-   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_LPINFO, lp->lpilpinfo) );
+   CHECK_OKAY( lpCheckBoolpar(lp, SCIP_LPPAR_LPINFO, lp->lpilpinfo) );
 
    if( lpinfo != lp->lpilpinfo )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPINFO, lpinfo, &success) );
+      CHECK_OKAY( lpSetBoolpar(lp, SCIP_LPPAR_LPINFO, lpinfo, &success) );
       if( success )
          lp->lpilpinfo = lpinfo;
    }
@@ -2290,7 +2314,7 @@ RETCODE SCIPcolCreate(
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
    (*col)->var_probindex = SCIPvarGetProbindex(var);
-   (*col)->basisstatus = SCIP_BASESTAT_ZERO;
+   (*col)->basisstatus = SCIP_BASESTAT_ZERO; /*lint !e641*/
    (*col)->lprowssorted = TRUE;
    (*col)->nonlprowssorted = (len <= 1);
    (*col)->objchanged = FALSE;
@@ -3507,7 +3531,7 @@ RETCODE SCIProwCreate(
    (*row)->validactivitybdsdomchg = -1;
    (*row)->age = 0;
    (*row)->obsoletenode = -1;
-   (*row)->basisstatus = SCIP_BASESTAT_BASIC;
+   (*row)->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    (*row)->lpcolssorted = TRUE;
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
@@ -4136,7 +4160,7 @@ RETCODE SCIProwCalcIntegralScalar(
    else
    {
       assert(!(*success));
-      debugMessage(" -> rationalizing failed: gcd=%lld, scm=%lld, lastval=%g\n", gcd, scm, val);
+      debugMessage(" -> rationalizing failed: gcd=%lld, scm=%lld, lastval=%g\n", gcd, scm, val); /*lint !e771*/
    }
 
    return SCIP_OKAY;
@@ -4468,6 +4492,7 @@ RETCODE SCIProwGetSolActivity(
    )
 {
    COL* col;
+   Real inf;
    int i;
 
    assert(row != NULL);
@@ -4482,8 +4507,9 @@ RETCODE SCIProwGetSolActivity(
       (*solactivity) += row->vals[i] * SCIPsolGetVal(sol, stat, col->var);
    }
 
-   *solactivity = MAX(*solactivity, -SCIPsetInfinity(set));
-   *solactivity = MIN(*solactivity, +SCIPsetInfinity(set));
+   inf = SCIPsetInfinity(set);
+   *solactivity = MAX(*solactivity, -inf);
+   *solactivity = MIN(*solactivity, +inf);
 
    return SCIP_OKAY;
 }
@@ -4652,6 +4678,7 @@ Real SCIProwGetEfficacy(
 {
    Real norm;
    Real feasibility;
+   Real eps;
 
    assert(set != NULL);
 
@@ -4674,7 +4701,8 @@ Real SCIProwGetEfficacy(
       abort();
    }
 
-   norm = MAX(norm, SCIPsetSumepsilon(set));
+   eps = SCIPsetSumepsilon(set);
+   norm = MAX(norm, eps);
    feasibility = SCIProwGetLPFeasibility(row, stat, lp);
 
    return -feasibility / norm;
@@ -4853,7 +4881,7 @@ void markColDeleted(
    col->validredcostlp = -1;
    col->validfarkaslp = -1;
    col->strongbranchitlim = -1;
-   col->basisstatus = SCIP_BASESTAT_ZERO;
+   col->basisstatus = SCIP_BASESTAT_ZERO; /*lint !e641*/
 }
 
 /** applies all cached column removals to the LP solver */
@@ -5071,7 +5099,7 @@ void markRowDeleted(
    row->dualsol = 0.0;
    row->activity = SCIP_INVALID;
    row->dualfarkas = 0.0;
-   row->basisstatus = SCIP_BASESTAT_BASIC;
+   row->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
    row->validactivitylp = -1;
 }
 
@@ -5334,7 +5362,7 @@ RETCODE lpFlushChgCols(
             Real newobj;
 
             newobj = col->obj;
-            if( col->flushedobj != newobj )
+            if( col->flushedobj != newobj ) /*lint !e777*/
             {
                assert(nobjchg < lp->ncols);
                objind[nobjchg] = col->lpipos;
@@ -5351,7 +5379,7 @@ RETCODE lpFlushChgCols(
 
             newlb = (SCIPsetIsInfinity(set, -col->lb) ? -infinity : col->lb);
             newub = (SCIPsetIsInfinity(set, col->ub) ? infinity : col->ub);
-            if( col->flushedlb != newlb || col->flushedub != newub )
+            if( col->flushedlb != newlb || col->flushedub != newub ) /*lint !e777*/
             {
                assert(nbdchg < lp->ncols);
                bdind[nbdchg] = col->lpipos;
@@ -5459,7 +5487,7 @@ RETCODE lpFlushChgRows(
 
             newlhs = (SCIPsetIsInfinity(set, -row->lhs) ? -infinity : row->lhs - row->constant);
             newrhs = (SCIPsetIsInfinity(set, row->rhs) ? infinity : row->rhs - row->constant);
-            if( row->flushedlhs != newlhs || row->flushedrhs != newrhs )
+            if( row->flushedlhs != newlhs || row->flushedrhs != newrhs ) /*lint !e777*/
             {
                assert(nchg < lp->nrows);
                ind[nchg] = row->lpipos;
@@ -5604,9 +5632,9 @@ RETCODE SCIPlpMarkFlushed(
          assert(SCIPsetIsSumEQ(set, lpiobj, col->flushedobj));
          assert(SCIPsetIsSumEQ(set, lpilb, col->flushedlb));
          assert(SCIPsetIsSumEQ(set, lpiub, col->flushedub));
-         assert(col->flushedobj == col->obj);
-         assert(col->flushedlb == (SCIPsetIsInfinity(set, -col->lb) ? -SCIPlpiInfinity(lp->lpi) : col->lb));
-         assert(col->flushedub == (SCIPsetIsInfinity(set, col->ub) ? SCIPlpiInfinity(lp->lpi) : col->ub));
+         assert(col->flushedobj == col->obj); /*lint !e777*/
+         assert(col->flushedlb == (SCIPsetIsInfinity(set, -col->lb) ? -SCIPlpiInfinity(lp->lpi) : col->lb)); /*lint !e777*/
+         assert(col->flushedub == (SCIPsetIsInfinity(set, col->ub) ? SCIPlpiInfinity(lp->lpi) : col->ub)); /*lint !e777*/
 #endif
          col->objchanged = FALSE;
          col->lbchanged = FALSE;
@@ -5633,9 +5661,9 @@ RETCODE SCIPlpMarkFlushed(
          assert(SCIPsetIsSumEQ(set, lpilhs, row->flushedlhs));
          assert(SCIPsetIsSumEQ(set, lpirhs, row->flushedrhs));
          assert(row->flushedlhs ==
-            (SCIPsetIsInfinity(set, -row->lhs) ? -SCIPlpiInfinity(lp->lpi) : row->lhs - row->constant));
+            (SCIPsetIsInfinity(set, -row->lhs) ? -SCIPlpiInfinity(lp->lpi) : row->lhs - row->constant)); /*lint !e777*/
          assert(row->flushedrhs ==
-            (SCIPsetIsInfinity(set, row->rhs) ? SCIPlpiInfinity(lp->lpi) : row->rhs - row->constant));
+            (SCIPsetIsInfinity(set, row->rhs) ? SCIPlpiInfinity(lp->lpi) : row->rhs - row->constant)); /*lint !e777*/
 #endif
          row->lhschanged = FALSE;
          row->rhschanged = FALSE;
@@ -5880,22 +5908,22 @@ RETCODE SCIPlpCreate(
          "LP Solver <%s>: dual feasibility tolerance cannot be set -- tolerance of SCIP and LP solver may differ\n",
          SCIPlpiGetSolverName());
    }
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip, &success) );
+   CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_FROMSCRATCH, (*lp)->lpifromscratch, &success) );
+   CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: fastmip setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling, &success) );
+   CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: scaling not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRESOLVING, (*lp)->lpipresolving, &success) );
+   CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_PRESOLVING, (*lp)->lpipresolving, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -5909,7 +5937,7 @@ RETCODE SCIPlpCreate(
          "LP Solver <%s>: iteration limit cannot be set -- can lead to unnecessary simplex iterations\n",
          SCIPlpiGetSolverName());
    }
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo, &success) );
+   CHECK_OKAY( lpSetBoolpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo, &success) );
    if( !success )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -9319,7 +9347,7 @@ RETCODE SCIPlpUpdateVarObj(
 
    if( set->misc_exactsolve )
    {
-      if( oldobj != newobj )
+      if( oldobj != newobj ) /*lint !e777*/
       {
          CHECK_OKAY( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
                         newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
@@ -9351,7 +9379,7 @@ RETCODE SCIPlpUpdateVarLb(
 
    if( set->misc_exactsolve )
    {
-      if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 )
+      if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
          CHECK_OKAY( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
                         SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
@@ -9383,7 +9411,7 @@ RETCODE SCIPlpUpdateVarUb(
 
    if( set->misc_exactsolve )
    {
-      if( oldub != newub && SCIPvarGetObj(var) < 0.0 )
+      if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
          CHECK_OKAY( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
                         SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
@@ -9748,7 +9776,7 @@ RETCODE SCIPlpGetSol(
       if( primsol[c] > lpicols[c]->maxprimsol )
          lpicols[c]->maxprimsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
-      lpicols[c]->basisstatus = cstat[c];
+      lpicols[c]->basisstatus = cstat[c]; /*lint !e732*/
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -9773,7 +9801,7 @@ RETCODE SCIPlpGetSol(
    {
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lpirows[r]->constant;
-      lpirows[r]->basisstatus = rstat[r];
+      lpirows[r]->basisstatus = rstat[r]; /*lint !e732*/
       lpirows[r]->validactivitylp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
@@ -10222,7 +10250,7 @@ RETCODE lpRemoveObsoleteCols(
       if( cols[c]->removeable
          && cols[c]->obsoletenode != stat->nnodes /* don't remove column a second time from same node (avoid cycling) */
          && cols[c]->age > set->lp_colagelimit
-         && cols[c]->basisstatus != SCIP_BASESTAT_BASIC
+         && (BASESTAT)cols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
          coldstat[c] = 1;
@@ -10294,7 +10322,7 @@ RETCODE lpRemoveObsoleteRows(
       if( rows[r]->removeable
          && rows[r]->obsoletenode != stat->nnodes  /* don't remove row a second time from same node (avoid cycling) */
          && rows[r]->age > set->lp_rowagelimit
-         && rows[r]->basisstatus == SCIP_BASESTAT_BASIC )
+         && (BASESTAT)rows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -10419,7 +10447,7 @@ RETCODE lpCleanupCols(
       assert(cols[c]->lppos == c);
       assert(cols[c]->lpipos == c);
       if( lpicols[c]->removeable
-         && lpicols[c]->basisstatus != SCIP_BASESTAT_BASIC
+         && (BASESTAT)lpicols[c]->basisstatus != SCIP_BASESTAT_BASIC
          && lpicols[c]->primsol == 0.0 /* non-basic columns to remove are exactly at 0.0 */
          && SCIPsetIsZero(set, SCIPcolGetBestBound(cols[c])) ) /* bestbd != 0 -> column would be priced in next time */
       {
@@ -10487,7 +10515,7 @@ RETCODE lpCleanupRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( lpirows[r]->removeable && lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC )
+      if( lpirows[r]->removeable && (BASESTAT)lpirows[r]->basisstatus == SCIP_BASESTAT_BASIC )
       {
          rowdstat[r] = 1;
          ndelrows++;
@@ -11013,9 +11041,9 @@ BASESTAT SCIPcolGetBasisStatus(
    )
 {
    assert(col != NULL);
-   assert(col->lppos >= 0 || col->basisstatus == SCIP_BASESTAT_ZERO);
+   assert(col->lppos >= 0 || (BASESTAT)col->basisstatus == SCIP_BASESTAT_ZERO);
 
-   return col->basisstatus;
+   return (BASESTAT)col->basisstatus;
 }
 
 /** gets variable this column represents */
@@ -11263,9 +11291,9 @@ BASESTAT SCIProwGetBasisStatus(
    )
 {
    assert(row != NULL);
-   assert(row->lppos >= 0 || row->basisstatus == SCIP_BASESTAT_BASIC);
+   assert(row->lppos >= 0 || (BASESTAT)row->basisstatus == SCIP_BASESTAT_BASIC);
 
-   return row->basisstatus;
+   return (BASESTAT)row->basisstatus;
 }
 
 /** returns the name of the row */

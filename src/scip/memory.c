@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.37 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.38 2005/02/16 17:46:19 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -45,7 +45,6 @@
 #define debugMessage(...)               /**/
 #endif
 
-#define Bool unsigned int               /**< type used for boolean values */
 #define TRUE  1                         /**< boolean value TRUE */
 #define FALSE 0                         /**< boolean value FALSE */
 
@@ -957,7 +956,7 @@ CHKMEM* createChkmem(
 {
    CHKMEM* chkmem;
 
-   assert(isAligned(size));
+   assert(isAligned((size_t)size));
 
    allocMemory(&chkmem);
    if( chkmem == NULL )
@@ -1139,7 +1138,7 @@ void freeChkmemElement(
    const char*      filename,           /**< source file of the function call */
    int              line                /**< line number in source file of the function call */
    )
-{
+{  /*lint --e{715}*/
    assert(chkmem != NULL);
    assert(ptr != NULL);
 
@@ -1385,7 +1384,7 @@ int getHashNumber(
    int              size                /**< element size */
    )
 {
-   assert(isAligned(size));
+   assert(isAligned((size_t)size));
 
    return (size % CHKHASH_SIZE);
 }
@@ -1737,8 +1736,8 @@ void displayBlockMemory_call(
 	 if( nelems > 0 )
 	 {
 	    nblocks++;
-	    allocedmem += chkmem->elemsize * nelems;
-	    freemem += chkmem->elemsize * (neagerelems + chkmem->lazyfreesize);
+	    allocedmem += (long long)chkmem->elemsize * (long long)nelems;
+	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
 #ifndef NDEBUG
 	    printf("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
@@ -1834,14 +1833,15 @@ void checkEmptyBlockMemory_call(
 
 	 if( nelems > 0 )
 	 {
-	    allocedmem += chkmem->elemsize * nelems;
-	    freemem += chkmem->elemsize * (neagerelems + chkmem->lazyfreesize);
+	    allocedmem += (long long)chkmem->elemsize * (long long)nelems;
+	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
                printf("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
-                  ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
+                  (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
+                  * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else

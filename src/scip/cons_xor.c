@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.26 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.27 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -815,6 +815,7 @@ RETCODE resolvePropagation(
       *result = SCIP_SUCCESS;
       break;
 
+   case PROPRULE_INVALID:
    default:
       errorMessage("invalid inference information %d in xor constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.11 2005/02/14 13:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.12 2005/02/16 17:46:21 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -235,7 +235,13 @@ RETCODE SCIPvbcNewChild(
       return SCIP_OKAY;
 
    /* insert mapping node -> nodenum into hash map */
-   nodenum = stat->ncreatednodesrun;
+   if( stat->ncreatednodesrun >= (Longint)INT_MAX )
+   {
+      errorMessage("too many nodes to store in the VBC file\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   nodenum = (int)stat->ncreatednodesrun;
    assert(nodenum > 0);
    CHECK_OKAY( SCIPhashmapInsert(vbc->nodenum, node, (void*)nodenum) );
 
@@ -268,7 +274,7 @@ void vbcSetColor(
    assert(vbc != NULL);
    assert(node != NULL);
 
-   if( vbc->file != NULL && color != -1 )
+   if( vbc->file != NULL && (int)color != -1 )
    {
       int nodenum;
 

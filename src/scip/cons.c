@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.116 2005/02/14 13:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.117 2005/02/16 17:46:17 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1906,7 +1906,7 @@ RETCODE SCIPconshdlrSeparate(
             if( *result == SCIP_CUTOFF )
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
-            conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
+            conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
 
             /* evaluate result */
@@ -2049,7 +2049,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
-         conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
+         conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);

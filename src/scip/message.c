@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.14 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.15 2005/02/16 17:46:19 bzfpfend Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -45,7 +45,7 @@ void infoMessage(
 
    if( msgverblevel <= verblevel )
    {
-      va_start(ap, formatstr);
+      va_start(ap, formatstr); /*lint !e826*/
       vprintf(formatstr, ap);
       va_end(ap);
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.40 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.41 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -46,7 +46,7 @@
 
 /** parameter change information method to autoselect display columns again */
 DECL_PARAMCHGD(SCIPparamChgdDispActive)
-{
+{  /*lint --e{715}*/
    /* automatically select the now active display columns */
    CHECK_OKAY( SCIPautoselectDisps(scip) );
 

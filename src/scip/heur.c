@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.43 2005/02/14 13:35:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.44 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -58,8 +58,10 @@ DECL_SORTPTRCOMP(SCIPheurComp)
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
       return -1;                                /* prefer delayed heuristics */
-   else if( heur1->ncalls * heur1->freq != heur2->ncalls * heur2->freq )
-      return heur1->ncalls * heur1->freq - heur2->ncalls * heur2->freq;
+   else if( heur1->ncalls * heur1->freq > heur2->ncalls * heur2->freq )
+      return +1;
+   else if( heur1->ncalls * heur1->freq < heur2->ncalls * heur2->freq )
+      return -1;
    else
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.18 2005/02/14 13:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.19 2005/02/16 17:46:17 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -265,6 +265,8 @@ RETCODE branch(
                bestscore = score;
             }
          }
+         else
+            score = 0.0;
 
          /* update pseudo cost values */
          if( !downinf )

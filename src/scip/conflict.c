@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.87 2005/02/16 14:51:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.88 2005/02/16 17:46:17 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1549,7 +1549,7 @@ RETCODE conflictAnalyze(
       assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].var
          == SCIPbdchginfoGetVar(bdchginfo));
       assert(tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].newbound
-         == SCIPbdchginfoGetNewbound(bdchginfo)); /*lint --e{777}*/
+         == SCIPbdchginfoGetNewbound(bdchginfo)); /*lint !e777*/
       assert((BOUNDTYPE)tree->path[bdchgdepth]->domchg->domchgbound.boundchgs[SCIPbdchginfoGetPos(bdchginfo)].boundtype
          == SCIPbdchginfoGetBoundtype(bdchginfo));
 
@@ -3781,6 +3781,8 @@ RETCODE conflictAnalyzeLP(
             debugMessage(" -> resolved LP in %d iterations (total: %lld) (valid: %d, infeasible:%d)\n",
                iter, stat->nconflictlpiterations, valid, SCIPlpiIsPrimalInfeasible(lpi));
          }
+         else
+            iter = 0;
          lastnbdchgs = nbdchgs;
 
          /* evaluate result */
@@ -3812,7 +3814,7 @@ RETCODE conflictAnalyzeLP(
          assert(!resolve || valid);
          assert(!resolve || nbdchgs > lastnbdchgs);
          debugMessage(" -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
-            nloops, allcolsinlp ? iter : 0, nbdchgs - lastnbdchgs);
+            nloops, iter, nbdchgs - lastnbdchgs);
       }
       while( resolve && nloops < set->conf_maxlploops && allcolsinlp );
       debugMessage("finished undoing bound changes after %d loops (valid=%d, nbdchgs: %d)\n",

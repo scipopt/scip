@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.68 2005/02/14 13:35:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.69 2005/02/16 17:46:19 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1116,7 +1116,7 @@ Real SCIPprobGetObjlim(
    assert(prob != NULL);
    assert(set != NULL);
 
-   return prob->objlim == SCIP_INVALID ? (Real)(prob->objsense) * SCIPsetInfinity(set) : prob->objlim;
+   return prob->objlim >= SCIP_INVALID ? (Real)(prob->objsense) * SCIPsetInfinity(set) : prob->objlim;
 }
 
 /** returns whether the objective value is known to be integral in every feasible solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.38 2005/02/14 13:35:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.39 2005/02/16 17:46:19 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -801,7 +801,7 @@ RETCODE SCIPhashmapInsert(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % hashmap->nlists;
+   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* append origin->image pair to the list at the hash position */
    CHECK_OKAY( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
@@ -823,7 +823,7 @@ void* SCIPhashmapGetImage(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % hashmap->nlists;
+   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* get image for origin from hash list */
    return hashmaplistGetImage(hashmap->lists[hashval], origin);
@@ -846,7 +846,7 @@ RETCODE SCIPhashmapSetImage(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % hashmap->nlists;
+   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* set image for origin in hash list */
    CHECK_OKAY( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
@@ -868,7 +868,7 @@ RETCODE SCIPhashmapRemove(
    assert(origin != NULL);
 
    /* get the hash value */
-   hashval = (unsigned int)origin % hashmap->nlists;
+   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
    /* append element to the list at the hash position */
    CHECK_OKAY( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.140 2005/02/14 13:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.141 2005/02/16 17:46:20 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -267,7 +267,7 @@ DECL_PARAMCHGD(paramChgdDualfeastol)
 /** parameter change information method to autoselect display columns again */
 static
 DECL_PARAMCHGD(SCIPparamChgdDispWidth)
-{
+{  /*lint --e{715}*/
    /* automatically select the now active display columns */
    CHECK_OKAY( SCIPautoselectDisps(scip) );
 
@@ -603,7 +603,7 @@ RETCODE SCIPsetCreate(
          &(*set)->misc_exactsolve, SCIP_DEFAULT_MISC_EXACTSOLVE,
          NULL, NULL) );
 #else
-   (*set)->misc_exactsolve = FALSE;
+   (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
 #endif
 
    /* numerical parameters */

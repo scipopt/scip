@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.34 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.35 2005/02/16 17:46:20 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -31,11 +31,8 @@
 #include "scip/branch_pscost.h"
 #include "scip/branch_relpscost.h"
 #include "scip/cons_and.h"
-#include "scip/cons_binpack.h"
 #include "scip/cons_conjunction.h"
-#include "scip/cons_eqknapsack.h"
 #include "scip/cons_integral.h"
-#include "scip/cons_invarknapsack.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
@@ -72,6 +69,11 @@
 #include "scip/sepa_intobj.h"
 #include "scip/scipdefplugins.h"
 
+#if 0
+#include "scip/cons_binpack.h"
+#include "scip/cons_eqknapsack.h"
+#include "scip/cons_invarknapsack.h"
+#endif
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.45 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.46 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1276,8 +1276,7 @@ RETCODE SCIPeventqueueAdd(
                qevent->data.eventobjchg.newobj);
 
             qevent->data.eventobjchg.newobj = (*event)->data.eventobjchg.newobj;
-            /*if( SCIPsetIsEQ(set, qevent->data.eventobjchg.newobj, qevent->data.eventobjchg.oldobj) )*/
-            if( qevent->data.eventobjchg.newobj == qevent->data.eventobjchg.oldobj )
+            if( qevent->data.eventobjchg.newobj == qevent->data.eventobjchg.oldobj ) /*lint !e777*/
             {
                /* the queued objective value change was reversed -> disable the event in the queue */
                eventDisable(qevent);
@@ -1328,8 +1327,7 @@ RETCODE SCIPeventqueueAdd(
             else
             {
                /* the queued bound change was reversed -> disable the event in the queue */
-               /*assert(SCIPsetIsEQ(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound));*/
-               assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound);
+               assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound); /*lint !e777*/
                eventDisable(qevent);
                var->eventqueueindexlb = -1;
                debugMessage(" -> event disabled\n");
@@ -1378,8 +1376,7 @@ RETCODE SCIPeventqueueAdd(
             else
             {
                /* the queued bound change was reversed -> disable the event in the queue */
-               /*assert(SCIPsetIsEQ(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound));*/
-               assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound);
+               assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound); /*lint !e777*/
                eventDisable(qevent);
                var->eventqueueindexub = -1;
                debugMessage(" -> event disabled\n");

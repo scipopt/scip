@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.17 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.18 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -322,7 +322,7 @@ const char* SCIPdialoghdlrGetWord(
       CHECK_ABORT( readLine(dialoghdlr, prompt) );
 
       /* strip trailing spaces */
-      len = strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+      len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
       while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
       {
          dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';

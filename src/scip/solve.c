@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.170 2005/02/16 14:51:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.171 2005/02/16 17:46:20 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -464,6 +464,7 @@ enum PseudocostFlag
    PSEUDOCOST_IGNORE   = 1,             /**< bound changes on variable should be ignored for pseudo cost updates */
    PSEUDOCOST_UPDATE   = 2              /**< pseudo cost value of variable should be updated */
 };
+typedef enum PseudocostFlag PSEUDOCOSTFLAG;
 
 /** updates the variable's pseudo cost values after the node's initial LP was solved */
 static
@@ -527,11 +528,11 @@ RETCODE updatePseudocost(
             nboundchgs = node->domchg->domchgbound.nboundchgs;
             for( i = 0; i < nboundchgs; ++i )
             {
-               if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+               if( (BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
                {
                   var = boundchgs[i].var;
                   assert(var != NULL);
-                  if( var->pseudocostflag == PSEUDOCOST_NONE )
+                  if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_NONE )
                   {
                      /* remember the bound change and mark the variable */
                      CHECK_OKAY( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
@@ -541,11 +542,11 @@ RETCODE updatePseudocost(
                      /* check, if the bound change would lead to a valid pseudo cost update */
                      if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval) )
                      {
-                        var->pseudocostflag = PSEUDOCOST_UPDATE;
+                        var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
                         nvalidupdates++;
                      }
                      else
-                        var->pseudocostflag = PSEUDOCOST_IGNORE;
+                        var->pseudocostflag = PSEUDOCOST_IGNORE; /*lint !e641*/
                   }
                }
             }
@@ -560,11 +561,11 @@ RETCODE updatePseudocost(
       lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {
-         assert(updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
+         assert((BOUNDCHGTYPE)updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
          var = updates[i]->var;
          assert(var != NULL);
-         assert(var->pseudocostflag != PSEUDOCOST_NONE);
-         if( var->pseudocostflag == PSEUDOCOST_UPDATE )
+         assert((PSEUDOCOSTFLAG)var->pseudocostflag != PSEUDOCOST_NONE);
+         if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
             debugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => gain=%g, weight: %g\n",
                SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
@@ -572,7 +573,7 @@ RETCODE updatePseudocost(
             CHECK_OKAY( SCIPvarUpdatePseudocost(var, set, stat, 
                   SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
          }
-         var->pseudocostflag = PSEUDOCOST_NONE;
+         var->pseudocostflag = PSEUDOCOST_NONE; /*lint !e641*/
       }
 
       /* free the buffer for the collected bound changes */
@@ -1368,7 +1369,7 @@ RETCODE solveNodeRelax(
       default:
          errorMessage("invalid result code <%d> of relaxator <%s>\n", result, SCIPrelaxGetName(set->relaxs[r]));
          return SCIP_INVALIDRESULT;
-      }
+      }  /*lint !e788*/
    }
 
    return SCIP_OKAY;
@@ -1874,6 +1875,7 @@ RETCODE solveNode(
       updateLoopStatus(set, stat, tree, actdepth, cutoff, &propagateagain, &solverelaxagain);
 
       /* enforce constraints */
+      branched = FALSE;
       if( !(*cutoff) && !solverelaxagain && !solvelpagain && !propagateagain )
       {
          /* if the solution changed since the last enforcement, we have to completely reenforce it; otherwise, we
@@ -2238,6 +2240,7 @@ RETCODE SCIPsolveCIP(
    SCIPbsortPtr((void**)conshdlrs_enfo, set->nconshdlrs, SCIPconshdlrCompEnfo);
 
    nextnode = NULL;
+   unbounded = FALSE;
 
    while( !SCIPsolveIsStopped(set, stat) && !(*restart) )
    {

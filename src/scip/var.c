@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.151 2005/02/14 13:35:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.152 2005/02/16 17:46:20 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -295,9 +295,9 @@ RETCODE varAddLbchginfo(
    var->lbchginfos[var->nlbchginfos].var = var;
    var->lbchginfos[var->nlbchginfos].bdchgidx.depth = depth;
    var->lbchginfos[var->nlbchginfos].bdchgidx.pos = pos;
-   var->lbchginfos[var->nlbchginfos].boundchgtype = boundchgtype;
-   var->lbchginfos[var->nlbchginfos].boundtype = SCIP_BOUNDTYPE_LOWER;
-   var->lbchginfos[var->nlbchginfos].inferboundtype = inferboundtype;
+   var->lbchginfos[var->nlbchginfos].boundchgtype = boundchgtype; /*lint !e641*/
+   var->lbchginfos[var->nlbchginfos].boundtype = SCIP_BOUNDTYPE_LOWER; /*lint !e641*/
+   var->lbchginfos[var->nlbchginfos].inferboundtype = inferboundtype; /*lint !e641*/
    var->lbchginfos[var->nlbchginfos].inferencedata.var = infervar;
    var->lbchginfos[var->nlbchginfos].inferencedata.info = inferinfo;
 
@@ -363,9 +363,9 @@ RETCODE varAddUbchginfo(
    var->ubchginfos[var->nubchginfos].var = var;
    var->ubchginfos[var->nubchginfos].bdchgidx.depth = depth;
    var->ubchginfos[var->nubchginfos].bdchgidx.pos = pos;
-   var->ubchginfos[var->nubchginfos].boundchgtype = boundchgtype;
-   var->ubchginfos[var->nubchginfos].boundtype = SCIP_BOUNDTYPE_UPPER;
-   var->ubchginfos[var->nubchginfos].inferboundtype = inferboundtype;
+   var->ubchginfos[var->nubchginfos].boundchgtype = boundchgtype; /*lint !e641*/
+   var->ubchginfos[var->nubchginfos].boundtype = SCIP_BOUNDTYPE_UPPER; /*lint !e641*/
+   var->ubchginfos[var->nubchginfos].inferboundtype = inferboundtype; /*lint !e641*/
    var->ubchginfos[var->nubchginfos].inferencedata.var = infervar;
    var->ubchginfos[var->nubchginfos].inferencedata.info = inferinfo;
 
@@ -485,7 +485,7 @@ RETCODE SCIPboundchgApply(
       {
          /* mark bound change to be inactive */
          debugMessage(" -> inactive %s: new lower bound of <%s>[%g,%g]: %g\n",
-            boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
+            (BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
             SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
          boundchg->var = NULL;
       }
@@ -551,7 +551,7 @@ RETCODE SCIPboundchgApply(
       {
          /* mark bound change to be inactive */
          debugMessage(" -> inactive %s: new upper bound of <%s>[%g,%g]: %g\n",
-            boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
+            (BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference",
             SCIPvarGetName(var), var->locdom.lb, var->locdom.ub, boundchg->newbound);
          boundchg->var = NULL;
       }
@@ -592,8 +592,8 @@ RETCODE SCIPboundchgUndo(
       var->nlbchginfos--;
       assert(var->nlbchginfos >= 0);
       assert(var->lbchginfos != NULL);
-      assert(var->lbchginfos[var->nlbchginfos].newbound == var->locdom.lb);
-      assert(boundchg->newbound == var->locdom.lb);
+      assert(var->lbchginfos[var->nlbchginfos].newbound == var->locdom.lb); /*lint !e777*/
+      assert(boundchg->newbound == var->locdom.lb); /*lint !e777*/
 
       debugMessage("removed lower bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
@@ -609,8 +609,8 @@ RETCODE SCIPboundchgUndo(
       var->nubchginfos--;
       assert(var->nubchginfos >= 0);
       assert(var->ubchginfos != NULL);
-      assert(var->ubchginfos[var->nubchginfos].newbound == var->locdom.ub);
-      assert(boundchg->newbound == var->locdom.ub);
+      assert(var->ubchginfos[var->nubchginfos].newbound == var->locdom.ub); /*lint !e777*/
+      assert(boundchg->newbound == var->locdom.ub); /*lint !e777*/
 
       debugMessage("removed upper bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
@@ -628,7 +628,7 @@ RETCODE SCIPboundchgUndo(
    }
 
    /* update last branching variable */
-   if( boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+   if( (BOUNDCHGTYPE)boundchg->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
       stat->lastbranchvar = NULL;
 
    return SCIP_OKAY;
@@ -804,7 +804,7 @@ RETCODE domchgMakeDynamic(
 #ifndef NDEBUG
    {
       int i;
-      for( i = 0; i < (*domchg)->domchgbound.nboundchgs; ++i )
+      for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
          assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
             || EPSISINT((*domchg)->domchgbound.boundchgs[i].newbound, 1e-06));
    }
@@ -889,7 +889,7 @@ RETCODE SCIPdomchgMakeStatic(
       if( *domchg != NULL )
       {
          int i;
-         for( i = 0; i < (*domchg)->domchgbound.nboundchgs; ++i )
+         for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
             assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
                || SCIPsetIsFeasIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
       }
@@ -996,7 +996,7 @@ RETCODE domchgShrinkBdchgs(
    assert(domchg != NULL);
    assert(newnbdchgs < (int)domchg->domchgbound.nboundchgs);
 
-   if( domchg->domchgbound.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC )
+   if( (DOMCHGTYPE)domchg->domchgbound.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC )
    {
       if( newnbdchgs == 0 )
       {
@@ -1008,7 +1008,8 @@ RETCODE domchgShrinkBdchgs(
                newnbdchgs) );
       }
    }
-   domchg->domchgbound.nboundchgs = newnbdchgs;
+   domchg->domchgbound.nboundchgs = newnbdchgs; /*lint !e732*/
+   assert((int)domchg->domchgbound.nboundchgs == newnbdchgs);
 
    return SCIP_OKAY;
 }
@@ -1197,7 +1198,7 @@ RETCODE SCIPdomchgAddBoundchg(
    boundchg->newbound = newbound;
    boundchg->boundchgtype = boundchgtype; /*lint !e641*/
    boundchg->boundtype = boundtype; /*lint !e641*/
-   boundchg->inferboundtype = inferboundtype;
+   boundchg->inferboundtype = inferboundtype; /*lint !e641*/
    (*domchg)->domchgdyn.nboundchgs++;
 
    /* capture branching and inference data associated with the bound changes */
@@ -1206,7 +1207,7 @@ RETCODE SCIPdomchgAddBoundchg(
 #ifndef NDEBUG
    {
       int i;
-      for( i = 0; i < (*domchg)->domchgbound.nboundchgs; ++i )
+      for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
          assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
             || SCIPsetIsFeasIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
    }
@@ -1348,8 +1349,8 @@ RETCODE vboundsAdd(
    /**@todo don't add redundant variable bounds */
    assert(vbounds != NULL);
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
-   assert(var->vartype != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
    CHECK_OKAY( vboundsEnsureSize(vbounds, blkmem, set, *vbounds != NULL ? (*vbounds)->len+1 : 1) );
    assert(*vbounds != NULL);
@@ -1632,7 +1633,7 @@ RETCODE implicsAdd(
    assert(implics != NULL);
    assert(implvar != NULL);
    assert(conflict != NULL);
-   assert(implvar->varstatus == SCIP_VARSTATUS_COLUMN || implvar->varstatus == SCIP_VARSTATUS_LOOSE); 
+   assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE); 
    assert(*implics == NULL || (*implics)->nbinimpls[varfixing] <= (*implics)->nimpls[varfixing]);
  
    *conflict = FALSE;
@@ -1887,7 +1888,7 @@ RETCODE varCreate(
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
    (*var)->branchpriority = 0;
-   (*var)->branchdirection = SCIP_BRANCHDIR_AUTO;
+   (*var)->branchdirection = SCIP_BRANCHDIR_AUTO; /*lint !e641*/
    (*var)->lbchginfossize = 0;
    (*var)->nlbchginfos = 0;
    (*var)->ubchginfossize = 0;
@@ -2124,7 +2125,7 @@ RETCODE varFree(
    assert((*var)->probindex == -1);
 
    debugMessage("free variable <%s> with status=%d\n", (*var)->name, SCIPvarGetStatus(*var));
-   switch( (*var)->varstatus )
+   switch( SCIPvarGetStatus(*var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert((*var)->data.original.transvar == NULL); /* cannot free variable, if transformed variable is still existing */
@@ -2153,7 +2154,7 @@ RETCODE varFree(
    CHECK_OKAY( varFreeParents(var, blkmem, set, lp) );
 
    /* free user data */
-   if( (*var)->varstatus == SCIP_VARSTATUS_ORIGINAL )
+   if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_ORIGINAL )
    {
       if( (*var)->vardelorig != NULL )
       {
@@ -2270,7 +2271,7 @@ void SCIPvarPrint(
       file = stdout;
 
    /* type of variable */
-   switch( var->vartype )
+   switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
       fprintf(file, "  [binary]");
@@ -2320,7 +2321,7 @@ void SCIPvarPrint(
    /**@todo print holes */
 
    /* fixings and aggregations */
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
    case SCIP_VARSTATUS_LOOSE:
@@ -2623,7 +2624,7 @@ RETCODE SCIPvarTransform(
       sprintf(name, "t_%s", origvar->name);
       CHECK_OKAY( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
-            (VARTYPE)(origvar->vartype), origvar->initial, origvar->removeable,
+            SCIPvarGetType(origvar), origvar->initial, origvar->removeable,
             NULL, NULL, origvar->vardeltrans, origvar->vardata) );
       
       /* copy the branch factor and priority */
@@ -2780,7 +2781,7 @@ RETCODE varEventVarFixed(
    /* process all parents */
    for( i = 0; i < var->nparentvars; ++i )
    {
-      if( var->parentvars[i]->varstatus != SCIP_VARSTATUS_ORIGINAL )
+      if( SCIPvarGetStatus(var->parentvars[i]) != SCIP_VARSTATUS_ORIGINAL )
       {
          CHECK_OKAY( varEventVarFixed(var->parentvars[i], blkmem, set, eventqueue) );
       }
@@ -3211,12 +3212,12 @@ RETCODE SCIPvarAggregate(
    var->nlocksup = 0;
 
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
-   if( var->vartype == SCIP_VARTYPE_BINARY && aggvar->vartype == SCIP_VARTYPE_BINARY
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY
       && var->negatedvar == NULL && aggvar->negatedvar == NULL
       && SCIPsetIsEQ(set, scalar, -1.0) && SCIPsetIsEQ(set, constant, 1.0) )
    {
       /* link both variables as negation pair */
-      var->varstatus = SCIP_VARSTATUS_NEGATED;
+      var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->data.negate.constant = 1.0;
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
@@ -3284,7 +3285,7 @@ RETCODE SCIPvarAggregate(
       {
          for( j = 0; j < nimpls[i]; ++j )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, i, implvars[i][j], impltypes[i][j], implbounds[i][j],
+            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, (Bool)i, implvars[i][j], impltypes[i][j], implbounds[i][j],
                   &conflict) );
             implconflict[i] = implconflict[i] || conflict;
          }
@@ -3312,19 +3313,19 @@ RETCODE SCIPvarAggregate(
    /* update branching direction of both variables to agree to a single direction */
    if( scalar >= 0.0 )
    {
-      if( var->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(var, aggvar->branchdirection);
-      else if( aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(aggvar, var->branchdirection);
+      if( (BRANCHDIR)var->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(var, (BRANCHDIR)aggvar->branchdirection);
+      else if( (BRANCHDIR)aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(aggvar, (BRANCHDIR)var->branchdirection);
       else if( var->branchdirection != aggvar->branchdirection )
          SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO);
    }
    else
    {
-      if( var->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(var, SCIPbranchdirOpposite(aggvar->branchdirection));
-      else if( aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
-         SCIPvarChgBranchDirection(aggvar, SCIPbranchdirOpposite(var->branchdirection));
+      if( (BRANCHDIR)var->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(var, SCIPbranchdirOpposite((BRANCHDIR)aggvar->branchdirection));
+      else if( (BRANCHDIR)aggvar->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchDirection(aggvar, SCIPbranchdirOpposite((BRANCHDIR)var->branchdirection));
       else if( var->branchdirection != aggvar->branchdirection )
          SCIPvarChgBranchDirection(var, SCIP_BRANCHDIR_AUTO);
    }
@@ -3469,7 +3470,7 @@ RETCODE SCIPvarMultiaggregate(
        */
       branchfactor = var->branchfactor;
       branchpriority = var->branchpriority;
-      branchdirection = var->branchdirection;
+      branchdirection = (BRANCHDIR)var->branchdirection;
       for( v = 0; v < naggvars; ++v )
       {
          assert(aggvars[v] != NULL);
@@ -3481,7 +3482,7 @@ RETCODE SCIPvarMultiaggregate(
       {
          SCIPvarChgBranchFactor(aggvars[v], set, branchfactor);
          SCIPvarChgBranchPriority(aggvars[v], branchpriority);
-         if( aggvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
+         if( (BRANCHDIR)aggvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
             if( scalars[v] >= 0.0 )
                SCIPvarChgBranchDirection(aggvars[v], branchdirection);
@@ -3619,7 +3620,7 @@ RETCODE SCIPvarNegate(
       /* copy the branch factor and priority, and use the negative preferred branching direction */
       (*negvar)->branchfactor = var->branchfactor;
       (*negvar)->branchpriority = var->branchpriority;
-      (*negvar)->branchdirection = SCIPbranchdirOpposite(var->branchdirection);
+      (*negvar)->branchdirection = SCIPbranchdirOpposite((BRANCHDIR)var->branchdirection); /*lint !e641*/
 
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       CHECK_OKAY( varAddParent(var, blkmem, set, *negvar) );
@@ -3645,7 +3646,7 @@ void SCIPvarSetProbindex(
    assert(var != NULL);
 
    var->probindex = probindex;
-   if( var->varstatus == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
    {
       assert(var->data.col != NULL);
       var->data.col->var_probindex = probindex;
@@ -3925,7 +3926,7 @@ void SCIPvarAdjustLb(
 
    debugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
 
-   *lb = adjustedLb(set, (VARTYPE)(var->vartype), *lb);
+   *lb = adjustedLb(set, SCIPvarGetType(var), *lb);
 }
 
 /** adjust upper bound to integral value, if variable is integral */
@@ -3940,7 +3941,7 @@ void SCIPvarAdjustUb(
 
    debugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
 
-   *ub = adjustedUb(set, (VARTYPE)(var->vartype), *ub);
+   *ub = adjustedUb(set, SCIPvarGetType(var), *ub);
 }
 
 /** changes lower bound of original variable in original problem */
@@ -3950,7 +3951,6 @@ RETCODE SCIPvarChgLbOriginal(
    Real             newbound            /**< new bound for variable */
    )
 {
-   Real oldbound;
    int i;
 
    assert(var != NULL);
@@ -3969,7 +3969,6 @@ RETCODE SCIPvarChgLbOriginal(
       return SCIP_OKAY;
 
    /* change the bound */
-   oldbound = var->data.original.origdom.lb;
    var->data.original.origdom.lb = newbound;
 
    /* process parent variables */
@@ -3996,7 +3995,6 @@ RETCODE SCIPvarChgUbOriginal(
    Real             newbound            /**< new bound for variable */
    )
 {
-   Real oldbound;
    int i;
 
    assert(var != NULL);
@@ -4015,7 +4013,6 @@ RETCODE SCIPvarChgUbOriginal(
       return SCIP_OKAY;
 
    /* change the bound */
-   oldbound = var->data.original.origdom.ub;
    var->data.original.origdom.ub = newbound;
 
    /* process parent variables */
@@ -4060,7 +4057,7 @@ RETCODE varProcessChgLbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, (VARTYPE)(var->vartype), newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
 
    debugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -4142,7 +4139,7 @@ RETCODE varProcessChgUbGlobal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, (VARTYPE)(var->vartype), newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
 
    debugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -4521,7 +4518,7 @@ RETCODE varProcessChgLbLocal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, (VARTYPE)(var->vartype), newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, SCIPvarGetType(var), newbound)));
 
    debugMessage("process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -4616,7 +4613,7 @@ RETCODE varProcessChgUbLocal(
    int i;
 
    assert(var != NULL);
-   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, (VARTYPE)(var->vartype), newbound)));
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, SCIPvarGetType(var), newbound)));
 
    debugMessage("process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -5198,12 +5195,12 @@ RETCODE SCIPvarAddVlb(
    )
 {
    assert(var != NULL);
-   assert(vlbvar->vartype != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(vlbvar) != SCIP_VARTYPE_CONTINUOUS);
 
    debugMessage("adding variable lower bound <%s> >= %g<%s> + %g\n", 
       SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
@@ -5286,12 +5283,12 @@ RETCODE SCIPvarAddVub(
    )
 {
    assert(var != NULL);
-   assert(vubvar->vartype != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(vubvar) != SCIP_VARTYPE_CONTINUOUS);
 
    debugMessage("adding variable upper bound <%s> <= %g<%s> + %g\n", 
       SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
@@ -5381,7 +5378,7 @@ RETCODE SCIPvarAddImplic(
    
    *conflict = FALSE;
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
@@ -5406,7 +5403,7 @@ RETCODE SCIPvarAddImplic(
             assert(SCIPsetIsEQ(set, implbound, 0.0) || SCIPsetIsEQ(set, implbound, 1.0));
             *conflict = ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
          }
-         else if( implvar->varstatus != SCIP_VARSTATUS_FIXED )
+         else if( SCIPvarGetStatus(implvar) != SCIP_VARSTATUS_FIXED )
          {
             /* add implication to the implications list */
             CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, varfixing, implvar, impltype, implbound, conflict) );
@@ -5566,13 +5563,15 @@ void varProcessChgBranchFactor(
    )
 {
    VAR* parentvar;
+   Real eps;
    int i;
 
    assert(var != NULL);
    assert(set != NULL);
 
    /* only use positive values */
-   branchfactor = MAX(branchfactor, SCIPsetEpsilon(set));
+   eps = SCIPsetEpsilon(set);
+   branchfactor = MAX(branchfactor, eps);
 
    debugMessage("process changing branch factor of <%s> from %f to %f\n", var->name, var->branchfactor, branchfactor);
 
@@ -5798,11 +5797,11 @@ void varProcessChgBranchDirection(
    debugMessage("process changing branch direction of <%s> from %d to %d\n", 
       var->name, var->branchdirection, branchdirection);
 
-   if( branchdirection == var->branchdirection )
+   if( branchdirection == (BRANCHDIR)var->branchdirection )
       return;
 
    /* change the branch direction */
-   var->branchdirection = branchdirection;
+   var->branchdirection = branchdirection; /*lint !e641*/
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
@@ -5855,7 +5854,7 @@ void SCIPvarChgBranchDirection(
 
    debugMessage("changing branch direction of <%s> from %d to %d\n", var->name, var->branchdirection, branchdirection);
 
-   if( var->branchdirection == branchdirection )
+   if( (BRANCHDIR)var->branchdirection == branchdirection )
       return;
 
    /* change directions of attached variables */
@@ -5865,7 +5864,7 @@ void SCIPvarChgBranchDirection(
       if( var->data.original.transvar != NULL )
          SCIPvarChgBranchDirection(var->data.original.transvar, branchdirection);
       else
-         var->branchdirection = branchdirection;
+         var->branchdirection = branchdirection; /*lint !e641*/
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5887,7 +5886,7 @@ void SCIPvarChgBranchDirection(
       {
          /* only update branching direction of aggregation variables, if they don't have a preferred direction yet */
          assert(var->data.multaggr.vars[v] != NULL);
-         if( var->data.multaggr.vars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
+         if( (BRANCHDIR)var->data.multaggr.vars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
             if( var->data.multaggr.scalars[v] > 0.0 )
                SCIPvarChgBranchDirection(var->data.multaggr.vars[v], branchdirection);
@@ -6003,7 +6002,7 @@ RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPvarGetLbGlobal(*var) > 0.5 || SCIPvarGetUbGlobal(*var) < 0.5);
-         *negated = *negated ^ (SCIPvarGetLbGlobal(*var) > 0.5);
+         *negated = (*negated != (SCIPvarGetLbGlobal(*var) > 0.5));
          *var = NULL;
          break;
 
@@ -6013,7 +6012,7 @@ RETCODE SCIPvarGetProbvarBinary(
          assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
          assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
          assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
-         *negated = *negated ^ ((*var)->data.aggregate.scalar < 0.0);
+         *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
          *var = (*var)->data.aggregate.var;
          break;
 
@@ -6721,7 +6720,7 @@ RETCODE SCIPvarUpdatePseudocost(
    assert(var != NULL);
    assert(stat != NULL);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -6776,7 +6775,7 @@ Real SCIPvarGetPseudocost(
    assert(var != NULL);
    assert(stat != NULL);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -6824,7 +6823,7 @@ Real SCIPvarGetPseudocostCurrentRun(
    assert(var != NULL);
    assert(stat != NULL);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -6867,7 +6866,7 @@ Real SCIPvarGetPseudocostCount(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -6911,7 +6910,7 @@ Real SCIPvarGetPseudocostCountCurrentRun(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
    
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -6956,7 +6955,7 @@ RETCODE SCIPvarIncNBranchings(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7016,7 +7015,7 @@ RETCODE SCIPvarIncNInferences(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7076,7 +7075,7 @@ RETCODE SCIPvarIncNCutoffs(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7134,7 +7133,7 @@ Longint SCIPvarGetNBranchings(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7178,7 +7177,7 @@ Longint SCIPvarGetNBranchingsCurrentRun(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7220,7 +7219,7 @@ Real SCIPvarGetAvgBranchdepth(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7264,7 +7263,7 @@ Real SCIPvarGetAvgBranchdepthCurrentRun(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7306,7 +7305,7 @@ Longint SCIPvarGetNInferences(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7350,7 +7349,7 @@ Longint SCIPvarGetNInferencesCurrentRun(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7394,7 +7393,7 @@ Real SCIPvarGetAvgInferences(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7442,7 +7441,7 @@ Real SCIPvarGetAvgInferencesCurrentRun(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7486,7 +7485,7 @@ Longint SCIPvarGetNCutoffs(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7528,7 +7527,7 @@ Longint SCIPvarGetNCutoffsCurrentRun(
    assert(var != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7572,7 +7571,7 @@ Real SCIPvarGetAvgCutoffs(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7618,7 +7617,7 @@ Real SCIPvarGetAvgCutoffsCurrentRun(
    assert(stat != NULL);
    assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
 
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.original.transvar == NULL )
@@ -7681,7 +7680,7 @@ BDCHGINFO* SCIPvarGetLbchgInfo(
       for( i = var->nlbchginfos-1; i >= 0; --i )
       {
          assert(var->lbchginfos[i].var == var);
-         assert(var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
+         assert((BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
          
          if( !SCIPbdchgidxIsEarlier(bdchgidx, &var->lbchginfos[i].bdchgidx) )
             return &var->lbchginfos[i];
@@ -7692,7 +7691,7 @@ BDCHGINFO* SCIPvarGetLbchgInfo(
       for( i = var->nlbchginfos-1; i >= 0; --i )
       {
          assert(var->lbchginfos[i].var == var);
-         assert(var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
+         assert((BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
          
          if( SCIPbdchgidxIsEarlier(&var->lbchginfos[i].bdchgidx, bdchgidx) )
             return &var->lbchginfos[i];
@@ -7723,7 +7722,7 @@ BDCHGINFO* SCIPvarGetUbchgInfo(
       for( i = var->nubchginfos-1; i >= 0; --i )
       {
          assert(var->ubchginfos[i].var == var);
-         assert(var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+         assert((BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          
          if( !SCIPbdchgidxIsEarlier(bdchgidx, &var->ubchginfos[i].bdchgidx) )
             return &var->ubchginfos[i];
@@ -7734,7 +7733,7 @@ BDCHGINFO* SCIPvarGetUbchgInfo(
       for( i = var->nubchginfos-1; i >= 0; --i )
       {
          assert(var->ubchginfos[i].var == var);
-         assert(var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+         assert((BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
          
          if( SCIPbdchgidxIsEarlier(&var->ubchginfos[i].bdchgidx, bdchgidx) )
             return &var->ubchginfos[i];
@@ -8176,10 +8175,11 @@ Bool SCIPvarIsOriginal(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
 
-   return (var->varstatus == SCIP_VARSTATUS_ORIGINAL
-      || (var->varstatus == SCIP_VARSTATUS_NEGATED && var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL));
+   return (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+      || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
+         && SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL));
 }
 
 /** returns whether the variable belongs to the transformed problem */
@@ -8188,10 +8188,11 @@ Bool SCIPvarIsTransformed(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
 
-   return (var->varstatus != SCIP_VARSTATUS_ORIGINAL
-      && (var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL));
+   return (SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL
+      && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED
+         || SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_ORIGINAL));
 }
 
 /** returns whether the variable was created by negation of a different variable */
@@ -8201,7 +8202,7 @@ Bool SCIPvarIsNegated(
 {
    assert(var != NULL);
 
-   return (var->varstatus == SCIP_VARSTATUS_NEGATED);
+   return (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 }
 
 /** gets type of variable */
@@ -8221,7 +8222,7 @@ Bool SCIPvarIsIntegral(
 {
    assert(var != NULL);
 
-   return (var->vartype != SCIP_VARTYPE_CONTINUOUS);
+   return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 }
 
 /** returns whether variable's column should be present in the initial root LP */
@@ -8280,7 +8281,7 @@ VAR* SCIPvarGetTransVar(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
 
    return var->data.original.transvar;
 }
@@ -8291,7 +8292,7 @@ COL* SCIPvarGetCol(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    return var->data.col;
 }
@@ -8303,7 +8304,7 @@ Bool SCIPvarIsInLP(
 {
    assert(var != NULL);
 
-   return (var->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(var->data.col));
+   return (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(var->data.col));
 }
 
 /** gets aggregation variable y of an aggregated variable x = a*y + c */
@@ -8312,7 +8313,7 @@ VAR* SCIPvarGetAggrVar(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_AGGREGATED);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
 
    return var->data.aggregate.var;
 }
@@ -8323,7 +8324,7 @@ Real SCIPvarGetAggrScalar(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_AGGREGATED);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
 
    return var->data.aggregate.scalar;
 }
@@ -8334,7 +8335,7 @@ Real SCIPvarGetAggrConstant(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_AGGREGATED);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
 
    return var->data.aggregate.constant;
 }
@@ -8345,7 +8346,7 @@ int SCIPvarGetMultaggrNVars(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
    return var->data.multaggr.nvars;
 }
@@ -8356,7 +8357,7 @@ VAR** SCIPvarGetMultaggrVars(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
    return var->data.multaggr.vars;
 }
@@ -8367,7 +8368,7 @@ Real* SCIPvarGetMultaggrScalars(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
    return var->data.multaggr.scalars;
 }
@@ -8378,7 +8379,7 @@ Real SCIPvarGetMultaggrConstant(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
    return var->data.multaggr.constant;
 }
@@ -8399,7 +8400,7 @@ VAR* SCIPvarGetNegationVar(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 
    return var->negatedvar;
 }
@@ -8410,7 +8411,7 @@ Real SCIPvarGetNegationConstant(
    )
 {
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 
    return var->data.negate.constant;
 }
@@ -8433,13 +8434,13 @@ Real SCIPvarGetLbOriginal(
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
 
-   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       return var->data.original.origdom.lb;
    else
    {
-      assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar != NULL);
-      assert(var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
 
       return var->data.negate.constant - var->negatedvar->data.original.origdom.ub;
    }
@@ -8453,13 +8454,13 @@ Real SCIPvarGetUbOriginal(
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
 
-   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       return var->data.original.origdom.ub;
    else
    {
-      assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar != NULL);
-      assert(var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL);
 
       return var->data.negate.constant - var->negatedvar->data.original.origdom.lb;
    }
@@ -8536,7 +8537,7 @@ BRANCHDIR SCIPvarGetBranchDirection(
 {
    assert(var != NULL);
 
-   return var->branchdirection;
+   return (BRANCHDIR)var->branchdirection;
 }
 
 /** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
@@ -8858,8 +8859,8 @@ VAR* SCIPbdchginfoGetInferVar(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-      || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+   assert((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      || (BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return bdchginfo->inferencedata.var;
 }
@@ -8870,7 +8871,7 @@ CONS* SCIPbdchginfoGetInferCons(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
+   assert((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER);
    assert(bdchginfo->inferencedata.reason.cons != NULL);
 
    return bdchginfo->inferencedata.reason.cons;
@@ -8882,7 +8883,7 @@ PROP* SCIPbdchginfoGetInferProp(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+   assert((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return bdchginfo->inferencedata.reason.prop;
 }
@@ -8893,8 +8894,8 @@ int SCIPbdchginfoGetInferInfo(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-      || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+   assert((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      || (BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return bdchginfo->inferencedata.info;
 }
@@ -8905,8 +8906,8 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    )
 {
    assert(bdchginfo != NULL);
-   assert(bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-      || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+   assert((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      || (BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return (BOUNDTYPE)(bdchginfo->inferboundtype);
 }
@@ -8918,6 +8919,7 @@ Bool SCIPbdchginfoHasInferenceReason(
 {
    assert(bdchginfo != NULL);
 
-   return (bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)
-      || (bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && bdchginfo->inferencedata.reason.prop != NULL);
+   return ((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)
+      || ((BOUNDCHGTYPE)bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+         && bdchginfo->inferencedata.reason.prop != NULL);
 }

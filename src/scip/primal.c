@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.62 2005/02/14 13:35:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.63 2005/02/16 17:46:19 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -298,12 +298,14 @@ RETCODE SCIPprimalUpdateObjlimit(
    )
 {
    Real objlimit;
+   Real inf;
 
    assert(primal != NULL);
 
    /* get internal objective limit */
    objlimit = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set));
-   objlimit = MIN(objlimit, SCIPsetInfinity(set));
+   inf = SCIPsetInfinity(set);
+   objlimit = MIN(objlimit, inf);
 
    /* update the cutoff bound */
    if( objlimit < primal->cutoffbound )
@@ -334,6 +336,7 @@ RETCODE SCIPprimalUpdateObjoffset(
    SOL* sol;
    Real upperbound;
    Real objval;
+   Real inf;
    int i;
    int j;
 
@@ -341,7 +344,8 @@ RETCODE SCIPprimalUpdateObjoffset(
 
    /* recalculate internal objective limit */
    upperbound = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set));
-   upperbound = MIN(upperbound, SCIPsetInfinity(set));
+   inf = SCIPsetInfinity(set);
+   upperbound = MIN(upperbound, inf);
 
    /* resort current primal solutions */
    for( i = 1; i < primal->nsols; ++i )
@@ -361,7 +365,12 @@ RETCODE SCIPprimalUpdateObjoffset(
 
    /* compare objective limit to currently best solution */
    if( primal->nsols > 0 )
-      upperbound = MIN(upperbound, SCIPsolGetObj(primal->sols[0], set, prob));
+   {
+      Real obj;
+
+      obj = SCIPsolGetObj(primal->sols[0], set, prob);
+      upperbound = MIN(upperbound, obj);
+   }
 
    /* invalidate old upper bound */
    CHECK_OKAY( primalSetUpperbound(primal, blkmem, set, stat, prob, tree, lp, SCIPsetInfinity(set)) );
@@ -386,7 +395,7 @@ Bool SCIPprimalUpperboundIsSol(
 {
    assert(primal != NULL);
 
-   return (primal->nsols > 0 && primal->upperbound == SCIPsolGetObj(primal->sols[0], set, prob));
+   return (primal->nsols > 0 && primal->upperbound == SCIPsolGetObj(primal->sols[0], set, prob)); /*lint !e777*/
 }
 
 /** adds primal solution to solution storage at given position */

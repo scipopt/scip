@@ -14,7 +14,7 @@
 //*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// $Id: scip.lnt,v 1.10 2005/02/16 14:51:22 bzfpfend Exp $
+// $Id: scip.lnt,v 1.11 2005/02/16 17:46:17 bzfpfend Exp $
 
 -passes(1)
 // esoteric size settings to find erros.
@@ -50,6 +50,7 @@
 -esym(534,fputs,fscanf,fseek,fwrite,lseek,memcpy,memmove,memset)
 -esym(534,printf,vprintf,puts,scanf,sprintf,sscanf,strcat,strcpy)
 -esym(534,strncat,strncpy,unlink,write)
+-esym(534,free_history_entry)
 
 -function(exit,__assertfail)
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.8 2005/02/14 13:35:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.9 2005/02/16 17:46:18 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -129,7 +129,7 @@ static
 void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
-{
+{  /*lint --e{715}*/
    warningMessage("setting rounding mode not available - interval arithmetic is invalid!\n");
 }
 

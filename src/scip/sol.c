@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.55 2005/02/14 13:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.56 2005/02/16 17:46:20 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -767,7 +767,7 @@ Real SCIPsolGetVal(
 
    default:
       errorMessage("unknown variable status\n");
-      return SCIP_INVALIDDATA;
+      abort();
    }
 }
 
@@ -1051,6 +1051,7 @@ RETCODE SCIPsolPrint(
    /* display additional priced variables (if given problem data is original problem) */
    if( !prob->transformed )
    {
+      assert(transprob != NULL);
       for( v = transprob->startnvars; v < transprob->nvars; ++v )
       {
          assert(transprob->vars[v] != NULL);

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.62 2005/02/14 13:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.63 2005/02/16 17:46:17 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -981,8 +981,8 @@ RETCODE SCIPbranchruleExecLPSol(
          {
             assert(tree->nchildren == 0);
             branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-            branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
-            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
+            branchrule->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
+            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
          }
          else
             branchrule->nchildren += tree->nchildren;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.135 2005/02/14 13:35:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.136 2005/02/16 17:46:20 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -855,7 +855,7 @@ void SCIPnodeCutoff(
    node->cutoff = TRUE;
    node->lowerbound = SCIPsetInfinity(set);
    if( node->active )
-      tree->cutoffdepth = MIN(tree->cutoffdepth, node->depth);
+      tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
 
    SCIPvbcCutoffNode(stat->vbc, stat, node);
 
@@ -878,7 +878,7 @@ void SCIPnodePropagateAgain(
 
    node->reprop = TRUE;
    if( node->active )
-      tree->repropdepth = MIN(tree->repropdepth, node->depth);
+      tree->repropdepth = MIN(tree->repropdepth, (int)node->depth);
 
    SCIPvbcMarkedRepropagateNode(stat->vbc, stat, node);
 
@@ -957,10 +957,10 @@ RETCODE nodeRepropagate(
    Bool clockisrunning;
 
    assert(node != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
-      || node->nodetype == SCIP_NODETYPE_JUNCTION
-      || node->nodetype == SCIP_NODETYPE_FORK
-      || node->nodetype == SCIP_NODETYPE_SUBROOT);
+   assert((NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_JUNCTION
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_FORK
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_SUBROOT);
    assert(node->active);
    assert(node->reprop || (node != NULL && node->repropsubtreemark != node->parent->repropsubtreemark));
    assert(stat != NULL);
@@ -990,7 +990,7 @@ RETCODE nodeRepropagate(
    oldnchildren = tree->nchildren;
    oldnsiblings = tree->nsiblings;
    oldfocusnodehaslp = tree->focusnodehaslp;
-   node->nodetype = SCIP_NODETYPE_REFOCUSNODE;
+   node->nodetype = SCIP_NODETYPE_REFOCUSNODE; /*lint !e641*/
    tree->focusnode = node;
    tree->focuslpfork = NULL;
    tree->focussubroot = NULL;
@@ -1004,7 +1004,7 @@ RETCODE nodeRepropagate(
    CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, SCIPnodeGetDepth(node), 0, cutoff) );
    assert(!node->reprop);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
-   assert(node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
+   assert((NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
    assert(tree->focusnode == node);
    assert(tree->focuslpfork == NULL);
    assert(tree->focussubroot == NULL);
@@ -1027,14 +1027,14 @@ RETCODE nodeRepropagate(
    if( initialreprop && !(*cutoff) && stat->nboundchgs > oldnboundchgs )
    {
       treeNextRepropsubtreecount(tree);
-      node->repropsubtreemark = tree->repropsubtreecount;
+      node->repropsubtreemark = tree->repropsubtreecount; /*lint !e732*/
       debugMessage("initial repropagation at depth %d changed %lld bounds -> repropagating subtree (new mark: %d)\n",
          node->depth, stat->nboundchgs - oldnboundchgs, tree->repropsubtreecount);
       assert((int)(node->repropsubtreemark) == tree->repropsubtreecount); /* bitfield must be large enough */
    }
 
    /* reset the node's type and reinstall the old focus node */
-   node->nodetype = oldtype;
+   node->nodetype = oldtype; /*lint !e641*/
    tree->focusnode = oldfocusnode;
    tree->focuslpfork = oldfocuslpfork;
    tree->focussubroot = oldfocussubroot;
@@ -1044,7 +1044,7 @@ RETCODE nodeRepropagate(
    tree->focusnodehaslp = oldfocusnodehaslp;
 
    /* make the domain change data static again to save memory */
-   if( node->nodetype != SCIP_NODETYPE_FOCUSNODE )
+   if( (NODETYPE)node->nodetype != SCIP_NODETYPE_FOCUSNODE )
    {
       CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, blkmem, set) );
    }
@@ -1253,15 +1253,15 @@ RETCODE SCIPnodeAddBoundinfer(
    Real oldbound;
 
    assert(node != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
-      || node->nodetype == SCIP_NODETYPE_PROBINGNODE
-      || node->nodetype == SCIP_NODETYPE_CHILD
-      || node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
+   assert((NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
    assert(set != NULL);
    assert(tree != NULL);
    assert(var != NULL);
    assert(node->active || (infercons == NULL && inferprop == NULL));
-   assert(node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
+   assert((NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
    debugMessage("adding boundchange at node at depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
       node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
@@ -1310,7 +1310,7 @@ RETCODE SCIPnodeAddBoundinfer(
    if( node->depth == 0 )
    {
       assert(node->active);
-      assert(node->nodetype != SCIP_NODETYPE_PROBINGNODE);
+      assert((NODETYPE)node->nodetype != SCIP_NODETYPE_PROBINGNODE);
       assert(!probingchange);
 
       debugMessage(" -> bound change in root node: perform global bound change\n");
@@ -1439,9 +1439,9 @@ RETCODE SCIPnodeAddHolechg(
    )
 {
    assert(node != NULL);
-   assert(node->nodetype == SCIP_NODETYPE_FOCUSNODE
-      || node->nodetype == SCIP_NODETYPE_PROBINGNODE
-      || node->nodetype == SCIP_NODETYPE_CHILD);
+   assert((NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
+      || (NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD);
 
    debugMessage("adding holechange at node at depth %d: changed pointer at %p from %p to %p\n",
       node->depth, ptr, newlist, oldlist);
@@ -1546,6 +1546,9 @@ void treeUpdatePathLPSize(
          ncols = node->data.subroot->ncols;
          nrows = node->data.subroot->nrows;
          break;
+      case SCIP_NODETYPE_REFOCUSNODE:
+         errorMessage("node cannot be of type REFOCUSNODE at this point\n");
+         abort();
       default:
          errorMessage("unknown node type\n");
          abort();
@@ -1688,14 +1691,14 @@ void treeFindSwitchForks(
    /* if the common fork node is below the current cutoff depth, the cutoff node is an ancestor of the common fork
     * and thus an ancestor of the new focus node, s.t. the new node can also be cut off
     */
-   assert(fork->depth != tree->cutoffdepth);
-   if( fork->depth > tree->cutoffdepth )
+   assert((int)fork->depth != tree->cutoffdepth);
+   if( (int)fork->depth > tree->cutoffdepth )
    {
 #ifndef NDEBUG
       while( fork != NULL && !fork->cutoff )
          fork = fork->parent;
       assert(fork != NULL);
-      assert(fork->depth >= tree->cutoffdepth);
+      assert((int)fork->depth >= tree->cutoffdepth);
 #endif
       *cutoff = TRUE;
       return;
@@ -1752,15 +1755,14 @@ void treeFindSwitchForks(
       assert(subroot == NULL || subroot->active);
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
-   assert(subroot == NULL || lpfork != NULL);
-   assert(subroot == NULL || subroot->depth <= lpfork->depth);
+   assert(subroot == NULL || (lpfork != NULL && subroot->depth <= lpfork->depth));
    debugMessage("find switch forks: subrootdepth=%d\n", subroot == NULL ? -1 : (int)(subroot->depth));
 
    /* if a node prior to the common fork should be repropagated, we select the node to be repropagated as common
     * fork in order to undo all bound changes up to this node, repropagate the node, and redo the bound changes
     * afterwards
     */
-   if( fork->depth > tree->repropdepth )
+   if( (int)fork->depth > tree->repropdepth )
    {
       fork = tree->path[tree->repropdepth];
       assert(fork->active);
@@ -1817,8 +1819,8 @@ RETCODE treeSwitchPath(
    debugMessage("switch path: old pathlen=%d\n", tree->pathlen);   
 
    /* get the nodes' depth's */
-   focusnodedepth = (focusnode != NULL ? focusnode->depth : -1);
-   forkdepth = (fork != NULL ? fork->depth : -1);
+   focusnodedepth = (focusnode != NULL ? (int)focusnode->depth : -1);
+   forkdepth = (fork != NULL ? (int)fork->depth : -1);
    assert(forkdepth <= focusnodedepth);
    assert(forkdepth < tree->pathlen);
 
@@ -2614,7 +2616,7 @@ RETCODE SCIPnodeFocus(
    assert(cutoff != NULL);
 
    debugMessage("focussing node %p of type %d in depth %d\n",
-      *node, *node != NULL ? SCIPnodeGetType(*node) : 0, *node != NULL ? SCIPnodeGetDepth(*node) : 0);
+      *node, *node != NULL ? (int)SCIPnodeGetType(*node) : 0, *node != NULL ? SCIPnodeGetDepth(*node) : 0);
 
    /* remember old cutoff depth in order to know, whether the children and siblings can be deleted */
    oldcutoffdepth = tree->cutoffdepth;
@@ -2652,7 +2654,7 @@ RETCODE SCIPnodeFocus(
    {
       /* we are in the same subtree: the LP is correct at most upto the common fork depth */
       assert(subroot == NULL || subroot->active);
-      tree->correctlpdepth = MIN(tree->correctlpdepth, fork->depth);
+      tree->correctlpdepth = MIN(tree->correctlpdepth, (int)fork->depth);
    }
    else
    {
@@ -2669,7 +2671,7 @@ RETCODE SCIPnodeFocus(
    /* if the old focus node was cut off, we can delete its children;
     * if the old focus node's parent was cut off, we can also delete the focus node's siblings
     */
-   if( tree->focusnode != NULL && oldcutoffdepth <= tree->focusnode->depth )
+   if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
    {
       debugMessage("path to old focus node of depth %d was cut off at depth %d\n", 
          tree->focusnode->depth, oldcutoffdepth);
@@ -2683,7 +2685,7 @@ RETCODE SCIPnodeFocus(
       CHECK_OKAY( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, NULL, REAL_MIN) );
       assert(tree->nchildren == 0);
 
-      if( oldcutoffdepth < tree->focusnode->depth )
+      if( oldcutoffdepth < (int)tree->focusnode->depth )
       {
          /* delete the focus node's siblings by converting them to leaves with a cutoffbound of REAL_MIN;
           * we cannot delete them directly, because in SCIPnodeFree(), the siblings array is changed, which is the
@@ -2861,7 +2863,7 @@ RETCODE SCIPnodeFocus(
          fork, *node, cutoff) );
    assert(tree->pathlen >= 0);
    assert(*node != NULL || tree->pathlen == 0);
-   assert(*node == NULL || tree->pathlen-1 <= (*node)->depth);
+   assert(*node == NULL || tree->pathlen-1 <= (int)(*node)->depth);
 
    /* if the old focus node is a dead end (has no children), delete it */
    if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
@@ -3023,7 +3025,7 @@ RETCODE SCIPtreeCreateRoot(
    tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
    assert(tree->root->depth == 0);
-   assert(tree->root->nodetype == SCIP_NODETYPE_CHILD);
+   assert((NODETYPE)tree->root->nodetype == SCIP_NODETYPE_CHILD);
    assert(!tree->root->active);
    assert(!tree->root->cutoff);
    assert(!tree->root->reprop);
@@ -4012,10 +4014,10 @@ Bool SCIPtreeIsPathComplete(
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+   assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
-   return (tree->focusnode == NULL || tree->focusnode->depth < tree->pathlen);
+   return (tree->focusnode == NULL || (int)tree->focusnode->depth < tree->pathlen);
 }
 
 /** returns whether the current node is a temporary probing node */
@@ -4024,7 +4026,7 @@ Bool SCIPtreeProbing(
    )
 {
    assert(tree != NULL);
-   assert(tree->probingroot == NULL || tree->probingroot->nodetype == SCIP_NODETYPE_PROBINGNODE);
+   assert(tree->probingroot == NULL || (NODETYPE)tree->probingroot->nodetype == SCIP_NODETYPE_PROBINGNODE);
    assert(tree->probingroot == NULL || tree->pathlen > SCIPnodeGetDepth(tree->probingroot));
    assert(tree->probingroot == NULL || tree->path[SCIPnodeGetDepth(tree->probingroot)] == tree->probingroot);
 
@@ -4037,7 +4039,7 @@ NODE* SCIPtreeGetProbingRoot(
    )
 {
    assert(tree != NULL);
-   assert(tree->probingroot == NULL || tree->probingroot->nodetype == SCIP_NODETYPE_PROBINGNODE);
+   assert(tree->probingroot == NULL || (NODETYPE)tree->probingroot->nodetype == SCIP_NODETYPE_PROBINGNODE);
    assert(tree->probingroot == NULL || tree->pathlen > SCIPnodeGetDepth(tree->probingroot));
    assert(tree->probingroot == NULL || tree->path[SCIPnodeGetDepth(tree->probingroot)] == tree->probingroot);
 
@@ -4055,7 +4057,7 @@ NODE* SCIPtreeGetFocusNode(
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+   assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->focusnode;
@@ -4072,10 +4074,10 @@ int SCIPtreeGetFocusDepth(
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+   assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
-   return tree->focusnode != NULL ? tree->focusnode->depth : -1;
+   return tree->focusnode != NULL ? (int)tree->focusnode->depth : -1;
 }
 
 /** returns, whether the LP was or is to be solved in the focus node */
@@ -4110,7 +4112,7 @@ NODE* SCIPtreeGetCurrentNode(
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+   assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return (tree->pathlen > 0 ? tree->path[tree->pathlen-1] : NULL);
@@ -4127,7 +4129,7 @@ int SCIPtreeGetCurrentDepth(
    assert(tree->pathlen >= 2 || !SCIPtreeProbing(tree));
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
    assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen
+   assert(tree->focusnode == NULL || (int)tree->focusnode->depth >= tree->pathlen
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->pathlen-1;

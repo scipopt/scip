@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.270 2005/02/15 19:59:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.271 2005/02/16 17:46:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -472,7 +472,7 @@ void SCIPmessage(
 
    CHECK_ABORT( checkStage(scip, "SCIPmessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   va_start(ap, formatstr);
+   va_start(ap, formatstr); /*lint !e826*/
    vinfoMessage(scip->set->disp_verblevel, msgverblevel, formatstr, ap);
    va_end(ap);
 }
@@ -1170,7 +1170,7 @@ RETCODE SCIPactivatePricer(
 {
    CHECK_OKAY( checkStage(scip, "SCIPactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPpricerActivate(pricer, scip->set);
+   CHECK_OKAY( SCIPpricerActivate(pricer, scip->set) );
 
    return SCIP_OKAY;
 }
@@ -2434,7 +2434,7 @@ RETCODE SCIPsetObjlimit(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
-      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set));
+      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
       if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->set, oldobjlimit) )
       {
          errorMessage("cannot relax objective limit from %g to %g after problem was transformed\n", oldobjlimit, objlimit);
@@ -2499,19 +2499,17 @@ Bool SCIPisObjIntegral(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      SCIPprobIsObjIntegral(scip->origprob);
-      return SCIP_OKAY;
+      return SCIPprobIsObjIntegral(scip->origprob);
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      SCIPprobIsObjIntegral(scip->transprob);
-      return SCIP_OKAY;
+      return SCIPprobIsObjIntegral(scip->transprob);
 
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return SCIP_ERROR;
+      abort();
    }  /*lint !e788*/
 }
 
@@ -4058,7 +4056,7 @@ RETCODE SCIPpresolve(
       CHECK_OKAY( transformProb(scip) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
-      /*lint -fallthrough */
+      /*lint -fallthrough*/
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
@@ -4157,7 +4155,7 @@ RETCODE SCIPpresolve(
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
-   }
+   }  /*lint !e788*/
 
    /* release the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )
@@ -4326,7 +4324,7 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( exitPresolve(scip, &unbounded, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
-      /* -lint fallthrough */
+      /*lint -fallthrough*/
 
    case SCIP_STAGE_PRESOLVED:
       /* switch stage to TRANSFORMED */
@@ -4367,7 +4365,7 @@ RETCODE SCIPfreeTransform(
       CHECK_OKAY( exitPresolve(scip, &unbounded, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
-      /* -lint fallthrough */
+      /*lint -fallthrough*/
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -4376,7 +4374,7 @@ RETCODE SCIPfreeTransform(
       CHECK_OKAY( SCIPfreeSolve(scip) );
       assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
-      /*lint -fallthrough */
+      /*lint -fallthrough*/
 
    case SCIP_STAGE_TRANSFORMED:
       /* free transformed problem data structures */
@@ -4823,7 +4821,7 @@ Longint SCIPgetVarStrongbranchNode(
    VAR*             var                 /**< variable to get last strong branching node for */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranchNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarStrongbranchNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
@@ -5542,7 +5540,7 @@ RETCODE SCIPinferBinvarCons(
                scip->lp, scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible, &fixed) );
          break;
       }
-      /* fallthrough */
+      /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       if( fixedval == TRUE )
       {
@@ -5781,7 +5779,7 @@ RETCODE SCIPinferBinvarProp(
                scip->lp, scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible, &fixed) );
          break;
       }
-      /* fallthrough */
+      /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
       if( fixedval == TRUE )
       {
@@ -6090,7 +6088,7 @@ RETCODE SCIPfixVar(
                scip->lp, scip->branchcand, scip->eventqueue, fixedval, infeasible, fixed) );
          return SCIP_OKAY;
       }
-      /* -lint fallthrough */
+      /*lint -fallthrough*/
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -8807,7 +8805,6 @@ RETCODE SCIPchgVarUbProbing(
  *  the same can also be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated
  *  like deductions instead of branching decisions
  */
-extern
 RETCODE SCIPfixVarProbing(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
@@ -10606,7 +10603,7 @@ int SCIPgetNGlobalConss(
    default:
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
-   }
+   }  /*lint !e788*/
 }
 
 /** gets average dual bound of all unprocessed nodes */
@@ -11576,8 +11573,6 @@ RETCODE SCIPprintBranchingStatistics(
       errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** outputs node information display line */
@@ -11643,9 +11638,10 @@ RETCODE SCIPwriteImplicationConflictGraph(
    /* store edges */
    for( v = 0; v < nvars; ++v )
    {
-      int fix;
+      Bool fix;
 
-      for( fix = 0; fix <= 1; ++fix )
+      fix = FALSE;
+      do
       {
          VAR** implvars;
          BOUNDTYPE* impltypes;
@@ -11664,7 +11660,9 @@ RETCODE SCIPwriteImplicationConflictGraph(
                fprintf(file, "%s%d -> %s%d [dir=none];\n", fix == TRUE ? "pos" : "neg", v, 
                   impltypes[i] == SCIP_BOUNDTYPE_UPPER ? "pos" : "neg", implidx);
          }
+         fix = !fix;
       }
+      while( fix == TRUE );
    }
 
    /* write footer */
@@ -11689,7 +11687,7 @@ Real SCIPgetTimeOfDay(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPgetTimeOfDay", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetTimeOfDay", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPclockGetTimeOfDay();
 }
