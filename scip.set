@@ -19,35 +19,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
+# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -250,6 +250,10 @@ constraints/linear/sepafreq = 5
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/propfreq = 5
 
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <linear> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/linear/eagerfreq = 100
+
 # multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/linear/tightenboundsfreq = 1
@@ -266,6 +270,10 @@ constraints/and/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/propfreq = 1
 
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <and> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/and/eagerfreq = 100
+
 # frequency for separating cuts of constraint handler <conjunction> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = -1
@@ -273,6 +281,10 @@ constraints/conjunction/sepafreq = -1
 # frequency for propagating domains of constraint handler <conjunction> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/propfreq = -1
+
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <conjunction> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/conjunction/eagerfreq = 100
 
 # frequency for separating cuts of constraint handler <integral> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -282,6 +294,10 @@ constraints/integral/sepafreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <integral> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/integral/eagerfreq = -1
+
 # frequency for separating cuts of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 constraints/knapsack/sepafreq = 10
@@ -289,6 +305,10 @@ constraints/knapsack/sepafreq = 10
 # frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
+
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <knapsack> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/knapsack/eagerfreq = 100
 
 # maximal number of separation rounds per node
 # [type: int, range: [0,2147483647], default: 5]
@@ -318,8 +338,12 @@ constraints/logicor/sepafreq = 5
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/logicor/propfreq = 1
 
-# number of children created in pseudo branching
-# [type: int, range: [2,2147483647], default: 2]
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <logicor> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/logicor/eagerfreq = 100
+
+# number of children created in pseudo branching (0: disable pseudo branching)
+# [type: int, range: [0,2147483647], default: 2]
 constraints/logicor/npseudobranches = 2
 
 # branching factor to weigh maximum of positive and negative variable uses
@@ -338,6 +362,10 @@ constraints/or/sepafreq = 1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/propfreq = 1
 
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <or> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/or/eagerfreq = 100
+
 # priority of conflict handler <setppc>
 # [type: int, range: [-2147483648,2147483647], default: 700000]
 conflict/setppc/priority = 700000
@@ -350,6 +378,10 @@ constraints/setppc/sepafreq = 5
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/propfreq = 1
 
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <setppc> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/setppc/eagerfreq = 100
+
 # number of children created in pseudo branching
 # [type: int, range: [2,2147483647], default: 2]
 constraints/setppc/npseudobranches = 2
@@ -361,6 +393,10 @@ constraints/varbound/sepafreq = 1
 # frequency for propagating domains of constraint handler <varbound> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/propfreq = 1
+
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <varbound> (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/varbound/eagerfreq = 100
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -457,6 +493,10 @@ branching/inference/priority = 1000
 # maximal depth level, up to which branching rule <inference> should be used (-1 for no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 branching/inference/maxdepth = -1
+
+# factor to weigh average number of cutoffs in branching score
+# [type: real, range: [0,1.79769313486232e+308], default: 1]
+branching/inference/cutoffweight = 1
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]
@@ -693,6 +733,62 @@ heuristics/simplerounding/freqofs = 0
 # maximal depth level to call primal heuristic <simplerounding> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/simplerounding/maxdepth = -1
+
+# priority of separator <cmir>
+# [type: int, range: [-2147483648,2147483647], default: -1000]
+separating/cmir/priority = -1000
+
+# frequency for calling separator <cmir> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/cmir/freq = 10
+
+# maximal number of cmir separation rounds per node
+# [type: int, range: [0,2147483647], default: 5]
+separating/cmir/maxrounds = 5
+
+# maximal number of cmir separation rounds in the root node
+# [type: int, range: [0,2147483647], default: 9]
+separating/cmir/maxroundsroot = 9
+
+# maximal number of cmir cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 25]
+separating/cmir/maxsepacuts = 25
+
+# maximal number of cmir cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 75]
+separating/cmir/maxsepacutsroot = 75
+
+# maximal number of aggregations for each row per separation round
+# [type: int, range: [0,2147483647], default: 5]
+separating/cmir/maxaggrs = 5
+
+# maximal number of aggregations for each row per separation round in the root node
+# [type: int, range: [0,2147483647], default: 8]
+separating/cmir/maxaggrsroot = 8
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cmir/dynamiccuts = FALSE
+
+# maximal slack of rows to be used
+# [type: real, range: [0,1.79769313486232e+308], default: 0.1]
+separating/cmir/maxslack = 0.1
+
+# maximal row aggregation factor
+# [type: int, range: [0,2147483647], default: 10000]
+separating/cmir/maxrowfac = 10000
+
+# minimal row aggregation factor
+# [type: int, range: [-2147483648,0], default: -10000]
+separating/cmir/minrowfac = -10000
+
+# maximal number of different deltas tested
+# [type: int, range: [0,2147483647], default: 128]
+separating/cmir/maxtestdelta = 128
+
+# maximal number of cont. vars in aggregated row
+# [type: int, range: [0,2147483647], default: 10]
+separating/cmir/maxcont = 10
 
 # priority of separator <gomory>
 # [type: int, range: [-2147483648,2147483647], default: 0]
