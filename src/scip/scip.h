@@ -379,6 +379,15 @@ RETCODE SCIPaddCons(
    CONS*            cons                /**< constraint to add */
    );
 
+/** deletes global constraint from the problem; this method is equivalent to SCIPdisableConsLocal(), besides it can
+ *  only be called during problem modification and presolving stage
+ */
+extern
+RETCODE SCIPdelCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to delete */
+   );
+
 /** finds constraint of given name in the problem */
 extern
 RETCODE SCIPfindCons(
@@ -399,20 +408,37 @@ RETCODE SCIPfindCons(
 /**@name Local Subproblem Methods */
 /**@{ */
 
+/** adds local constraint to the active node (and all of its subnodes) */
+extern
+RETCODE SCIPaddConsLocal(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to add */
+   );
+
 /** adds local constraint to the given node (and all of its subnodes) */
 extern
 RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to add constraint to, or NULL for active node */
+   NODE*            node,               /**< node to add constraint to */
    CONS*            cons                /**< constraint to add */
+   );
+
+/** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
+ *  if the current node is the root node, or if the method is called during problem modification or presolving,
+ *  the constraint is deleted from the problem
+ */
+extern
+RETCODE SCIPdisableConsLocal(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to disable */
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
 extern
 RETCODE SCIPdisableConsNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to add constraint to, or NULL for active node */
-   CONS*            cons                /**< constraint to add */
+   NODE*            node,               /**< node to disable constraint in */
+   CONS*            cons                /**< constraint to disable */
    );
 
 /**@} */

@@ -144,6 +144,15 @@ RETCODE SCIPprobAddCons(
    CONS*            cons                /**< constraint to add */
    );
 
+/** removes constraint from the problem and releases it */
+extern
+RETCODE SCIPprobDelCons(
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to remove */
+   );
+
 /** sets objective sense: minimization or maximization */
 extern
 void SCIPprobSetObjsense(

@@ -234,7 +234,7 @@ RETCODE SCIPnodeDisableCons(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons                /**< constraint to disable */
    );
 
 /** adds bound change to actual node, child or sibling of actual node */

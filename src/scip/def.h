@@ -37,7 +37,7 @@
 
 
 #ifndef NDEBUG
-#define CHECK_OKAY(x) { RETCODE _restat_;                                                                       \
+#define CHECK_OKAY(x) { RETCODE _restat_;                                                                   \
                         if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                         {                                                                                   \
                           printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
@@ -51,7 +51,7 @@
                         }                                                                                   \
                       }
 #else
-#define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
+#define CHECK_OKAY(x) { RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; }
 #define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
 #endif
 
@@ -113,7 +113,7 @@ typedef long long Longint;              /**< type used for long integer values *
 
 typedef double Real;                    /**< type used for floating point values */
 #define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
-#define SCIP_DEFAULT_SUMEPSILON  1e-07  /**< default upper bound for sums of floating points to be considered zero */
+#define SCIP_DEFAULT_SUMEPSILON  1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
 #define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */

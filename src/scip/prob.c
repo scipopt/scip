@@ -480,6 +480,12 @@ RETCODE SCIPprobAddCons(
    assert(prob != NULL);
    assert(memhdr != NULL);
    assert(cons != NULL);
+   assert(cons->node == NULL);
+   assert(cons->arraypos == -1);
+
+   /* mark the constraint as problem constraint, and remember the constraint's position */
+   cons->node = NULL;
+   cons->arraypos = prob->nconss;
 
    /* add the constraint to the problem's constraint array */
    CHECK_OKAY( probEnsureConssMem(prob, set, prob->nconss+1) );
@@ -491,6 +497,56 @@ RETCODE SCIPprobAddCons(
 
    /* add constraint's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->consnames, memhdr, (void*)cons) );
+
+   return SCIP_OKAY;
+}
+
+/** removes constraint from the problem and releases it */
+RETCODE SCIPprobDelCons(
+   PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to remove */
+   )
+{
+   int arraypos;
+
+   assert(prob != NULL);
+   assert(memhdr != NULL);
+   assert(cons != NULL);
+   assert(cons->node == NULL);
+   assert(0 <= cons->arraypos && cons->arraypos < prob->nconss);
+   assert(prob->conss != NULL);
+   assert(prob->conss[cons->arraypos] == cons);
+
+   /* if constraint is active, deactivate it */
+   if( cons->active )
+   {
+      CHECK_OKAY( SCIPconsDeactivate(cons) );
+   }
+   assert(!cons->active);
+   assert(!cons->enabled);
+   assert(cons->sepaconsspos == -1);
+   assert(cons->enfoconsspos == -1);
+   assert(cons->chckconsspos == -1);
+   assert(cons->propconsspos == -1);
+
+   /* remove constraint's name from the namespace */
+   CHECK_OKAY( SCIPhashtableRemove(prob->consnames, memhdr, (void*)cons) );
+
+   /* remove the constraint from the problem's constraint array */
+   arraypos = cons->arraypos;
+   prob->conss[arraypos] = prob->conss[prob->nconss-1];
+   prob->conss[arraypos]->arraypos = arraypos;
+   prob->nconss--;
+   assert(prob->conss[arraypos] != NULL);
+   assert(prob->conss[arraypos]->node == NULL);
+
+   /* mark the constraint to be no longer in the problem */
+   cons->arraypos = -1;
+
+   /* release constraint */
+   CHECK_OKAY( SCIPconsRelease(&cons, memhdr, set) );
 
    return SCIP_OKAY;
 }

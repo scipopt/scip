@@ -1891,7 +1891,7 @@ DECL_CONSPROP(consPropLinear)
       {
          debugMessage("linear constraint <%s> is redundant: activitybounds=[%g,%g], sides=[%g,%g]\n",
             SCIPconsGetName(cons), minactivity, maxactivity, lhs, rhs);
-         CHECK_OKAY( SCIPdisableConsNode(scip, NULL, cons) );
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
    }
 

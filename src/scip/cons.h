@@ -224,6 +224,41 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
 #include "mem.h"
 #include "lp.h"
 #include "sol.h"
+#include "tree.h"
+
+
+
+/** constraint data structure */
+struct Cons
+{
+   char*            name;               /**< name of the constraint */
+   CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
+   CONSDATA*        consdata;           /**< data for this specific constraint */
+   NODE*            node;               /**< node this constraint was created, or NULL if it's a global constraint */
+   int              nuses;              /**< number of times, this constraint is referenced */
+   int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
+   int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
+   int              chckconsspos;       /**< position of constraint in the handler's chckconss array */
+   int              propconsspos;       /**< position of constraint in the handler's propconss array */
+   int              arraypos;           /**< position of constraint in the node's/problem's addedconss/conss array */
+   unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
+   unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
+   unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
+   unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
+   unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
+   unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
+   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
+};
+
+/** tracks additions and removals of the set of active constraints */
+struct ConsSetChg
+{
+   CONS**           addedconss;         /**< constraints added to the set of active constraints */
+   CONS**           disabledconss;      /**< constraints disabled in the set of active constraints */
+   int              naddedconss;        /**< number of added constraints */
+   int              ndisabledconss;     /**< number of disabled constraints */
+};
+
 
 
 
@@ -530,10 +565,20 @@ RETCODE SCIPconssetchgFree(
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** deletes and releases deactivated constraint from the addedconss array of the constraint set change data */
+extern
+RETCODE SCIPconssetchgDelAddedCons(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to delete constraint from */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to delete from addedconss array */
+   );
+
 /** applies constraint set change */
 extern
 RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 
@@ -594,6 +639,7 @@ RETCODE SCIPconssetchgdynAddAddedCons(
    CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   NODE*            node,               /**< node that the constraint set change belongs to */
    CONS*            cons                /**< added constraint */
    );
 

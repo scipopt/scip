@@ -876,6 +876,34 @@ RETCODE SCIPaddCons(
    }
 }
 
+/** deletes global constraint from the problem; this method is equivalent to SCIPdisableConsLocal(), besides it can
+ *  only be called during problem modification and presolving stage
+ */
+RETCODE SCIPdelCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to delete */
+   )
+{
+   assert(cons != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      CHECK_OKAY( SCIPprobDelCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPprobDelCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+}
+
 /** finds constraint of given name in the problem */
 RETCODE SCIPfindCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -917,10 +945,25 @@ RETCODE SCIPfindCons(
  * local subproblem methods
  */
 
+/** adds local constraint to the active node (and all of its subnodes) */
+RETCODE SCIPaddConsLocal(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(cons != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsLocal", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPnodeAddCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
+   
+   return SCIP_OKAY;
+}
+
 /** adds local constraint to the given node (and all of its subnodes) */
 RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to add constraint to, or NULL for active node */
+   NODE*            node,               /**< node to add constraint to */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -928,33 +971,68 @@ RETCODE SCIPaddConsNode(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( node == NULL )
-      node = scip->tree->actnode;
-
    CHECK_OKAY( SCIPnodeAddCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
    
    return SCIP_OKAY;
 }
 
+/** disables constraint's separation, enforcing, and propagation capabilities at the active node (and all subnodes);
+ *  if the current node is the root node, or if the method is called during problem modification or presolving,
+ *  the constraint is deleted from the problem
+ */
+RETCODE SCIPdisableConsLocal(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to disable */
+   )
+{
+   assert(cons != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPdisableConsLocal", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      CHECK_OKAY( SCIPprobDelCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPprobDelCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      assert(scip->tree->actnode != NULL);
+      if( cons->node == NULL && scip->tree->actnode == scip->tree->root )
+      {
+         assert(scip->tree->actnode->depth == 0);
+         CHECK_OKAY( SCIPprobDelCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPnodeDisableCons(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->tree, cons) );
+      }
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+}
+
 /** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
 RETCODE SCIPdisableConsNode(
    SCIP*            scip,               /**< SCIP data structure */
-   NODE*            node,               /**< node to add constraint to, or NULL for active node */
-   CONS*            cons                /**< constraint to add */
+   NODE*            node,               /**< node to disable constraint in */
+   CONS*            cons                /**< constraint to disable */
    )
 {
    assert(cons != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPdisableConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( node == NULL )
-      node = scip->tree->actnode;
-
    CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, scip->tree, cons) );
    
    return SCIP_OKAY;
 }
-
 
 
 

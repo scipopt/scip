@@ -68,35 +68,6 @@ struct ConsHdlr
    unsigned int     initialized:1;      /**< is constraint handler initialized? */
 };
 
-/** constraint data structure */
-struct Cons
-{
-   char*            name;               /**< name of the constraint */
-   CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
-   CONSDATA*        consdata;           /**< data for this specific constraint */
-   int              nuses;              /**< number of times, this constraint is referenced */
-   int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
-   int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
-   int              chckconsspos;       /**< position of constraint in the handler's chckconss array */
-   int              propconsspos;       /**< position of constraint in the handler's propconss array */
-   unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
-   unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
-   unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
-   unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
-   unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
-   unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
-   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
-};
-
-/** tracks additions and removals of the set of active constraints */
-struct ConsSetChg
-{
-   CONS**           addedconss;         /**< constraints added to the set of active constraints */
-   CONS**           disabledconss;      /**< constraints disabled in the set of active constraints */
-   int              naddedconss;        /**< number of added constraints */
-   int              ndisabledconss;     /**< number of disabled constraints */
-};
-
 /** dynamic size attachment for constraint set change data */
 struct ConsSetChgDyn
 {
@@ -614,6 +585,8 @@ RETCODE SCIPconshdlrSeparate(
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
 
          CHECK_OKAY( conshdlr->conssepa(set->scip, conshdlr, conss, nconss, result) );
+         debugMessage(" -> separating returned result <%d>\n", *result);
+
          if( *result != SCIP_SEPARATED
             && *result != SCIP_CONSADDED
             && *result != SCIP_DIDNOTFIND
@@ -665,6 +638,8 @@ RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          CHECK_OKAY( conshdlr->consenlp(set->scip, conshdlr, conss, nconss, result) );
+         debugMessage(" -> enforcing returned result <%d>\n", *result);
+
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
             && *result != SCIP_REDUCEDDOM
@@ -719,6 +694,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          CHECK_OKAY( conshdlr->consenps(set->scip, conshdlr, conss, nconss, result) );
+         debugMessage(" -> enforcing returned result <%d>\n", *result);
+
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
             && *result != SCIP_REDUCEDDOM
@@ -760,6 +737,7 @@ RETCODE SCIPconshdlrCheck(
       debugMessage("checking %d constraints of handler <%s>\n", conshdlr->nchckconss, conshdlr->name);
       CHECK_OKAY( conshdlr->conschck(set->scip, conshdlr, conshdlr->chckconss, conshdlr->nchckconss, 
                      sol, chckintegrality, chcklprows, result) );
+      debugMessage(" -> checking returned result <%d>\n", *result);
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
       {
@@ -795,6 +773,7 @@ RETCODE SCIPconshdlrPropagate(
    {
       debugMessage("propagating %d constraints of handler <%s>\n", conshdlr->npropconss, conshdlr->name);
       CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conshdlr->propconss, conshdlr->npropconss, result) );
+      debugMessage(" -> propagation returned result <%d>\n", *result);
       if( *result != SCIP_CUTOFF
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_DIDNOTFIND
@@ -947,11 +926,13 @@ RETCODE SCIPconsCreate(
    ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*cons)->name, name, strlen(name)+1) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
+   (*cons)->node = NULL;
    (*cons)->nuses = 0;
    (*cons)->sepaconsspos = -1;
    (*cons)->enfoconsspos = -1;
    (*cons)->chckconsspos = -1;
    (*cons)->propconsspos = -1;
+   (*cons)->arraypos = -1;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
    (*cons)->check = check;
@@ -1206,6 +1187,7 @@ RETCODE conssetchgRelease(
    const SET*       set                 /**< global SCIP settings */
    )
 {
+   CONS* cons;
    int i;
    
    assert(conssetchg != NULL);
@@ -1213,11 +1195,21 @@ RETCODE conssetchgRelease(
    /* release constraints */
    for( i = 0; i < conssetchg->naddedconss; ++i )
    {
-      CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[i], memhdr, set) );
+      cons = conssetchg->addedconss[i];
+      if( cons != NULL )
+      {
+         assert(cons->arraypos == i);
+         cons->node = NULL;
+         cons->arraypos = -1;
+         CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[i], memhdr, set) );
+      }
    }
    for( i = 0; i < conssetchg->ndisabledconss; ++i )
    {
-      CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[i], memhdr, set) );
+      if( conssetchg->disabledconss[i] != NULL )
+      {
+         CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[i], memhdr, set) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1247,12 +1239,64 @@ RETCODE SCIPconssetchgFree(
    return SCIP_OKAY;
 }
 
+/** deletes and releases deactivated constraint from the addedconss array of the constraint set change data */
+RETCODE SCIPconssetchgDelAddedCons(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to delete constraint from */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to delete from addedconss array */
+   )
+{
+   int arraypos;
+
+   assert(conssetchg != NULL);
+   assert(cons != NULL);
+   assert(!cons->active);
+   assert(!cons->enabled);
+
+   arraypos = cons->arraypos;
+   assert(0 <= arraypos && arraypos < conssetchg->naddedconss);
+   assert(conssetchg->addedconss[arraypos] == cons);
+
+   cons->node = NULL;
+   cons->arraypos = -1;
+   CHECK_OKAY( SCIPconsRelease(&conssetchg->addedconss[arraypos], memhdr, set) );
+
+   assert(conssetchg->addedconss[arraypos] == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** deletes and releases deactivated constraint from the disabledconss array of the constraint set change data */
+static
+RETCODE conssetchgDelDisabledCons(
+   CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              arraypos            /**< position of constraint in disabledconss array */
+   )
+{
+   assert(conssetchg != NULL);
+   assert(0 <= arraypos && arraypos < conssetchg->ndisabledconss);
+   assert(conssetchg->disabledconss[arraypos] != NULL);
+   assert(!conssetchg->disabledconss[arraypos]->active);
+   assert(!conssetchg->disabledconss[arraypos]->enabled);
+
+   CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[arraypos], memhdr, set) );
+
+   assert(conssetchg->disabledconss[arraypos] == NULL);
+
+   return SCIP_OKAY;
+}
+
 /** applies constraint set change */
 RETCODE SCIPconssetchgApply(
    CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
+   CONS* cons;
    int i;
 
    debugMessage("applying constraint set changes at %p\n", conssetchg);
@@ -1266,13 +1310,56 @@ RETCODE SCIPconssetchgApply(
    /* apply constraint additions */
    for( i = 0; i < conssetchg->naddedconss; ++i )
    {
-      CHECK_OKAY( SCIPconsActivate(conssetchg->addedconss[i], set) );
+      cons = conssetchg->addedconss[i];
+      if( cons != NULL )
+      {
+         CHECK_OKAY( SCIPconsActivate(cons, set) );
+      }
    }
 
    /* apply constraint disablings */
    for( i = 0; i < conssetchg->ndisabledconss; ++i )
    {
-      CHECK_OKAY( SCIPconsDisable(conssetchg->disabledconss[i]) );
+      cons = conssetchg->disabledconss[i];
+
+      if( cons != NULL )
+      {
+         int arraypos;
+
+         arraypos = cons->arraypos;
+         assert(!cons->active || arraypos >= 0);
+
+         /* if the constraint is inactive, we can permanently remove it from the disabledconss array
+          * if the constraint was added at this node and is no check-constraint, we can deactivate and remove it from
+          * both arrays
+          */
+         if( !cons->active )
+         {
+            debugMessage("constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
+               cons->name, cons->conshdlr->name);
+            
+            /* release and remove constraint from the disabledconss array */
+            CHECK_OKAY( SCIPconsRelease(&conssetchg->disabledconss[i], memhdr, set) );
+         }
+         else if( !cons->check && arraypos < conssetchg->naddedconss && cons == conssetchg->addedconss[arraypos] )
+         {
+            debugMessage("constraint <%s> of handler <%s> was deactivated at same node -> remove it from both arrays\n",
+               cons->name, cons->conshdlr->name);
+            
+            /* deactivate constraint */
+            CHECK_OKAY( SCIPconsDeactivate(conssetchg->addedconss[i]) );
+
+            /* release and remove constraint from the addedconss array */
+            CHECK_OKAY( SCIPconssetchgDelAddedCons(conssetchg, memhdr, set, cons) );
+
+            /* release and remove constraint from the disabledconss array */
+            CHECK_OKAY( conssetchgDelDisabledCons(conssetchg, memhdr, set, i) );
+         }
+         else
+         {
+            CHECK_OKAY( SCIPconsDisable(conssetchg->disabledconss[i]) );
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -1295,13 +1382,13 @@ RETCODE SCIPconssetchgUndo(
       conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* undo constraint disablings */
-   for( i = 0; i < conssetchg->ndisabledconss; ++i )
+   for( i = conssetchg->ndisabledconss-1; i >= 0; --i )
    {
       CHECK_OKAY( SCIPconsEnable(conssetchg->disabledconss[i], set) );
    }
 
    /* undo constraint additions */
-   for( i = 0; i < conssetchg->naddedconss; ++i )
+   for( i = conssetchg->naddedconss-1; i >= 0; --i )
    {
       CHECK_OKAY( SCIPconsDeactivate(conssetchg->addedconss[i]) );
    }
@@ -1554,6 +1641,7 @@ RETCODE SCIPconssetchgdynAddAddedCons(
    CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   NODE*            node,               /**< node that the constraint set change belongs to */
    CONS*            cons                /**< added constraint */
    )
 {
@@ -1561,8 +1649,11 @@ RETCODE SCIPconssetchgdynAddAddedCons(
    int naddedconss;
 
    assert(conssetchgdyn != NULL);
-   assert(conssetchgdyn->conssetchg != NULL);
+   assert(node != NULL);
+   assert(conssetchgdyn->conssetchg == &node->conssetchg);
    assert(cons != NULL);
+   assert(cons->node == NULL);
+   assert(cons->arraypos == -1);
 
    naddedconss = (*conssetchgdyn->conssetchg == NULL ? 0 : (*conssetchgdyn->conssetchg)->naddedconss);
    CHECK_OKAY( ensureAddedconssSize(conssetchgdyn, memhdr, set, naddedconss+1) );
@@ -1571,6 +1662,8 @@ RETCODE SCIPconssetchgdynAddAddedCons(
    assert(conssetchg != NULL);
 
    conssetchg->addedconss[conssetchg->naddedconss] = cons;
+   cons->node = node;
+   cons->arraypos = conssetchg->naddedconss;
    conssetchg->naddedconss++;
 
    SCIPconsCapture(cons);

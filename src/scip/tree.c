@@ -806,26 +806,31 @@ RETCODE SCIPnodeAddCons(
    )
 {
    assert(node != NULL);
+   assert(cons != NULL);
+   assert(cons->node == NULL);
+   assert(cons->arraypos == -1);
 
    switch( node->nodetype )
    {
    case SCIP_NODETYPE_ACTNODE:
       assert(tree->actnode == node);
-      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->actnodeconssetchg, memhdr, set, cons) );
+      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->actnodeconssetchg, memhdr, set, node, cons) );
       CHECK_OKAY( SCIPconsActivate(cons, set) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_NODETYPE_SIBLING:
       assert(node->data.sibling.arraypos >= 0 && node->data.sibling.arraypos < tree->nsiblings);
       assert(tree->siblings[node->data.sibling.arraypos] == node);
-      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->siblingsconssetchg[node->data.sibling.arraypos], memhdr, set, cons) );
-      return SCIP_OKAY;
+      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->siblingsconssetchg[node->data.sibling.arraypos],
+                     memhdr, set, node, cons) );
+      break;
 
    case SCIP_NODETYPE_CHILD:
       assert(node->data.child.arraypos >= 0 && node->data.child.arraypos < tree->nchildren);
       assert(tree->children[node->data.child.arraypos] == node);
-      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->childrenconssetchg[node->data.child.arraypos], memhdr, set, cons) );
-      return SCIP_OKAY;
+      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->childrenconssetchg[node->data.child.arraypos], 
+                     memhdr, set, node, cons) );
+      break;
 
    case SCIP_NODETYPE_LEAF:
    case SCIP_NODETYPE_DEADEND:
@@ -838,6 +843,11 @@ RETCODE SCIPnodeAddCons(
       errorMessage("unknown node type");
       return SCIP_ERROR;
    }
+   assert(node->conssetchg != NULL);
+   assert(node->conssetchg->addedconss != NULL);
+   assert(cons->node == node);
+   assert(0 <= cons->arraypos && cons->arraypos < node->conssetchg->naddedconss);
+   assert(node->conssetchg->addedconss[cons->arraypos] == cons);
 
    return SCIP_OKAY;
 }
@@ -848,15 +858,17 @@ RETCODE SCIPnodeDisableCons(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons                /**< constraint to disable */
    )
 {
    assert(node != NULL);
+   assert(tree != NULL);
+   assert(cons != NULL);
 
    switch( node->nodetype )
    {
    case SCIP_NODETYPE_ACTNODE:
-      assert(tree->actnode == node);
+      assert(node == tree->actnode);
       CHECK_OKAY( SCIPconssetchgdynAddDisabledCons(tree->actnodeconssetchg, memhdr, set, cons) );
       CHECK_OKAY( SCIPconsDisable(cons) );
       return SCIP_OKAY;
@@ -1287,7 +1299,7 @@ RETCODE treeSwitchPath(
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
       debugMessage("switch path: apply constraint set changed in depth %d\n", i);
-      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, set) );
+      CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
    }
