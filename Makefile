@@ -1,13 +1,27 @@
-# $Id: Makefile,v 1.2 2002/10/23 14:35:54 bzfpfend Exp $
+# $Id: Makefile,v 1.3 2002/10/23 14:45:30 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
-#*   File....: Makefile                                                      *
-#*   Name....: SCIP Makefile                                                  *
-#*   Author..: Thorsten Koch                                                 *
-#*   Copyright by Author, All rights reserved                                *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2002 Tobias Achterberg                              *
+#*                            Thorsten Koch                                  *
+#*                            Andreas Martin                                 *
+#*                  2002-2002 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the SCIP Academic Licence.        *
+#*                                                                           *
+#*  You should have received a copy of the SCIP Academic License             *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+
+#@file    Makefile
+#@brief   SCIP Makefile
+#@author  Thorsten Koch
+#@author  Tobias Achterberg
+
 # Several symlinks are nesseccary:
 #
 # lib/cpxinc                         -> directory with cplex.h
