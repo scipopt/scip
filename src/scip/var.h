@@ -138,6 +138,7 @@ struct Var
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
+   unsigned int     negation:1;         /**< TRUE iff variable was created by negation of a different variable */
 };
 
 
@@ -323,6 +324,12 @@ RETCODE SCIPvarNegate(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< problem variable to negate */
+   );
+
+/** returns whether the variable was created by negation of a different variable */
+extern
+Bool SCIPvarIsNegation(
+   VAR*             var                 /**< problem variable */
    );
 
 /** increases lock number for rounding down; tells variable, that rounding its value down will make the solution

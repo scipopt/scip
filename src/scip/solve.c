@@ -41,7 +41,8 @@ Bool SCIPsolveIsStopped(
    return (SCIPinterrupted()
       || (set->nodelimit >= 0 && stat->nnodes >= set->nodelimit)
       || SCIPclockGetTime(stat->solvingtime) >= set->timelimit
-      || (set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit));
+      || (set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit)
+      || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit)));
 }
 
 /** outputs the reason for termination */
@@ -62,6 +63,8 @@ void SCIPsolvePrintStopReason(
       fprintf(file, "time limit reached");
    else if( set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit )
       fprintf(file, "memory limit reached");
+   else if( SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit) )
+      fprintf(file, "gap limit reached");
 }
 
 /** constructs the LP of the root node */

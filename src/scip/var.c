@@ -738,6 +738,7 @@ RETCODE varCreate(
    (*var)->nlocksup = 0;
    (*var)->vartype = vartype;
    (*var)->removeable = removeable;
+   (*var)->negation = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1104,6 +1105,7 @@ RETCODE SCIPvarNegate(
       /* link the variables together */
       var->negatedvar = *negvar;
       (*negvar)->negatedvar = var;
+      (*negvar)->negation = TRUE;
 
       /* release the negated variable (it is now a parent of the problem variable, and is freed together with var) */
       CHECK_OKAY( SCIPvarRelease(negvar, memhdr, set, lp) );
@@ -1114,7 +1116,20 @@ RETCODE SCIPvarNegate(
    /* return the negated variable */
    *negvar = var->negatedvar;
 
+   /* exactly one variable of the negation pair has to be marked as negation variable */
+   assert((*negvar)->negation ^ var->negation);
+
    return SCIP_OKAY;
+}
+
+/** returns whether the variable was created by negation of a different variable */
+Bool SCIPvarIsNegation(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->negation;
 }
 
 /** increases lock numbers for rounding */

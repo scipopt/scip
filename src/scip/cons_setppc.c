@@ -144,6 +144,16 @@ RETCODE conshdlrdataIncVaruses(
    varuses = conshdlrdata->varuses;
    assert(varuses != NULL);
 
+   /* if the variable is the negation of a problem variable, count the varuses in the problem variable */
+   if( SCIPvarIsNegation(var) )
+   {
+      VAR* negvar;
+
+      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &negvar) );
+      var = negvar;
+   }
+
+   /* increase varuses counter */
    CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), +1) );
 
    /*debugMessage("varuses of <%s>: %d\n", SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));*/
@@ -167,6 +177,16 @@ RETCODE conshdlrdataDecVaruses(
    varuses = conshdlrdata->varuses;
    assert(varuses != NULL);
 
+   /* if the variable is the negation of a problem variable, count the varuses in the problem variable */
+   if( SCIPvarIsNegation(var) )
+   {
+      VAR* negvar;
+
+      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &negvar) );
+      var = negvar;
+   }
+
+   /* decrease varuses counter */
    CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), -1) );
    assert(SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)) >= 0);
 

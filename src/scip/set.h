@@ -134,6 +134,7 @@ struct Set
    Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
    Real             timelimit;          /**< maximal time in seconds to run */
    Longint          memlimit;           /**< maximal memory usage (-1: no limit) */
+   Real             gaplimit;           /**< solution process stops, if the given gap is reached */
    Real             memsavefac;         /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */

@@ -2201,12 +2201,12 @@ RETCODE SCIPfreeSolve(
       /* switch stage to FREESOLVE */
       scip->stage = SCIP_STAGE_FREESOLVE;
 
-      /* exit callback methods */
-      CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
-
       /* deactivate the active node */
       CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
                      scip->branchcand, scip->eventqueue) );
+
+      /* exit callback methods */
+      CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
 
       /* deactivate constraints in the problem */
       CHECK_OKAY( SCIPprobDeactivate(scip->transprob, scip->mem->solvemem, scip->set) );
@@ -2347,7 +2347,7 @@ RETCODE SCIPgetNegatedVar(
    VAR**            negvar              /**< pointer to store the negated variable */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPgetNegatedVar", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetNegatedVar", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPvarNegate(negvar, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
                   scip->branchcand, scip->eventqueue, var) );

@@ -1,6 +1,6 @@
 # verbosity level of output
 # [default: 2]
-global/display/verblevel = 4
+global/display/verblevel = 4 # ??? 2
 
 # maximal number of characters in a node information line
 # [default: 138]
@@ -68,7 +68,7 @@ global/nodeselection/stdnodeselector = ""
 
 # memory saving mode node selection method
 # [default: ""]
-global/nodeselection/memsavenodeselector = "dfs"
+global/nodeselection/memsavenodeselector = "dfs" # ???
 
 # branching score factor to weigh downward and upward gain prediction
 # [default: 0.167]
@@ -125,6 +125,10 @@ global/limits/timelimit = 1e+20
 # maximal memory usage (-1: no limit); reported memory usage is lower than real memory usage!
 # [default: -1]
 global/limits/memlimit = -1
+
+# solution process stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value
+# [default: 0]
+global/limits/gaplimit = 0
 
 # frequency for solving LP at the nodes (-1: never; 0: only root LP)
 # [default: 4]

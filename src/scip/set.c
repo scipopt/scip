@@ -97,6 +97,7 @@
 
 /* Primal Solutions */
 
+#define SCIP_DEFAULT_GAPLIMIT          0.0 /**< solution process stops, if the gap is below the given value */
 #define SCIP_DEFAULT_MAXSOL            256 /**< maximal number of solutions to store in the solution storage */
 
 
@@ -434,6 +435,11 @@ RETCODE SCIPsetCreate(
                   "global/limits/memlimit",
                   "maximal memory usage (-1: no limit); reported memory usage is lower than real memory usage!",
                   &(*set)->memlimit, SCIP_DEFAULT_MEMLIMIT, -1, LONGINT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/limits/gaplimit",
+                  "solution process stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value",
+                  &(*set)->gaplimit, SCIP_DEFAULT_GAPLIMIT, 0.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global/lp/lpsolvefreq",
