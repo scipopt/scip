@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.99 2004/06/01 16:40:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.100 2004/06/09 07:50:47 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2416,6 +2416,10 @@ RETCODE separateCons(
       /* insert LP row as cut */
       CHECK_OKAY( addCut(scip, cons, violation) );
       *result = SCIP_SEPARATED;
+   }
+   else
+   {
+      /**@todo relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
    }
 
    return SCIP_OKAY;
