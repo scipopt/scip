@@ -132,12 +132,13 @@ RETCODE SCIPfree(
    SCIP**           scip                /**< pointer to SCIP data structure */
    );
 
-/** prints a message (with newline) depending on the verbosity level */
+/** prints a message depending on the verbosity level */
 extern
 void SCIPmessage(
    SCIP*            scip,               /**< SCIP data structure */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      msg                 /**< message to display */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
    );
 
 /** returns current stage of SCIP */

@@ -133,7 +133,7 @@ RETCODE SCIPprimalSetUpperbound(
    }
    else
    {
-      errorMessage("Invalid increase in upper bound");
+      errorMessage("Invalid increase in upper bound\n");
       return SCIP_INVALIDDATA;
    }
 

@@ -69,7 +69,7 @@ struct PresolData
 static
 DECL_PRESOLFREE(presolFreeXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet");
+   errorMessage("method of xxx presolver not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -84,7 +84,7 @@ DECL_PRESOLFREE(presolFreeXxx)
 static
 DECL_PRESOLINIT(presolInitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet");
+   errorMessage("method of xxx presolver not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -99,7 +99,7 @@ DECL_PRESOLINIT(presolInitXxx)
 static
 DECL_PRESOLEXIT(presolExitXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet");
+   errorMessage("method of xxx presolver not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -113,7 +113,7 @@ DECL_PRESOLEXIT(presolExitXxx)
 static
 DECL_PRESOLEXEC(presolExecXxx)
 {  /*lint --e{715}*/
-   errorMessage("method of xxx presolver not implemented yet");
+   errorMessage("method of xxx presolver not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;

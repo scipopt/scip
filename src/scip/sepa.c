@@ -140,9 +140,7 @@ RETCODE SCIPsepaInit(
 
    if( sepa->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "separator <%s> already initialized", sepa->name);
-      errorMessage(s);
+      errorMessage("separator <%s> already initialized\n", sepa->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -174,9 +172,7 @@ RETCODE SCIPsepaExit(
 
    if( !sepa->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "separator <%s> not initialized", sepa->name);
-      errorMessage(s);
+      errorMessage("separator <%s> not initialized\n", sepa->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -242,10 +238,8 @@ RETCODE SCIPsepaExec(
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "execution method of separator <%s> returned invalid result <%d>", 
+         errorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
             sepa->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
       if( *result != SCIP_DIDNOTRUN )

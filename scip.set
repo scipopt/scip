@@ -240,19 +240,19 @@ constraints/setppc/npseudobranches = 2
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reading/cnf/dynamiccols = FALSE
+reading/cnfreader/dynamiccols = FALSE
 
 # should rows be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reading/cnf/dynamicrows = FALSE
+reading/cnfreader/dynamicrows = FALSE
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reading/mps/dynamiccols = FALSE
+reading/mpsreader/dynamiccols = FALSE
 
 # should rows be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-reading/mps/dynamicrows = FALSE
+reading/mpsreader/dynamicrows = FALSE
 
 # minimal plunging depth, before new best node may be selected
 # [type: int, range: [0,2147483647], default: 10]

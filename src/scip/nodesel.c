@@ -468,7 +468,7 @@ RETCODE SCIPnodepqRemove(
    pos = nodepqFindNode(nodepq, set, node);
    if( pos == -1 )
    {
-      errorMessage("node doesn't exist in node priority queue");
+      errorMessage("node doesn't exist in node priority queue\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -783,9 +783,7 @@ RETCODE SCIPnodeselInit(
 
    if( nodesel->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Node selector <%s> already initialized", nodesel->name);
-      errorMessage(s);
+      errorMessage("Node selector <%s> already initialized", nodesel->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -809,9 +807,7 @@ RETCODE SCIPnodeselExit(
 
    if( !nodesel->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Node selector <%s> not initialized", nodesel->name);
-      errorMessage(s);
+      errorMessage("Node selector <%s> not initialized", nodesel->name);
       return SCIP_INVALIDCALL;
    }
 

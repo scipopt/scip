@@ -1,4 +1,4 @@
-# $Id: check.sh,v 1.1 2002/10/23 14:31:35 bzfpfend Exp $
+# $Id: check.sh,v 1.2 2003/11/20 17:42:00 bzfpfend Exp $
 BINNAME=`basename $2`
 TSTNAME=`basename $1 .test`
 SETNAME=$3
@@ -15,26 +15,26 @@ date >$ERRFILE
 
 for i in `cat $1`
 do
-    echo @01 $i ===========
-    echo @01 $i =========== >>$ERRFILE
     if [ -f $i ]
     then
-	cp $SETFILE $TMPFILE
-	echo read $i                    >> $TMPFILE
-	echo set limit bab 10000000     >> $TMPFILE
-	echo set limit time 3600        >> $TMPFILE
-	echo set time cpu               >> $TMPFILE
-	echo set info level 2           >> $TMPFILE
-	echo set info frequ 10000       >> $TMPFILE
-	echo optimize                   >> $TMPFILE
-	echo display stat               >> $TMPFILE
-	echo quit                       >> $TMPFILE
+        echo @01 $i ===========
+	echo @01 $i ===========                >> $ERRFILE
+	echo read $i                           >  $TMPFILE
+	echo set load $SETFILE                 >> $TMPFILE
+	echo set limits nodelimit 10000000     >> $TMPFILE
+	echo set limits timelimit 3600         >> $TMPFILE
+	echo set timing clocktype 1            >> $TMPFILE
+	echo set display verblevel 4           >> $TMPFILE
+	echo set display dispfreq 10000        >> $TMPFILE
+	echo optimize                          >> $TMPFILE
+	echo display statistics                >> $TMPFILE
+	echo quit                              >> $TMPFILE
 	../$2 < $TMPFILE 2>>$ERRFILE
+	echo =ready=
     else
-	echo FILE NOT FOUND
-	echo FILE NOT FOUND >>$ERRFILE
+	echo @02 FILE NOT FOUND: $i ===========
+	echo @02 FILE NOT FOUND: $i =========== >>$ERRFILE
     fi
-    echo =ready=
 done | tee -a $OUTFILE
 
 rm $TMPFILE

@@ -1243,9 +1243,7 @@ RETCODE SCIPconshdlrInit(
 
    if( conshdlr->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Constraint handler <%s> already initialized", conshdlr->name);
-      errorMessage(s);
+      errorMessage("Constraint handler <%s> already initialized\n", conshdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -1301,9 +1299,7 @@ RETCODE SCIPconshdlrExit(
 
    if( !conshdlr->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Constraint handler <%s> not initialized", conshdlr->name);
-      errorMessage(s);
+      errorMessage("Constraint handler <%s> not initialized\n", conshdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -1469,10 +1465,8 @@ RETCODE SCIPconshdlrSeparate(
             && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
          {
-            char s[MAXSTRLEN];
-            sprintf(s, "separation method of constraint handler <%s> returned invalid result <%d>", 
+            errorMessage("separation method of constraint handler <%s> returned invalid result <%d>\n", 
                conshdlr->name, *result);
-            errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
          if( *result != SCIP_DIDNOTRUN )
@@ -1578,10 +1572,8 @@ RETCODE SCIPconshdlrEnforceLPSol(
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
          {
-            char s[MAXSTRLEN];
-            sprintf(s, "enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>", 
+            errorMessage("enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>\n", 
                conshdlr->name, *result);
-            errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
          if( *result != SCIP_DIDNOTRUN )
@@ -1685,10 +1677,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
             && *result != SCIP_INFEASIBLE
             && *result != SCIP_FEASIBLE )
          {
-            char s[MAXSTRLEN];
-            sprintf(s, "enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>", 
+            errorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n", 
                conshdlr->name, *result);
-            errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
          if( *result != SCIP_DIDNOTRUN )
@@ -1699,10 +1689,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          }
          else if( !objinfeasible )
          {
-            char s[MAXSTRLEN];
-            sprintf(s, "enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible", 
+            errorMessage("enforcing method of constraint handler <%s> for pseudo solutions was skipped, even though the solution was not objective-infeasible\n", 
                conshdlr->name);
-            errorMessage(s);
             return SCIP_INVALIDRESULT;
          }
       }
@@ -1754,10 +1742,8 @@ RETCODE SCIPconshdlrCheck(
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "feasibility check of constraint handler <%s> returned invalid result <%d>", 
+         errorMessage("feasibility check of constraint handler <%s> returned invalid result <%d>\n", 
             conshdlr->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
    }
@@ -1817,10 +1803,8 @@ RETCODE SCIPconshdlrPropagate(
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "propagation method of constraint handler <%s> returned invalid result <%d>", 
+         errorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n", 
             conshdlr->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
       if( *result != SCIP_DIDNOTRUN )
@@ -1945,10 +1929,8 @@ RETCODE SCIPconshdlrPresolve(
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "presolving method of constraint handler <%s> returned invalid result <%d>", 
+         errorMessage("presolving method of constraint handler <%s> returned invalid result <%d>\n", 
             conshdlr->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
    }
@@ -3269,7 +3251,7 @@ RETCODE SCIPconsResolveConflictVar(
 
    if( cons->conshdlr->consrescvar == NULL )
    {
-      errorMessage("inference constraint is unable to resolve conflict variable due to missing resolving method");
+      errorMessage("inference constraint is unable to resolve conflict variable due to missing resolving method\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -3373,10 +3355,8 @@ RETCODE SCIPconsCheck(
    if( *result != SCIP_INFEASIBLE
       && *result != SCIP_FEASIBLE )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "feasibility check of constraint handler <%s> on constraint <%s> returned invalid result <%d>", 
+      errorMessage("feasibility check of constraint handler <%s> on constraint <%s> returned invalid result <%d>\n", 
          conshdlr->name, cons->name, *result);
-      errorMessage(s);
       return SCIP_INVALIDRESULT;
    }
 

@@ -144,9 +144,7 @@ RETCODE SCIPdispInit(
 
    if( disp->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "display column <%s> already initialized", disp->name);
-      errorMessage(s);
+      errorMessage("display column <%s> already initialized\n", disp->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -170,9 +168,7 @@ RETCODE SCIPdispExit(
 
    if( !disp->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "display column <%s> not initialized", disp->name);
-      errorMessage(s);
+      errorMessage("display column <%s> not initialized\n", disp->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -389,11 +385,8 @@ RETCODE SCIPdispAutoActivate(
          }
          else
          {
-            char s[MAXSTRLEN];
-            
             disps[i]->active = FALSE;
-            sprintf(s, "deactivated display column <%s>", disps[i]->name);
-            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, "deactivated display column <%s>\n", disps[i]->name);
          }
       }
    }

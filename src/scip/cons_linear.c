@@ -244,7 +244,7 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
-      errorMessage("event handler for linear constraints not found");
+      errorMessage("event handler for linear constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -555,10 +555,8 @@ RETCODE consdataCreate(
 
    if( SCIPisGT(scip, lhs, rhs) )
    {
-      char s[MAXSTRLEN];
-      errorMessage("left hand side of linear constraint greater than right hand side");
-      sprintf(s, "  (lhs=%f, rhs=%f)", lhs, rhs);
-      errorMessage(s);
+      errorMessage("left hand side of linear constraint greater than right hand side\n");
+      errorMessage(" -> lhs=%f, rhs=%f", lhs, rhs);
       return SCIP_INVALIDDATA;
    }
 
@@ -2131,7 +2129,7 @@ RETCODE applyFixings(
       switch( SCIPvarGetStatus(var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         errorMessage("original variable in transformed linear constraint");
+         errorMessage("original variable in transformed linear constraint\n");
          return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -2188,7 +2186,7 @@ RETCODE applyFixings(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -3240,7 +3238,7 @@ int getVarWeight(
    case SCIP_VARTYPE_CONTINUOUS:
       return CONTWEIGHT;
    default:
-      errorMessage("invalid variable type");
+      errorMessage("invalid variable type\n");
       abort();
    }
 }
@@ -3723,7 +3721,7 @@ RETCODE preprocessConstraintPairs(
             break;
 
          default:
-            errorMessage("invalid comparison result");
+            errorMessage("invalid comparison result\n");
             abort();
          }
          assert(var != NULL);
@@ -4359,7 +4357,7 @@ RETCODE SCIPincludeLinconsUpgrade(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("linear constraint handler not found");
+      errorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -4402,7 +4400,7 @@ RETCODE SCIPcreateConsLinear(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("linear constraint handler not found");
+      errorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -4448,7 +4446,7 @@ RETCODE SCIPaddCoefLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not linear");
+      errorMessage("constraint is not linear\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -4470,7 +4468,7 @@ RETCODE SCIPgetLhsLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not linear");
+      errorMessage("constraint is not linear\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -4495,7 +4493,7 @@ RETCODE SCIPgetRhsLinear(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not linear");
+      errorMessage("constraint is not linear\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -4516,7 +4514,7 @@ RETCODE SCIPchgLhsLinear(
 {
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not linear");
+      errorMessage("constraint is not linear\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -4534,7 +4532,7 @@ RETCODE SCIPchgRhsLinear(
 {
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not linear");
+      errorMessage("constraint is not linear\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -4588,7 +4586,7 @@ RETCODE SCIPupgradeConsLinear(
    conshdlr = SCIPconsGetHdlr(cons);
    if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not linear");
+      errorMessage("constraint is not linear\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -4605,7 +4603,7 @@ RETCODE SCIPupgradeConsLinear(
    /* check, if the constraint is already stored as LP row */
    if( consdata->row != NULL )
    {
-      errorMessage("cannot upgrade linear constraint that is already stored as LP row");
+      errorMessage("cannot upgrade linear constraint that is already stored as LP row\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -4677,7 +4675,7 @@ RETCODE SCIPupgradeConsLinear(
             nnegcont++;
          break;
       default:
-         errorMessage("unknown variable type");
+         errorMessage("unknown variable type\n");
          return SCIP_INVALIDDATA;
       }
       if( SCIPisEQ(scip, val, 1.0) )

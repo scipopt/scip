@@ -887,9 +887,7 @@ RETCODE rowAddCoeff(
 
    if( row->nlocks > 0 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot add a coefficient to the locked unmodifiable row <%s>", row->name);
-      errorMessage(s);
+      errorMessage("cannot add a coefficient to the locked unmodifiable row <%s>\n", row->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -942,9 +940,7 @@ RETCODE rowDelCoeffPos(
 
    if( row->nlocks > 0 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot delete a coefficient from the locked unmodifiable row <%s>", row->name);
-      errorMessage(s);
+      errorMessage("cannot delete a coefficient from the locked unmodifiable row <%s>\n", row->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -998,9 +994,7 @@ RETCODE rowChgCoeffPos(
 
    if( row->nlocks > 0 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot change a coefficient of the locked unmodifiable row <%s>", row->name);
-      errorMessage(s);
+      errorMessage("cannot change a coefficient of the locked unmodifiable row <%s>\n", row->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -1053,7 +1047,7 @@ RETCODE rowSideChanged(
          row->rhschanged = TRUE;
          break;
       default:
-         errorMessage("Unknown row side type");
+         errorMessage("Unknown row side type\n");
          abort();
       }
       
@@ -1400,9 +1394,7 @@ RETCODE SCIPcolDelCoeff(
    pos = colSearchCoeff(col, row);
    if( pos == -1 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "coefficient for row <%s> doesn't exist in column <%s>", row->name, SCIPvarGetName(col->var));
-      errorMessage(s);
+      errorMessage("coefficient for row <%s> doesn't exist in column <%s>\n", row->name, SCIPvarGetName(col->var));
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < col->len);
@@ -2255,9 +2247,7 @@ RETCODE SCIProwLock(
    /* check, if row is modifiable */
    if( row->modifiable )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot lock the modifiable row <%s>", row->name);
-      errorMessage(s);
+      errorMessage("cannot lock the modifiable row <%s>\n", row->name);
       return SCIP_INVALIDDATA;
    }
    
@@ -2278,18 +2268,14 @@ RETCODE SCIProwUnlock(
    /* check, if row is modifiable */
    if( row->modifiable )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot unlock the modifiable row <%s>", row->name);
-      errorMessage(s);
+      errorMessage("cannot unlock the modifiable row <%s>\n", row->name);
       return SCIP_INVALIDDATA;
    }
    
    /* check, if row is locked */
    if( row->nlocks == 0 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "row <%s> has no sealed lock", row->name);
-      errorMessage(s);
+      errorMessage("row <%s> has no sealed lock\n", row->name);
       return SCIP_INVALIDDATA;
    }
 
@@ -2339,9 +2325,7 @@ RETCODE SCIProwDelCoeff(
    pos = rowSearchCoeff(row, col);
    if( pos == -1 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "coefficient for column <%s> doesn't exist in row <%s>", SCIPvarGetName(col->var), row->name);
-      errorMessage(s);
+      errorMessage("coefficient for column <%s> doesn't exist in row <%s>\n", SCIPvarGetName(col->var), row->name);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < row->len);
@@ -4956,10 +4940,9 @@ RETCODE lpSolvePrimal(
       if( !SCIPlpiIsStable(lp->lpi) )
       {
          char lpname[MAXSTRLEN];
-         char s[MAXSTRLEN];
+
          sprintf(lpname, "lp%d.lp", stat->nlps);
-         sprintf(s, "numerical troubles in LP %d. Saved in file <%s>.", stat->nlps, lpname);
-         errorMessage(s);
+         errorMessage("numerical troubles in LP %d, saved in file <%s>\n", stat->nlps, lpname);
 
          CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, lpname) );
          
@@ -5003,14 +4986,14 @@ RETCODE lpSolvePrimal(
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-      errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists");
+      errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       lp->objval = -set->infinity;
       return SCIP_LPERROR;
    }
    else
    {
-      errorMessage("Unknown return status of primal simplex");
+      errorMessage("Unknown return status of primal simplex\n");
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
    }
@@ -5096,10 +5079,9 @@ RETCODE lpSolveDual(
       if( !SCIPlpiIsStable(lp->lpi) )
       {
          char lpname[MAXSTRLEN];
-         char s[MAXSTRLEN];
+
          sprintf(lpname, "lp%d.lp", stat->nlps);
-         sprintf(s, "numerical troubles in LP %d. Saved in file <%s>.", stat->nlps, lpname);
-         errorMessage(s);
+         errorMessage("numerical troubles in LP %d, saved in file <%s>\n", stat->nlps, lpname);
 
          CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, lpname) );
          
@@ -5148,7 +5130,7 @@ RETCODE lpSolveDual(
    }
    else
    {
-      errorMessage("Unknown return status of dual simplex");
+      errorMessage("Unknown return status of dual simplex\n");
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       lp->objval = -set->infinity;
       return SCIP_LPERROR;
@@ -5196,6 +5178,7 @@ RETCODE SCIPlpSolve(
       char fname[MAXSTRLEN];
       sprintf(fname, "lp%lld_%d.lp", stat->nnodes, stat->lpcount);
       CHECK_OKAY( SCIPlpWrite(lp, fname) );
+      printf("wrote LP to file <%s>\n", fname);
    }
 #endif
 
@@ -5327,7 +5310,7 @@ RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_ITERLIMIT:
-         errorMessage("LP solver reached iteration limit -- this should not happen!");
+         errorMessage("LP solver reached iteration limit -- this should not happen!\n");
          return SCIP_ERROR;
 
       case SCIP_LPSOLSTAT_TIMELIMIT:
@@ -5336,11 +5319,11 @@ RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_ERROR:
       case SCIP_LPSOLSTAT_NOTSOLVED:
-         errorMessage("Error in LP solver");
+         errorMessage("Error in LP solver\n");
          return SCIP_LPERROR;
 
       default:
-         errorMessage("Unknown LP solution status");
+         errorMessage("Unknown LP solution status\n");
          return SCIP_ERROR;
       }
    }

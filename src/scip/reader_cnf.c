@@ -46,10 +46,7 @@ void readError(
    const char*      errormsg            /**< error message */
    )
 {
-   char s[MAXSTRLEN];
-
-   sprintf(s, "read error in line <%d>: %s", linecount, errormsg);
-   errorMessage(s);
+   errorMessage("read error in line <%d>: %s\n", linecount, errormsg);
 }
 
 static
@@ -187,8 +184,8 @@ RETCODE readCnf(
    }
 
    /* get parameter values */
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnf/dynamiccols", &dynamiccols) );
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnf/dynamicrows", &dynamicrows) );
+   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnfreader/dynamiccols", &dynamiccols) );
+   CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnfreader/dynamicrows", &dynamicrows) );
 
    /* get temporary memory */
    CHECK_OKAY( SCIPallocBufferArray(scip, &vars, nvars) );
@@ -337,9 +334,7 @@ DECL_READERREAD(readerReadCnf)
    f = fopen(filename, "r");
    if( f == NULL )
    {
-      char s[1024];
-      sprintf(s, "cannot open file <%s> for reading", filename);
-      errorMessage(s);
+      errorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
    }
@@ -381,10 +376,10 @@ RETCODE SCIPincludeReaderCnf(
 
    /* add cnf reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reading/cnf/dynamiccols", "should columns be added and removed dynamically to the LP?",
+                  "reading/cnfreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reading/cnf/dynamicrows", "should rows be added and removed dynamically to the LP?",
+                  "reading/cnfreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
                   NULL, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;

@@ -551,9 +551,7 @@ RETCODE SCIPbranchruleInit(
 
    if( branchrule->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "branching rule <%s> already initialized", branchrule->name);
-      errorMessage(s);
+      errorMessage("branching rule <%s> already initialized\n", branchrule->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -577,9 +575,7 @@ RETCODE SCIPbranchruleExit(
 
    if( !branchrule->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "branching rule <%s> not initialized", branchrule->name);
-      errorMessage(s);
+      errorMessage("branching rule <%s> not initialized\n", branchrule->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -613,10 +609,8 @@ RETCODE SCIPbranchruleExecLPSol(
          && *result != SCIP_SEPARATED
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "branching rule <%s> returned invalid result code <%d> from LP solution branching",
+         errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
             branchrule->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
    }
@@ -644,10 +638,8 @@ RETCODE SCIPbranchruleExecPseudoSol(
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "branching rule <%s> returned invalid result code <%d> from LP solution branching",
+         errorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
             branchrule->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
    }

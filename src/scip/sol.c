@@ -376,7 +376,7 @@ RETCODE solUnlinkVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -451,7 +451,7 @@ RETCODE SCIPsolSetVal(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot set solution value for fixed variable");
+      errorMessage("cannot set solution value for fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -460,14 +460,14 @@ RETCODE SCIPsolSetVal(
          (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot set solution value for multiple aggregated variable");
+      errorMessage("cannot set solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), SCIPvarGetNegationConstant(var) - val);
       
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -511,7 +511,7 @@ RETCODE SCIPsolIncVal(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot set solution value for fixed variable");
+      errorMessage("cannot set solution value for fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -519,14 +519,14 @@ RETCODE SCIPsolIncVal(
       return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetAggrVar(var), incval/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot set solution value for multiple aggregated variable");
+      errorMessage("cannot set solution value for multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), -incval);
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -598,7 +598,7 @@ RETCODE SCIPsolGetVal(
       return SCIP_OKAY;
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }

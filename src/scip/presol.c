@@ -136,9 +136,7 @@ RETCODE SCIPpresolInit(
 
    if( presol->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "presolver <%s> already initialized", presol->name);
-      errorMessage(s);
+      errorMessage("presolver <%s> already initialized\n", presol->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -183,9 +181,7 @@ RETCODE SCIPpresolExit(
 
    if( !presol->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "presolver <%s> not initialized", presol->name);
-      errorMessage(s);
+      errorMessage("presolver <%s> not initialized\n", presol->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -296,9 +292,7 @@ RETCODE SCIPpresolExec(
       && *result != SCIP_DIDNOTFIND
       && *result != SCIP_DIDNOTRUN )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "presolver <%s> returned invalid result <%d>", presol->name, *result);
-      errorMessage(s);
+      errorMessage("presolver <%s> returned invalid result <%d>\n", presol->name, *result);
       return SCIP_INVALIDRESULT;
    }
 

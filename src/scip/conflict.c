@@ -268,9 +268,7 @@ RETCODE SCIPconflicthdlrInit(
 
    if( conflicthdlr->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Conflict handler <%s> already initialized", conflicthdlr->name);
-      errorMessage(s);
+      errorMessage("Conflict handler <%s> already initialized\n", conflicthdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -294,9 +292,7 @@ RETCODE SCIPconflicthdlrExit(
 
    if( !conflicthdlr->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Conflict handler <%s> not initialized", conflicthdlr->name);
-      errorMessage(s);
+      errorMessage("Conflict handler <%s> not initialized\n", conflicthdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -334,10 +330,8 @@ RETCODE SCIPconflicthdlrExec(
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "execution method of conflict handler <%s> returned invalid result <%d>", 
+         errorMessage("execution method of conflict handler <%s> returned invalid result <%d>\n", 
             conflicthdlr->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
    }
@@ -554,7 +548,7 @@ RETCODE conflictAnalyze(
    /* check, if there is something to analyze */
    if( SCIPpqueueNElems(conflict->varqueue) == 0 )
    {
-      errorMessage("no conflict variables to analyze");
+      errorMessage("no conflict variables to analyze\n");
       return SCIP_INVALIDDATA;
    }
 

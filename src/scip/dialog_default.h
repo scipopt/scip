@@ -74,13 +74,13 @@ DECL_DIALOGEXEC(SCIPdialogExecQuit);
 extern
 DECL_DIALOGEXEC(SCIPdialogExecRead);
 
-/** dialog execution method for the set read command */
+/** dialog execution method for the set load command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetRead);
+DECL_DIALOGEXEC(SCIPdialogExecSetLoad);
 
-/** dialog execution method for the set write command */
+/** dialog execution method for the set save command */
 extern
-DECL_DIALOGEXEC(SCIPdialogExecSetWrite);
+DECL_DIALOGEXEC(SCIPdialogExecSetSave);
 
 /** dialog execution method for the set parameter command */
 extern

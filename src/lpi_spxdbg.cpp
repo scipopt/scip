@@ -15,8 +15,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lpi_spx.c
- * @brief  LP interface for SOPLEX 1.2.1
+/**@file   lpi_spxdbg.c
+ * @brief  LP interface for SOPLEX 1.2.1 debug mode
  * @author Tobias Achterberg
  */
 
@@ -36,8 +36,8 @@
 /* SOPLEX defines it's own DEBUG which should be turned off */
 #undef DEBUG
 
-/* include SOPLEX in non-debug mode */
-#define NDEBUG
+/* include SOPLEX in debug mode */
+#undef NDEBUG
 
 #include "spxdefines.h"
 #include "soplex.h"

@@ -107,7 +107,7 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
-      errorMessage("event handler for set partitioning / packing / covering constraints not found");
+      errorMessage("event handler for set partitioning / packing / covering constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -324,7 +324,7 @@ void consdataLockRounding(
       SCIPvarLock(var, nlockspos, nlocksneg);
       break;
    default:
-      errorMessage("unknown setppc type");
+      errorMessage("unknown setppc type\n");
       abort();
    }
 }
@@ -353,7 +353,7 @@ void consdataUnlockRounding(
       SCIPvarUnlock(var, nunlockspos, nunlocksneg);
       break;
    default:
-      errorMessage("unknown setppc type");
+      errorMessage("unknown setppc type\n");
       abort();
    }
 }
@@ -518,7 +518,7 @@ void consdataPrint(
       fprintf(file, "<= 1\n");
       break;
    default:
-      errorMessage("unknown setppc type");
+      errorMessage("unknown setppc type\n");
       abort();
    }
 }
@@ -910,7 +910,7 @@ Bool checkCons(
    case SCIP_SETPPCTYPE_COVERING:
       return SCIPisFeasGE(scip, sum, 1.0);
    default:
-      errorMessage("unknown setppc type");
+      errorMessage("unknown setppc type\n");
       abort();
    }
 }
@@ -945,7 +945,7 @@ RETCODE createRow(
       rhs = SCIPinfinity(scip);
       break;
    default:
-      errorMessage("unknown setppc type");
+      errorMessage("unknown setppc type\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -2169,7 +2169,7 @@ RETCODE createConsSetppc(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("set partitioning / packing / covering constraint handler not found");
+      errorMessage("set partitioning / packing / covering constraint handler not found\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -2367,7 +2367,7 @@ DECL_EVENTEXEC(eventExecSetppc)
       consdata->nfixedzeros--;
       break;
    default:
-      errorMessage("invalid event type");
+      errorMessage("invalid event type\n");
       abort();
    }
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);

@@ -28,29 +28,34 @@
 #include "message.h"
 
 
-/** prints an error message */
-void errorMessage_call(
-   const char*      msg,                /**< message to print */
-   const char*      filename,           /**< name of the file, where the error occured */
-   int              line                /**< line of the file, where the error occured */
-   )
-{
-   fprintf(stderr, "[%s:%d] ERROR: %s\n", filename, line, msg);
-}
-
-/** prints a warning message */
-void warningMessage(
-   const char*      msg                 /**< message to print */
-   )
-{
-   fprintf(stderr, "Warning: %s\n", msg);
-}
-
-/** prints a message depending on the verbosity level */
+/** prints a message depending on the verbosity level, acting like the printf() command */
 void infoMessage(
    VERBLEVEL        verblevel,          /**< actual verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      msg                 /**< message to print */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert(msgverblevel > SCIP_VERBLEVEL_NONE);
+   assert(msgverblevel <= SCIP_VERBLEVEL_FULL);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( msgverblevel <= verblevel )
+   {
+      va_start(ap, formatstr);
+      vprintf(formatstr, ap);
+      va_end(ap);
+   }
+}
+
+/** prints a message depending on the verbosity level, acting like the vprintf() command */
+void vinfoMessage(
+   VERBLEVEL        verblevel,          /**< actual verbosity level */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
    )
 {
    assert(msgverblevel > SCIP_VERBLEVEL_NONE);
@@ -58,9 +63,6 @@ void infoMessage(
    assert(verblevel <= SCIP_VERBLEVEL_FULL);
 
    if( msgverblevel <= verblevel )
-   {
-      printf(msg);
-      printf("\n");
-   }
+      vprintf(formatstr, ap);
 }
 

@@ -272,6 +272,12 @@ RETCODE solveNodeLP(
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
    assert(lp->solved);
 
+   /* display node information line for root node */
+   if( SCIPnodeGetDepth(tree->actnode) == 0 && (VERBLEVEL)set->verblevel >= SCIP_VERBLEVEL_HIGH )
+   {
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+   }
+
    /* price-and-cut loop */
    mustprice = TRUE;
    mustsepar = TRUE;
@@ -315,6 +321,12 @@ RETCODE solveNodeLP(
          CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
          assert(lp->solved);
 
+         /* display node information line for root node */
+         if( SCIPnodeGetDepth(tree->actnode) == 0 && mustprice && (VERBLEVEL)set->verblevel >= SCIP_VERBLEVEL_FULL )
+         {
+            CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+         }
+
          /* if the LP is unbounded, we can stop pricing */
          mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
       }
@@ -331,7 +343,7 @@ RETCODE solveNodeLP(
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT);
 
       /* separation (has not to be done completely, because we just want to increase the lower bound) */
-      if( mustsepar )
+      if( !(*cutoff) && mustsepar )
       {
          Bool separateagain;
          Bool enoughcuts;
@@ -420,9 +432,9 @@ RETCODE solveNodeLP(
          /* increase separation round counter */
          stat->nseparounds++;
 
+         /* display node information line for root node */
          if( SCIPnodeGetDepth(tree->actnode) == 0 )
          {
-            /* display node information line for root node */
             CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
          }
       }
@@ -565,7 +577,7 @@ RETCODE redcostStrengthening(
          break;
 
       default:
-         errorMessage("invalid basis state");
+         errorMessage("invalid basis state\n");
          return SCIP_INVALIDDATA;
       }
    }
@@ -665,10 +677,8 @@ RETCODE enforceConstraints(
             CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, objinfeasible, &result) );
             if( SCIPsepastoreGetNCuts(sepastore) != 0 )
             {
-               char s[MAXSTRLEN];
-               sprintf(s, "pseudo enforcing method of constraint handler <%s> separated cuts",
+               errorMessage("pseudo enforcing method of constraint handler <%s> separated cuts\n",
                   SCIPconshdlrGetName(conshdlrs_enfo[h]));
-               errorMessage(s);
                return SCIP_INVALIDRESULT;
             }
          }
@@ -752,12 +762,8 @@ RETCODE enforceConstraints(
             break;
 
          default:
-            {
-               char s[MAXSTRLEN];
-               sprintf(s, "invalid result code <%d> from enforcing method of constraint handler <%s>",
-                  result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
-               errorMessage(s);
-            }
+            errorMessage("invalid result code <%d> from enforcing method of constraint handler <%s>\n",
+               result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
             return SCIP_INVALIDRESULT;
          }
          assert(!(*solveagain) || (resolved && *infeasible));
@@ -824,12 +830,8 @@ RETCODE enforceConstraints(
          break;
 
       default:
-         {
-            char s[MAXSTRLEN];
-            sprintf(s, "invalid result code <%d> from SCIPbranchPseudo()", result);
-            errorMessage(s);
-            abort();
-         }
+         errorMessage("invalid result code <%d> from SCIPbranchPseudo()\n", result);
+         abort();
       }
    }
    assert(*infeasible || !resolved);

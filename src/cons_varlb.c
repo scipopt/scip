@@ -65,7 +65,7 @@
 static
 DECL_CONSFREE(consFreeVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -80,7 +80,7 @@ DECL_CONSFREE(consFreeVarlb)
 static
 DECL_CONSINIT(consInitVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -95,7 +95,7 @@ DECL_CONSINIT(consInitVarlb)
 static
 DECL_CONSEXIT(consExitVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -110,7 +110,7 @@ DECL_CONSEXIT(consExitVarlb)
 static
 DECL_CONSSOLSTART(consSolstartVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -125,7 +125,7 @@ DECL_CONSSOLSTART(consSolstartVarlb)
 static
 DECL_CONSDELETE(consDeleteVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -140,7 +140,7 @@ DECL_CONSDELETE(consDeleteVarlb)
 static
 DECL_CONSTRANS(consTransVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -155,7 +155,7 @@ DECL_CONSTRANS(consTransVarlb)
 static
 DECL_CONSINITLP(consInitlpVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -170,7 +170,7 @@ DECL_CONSINITLP(consInitlpVarlb)
 static
 DECL_CONSSEPA(consSepaVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -184,7 +184,7 @@ DECL_CONSSEPA(consSepaVarlb)
 static
 DECL_CONSENFOLP(consEnfolpVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -195,7 +195,7 @@ DECL_CONSENFOLP(consEnfolpVarlb)
 static
 DECL_CONSENFOPS(consEnfopsVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -206,7 +206,7 @@ DECL_CONSENFOPS(consEnfopsVarlb)
 static
 DECL_CONSCHECK(consCheckVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -218,7 +218,7 @@ DECL_CONSCHECK(consCheckVarlb)
 static
 DECL_CONSPROP(consPropVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -233,7 +233,7 @@ DECL_CONSPROP(consPropVarlb)
 static
 DECL_CONSPRESOL(consPresolVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -248,7 +248,7 @@ DECL_CONSPRESOL(consPresolVarlb)
 static
 DECL_CONSRESCVAR(consRescvarVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -262,7 +262,7 @@ DECL_CONSRESCVAR(consRescvarVarlb)
 static
 DECL_CONSLOCK(consLockVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -273,7 +273,7 @@ DECL_CONSLOCK(consLockVarlb)
 static
 DECL_CONSUNLOCK(consUnlockVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -285,7 +285,7 @@ DECL_CONSUNLOCK(consUnlockVarlb)
 static
 DECL_CONSACTIVE(consActiveVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -300,7 +300,7 @@ DECL_CONSACTIVE(consActiveVarlb)
 static
 DECL_CONSDEACTIVE(consDeactiveVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -315,7 +315,7 @@ DECL_CONSDEACTIVE(consDeactiveVarlb)
 static
 DECL_CONSENABLE(consEnableVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -330,7 +330,7 @@ DECL_CONSENABLE(consEnableVarlb)
 static
 DECL_CONSDISABLE(consDisableVarlb)
 {  /*lint --e{715}*/
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -463,14 +463,14 @@ RETCODE SCIPcreateConsVarlb(
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
-   errorMessage("method of varlb constraint handler not implemented yet");
+   errorMessage("method of varlb constraint handler not implemented yet\n");
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the varlb constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("varlb constraint handler not found");
+      errorMessage("varlb constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 

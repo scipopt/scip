@@ -65,7 +65,7 @@
 static
 DECL_CONSFREE(consFreeKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -80,7 +80,7 @@ DECL_CONSFREE(consFreeKnapsack)
 static
 DECL_CONSINIT(consInitKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -95,7 +95,7 @@ DECL_CONSINIT(consInitKnapsack)
 static
 DECL_CONSEXIT(consExitKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -110,7 +110,7 @@ DECL_CONSEXIT(consExitKnapsack)
 static
 DECL_CONSSOLSTART(consSolstartKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -125,7 +125,7 @@ DECL_CONSSOLSTART(consSolstartKnapsack)
 static
 DECL_CONSDELETE(consDeleteKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -140,7 +140,7 @@ DECL_CONSDELETE(consDeleteKnapsack)
 static
 DECL_CONSTRANS(consTransKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -155,7 +155,7 @@ DECL_CONSTRANS(consTransKnapsack)
 static
 DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -170,7 +170,7 @@ DECL_CONSINITLP(consInitlpKnapsack)
 static
 DECL_CONSSEPA(consSepaKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -184,7 +184,7 @@ DECL_CONSSEPA(consSepaKnapsack)
 static
 DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -195,7 +195,7 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
 static
 DECL_CONSENFOPS(consEnfopsKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -206,7 +206,7 @@ DECL_CONSENFOPS(consEnfopsKnapsack)
 static
 DECL_CONSCHECK(consCheckKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -218,7 +218,7 @@ DECL_CONSCHECK(consCheckKnapsack)
 static
 DECL_CONSPROP(consPropKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -233,7 +233,7 @@ DECL_CONSPROP(consPropKnapsack)
 static
 DECL_CONSPRESOL(consPresolKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -248,7 +248,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
 static
 DECL_CONSRESCVAR(consRescvarKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -262,7 +262,7 @@ DECL_CONSRESCVAR(consRescvarKnapsack)
 static
 DECL_CONSLOCK(consLockKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -273,7 +273,7 @@ DECL_CONSLOCK(consLockKnapsack)
 static
 DECL_CONSUNLOCK(consUnlockKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -285,7 +285,7 @@ DECL_CONSUNLOCK(consUnlockKnapsack)
 static
 DECL_CONSACTIVE(consActiveKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -300,7 +300,7 @@ DECL_CONSACTIVE(consActiveKnapsack)
 static
 DECL_CONSDEACTIVE(consDeactiveKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -315,7 +315,7 @@ DECL_CONSDEACTIVE(consDeactiveKnapsack)
 static
 DECL_CONSENABLE(consEnableKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -330,7 +330,7 @@ DECL_CONSENABLE(consEnableKnapsack)
 static
 DECL_CONSDISABLE(consDisableKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -444,14 +444,14 @@ RETCODE SCIPcreateConsKnapsack(
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
-   errorMessage("method of knapsack constraint handler not implemented yet");
+   errorMessage("method of knapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the knapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("knapsack constraint handler not found");
+      errorMessage("knapsack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 

@@ -81,12 +81,10 @@ DECL_PRESOLEXEC(presolExecDualfix)
       /* apply the fixing */
       if( SCIPisInfinity(scip, ABS(bound)) )
       {
-         char msg[MAXSTRLEN];
-
          debugMessage(" -> unbounded fixing\n");
-         sprintf(msg, "problem infeasible or unbounded: variable <%s> with objective %g can be made infinitely %s",
+         SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+            "problem infeasible or unbounded: variable <%s> with objective %g can be made infinitely %s\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound < 0.0 ? "small" : "large");
-         SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL, msg);
          *result = SCIP_UNBOUNDED;
          return SCIP_OKAY;
       }

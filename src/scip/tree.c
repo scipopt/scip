@@ -200,7 +200,7 @@ void SCIPnodeCaptureLPIState(
       subrootCaptureLPIState(node->data.subroot, nuses);
       break;
    default:
-      errorMessage("node for capturing the LPI state is neither fork nor subroot");
+      errorMessage("node for capturing the LPI state is neither fork nor subroot\n");
       abort();
    }
 }
@@ -222,7 +222,7 @@ RETCODE SCIPnodeReleaseLPIState(
    case SCIP_NODETYPE_SUBROOT:
       return subrootReleaseLPIState(node->data.subroot, memhdr, lp);
    default:
-      errorMessage("node for releasing the LPI state is neither fork nor subroot");
+      errorMessage("node for releasing the LPI state is neither fork nor subroot\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -481,16 +481,16 @@ RETCODE nodeReleaseParent(
          hasChildren = TRUE; /* don't kill the active node at this point */
          break;
       case SCIP_NODETYPE_SIBLING:
-         errorMessage("Sibling cannot be a parent node");
+         errorMessage("Sibling cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_CHILD:
-         errorMessage("Child cannot be a parent node");
+         errorMessage("Child cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_LEAF:
-         errorMessage("Leaf cannot be a parent node");
+         errorMessage("Leaf cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_DEADEND:
-         errorMessage("Deadend cannot be a parent node");
+         errorMessage("Deadend cannot be a parent node\n");
          abort();
       case SCIP_NODETYPE_JUNCTION:
          assert(parent->data.junction.nchildren > 0);
@@ -510,7 +510,7 @@ RETCODE nodeReleaseParent(
          hasChildren = (parent->data.subroot->nchildren > 0);
          break;
       default:
-         errorMessage("Unknown node type");
+         errorMessage("Unknown node type\n");
          abort();
       }
 
@@ -678,7 +678,7 @@ RETCODE SCIPnodeFree(
       CHECK_OKAY( subrootFree(&((*node)->data.subroot), memhdr, set, lp) );
       break;
    default:
-      errorMessage("Unknown node type");
+      errorMessage("Unknown node type\n");
       abort();
    }
 
@@ -720,19 +720,19 @@ RETCODE nodeDeactivate(
    case SCIP_NODETYPE_ACTNODE:
       if( tree->nchildren > 0 )
       {
-         errorMessage("Cannot deactivate active node with children");
+         errorMessage("Cannot deactivate active node with children\n");
          abort();
       }
       hasChildren = FALSE;
       break;
    case SCIP_NODETYPE_SIBLING:
-      errorMessage("Cannot deactivate sibling (which shouldn't be active)");
+      errorMessage("Cannot deactivate sibling (which shouldn't be active)\n");
       abort();
    case SCIP_NODETYPE_CHILD:
-      errorMessage("Cannot deactivate child (which shouldn't be active)");
+      errorMessage("Cannot deactivate child (which shouldn't be active)\n");
       abort();
    case SCIP_NODETYPE_LEAF:
-      errorMessage("Cannot deactivate leaf (which shouldn't be active)");
+      errorMessage("Cannot deactivate leaf (which shouldn't be active)\n");
       abort();
    case SCIP_NODETYPE_DEADEND:
       hasChildren = FALSE;
@@ -749,7 +749,7 @@ RETCODE nodeDeactivate(
       hasChildren = ((*node)->data.subroot->nchildren > 0);
       break;
    default:
-      errorMessage("Unknown node type");
+      errorMessage("Unknown node type\n");
       abort();
    }
 
@@ -873,10 +873,8 @@ RETCODE SCIPnodeAddBoundchg(
 
       if( SCIPsetIsLE(set, newbound, oldbound) )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "variable's lower bound was not tightened: var <%s>, oldbound=%f, newbound=%f",
+         errorMessage("variable's lower bound was not tightened: var <%s>, oldbound=%f, newbound=%f\n",
             SCIPvarGetName(var), oldbound, newbound);
-         errorMessage(s);
          return SCIP_INVALIDDATA;
       }
    }
@@ -887,10 +885,8 @@ RETCODE SCIPnodeAddBoundchg(
 
       if( SCIPsetIsGE(set, newbound, oldbound) )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "variable's upper bound was not tightened: var <%s>, oldbound=%f, newbound=%f",
+         errorMessage("variable's upper bound was not tightened: var <%s>, oldbound=%f, newbound=%f\n",
             SCIPvarGetName(var), oldbound, newbound);
-         errorMessage(s);
          return SCIP_INVALIDDATA;
       }
    }
@@ -1064,16 +1060,16 @@ void treeUpdatePathLPSize(
          assert(i == tree->pathlen-1);
          break;
       case SCIP_NODETYPE_SIBLING:
-         errorMessage("Sibling cannot be in the active path");
+         errorMessage("Sibling cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_CHILD:
-         errorMessage("Child cannot be in the active path");
+         errorMessage("Child cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_LEAF:
-         errorMessage("Leaf cannot be in the active path");
+         errorMessage("Leaf cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_DEADEND:
-         errorMessage("Deadend cannot be in the active path");
+         errorMessage("Deadend cannot be in the active path\n");
          abort();
       case SCIP_NODETYPE_JUNCTION:
          break;
@@ -1088,7 +1084,7 @@ void treeUpdatePathLPSize(
          nrows = node->data.subroot->nrows;
          break;
       default:
-         errorMessage("Unknown node type");
+         errorMessage("Unknown node type\n");
          abort();
       }
       tree->pathnlpcols[i] = ncols;
@@ -1414,9 +1410,8 @@ void treeCheckPath(
          assert(d == tree->pathlen-1);
          break;
       default:
-         sprintf(s, "node in depth %d on active path has to be of type FORK, SUBROOT, or ACTNODE, but is %d",
+         errorMessage("node in depth %d on active path has to be of type FORK, SUBROOT, or ACTNODE, but is %d\n",
             d, SCIPnodeGetType(node));
-         errorMessage(s);
          abort();
       }
       assert(tree->pathnlpcols[d] == ncols);
@@ -1983,7 +1978,7 @@ RETCODE SCIPnodeActivate(
          break;
 
       default:
-         errorMessage("Selected node is neither sibling, child, nor leaf");
+         errorMessage("Selected node is neither sibling, child, nor leaf\n");
          return SCIP_INVALIDDATA;
       }
 
@@ -2116,10 +2111,8 @@ RETCODE SCIPtreeSetNodesel(
       /* issue message */
       if( stat->nnodes > 0 )
       {
-         char s[MAXSTRLEN];
-         
-         sprintf(s, "(node %lld) switching to node selector <%s>", stat->nnodes, SCIPnodeselGetName(nodesel));
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
       }
    }
 
@@ -2208,7 +2201,7 @@ RETCODE SCIPtreeBranchVar(
 
    if( var == NULL )
    {
-      errorMessage("cannot branch on a fixed variable");
+      errorMessage("cannot branch on a fixed variable\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -2317,7 +2310,7 @@ RETCODE SCIPtreeUpdateVar(
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
-      errorMessage("tree was informed of an objective change of a non-mutable variable");
+      errorMessage("tree was informed of an objective change of a non-mutable variable\n");
       return SCIP_INVALIDDATA;
    }
 

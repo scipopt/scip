@@ -328,7 +328,7 @@ RETCODE SCIPcutpoolAddNewRow(
    /* check, if row is modifiable */
    if( row->modifiable )
    {
-      errorMessage("cannot store a modifiable row in a cut pool");
+      errorMessage("cannot store a modifiable row in a cut pool\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -421,9 +421,7 @@ RETCODE SCIPcutpoolDelRow(
    cut = (CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    if( cut == NULL )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "row <%s> is not existing in cutpool %p", SCIProwGetName(row), cutpool);
-      errorMessage(s);
+      errorMessage("row <%s> is not existing in cutpool %p\n", SCIProwGetName(row), cutpool);
       return SCIP_INVALIDDATA;
    }
 

@@ -416,7 +416,7 @@ void probRemoveVar(
       prob->ncont--;
       break;
    default:
-      errorMessage("unknown variable type");
+      errorMessage("unknown variable type\n");
       abort();
    }
 

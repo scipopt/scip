@@ -900,7 +900,7 @@ void paramFree(
       }
       break;
    default:
-      errorMessage("invalid parameter type");
+      errorMessage("invalid parameter type\n");
       abort();
    }
 
@@ -931,9 +931,7 @@ RETCODE paramParseBool(
    }
    else
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "invalid parameter value <%s> for Bool parameter <%s>", valuestr, param->name);
-      errorMessage(s);
+      errorMessage("invalid parameter value <%s> for Bool parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -960,9 +958,7 @@ RETCODE paramParseInt(
    }
    else
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "invalid parameter value <%s> for int parameter <%s>", valuestr, param->name);
-      errorMessage(s);
+      errorMessage("invalid parameter value <%s> for int parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -989,9 +985,7 @@ RETCODE paramParseLongint(
    }
    else
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "invalid parameter value <%s> for Longint parameter <%s>", valuestr, param->name);
-      errorMessage(s);
+      errorMessage("invalid parameter value <%s> for Longint parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -1018,9 +1012,7 @@ RETCODE paramParseReal(
    }
    else
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "invalid parameter value <%s> for Real parameter <%s>", valuestr, param->name);
-      errorMessage(s);
+      errorMessage("invalid parameter value <%s> for Real parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -1047,9 +1039,7 @@ RETCODE paramParseChar(
    }
    else
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "invalid parameter value <%s> for char parameter <%s>", valuestr, param->name);
-      errorMessage(s);
+      errorMessage("invalid parameter value <%s> for char parameter <%s>\n", valuestr, param->name);
       return SCIP_PARSEERROR;
    }
    
@@ -1074,10 +1064,8 @@ RETCODE paramParseString(
    len = strlen(valuestr);
    if( len <= 1 || valuestr[0] != '"' || valuestr[len-1] != '"' )
    {
-      char s[2*MAXSTRLEN];
-      sprintf(s, "invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)",
+      errorMessage("invalid parameter value <%s> for string parameter <%s> (string has to be in double quotes)\n",
          valuestr, param->name);
-      errorMessage(s);
       return SCIP_PARSEERROR;
    }
 
@@ -1130,7 +1118,7 @@ RETCODE paramWrite(
          fprintf(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
          break;
       default:
-         errorMessage("unknown parameter type");
+         errorMessage("unknown parameter type\n");
          return SCIP_INVALIDDATA;
       }
    }
@@ -1156,7 +1144,7 @@ RETCODE paramWrite(
       fprintf(file, "\"%s\"", SCIPparamGetString(param));
       break;
    default:
-      errorMessage("unknown parameter type");
+      errorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -1750,7 +1738,7 @@ RETCODE paramsetParse(
          line++;
       if( *line != '=' )
       {
-         errorMessage("character '=' was expected after the parameter name");
+         errorMessage("character '=' was expected after the parameter name\n");
          return SCIP_PARSEERROR;
       }
       line++;
@@ -1761,7 +1749,7 @@ RETCODE paramsetParse(
       line++;
    if( *line == '\0' || *line == '\n' || *line == '#' )
    {
-      errorMessage("parameter value is missing");
+      errorMessage("parameter value is missing\n");
       return SCIP_PARSEERROR;
    }
    paramvaluestr = line;
@@ -1788,7 +1776,7 @@ RETCODE paramsetParse(
          line++;
       if( *line != '\0' && *line != '\n' && *line != '#' )
       {
-         errorMessage("additional characters after parameter value");
+         errorMessage("additional characters after parameter value\n");
          return SCIP_PARSEERROR;
       }
    }
@@ -1825,7 +1813,7 @@ RETCODE paramsetParse(
       CHECK_OKAY( paramParseString(param, scip, paramvaluestr) );
       break;
    default:
-      errorMessage("unknown parameter type");
+      errorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -1842,7 +1830,6 @@ RETCODE SCIPparamsetRead(
    RETCODE retcode;
    FILE* file;
    char line[1024];
-   char s[MAXSTRLEN];
    int lineno;
 
    assert(paramset != NULL);
@@ -1852,8 +1839,7 @@ RETCODE SCIPparamsetRead(
    file = fopen(filename, "r");
    if( file == NULL )
    {
-      sprintf(s, "cannot open file <%s> for reading", filename);
-      errorMessage(s);
+      errorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
    }
@@ -1866,8 +1852,7 @@ RETCODE SCIPparamsetRead(
       retcode = paramsetParse(paramset, scip, line);
       if( retcode == SCIP_PARSEERROR )
       {
-         sprintf(s, "input error in file <%s> line %d", filename, lineno);
-         errorMessage(s);
+         errorMessage("input error in file <%s> line %d\n", filename, lineno);
       }
       CHECK_OKAY( retcode );
    }
@@ -1897,9 +1882,7 @@ RETCODE SCIPparamsetWrite(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "cannot open file <%s> for writing", filename);
-         errorMessage(s);
+         errorMessage("cannot open file <%s> for writing\n", filename);
          perror(filename);
          return SCIP_FILECREATEERROR;
       }

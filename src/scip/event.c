@@ -125,9 +125,7 @@ RETCODE SCIPeventhdlrInit(
 
    if( eventhdlr->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Event handler <%s> already initialized", eventhdlr->name);
-      errorMessage(s);
+      errorMessage("Event handler <%s> already initialized\n", eventhdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -151,9 +149,7 @@ RETCODE SCIPeventhdlrExit(
 
    if( !eventhdlr->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Event handler <%s> not initialized", eventhdlr->name);
-      errorMessage(s);
+      errorMessage("Event handler <%s> not initialized\n", eventhdlr->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -368,10 +364,10 @@ VAR* SCIPeventGetVar(
    switch( event->eventtype )
    {  /*lint --e{788}*/
    case SCIP_EVENTTYPE_VARCREATED:
-      errorMessage("VARCREATED event not implemented yet");
+      errorMessage("VARCREATED event not implemented yet\n");
       abort();
    case SCIP_EVENTTYPE_VARFIXED:
-      errorMessage("VARFIXED event not implemented yet");
+      errorMessage("VARFIXED event not implemented yet\n");
       abort();
 
    case SCIP_EVENTTYPE_OBJCHANGED:
@@ -386,15 +382,15 @@ VAR* SCIPeventGetVar(
       return event->data.eventbdchg.var;
 
    case SCIP_EVENTTYPE_HOLEADDED:
-      errorMessage("HOLEADDED event not implemented yet");
+      errorMessage("HOLEADDED event not implemented yet\n");
       abort();
 
    case SCIP_EVENTTYPE_HOLEREMOVED:
-      errorMessage("HOLEREMOVED event not implemented yet");
+      errorMessage("HOLEREMOVED event not implemented yet\n");
       abort();
 
    default:
-      errorMessage("event does not belong to a variable");
+      errorMessage("event does not belong to a variable\n");
       abort();
    }
 }
@@ -408,7 +404,7 @@ Real SCIPeventGetOldobj(
 
    if( event->eventtype != SCIP_EVENTTYPE_OBJCHANGED )
    {
-      errorMessage("event is not an objective value change event");
+      errorMessage("event is not an objective value change event\n");
       return SCIP_INVALID;
    }
 
@@ -424,7 +420,7 @@ Real SCIPeventGetNewobj(
 
    if( event->eventtype != SCIP_EVENTTYPE_OBJCHANGED )
    {
-      errorMessage("event is not an objective value change event");
+      errorMessage("event is not an objective value change event\n");
       return SCIP_INVALID;
    }
 
@@ -447,7 +443,7 @@ Real SCIPeventGetOldbound(
       return event->data.eventbdchg.oldbound;
 
    default:
-      errorMessage("event is not a bound change event");
+      errorMessage("event is not a bound change event\n");
       abort();
    }
 }
@@ -468,7 +464,7 @@ Real SCIPeventGetNewbound(
       return event->data.eventbdchg.newbound;
 
    default:
-      errorMessage("event is not a bound change event");
+      errorMessage("event is not a bound change event\n");
       abort();
    }
 }
@@ -482,7 +478,7 @@ NODE* SCIPeventGetNode(
    
    if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
-      errorMessage("event is neither node nor LP event");
+      errorMessage("event is neither node nor LP event\n");
       return NULL;
    }
 
@@ -499,7 +495,7 @@ RETCODE SCIPeventChgNode(
 
    if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
-      errorMessage("event is neither node nor LP event");
+      errorMessage("event is neither node nor LP event\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -517,7 +513,7 @@ SOL* SCIPeventGetSol(
 
    if( (event->eventtype & SCIP_EVENTTYPE_SOLEVENT) == 0 )
    {
-      errorMessage("event is not a primal solution event");
+      errorMessage("event is not a primal solution event\n");
       return NULL;
    }
 
@@ -534,7 +530,7 @@ RETCODE SCIPeventChgSol(
 
    if( (event->eventtype & SCIP_EVENTTYPE_SOLEVENT) == 0 )
    {
-      errorMessage("event is not a primal solution event");
+      errorMessage("event is not a primal solution event\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -638,20 +634,16 @@ RETCODE SCIPeventProcess(
       break;
 
    case SCIP_EVENTTYPE_HOLEADDED:
-      errorMessage("HOLEADDED event not implemented yet");
+      errorMessage("HOLEADDED event not implemented yet\n");
       abort();
 
    case SCIP_EVENTTYPE_HOLEREMOVED:
-      errorMessage("HOLEREMOVED event not implemented yet");
+      errorMessage("HOLEREMOVED event not implemented yet\n");
       abort();
 
    default:
-      {
-         char s[MAXSTRLEN];
-         sprintf(s, "unknown event type <%d>", event->eventtype);
-         errorMessage(s);
-         return SCIP_INVALIDDATA;
-      }
+      errorMessage("unknown event type <%d>\n", event->eventtype);
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -902,10 +894,8 @@ RETCODE SCIPeventfilterDel(
    pos = eventfilterSearch(eventfilter, eventtype, eventhdlr, eventdata);
    if( pos == -1 )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "no event for event handler %p with data %p and event mask 0x%x found in event filter %p\n",
+      errorMessage("no event for event handler %p with data %p and event mask 0x%x found in event filter %p\n",
          eventhdlr, eventdata, eventtype, eventfilter);
-      errorMessage(s);
       return SCIP_INVALIDDATA;
    }
    assert(0 <= pos && pos < eventfilter->len);
@@ -1100,7 +1090,7 @@ RETCODE SCIPeventqueueAdd(
       switch( (*event)->eventtype )
       {
       case SCIP_EVENTTYPE_DISABLED:
-         errorMessage("cannot add a disabled event to the event queue");
+         errorMessage("cannot add a disabled event to the event queue\n");
          return SCIP_INVALIDDATA;
       case SCIP_EVENTTYPE_VARCREATED:
       case SCIP_EVENTTYPE_VARFIXED:
@@ -1252,20 +1242,16 @@ RETCODE SCIPeventqueueAdd(
          break;
 
       case SCIP_EVENTTYPE_HOLEADDED:
-         errorMessage("HOLEADDED event not implemented yet");
+         errorMessage("HOLEADDED event not implemented yet\n");
          abort();
 
       case SCIP_EVENTTYPE_HOLEREMOVED:
-         errorMessage("HOLEREMOVED event not implemented yet");
+         errorMessage("HOLEREMOVED event not implemented yet\n");
          abort();
 
       default:
-         {
-            char s[MAXSTRLEN];
-            sprintf(s, "unknown event type <%d>", (*event)->eventtype);
-            errorMessage(s);
-            return SCIP_INVALIDDATA;
-         }
+         errorMessage("unknown event type <%d>\n", (*event)->eventtype);
+         return SCIP_INVALIDDATA;
       }
    }
    

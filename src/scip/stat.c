@@ -179,24 +179,23 @@ void SCIPstatUpdateMemsaveMode(
    if( SCIPsetIsLT(set, set->memsavefac, 1.0) )
    {
       Longint memused;
-      char s[MAXSTRLEN];
 
       memused = SCIPgetMemUsed(set->scip);
       if( !stat->memsavemode && memused >= set->memsavefac * set->memlimit * 1024.0 * 1024.0 )
       {
          /* switch to memory saving mode */
-         sprintf(s, "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)", 
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) switching to memory saving mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (Real)memused/(1024.0*1024.0), set->memlimit);
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
          stat->memsavemode = TRUE;
          set->actnodesel = NULL;
       }
       else if( stat->memsavemode && memused < 0.5 * set->memsavefac * set->memlimit * 1024.0 * 1024.0 )
       {
          /* switch to standard mode */
-         sprintf(s, "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)", 
+         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+            "(node %lld) switching to standard mode (mem: %.1fM/%.1fM)\n", 
             stat->nnodes, (Real)memused/(1024.0*1024.0), set->memlimit);
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
          stat->memsavemode = FALSE;
          set->actnodesel = NULL;
       }

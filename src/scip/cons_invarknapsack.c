@@ -65,7 +65,7 @@
 static
 DECL_CONSFREE(consFreeInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -80,7 +80,7 @@ DECL_CONSFREE(consFreeInvarknapsack)
 static
 DECL_CONSINIT(consInitInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -95,7 +95,7 @@ DECL_CONSINIT(consInitInvarknapsack)
 static
 DECL_CONSEXIT(consExitInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -110,7 +110,7 @@ DECL_CONSEXIT(consExitInvarknapsack)
 static
 DECL_CONSSOLSTART(consSolstartInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -125,7 +125,7 @@ DECL_CONSSOLSTART(consSolstartInvarknapsack)
 static
 DECL_CONSDELETE(consDeleteInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -140,7 +140,7 @@ DECL_CONSDELETE(consDeleteInvarknapsack)
 static
 DECL_CONSTRANS(consTransInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -155,7 +155,7 @@ DECL_CONSTRANS(consTransInvarknapsack)
 static
 DECL_CONSINITLP(consInitlpInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -170,7 +170,7 @@ DECL_CONSINITLP(consInitlpInvarknapsack)
 static
 DECL_CONSSEPA(consSepaInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -184,7 +184,7 @@ DECL_CONSSEPA(consSepaInvarknapsack)
 static
 DECL_CONSENFOLP(consEnfolpInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -195,7 +195,7 @@ DECL_CONSENFOLP(consEnfolpInvarknapsack)
 static
 DECL_CONSENFOPS(consEnfopsInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -206,7 +206,7 @@ DECL_CONSENFOPS(consEnfopsInvarknapsack)
 static
 DECL_CONSCHECK(consCheckInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -218,7 +218,7 @@ DECL_CONSCHECK(consCheckInvarknapsack)
 static
 DECL_CONSPROP(consPropInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -233,7 +233,7 @@ DECL_CONSPROP(consPropInvarknapsack)
 static
 DECL_CONSPRESOL(consPresolInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -248,7 +248,7 @@ DECL_CONSPRESOL(consPresolInvarknapsack)
 static
 DECL_CONSRESCVAR(consRescvarInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -262,7 +262,7 @@ DECL_CONSRESCVAR(consRescvarInvarknapsack)
 static
 DECL_CONSLOCK(consLockInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -273,7 +273,7 @@ DECL_CONSLOCK(consLockInvarknapsack)
 static
 DECL_CONSUNLOCK(consUnlockInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -285,7 +285,7 @@ DECL_CONSUNLOCK(consUnlockInvarknapsack)
 static
 DECL_CONSACTIVE(consActiveInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -300,7 +300,7 @@ DECL_CONSACTIVE(consActiveInvarknapsack)
 static
 DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -315,7 +315,7 @@ DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
 static
 DECL_CONSENABLE(consEnableInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -330,7 +330,7 @@ DECL_CONSENABLE(consEnableInvarknapsack)
 static
 DECL_CONSDISABLE(consDisableInvarknapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -443,14 +443,14 @@ RETCODE SCIPcreateConsInvarknapsack(
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
-   errorMessage("method of invarknapsack constraint handler not implemented yet");
+   errorMessage("method of invarknapsack constraint handler not implemented yet\n");
    abort(); /*lint --e{527} --e{715}*/
 
    /* find the invarknapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("invarknapsack constraint handler not found");
+      errorMessage("invarknapsack constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 

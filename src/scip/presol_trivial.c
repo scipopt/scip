@@ -92,11 +92,9 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* check bounds on variable for infeasibility */
          if( newlb > newub + 0.5 )
          {
-            char msg[MAXSTRLEN];
-
-            sprintf(msg, "problem infeasible: integral variable <%s> has bounds [%g,%g] rounded to [%g,%g]",
+            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+               "problem infeasible: integral variable <%s> has bounds [%g,%g] rounded to [%g,%g]\n",
                SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
-            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL, msg);
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
@@ -139,11 +137,9 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* check bounds on continuous variable for infeasibility */
          if( SCIPisFeasGT(scip, lb, ub) )
          {
-            char msg[MAXSTRLEN];
-
-            sprintf(msg, "problem infeasible: continuous variable <%s> has bounds [%g,%g]",
+            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+               "problem infeasible: continuous variable <%s> has bounds [%g,%g]\n",
                SCIPvarGetName(vars[v]), lb, ub);
-            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL, msg);
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }

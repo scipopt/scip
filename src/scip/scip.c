@@ -22,6 +22,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <stdarg.h>
 #include <assert.h>
 
 #include "scip.h"
@@ -60,8 +61,6 @@ RETCODE checkStage(
    Bool             freesolve           /**< may method be called in the FREESOLVE stage? */
    )
 {
-   char s[MAXSTRLEN];
-
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(scip->mem != NULL);
@@ -89,8 +88,7 @@ RETCODE checkStage(
 
       if( !init )
       {
-         sprintf(s, "Cannot call method <%s> in initialization stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in initialization stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -112,8 +110,7 @@ RETCODE checkStage(
 
       if( !problem )
       {
-         sprintf(s, "Cannot call method <%s> in problem creation stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in problem creation stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -125,8 +122,7 @@ RETCODE checkStage(
 
       if( !initsolve )
       {
-         sprintf(s, "Cannot call method <%s> in solve initialization stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in solve initialization stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -148,8 +144,7 @@ RETCODE checkStage(
 
       if( !presolving )
       {
-         sprintf(s, "Cannot call method <%s> in presolving stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in presolving stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -171,8 +166,7 @@ RETCODE checkStage(
 
       if( !presolved )
       {
-         sprintf(s, "Cannot call method <%s> in problem presolved stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in problem presolved stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -194,8 +188,7 @@ RETCODE checkStage(
 
       if( !solving )
       {
-         sprintf(s, "Cannot call method <%s> in solving stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in solving stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -217,8 +210,7 @@ RETCODE checkStage(
 
       if( !solved )
       {
-         sprintf(s, "Cannot call method <%s> in problem solved stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in problem solved stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -229,14 +221,13 @@ RETCODE checkStage(
 
       if( !freesolve )
       {
-         sprintf(s, "Cannot call method <%s> in solve deinitialization stage", method);
-         errorMessage(s);
+         errorMessage("Cannot call method <%s> in solve deinitialization stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
 
    default:
-      errorMessage("Unknown SCIP stage");
+      errorMessage("Unknown SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -265,7 +256,7 @@ void SCIPprintVersion(
       file = stdout;
 
    fprintf(file, "SCIP version %g [precision: %d byte]", SCIPversion(), (int)sizeof(Real));
-#ifdef SCIP_BLOCKMEMORY
+#ifndef NOBLOCKMEM
    fprintf(file, " [memory: block]");
 #else
    fprintf(file, " [memory: standard]");
@@ -354,16 +345,21 @@ RETCODE SCIPfree(
    return SCIP_OKAY;
 }
 
-/** prints a message (with newline) depending on the verbosity level */
+/** prints a message depending on the verbosity level */
 void SCIPmessage(
    SCIP*            scip,               /**< SCIP data structure */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      msg                 /**< message to display */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
    )
 {
+   va_list ap;
+
    CHECK_ABORT( checkStage(scip, "SCIPmessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   infoMessage(scip->set->verblevel, msgverblevel, msg);
+   va_start(ap, formatstr);
+   vinfoMessage(scip->set->verblevel, msgverblevel, formatstr, ap);
+   va_end(ap);
 }
 
 /** returns current stage of SCIP */
@@ -1540,7 +1536,6 @@ RETCODE SCIPreadProb(
 {
    RESULT result;
    int i;
-   char s[MAXSTRLEN];
 
    assert(filename != NULL);
 
@@ -1556,16 +1551,16 @@ RETCODE SCIPreadProb(
    switch( result )
    {  /*lint --e{788}*/
    case SCIP_DIDNOTRUN:
-      failureMessage("No reader for input file <%s> available\n", filename);
+      warningMessage("No reader for input file <%s> available\n", filename);
       return SCIP_READERROR;
 
    case SCIP_SUCCESS:
       if( scip->origprob != NULL )
       {      
-         sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
+            "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
             scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
             scip->origprob->nconss);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
 #if 0
          printf(" var names :  ");
          SCIPhashtablePrintStatistics(scip->origprob->varnames);
@@ -1577,9 +1572,8 @@ RETCODE SCIPreadProb(
 
    default:
       assert(i < scip->set->nreaders);
-      sprintf(s, "invalid result code <%d> from reader <%s> reading file <%s>", 
+      errorMessage("invalid result code <%d> from reader <%s> reading file <%s>\n", 
          result, SCIPreaderGetName(scip->set->readers[i]), filename);
-      errorMessage(s);
       return SCIP_READERROR;
    }
 }
@@ -1627,7 +1621,7 @@ PROBDATA* SCIPgetProbData(
       return SCIPprobGetData(scip->transprob);
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -1656,7 +1650,7 @@ RETCODE SCIPsetProbData(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -1671,7 +1665,7 @@ RETCODE SCIPsetObjsense(
 
    if( objsense != SCIP_OBJSENSE_MAXIMIZE && objsense != SCIP_OBJSENSE_MINIMIZE )
    {
-      errorMessage("Invalid objective sense");
+      errorMessage("Invalid objective sense\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -1705,7 +1699,7 @@ RETCODE SCIPsetObjlimit(
       }
       break;
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 
@@ -1739,7 +1733,7 @@ RETCODE SCIPaddVar(
    case SCIP_STAGE_PROBLEM:
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
       {
-         errorMessage("Cannot add transformed variables to original problem");
+         errorMessage("Cannot add transformed variables to original problem\n");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->tree, scip->branchcand, var) );
@@ -1752,16 +1746,20 @@ RETCODE SCIPaddVar(
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
       {
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
-            errorMessage("Cannot add original variables to transformed problem");
+         {
+            errorMessage("Cannot add original variables to transformed problem\n");
+         }
          else
-            errorMessage("Cannot add fixed or aggregated variables to transformed problem");
+         {
+            errorMessage("Cannot add fixed or aggregated variables to transformed problem\n");
+         }
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->tree, scip->branchcand, var) );
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -1817,7 +1815,7 @@ RETCODE SCIPgetVarsData(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -1843,7 +1841,7 @@ VAR** SCIPgetVars(
       return scip->transprob->vars;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -1867,7 +1865,7 @@ int SCIPgetNVars(
       return scip->transprob->nvars;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -1891,7 +1889,7 @@ int SCIPgetNBinVars(
       return scip->transprob->nbin;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -1915,7 +1913,7 @@ int SCIPgetNIntVars(
       return scip->transprob->nint;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -1939,7 +1937,7 @@ int SCIPgetNImplVars(
       return scip->transprob->nimpl;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -1963,7 +1961,7 @@ int SCIPgetNContVars(
       return scip->transprob->ncont;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -2090,7 +2088,7 @@ VAR* SCIPfindVar(
          return var;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -2143,7 +2141,7 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -2176,7 +2174,7 @@ RETCODE SCIPdelCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -2211,7 +2209,7 @@ CONS* SCIPfindCons(
          return cons;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       abort();
    }
 }
@@ -2290,7 +2288,7 @@ RETCODE SCIPdisableConsLocal(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -2347,7 +2345,6 @@ RETCODE presolve(
    int lastnchgcoefs;
    int lastnchgsides;
    int i;
-   char s[MAXSTRLEN];
 
    assert(result != NULL);
 
@@ -2431,20 +2428,18 @@ RETCODE presolve(
       if( !aborted )
       {
          /* print presolving statistics */
-         sprintf(s, "presolving after %d rounds:", nrounds);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
-         sprintf(s, " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients",
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "presolving after %d rounds:\n", nrounds);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
+            " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
             nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
       }
    }
    
    /* print presolving statistics */
-   sprintf(s, "presolving (%d rounds):", nrounds);
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
-   sprintf(s, " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients",
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving (%d rounds):\n", nrounds);
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
+      " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
       nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
 
    return SCIP_OKAY;
 }
@@ -2455,7 +2450,6 @@ RETCODE SCIPpresolve(
    )
 {
    RESULT result;
-   char s[MAXSTRLEN];
    int h;
 
    CHECK_OKAY( checkStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -2466,7 +2460,7 @@ RETCODE SCIPpresolve(
    /* check, if a node selector exists */
    if( SCIPsetGetActNodesel(scip->set, scip->stat) == NULL )
    {
-      errorMessage("no node selector available");
+      errorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
    }
    
@@ -2525,10 +2519,10 @@ RETCODE SCIPpresolve(
    if( result != SCIP_CUTOFF && result != SCIP_UNBOUNDED )
    {
       /* print presolved problem statistics */
-      sprintf(s, "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
+         "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
          scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
          scip->transprob->ncont, scip->transprob->nconss);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, s);
 
       for( h = 0; h < scip->set->nconshdlrs; ++h )
       {
@@ -2537,8 +2531,8 @@ RETCODE SCIPpresolve(
          nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
          if( nconss > 0 )
          {
-            sprintf(s, " %5d constraints of type <%s>", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
-            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
+               " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
          }
       }
 
@@ -2550,11 +2544,11 @@ RETCODE SCIPpresolve(
       /* print solution message */
       if( result == SCIP_CUTOFF )
       {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.");
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
       }
       else if( result == SCIP_UNBOUNDED )
       {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.");
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
       }
 
       /* switch stage to SOLVED */
@@ -2562,8 +2556,8 @@ RETCODE SCIPpresolve(
    }
 
    /* display timing statistics */
-   sprintf(s, "Presolving Time: %.2f", SCIPclockGetTime(scip->stat->presolvingtime));
-   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
+      "Presolving Time: %.2f\n", SCIPclockGetTime(scip->stat->presolvingtime));
 
    return SCIP_OKAY;
 }
@@ -2578,7 +2572,7 @@ RETCODE SCIPsolve(
    /* check, if a node selector exists */
    if( SCIPsetGetActNodesel(scip->set, scip->stat) == NULL )
    {
-      errorMessage("no node selector available");
+      errorMessage("no node selector available\n");
       return SCIP_PLUGINNOTFOUND;
    }
    
@@ -2596,7 +2590,7 @@ RETCODE SCIPsolve(
       if( scip->stage == SCIP_STAGE_SOLVED )
          return SCIP_OKAY;
       assert(scip->stage == SCIP_STAGE_PRESOLVED);
-      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "");
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
 
       /*lint -fallthrough*/
 
@@ -2645,7 +2639,7 @@ RETCODE SCIPsolve(
       break;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 
@@ -2718,7 +2712,7 @@ RETCODE SCIPfreeSolve(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -2763,7 +2757,7 @@ RETCODE SCIPcreateVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -2806,14 +2800,14 @@ RETCODE SCIPreleaseVar(
    case SCIP_STAGE_FREESOLVE:
       if( !SCIPvarIsTransformed(*var) )
       {
-         errorMessage("cannot release original variables while solving the problem");
+         errorMessage("cannot release original variables while solving the problem\n");
          return SCIP_INVALIDCALL;
       }
       CHECK_OKAY( SCIPvarRelease(var, scip->mem->solvemem, scip->set, scip->lp) );
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -2986,7 +2980,7 @@ RETCODE SCIPgetVarStrongbranch(
 
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
    {
-      errorMessage("cannot get strong branching information on non-COLUMN variable");
+      errorMessage("cannot get strong branching information on non-COLUMN variable\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -3020,7 +3014,7 @@ RETCODE SCIPchgVarObj(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }   
 }
@@ -3049,7 +3043,7 @@ RETCODE SCIPaddVarObj(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }   
 }
@@ -3090,7 +3084,7 @@ RETCODE SCIPchgVarLb(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -3131,7 +3125,7 @@ RETCODE SCIPchgVarUb(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -3231,7 +3225,7 @@ RETCODE SCIPtightenVarLb(
       break;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 
@@ -3296,7 +3290,7 @@ RETCODE SCIPtightenVarUb(
       break;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 
@@ -3359,7 +3353,7 @@ RETCODE SCIPinferBinVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -3411,7 +3405,7 @@ RETCODE SCIPchgVarType(
    case SCIP_STAGE_PRESOLVING:
       if( !SCIPvarIsTransformed(var) )
       {
-         errorMessage("cannot change type of original variables while solving the problem");
+         errorMessage("cannot change type of original variables while solving the problem\n");
          return SCIP_INVALIDCALL;
       }
       if( SCIPvarGetProbIndex(var) >= 0 )
@@ -3425,7 +3419,7 @@ RETCODE SCIPchgVarType(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }   
 }
@@ -3481,7 +3475,7 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
       
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -4000,7 +3994,7 @@ RETCODE SCIPcreateCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -4043,14 +4037,14 @@ RETCODE SCIPreleaseCons(
    case SCIP_STAGE_FREESOLVE:
       if( SCIPconsIsOriginal(*cons) && (*cons)->nuses == 1 )
       {
-         errorMessage("cannot release last use of original constraint while solving the problem");
+         errorMessage("cannot release last use of original constraint while solving the problem\n");
          return SCIP_INVALIDCALL;
       }
       CHECK_OKAY( SCIPconsRelease(cons, scip->mem->solvemem, scip->set) );
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }
 }
@@ -4524,13 +4518,13 @@ RETCODE SCIPstartDive(
 
    if( scip->lp->diving )
    {
-      errorMessage("already in diving mode");
+      errorMessage("already in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
    if( !scip->tree->actnodehaslp )
    {
-      errorMessage("cannot start diving at a pseudo node");
+      errorMessage("cannot start diving at a pseudo node\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -4548,7 +4542,7 @@ RETCODE SCIPendDive(
 
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -4578,12 +4572,12 @@ RETCODE SCIPchgVarObjDive(
 
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
    /**@todo implement SCIPchgVarObjDive() */
-   errorMessage("not implemented yet");
+   errorMessage("not implemented yet\n");
    abort();  /*lint --e{527} --e{715}*/
 }
 
@@ -4598,7 +4592,7 @@ RETCODE SCIPchgVarLbDive(
    
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -4618,7 +4612,7 @@ RETCODE SCIPchgVarUbDive(
    
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -4637,7 +4631,7 @@ Real SCIPgetVarLbDive(
    
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       abort();
    }
 
@@ -4654,7 +4648,7 @@ Real SCIPgetVarUbDive(
    
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       abort();
    }
 
@@ -4670,7 +4664,7 @@ RETCODE SCIPsolveDiveLP(
 
    if( !scip->lp->diving )
    {
-      errorMessage("not in diving mode");
+      errorMessage("not in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -4762,7 +4756,7 @@ RETCODE SCIPchgRowLhs(
    Real             lhs                 /**< new left hand side */
    )
 {
-   errorMessage("sides of row must not be changed (not implemented yet)");
+   errorMessage("sides of row must not be changed (not implemented yet)\n");
    abort(); /*lint --e{527} --e{715}*/
 #if 0
    CHECK_OKAY( checkStage(scip, "SCIPchgRowLhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -4779,7 +4773,7 @@ RETCODE SCIPchgRowRhs(
    Real             rhs                 /**< new right hand side */
    )
 {
-   errorMessage("sides of row must not be changed (not implemented yet)");
+   errorMessage("sides of row must not be changed (not implemented yet)\n");
    abort(); /*lint --e{527} --e{715}*/
 #if 0
    CHECK_OKAY( checkStage(scip, "SCIPchgRowRhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -5065,7 +5059,7 @@ RETCODE SCIPaddCut(
 
    if( !scip->tree->actnodehaslp )
    {
-      errorMessage("cannot add cuts, because node LP is not processed");
+      errorMessage("cannot add cuts, because node LP is not processed\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -5123,7 +5117,7 @@ RETCODE SCIPgetLPBranchCands(
    if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL
       && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDED )
    {
-      errorMessage("LP not solved to optimality");
+      errorMessage("LP not solved to optimality\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -5144,7 +5138,7 @@ int SCIPgetNLPBranchCands(
 
    if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      errorMessage("LP not solved to optimality");
+      errorMessage("LP not solved to optimality\n");
       abort();
    }
 
@@ -5224,17 +5218,13 @@ RETCODE SCIPbranchVar(
 
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot branch on continuous variable <%s>", SCIPvarGetName(var));
-      errorMessage(s);
+      errorMessage("cannot branch on continuous variable <%s>\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
    if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "cannot branch on variable <%s> with fixed domain [%g,%g]", 
+      errorMessage("cannot branch on variable <%s> with fixed domain [%g,%g]\n", 
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-      errorMessage(s);
       return SCIP_INVALIDDATA;
    }
 
@@ -5392,7 +5382,7 @@ RETCODE SCIPcreateLPSol(
 
    if( !scip->tree->actnodehaslp )
    {
-      errorMessage("LP solution does not exist");
+      errorMessage("LP solution does not exist\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -5452,7 +5442,7 @@ RETCODE SCIPlinkLPSol(
 
    if( !scip->tree->actnodehaslp )
    {
-      errorMessage("LP solution does not exist");
+      errorMessage("LP solution does not exist\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -5952,13 +5942,13 @@ RETCODE SCIPcatchVarEvent(
 
    if( !SCIPvarIsTransformed(var) )
    {
-      errorMessage("cannot catch events for original variables");
+      errorMessage("cannot catch events for original variables\n");
       return SCIP_INVALIDDATA;
    }
 
    if( (eventtype & SCIP_EVENTTYPE_VARCHANGED) == 0 )
    {
-      errorMessage("event is neither an objective value nor a domain change event");
+      errorMessage("event is neither an objective value nor a domain change event\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -5980,7 +5970,7 @@ RETCODE SCIPdropVarEvent(
 
    if( !SCIPvarIsTransformed(var) )
    {
-      errorMessage("cannot drop events for original variables");
+      errorMessage("cannot drop events for original variables\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -7013,7 +7003,7 @@ RETCODE SCIPprintStatistics(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
    }
 }
@@ -7830,7 +7820,7 @@ MEMHDR* SCIPmemhdr(
       return scip->mem->solvemem;
 
    default:
-      errorMessage("Unknown SCIP stage");
+      errorMessage("Unknown SCIP stage\n");
       return NULL;
    }
 }
@@ -7857,7 +7847,7 @@ Longint SCIPgetMemUsed(
       return getBlockMemoryUsed(scip->mem->probmem) + getBlockMemoryUsed(scip->mem->solvemem);
 
    default:
-      errorMessage("Unknown SCIP stage");
+      errorMessage("Unknown SCIP stage\n");
       abort();
    }
 }

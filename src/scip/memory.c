@@ -27,7 +27,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include "message.h"
 #include "memory.h"
 
 #ifndef MAXSTRLEN
@@ -36,12 +35,24 @@
 
 
 
+#ifdef DEBUG
+#define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
+#else
+#define debugMessage                    if( FALSE ) printf
+#endif
+
+#define TRUE     1
+#define FALSE    0
+#define MAX(x,y) ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
+#define MIN(x,y) ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+
+
 /******************************
  * Standard Memory Management *
  ******************************/
 
 
-#ifdef SCIP_SAFEMEMORY
+#ifndef NOSAFEMEM
 
 /*
  * safe memory management with leakage detection in debug mode
@@ -102,12 +113,7 @@ memListRemove(void *ptr, const char *filename, int line)
       free(list);
    }
    else
-   {
-      char    s[MAXSTRLEN];
-
-      sprintf(s, "Error! Tried to free unknown pointer <%p>.", ptr);
-      errorMessage_call(s, filename, line);
-   }
+      fprintf(stderr, "[%s:%d] ERROR: Tried to free unknown pointer <%p>\n", filename, line, ptr);
 }
 
 size_t
@@ -139,13 +145,8 @@ memoryDiagnostic(void)
    }
    printf("Total:    %8ld\n", memused);
    if( used != memused )
-   {
-      char    s[MAXSTRLEN];
-
-      sprintf(s, "Error! Used memory in list sums up to %ld instead of %ld",
-	 used, memused);
-      errorMessage(s);
-   }
+      fprintf(stderr, "[%s:%d] ERROR: Used memory in list sums up to %ld instead of %ld\n",
+	 __FILE__, __LINE__, used, memused);
 }
 
 void
@@ -169,12 +170,7 @@ allocMemory_call(size_t size, const char *filename, int line)
    ptr = malloc(size);
 
    if( ptr == NULL )
-   {
-      char s[MAXSTRLEN];
-
-      sprintf(s, "Error! Insufficient memory for allocation of %ld bytes.", (long) size);
-      errorMessage_call(s, filename, line);
-   }
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for allocation of %ld bytes\n", filename, line, (long) size);
 #ifndef NDEBUG
    else
       memListAdd(ptr, size, filename, line);
@@ -196,12 +192,7 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
    newptr = realloc(ptr, size);
 
    if( newptr == NULL )
-   {
-      char s[MAXSTRLEN];
-
-      sprintf(s, "Error! Insufficient memory for reallocation of %ld bytes.", (long) size);
-      errorMessage_call(s, filename, line);
-   }
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for reallocation of %ld bytes\n", filename, line, (long) size);
 #ifndef NDEBUG
    else
       memListAdd(newptr, size, filename, line);
@@ -248,7 +239,7 @@ freeMemory_call(void **ptr, const char *filename, int line)
       *ptr = NULL;
    }
    else
-      errorMessage_call("Tried to free null pointer.", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Tried to free null pointer\n", filename, line);
 }
 
 
@@ -283,7 +274,7 @@ duplicateMemory_call(const void* source, size_t size)
  ***************************/
 
 
-#ifdef SCIP_BLOCKMEMORY
+#ifndef NOBLOCKMEM
 
 /* 
  * block memory methods for faster memory access
@@ -1029,25 +1020,17 @@ freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
    if( !isPtrInBlock(blk, ptr) )
    {
       BLKHDR *correctblk;
-      char    s[MAXSTRLEN];
 
-      sprintf(s, "pointer %p does not belong to block %p (size: %ld)", ptr,
-	 blk, (long) (blk->elemSize));
-      errorMessage_call(s, filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: pointer %p does not belong to block %p (size: %ld)\n", 
+         filename, line, ptr, blk, (long) (blk->elemSize));
 
       correctblk = findBlock(blk->mem, ptr);
       if( correctblk == NULL )
-      {
-	 sprintf(s, "pointer %p does not belong to memory structure %p", ptr,
-	    blk->mem);
-	 errorMessage_call(s, filename, line);
-      }
+	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p does not belong to memory structure %p\n", 
+            filename, line, ptr, blk->mem);
       else
-      {
-	 sprintf(s, "pointer %p belongs to block %p instead (size: %ld)", ptr,
-	    correctblk, (long) (correctblk->elemSize));
-	 errorMessage_call(s, filename, line);
-      }
+	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p belongs to block %p instead (size: %ld)\n", 
+            filename, line, ptr, correctblk, (long) (correctblk->elemSize));
    }
 #endif
 
@@ -1104,7 +1087,7 @@ createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
       mem->memused = 0;
    }
    else
-      errorMessage_call("Error! Insufficient memory for memory header.", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for memory header\n", filename, line);
 
    return mem;
 }
@@ -1138,7 +1121,7 @@ clearBlockMemory_call(MEMHDR *mem, const char *filename, int line)
       mem->memused = 0;
    }
    else
-      errorMessage_call("Tried to clear null block.", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Tried to clear null block\n", filename, line);
 }
 
 /*-----------------------------------------------------------------------------
@@ -1159,7 +1142,7 @@ destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
       assert(*mem == NULL);
    }
    else
-      errorMessage_call("Tried to destroy null block.", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Tried to destroy null block\n", filename, line);
 }
 
 /*-----------------------------------------------------------------------------
@@ -1193,7 +1176,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
       *blkptr = createBlock(mem, (int)size);
       if( *blkptr == NULL )
       {
-	 errorMessage_call("Error! Insufficient memory for block header.", filename, line);
+	 fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for block header\n", filename, line);
 	 return NULL;
       }
 #ifndef NDEBUG
@@ -1205,7 +1188,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    /* get memory inside the block */
    ptr = allocBlockElement(*blkptr);
    if( ptr == NULL )
-      errorMessage_call("Error! Insufficient memory for new chunk.", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
    debugMessage("[%s:%4d] alloced %8ld bytes in %p\n", filename, line, (long)size, ptr);
 
    mem->memused += size;
@@ -1282,11 +1265,8 @@ garbageCollection(BLKHDR * blk)
       chk = findChunk(blk, (void *) lazyFree);
 #ifndef NDEBUG
       if( chk == NULL )
-      {
-         char s[MAXSTRLEN];
-         sprintf( s, "chunk for lazy free block %p not found in block %p", lazyFree, blk );
-         errorMessage( s );
-      }
+         fprintf(stderr, "[%s:%d] ERROR: chunk for lazy free block %p not found in block %p\n",
+            __FILE__, __LINE__, lazyFree, blk );
 #endif
       assert(chk != NULL);
 
@@ -1344,10 +1324,8 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
 	 blk = blk->next;
       if( blk == NULL )
       {
-	 char    s[MAXSTRLEN];
-
-	 sprintf(s, "Error! Tried to free pointer <%p> in block memory <%p> of unknown size %ld.", *ptr, mem, (long) size);
-	 errorMessage_call(s, filename, line);
+	 fprintf(stderr, "[%s:%d] ERROR: Tried to free pointer <%p> in block memory <%p> of unknown size %ld\n",
+            filename, line, *ptr, mem, (long) size);
 	 return;
       }
 
@@ -1374,7 +1352,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       assert(mem->memused >= 0);
    }
    else
-      errorMessage_call("Tried to free null block pointer.", filename, line);
+      fprintf(stderr, "[%s:%d] ERROR: Tried to free null block pointer\n", filename, line);
 
    checkMem(mem);
 }

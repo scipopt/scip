@@ -258,7 +258,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_FREESOLVE:
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
    }
    printf("\n");
@@ -297,7 +297,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_FREESOLVE:
    default:
-      errorMessage("invalid SCIP stage");
+      errorMessage("invalid SCIP stage\n");
       return SCIP_INVALIDCALL;
    }
    printf("\n");
@@ -310,6 +310,8 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 /** dialog execution method for the quit command */
 DECL_DIALOGEXEC(SCIPdialogExecQuit)
 {
+   printf("\n");
+
    *nextdialog = NULL;
 
    return SCIP_OKAY;
@@ -318,6 +320,7 @@ DECL_DIALOGEXEC(SCIPdialogExecQuit)
 /** dialog execution method for the read command */
 DECL_DIALOGEXEC(SCIPdialogExecRead)
 {
+   RETCODE retcode;
    const char* filename;
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
@@ -329,7 +332,16 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPfreeProb(scip) );
-         CHECK_OKAY( SCIPreadProb(scip, filename) );
+         retcode = SCIPreadProb(scip, filename);
+         if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+         {
+            printf("error reading file <%s>\n", filename);
+            CHECK_OKAY( SCIPfreeProb(scip) );
+         }
+         else
+         {
+            CHECK_OKAY( retcode );
+         }
       }
       else
       {
@@ -343,8 +355,8 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set read command */
-DECL_DIALOGEXEC(SCIPdialogExecSetRead)
+/** dialog execution method for the set load command */
+DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
 {
    const char* filename;
 
@@ -357,7 +369,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetRead)
       if( SCIPfileExists(filename) )
       {
          CHECK_OKAY( SCIPreadParams(scip, filename) );
-         printf("read parameter file <%s>\n", filename);
+         printf("loaded parameter file <%s>\n", filename);
       }
       else
       {
@@ -371,8 +383,8 @@ DECL_DIALOGEXEC(SCIPdialogExecSetRead)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set write command */
-DECL_DIALOGEXEC(SCIPdialogExecSetWrite)
+/** dialog execution method for the set save command */
+DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 {
    const char* filename;
 
@@ -383,7 +395,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetWrite)
    if( filename[0] != '\0' )
    {
       CHECK_OKAY( SCIPwriteParams(scip, filename, TRUE) );
-      printf("written parameter file <%s>\n", filename);
+      printf("saved parameter file <%s>\n", filename);
    }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -461,6 +473,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
+      printf("parameter <%s> set to %d\n", SCIPparamGetName(param), SCIPparamGetInt(param));
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
@@ -481,6 +494,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
+      printf("parameter <%s> set to %lld\n", SCIPparamGetName(param), SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
@@ -501,6 +515,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
+      printf("parameter <%s> set to %g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
       break;
 
    case SCIP_PARAMTYPE_CHAR:
@@ -520,6 +535,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
+      printf("parameter <%s> set to <%c>\n", SCIPparamGetName(param), SCIPparamGetChar(param));
       break;
 
    case SCIP_PARAMTYPE_STRING:
@@ -534,13 +550,13 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          CHECK_OKAY( retcode );
       }
+      printf("parameter <%s> set to <%s>\n", SCIPparamGetName(param), SCIPparamGetString(param));
       break;
 
    default:
-      errorMessage("invalid parameter type");
+      errorMessage("invalid parameter type\n");
       return SCIP_INVALIDDATA;
    }
-
 
    return SCIP_OKAY;
 }
@@ -587,7 +603,7 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
       break;
 
    default:
-      errorMessage("invalid parameter type");
+      errorMessage("invalid parameter type\n");
       return SCIP_INVALIDDATA;
    }
    valuestr[MAXSTRLEN-1] = '\0';
@@ -814,7 +830,7 @@ RETCODE addParamDialog(
       (void)SCIPdialogFindEntry(menu, dirname, &submenu);
       if( submenu == NULL )
       {
-         errorMessage("dialog sub menu not found");
+         errorMessage("dialog sub menu not found\n");
          return SCIP_PLUGINNOTFOUND;
       }
 
@@ -844,7 +860,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    root = SCIPgetRootDialog(scip);
    if( root == NULL )
    {
-      errorMessage("root dialog not found");
+      errorMessage("root dialog not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -860,19 +876,19 @@ RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
 
    /* set read */
-   if( !SCIPdialogHasEntry(setmenu, "read") )
+   if( !SCIPdialogHasEntry(setmenu, "load") )
    {
-      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetRead, NULL,
-                     "read", "read parameter settings from a file", FALSE, NULL) );
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetLoad, NULL,
+                     "load", "load parameter settings from a file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* set write */
-   if( !SCIPdialogHasEntry(setmenu, "write") )
+   if( !SCIPdialogHasEntry(setmenu, "save") )
    {
-      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetWrite, NULL,
-                     "write", "save parameter settings to a file", FALSE, NULL) );
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetSave, NULL,
+                     "save", "save parameter settings to a file", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, setmenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

@@ -135,7 +135,7 @@ void SCIPclockReset(
       clock->data.wallclock.usec = 0;
       break;
    default:
-      errorMessage("invalid clock type");
+      errorMessage("invalid clock type\n");
       abort();
    }
    clock->nruns = 0;
@@ -225,7 +225,7 @@ void SCIPclockStart(
 
          case SCIP_CLOCKTYPE_DEFAULT:            
          default:
-            errorMessage("invalid clock type");
+            errorMessage("invalid clock type\n");
             abort();
          }
       }
@@ -277,7 +277,7 @@ void SCIPclockStop(
 
          case SCIP_CLOCKTYPE_DEFAULT:
          default:
-            errorMessage("invalid clock type");
+            errorMessage("invalid clock type\n");
             abort();
          }
       }
@@ -370,7 +370,7 @@ Real SCIPclockGetTime(
          return walltime2sec(clock->data.wallclock.sec, clock->data.wallclock.usec);
 
       default:
-         errorMessage("invalid clock type");
+         errorMessage("invalid clock type\n");
          abort();
       }
    }
@@ -397,7 +397,7 @@ Real SCIPclockGetTime(
 
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
-         errorMessage("invalid clock type");
+         errorMessage("invalid clock type\n");
          abort();
       }
    }
@@ -430,7 +430,7 @@ void SCIPclockSetTime(
       
    case SCIP_CLOCKTYPE_DEFAULT:
    default:
-      errorMessage("invalid clock type");
+      errorMessage("invalid clock type\n");
       abort();
    }
    
@@ -463,7 +463,7 @@ void SCIPclockSetTime(
 
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
-         errorMessage("invalid clock type");
+         errorMessage("invalid clock type\n");
          abort();
       }
    }

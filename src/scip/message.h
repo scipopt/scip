@@ -18,6 +18,20 @@
 /**@file   message.h
  * @brief  message output methods
  * @author Tobias Achterberg
+ *
+ * Because the message functions are implemented as defines with more than one
+ * function call, they shouldn't be used as a single statement like in:
+ *   if( error )
+ *      errorMessage("an error occured");
+ * because this would produce the following macro extension:
+ *   if( error )
+ *      printf(("[%s:%d] ERROR: ", __FILE__, __LINE__);
+ *   printf(("an error occured");
+ * Instead, they should be protected with brackets:
+ *   if( error )
+ *   {
+ *      errorMessage("an error occured");
+ *   }
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,8 +52,8 @@ enum VerbLevel
 typedef enum VerbLevel VERBLEVEL;
 
 
-#define errorMessage(msg)               errorMessage_call((msg), __FILE__, __LINE__)
-#define failureMessage                  printf("failure: "); printf
+#define errorMessage                    printf("[%s:%d] ERROR: ", __FILE__, __LINE__); printf
+#define warningMessage                  printf("Warning: "); printf
 
 #ifdef DEBUG
 #define debug(x)                        x
@@ -50,26 +64,25 @@ typedef enum VerbLevel VERBLEVEL;
 #endif
 
 
-/** prints an error message */
-extern
-void errorMessage_call(
-   const char*      msg,                /**< message to print */
-   const char*      filename,           /**< name of the file, where the error occured */
-   int              line                /**< line of the file, where the error occured */
-   );
+#include <stdarg.h>
 
-/** prints a warning message */
-extern
-void warningMessage(
-   const char*      msg                 /**< message to print */
-   );
 
 /** prints a message depending on the verbosity level */
 extern
 void infoMessage(
    VERBLEVEL        verblevel,          /**< actual verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
-   const char*      msg                 /**< message to print */
+   const char*      formatstr,          /**< format string like in printf() function */
+   ...                                  /**< format arguments line in printf() function */
+   );
+
+/** prints a message depending on the verbosity level, acting like the vprintf() command */
+extern
+void vinfoMessage(
+   VERBLEVEL        verblevel,          /**< actual verbosity level */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*      formatstr,          /**< format string like in printf() function */
+   va_list          ap                  /**< variable argument list */
    );
 
 

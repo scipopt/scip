@@ -322,7 +322,7 @@ RETCODE priceProbVars(
       switch( SCIPvarGetStatus(var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-         errorMessage("Found original variable in transformed problem");
+         errorMessage("Found original variable in transformed problem\n");
          abort();
       case SCIP_VARSTATUS_LOOSE:
          /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
@@ -447,7 +447,7 @@ RETCODE priceProbVars(
          /* we don't have to price fixed or aggregated variables */
          break;
       default:
-         errorMessage("invalid variable status");
+         errorMessage("invalid variable status\n");
          return SCIP_INVALIDDATA;
       }
    }

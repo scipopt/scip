@@ -89,7 +89,7 @@ RETCODE consdataCreate(
       {
          if( SCIPconsIsInitial(conss[c]) || SCIPconsIsChecked(conss[c]) )
          {
-            errorMessage("constraints in an and concatenation must not be initial or checked");
+            errorMessage("constraints in an and concatenation must not be initial or checked\n");
             return SCIP_INVALIDDATA;
          }
          CHECK_OKAY( SCIPcaptureCons(scip, conss[c]) );
@@ -142,7 +142,7 @@ RETCODE consdataAddCons(
 
    if( SCIPconsIsInitial(cons) || SCIPconsIsChecked(cons) )
    {
-      errorMessage("constraints in an and concatenation must not be initial or checked");
+      errorMessage("constraints in an and concatenation must not be initial or checked\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -532,7 +532,7 @@ RETCODE SCIPcreateConsAnd(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("and constraint handler not found");
+      errorMessage("and constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -560,7 +560,7 @@ RETCODE SCIPaddConsElemAnd(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      errorMessage("constraint is not an and constraint");
+      errorMessage("constraint is not an and constraint\n");
       return SCIP_INVALIDDATA;
    }
    

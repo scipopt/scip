@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.48 2003/11/17 17:52:54 bzfpfend Exp $
+# $Id: Makefile,v 1.49 2003/11/20 17:42:00 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -59,7 +59,7 @@ AR		=	ar
 RANLIB		=	ranlib
 DOXY		=	doxygen
 
-SETTINGS        =       hybridhistory
+SETTINGS        =       default
 
 SRCDIR		=	src
 BINDIR		=	bin
@@ -95,6 +95,14 @@ include make/make.$(BASE)
 
 
 #-----------------------------------------------------------------------------
+# Memory Management
+#-----------------------------------------------------------------------------
+
+#CFLAGS		+=	-DNOSAFEMEM
+#CFLAGS		+=	-DNOBLOCKMEM
+
+
+#-----------------------------------------------------------------------------
 # Program Components
 #-----------------------------------------------------------------------------
 
@@ -122,6 +130,13 @@ CPPFLAGS	+=	-I$(LIBDIR)/spxinc
 LPSLIB		=	soplex.$(OSTYPE).$(ARCH)
 LPIOBJ		=	lpi_spx.o bitencode.o
 LPISRC  	=	lpi_spx.cpp bitencode.c
+endif
+
+ifeq ($(LPS),spxdbg)
+CPPFLAGS	+=	-I$(LIBDIR)/spxinc 
+LPSLIB		=	soplexdbg.$(OSTYPE).$(ARCH)
+LPIOBJ		=	lpi_spxdbg.o bitencode.o
+LPISRC  	=	lpi_spxdbg.cpp bitencode.c
 endif
 
 LPILIB		=	$(LPS)lp.$(BASE)
@@ -228,10 +243,6 @@ lint:		$(SCIPSRC) $(OBJSRC) $(MAINSRC)
 
 doc:		
 		cd doc; $(DOXY) $(NAME).dxy
-
-tmpcheck:
-		cd check; \
-		/bin/sh ./tmpcheck.sh $(TEST).test $(BINARY);
 
 test:		
 		cd check; \

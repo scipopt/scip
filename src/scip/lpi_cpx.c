@@ -30,9 +30,14 @@
 #include "message.h"
 
 
-#define CHECK_ZERO(x) { int _restat_; if( (_restat_ = (x)) != 0 ) { errorMessage("LP Error"); \
-                                                                    printf("-> CPLEX returned %d.\n", _restat_); \
-                                                                    return SCIP_LPERROR; } }
+#define CHECK_ZERO(x) { int _restat_;                                               \
+                        if( (_restat_ = (x)) != 0 )                                 \
+                        {                                                           \
+                           errorMessage("LP Error: CPLEX returned %d\n", _restat_); \
+                           return SCIP_LPERROR;                                     \
+                        }                                                           \
+                      }
+
 #define NOTCALLED  -1
 
 
@@ -425,7 +430,7 @@ int getIntParam(LPI* lpi, const int param)
       if( intparam[i] == param )
          return lpi->cpxparam.intparval[i];
 
-   errorMessage("Unknown CPLEX integer parameter");
+   errorMessage("Unknown CPLEX integer parameter\n");
    abort();
 }
 
@@ -440,7 +445,7 @@ double getDblParam(LPI* lpi, const int param)
       if( dblparam[i] == param )
          return lpi->cpxparam.dblparval[i];
 
-   errorMessage("Unknown CPLEX double parameter");
+   errorMessage("Unknown CPLEX double parameter\n");
    abort();
 }
 
@@ -458,7 +463,7 @@ void setIntParam(LPI* lpi, const int param, int parval)
          return;
       }
 
-   errorMessage("Unknown CPLEX integer parameter");
+   errorMessage("Unknown CPLEX integer parameter\n");
    abort();
 }
 
@@ -476,7 +481,7 @@ void setDblParam(LPI* lpi, const int param, double parval)
          return;
       }
 
-   errorMessage("Unknown CPLEX double parameter");
+   errorMessage("Unknown CPLEX double parameter\n");
    abort();
 }
 
@@ -497,7 +502,7 @@ int cpxObjsen(OBJSEN objsen)
    case SCIP_OBJSEN_MINIMIZE:
       return CPX_MIN;
    default:
-      errorMessage("invalid objective sense");
+      errorMessage("invalid objective sense\n");
       abort();
    }
 }
@@ -621,7 +626,7 @@ void reconvertSides(
          break;
          
       default:
-         errorMessage("invalid row sense");
+         errorMessage("invalid row sense\n");
          abort();
       }
       assert(lhs[i] <= rhs[i]);
@@ -1492,7 +1497,7 @@ RETCODE SCIPlpiSolvePrimal(
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         errorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off");
+         errorMessage("CPLEX primal simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
 
       /* switch on preprocessing again */
@@ -1560,7 +1565,7 @@ RETCODE SCIPlpiSolveDual(
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off");
+         errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
 
       /* switch on preprocessing again */
@@ -1625,7 +1630,7 @@ RETCODE SCIPlpiSolveBarrier(
       if( lpi->solstat == CPX_STAT_INForUNBD )
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
-         errorMessage("CPLEX barrier returned CPX_STAT_INForUNBD after presolving was turned off");
+         errorMessage("CPLEX barrier returned CPX_STAT_INForUNBD after presolving was turned off\n");
       }
 
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );

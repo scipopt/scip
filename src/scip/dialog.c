@@ -514,10 +514,8 @@ RETCODE SCIPdialogAddEntry(
    /* check, if subdialog already exists */
    if( SCIPdialogHasEntry(dialog, SCIPdialogGetName(subdialog)) )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "dialog entry with name <%s> already exists in dialog <%s>\n",
+      errorMessage("dialog entry with name <%s> already exists in dialog <%s>\n",
          SCIPdialogGetName(subdialog), SCIPdialogGetName(dialog));
-      errorMessage(s);
       return SCIP_INVALIDDATA;
    }
 

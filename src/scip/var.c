@@ -223,7 +223,7 @@ RETCODE SCIPboundchgApply(
                      boundchg->infercons, boundchg->infervar, boundchg->inferdepth, boundchg->infernum) );
       break;
    default:
-      errorMessage("Unknown bound type");
+      errorMessage("Unknown bound type\n");
       abort();
    }
 
@@ -259,7 +259,7 @@ RETCODE SCIPboundchgUndo(
                      NULL, NULL, 0, 0) );
       break;
    default:
-      errorMessage("Unknown bound type");
+      errorMessage("Unknown bound type\n");
       abort();
    }
 
@@ -346,7 +346,7 @@ RETCODE SCIPdomchgFree(
          freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN));
          break;
       default:
-         errorMessage("invalid domain change type");
+         errorMessage("invalid domain change type\n");
          abort();
       }
    }
@@ -391,7 +391,7 @@ RETCODE domchgMakeDynamic(
       case SCIP_DOMCHGTYPE_DYNAMIC:
          break;
       default:
-         errorMessage("invalid domain change type");
+         errorMessage("invalid domain change type\n");
          abort();
       }
    }
@@ -468,7 +468,7 @@ RETCODE SCIPdomchgMakeStatic(
          }
          break;
       default:
-         errorMessage("invalid domain change type");
+         errorMessage("invalid domain change type\n");
          abort();
       }
    }
@@ -946,7 +946,7 @@ RETCODE varFreeParents(
          break;
 
       default:
-         errorMessage("parent variable is neither ORIGINAL, AGGREGATED nor NEGATED");
+         errorMessage("parent variable is neither ORIGINAL, AGGREGATED nor NEGATED\n");
          return SCIP_INVALIDDATA;
       }
 
@@ -996,7 +996,7 @@ RETCODE varFree(
    case SCIP_VARSTATUS_NEGATED:
       break;
    default:
-      errorMessage("Unknown variable status");
+      errorMessage("Unknown variable status\n");
       abort();
    }
 
@@ -1116,7 +1116,7 @@ void varAddRoundLocks(
       break;
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -1350,7 +1350,7 @@ int SCIPvarGetNLocksDown(
       return SCIPvarGetNLocksUp(var->negatedvar);
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -1403,7 +1403,7 @@ int SCIPvarGetNLocksUp(
       return SCIPvarGetNLocksDown(var->negatedvar);
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -1583,7 +1583,7 @@ RETCODE SCIPvarFix(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
       {
-         errorMessage("Cannot fix an untransformed original variable");
+         errorMessage("Cannot fix an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue, fixedval,
@@ -1613,11 +1613,11 @@ RETCODE SCIPvarFix(
       break;
 
    case SCIP_VARSTATUS_COLUMN:
-      errorMessage("Cannot fix a column variable");
+      errorMessage("Cannot fix a column variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("Cannot fix a fixed variable again");
+      errorMessage("Cannot fix a fixed variable again\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
@@ -1629,7 +1629,7 @@ RETCODE SCIPvarFix(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot fix a multiple aggregated variable");
+      errorMessage("cannot fix a multiple aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
@@ -1643,7 +1643,7 @@ RETCODE SCIPvarFix(
       break;
 
    default:
-      errorMessage("Unknown variable status");
+      errorMessage("Unknown variable status\n");
       abort();
    }
    
@@ -1967,7 +1967,7 @@ RETCODE SCIPvarMultiaggregate(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
       {
-         errorMessage("Cannot multi-aggregate an untransformed original variable");
+         errorMessage("Cannot multi-aggregate an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue,
@@ -2018,19 +2018,19 @@ RETCODE SCIPvarMultiaggregate(
       break;
 
    case SCIP_VARSTATUS_COLUMN:
-      errorMessage("Cannot multi-aggregate a column variable");
+      errorMessage("Cannot multi-aggregate a column variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("Cannot multi-aggregate a fixed variable");
+      errorMessage("Cannot multi-aggregate a fixed variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
-      errorMessage("Cannot multi-aggregate an aggregated variable");
+      errorMessage("Cannot multi-aggregate an aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("cannot multi-aggregate a multiple aggregated variable again");
+      errorMessage("cannot multi-aggregate a multiple aggregated variable again\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
@@ -2057,7 +2057,7 @@ RETCODE SCIPvarMultiaggregate(
       break;
 
    default:
-      errorMessage("Unknown variable status");
+      errorMessage("Unknown variable status\n");
       abort();
    }
    
@@ -2091,7 +2091,7 @@ RETCODE SCIPvarNegate(
       /* negation is only possible for bounded variables */
       if( SCIPsetIsInfinity(set, -var->glbdom.lb) || SCIPsetIsInfinity(set, var->glbdom.ub) )
       {
-         errorMessage("cannot negate unbounded variable");
+         errorMessage("cannot negate unbounded variable\n");
          return SCIP_INVALIDDATA;
       }
 
@@ -2153,7 +2153,7 @@ RETCODE SCIPvarChgType(
 
    if( var->probindex >= 0 )
    {
-      errorMessage("cannot change type of variable already in the problem");
+      errorMessage("cannot change type of variable already in the problem\n");
       return SCIP_INVALIDDATA;
    }
    
@@ -2244,11 +2244,11 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_MULTAGGR:
       case SCIP_VARSTATUS_NEGATED:
-         errorMessage("cannot change objective value of a fixed, aggregated, multi-aggregated, or negated variable");
+         errorMessage("cannot change objective value of a fixed, aggregated, multi-aggregated, or negated variable\n");
          return SCIP_INVALIDDATA;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -2331,7 +2331,7 @@ RETCODE SCIPvarAddObj(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -2388,7 +2388,7 @@ RETCODE varProcessChgLbGlobal(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          abort();
       
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -2422,7 +2422,7 @@ RETCODE varProcessChgLbGlobal(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -2468,7 +2468,7 @@ RETCODE varProcessChgUbGlobal(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          abort();
       
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -2502,7 +2502,7 @@ RETCODE varProcessChgUbGlobal(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -2548,7 +2548,7 @@ RETCODE SCIPvarChgLbGlobal(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot change the bounds of a fixed variable");
+      errorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
          
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -2573,14 +2573,14 @@ RETCODE SCIPvarChgLbGlobal(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          return SCIP_INVALIDDATA;
       }
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo change the sides of the corresponding linear constraint */
-      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -2591,7 +2591,7 @@ RETCODE SCIPvarChgLbGlobal(
       break;
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -2636,7 +2636,7 @@ RETCODE SCIPvarChgUbGlobal(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot change the bounds of a fixed variable");
+      errorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
          
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -2661,14 +2661,14 @@ RETCODE SCIPvarChgUbGlobal(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          return SCIP_INVALIDDATA;
       }
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo change the sides of the corresponding linear constraint */
-      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -2679,7 +2679,7 @@ RETCODE SCIPvarChgUbGlobal(
       break;
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -2702,7 +2702,7 @@ RETCODE SCIPvarChgBdGlobal(
    case SCIP_BOUNDTYPE_UPPER:
       return SCIPvarChgUbGlobal(var, set, newbound);
    default:
-      errorMessage("Unknown bound type");
+      errorMessage("Unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -2861,7 +2861,7 @@ RETCODE varProcessChgLbLocal(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          abort();
       
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -2899,7 +2899,7 @@ RETCODE varProcessChgLbLocal(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -2966,7 +2966,7 @@ RETCODE varProcessChgUbLocal(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          abort();
       
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c */
@@ -3004,7 +3004,7 @@ RETCODE varProcessChgUbLocal(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -3068,7 +3068,7 @@ RETCODE SCIPvarChgLbLocal(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot change the bounds of a fixed variable");
+      errorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
          
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -3095,14 +3095,14 @@ RETCODE SCIPvarChgLbLocal(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          return SCIP_INVALIDDATA;
       }
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo change the sides of the corresponding linear constraint */
-      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -3115,7 +3115,7 @@ RETCODE SCIPvarChgLbLocal(
       break;
          
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
    
@@ -3178,7 +3178,7 @@ RETCODE SCIPvarChgUbLocal(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot change the bounds of a fixed variable");
+      errorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
          
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -3205,14 +3205,14 @@ RETCODE SCIPvarChgUbLocal(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          return SCIP_INVALIDDATA;
       }
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo change the sides of the corresponding linear constraint */
-      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -3225,7 +3225,7 @@ RETCODE SCIPvarChgUbLocal(
       break;
          
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -3260,7 +3260,7 @@ RETCODE SCIPvarChgBdLocal(
       return SCIPvarChgUbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, newbound, 
          infercons, infervar, inferdepth, infernum);
    default:
-      errorMessage("Unknown bound type");
+      errorMessage("Unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
 }
@@ -3336,11 +3336,11 @@ RETCODE SCIPvarChgLbDive(
       break;
 
    case SCIP_VARSTATUS_LOOSE:
-      errorMessage("cannot change variable's bounds in dive for LOOSE variables");
+      errorMessage("cannot change variable's bounds in dive for LOOSE variables\n");
       return SCIP_INVALIDDATA;
       
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot change the bounds of a fixed variable");
+      errorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
       
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -3359,14 +3359,14 @@ RETCODE SCIPvarChgLbDive(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          return SCIP_INVALIDDATA;
       }
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo change the sides of the corresponding linear constraint */
-      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -3377,7 +3377,7 @@ RETCODE SCIPvarChgLbDive(
       break;
       
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -3413,11 +3413,11 @@ RETCODE SCIPvarChgUbDive(
       break;
 
    case SCIP_VARSTATUS_LOOSE:
-      errorMessage("cannot change variable's bounds in dive for LOOSE variables");
+      errorMessage("cannot change variable's bounds in dive for LOOSE variables\n");
       return SCIP_INVALIDDATA;
       
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("cannot change the bounds of a fixed variable");
+      errorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
       
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
@@ -3436,14 +3436,14 @@ RETCODE SCIPvarChgUbDive(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          return SCIP_INVALIDDATA;
       }
       break;
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo change the sides of the corresponding linear constraint */
-      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("changing the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -3454,7 +3454,7 @@ RETCODE SCIPvarChgUbDive(
       break;
       
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -3540,7 +3540,7 @@ void varProcessChgBranchingPriority(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable");
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
          abort();
       
       case SCIP_VARSTATUS_AGGREGATED:
@@ -3549,7 +3549,7 @@ void varProcessChgBranchingPriority(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -3612,7 +3612,7 @@ void SCIPvarChgBranchingPriority(
       break;
          
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -3653,7 +3653,7 @@ VAR* SCIPvarGetProbvar(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
       {
-         errorMessage("original variable has no transformed variable attached");
+         errorMessage("original variable has no transformed variable attached\n");
          return NULL;
       }
       return SCIPvarGetProbvar(var->data.transvar);
@@ -3669,14 +3669,14 @@ VAR* SCIPvarGetProbvar(
       return SCIPvarGetProbvar(var->data.aggregate.var);
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("multi-aggregated variable has no single active problem variable");
+      errorMessage("multi-aggregated variable has no single active problem variable\n");
       abort();
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetProbvar(var->negatedvar);
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -3700,7 +3700,7 @@ RETCODE SCIPvarGetProbvarBound(
    case SCIP_VARSTATUS_ORIGINAL:
       if( (*var)->data.transvar == NULL )
       {
-         errorMessage("original variable has no transformed variable attached");
+         errorMessage("original variable has no transformed variable attached\n");
          return SCIP_INVALIDDATA;
       }
       *var = (*var)->data.transvar;
@@ -3712,7 +3712,7 @@ RETCODE SCIPvarGetProbvarBound(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      errorMessage("fixed variable has no corresponding active problem variable");
+      errorMessage("fixed variable has no corresponding active problem variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:  /* x = a*y + c  ->  y = x/a - c/a */
@@ -3733,7 +3733,7 @@ RETCODE SCIPvarGetProbvarBound(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("multiple aggregated variable has no single corresponding active problem variable");
+      errorMessage("multiple aggregated variable has no single corresponding active problem variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -3750,7 +3750,7 @@ RETCODE SCIPvarGetProbvarBound(
       break;
 
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 
@@ -3778,7 +3778,7 @@ RETCODE SCIPvarGetProbvarSum(
       case SCIP_VARSTATUS_ORIGINAL:
          if( (*var)->data.transvar == NULL )
          {
-            errorMessage("original variable has no transformed variable attached");
+            errorMessage("original variable has no transformed variable attached\n");
             return SCIP_INVALIDDATA;
          }
          *var = (*var)->data.transvar;
@@ -3802,7 +3802,7 @@ RETCODE SCIPvarGetProbvarSum(
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("multiple aggregated variable has no single corresponding active problem variable");
+         errorMessage("multiple aggregated variable has no single corresponding active problem variable\n");
          return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
@@ -3815,7 +3815,7 @@ RETCODE SCIPvarGetProbvarSum(
          break;
 
       default:
-         errorMessage("unknown variable status");
+         errorMessage("unknown variable status\n");
          abort();
       }
    }
@@ -4185,13 +4185,13 @@ Real SCIPvarGetLbDive(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          abort();
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
-      errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -4201,7 +4201,7 @@ Real SCIPvarGetLbDive(
       return var->data.negate.constant - SCIPvarGetUbDive(var->negatedvar, set);
       
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -4243,13 +4243,13 @@ Real SCIPvarGetUbDive(
       }
       else
       {
-         errorMessage("scalar is zero in aggregation");
+         errorMessage("scalar is zero in aggregation\n");
          abort();
       }
       
    case SCIP_VARSTATUS_MULTAGGR:
       /**@todo get the sides of the corresponding linear constraint */
-      errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet");
+      errorMessage("getting the bounds of a multiple aggregated variable is not implemented yet\n");
       abort();
       
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
@@ -4259,7 +4259,7 @@ Real SCIPvarGetUbDive(
       return var->data.negate.constant - SCIPvarGetLbDive(var->negatedvar, set);
       
    default:
-      errorMessage("unknown variable status");
+      errorMessage("unknown variable status\n");
       abort();
    }
 }
@@ -4341,7 +4341,7 @@ Real SCIPvarGetLPSol(
       return var->data.negate.constant - SCIPvarGetLPSol(var->negatedvar);
       
    default:
-      errorMessage("Unknown variable status");
+      errorMessage("Unknown variable status\n");
       abort();
    }
 }
@@ -4393,7 +4393,7 @@ Real SCIPvarGetPseudoSol(
       return var->data.negate.constant - SCIPvarGetPseudoSol(var->negatedvar);
       
    default:
-      errorMessage("Unknown variable status");
+      errorMessage("Unknown variable status\n");
       abort();
    }
 }
@@ -4440,9 +4440,7 @@ RETCODE SCIPvarAddToRow(
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "Cannot add untransformed original variable <%s> to LP row <%s>", var->name, row->name);
-         errorMessage(s);
+         errorMessage("Cannot add untransformed original variable <%s> to LP row <%s>\n", var->name, row->name);
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarAddToRow(var->data.transvar, memhdr, set, stat, lp, row, val) );
@@ -4495,7 +4493,7 @@ RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    default:
-      errorMessage("Unknown variable status");
+      errorMessage("Unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
 }

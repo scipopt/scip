@@ -477,7 +477,7 @@ RETCODE SCIPsetFree(
    /* free variable pricers */
    for( i = 0; i < (*set)->npricers; ++i )
    {
-      errorMessage("pricers not implemented yet");
+      errorMessage("pricers not implemented yet\n");
       abort();
 #if 0
       CHECK_OKAY( SCIPpricerFree(&(*set)->pricers[i], (*set)->scip) );
@@ -970,7 +970,7 @@ PRICER* SCIPsetFindPricer(
 
    for( i = 0; i < set->npricers; ++i )
    {
-      errorMessage("pricers not yet implemented");
+      errorMessage("pricers not yet implemented\n");
       abort();
 #if 0
       if( strcmp(SCIPpricerGetName(set->pricers[i]), name) == 0 )
@@ -1457,7 +1457,7 @@ RETCODE SCIPsetInitCallbacks(
    /* variable pricers */
    for( i = 0; i < set->npricers; ++i )
    {
-      errorMessage("pricers not implemented yet");
+      errorMessage("pricers not implemented yet\n");
       abort();
 #if 0
       CHECK_OKAY( SCIPpricerInit(set->pricers[i], set->scip) );
@@ -1534,7 +1534,7 @@ RETCODE SCIPsetExitCallbacks(
    /* variable pricers */
    for( i = 0; i < set->npricers; ++i )
    {
-      errorMessage("pricers not implemented yet");
+      errorMessage("pricers not implemented yet\n");
       abort();
 #if 0
       CHECK_OKAY( SCIPpricerExit(set->pricers[i], set->scip) );
@@ -1635,9 +1635,7 @@ RETCODE SCIPsetSetVerbLevel(
 
    if( verblevel > SCIP_VERBLEVEL_FULL )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "Invalid verbosity level <%d>, maximum is <%d>", verblevel, SCIP_VERBLEVEL_FULL);
-      errorMessage(s);
+      errorMessage("Invalid verbosity level <%d>, maximum is <%d>\n", verblevel, SCIP_VERBLEVEL_FULL);
       return SCIP_INVALIDCALL;
    }
    

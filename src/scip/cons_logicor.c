@@ -109,7 +109,7 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
    if( (*conshdlrdata)->eventhdlr == NULL )
    {
-      errorMessage("event handler for logic or constraints not found");
+      errorMessage("event handler for logic or constraints not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
    
@@ -2193,7 +2193,7 @@ RETCODE SCIPcreateConsLogicor(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("logic or constraint handler not found");
+      errorMessage("logic or constraint handler not found\n");
       return SCIP_INVALIDCALL;
    }
 

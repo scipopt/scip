@@ -140,9 +140,7 @@ RETCODE SCIPheurInit(
 
    if( heur->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "primal heuristic <%s> already initialized", heur->name);
-      errorMessage(s);
+      errorMessage("primal heuristic <%s> already initialized\n", heur->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -171,9 +169,7 @@ RETCODE SCIPheurExit(
 
    if( !heur->initialized )
    {
-      char s[MAXSTRLEN];
-      sprintf(s, "primal heuristic <%s> not initialized", heur->name);
-      errorMessage(s);
+      errorMessage("primal heuristic <%s> not initialized\n", heur->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -244,10 +240,8 @@ RETCODE SCIPheurExec(
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {
-         char s[MAXSTRLEN];
-         sprintf(s, "execution method of primal heuristic <%s> returned invalid result <%d>", 
+         errorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
             heur->name, *result);
-         errorMessage(s);
          return SCIP_INVALIDRESULT;
       }
       if( *result != SCIP_DIDNOTRUN )

@@ -27,14 +27,14 @@
 
 
 #include <stdlib.h>
-#include "def.h"
+
 
 
 /*
  * standard memory management
  */
 
-#ifdef SCIP_SAFEMEMORY
+#ifndef NOSAFEMEM
 
 /* safe memory management with leakage detection in debug mode */
 
@@ -127,7 +127,7 @@ void *  duplicateMemory_call(const void* source, size_t size);
 typedef struct memory_header MEMHDR;
 
 
-#ifdef SCIP_BLOCKMEMORY
+#ifndef NOBLOCKMEM
 
 /* block memory methods for faster memory access */
 

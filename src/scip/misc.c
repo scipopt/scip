@@ -360,7 +360,7 @@ RETCODE hashlistRemove(
    }
    else
    {
-      errorMessage("element not found in the hash table");
+      errorMessage("element not found in the hash table\n");
       return SCIP_INVALIDDATA;
    }
 }
