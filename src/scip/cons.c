@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.87 2004/07/12 12:40:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.88 2004/08/02 16:22:21 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1318,8 +1318,15 @@ RETCODE SCIPconshdlrInit(
    conshdlr->nconssfound = 0;
    conshdlr->ndomredsfound = 0;
    conshdlr->nchildren = 0;
+   conshdlr->lastpropdomchgcount = -1;
+   conshdlr->lastenfodomchgcount = -1;
    conshdlr->maxnconss = conshdlr->nconss;
    conshdlr->startnconss = 0;
+   conshdlr->lastsepalpcount = -1;
+   conshdlr->lastenfolpcount = -1;
+   conshdlr->lastnusefulpropconss = 0;
+   conshdlr->lastnusefulsepaconss = 0;
+   conshdlr->lastnusefulenfoconss = 0;
    conshdlr->lastnfixedvars = 0;
    conshdlr->lastnaggrvars = 0;
    conshdlr->lastnchgvartypes = 0;
@@ -1345,6 +1352,7 @@ RETCODE SCIPconshdlrInit(
       CHECK_OKAY( conshdlr->consinit(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
    conshdlr->initialized = TRUE;
+   assert(!conshdlr->delayupdates);
 
    return SCIP_OKAY;
 }

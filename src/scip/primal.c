@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.40 2004/06/29 17:55:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.41 2004/08/02 16:22:22 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -312,11 +312,11 @@ RETCODE primalAddSol(
     */
    {
       Bool feasible;
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, TRUE, TRUE, &feasible) );
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, stat, prob, TRUE, TRUE, &feasible) );
       if( !feasible )
       {
          errorMessage("infeasible solution accepted:\n");
-         CHECK_OKAY( SCIPsolPrint(sol, set, stat, prob, NULL) );
+         CHECK_OKAY( SCIPsolPrint(sol, set, stat, prob, NULL, NULL) );
       }
       assert(feasible);
    }

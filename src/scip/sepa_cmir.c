@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.8 2004/07/13 15:03:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.9 2004/08/02 16:22:22 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -41,7 +41,7 @@
 #define DEFAULT_MAXAGGRS              4 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          8 /**< maximal number of aggreagtions for each row per round in the root node */
 #define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_MINVIOLATION        0.2 /**< min. violation of c-MIR cut to be used */
+#define DEFAULT_MINVIOLATION        0.2 /**< min. violation of unscaled c-MIR cut to be used */
 #define DEFAULT_MAXSLACK            0.1 /**< max. slack of rows to be used */
 #define DEFAULT_SLACKSCORE         1e-3 /**< weight of slack in the aggregation scoring of the rows */
 #define DEFAULT_MAXROWFAC          1e+4 /**< max. row aggregation factor */
@@ -65,7 +65,7 @@ struct SepaData
    int              maxaggrs;           /**< maximal number of aggregations for each row per separation round */
    int              maxaggrsroot;       /**< maximal number of aggreagtions for each row per sepa. r. in the root node */
    Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
-   Real             minviolation;       /**< min. violation of c-MIR cut to be used */
+   Real             minviolation;       /**< min. violation of unscaled c-MIR cut to be used */
    Real             maxslack;         	/**< maximal slack of rows to be used as startrow */
    Real             slackscore;         /**< weight of slack in the aggregation scoring of the rows */
    int              maxrowfac;          /**< maximal row aggregation factor */
@@ -382,7 +382,7 @@ RETCODE aggregation(
       }
   
       /* delta found */
-      if( bestviolation >= sepadata->minviolation )
+      if( bestviolation >= sepadata->minviolation * bestdelta )
       {
          Real cutact;
          Real violation;
@@ -819,7 +819,7 @@ RETCODE SCIPincludeSepaCmir(
          &sepadata->dynamiccuts, DEFAULT_DYNAMICCUTS, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "separating/cmir/minviolation",
-         "min. violation of c-MIR cut to be used",
+         "min. violation of unscaled c-MIR cut to be used",
          &sepadata->minviolation, DEFAULT_MINVIOLATION, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "separating/cmir/maxslack",

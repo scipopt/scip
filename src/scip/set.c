@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.102 2004/07/13 15:03:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.103 2004/08/02 16:22:22 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -443,12 +443,12 @@ RETCODE SCIPsetCreate(
          &(*set)->abortpricevarsfac, SCIP_DEFAULT_ABORTPRICEVARSFAC, 1.0, REAL_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "propagating/maxproprounds",
+         "propagation/maxproprounds",
          "maximal number of propagation rounds per node (-1: unlimited)",
          &(*set)->maxproprounds, SCIP_DEFAULT_MAXPROPROUNDS, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-         "propagating/maxproproundsroot",
+         "propagation/maxproproundsroot",
          "maximal number of propagation rounds in the root node (-1: unlimited)",
          &(*set)->maxproproundsroot, SCIP_DEFAULT_MAXPROPROUNDSROOT, -1, INT_MAX,
          NULL, NULL) );
