@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.3 2004/03/22 16:03:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.4 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -35,6 +35,7 @@ typedef struct HashMapList HASHMAPLIST; /**< element list to store single mappin
 typedef struct RealArray REALARRAY;     /**< dynamic array for storing Real values */
 typedef struct IntArray INTARRAY;       /**< dynamic array for storing int values */
 typedef struct BoolArray BOOLARRAY;     /**< dynamic array for storing Bool values */
+typedef struct PtrArray PTRARRAY;       /**< dynamic array for storing pointers */
 
 
 

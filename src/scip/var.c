@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.99 2004/06/24 15:34:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.100 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2161,11 +2161,11 @@ RETCODE SCIPvarFix(
          CHECK_OKAY( SCIPprobVarChangedStatus(prob, set, branchcand, var) );
       }
 
-      /* issue VARFIXED event */
-      CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
-
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
       CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
+
+      /* issue VARFIXED event */
+      CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
       break;
 
    case SCIP_VARSTATUS_COLUMN:
@@ -2399,7 +2399,6 @@ RETCODE SCIPvarAggregate(
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    )
 {
-   EVENT* event;
    VAR** vars;
    Real* coefs;
    Real* constants;
@@ -2511,14 +2510,13 @@ RETCODE SCIPvarAggregate(
       CHECK_OKAY( SCIPprobVarChangedStatus(prob, set, branchcand, var) );
    }
 
-   /* issue VARFIXED event */
-   CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
-
    /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
     * variable and the problem's objective offset
     */
    CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
+
+   /* issue VARFIXED event */
+   CHECK_OKAY( varEventVarFixed(var, memhdr, set, eventqueue) );
 
    return SCIP_OKAY;
 }

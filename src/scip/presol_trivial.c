@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.13 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.14 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -50,6 +50,14 @@
 
 /** deinitialization method of presolver (called before transformed problem is freed) */
 #define presolExitTrivial NULL
+
+
+/** presolving initialization method of presolver (called when presolving is about to begin) */
+#define presolInitpreTrivial NULL
+
+
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+#define presolExitpreTrivial NULL
 
 
 /** presolving execution method */
@@ -187,8 +195,9 @@ RETCODE SCIPincludePresolTrivial(
 
    /* include presolver */
    CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY,
-                  presolFreeTrivial, presolInitTrivial, presolExitTrivial, presolExecTrivial,
-                  presoldata) );
+         presolFreeTrivial, presolInitTrivial, presolExitTrivial, 
+         presolInitpreTrivial, presolExitpreTrivial, presolExecTrivial,
+         presoldata) );
 
    return SCIP_OKAY;
 }

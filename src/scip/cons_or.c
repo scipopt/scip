@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.9 2004/06/24 15:34:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.10 2004/06/29 17:55:04 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1010,7 +1010,7 @@ RETCODE resolveConflict(
    {
    case PROPRULE_1:
       /* the resultant was infered to TRUE, because one operand variable was TRUE */
-      assert(SCIPvarGetUbLocal(infervar) < 0.5);
+      assert(SCIPvarGetLbLocal(infervar) > 0.5);
       assert(infervar == consdata->resvar);
       for( i = 0; i < nvars; ++i )
       {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.4 2004/03/22 16:03:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.5 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -112,6 +112,17 @@ struct BoolArray
 {
    MEMHDR*          memhdr;             /**< block memory that stores the vals array */
    Bool*            vals;               /**< array values */
+   int              valssize;           /**< size of vals array */
+   int              firstidx;           /**< index of first element in vals array */
+   int              minusedidx;         /**< index of first non zero element in vals array */
+   int              maxusedidx;         /**< index of last non zero element in vals array */
+};
+
+/** dynamic array for storing pointers */
+struct PtrArray
+{
+   MEMHDR*          memhdr;             /**< block memory that stores the vals array */
+   void**           vals;               /**< array values */
    int              valssize;           /**< size of vals array */
    int              firstidx;           /**< index of first element in vals array */
    int              minusedidx;         /**< index of first non zero element in vals array */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.141 2004/06/24 15:34:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.142 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -597,9 +597,11 @@ RETCODE SCIPincludePresol(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
-   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
    DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    PRESOLDATA*      presoldata          /**< presolver data */
    );
@@ -4309,6 +4311,53 @@ RETCODE SCIPsetBoolarrayVal(
    Bool             val                 /**< value to set array index to */
    );
 
+/** creates a dynamic array of pointers */
+extern
+RETCODE SCIPcreatePtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY**       ptrarray            /**< pointer to store the int array */
+   );
+
+/** frees a dynamic array of pointers */
+extern
+RETCODE SCIPfreePtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY**       ptrarray            /**< pointer to the int array */
+   );
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+extern
+RETCODE SCIPextendPtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              minidx,             /**< smallest index to allocate storage for */
+   int              maxidx              /**< largest index to allocate storage for */
+   );
+
+/** clears a dynamic pointer array */
+extern
+RETCODE SCIPclearPtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray            /**< dynamic int array */
+   );
+
+/** gets value of entry in dynamic array */
+extern
+void* SCIPgetPtrarrayVal(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              idx                 /**< array index to get value for */
+   );
+
+/** sets value of entry in dynamic array */
+extern
+RETCODE SCIPsetPtrarrayVal(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              idx,                /**< array index to set value for */
+   void*            val                 /**< value to set array index to */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -4348,6 +4397,16 @@ RETCODE SCIPsetBoolarrayVal(
                                              SCIPboolarrayGetVal(boolarray, idx)
 #define SCIPsetBoolarrayVal(scip, boolarray, idx, val) \
                                              SCIPboolarraySetVal(boolarray, (scip)->set, idx, val)
+
+#define SCIPcreatePtrarray(scip, ptrarray)   SCIPptrarrayCreate(ptrarray, SCIPmemhdr(scip))
+#define SCIPfreePtrarray(scip, ptrarray)     SCIPptrarrayFree(ptrarray)
+#define SCIPextendPtrarray(scip, ptrarray, minidx, maxidx) \
+                                             SCIPptrarrayExtend(ptrarray, (scip)->set, minidx, maxidx)
+#define SCIPclearPtrarray(scip, ptrarray)    SCIPptrarrayClear(ptrarray)
+#define SCIPgetPtrarrayVal(scip, ptrarray, idx) \
+                                             SCIPptrarrayGetVal(ptrarray, idx)
+#define SCIPsetPtrarrayVal(scip, ptrarray, idx, val) \
+                                             SCIPptrarraySetVal(ptrarray, (scip)->set, idx, val)
 
 #endif
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.4 2004/04/27 15:50:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.5 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -54,6 +54,38 @@ typedef struct PresolData PRESOLDATA;   /**< presolver specific data */
  *  - presol          : the presolver itself
  */
 #define DECL_PRESOLEXIT(x) RETCODE x (SCIP* scip, PRESOL* presol)
+
+/** presolving initialization method of presolver (called when presolving is about to begin)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - presol          : the presolver itself
+ *
+ *  output:
+ *  - result          : pointer to store the result of the presolving call
+ *
+ *  possible return values for *result:
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ */
+#define DECL_PRESOLINITPRE(x) RETCODE x (SCIP* scip, PRESOL* presol, RESULT* result)
+
+/** presolving deinitialization method of presolver (called after presolving has been finished)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - presol          : the presolver itself
+ *
+ *  output:
+ *  - result          : pointer to store the result of the presolving call
+ *
+ *  possible return values for *result:
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+ */
+#define DECL_PRESOLEXITPRE(x) RETCODE x (SCIP* scip, PRESOL* presol, RESULT* result)
 
 /** execution method of presolver
  *

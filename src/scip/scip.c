@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.176 2004/06/24 15:34:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.177 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1159,9 +1159,11 @@ RETCODE SCIPincludePresol(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
-   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
    DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    PRESOLDATA*      presoldata          /**< presolver data */
    )
@@ -1171,7 +1173,7 @@ RETCODE SCIPincludePresol(
    CHECK_OKAY( checkStage(scip, "SCIPincludePresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority,
-                  presolfree, presolinit, presolexit, presolexec, presoldata) );
+         presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata) );
    CHECK_OKAY( SCIPsetIncludePresol(scip->set, presol) );
    
    return SCIP_OKAY;
@@ -2221,7 +2223,7 @@ RETCODE SCIPgetVarsData(
    int*             ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPgetVarsData", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetVarsData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
@@ -2240,6 +2242,7 @@ RETCODE SCIPgetVarsData(
          *ncontvars = scip->origprob->ncontvars;
       return SCIP_OKAY;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2271,13 +2274,14 @@ VAR** SCIPgetVars(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetVars", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->vars;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2295,13 +2299,14 @@ int SCIPgetNVars(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNVars", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nvars;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2319,13 +2324,14 @@ int SCIPgetNBinVars(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNBinVars", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNBinVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nbinvars;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2343,13 +2349,14 @@ int SCIPgetNIntVars(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNIntVars", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNIntVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nintvars;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2367,13 +2374,14 @@ int SCIPgetNImplVars(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nimplvars;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2391,13 +2399,14 @@ int SCIPgetNContVars(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNContVars", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNContVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->ncontvars;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -2923,9 +2932,6 @@ RETCODE transformProb(
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
                   scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
 
-   /* init callback methods */
-   CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
-
    /* switch stage to TRANSFORMED */
    scip->stage = SCIP_STAGE_TRANSFORMED;
 
@@ -2951,6 +2957,9 @@ RETCODE transformProb(
       }
    }
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL, "\n");
+
+   /* init callback methods */
+   CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
 
    return SCIP_OKAY;
 }
@@ -2996,6 +3005,9 @@ RETCODE presolve(
    assert(unbounded != NULL);
    assert(infeasible != NULL);
 
+   *unbounded = FALSE;
+   *infeasible = FALSE;
+
    /* update upper bound (e.g. objective limit) in primal data */
    CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
                   scip->tree, scip->lp) );
@@ -3028,12 +3040,22 @@ RETCODE presolve(
 
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
+   /* inform presolvers that the presolving is abound to begin */
+   for( i = 0; i < scip->set->npresols; ++i )
+   {
+      CHECK_OKAY( SCIPpresolInitpre(scip->set->presols[i], scip, &result) );
+      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+      *infeasible = *infeasible || (result == SCIP_CUTOFF);
+   }
+
    /* inform constraint handlers that the presolving is abound to begin */
-   for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrInitpre(scip->set->conshdlrs[i], scip, &result) );
+      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+      *infeasible =*infeasible ||  (result == SCIP_CUTOFF);
    }
-   aborted = aborted || (result == SCIP_CUTOFF) || (result == SCIP_UNBOUNDED);
+   aborted = aborted || *unbounded || *infeasible;
 
    /* perform presolving rounds */
    while( nrounds < maxnrounds && !aborted )
@@ -3052,20 +3074,24 @@ RETCODE presolve(
       SCIPsetSortPresols(scip->set);
 
       /* call included presolvers */
-      for( i = 0; i < scip->set->npresols && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
+      for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
       {
          CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 
                         &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
                         &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
+         *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+         *infeasible = *infeasible || (result == SCIP_CUTOFF);
       }
 
       /* call presolve methods of constraint handlers */
-      for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
+      for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible); ++i )
       {
          CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
                         scip->transprob, nrounds,
                         &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
                         &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
+         *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+         *infeasible = *infeasible || (result == SCIP_CUTOFF);
       }
 
       /* check, if we should abort presolving due to not enough changes in the last round */
@@ -3092,7 +3118,7 @@ RETCODE presolve(
       aborted = aborted || SCIPsolveIsStopped(scip->set, scip->stat);
 
       /* abort if problem is infeasible or unbounded */
-      aborted = aborted || (result == SCIP_CUTOFF) || (result == SCIP_UNBOUNDED);
+      aborted = aborted || *unbounded || *infeasible;
 
       /* increase round number */
       nrounds++;
@@ -3108,9 +3134,19 @@ RETCODE presolve(
    }
    
    /* inform constraint handlers that the presolving is finished, and perform final modifications */
-   for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrExitpre(scip->set->conshdlrs[i], scip, &result) );
+      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+      *infeasible = *infeasible || (result == SCIP_CUTOFF);
+   }
+
+   /* inform presolvers that the presolving is finished, and perform final modifications */
+   for( i = 0; i < scip->set->npresols; ++i )
+   {
+      CHECK_OKAY( SCIPpresolExitpre(scip->set->presols[i], scip, &result) );
+      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
+      *infeasible = *infeasible || (result == SCIP_CUTOFF);
    }
 
    /* print presolving statistics */
@@ -3118,10 +3154,6 @@ RETCODE presolve(
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d deleted vars, %d deleted constraints, %d tightened bounds, %d added holes, %d changed sides, %d changed coefficients\n",
       nfixedvars + naggrvars, ndelconss, nchgbds, naddholes, nchgsides, nchgcoefs);
-
-   /* check for unboundness and infeasibility */
-   *unbounded = (result == SCIP_UNBOUNDED);
-   *infeasible = (result == SCIP_CUTOFF);
 
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
@@ -3289,11 +3321,11 @@ RETCODE freeTransform(
    assert(scip->mem != NULL);
    assert(scip->stage == SCIP_STAGE_TRANSFORMED);
 
-   /* switch stage to FREETRANS */
-   scip->stage = SCIP_STAGE_FREETRANS;
-
    /* exit callback methods */
    CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
+
+   /* switch stage to FREETRANS */
+   scip->stage = SCIP_STAGE_FREETRANS;
 
    /* free transformed problem data structures */
    CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
@@ -9716,8 +9748,10 @@ MEMHDR* SCIPmemhdr(
       return scip->mem->probmem;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_FREESOLVE:
@@ -9918,7 +9952,7 @@ Real SCIPgetRealarrayVal(
    int              idx                 /**< array index to get value for */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetRealarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    return SCIPrealarrayGetVal(realarray, idx);
 }
@@ -9931,7 +9965,7 @@ RETCODE SCIPsetRealarrayVal(
    Real             val                 /**< value to set array index to */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPsetRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPsetRealarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    CHECK_OKAY( SCIPrealarraySetVal(realarray, scip->set, idx, val) );
    
@@ -9946,7 +9980,7 @@ RETCODE SCIPincRealarrayVal(
    Real             incval              /**< value to increase array index */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPincRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincRealarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    CHECK_OKAY( SCIPrealarrayIncVal(realarray, scip->set, idx, incval) );
    
@@ -10014,7 +10048,7 @@ int SCIPgetIntarrayVal(
    int              idx                 /**< array index to get value for */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetIntarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    return SCIPintarrayGetVal(intarray, idx);
 }
@@ -10027,7 +10061,7 @@ RETCODE SCIPsetIntarrayVal(
    int              val                 /**< value to set array index to */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPsetIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPsetIntarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    CHECK_OKAY( SCIPintarraySetVal(intarray, scip->set, idx, val) );
    
@@ -10042,7 +10076,7 @@ RETCODE SCIPincIntarrayVal(
    int              incval              /**< value to increase array index */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPincIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincIntarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    CHECK_OKAY( SCIPintarrayIncVal(intarray, scip->set, idx, incval) );
    
@@ -10110,7 +10144,7 @@ Bool SCIPgetBoolarrayVal(
    int              idx                 /**< array index to get value for */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetBoolarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    return SCIPboolarrayGetVal(boolarray, idx);
 }
@@ -10123,9 +10157,90 @@ RETCODE SCIPsetBoolarrayVal(
    Bool             val                 /**< value to set array index to */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPsetBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPsetBoolarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    CHECK_OKAY( SCIPboolarraySetVal(boolarray, scip->set, idx, val) );
+   
+   return SCIP_OKAY;
+}
+
+/** creates a dynamic array of pointers */
+RETCODE SCIPcreatePtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY**       ptrarray            /**< pointer to store the int array */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcreatePtrarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   CHECK_OKAY( SCIPptrarrayCreate(ptrarray, SCIPmemhdr(scip)) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a dynamic array of pointers */
+RETCODE SCIPfreePtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY**       ptrarray            /**< pointer to the int array */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPfreePtrarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   CHECK_OKAY( SCIPptrarrayFree(ptrarray) );
+   
+   return SCIP_OKAY;
+}
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+RETCODE SCIPextendPtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              minidx,             /**< smallest index to allocate storage for */
+   int              maxidx              /**< largest index to allocate storage for */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPextendPtrarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   CHECK_OKAY( SCIPptrarrayExtend(ptrarray, scip->set, minidx, maxidx) );
+   
+   return SCIP_OKAY;
+}
+
+/** clears a dynamic pointer array */
+RETCODE SCIPclearPtrarray(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray            /**< dynamic int array */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPclearPtrarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   CHECK_OKAY( SCIPptrarrayClear(ptrarray) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets value of entry in dynamic array */
+void* SCIPgetPtrarrayVal(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              idx                 /**< array index to get value for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetPtrarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   return SCIPptrarrayGetVal(ptrarray, idx);
+}
+
+/** sets value of entry in dynamic array */
+RETCODE SCIPsetPtrarrayVal(
+   SCIP*            scip,               /**< SCIP data structure */
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              idx,                /**< array index to set value for */
+   void*            val                 /**< value to set array index to */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetPtrarrayVal", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   CHECK_OKAY( SCIPptrarraySetVal(ptrarray, scip->set, idx, val) );
    
    return SCIP_OKAY;
 }

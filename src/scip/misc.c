@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.23 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.24 2004/06/29 17:55:04 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1285,7 +1285,7 @@ RETCODE SCIPintarrayCreate(
    return SCIP_OKAY;
 }
 
-/** creates a copy of a dynamic array of real values */
+/** creates a copy of a dynamic array of int values */
 RETCODE SCIPintarrayCopy(
    INTARRAY**       intarray,           /**< pointer to store the copied real array */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1625,7 +1625,7 @@ RETCODE SCIPboolarrayCreate(
    return SCIP_OKAY;
 }
 
-/** creates a copy of a dynamic array of real values */
+/** creates a copy of a dynamic array of bool values */
 RETCODE SCIPboolarrayCopy(
    BOOLARRAY**      boolarray,          /**< pointer to store the copied real array */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1934,6 +1934,334 @@ RETCODE SCIPboolarraySetVal(
    return SCIP_OKAY;
 }
 
+
+/** creates a dynamic array of pointer values */
+RETCODE SCIPptrarrayCreate(
+   PTRARRAY**       ptrarray,           /**< pointer to store the int array */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(ptrarray != NULL);
+   assert(memhdr != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, ptrarray) );
+   (*ptrarray)->memhdr = memhdr;
+   (*ptrarray)->vals = NULL;
+   (*ptrarray)->valssize = 0;
+   (*ptrarray)->firstidx = -1;
+   (*ptrarray)->minusedidx = INT_MAX;
+   (*ptrarray)->maxusedidx = INT_MIN;
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a dynamic array of pointer values */
+RETCODE SCIPptrarrayCopy(
+   PTRARRAY**       ptrarray,           /**< pointer to store the copied real array */
+   MEMHDR*          memhdr,             /**< block memory */
+   PTRARRAY*        sourceptrarray      /**< dynamic real array to copy */
+   )
+{
+   assert(ptrarray != NULL);
+   assert(sourceptrarray != NULL);
+
+   CHECK_OKAY( SCIPptrarrayCreate(ptrarray, memhdr) );
+   if( sourceptrarray->valssize > 0 )
+   {
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*ptrarray)->vals, sourceptrarray->vals, sourceptrarray->valssize) );
+   }
+   (*ptrarray)->valssize = sourceptrarray->valssize;
+   (*ptrarray)->firstidx = sourceptrarray->firstidx;
+   (*ptrarray)->minusedidx = sourceptrarray->minusedidx;
+   (*ptrarray)->maxusedidx = sourceptrarray->maxusedidx;
+
+   return SCIP_OKAY;
+}
+
+/** frees a dynamic array of pointer values */
+RETCODE SCIPptrarrayFree(
+   PTRARRAY**       ptrarray            /**< pointer to the int array */
+   )
+{
+   assert(ptrarray != NULL);
+   assert(*ptrarray != NULL);
+
+   freeBlockMemoryArrayNull((*ptrarray)->memhdr, &(*ptrarray)->vals, (*ptrarray)->valssize);
+   freeBlockMemory((*ptrarray)->memhdr, ptrarray);
+
+   return SCIP_OKAY;
+}
+
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+RETCODE SCIPptrarrayExtend(
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   SET*             set,                /**< global SCIP settings */
+   int              minidx,             /**< smallest index to allocate storage for */
+   int              maxidx              /**< largest index to allocate storage for */
+   )
+{
+   int nused;
+   int nfree;
+   int newfirstidx;
+   int i;
+
+   assert(ptrarray != NULL);
+   assert(ptrarray->minusedidx == INT_MAX || ptrarray->firstidx >= 0);
+   assert(ptrarray->maxusedidx == INT_MIN || ptrarray->firstidx >= 0);
+   assert(ptrarray->minusedidx == INT_MAX || ptrarray->minusedidx >= ptrarray->firstidx);
+   assert(ptrarray->maxusedidx == INT_MIN || ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
+   assert(0 <= minidx);
+   assert(minidx <= maxidx);
+   
+   minidx = MIN(minidx, ptrarray->minusedidx);
+   maxidx = MAX(maxidx, ptrarray->maxusedidx);
+   assert(0 <= minidx);
+   assert(minidx <= maxidx);
+
+   debugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
+
+   /* check, whether we have to allocate additional memory, or shift the array */
+   nused = maxidx - minidx + 1;
+   if( nused > ptrarray->valssize )
+   {
+      void** newvals;
+      int newvalssize;
+
+      /* allocate new memory storage */
+      newvalssize = SCIPsetCalcMemGrowSize(set, nused);
+      ALLOC_OKAY( allocBlockMemoryArray(ptrarray->memhdr, &newvals, newvalssize) );
+      nfree = newvalssize - nused;
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + newvalssize);
+
+      /* initialize memory array by copying old values and setting new values to zero */
+      if( ptrarray->firstidx != -1 )
+      {
+         for( i = 0; i < ptrarray->minusedidx - newfirstidx; ++i )
+            newvals[i] = NULL;
+         copyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
+            &ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx],
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1);
+         for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
+            newvals[i] = NULL;
+      }
+      else
+      {
+         for( i = 0; i < newvalssize; ++i )
+            newvals[i] = NULL;
+      }
+
+      /* free old memory storage, and set the new array parameters */
+      freeBlockMemoryArrayNull(ptrarray->memhdr, &ptrarray->vals, ptrarray->valssize);
+      ptrarray->vals = newvals;
+      ptrarray->valssize = newvalssize;
+      ptrarray->firstidx = newfirstidx;
+   }
+   else if( ptrarray->firstidx == -1 )
+   {
+      /* a sufficiently large memory storage exists, but it was cleared */
+      nfree = ptrarray->valssize - nused;
+      assert(nfree >= 0);
+      ptrarray->firstidx = minidx - nfree/2;
+      assert(ptrarray->firstidx <= minidx);
+      assert(maxidx < ptrarray->firstidx + ptrarray->valssize);
+#ifndef NDEBUG
+      for( i = 0; i < ptrarray->valssize; ++i )
+         assert(ptrarray->vals[i] == NULL);
+#endif
+   }
+   else if( minidx < ptrarray->firstidx )
+   {
+      /* a sufficiently large memory storage exists, but it has to be shifted to the right */
+      nfree = ptrarray->valssize - nused;
+      assert(nfree >= 0);
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + ptrarray->valssize);
+      
+      if( ptrarray->minusedidx <= ptrarray->maxusedidx )
+      {
+         int shift;
+
+         assert(ptrarray->firstidx <= ptrarray->minusedidx);
+         assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
+
+         /* shift used part of array to the right */
+         shift = ptrarray->firstidx - newfirstidx;
+         assert(shift > 0);
+         for( i = ptrarray->maxusedidx - ptrarray->firstidx; i >= ptrarray->minusedidx - ptrarray->firstidx; --i )
+         {
+            assert(0 <= i + shift && i + shift < ptrarray->valssize);
+            ptrarray->vals[i + shift] = ptrarray->vals[i];
+         }
+         /* clear the formerly used head of the array */
+         for( i = 0; i < shift; ++i )
+            ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx + i] = NULL;
+      }
+      ptrarray->firstidx = newfirstidx;
+   }
+   else if( maxidx >= ptrarray->firstidx + ptrarray->valssize )
+   {
+      /* a sufficiently large memory storage exists, but it has to be shifted to the left */
+      nfree = ptrarray->valssize - nused;
+      assert(nfree >= 0);
+      newfirstidx = minidx - nfree/2;
+      newfirstidx = MAX(newfirstidx, 0);
+      assert(newfirstidx <= minidx);
+      assert(maxidx < newfirstidx + ptrarray->valssize);
+      
+      if( ptrarray->minusedidx <= ptrarray->maxusedidx )
+      {
+         int shift;
+
+         assert(ptrarray->firstidx <= ptrarray->minusedidx);
+         assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
+
+         /* shift used part of array to the left */
+         shift = newfirstidx - ptrarray->firstidx;
+         assert(shift > 0);
+         for( i = ptrarray->minusedidx - ptrarray->firstidx; i <= ptrarray->maxusedidx - ptrarray->firstidx; ++i )
+         {
+            assert(0 <= i - shift && i - shift < ptrarray->valssize);
+            ptrarray->vals[i - shift] = ptrarray->vals[i];
+         }
+         /* clear the formerly used tail of the array */
+         for( i = 0; i < shift; ++i )
+            ptrarray->vals[ptrarray->maxusedidx - ptrarray->firstidx - i] = NULL;
+      }
+      ptrarray->firstidx = newfirstidx;
+   }
+
+   assert(minidx >= ptrarray->firstidx);
+   assert(maxidx < ptrarray->firstidx + ptrarray->valssize);
+
+   return SCIP_OKAY;
+}
+
+/** clears a dynamic pointer array */
+RETCODE SCIPptrarrayClear(
+   PTRARRAY*        ptrarray            /**< dynamic int array */
+   )
+{
+   assert(ptrarray != NULL);
+
+   debugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
+
+   if( ptrarray->minusedidx <= ptrarray->maxusedidx )
+   {
+      int i;
+   
+      assert(ptrarray->firstidx <= ptrarray->minusedidx);
+      assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
+      assert(ptrarray->firstidx != -1);
+      assert(ptrarray->valssize > 0);
+
+      /* clear the used part of array */
+      for( i = ptrarray->minusedidx - ptrarray->firstidx; i <= ptrarray->maxusedidx - ptrarray->firstidx; ++i )
+         ptrarray->vals[i] = NULL;
+
+      /* mark the array cleared */
+      ptrarray->minusedidx = INT_MAX;
+      ptrarray->maxusedidx = INT_MIN;
+   }
+   assert(ptrarray->minusedidx == INT_MAX);
+   assert(ptrarray->maxusedidx == INT_MIN);
+
+   return SCIP_OKAY;
+}
+
+/** gets value of entry in dynamic array */
+void* SCIPptrarrayGetVal(
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   int              idx                 /**< array index to get value for */
+   )
+{
+   assert(ptrarray != NULL);
+   assert(idx >= 0);
+   
+   if( idx < ptrarray->minusedidx || idx > ptrarray->maxusedidx )
+      return NULL;
+   else
+   {
+      assert(ptrarray->vals != NULL);
+      assert(idx - ptrarray->firstidx >= 0);
+      assert(idx - ptrarray->firstidx < ptrarray->valssize);
+
+      return ptrarray->vals[idx - ptrarray->firstidx];
+   }
+}
+
+/** sets value of entry in dynamic array */
+RETCODE SCIPptrarraySetVal(
+   PTRARRAY*        ptrarray,           /**< dynamic int array */
+   SET*             set,                /**< global SCIP settings */
+   int              idx,                /**< array index to set value for */
+   void*            val                 /**< value to set array index to */
+   )
+{
+   assert(ptrarray != NULL);
+   assert(idx >= 0);
+
+   debugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
+
+   if( val != NULL )
+   {
+      /* extend array to be able to store the index */
+      CHECK_OKAY( SCIPptrarrayExtend(ptrarray, set, idx, idx) );
+      assert(idx >= ptrarray->firstidx);
+      assert(idx < ptrarray->firstidx + ptrarray->valssize);
+      
+      /* set the array value of the index */
+      ptrarray->vals[idx - ptrarray->firstidx] = val;
+
+      /* update min/maxusedidx */
+      ptrarray->minusedidx = MIN(ptrarray->minusedidx, idx);
+      ptrarray->maxusedidx = MAX(ptrarray->maxusedidx, idx);
+   }
+   else if( idx >= ptrarray->firstidx && idx < ptrarray->firstidx + ptrarray->valssize )
+   {
+      /* set the array value of the index to zero */
+      ptrarray->vals[idx - ptrarray->firstidx] = NULL;
+      
+      /* check, if we can tighten the min/maxusedidx */
+      if( idx == ptrarray->minusedidx )
+      {
+         assert(ptrarray->maxusedidx >= 0);
+         assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
+         do
+         {
+            ptrarray->minusedidx++;
+         }
+         while( ptrarray->minusedidx <= ptrarray->maxusedidx
+            && ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx] == NULL );
+         if( ptrarray->minusedidx > ptrarray->maxusedidx )
+         {
+            ptrarray->minusedidx = INT_MAX;
+            ptrarray->maxusedidx = INT_MIN;
+         }
+      }
+      else if( idx == ptrarray->maxusedidx )
+      {
+         assert(ptrarray->minusedidx >= 0);
+         assert(ptrarray->minusedidx < ptrarray->maxusedidx);
+         assert(ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
+         do
+         {
+            ptrarray->maxusedidx--;
+            assert(ptrarray->minusedidx <= ptrarray->maxusedidx);
+         }
+         while( ptrarray->vals[ptrarray->maxusedidx - ptrarray->firstidx] == NULL );
+      }      
+   }
+
+   return SCIP_OKAY;
+}
 
 
 

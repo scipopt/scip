@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.4 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.5 2004/06/29 17:55:04 bzfpfend Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -107,6 +107,40 @@ DECL_PRESOLEXIT(presolExitObj)
 }
 
 
+/** presolving initialization method of presolver (called when presolving is about to begin) */
+static
+DECL_PRESOLINITPRE(presolInitpreObj)
+{  /*lint --e{715}*/
+   PRESOLDATA* presoldata;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+   assert(presoldata->objpresol != NULL);
+
+   /* call virtual method of presol object */
+   CHECK_OKAY( presoldata->objpresol->scip_initpre(scip, presol, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+static
+DECL_PRESOLEXITPRE(presolExitpreObj)
+{  /*lint --e{715}*/
+   PRESOLDATA* presoldata;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+   assert(presoldata->objpresol != NULL);
+
+   /* call virtual method of presol object */
+   CHECK_OKAY( presoldata->objpresol->scip_exitpre(scip, presol, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** execution method of presolver */
 static
 DECL_PRESOLEXEC(presolExecObj)
@@ -119,10 +153,10 @@ DECL_PRESOLEXEC(presolExecObj)
 
    /* call virtual method of presol object */
    CHECK_OKAY( presoldata->objpresol->scip_exec(scip, presol, nrounds,
-                  nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
-                  nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
-                  nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-                  ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
+         nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,
+         nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
+         nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+         ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    return SCIP_OKAY;
 }
@@ -150,8 +184,9 @@ RETCODE SCIPincludeObjPresol(
 
    /* include presolver */
    CHECK_OKAY( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, objpresol->scip_priority_,
-                  presolFreeObj, presolInitObj, presolExitObj, presolExecObj,
-                  presoldata) );
+         presolFreeObj, presolInitObj, presolExitObj, 
+         presolInitpreObj, presolExitpreObj, presolExecObj,
+         presoldata) );
 
    return SCIP_OKAY;
 }

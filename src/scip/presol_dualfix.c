@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.11 2004/03/30 12:51:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.12 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -36,9 +36,30 @@
 
 
 /*
- * Callback methods
+ * Callback methods of presolver
  */
 
+/** destructor of presolver to free user data (called when SCIP is exiting) */
+#define presolFreeDualfix NULL
+
+
+/** initialization method of presolver (called after problem was transformed) */
+#define presolInitDualfix NULL
+
+
+/** deinitialization method of presolver (called before transformed problem is freed) */
+#define presolExitDualfix NULL
+
+
+/** presolving initialization method of presolver (called when presolving is about to begin) */
+#define presolInitpreDualfix NULL
+
+
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+#define presolExitpreDualfix NULL
+
+
+/** execution method of presolver */
 static
 DECL_PRESOLEXEC(presolExecDualfix)
 {  /*lint --e{715}*/
@@ -118,9 +139,16 @@ RETCODE SCIPincludePresolDualfix(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   PRESOLDATA* presoldata;
+
+   /* create dualfix presolver data */
+   presoldata = NULL;
+
+   /* include presolver */
    CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY,
-                  NULL, NULL, NULL, presolExecDualfix,
-                  NULL) );
+         presolFreeDualfix, presolInitDualfix, presolExitDualfix, 
+         presolInitpreDualfix, presolExitpreDualfix, presolExecDualfix,
+         presoldata) );
 
    return SCIP_OKAY;
 }

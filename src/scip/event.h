@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.26 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.27 2004/06/29 17:55:04 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -176,6 +176,7 @@ RETCODE SCIPeventChgSol(
 extern
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
    LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
@@ -230,6 +231,7 @@ RETCODE SCIPeventfilterDel(
 extern
 RETCODE SCIPeventfilterProcess(
    EVENTFILTER*     eventfilter,        /**< event filter */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    EVENT*           event               /**< event to process */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.20 2004/06/22 10:48:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.21 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -143,7 +143,7 @@ struct Set
    Bool             sepassorted;        /**< are the separators sorted by priority? */
    Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
-   Bool             catchctrlc;         /**< should the CTRL-C interrupt be catched by SCIP? */
+   Bool             catchctrlc;         /**< should the CTRL-C interrupt be caught by SCIP? */
    Bool             usepropconflict;    /**< should propagation conflict analysis be used? */
    Bool             uselpconflict;      /**< should infeasible LP conflict analysis be used? */
    Bool             usesbconflict;      /**< should infeasible strong branching conflict analysis be used? */

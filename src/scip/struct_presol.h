@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.5 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -37,10 +37,12 @@ struct Presol
 {
    char*            name;               /**< name of presolver */
    char*            desc;               /**< description of presolver */
-   DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit));    /**< initialize presolver */
-   DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec));    /**< presolver execution method */
+   DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   DECL_PRESOLINIT  ((*presolinit));    /**< initialization method of presolver (called after problem was transformed) */
+   DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   DECL_PRESOLINITPRE((*presolinitpre));/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   DECL_PRESOLEXITPRE((*presolexitpre));/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   DECL_PRESOLEXEC  ((*presolexec));    /**< execution method of presolver */
    PRESOLDATA*      presoldata;         /**< presolver data */
    CLOCK*           clock;              /**< presolving time */
    int              priority;           /**< priority of the presolver */

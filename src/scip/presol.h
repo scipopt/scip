@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.15 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.16 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -47,10 +47,12 @@ RETCODE SCIPpresolCreate(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
-   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolver execution method */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    PRESOLDATA*      presoldata          /**< presolver data */
    );
 
@@ -73,6 +75,22 @@ extern
 RETCODE SCIPpresolExit(
    PRESOL*          presol,             /**< presolver */
    SCIP*            scip                /**< SCIP data structure */   
+   );
+
+/** informs presolver that the presolving process is being started */
+extern
+RETCODE SCIPpresolInitpre(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** informs presolver that the presolving process is finished */
+extern
+RETCODE SCIPpresolExitpre(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** executes presolver */

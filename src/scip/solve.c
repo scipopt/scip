@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.114 2004/06/08 20:55:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.115 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -599,7 +599,7 @@ RETCODE solveNodeInitialLP(
       /* issue FIRSTLPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
       CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
       
       /* update pseudo cost values */
       CHECK_OKAY( updatePseudocost(set, stat, tree, lp) );
@@ -910,7 +910,7 @@ RETCODE priceAndCutLoop(
       /* issue LPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
       CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
       /* analyze an infeasible LP (not necessary in the root node) */
       if( !set->exactsolve && SCIPnodeGetDepth(tree->actnode) > 0
@@ -1667,7 +1667,7 @@ RETCODE SCIPsolveCIP(
       /* issue NODEACTIVATED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
       CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
       /* stop node activation timer */
       SCIPclockStop(stat->nodeactivationtime, set);
@@ -1711,7 +1711,7 @@ RETCODE SCIPsolveCIP(
          /* issue NODEFEASIBLE event */
          CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
          CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-         CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+         CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
       }
       else
       {
@@ -1733,7 +1733,7 @@ RETCODE SCIPsolveCIP(
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
          }
          CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-         CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+         CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
       }
 
       /* if no branching was created, the node was not cut off, but it's lower bound is still smaller than

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.99 2004/06/22 10:48:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.100 2004/06/29 17:55:06 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -59,7 +59,7 @@
 
 /* CTRL-C interrupt */
 
-#define SCIP_DEFAULT_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be catched by SCIP? */
+#define SCIP_DEFAULT_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
 
 
 /* Dynamic Memory */
@@ -597,7 +597,7 @@ RETCODE SCIPsetCreate(
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
          "misc/catchctrlc",
-         "should the CTRL-C interrupt be catched by SCIP?",
+         "should the CTRL-C interrupt be caught by SCIP?",
          &(*set)->catchctrlc, SCIP_DEFAULT_CATCHCTRLC,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddStringParam(*set, memhdr,

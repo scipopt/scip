@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.39 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.40 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -360,7 +360,7 @@ RETCODE primalAddSol(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
    }
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
-   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
    /* change color of node in VBC output */
    SCIPvbcFoundSolution(stat->vbc, stat, tree->actnode);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.8 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.9 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   presol_xxx.c
  * @brief  xxx presolver
@@ -109,6 +109,36 @@ DECL_PRESOLEXIT(presolExitXxx)
 #endif
 
 
+/** presolving initialization method of presolver (called when presolving is about to begin) */
+#if 0
+static
+DECL_PRESOLINITPRE(presolInitpreXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx presolver not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define presolInitpreXxx NULL
+#endif
+
+
+/** presolving deinitialization method of presolver (called after presolving has been finished) */
+#if 0
+static
+DECL_PRESOLEXITPRE(presolExitpreXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx presolver not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define presolExitpreXxx NULL
+#endif
+
+
 /** execution method of presolver */
 static
 DECL_PRESOLEXEC(presolExecXxx)
@@ -140,8 +170,9 @@ RETCODE SCIPincludePresolXxx(
 
    /* include presolver */
    CHECK_OKAY( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY,
-                  presolFreeXxx, presolInitXxx, presolExitXxx, presolExecXxx,
-                  presoldata) );
+         presolFreeXxx, presolInitXxx, presolExitXxx, 
+         presolInitpreXxx, presolExitpreXxx, presolExecXxx,
+         presoldata) );
 
    /* add xxx presolver parameters */
    /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */

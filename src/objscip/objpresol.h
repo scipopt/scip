@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.7 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -90,6 +90,46 @@ public:
       PRESOL*       presol              /**< the presolver itself */
       )
    {
+      return SCIP_OKAY;
+   }
+
+   /** presolving initialization method of presolver (called when presolving is about to begin)
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+    */
+   virtual RETCODE scip_initpre(
+      SCIP*         scip,               /**< SCIP data structure */   
+      PRESOL*       presol,             /**< presolver */
+      RESULT*       result              /**< pointer to store the result of the callback method */
+      )
+   {
+      assert(result != NULL);
+
+      *result = SCIP_FEASIBLE;
+
+      return SCIP_OKAY;
+   }
+   
+   /** presolving deinitialization method of presolver (called after presolving has been finished)
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
+    */
+   virtual RETCODE scip_exitpre(
+      SCIP*         scip,               /**< SCIP data structure */   
+      PRESOL*       presol,             /**< presolver */
+      RESULT*       result              /**< pointer to store the result of the callback method */
+      )
+   {
+      assert(result != NULL);
+
+      *result = SCIP_FEASIBLE;
+
       return SCIP_OKAY;
    }
    

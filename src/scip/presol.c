@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.18 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.19 2004/06/29 17:55:05 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -71,10 +71,12 @@ RETCODE SCIPpresolCreate(
    const char*      name,               /**< name of presolver */
    const char*      desc,               /**< description of presolver */
    int              priority,           /**< priority of the presolver */
-   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver */
-   DECL_PRESOLINIT  ((*presolinit)),    /**< initialize presolver */
-   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialize presolver */
-   DECL_PRESOLEXEC  ((*presolexec)),    /**< presolver execution method */
+   DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
+   DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
+   DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
+   DECL_PRESOLINITPRE((*presolinitpre)),/**< presolving initialization method of presolver (called when presolving is about to begin) */
+   DECL_PRESOLEXITPRE((*presolexitpre)),/**< presolving deinitialization method of presolver (called after presolving has been finished) */
+   DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    PRESOLDATA*      presoldata          /**< presolver data */
    )
 {
@@ -92,6 +94,8 @@ RETCODE SCIPpresolCreate(
    (*presol)->presolfree = presolfree;
    (*presol)->presolinit = presolinit;
    (*presol)->presolexit = presolexit;
+   (*presol)->presolinitpre = presolinitpre;
+   (*presol)->presolexitpre = presolexitpre;
    (*presol)->presolexec = presolexec;
    (*presol)->presoldata = presoldata;
    CHECK_OKAY( SCIPclockCreate(&(*presol)->clock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -138,7 +142,6 @@ RETCODE SCIPpresolInit(
    )
 {
    assert(presol != NULL);
-   assert(scip != NULL);
 
    if( presol->initialized )
    {
@@ -167,6 +170,7 @@ RETCODE SCIPpresolInit(
    presol->nchgcoefs = 0;
    presol->nchgsides = 0;
 
+   /* call initialization method of presolver */
    if( presol->presolinit != NULL )
    {
       CHECK_OKAY( presol->presolinit(scip, presol) );
@@ -183,7 +187,6 @@ RETCODE SCIPpresolExit(
    )
 {
    assert(presol != NULL);
-   assert(scip != NULL);
 
    if( !presol->initialized )
    {
@@ -191,11 +194,74 @@ RETCODE SCIPpresolExit(
       return SCIP_INVALIDCALL;
    }
 
+   /* call deinitialization method of presolver */
    if( presol->presolexit != NULL )
    {
       CHECK_OKAY( presol->presolexit(scip, presol) );
    }
    presol->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs presolver that the presolving process is being started */
+RETCODE SCIPpresolInitpre(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(presol != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   /* call presolving initialization method of presolver */
+   if( presol->presolinitpre != NULL )
+   {
+      CHECK_OKAY( presol->presolinitpre(scip, presol, result) );
+
+      /* evaluate result */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_FEASIBLE )
+      {
+         errorMessage("presolving initialization method of presolver <%s> returned invalid result <%d>\n", 
+            presol->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs presolver that the presolving process is finished */
+RETCODE SCIPpresolExitpre(
+   PRESOL*          presol,             /**< presolver */
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(presol != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   /* call presolving deinitialization method of presolver */
+   if( presol->presolexitpre != NULL )
+   {
+      CHECK_OKAY( presol->presolexitpre(scip, presol, result) );
+
+      /* evaluate result */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_UNBOUNDED
+         && *result != SCIP_FEASIBLE )
+      {
+         errorMessage("presolving deinitialization method of presolver <%s> returned invalid result <%d>\n", 
+            presol->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+   }
 
    return SCIP_OKAY;
 }
