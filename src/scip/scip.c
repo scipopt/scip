@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.201 2004/08/31 16:53:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.202 2004/09/01 16:53:37 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3742,15 +3742,17 @@ RETCODE SCIPreleaseVar(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_FREESOLVE:
    case SCIP_STAGE_FREETRANS:
       if( !SCIPvarIsTransformed(*var) )
       {
-         errorMessage("cannot release original variables while solving the problem\n");
+         errorMessage("cannot release original variables while the transformed problem exists\n");
          return SCIP_INVALIDCALL;
       }
       CHECK_OKAY( SCIPvarRelease(var, scip->mem->solvemem, scip->set, scip->lp) );
@@ -5859,15 +5861,17 @@ RETCODE SCIPreleaseCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_FREESOLVE:
    case SCIP_STAGE_FREETRANS:
       if( SCIPconsIsOriginal(*cons) && (*cons)->nuses == 1 )
       {
-         errorMessage("cannot release last use of original constraint while solving the problem\n");
+         errorMessage("cannot release last use of original constraint while the transformed problem exists\n");
          return SCIP_INVALIDCALL;
       }
       CHECK_OKAY( SCIPconsRelease(cons, scip->mem->solvemem, scip->set) );

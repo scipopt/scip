@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.28 2004/08/31 16:53:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.29 2004/09/01 16:53:37 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -37,8 +37,8 @@
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 
-#define DEFAULT_MAXROUNDS             3 /**< maximal number of gomory separation rounds per node */
-#define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node */
+#define DEFAULT_MAXROUNDS             3 /**< maximal number of gomory separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          25 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -50,8 +50,8 @@
 /** separator data */
 struct SepaData
 {
-   int              maxrounds;          /**< maximal number of gomory separation rounds per node */
-   int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node */
+   int              maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
+   int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int              maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
    Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -125,8 +125,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the gomory cut separator a given number of times at each node */
-   if( (depth == 0 && ncalls >= sepadata->maxroundsroot)
-      || (depth > 0 && ncalls >= sepadata->maxrounds) )
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
    /* only call separator, if an optimal LP solution is at hand */
@@ -349,8 +349,6 @@ RETCODE SCIPincludeSepaGomory(
 
    /* create separator data */
    CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
-   sepadata->maxrounds = DEFAULT_MAXROUNDS;
-   sepadata->maxroundsroot = DEFAULT_MAXROUNDSROOT;
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
@@ -360,12 +358,12 @@ RETCODE SCIPincludeSepaGomory(
    /* add separator parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "separating/gomory/maxrounds",
-                  "maximal number of gomory separation rounds per node",
-                  &sepadata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+                  "maximal number of gomory separation rounds per node (-1: unlimited)",
+                  &sepadata->maxrounds, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "separating/gomory/maxroundsroot",
-                  "maximal number of gomory separation rounds in the root node",
-                  &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+                  "maximal number of gomory separation rounds in the root node (-1: unlimited)",
+                  &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "separating/gomory/maxsepacuts",
                   "maximal number of gomory cuts separated per separation round",

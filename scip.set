@@ -126,12 +126,12 @@ propagation/maxproprounds = 100
 # [type: int, range: [-1,2147483647], default: 1000]
 propagation/maxproproundsroot = 1000
 
-# maximal number of cuts separated per separation round
-# [type: int, range: [1,2147483647], default: 100]
+# maximal number of cuts separated per separation round (0: disable local separation)
+# [type: int, range: [0,2147483647], default: 100]
 separating/maxsepacuts = 100
 
-# maximal number of separated cuts at the root node
-# [type: int, range: [1,2147483647], default: 2000]
+# maximal number of separated cuts at the root node (0: disable root node separation)
+# [type: int, range: [0,2147483647], default: 2000]
 separating/maxsepacutsroot = 2000
 
 # maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts
@@ -970,12 +970,12 @@ separating/cmir/priority = -1000
 # [type: int, range: [-1,2147483647], default: 25]
 separating/cmir/freq = 25
 
-# maximal number of cmir separation rounds per node
-# [type: int, range: [0,2147483647], default: 5]
+# maximal number of cmir separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
 separating/cmir/maxrounds = 5
 
-# maximal number of cmir separation rounds in the root node
-# [type: int, range: [0,2147483647], default: 20]
+# maximal number of cmir separation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 20]
 separating/cmir/maxroundsroot = 20
 
 # maximal number of cmir cuts separated per separation round
@@ -1022,9 +1022,9 @@ separating/cmir/minrowfac = -10000
 # [type: int, range: [0,2147483647], default: 100]
 separating/cmir/maxtestdelta = 100
 
-# maximal number of cont. vars in aggregated row
+# maximal number of active continuous variables in aggregated row
 # [type: int, range: [0,2147483647], default: 10]
-separating/cmir/maxcont = 10
+separating/cmir/maxconts = 10
 
 # priority of separator <gomory>
 # [type: int, range: [-2147483648,2147483647], default: 0]
@@ -1034,12 +1034,12 @@ separating/gomory/priority = 0
 # [type: int, range: [-1,2147483647], default: 10]
 separating/gomory/freq = 10
 
-# maximal number of gomory separation rounds per node
-# [type: int, range: [0,2147483647], default: 3]
+# maximal number of gomory separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 3]
 separating/gomory/maxrounds = 3
 
-# maximal number of gomory separation rounds in the root node
-# [type: int, range: [0,2147483647], default: 6]
+# maximal number of gomory separation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 6]
 separating/gomory/maxroundsroot = 6
 
 # maximal number of gomory cuts separated per separation round

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.12 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.13 2004/09/01 16:53:36 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -29,6 +29,15 @@
 
 #include "scip.h"
 
+
+/** type of setppc constraint: set partitioning, set packing, or set covering */
+enum SetppcType
+{
+   SCIP_SETPPCTYPE_PARTITIONING = 0,     /**< constraint is a set partitioning constraint: sum(x) == 1 */
+   SCIP_SETPPCTYPE_PACKING      = 1,     /**< constraint is a set packing constraint:      sum(x) <= 1 */
+   SCIP_SETPPCTYPE_COVERING     = 2      /**< constraint is a set covering constraint:     sum(x) >= 1 */
+};
+typedef enum SetppcType SETPPCTYPE;
 
 /** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
 extern
@@ -104,5 +113,27 @@ Real SCIPgetDualsolSetppc(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint data */
    );
+
+/** gets array of variables in set partitioning / packing / covering constraint */
+extern
+VAR** SCIPgetVarsSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets number of variables in set partitioning / packing / covering constraint */
+extern
+int SCIPgetVarsNSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
+/** gets type of set partitioning / packing / covering constraint */
+extern
+SETPPCTYPE SCIPgetTypeSetppc(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint data */
+   );
+
 
 #endif

@@ -23,35 +23,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
+# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -126,13 +126,13 @@ propagation/maxproprounds = 100
 # [type: int, range: [-1,2147483647], default: 1000]
 propagation/maxproproundsroot = 1000
 
-# maximal number of cuts separated per separation round
-# [type: int, range: [1,2147483647], default: 100]
+# maximal number of cuts separated per separation round (0: disable local separation)
+# [type: int, range: [0,2147483647], default: 100]
 separating/maxsepacuts = 100
 
-# maximal number of separated cuts at the root node
-# [type: int, range: [1,2147483647], default: 2000]
-separating/maxsepacutsroot = 2000
+# maximal number of separated cuts at the root node (0: disable root node separation)
+# [type: int, range: [0,2147483647], default: 2000]
+separating/maxsepacutsroot = 500
 
 # maximum age a cut can reach before it is deleted from the global cut pool, or -1 to keep all cuts
 # [type: int, range: [-1,2147483647], default: 100]
@@ -169,6 +169,10 @@ conflict/maxconfvarsfac = 0.02
 # minimal absolute maximum of variables involved in a conflict clause
 # [type: int, range: [0,2147483647], default: 30]
 conflict/minmaxconfvars = 30
+
+# maximal number of LP resolving loops during conflict analysis
+# [type: int, range: [1,2147483647], default: 100]
+conflict/maxconflploops = 100
 
 # maximal number of nodes to process (-1: no limit)
 # [type: longint, range: [-1,9223372036854775807], default: -1]
@@ -228,7 +232,7 @@ lp/cleanupcols = FALSE
 
 # should new basic rows be removed after LP solving?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-lp/cleanuprows = FALSE
+lp/cleanuprows = TRUE
 
 # maximum age a dynamic column can reach before it is deleted from the LP
 # [type: int, range: [0,2147483647], default: 10]
@@ -475,8 +479,8 @@ constraints/varbound/eagerfreq = 100
 constraints/varbound/maxprerounds = -1
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/xor/sepafreq = -1
+# [type: int, range: [-1,2147483647], default: 5]
+constraints/xor/sepafreq = 0
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -966,13 +970,13 @@ separating/cmir/priority = -1000
 # [type: int, range: [-1,2147483647], default: 25]
 separating/cmir/freq = 0
 
-# maximal number of cmir separation rounds per node
-# [type: int, range: [0,2147483647], default: 5]
+# maximal number of cmir separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
 separating/cmir/maxrounds = 5
 
-# maximal number of cmir separation rounds in the root node
-# [type: int, range: [0,2147483647], default: 20]
-separating/cmir/maxroundsroot = 20
+# maximal number of cmir separation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 20]
+separating/cmir/maxroundsroot = -1
 
 # maximal number of cmir cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 25]
@@ -992,7 +996,7 @@ separating/cmir/maxaggrsroot = 8
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/cmir/dynamiccuts = FALSE
+separating/cmir/dynamiccuts = TRUE
 
 # min. violation of unscaled c-MIR cut to be used
 # [type: real, range: [0,1.79769313486232e+308], default: 0.2]
@@ -1018,9 +1022,9 @@ separating/cmir/minrowfac = -10000
 # [type: int, range: [0,2147483647], default: 100]
 separating/cmir/maxtestdelta = 100
 
-# maximal number of cont. vars in aggregated row
+# maximal number of active continuous variables in aggregated row
 # [type: int, range: [0,2147483647], default: 10]
-separating/cmir/maxcont = 10
+separating/cmir/maxconts = 10
 
 # priority of separator <gomory>
 # [type: int, range: [-2147483648,2147483647], default: 0]
@@ -1030,13 +1034,13 @@ separating/gomory/priority = 0
 # [type: int, range: [-1,2147483647], default: 10]
 separating/gomory/freq = 0
 
-# maximal number of gomory separation rounds per node
-# [type: int, range: [0,2147483647], default: 3]
+# maximal number of gomory separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 3]
 separating/gomory/maxrounds = 3
 
-# maximal number of gomory separation rounds in the root node
-# [type: int, range: [0,2147483647], default: 6]
-separating/gomory/maxroundsroot = 6
+# maximal number of gomory separation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 6]
+separating/gomory/maxroundsroot = -1
 
 # maximal number of gomory cuts separated per separation round
 # [type: int, range: [0,2147483647], default: 25]
@@ -1048,7 +1052,7 @@ separating/gomory/maxsepacutsroot = 100
 
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/gomory/dynamiccuts = FALSE
+separating/gomory/dynamiccuts = TRUE
 
 # priority of separator <intobj>
 # [type: int, range: [-2147483648,2147483647], default: -100]

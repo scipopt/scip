@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.139 2004/08/31 16:53:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.140 2004/09/01 16:53:36 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8649,8 +8649,7 @@ RETCODE SCIPlpUpdateAges(
    for( r = 0; r < nlpirows; ++r )
    {
       assert(lpirows[r] == lp->rows[r]);
-      if( SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
-         && SCIPsetIsLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+      if( lpirows[r]->dualsol == 0.0 )  /* basic rows to remove are exactly at 0.0 */
          lpirows[r]->age++;
       else
          lpirows[r]->age = 0;
@@ -9126,9 +9125,7 @@ RETCODE lpCleanupRows(
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
       assert(rows[r]->lpipos == r);
-      if( lpirows[r]->removeable
-         && SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
-         && SCIPsetIsLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+      if( lpirows[r]->removeable && lpirows[r]->dualsol == 0.0 ) /* basic rows to remove are exactly at 0.0 */
       {
          rowdstat[r] = 1;
          ndelrows++;

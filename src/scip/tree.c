@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.106 2004/08/26 08:32:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.107 2004/09/01 16:53:37 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1863,7 +1863,7 @@ RETCODE actnodeToFork(
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
-   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
       CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
@@ -1960,7 +1960,6 @@ RETCODE actnodeToSubroot(
    assert(tree->nchildren > 0);
    assert(lp != NULL);
    assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
 
@@ -1968,7 +1967,7 @@ RETCODE actnodeToSubroot(
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
    lperror = FALSE;
-   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up whole LP to keep only necessary columns and rows */
 #if 0
