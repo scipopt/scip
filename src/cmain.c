@@ -37,7 +37,20 @@ RETCODE runSCIP(
 {
    SCIP* scip = NULL;
 
+
+   /****************************************
+    * Version information and syntax check *
+    ****************************************/
+
    SCIPprintVersion(NULL);
+
+   if( argc < 2 )
+   {
+      printf("syntax: %s <problem> [parameter file]\n", argv[0]);
+      return SCIP_OKAY;
+   }
+
+
 
    /*********
     * Setup *
@@ -80,12 +93,6 @@ RETCODE runSCIP(
    /********************
     * Problem Creation *
     ********************/
-
-   if( argc < 2 )
-   {
-      printf("syntax: %s <problem> [parameter file]\n", argv[0]);
-      return SCIP_OKAY;
-   }
 
    printf("\nread problem <%s>\n", argv[1]);
    printf("============\n\n");
