@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.154 2004/10/20 15:52:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.155 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3477,7 +3477,7 @@ RETCODE rowScale(
    assert(-1.0 < minrounddelta && minrounddelta <= 0.0);
    assert(0.0 <= maxrounddelta && maxrounddelta < 1.0);
 
-   debugMessage("scale row <%s> with %g (tolerance=[%g,%g])\n", row->name, scaleval, mindelta, maxdelta);
+   debugMessage("scale row <%s> with %g (tolerance=[%g,%g])\n", row->name, scaleval, minrounddelta, maxrounddelta);
 
    mindelta = 0.0;
    maxdelta = 0.0;

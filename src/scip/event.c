@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.35 2004/09/21 12:08:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.36 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -1076,34 +1076,35 @@ RETCODE SCIPeventfilterProcess(
    debugMessage("processing event filter %p (len %d, mask 0x%x) with event type 0x%x\n",
       eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
 
+   /* check, if there may be any event handler for specific event */
+   if( (event->eventtype & eventfilter->eventmask) == 0 )
+      return SCIP_OKAY;
+
    /* delay the updates on this eventfilter, such that changes during event processing to the event filter
     * don't destroy the arrays we are currently using
     */
    eventfilterDelayUpdates(eventfilter);
 
-   /* check, if there may be any event handler for specific event */
-   if( (event->eventtype & eventfilter->eventmask) != 0 )
+   /* process the event by calling the event handlers */
+   processed = FALSE;
+   for( i = 0; i < eventfilter->len; ++i )
    {
-      processed = FALSE;
-      for( i = 0; i < eventfilter->len; ++i )
+      /* check, if event is applicable for the filter element */
+      if( (event->eventtype & eventfilter->eventtypes[i]) != 0 )
       {
-         /* check, if event is applicable for the filter element */
-         if( (event->eventtype & eventfilter->eventtypes[i]) != 0 )
-         {
-            /* call event handler */
-            CHECK_OKAY( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdatas[i]) );
+         /* call event handler */
+         CHECK_OKAY( SCIPeventhdlrExec(eventfilter->eventhdlrs[i], set, event, eventfilter->eventdatas[i]) );
             
-            processed = TRUE;
-         }
+         processed = TRUE;
       }
+   }
       
-      /* update eventfilter mask, if event was not processed by any event handler */
-      if( !processed )
-      {
-         eventfilter->eventmask &= ~event->eventtype;
-         debugMessage(" -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
-            event->eventtype, eventfilter, eventfilter->eventmask);
-      }
+   /* update eventfilter mask, if event was not processed by any event handler */
+   if( !processed )
+   {
+      eventfilter->eventmask &= ~event->eventtype;
+      debugMessage(" -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
+         event->eventtype, eventfilter, eventfilter->eventmask);
    }
 
    /* process delayed events on this eventfilter */

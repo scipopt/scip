@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.17 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.18 2004/10/26 07:30:56 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -349,8 +349,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             Real size;
 
             /* check, if the pseudo cost score of the variable is reliable */
-            downsize = SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], 0);
-            upsize = SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], 1);
+            downsize = SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_DOWNWARDS);
+            upsize = SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
             /* use strong branching on variables with unreliable pseudo cost scores */
@@ -447,8 +447,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          assert(!SCIPisIntegral(scip, lpcandssol[c]));
 
          debugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iters) -- %lld/%lld iterations\n",
-            SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], 0), 
-            SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], 1), 
+            SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
+            SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_UPWARDS), 
             SCIPvarGetName(lpcands[c]), lpcandssol[c], initcandscores[i],
             inititer, SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 

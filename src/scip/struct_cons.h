@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.20 2004/09/07 18:22:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.21 2004/10/26 07:30:58 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -53,12 +53,13 @@ struct Cons
    int              nuses;              /**< number of times, this constraint is referenced */
    int              nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int              nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
-   int              activedepth;        /**< depth level of constraint activation (-1: inactive or problem constraint) */
+   int              activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
+   unsigned int     propenabled:1;      /**< TRUE iff constraint should be propagated in the next propagation call */
    unsigned int     local:1;            /**< TRUE iff constraint is only valid locally */
    unsigned int     modifiable:1;       /**< TRUE iff constraint is modifiable (subject to column generation) */
    unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
@@ -72,6 +73,8 @@ struct Cons
    unsigned int     updatedeactivate:1; /**< TRUE iff constraint has to be deactivated in update phase */
    unsigned int     updateenable:1;     /**< TRUE iff constraint has to be enabled in update phase */
    unsigned int     updatedisable:1;    /**< TRUE iff constraint has to be disabled in update phase */
+   unsigned int     updatepropenable:1; /**< TRUE iff constraint's propagation has to be enabled in update phase */
+   unsigned int     updatepropdisable:1;/**< TRUE iff constraint's propagation has to be disabled in update phase */
    unsigned int     updatedelete:1;     /**< TRUE iff constraint has to be deleted in update phase */
    unsigned int     updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
 };

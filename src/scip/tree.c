@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.119 2004/10/22 13:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.120 2004/10/26 07:30:58 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -720,7 +720,7 @@ RETCODE SCIPnodeCreateChild(
 
    /* make focus node the parent of the new child */
    CHECK_OKAY( nodeAssignParent(*node, memhdr, set, tree, tree->focusnode, nodeselprio) );
-
+   
    /* output node creation to VBC file */
    CHECK_OKAY( SCIPvbcNewChild(stat->vbc, stat, *node) );
 
@@ -1102,6 +1102,7 @@ RETCODE nodeActivate(
 
    /* mark node active */
    node->active = TRUE;
+   stat->nactivatednodes++;
 
    /* check if the domain change produced a cutoff */
    if( *cutoff )
@@ -1158,6 +1159,7 @@ RETCODE nodeDeactivate(
 
    /* mark node inactive */
    node->active = FALSE;
+   stat->ndeactivatednodes++;
 
    return SCIP_OKAY;
 }

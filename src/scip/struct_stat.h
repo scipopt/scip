@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.24 2004/10/12 14:06:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.25 2004/10/26 07:30:58 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -53,6 +53,8 @@ struct Stat
    Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    Longint          ncreatednodes;      /**< total number of nodes created */
    Longint          ncreatednodesrun;   /**< number of nodes created in current run */
+   Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
+   Longint          ndeactivatednodes;  /**< number of times, a node got deactivated in current run */
    Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    Longint          nreprops;           /**< number of times, a solved node is repropagated again */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.12 2004/08/10 14:19:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.13 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -357,6 +357,12 @@ Bool SCIPconsIsEnabled(
    CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint's propagation is enabled in the current node */
+extern
+Bool SCIPconsIsPropagationEnabled(
+   CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is deleted or marked to be deleted */
 extern
 Bool SCIPconsIsDeleted(
@@ -478,6 +484,8 @@ Bool SCIPconsIsLocked(
 #define SCIPconsGetActiveDepth(cons)    (cons)->activedepth
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
+#define SCIPconsIsPropagationEnabled(cons)      \
+   (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted || (cons)->updatedelete)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
 #define SCIPconsGetAge(cons)            (cons)->age

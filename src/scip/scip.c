@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.217 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.218 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3390,9 +3390,6 @@ RETCODE freeSolve(
    assert(scip->stat != NULL);
    assert(scip->stage == SCIP_STAGE_SOLVING || scip->stage == SCIP_STAGE_SOLVED);
 
-   /* switch stage to FREESOLVE */
-   scip->stage = SCIP_STAGE_FREESOLVE;
-
    /* remove focus from the current focus node */
    if( SCIPtreeGetFocusNode(scip->tree) != NULL )
    {
@@ -3403,6 +3400,9 @@ RETCODE freeSolve(
             scip->tree, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue, &cutoff) );
       assert(!cutoff);
    }
+
+   /* switch stage to FREESOLVE */
+   scip->stage = SCIP_STAGE_FREESOLVE;
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
@@ -6454,6 +6454,34 @@ RETCODE SCIPresetConsAge(
    CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsResetAge(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** enables constraint's propagation capabilities */
+RETCODE SCIPenableConsPropagation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPenableConsPropagation", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsEnablePropagation(cons, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** disables constraint's propagation capabilities s.t. the constraint is not propagated anymore until the propagation
+ *  is enabled again with a call to SCIPenableConsPropagation()
+ */
+RETCODE SCIPdisableConsPropagation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPdisableConsPropagation", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsDisablePropagation(cons, scip->set) );
 
    return SCIP_OKAY;
 }
@@ -10132,6 +10160,9 @@ void printTreeStatistics(
    fprintf(file, "  delayed cutoffs  : %10lld\n", scip->stat->ndelayedcutoffs);
    fprintf(file, "  repropagations   : %10lld (%lld domain reductions)\n", 
       scip->stat->nreprops, scip->stat->nrepropboundchgs);
+   fprintf(file, "  avg switch length: %10.2f\n", 
+      scip->stat->nnodes > 0
+      ? (Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (Real)scip->stat->nnodes : 0.0);
    fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.33 2004/10/20 15:52:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.34 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1999,7 +1999,7 @@ RETCODE SCIPlpiGetBInvARow(
    assert(lpi->spx != NULL);
 
    nrows = lpi->spx->nRows();
-   nrows = lpi->spx->nCols();
+   ncols = lpi->spx->nCols();
 
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
@@ -2131,7 +2131,8 @@ RETCODE SCIPlpiReadState(
    debugMessage("calling SCIPlpiReadState()\n");
 
    errorMessage("SCIPlpiReadState() not implemented yet in SOPLEX interface\n");
-   abort();
+
+   return SCIP_INVALIDCALL;
 }
 
 /** writes LP state (like basis information) to a file */
@@ -2143,7 +2144,8 @@ RETCODE SCIPlpiWriteState(
    debugMessage("calling SCIPlpiWriteState()\n");
 
    errorMessage("SCIPlpiWriteState() not implemented yet in SOPLEX interface\n");
-   abort();
+
+   return SCIP_INVALIDCALL;
 }
 
 /**@} */

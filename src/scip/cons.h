@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.77 2004/09/23 15:46:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.78 2004/10/26 07:30:56 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -440,6 +440,20 @@ RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< dynamic problem statistics */
+   );
+
+/** enables constraint's propagation capabilities or marks them to be enabled in next update */
+extern
+RETCODE SCIPconsEnablePropagation(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
+   );
+
+/** disables constraint's propagation capabilities or marks them to be disabled in next update */
+extern
+RETCODE SCIPconsDisablePropagation(
+   CONS*            cons,               /**< constraint */
+   SET*             set                 /**< global SCIP settings */
    );
 
 /** adds given value to age of constraint, but age can never become negative;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.17 2004/09/23 15:46:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.18 2004/10/26 07:30:58 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -32,7 +32,6 @@ typedef struct Cons CONS;               /**< constraint data structure */
 typedef struct ConshdlrData CONSHDLRDATA; /**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
 typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
-
 
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting)

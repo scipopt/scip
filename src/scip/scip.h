@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.174 2004/10/22 13:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.175 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2372,6 +2372,22 @@ RETCODE SCIPincConsAge(
  */
 extern
 RETCODE SCIPresetConsAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
+/** enables constraint's propagation capabilities */
+extern
+RETCODE SCIPenableConsPropagation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint */
+   );
+
+/** disables constraint's propagation capabilities s.t. the constraint is not propagated anymore until the propagation
+ *  is enabled again with a call to SCIPenableConsPropagation()
+ */
+extern
+RETCODE SCIPdisableConsPropagation(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.122 2004/10/13 14:36:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.123 2004/10/26 07:30:56 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5060,7 +5060,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
       vals[v] = 1.0;
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%d", SCIPgetNGlobalConss(scip));
+   sprintf(consname, "cf%lld", SCIPgetNConflictClausesFound(scip));
    CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, TRUE) );
 

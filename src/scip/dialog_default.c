@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.34 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.35 2004/10/26 07:30:57 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1130,7 +1130,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    VAR* var;
    char prompt[MAXSTRLEN];
    const char* valuestr;
-   BRANCHDIR direction;
+   int direction;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1156,7 +1156,23 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
    }
 
    /* get new branching direction from user */
-   snprintf(prompt, MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchDirection(var));
+   switch( SCIPvarGetBranchDirection(var) )
+   {
+   case SCIP_BRANCHDIR_DOWNWARDS:
+      direction = -1;
+      break;
+   case SCIP_BRANCHDIR_AUTO:
+      direction = 0;
+      break;
+   case SCIP_BRANCHDIR_UPWARDS:
+      direction = +1;
+      break;
+   default:
+      errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
+         SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
+   snprintf(prompt, MAXSTRLEN, "current value: %d, new value: ", direction);
    valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
    snprintf(prompt, MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
@@ -1168,15 +1184,21 @@ DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
       printf("\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;
    }
-   if( direction < 0 || direction > 2 )
+   if( direction < -1 || direction > +1 )
    {
-      printf("\ninvalid input <%d>: direction must be 0, 1, or 2\n\n", direction);
+      printf("\ninvalid input <%d>: direction must be -1, 0, or +1\n\n", direction);
       return SCIP_OKAY;
    }
 
    /* set new branching direction */
-   CHECK_OKAY( SCIPchgVarBranchDirection(scip, var, direction) );
-   printf("branching direction of variable <%s> set to %d\n", SCIPvarGetName(var), SCIPvarGetBranchDirection(var));
+   if( direction == -1 )
+      CHECK_OKAY( SCIPchgVarBranchDirection(scip, var, SCIP_BRANCHDIR_DOWNWARDS) );
+   else if( direction == 0 )
+      CHECK_OKAY( SCIPchgVarBranchDirection(scip, var, SCIP_BRANCHDIR_AUTO) );
+   else
+      CHECK_OKAY( SCIPchgVarBranchDirection(scip, var, SCIP_BRANCHDIR_UPWARDS) );
+
+   printf("branching direction of variable <%s> set to %d\n", SCIPvarGetName(var), direction);
 
    return SCIP_OKAY;
 }
@@ -1744,7 +1766,7 @@ RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(submenu, "direction") )
    {
       CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetBranchingDirection, NULL,
-            "direction", "change preferred branching direction of a single variable (0:down, 1:up, 2:auto)",
+            "direction", "change preferred branching direction of a single variable (-1:down, 0:auto, +1:up)",
             FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );

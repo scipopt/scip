@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.69 2004/10/21 14:20:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.70 2004/10/26 07:30:56 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1031,8 +1031,8 @@ RETCODE conflictAddClause(
     */
    d--;
    assert(validdepth <= d && d <= currentdepth);
-   debugMessage(" -> conflict with %d literals found at depth %d is active in depth %d\n", 
-      conflict->nconflictvars + conflict->ntmpconflictvars, currentdepth, d);
+   debugMessage(" -> conflict with %d literals found at depth %d is active in depth %d and valid in depth %d\n", 
+      conflict->nconflictvars + conflict->ntmpconflictvars, currentdepth, d, validdepth);
    
    /* if all branching variables are in the conflict set, the conflict clause is of no use */
    if( d == currentdepth )
