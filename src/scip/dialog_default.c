@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.20 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.21 2004/05/21 20:03:09 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -212,19 +212,20 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
 
    /* display list of constraint handlers */
    printf("\n");
-   printf(" constraint handler   chckprio enfoprio sepaprio sepafreq propfreq  description\n");
-   printf(" ------------------   -------- -------- -------- -------- --------  -----------\n");
+   printf(" constraint handler   chckprio enfoprio sepaprio sepaf propf eager  description\n");
+   printf(" ------------------   -------- -------- -------- ----- ----- -----  -----------\n");
    for( i = 0; i < nconshdlrs; ++i )
    {
       printf(" %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
       if( strlen(SCIPconshdlrGetName(conshdlrs[i])) > 20 )
          printf("\n %20s ", "-->");
-      printf("%8d %8d %8d %8d %8d  ",
+      printf("%8d %8d %8d %5d %5d %5d  ",
          SCIPconshdlrGetCheckPriority(conshdlrs[i]),
          SCIPconshdlrGetEnfoPriority(conshdlrs[i]),
          SCIPconshdlrGetSepaPriority(conshdlrs[i]),
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
-         SCIPconshdlrGetPropFreq(conshdlrs[i]));
+         SCIPconshdlrGetPropFreq(conshdlrs[i]),
+         SCIPconshdlrGetEagerFreq(conshdlrs[i]));
       printf(SCIPconshdlrGetDesc(conshdlrs[i]));
       printf("\n");
    }
@@ -480,8 +481,8 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the display branchingstatistics command */
-DECL_DIALOGEXEC(SCIPdialogExecDisplayBranchingstatistics)
+/** dialog execution method for the display varbranchstatistics command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayVarbranchstatistics)
 {  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
@@ -1148,11 +1149,11 @@ RETCODE SCIPincludeDialogDefault(
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
    
-   /* display branchingstatistics */
-   if( !SCIPdialogHasEntry(submenu, "branchingstatistics") )
+   /* display varbranchstatistics */
+   if( !SCIPdialogHasEntry(submenu, "varbranchstatistics") )
    {
-      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayBranchingstatistics, NULL,
-                     "branchingstatistics", "display branching statistics", FALSE, NULL) );
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayVarbranchstatistics, NULL,
+                     "varbranchstatistics", "display statistics for branching on variables", FALSE, NULL) );
       CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
       CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }

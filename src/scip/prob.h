@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.35 2004/05/07 11:56:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.36 2004/05/21 20:03:10 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -226,7 +226,7 @@ RETCODE SCIPprobInitSolve(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** deinitializes problem for branch and bound process, and converts all COLUMN variables back into LOOSE variables */
+/** deinitializes problem after branch and bound process, and converts all COLUMN variables back into LOOSE variables */
 extern
 RETCODE SCIPprobExitSolve(
    PROB*            prob,               /**< problem data */

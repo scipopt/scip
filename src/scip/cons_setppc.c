@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.42 2004/05/03 08:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.43 2004/05/21 20:03:09 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -38,6 +38,7 @@
 #define CONSHDLR_CHECKPRIORITY  -700000
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
+#define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define LINCONSUPGD_PRIORITY    +700000
@@ -1373,23 +1374,14 @@ DECL_CONSSEPA(consSepaSetppc)
    separated = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: check all useful set partitioning / packing / covering constraints for feasibility */
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
-   /* step 2: combine set partitioning / packing / covering constraints to get more cuts */
+   /* combine set partitioning / packing / covering constraints to get more cuts */
    /**@todo further cuts of set partitioning / packing / covering constraints */
-
-   /* step 3: if no cuts were found and we are in the root node, separate remaining constraints */
-   if( SCIPgetDepth(scip) == 0 )
-   {
-      for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-      {
-         CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
-      }
-   }
 
    /* return the correct result */
    if( cutoff )
@@ -1685,13 +1677,13 @@ DECL_CONSENFOLP(consEnfolpSetppc)
    separated = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: check all useful set partitioning / packing / covering constraints for feasibility */
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
-   /* step 2: check all obsolete set partitioning / packing / covering constraints for feasibility */
+   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
@@ -1700,7 +1692,7 @@ DECL_CONSENFOLP(consEnfolpSetppc)
 #ifdef BRANCHLP
    if( !cutoff && !separated && !reduceddom )
    {
-      /* step 3: if solution is not integral, choose a variable set to branch on */
+      /* if solution is not integral, choose a variable set to branch on */
       CHECK_OKAY( branchLP(scip, conshdlr, result) );
       if( *result != SCIP_FEASIBLE )
          return SCIP_OKAY;
@@ -1840,19 +1832,10 @@ DECL_CONSPROP(consPropSetppc)
    cutoff = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: propagate all useful set partitioning / packing / covering constraints */
+   /* propagate all useful set partitioning / packing / covering constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       CHECK_OKAY( processFixings(scip, conss[c], &cutoff, &reduceddom, &addcut, &mustcheck) );
-   }
-
-   /* step 2: every 10th propagation, propagate all obsolete logic or constraints */
-   if( SCIPgetDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
-   {
-      for( c = nusefulconss; c < nconss && !cutoff; ++c )
-      {
-         CHECK_OKAY( processFixings(scip, conss[c], &cutoff, &reduceddom, &addcut, &mustcheck) );
-      }
    }
 
    /* return the correct result */
@@ -2586,7 +2569,7 @@ RETCODE SCIPincludeConshdlrSetppc(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, 
                   CONSHDLR_NEEDSCONS,
                   consFreeSetppc, consInitSetppc, consExitSetppc, 
                   consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.3 2004/05/03 08:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.4 2004/05/21 20:03:08 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -38,6 +38,7 @@
 #define CONSHDLR_CHECKPRIORITY  -900000
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
+#define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_NEEDSCONS         TRUE
 
 
@@ -507,7 +508,7 @@ RETCODE SCIPincludeConshdlrConjunction(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
                   consFreeConjunction, consInitConjunction, consExitConjunction, 
                   consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
                   consDeleteConjunction, consTransConjunction, consInitlpConjunction,

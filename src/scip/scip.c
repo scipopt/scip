@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.167 2004/05/07 11:56:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.168 2004/05/21 20:03:10 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1000,6 +1000,8 @@ RETCODE SCIPincludeConshdlr(
    int              chckpriority,       /**< priority of the constraint handler for checking infeasibility */
    int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1032,7 +1034,7 @@ RETCODE SCIPincludeConshdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
-                  name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
+                  name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, needscons, 
                   consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
                   consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
                   consrescvar, conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
@@ -5351,7 +5353,7 @@ RETCODE SCIPaddConsAge(
    Real             deltaage            /**< value to add to the constraint's age */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddConsAge", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsAddAge(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, deltaage) );
 
@@ -5369,7 +5371,7 @@ RETCODE SCIPincConsAge(
    CONS*            cons                /**< constraint */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPincConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsIncAge(cons, scip->mem->solvemem, scip->set, scip->stat, scip->transprob) );
 
@@ -5387,7 +5389,7 @@ RETCODE SCIPresetConsAge(
    CONS*            cons                /**< constraint */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPresetConsAge", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconsResetAge(cons, scip->set) );
 

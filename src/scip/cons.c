@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.77 2004/05/05 14:05:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.78 2004/05/21 20:03:07 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1023,6 +1023,8 @@ RETCODE SCIPconshdlrCreate(
    int              checkpriority,      /**< priority of the constraint handler for checking infeasibility */
    int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -1058,6 +1060,7 @@ RETCODE SCIPconshdlrCreate(
    assert(desc != NULL);
    assert((conssepa != NULL) || (sepafreq == -1));
    assert((consprop != NULL) || (propfreq == -1));
+   assert(eagerfreq >= -1);
 
    ALLOC_OKAY( allocMemory(conshdlr) );
    ALLOC_OKAY( duplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );
@@ -1067,6 +1070,7 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->checkpriority = checkpriority;
    (*conshdlr)->sepafreq = sepafreq;
    (*conshdlr)->propfreq = propfreq;
+   (*conshdlr)->eagerfreq = eagerfreq;
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;
@@ -1169,6 +1173,12 @@ RETCODE SCIPconshdlrCreate(
       name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*conshdlr)->propfreq, propfreq, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "constraints/%s/eagerfreq", name);
+   sprintf(paramdesc, "frequency for using all instead of only the useful constraints in separation, propagation and enforcement of constraint handler <%s> (-1: never, 0: only in first evaluation)",
+      name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*conshdlr)->eagerfreq, eagerfreq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1493,6 +1503,11 @@ RETCODE SCIPconshdlrSeparate(
          oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
          oldnactiveconss = stat->nactiveconss;
 
+         /* check, if we want to use eager evaluation */
+         if( (conshdlr->eagerfreq == 0 && conshdlr->nsepacalls == 0)
+            || (conshdlr->eagerfreq > 0 && conshdlr->nsepacalls % conshdlr->eagerfreq == 0) )
+            nusefulconss = nconss;
+
          /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
           * external method; to avoid this, these changes will be buffered and processed after the method call
@@ -1614,6 +1629,11 @@ RETCODE SCIPconshdlrEnforceLPSol(
          oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
          oldnactiveconss = stat->nactiveconss;
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+
+         /* check, if we want to use eager evaluation */
+         if( (conshdlr->eagerfreq == 0 && conshdlr->nenfolpcalls == 0)
+            || (conshdlr->eagerfreq > 0 && conshdlr->nenfolpcalls % conshdlr->eagerfreq == 0) )
+            nusefulconss = nconss;
 
          /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1739,6 +1759,11 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          conss = &(conshdlr->enfoconss[firstcons]);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+
+         /* check, if we want to use eager evaluation */
+         if( (conshdlr->eagerfreq == 0 && conshdlr->nenfopscalls == 0)
+            || (conshdlr->eagerfreq > 0 && conshdlr->nenfopscalls % conshdlr->eagerfreq == 0) )
+            nusefulconss = nconss;
 
          /* because during constraint processing, constraints of this handler may be activated, deactivated,
           * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1881,10 +1906,20 @@ RETCODE SCIPconshdlrPropagate(
       && (depth == -1 || (conshdlr->propfreq > 0 && depth % conshdlr->propfreq == 0)) )
    {
       Longint oldndomchgs;
-      
+      int nconss;
+      int nusefulconss;
+
       debugMessage("propagating %d constraints of handler <%s>\n", conshdlr->npropconss, conshdlr->name);
 
       oldndomchgs = stat->nboundchgs + stat->nholechgs;
+
+      nconss = conshdlr->npropconss;
+      nusefulconss = conshdlr->nusefulpropconss;
+      
+      /* check, if we want to use eager evaluation */
+      if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
+         || (conshdlr->eagerfreq > 0 && conshdlr->npropcalls % conshdlr->eagerfreq == 0) )
+         nusefulconss = nconss;
 
       /* because during constraint processing, constraints of this handler may be activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -1896,8 +1931,7 @@ RETCODE SCIPconshdlrPropagate(
       SCIPclockStart(conshdlr->proptime, set);
 
       /* call external method */
-      CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conshdlr->propconss, conshdlr->npropconss, 
-                     conshdlr->nusefulpropconss, result) );
+      CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conshdlr->propconss, nconss, nusefulconss, result) );
       debugMessage(" -> propagation returned result <%d>\n", *result);
       
       /* stop timing */
@@ -2444,6 +2478,16 @@ int SCIPconshdlrGetPropFreq(
    assert(conshdlr != NULL);
 
    return conshdlr->propfreq;
+}
+
+/** gets frequency of constraint handler for eager evaluations in separation, propagation and enforcement */
+int SCIPconshdlrGetEagerFreq(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->eagerfreq;
 }
 
 /** needs constraint handler a constraint to be called? */

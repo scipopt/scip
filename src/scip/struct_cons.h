@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.10 2004/05/04 09:19:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.11 2004/05/21 20:03:10 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -139,6 +139,8 @@ struct Conshdlr
    int              checkpriority;      /**< priority of the constraint handler for checking infeasibility */
    int              sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
+   int              eagerfreq;          /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              consssize;          /**< size of conss array */
    int              nconss;             /**< total number of active constraints */
    int              maxnconss;          /**< maximal number of active constraints existing at the same time */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.40 2004/05/05 13:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.41 2004/05/21 20:03:09 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -38,6 +38,7 @@
 #define CONSHDLR_CHECKPRIORITY  -800000
 #define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ             1
+#define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define LINCONSUPGD_PRIORITY    +800000
@@ -69,7 +70,7 @@ struct ConshdlrData
    INTARRAY*        posvaruses;         /**< number of positive literal of a variable in the active logic or constraints */
    INTARRAY*        negvaruses;         /**< number of negative literal of a variable in the active logic or constraints */
    EVENTHDLR*       eventhdlr;          /**< event handler for bound tighten events on watched variables */
-   int              npseudobranches;    /**< number of children created in pseudo branching */
+   int              npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
 };
 
 /** logic or constraint data */
@@ -793,8 +794,7 @@ RETCODE processWatchedVars(
       /* there are at least two unfixed variables -> the constraint must be checked manually */
       *mustcheck = TRUE;
 
-      /* mark the constraint propagated, and increase its age */
-      CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * nvars) );
+      /* mark the constraint propagated */
       consdata->propagated = TRUE;
    }
 
@@ -947,6 +947,12 @@ RETCODE separateCons(
       }
       else
          addcut = !checkCons(scip, consdata, NULL);
+
+      if( !addcut )
+      {
+         /* constraint was feasible -> increase age */
+         CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
+      }
    }
 
    if( addcut )
@@ -955,11 +961,6 @@ RETCODE separateCons(
       CHECK_OKAY( addCut(scip, cons, 1.0) );
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *separated = TRUE;
-   }
-   else
-   {
-      /* constraint was feasible -> increase age */
-      CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
    }
 
    return SCIP_OKAY;
@@ -1018,11 +1019,6 @@ RETCODE enforcePseudo(
       /* a cut must be added to the LP -> we have to solve the LP immediately */
       CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *solvelp = TRUE;
-   }
-   else
-   {
-      /* constraint was feasible -> increase age */
-      CHECK_OKAY( SCIPaddConsAge(scip, cons, 1.0 + AGEFACTOR * consdata->nvars) );
    }
 
    return SCIP_OKAY;
@@ -1197,23 +1193,14 @@ DECL_CONSSEPA(consSepaLogicor)
    separated = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: check all useful logic or constraints for feasibility */
+   /* check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
-   /* step 2: combine logic or constraints to get more cuts */
+   /* combine logic or constraints to get more cuts */
    /**@todo further cuts of logic or constraints */
-
-   /* step 3: if no cuts were found and we are in the root node, separate remaining constraints */
-   if( SCIPgetDepth(scip) == 0 )
-   {
-      for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-      {
-         CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-      }
-   }
 
    /* return the correct result */
    if( cutoff )
@@ -1437,6 +1424,10 @@ RETCODE branchPseudo(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* check, if pseudo branching is disabled */
+   if( conshdlrdata->npseudobranches == 0 )
+      return SCIP_OKAY;
+
    posvaruses = conshdlrdata->posvaruses;
    negvaruses = conshdlrdata->negvaruses;
    maxvarusefac = conshdlrdata->maxvarusefac;
@@ -1560,20 +1551,20 @@ DECL_CONSENFOLP(consEnfolpLogicor)
    separated = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: check all useful logic or constraints for feasibility */
+   /* check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
-   /* step 2: check all obsolete logic or constraints for feasibility */
+   /* check all obsolete logic or constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
 #ifdef BRANCHLP
-   /* step 3: if solution is not integral, choose a variable set to branch on */
+   /* if solution is not integral, choose a variable set to branch on */
    if( !cutoff && !separated && !reduceddom )
    {
       CHECK_OKAY( branchLP(scip, conshdlr, result) );
@@ -1720,21 +1711,10 @@ DECL_CONSPROP(consPropLogicor)
    cutoff = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: propagate all useful logic or constraints */
+   /* propagate all useful logic or constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      CHECK_OKAY( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr,
-                     &cutoff, &reduceddom, &addcut, &mustcheck) );
-   }
-
-   /* step 2: every 10th propagation, propagate all obsolete logic or constraints */
-   if( SCIPgetDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
-   {
-      for( c = nusefulconss; c < nconss && !cutoff; ++c )
-      {
-         CHECK_OKAY( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr,
-                        &cutoff, &reduceddom, &addcut, &mustcheck) );
-      }
+      CHECK_OKAY( processWatchedVars(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
 
    /* return the correct result */
@@ -2168,8 +2148,7 @@ RETCODE SCIPincludeConshdlrLogicor(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
-                  CONSHDLR_NEEDSCONS,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
                   consFreeLogicor, consInitLogicor, consExitLogicor, 
                   consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
                   consDeleteLogicor, consTransLogicor, 
@@ -2187,8 +2166,8 @@ RETCODE SCIPincludeConshdlrLogicor(
    /* logic or constraint handler parameters */
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "constraints/logicor/npseudobranches", 
-                  "number of children created in pseudo branching",
-                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 2, INT_MAX, NULL, NULL) );
+                  "number of children created in pseudo branching (0: disable pseudo branching)",
+                  &conshdlrdata->npseudobranches, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "constraints/logicor/maxvarusefac", 
                   "branching factor to weigh maximum of positive and negative variable uses",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.22 2004/05/05 13:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.23 2004/05/21 20:03:08 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -36,6 +36,7 @@
 #define CONSHDLR_CHECKPRIORITY  -850000
 #define CONSHDLR_SEPAFREQ             1
 #define CONSHDLR_PROPFREQ             1
+#define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define EVENTHDLR_NAME         "and"
@@ -671,19 +672,24 @@ RETCODE addRelaxation(
 
 /** checks and constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
 static
-Bool checkCons(
+RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint to check */
    SOL*             sol,                /**< solution to check, NULL for current solution */
-   Bool             checklprows         /**< should LP rows be checked? */
+   Bool             checklprows,        /**< should LP rows be checked? */
+   Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
    CONSDATA* consdata;
    Bool mustcheck;
    int r;
 
+   assert(violated != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   *violated = FALSE;
 
    /* check, if we can skip this feasibility check, because all rows are in the LP and doesn't have to be checked */
    mustcheck = checklprows;
@@ -705,6 +711,9 @@ Bool checkCons(
       Real solval;
       int i;
 
+      /* increase age of constraint; age is reset to zero, if a violation was found */
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
       {
@@ -717,10 +726,15 @@ Bool checkCons(
       /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
       assert(SCIPisIntegral(scip, solval));
-      return ((i == consdata->nvars) == (solval > 0.5));
+
+      if( (i == consdata->nvars) != (solval > 0.5) )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *violated = TRUE;
+      }
    }
-   else
-      return TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** separates current LP solution */
@@ -728,7 +742,7 @@ static
 RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint to check */
-   Bool*            separated           /**< pointer to store TRUE, if a cut was found */
+   Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
    CONSDATA* consdata;
@@ -739,6 +753,8 @@ RETCODE separateCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   *separated = FALSE;
 
    /* create all necessary rows for the linear relaxation */
    if( consdata->rows == NULL )
@@ -809,6 +825,9 @@ RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
+   /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
+   CHECK_OKAY( SCIPincConsAge(scip, cons) );
+
    /* if one of the operator variables was fixed to FALSE, the resultant can be fixed to FALSE (rule (1)) */
    if( !consdata->nofixedzero )
    {
@@ -822,6 +841,10 @@ RETCODE propagateCons(
          *cutoff = *cutoff || infeasible;
          if( tightened )
             (*nfixedvars)++;
+         if( infeasible || tightened )
+         {
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         }
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          return SCIP_OKAY;
       }
@@ -841,6 +864,10 @@ RETCODE propagateCons(
          *cutoff = *cutoff || infeasible;
          if( tightened )
             (*nfixedvars)++;
+         if( infeasible || tightened )
+         {
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         }
       }
       CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       return SCIP_OKAY;
@@ -913,6 +940,10 @@ RETCODE propagateCons(
       *cutoff = *cutoff || infeasible;
       if( tightened )
          (*nfixedvars)++;
+      if( infeasible || tightened )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      }
       CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       return SCIP_OKAY;
    }
@@ -930,6 +961,10 @@ RETCODE propagateCons(
       *cutoff = *cutoff || infeasible;
       if( tightened )
          (*nfixedvars)++;
+      if( infeasible || tightened )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      }
       CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       return SCIP_OKAY;
    }
@@ -1168,28 +1203,18 @@ DECL_CONSSEPA(consSepaAnd)
    Bool separated;
    int c;
 
-   separated = FALSE;
+   *result = SCIP_DIDNOTFIND;
 
-   /* step 1: separate all useful constraints */
+   /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
       CHECK_OKAY( separateCons(scip, conss[c], &separated) );
+      if( separated )
+         *result = SCIP_SEPARATED;
    } 
 
-   /* step 2: combine constraints to get more cuts */
+   /* combine constraints to get more cuts */
    /**@todo combine constraints to get further cuts */
-
-   /* step 3: if no cuts were found, separate remaining constraints */
-   for( c = nusefulconss; c < nconss && !separated; ++c )
-   {
-      CHECK_OKAY( separateCons(scip, conss[c], &separated) );
-   }
-
-   /* return the correct result */
-   if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
@@ -1199,14 +1224,16 @@ DECL_CONSSEPA(consSepaAnd)
 static
 DECL_CONSENFOLP(consEnfolpAnd)
 {  /*lint --e{715}*/
+   Bool violated;
    int i;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      if( !checkCons(scip, conss[i], NULL, FALSE) )
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      if( violated )
       {
-         Bool separated = FALSE;
+         Bool separated;
 
          CHECK_OKAY( separateCons(scip, conss[i], &separated) );
          assert(separated); /* because the solution is integral, the separation always finds a cut */
@@ -1224,12 +1251,14 @@ DECL_CONSENFOLP(consEnfolpAnd)
 static
 DECL_CONSENFOPS(consEnfopsAnd)
 {  /*lint --e{715}*/
+   Bool violated;
    int i;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      if( !checkCons(scip, conss[i], NULL, TRUE) )
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      if( violated )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -1245,12 +1274,14 @@ DECL_CONSENFOPS(consEnfopsAnd)
 static
 DECL_CONSCHECK(consCheckAnd)
 {  /*lint --e{715}*/
+   Bool violated;
    int i;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      if( !checkCons(scip, conss[i], sol, TRUE) )
+      CHECK_OKAY( checkCons(scip, conss[i], sol, TRUE, &violated) );
+      if( violated )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -1277,19 +1308,10 @@ DECL_CONSPROP(consPropAnd)
    cutoff = FALSE;
    nfixedvars = 0;
 
-   /* step 1: propagate all useful constraints */
+   /* propagate all useful constraints */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
       CHECK_OKAY( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars) );
-   }
-
-   /* step 2: every 10th propagation, propagate all obsolete constraints */
-   if( SCIPgetDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
-   {
-      for( c = nusefulconss; c < nconss && !cutoff; ++c )
-      {
-         CHECK_OKAY( propagateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &nfixedvars) );
-      }
    }
 
    /* return the correct result */
@@ -1482,7 +1504,7 @@ RETCODE SCIPincludeConshdlrAnd(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
                   consFreeAnd, consInitAnd, consExitAnd, 
                   consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
                   consDeleteAnd, consTransAnd, consInitlpAnd,

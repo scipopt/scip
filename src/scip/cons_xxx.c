@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.16 2004/05/03 08:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.17 2004/05/21 20:03:09 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -36,6 +36,7 @@
 #define CONSHDLR_CHECKPRIORITY        0
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
+#define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_NEEDSCONS         TRUE
 
 /* TODO: (optional) enable linear constraint upgrading */
@@ -463,7 +464,7 @@ RETCODE SCIPincludeConshdlrXxx(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
                   consFreeXxx, consInitXxx, consExitXxx, 
                   consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
                   consDeleteXxx, consTransXxx, consInitlpXxx,

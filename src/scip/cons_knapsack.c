@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.44 2004/05/05 13:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.45 2004/05/21 20:03:08 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -40,6 +40,7 @@
 #define CONSHDLR_CHECKPRIORITY  -850000
 #define CONSHDLR_SEPAFREQ            10
 #define CONSHDLR_PROPFREQ             1
+#define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define EVENTHDLR_NAME         "knapsack"
@@ -363,6 +364,7 @@ RETCODE addRelaxation(
       CHECK_OKAY( createRelaxation(scip, cons) );
    }
    assert(consdata->row != NULL);
+   assert(!SCIProwIsInLP(consdata->row));
 
    debugMessage("adding relaxation of knapsack constraint <%s> (capacity %lld): ", 
       SCIPconsGetName(cons), consdata->capacity);
@@ -378,10 +380,13 @@ Bool checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint to check */
    SOL*             sol,                /**< solution to check, NULL for current solution */
-   Bool             checklprows         /**< should LP rows be checked? */
+   Bool             checklprows,        /**< should LP rows be checked? */
+   Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
    CONSDATA* consdata;
+
+   assert(violated != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -389,20 +394,30 @@ Bool checkCons(
    debugMessage("checking knapsack constraint <%s> for feasibility of solution %p (lprows=%d)\n",
       SCIPconsGetName(cons), sol, checklprows);
 
+   *violated = FALSE;
+
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       Real sum;
       int i;
+
+      /* increase age of constraint; age is reset to zero, if a violation was found */
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
 
       sum = 0.0;
       for( i = 0; i < consdata->nvars && sum <= consdata->capacity + 0.1; i++ )
       {
          sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
       }
-      return SCIPisFeasLE(scip, sum, (Real)consdata->capacity);
+
+      if( SCIPisFeasGT(scip, sum, (Real)consdata->capacity) )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *violated = TRUE;
+      }
    }
-   else
-      return TRUE;
+
+   return SCIP_OKAY;
 }
 
 #define IDX(j,d) ((j)*(capacity+1)+(d))
@@ -595,7 +610,7 @@ static
 RETCODE separateCardinality(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< knapsack constraint */
-   Bool*            separated           /**< pointer to store whether a cut was found */
+   int*             ncuts               /**< pointer to add up the number of found cuts */
    )
 {
    CONSDATA* consdata;
@@ -623,13 +638,14 @@ RETCODE separateCardinality(
    int j; 
    int idx;
 
-   assert(separated != NULL);
+   assert(ncuts != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   *separated = FALSE;
-   
+   /* increase age of constraint; age is reset to zero, if a cut was found */
+   CHECK_OKAY( SCIPincConsAge(scip, cons) );
+
    /* allocate temporary memory */
    CHECK_OKAY( SCIPallocBufferArray(scip, &items, consdata->nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
@@ -842,8 +858,9 @@ RETCODE separateCardinality(
             {         
                debugMessage("lifted cardinality cut for knapsack constraint <%s>: ", SCIPconsGetName(cons));
                debug(SCIProwPrint(row, NULL));
+               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
                CHECK_OKAY( SCIPaddCut(scip, row, -cutfeas/cutnorm/(SCIProwGetNNonz(row)+1)) );
-               *separated = TRUE;
+               (*ncuts)++;
             }
             CHECK_OKAY( SCIPreleaseRow(scip, &row) );
          }
@@ -876,48 +893,39 @@ static
 RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< knapsack constraint */
-   Bool*            separated           /**< pointer to store whether a cut was found */
+   int*             ncuts               /**< pointer to add up the number of found cuts */
    )
 {
    CONSDATA* consdata;
    Real feasibility;
+   Bool violated;
 
-   assert(separated != NULL);
+   assert(ncuts != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
 
-   *separated = FALSE;
+   /* check knapsack constraint itself for feasibility */
+   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violated) );
 
-   /* create LP relaxation if not yet existing */
-   if( consdata->row == NULL )
+   if( violated )
    {
-      CHECK_OKAY( createRelaxation(scip, cons) );
+      /* add knapsack constraint as LP row to the LP */
+      CHECK_OKAY( addRelaxation(scip, cons) );
+      (*ncuts)++;
    }
-
-   /* check non-LP rows for feasibility and add them as cut, if violated */
-   if( !SCIProwIsInLP(consdata->row) )
+   else
    {
-      feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
-      if( SCIPisFeasNegative(scip, feasibility) )
-      {
-         CHECK_OKAY( SCIPaddCut(scip, consdata->row, -feasibility) );
-         *separated = TRUE;
-      }
-   }
-
-   /* if LP row was not violated, separate lifted cardinality inequalities */
-   if( !(*separated) )
-   {
-      CHECK_OKAY( separateCardinality(scip, cons, separated) );
+      /* knapsack constraint itself was feasible: separate lifted cardinality inequalities */
+      CHECK_OKAY( separateCardinality(scip, cons, ncuts) );
    }
 
    return SCIP_OKAY;
 }
 
-/** propagation methode for knapsack constraint */
+/** propagation method for knapsack constraints */
 static
 RETCODE propagateCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -949,21 +957,29 @@ RETCODE propagateCons(
    if( consdata->propagated )
       return SCIP_OKAY;
 
+   /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
+   CHECK_OKAY( SCIPincConsAge(scip, cons) );
+
    /* check, if weights of fixed variables already exceeds knapsack capacity */
    if( consdata->capacity < consdata->onesweightsum )
    {
-      /* start conflict analysis with the fixed-to-one variables */
-      CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
-      for( i = 0; i < consdata->nvars; i++ )
-      {
-         if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
-         {
-            CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
-         }
-      }
-
-      CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
+      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
+
+      if( SCIPconsIsGlobal(cons) )
+      {
+         /* start conflict analysis with the fixed-to-one variables */
+         CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+         for( i = 0; i < consdata->nvars; i++ )
+         {
+            if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+            {
+               CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
+            }
+         }
+         
+         CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
+      }
 
       return SCIP_OKAY;
    }
@@ -981,6 +997,7 @@ RETCODE propagateCons(
          {
             if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
             {
+               CHECK_OKAY( SCIPresetConsAge(scip, cons) );
                CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
                assert(!infeasible);
                assert(tightened);
@@ -1369,7 +1386,7 @@ DECL_CONSSEPA(consSepaKnapsack)
       return SCIP_OKAY;
 
    /* get the maximal number of cuts allowed in a separation round */
-   maxsepacuts = depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts;
+   maxsepacuts = (depth == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
@@ -1377,19 +1394,9 @@ DECL_CONSSEPA(consSepaKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
    {
-      CHECK_OKAY( separateCons(scip, conss[i], &separated) );
-      if( separated )
-         ncuts++;
+      CHECK_OKAY( separateCons(scip, conss[i], &ncuts) );
    }
    
-   /* separate remaining constraints until a cutting plane was found */
-   for( i = nusefulconss; i < nconss && ncuts == 0; i++ )
-   {
-      CHECK_OKAY( separateCons(scip, conss[i], &separated) );
-      if( separated )
-         ncuts++;
-   }
-
    /* adjust return value */
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;
@@ -1402,25 +1409,48 @@ DECL_CONSSEPA(consSepaKnapsack)
 static
 DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
-   Bool separated;
+   CONSHDLRDATA* conshdlrdata;
+   Bool violated;
+   int maxncuts;
+   int ncuts;
    int i;
 
    *result = SCIP_FEASIBLE;
 
-   for( i = 0; i < nconss; i++ )
+   /* get maximal number of cuts per round */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   maxncuts = (SCIPgetDepth(scip) == 0 ? conshdlrdata->maxsepacutsroot : conshdlrdata->maxsepacuts);
+
+   ncuts = 0;
+
+   /* search for violated useful knapsack constraints */
+   for( i = 0; i < nusefulconss && ncuts < maxncuts; i++ )
    {
-      if( !checkCons(scip, conss[i], NULL, FALSE) )
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      if( violated )
       {
-         CHECK_OKAY( separateCons(scip, conss[i], &separated) );
-         if( separated )
-         {
-            *result = SCIP_SEPARATED;
-            break;
-         }
-         else
-            *result = SCIP_INFEASIBLE;
+         /* add knapsack constraint as LP row to the LP */
+         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+         ncuts++;
       }
    } 
+
+   /* as long as no violations were found, search for violated obsolete knapsack constraints */
+   for( i = nusefulconss; i < nconss && ncuts == 0; i++ )
+   {
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      if( violated )
+      {
+         /* add knapsack constraint as LP row to the LP */
+         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+         ncuts++;
+      }
+   } 
+
+   /* adjust the result code */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -1430,11 +1460,13 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
 static
 DECL_CONSENFOPS(consEnfopsKnapsack)
 {  /*lint --e{715}*/
+   Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      if( !checkCons(scip, conss[i], NULL, TRUE) )
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      if( violated )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -1450,11 +1482,13 @@ DECL_CONSENFOPS(consEnfopsKnapsack)
 static
 DECL_CONSCHECK(consCheckKnapsack)
 {  /*lint --e{715}*/
+   Bool violated;
    int i;
 
    for( i = 0; i < nconss; i++ )
    {
-      if( !checkCons(scip, conss[i], sol, checklprows) )
+      CHECK_OKAY( checkCons(scip, conss[i], sol, checklprows, &violated) );
+      if( violated )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -1478,11 +1512,13 @@ DECL_CONSPROP(consPropKnapsack)
    cutoff = FALSE;
    nfixedvars = 0;
 
+   /* process useful constraints */
    for( i = 0; i < nusefulconss && !cutoff; i++ )
    {
       CHECK_OKAY( propagateCons(scip, conss[i], &cutoff, &redundant, &nfixedvars) );
    } 
 
+   /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( nfixedvars > 0 )
@@ -1813,7 +1849,7 @@ RETCODE SCIPincludeConshdlrKnapsack(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
                   consFreeKnapsack, consInitKnapsack, consExitKnapsack, 
                   consInitpreKnapsack, consExitpreKnapsack, consInitsolKnapsack, consExitsolKnapsack,
                   consDeleteKnapsack, consTransKnapsack, consInitlpKnapsack,

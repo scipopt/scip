@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.48 2004/05/07 11:56:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.49 2004/05/21 20:03:10 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -912,15 +912,23 @@ RETCODE SCIPprobExitPresolve(
    return SCIP_OKAY;
 }
 
-/** initializes problem for branch and bound process */
+/** initializes problem for branch and bound process and resets all constraint's ages */
 RETCODE SCIPprobInitSolve(
    PROB*            prob,               /**< problem data */
    SET*             set                 /**< global SCIP settings */
    )
 {
+   int c;
+
    assert(prob != NULL);
    assert(prob->transformed);
    assert(set != NULL);
+
+   /* reset constraint's ages */
+   for( c = 0; c < prob->nconss; ++c )
+   {
+      CHECK_OKAY( SCIPconsResetAge(prob->conss[c], set) );
+   }
 
    /* call user data function */
    if( prob->probinitsol != NULL )
@@ -931,7 +939,7 @@ RETCODE SCIPprobInitSolve(
    return SCIP_OKAY;
 }
 
-/** deinitializes problem for branch and bound process, and converts all COLUMN variables back into LOOSE variables */
+/** deinitializes problem after branch and bound process, and converts all COLUMN variables back into LOOSE variables */
 RETCODE SCIPprobExitSolve(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */

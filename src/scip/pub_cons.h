@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.8 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.9 2004/05/21 20:03:10 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -273,6 +273,12 @@ int SCIPconshdlrGetSepaFreq(
 /** gets propagation frequency of constraint handler */
 extern
 int SCIPconshdlrGetPropFreq(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets frequency of constraint handler for eager evaluations in separation, propagation and enforcement */
+extern
+int SCIPconshdlrGetEagerFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

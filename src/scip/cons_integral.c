@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.25 2004/05/03 08:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.26 2004/05/21 20:03:08 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -37,6 +37,7 @@
 #define CONSHDLR_CHECKPRIORITY        0
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
+#define CONSHDLR_EAGERFREQ           -1
 #define CONSHDLR_NEEDSCONS        FALSE /**< the constraint handler is called without constraints */
 
 
@@ -216,7 +217,7 @@ RETCODE SCIPincludeConshdlrIntegral(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
+                  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
                   consFreeIntegral, consInitIntegral, consExitIntegral, 
                   consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
                   consDeleteIntegral, consTransIntegral, consInitlpIntegral,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.13 2004/05/05 14:05:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.14 2004/05/21 20:03:09 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -63,6 +63,9 @@ public:
    /** default propagation frequency of the constraint handler */
    const int scip_propfreq_;
 
+   /** default frequency of the constraint handler for eager evaluations in separation, propagation and enforcement */
+   const int scip_eagerfreq_;
+
    /** should the constraint handler be skipped, if no constraints are available? */
    const Bool scip_needscons_;
 
@@ -75,6 +78,8 @@ public:
       int           checkpriority,      /**< priority of the constraint handler for checking infeasibility */
       int           sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
       int           propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
+      int           eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
       Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
       : scip_name_(name),
@@ -84,6 +89,7 @@ public:
         scip_checkpriority_(checkpriority),
         scip_sepafreq_(sepafreq),
         scip_propfreq_(propfreq),
+        scip_eagerfreq_(eagerfreq),
         scip_needscons_(needscons)
    {
    }
