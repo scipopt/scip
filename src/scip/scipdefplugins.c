@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.23 2004/07/14 14:05:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.24 2004/07/19 15:49:13 bzfpfets Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -59,7 +59,7 @@
 #include "presol_trivial.h"
 #include "reader_cnf.h"
 #include "reader_mps.h"
-#include "sepa_cmir.h"
+//#include "sepa_cmir.h"
 #include "sepa_gomory.h"
 #include "sepa_intobj.h"
 #include "scipdefplugins.h"
@@ -110,7 +110,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeHeurRootsoldiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
    CHECK_OKAY( SCIPincludeHeurSimplerounding(scip) );
-   CHECK_OKAY( SCIPincludeSepaCmir(scip) );
+   //   CHECK_OKAY( SCIPincludeSepaCmir(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
    CHECK_OKAY( SCIPincludeSepaIntobj(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );

@@ -14,14 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.57 2004/07/13 15:03:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.58 2004/07/19 15:49:13 bzfpfets Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
  * @author Tobias Achterberg
  * @author Kati Wolter
  */
-
+#define DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -1419,9 +1419,9 @@ DECL_CONSSEPA(consSepaKnapsack)
 
    depth = SCIPgetDepth(scip);
    nrounds = SCIPgetNSepaRounds(scip);
-
+   
    debugMessage("knapsack separation of %d/%d constraints, round %d (max %d/%d)\n",
-      nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
+		nusefulconss, nconss, nrounds, conshdlrdata->maxroundsroot, conshdlrdata->maxrounds);
 
    /* only call the separator a given number of times at each node */
    if( (depth == 0 && nrounds >= conshdlrdata->maxroundsroot)
@@ -1464,6 +1464,9 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
    int i;
 
    *result = SCIP_FEASIBLE;
+
+   debugMessage("knapsack enforcement of %d/%d constraints\n", nusefulconss, nconss);
+
 
    /* get maximal number of cuts per round */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
