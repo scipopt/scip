@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.6 2004/10/28 14:30:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.7 2004/11/17 15:53:58 bzfwolte Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -316,6 +316,42 @@ Bool SCIPrealToRational(
    Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
    Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+extern
+RETCODE SCIPcalcIntegralScalar(
+   Real*            vals,               /**< values to scale */
+   int              nvals,              /**< number of values to scale */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal allowed scalar */
+   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   Bool*            success             /**< stores whether returned value is valid */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+extern
+Real SCIPrelDiff(
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPrelDiff(val1, val2)         ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
+
+#endif
 
 
 

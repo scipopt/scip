@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.121 2004/10/28 14:30:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.122 2004/11/17 15:53:59 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2393,6 +2393,7 @@ RETCODE focusnodeToFork(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    )
@@ -2426,13 +2427,7 @@ RETCODE focusnodeToFork(
       if( !lp->solved || !lp->flushed )
       {
          debugMessage("resolving LP after cleanup\n");
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->lp_fastmip, FALSE, &lperror) );
-
-         /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
-         if( lp->validsollp == stat->lpcount-1 )
-            lp->validsollp = stat->lpcount;
-         if( lp->validfarkaslp == stat->lpcount-1 )
-            lp->validfarkaslp = stat->lpcount;
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -2493,6 +2488,7 @@ RETCODE focusnodeToSubroot(
    MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp                  /**< current LP data */
    )
@@ -2534,13 +2530,8 @@ RETCODE focusnodeToSubroot(
       /* resolve LP after cleaning up */
       if( !lp->solved || !lp->flushed )
       {
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->lp_fastmip, FALSE, &lperror) );
-
-         /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
-         if( lp->validsollp == stat->lpcount-1 )
-            lp->validsollp = stat->lpcount;
-         if( lp->validfarkaslp == stat->lpcount-1 )
-            lp->validfarkaslp = stat->lpcount;
+         debugMessage("resolving LP after cleanup\n");
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, TRUE, &lperror) );
       }
    }
    assert(lp->flushed);
@@ -2803,7 +2794,7 @@ RETCODE SCIPnodeFocus(
          if( FALSE && tree->focusnode->depth > 0 && tree->focusnode->depth % 25 == 0 ) /* ????????????? */
          {
             /* convert old focus node into a subroot node */
-            CHECK_OKAY( focusnodeToSubroot(memhdr, set, stat, tree, lp) );
+            CHECK_OKAY( focusnodeToSubroot(memhdr, set, stat, prob, tree, lp) );
             if( *node != NULL && SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD
                && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_SUBROOT )
                subroot = tree->focusnode;
@@ -2811,7 +2802,7 @@ RETCODE SCIPnodeFocus(
          else
          {
             /* convert old focus node into a fork node */
-            CHECK_OKAY( focusnodeToFork(memhdr, set, stat, tree, lp) );
+            CHECK_OKAY( focusnodeToFork(memhdr, set, stat, prob, tree, lp) );
          }
 
          /* update the path's LP size */

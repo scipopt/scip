@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.162 2004/11/12 13:03:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.163 2004/11/17 15:53:57 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3431,20 +3431,37 @@ static
 Bool isIntegralScalar(
    Real             val,                /**< value that should be scaled to an integral value */
    Real             scalar,             /**< scalar that should be tried */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta            /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   Real*            intval              /**< pointer to store the scaled integral value, or NULL */
    )
 {
    Real sval;
-   Real ival;
+   Real abssval;
+   Real downval;
+   Real upval;
 
    assert(mindelta <= 0.0);
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   ival = EPSFLOOR(sval, -mindelta);
+   downval = EPSFLOOR(sval, 0.0);
+   upval = EPSCEIL(sval, 0.0);
    
-   return (sval - ival <= maxdelta);
+   if( SCIPrelDiff(sval, downval) <= maxdelta )
+   {
+      if( intval != NULL )
+         *intval = downval;
+      return TRUE;
+   }
+   else if( SCIPrelDiff(sval, upval) >= mindelta )
+   {
+      if( intval != NULL )
+         *intval = upval;
+      return TRUE;
+   }
+   
+   return FALSE;
 }
 
 /** scales row with given factor, and rounds coefficients to integers if close enough;
@@ -3460,9 +3477,9 @@ RETCODE rowScale(
    Real             scaleval,           /**< value to scale row with */
    Bool             integralcontvars,   /**< should the coefficients of the continuous variables also be made integral,
                                          *   if they are close to integral values? */
-   Real             minrounddelta,      /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i,
+   Real             minrounddelta,      /**< minimal relative difference of scaled coefficient s*c and integral i,
                                          *   upto which the integral is used instead of the scaled real coefficient */
-   Real             maxrounddelta       /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i
+   Real             maxrounddelta       /**< maximal relative difference of scaled coefficient s*c and integral i
                                          *   upto which the integral is used instead of the scaled real coefficient */
    )
 {
@@ -3477,7 +3494,6 @@ RETCODE rowScale(
    Real ub;
    Bool mindeltainf;
    Bool maxdeltainf;
-   int pos;
    int c;
 
    assert(row != NULL);
@@ -3519,11 +3535,9 @@ RETCODE rowScale(
 
       /* calculate scaled coefficient */
       newval = val * scaleval;
-      if( ((integralcontvars || SCIPcolIsIntegral(col))
-            && isIntegralScalar(val, scaleval, minrounddelta, maxrounddelta))
-         || SCIPsetIsIntegral(set, newval) )
+      if( (integralcontvars || SCIPcolIsIntegral(col) || SCIPsetIsIntegral(set, newval))
+         && isIntegralScalar(val, scaleval, minrounddelta, maxrounddelta, &intval) )
       {
-         intval = EPSFLOOR(newval, -minrounddelta);
          if( intval < newval )
          {
             mindelta += (intval - newval)*ub;
@@ -3589,7 +3603,15 @@ RETCODE rowScale(
    /* clear the row constant */
    CHECK_OKAY( SCIProwChgConstant(row, set, stat, lp, 0.0) );
 
+   debugMessage("scaled row <%s> (integral: %d)\n", row->name, row->integral);
    debug(SCIProwPrint(row, NULL));
+
+   //#ifdef DEBUG
+   /* check integrality status of row */
+   for( c = 0; c < row->len && SCIPcolIsIntegral(row->cols[c]) && SCIPsetIsIntegral(set, row->vals[c]); ++c )
+   {}
+   assert(row->integral == (c == row->len));
+   //#endif
 
    return SCIP_OKAY;
 }
@@ -4091,8 +4113,8 @@ static const int nscalars = 9;
 RETCODE SCIProwCalcIntegralScalar(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -4101,12 +4123,22 @@ RETCODE SCIProwCalcIntegralScalar(
    )
 {
    COL* col;
+   Longint gcd;
+   Longint scm;
+   Longint nominator;
+   Longint denominator;
    Real val;
+   Real absval;
    Real minval;
-   Real usedtol;
-   Bool fractional;
+   Real scaleval;
+   Real twomultval;
+   Bool scalable;
+   Bool twomult;
+   Bool rational;
    int c;
+   int s;
 
+   /**@todo call misc.c:SCIPcalcIntegralScalar() instead - if usecontvars == FALSE, filter the integer variables first */
    assert(row != NULL);
    assert(row->len == 0 || row->cols != NULL);
    assert(row->len == 0 || row->cols_index != NULL);
@@ -4122,20 +4154,8 @@ RETCODE SCIProwCalcIntegralScalar(
       *intscalar = SCIP_INVALID;
    *success = FALSE;
 
-   /* nothing to do, if row is empty */
-   if( row->len == 0 )
-   {
-      if( intscalar != NULL )
-         *intscalar = 1.0;
-      *success = TRUE;
-      return SCIP_OKAY;
-   }
-
-   /* check, if there are fractional coefficients in the row that have to be made integral, 
-    * and get minimal value that has to be made integral
-    */
-   fractional = FALSE;
-   minval = SCIPsetInfinity(set);
+   /* get minimal absolute non-zero value */
+   minval = REAL_MAX;
    for( c = 0; c < row->len; ++c )
    {
       col = row->cols[c];
@@ -4146,185 +4166,174 @@ RETCODE SCIProwCalcIntegralScalar(
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
 
-      if( (usecontvars || SCIPcolIsIntegral(col)) && !SCIPsetIsIntegral(set, val) )
+      if( val < mindelta || val > maxdelta )
       {
-         Real absval;
-
-         fractional = TRUE;
          absval = REALABS(val);
          minval = MIN(minval, absval);
       }
    }
-
-   /* if fractional coefficients exist, try to find a rational representation */
-   if( fractional )
+   if( minval == REAL_MAX )
    {
-      Bool scalable;
-      Bool twomult;
-      Real absval;
-      Real scaleval;
-      Real twomultval;
-      int s;
-
-      /* try, if row coefficients can be made integral by 
-       *  - multiplying them with the reciprocal of the smallest coefficient and a power of 2
-       *  - by multiplying them by a power of 2
-       */
-      assert(SCIPsetIsPositive(set, minval));
-      assert(!SCIPsetIsInfinity(set, minval));
-      scalable = TRUE;
-      scaleval = 1.0/minval;
-      twomult = TRUE;
-      twomultval = 1.0;
-      for( c = 0; c < row->len && (scalable || twomult); ++c )
-      {
-         /* don't look at continuous variables, if we don't have to */
-         if( !usecontvars && !SCIPcolIsIntegral(row->cols[c]) )
-            continue;
-
-         /* check, if the coefficient can be scaled with a simple scalar */
-         val = row->vals[c];
-         absval = REALABS(val);
-         if( scalable )
-         {
-            while( scaleval <= maxscale
-               && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
-            {
-               for( s = 0; s < nscalars; ++s )
-               {
-                  if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
-                  {
-                     scaleval *= scalars[s];
-                     break;
-                  }
-               }
-               if( s >= nscalars )
-                  scaleval *= 2.0;
-            }
-            scalable = (scaleval <= maxscale);
-            debugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
-               val, scaleval, val*scaleval, scalable);
-         }
-         if( twomult )
-         {
-            while( twomultval <= maxscale
-               && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta)) )
-            {
-               for( s = 0; s < nscalars; ++s )
-               {
-                  if( isIntegralScalar(val, twomultval * scalars[s], mindelta, maxdelta) )
-                  {
-                     twomultval *= scalars[s];
-                     break;
-                  }
-               }
-               if( s >= nscalars )
-                  twomultval *= 2.0;
-            }
-            twomult = (twomultval <= maxscale);
-            debugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
-               val, twomultval, val*twomultval, twomult);
-         }
-      }
-
-      if( scalable )
-      {
-         /* make row coefficients integral by dividing them by the smallest coefficient
-          * (and multiplying them with a power of 2)
-          */
-         assert(scaleval <= maxscale);
-         if( intscalar != NULL )
-            *intscalar = scaleval;
-         *success = TRUE;
-         debugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
-      }
-      else if( twomult )
-      {
-         /* make row coefficients integral by multiplying them with a power of 2 */
-         assert(twomultval <= maxscale);
-         if( intscalar != NULL )
-            *intscalar = twomultval;
-         *success = TRUE;
-         debugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
-      }
-      else
-      {
-         Longint gcd;
-         Longint scm;
-         Longint nominator;
-         Longint denominator;
-         Bool rational;
-         
-         /* convert each coefficient into a rational number, calculate the greatest common divisor of the nominators
-          * and the smallest common multiple of the denominators
-          */
-         gcd = 1;
-         scm = 1;
-         rational = TRUE;
-
-         /* first coefficient (to initialize gcd) */
-         for( c = 0; c < row->len && rational; ++c )
-         {
-            if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
-            {
-               val = row->vals[c];
-               rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-               if( rational && nominator != 0 )
-               {
-                  assert(denominator > 0);
-                  gcd = ABS(nominator);
-                  scm = denominator;
-                  rational = ((Real)scm/(Real)gcd <= maxscale);
-                  debugMessage(" -> first rational: val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
-                     val, nominator, denominator, gcd, scm, rational);
-                  break;
-               }
-            }
-         }
-
-         /* remaining coefficients */
-         for( ++c; c < row->len && rational; ++c )
-         {
-            if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
-            {
-               val = row->vals[c];
-               rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-               if( rational && nominator != 0 )
-               {
-                  assert(denominator > 0);
-                  gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
-                  scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-                  rational = ((Real)scm/(Real)gcd <= maxscale);
-                  debugMessage(" -> next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
-                     val, nominator, denominator, gcd, scm, rational);
-               }
-            }
-         }
-
-         if( rational )
-         {
-            /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
-            assert((Real)scm/(Real)gcd <= maxscale);
-            if( intscalar != NULL )
-               *intscalar = (Real)scm/(Real)gcd;
-            *success = TRUE;
-            debugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
-               (Real)scm/(Real)gcd, scm, gcd);
-         }
-         else
-         {
-            assert(!(*success));
-            debugMessage(" -> rationalizing failed: gcd=%lld, scm=%lld, lastval=%g\n", gcd, scm, val);
-         }
-      }
-   }
-   else
-   {
-      /* all coefficients are already integral */
+      /* all coefficients are zero (inside tolerances) */
       if( intscalar != NULL )
          *intscalar = 1.0;
       *success = TRUE;
-      debugMessage(" -> row is already integral\n");
+      debugMessage(" -> all values are zero (inside tolerances)\n");
+
+      return SCIP_OKAY;
+   }
+   assert(minval > MIN(-mindelta, maxdelta)); 
+   assert(SCIPsetIsPositive(set, minval));
+   assert(!SCIPsetIsInfinity(set, minval));
+
+   /* try, if row coefficients can be made integral by multiplying them with the reciprocal of the smallest coefficient and
+    * a power of 2
+    */
+   scalable = TRUE;
+   scaleval = 1.0/minval;
+   for( c = 0; c < row->len && scalable; ++c )
+   {
+      /* don't look at continuous variables, if we don't have to */
+      if( !usecontvars && !SCIPcolIsIntegral(row->cols[c]) )
+         continue;
+
+      /* check, if the coefficient can be scaled with a simple scalar */
+      val = row->vals[c];
+      absval = REALABS(val);
+      while( scaleval <= maxscale
+         && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta, NULL)) )
+      {
+         for( s = 0; s < nscalars; ++s )
+         {
+            if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta, NULL) )
+            {
+               scaleval *= scalars[s];
+               break;
+            }
+         }
+         if( s >= nscalars )
+            scaleval *= 2.0;
+      }
+      scalable = (scaleval <= maxscale);
+      debugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
+         val, scaleval, val*scaleval, scalable);
+   }
+   if( scalable )
+   {
+      /* make row coefficients integral by dividing them by the smallest coefficient
+       * (and multiplying them with a power of 2)
+       */
+      assert(scaleval <= maxscale);
+      if( intscalar != NULL )
+         *intscalar = scaleval;
+      *success = TRUE;
+      debugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
+
+      return SCIP_OKAY;
+   }
+
+   /* try, if row coefficients can be made integral by multiplying them by a power of 2 */
+   twomult = TRUE;
+   twomultval = 1.0;
+   for( c = 0; c < row->len && twomult; ++c )
+   {
+      /* don't look at continuous variables, if we don't have to */
+      if( !usecontvars && !SCIPcolIsIntegral(row->cols[c]) )
+         continue;
+
+      /* check, if the coefficient can be scaled with a simple scalar */
+      val = row->vals[c];
+      absval = REALABS(val);
+      while( twomultval <= maxscale
+         && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta, NULL)) )
+      {
+         for( s = 0; s < nscalars; ++s )
+         {
+            if( isIntegralScalar(val, twomultval * scalars[s], mindelta, maxdelta, NULL) )
+            {
+               twomultval *= scalars[s];
+               break;
+            }
+         }
+         if( s >= nscalars )
+            twomultval *= 2.0;
+      }
+      twomult = (twomultval <= maxscale);
+      debugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
+         val, twomultval, val*twomultval, twomult);
+   }
+   if( twomult )
+   {
+      /* make row coefficients integral by multiplying them with a power of 2 */
+      assert(twomultval <= maxscale);
+      if( intscalar != NULL )
+         *intscalar = twomultval;
+      *success = TRUE;
+      debugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
+
+      return SCIP_OKAY;
+   }
+
+   /* convert each coefficient into a rational number, calculate the greatest common divisor of the nominators
+    * and the smallest common multiple of the denominators
+    */
+   gcd = 1;
+   scm = 1;
+   rational = TRUE;
+
+   /* first coefficient (to initialize gcd) */
+   for( c = 0; c < row->len && rational; ++c )
+   {
+      if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
+      {
+         val = row->vals[c];
+         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
+         if( rational && nominator != 0 )
+         {
+            assert(denominator > 0);
+            gcd = ABS(nominator);
+            scm = denominator;
+            rational = ((Real)scm/(Real)gcd <= maxscale);
+            debugMessage(" -> first rational: val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+               val, nominator, denominator, gcd, scm, rational);
+            break;
+         }
+      }
+   }
+
+   /* remaining coefficients */
+   for( ++c; c < row->len && rational; ++c )
+   {
+      if( usecontvars || SCIPcolIsIntegral(row->cols[c]) )
+      {
+         val = row->vals[c];
+         rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
+         if( rational && nominator != 0 )
+         {
+            assert(denominator > 0);
+            gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+            scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+            rational = ((Real)scm/(Real)gcd <= maxscale);
+            debugMessage(" -> next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+               val, nominator, denominator, gcd, scm, rational);
+         }
+      }
+   }
+
+   if( rational )
+   {
+      /* make row coefficients integral by multiplying them with the smallest common multiple of the denominators */
+      assert((Real)scm/(Real)gcd <= maxscale);
+      if( intscalar != NULL )
+         *intscalar = (Real)scm/(Real)gcd;
+      *success = TRUE;
+      debugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
+         (Real)scm/(Real)gcd, scm, gcd);
+   }
+   else
+   {
+      assert(!(*success));
+      debugMessage(" -> rationalizing failed: gcd=%lld, scm=%lld, lastval=%g\n", gcd, scm, val);
    }
 
    return SCIP_OKAY;
@@ -4336,8 +4345,8 @@ RETCODE SCIProwMakeIntegral(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -5723,6 +5732,7 @@ RETCODE lpFlushChgCols(
          assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
          assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
 #endif
+
          if( col->objchanged )
          {
             Real newobj;
@@ -8635,7 +8645,8 @@ static
 RETCODE lpPrimalSimplex(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             keepsol             /**< should the old LP solution be kept if no iterations were performed? */
    )
 {
    int iterations;
@@ -8699,6 +8710,14 @@ RETCODE lpPrimalSimplex(
          stat->nprimallpiterations += iterations;
       }
    }
+   else if( keepsol )
+   {
+      /* the basis didn't change: if the solution was valid before resolve, it is still valid */
+      if( lp->validsollp == stat->lpcount-1 )
+         lp->validsollp = stat->lpcount;
+      if( lp->validfarkaslp == stat->lpcount-1 )
+         lp->validfarkaslp = stat->lpcount;
+   }
 
    debugMessage("solved primal LP %d in %d iterations\n", stat->lpcount, iterations);
 
@@ -8710,7 +8729,8 @@ static
 RETCODE lpDualSimplex(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool             keepsol             /**< should the old LP solution be kept if no iterations were performed? */
    )
 {
    int iterations;
@@ -8774,6 +8794,14 @@ RETCODE lpDualSimplex(
          stat->nduallpiterations += iterations;
       }
    }
+   else if( keepsol )
+   {
+      /* the basis didn't change: if the solution was valid before resolve, it is still valid */
+      if( lp->validsollp == stat->lpcount-1 )
+         lp->validsollp = stat->lpcount;
+      if( lp->validfarkaslp == stat->lpcount-1 )
+         lp->validfarkaslp = stat->lpcount;
+   }
 
    debugMessage("solved dual LP %d in %d iterations\n", stat->lpcount, iterations);
 
@@ -8786,7 +8814,8 @@ RETCODE lpSimplex(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   Bool             useprimal           /**< should the primal simplex be used? */
+   Bool             useprimal,          /**< should the primal simplex be used? */
+   Bool             keepsol             /**< should the old LP solution be kept if no iterations were performed? */
    )
 {
    assert(lp != NULL);
@@ -8795,11 +8824,11 @@ RETCODE lpSimplex(
    /* call appropriate simplex */
    if( useprimal )
    {
-      CHECK_OKAY( lpPrimalSimplex(lp, set, stat) );
+      CHECK_OKAY( lpPrimalSimplex(lp, set, stat, keepsol) );
    }
    else
    {
-      CHECK_OKAY( lpDualSimplex(lp, set, stat) );
+      CHECK_OKAY( lpDualSimplex(lp, set, stat, keepsol) );
    }
    
    /* check for primal and dual feasibility */
@@ -8819,7 +8848,8 @@ RETCODE lpSolveStable(
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    Bool             useprimal,          /**< should the primal simplex be used? */
-   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   Bool*            lperror,            /**< pointer to store whether an unresolved LP error occured */
+   Bool             keepsol             /**< should the old LP solution be kept if no iterations were performed? */
    )
 {
    Bool success;
@@ -8842,7 +8872,7 @@ RETCODE lpSolveStable(
    CHECK_OKAY( lpSetScaling(lp, set->lp_scaling, &success) );
    CHECK_OKAY( lpSetPresolving(lp, set->lp_presolving, &success) );
    CHECK_OKAY( lpSetLPInfo(lp, set->disp_lpinfo) );
-   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+   CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol) );
 
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
@@ -8857,7 +8887,7 @@ RETCODE lpSolveStable(
          infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %lld) numerical troubles in LP %d -- solve again without FASTMIP with %s simplex\n", 
             stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol) );
          
          /* check for stability */
          if( SCIPlpiIsStable(lp->lpi) )
@@ -8872,7 +8902,7 @@ RETCODE lpSolveStable(
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again with %s simplex %s scaling\n", 
          stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol) );
    
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
@@ -8890,7 +8920,7 @@ RETCODE lpSolveStable(
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again with %s simplex %s presolving\n", 
          stat->nnodes, stat->nlps, useprimal ? "primal" : "dual", !set->lp_presolving ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol) );
    
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
@@ -8908,7 +8938,7 @@ RETCODE lpSolveStable(
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
          stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+      CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol) );
       
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
@@ -8928,7 +8958,7 @@ RETCODE lpSolveStable(
          infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
             stat->nnodes, stat->nlps, useprimal ? "primal" : "dual");
-         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
+         CHECK_OKAY( lpSimplex(lp, set, stat, useprimal, keepsol) );
          
          /* check for stability */
          if( SCIPlpiIsStable(lp->lpi) )
@@ -8940,7 +8970,7 @@ RETCODE lpSolveStable(
    infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol) );
 
    /* check for stability */
    if( SCIPlpiIsStable(lp->lpi) )
@@ -8953,7 +8983,7 @@ RETCODE lpSolveStable(
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s scaling\n", 
          stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_scaling ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol) );
       
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
@@ -8971,7 +9001,7 @@ RETCODE lpSolveStable(
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex %s presolving\n", 
          stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual", !set->lp_presolving ? "with" : "without");
-      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol) );
       
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
@@ -8989,7 +9019,7 @@ RETCODE lpSolveStable(
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles in LP %d -- solve again from scratch with tighter feasibility tolerance with %s simplex\n", 
          stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
-      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+      CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal, keepsol) );
 
       /* check for stability */
       if( SCIPlpiIsStable(lp->lpi) )
@@ -9017,6 +9047,7 @@ RETCODE lpSolve(
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    Bool             useprimal,          /**< should the primal simplex be used? */
+   Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -9033,7 +9064,7 @@ RETCODE lpSolve(
 
  SOLVEAGAIN:
    /* call simplex */
-   CHECK_OKAY( lpSolveStable(lp, set, stat, fastmip, fromscratch, useprimal, lperror) );
+   CHECK_OKAY( lpSolveStable(lp, set, stat, fastmip, fromscratch, useprimal, lperror, keepsol) );
 
    /* check, if an error occured */
    if( *lperror )
@@ -9117,14 +9148,16 @@ RETCODE lpSolve(
    return SCIP_OKAY;
 }
 
-/** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
-RETCODE SCIPlpSolve(
+/** flushes the LP and solves it with the primal or dual simplex algorithm, depending on the current basis feasibility */
+static
+RETCODE lpFlushAndSolve(
    LP*              lp,                 /**< current LP data */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -9139,12 +9172,12 @@ RETCODE SCIPlpSolve(
    if( lp->dualfeasible || !lp->primalfeasible )
    {
       debugMessage("solving dual LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, fastmip, fromscratch, FALSE, lperror) );
+      CHECK_OKAY( lpSolve(lp, set, stat, fastmip, fromscratch, FALSE, keepsol, lperror) );
    }
    else
    {
       debugMessage("solving primal LP\n");
-      CHECK_OKAY( lpSolve(lp, set, stat, fastmip, fromscratch, TRUE, lperror) );
+      CHECK_OKAY( lpSolve(lp, set, stat, fastmip, fromscratch, TRUE, keepsol, lperror) );
    }
 
    return SCIP_OKAY;
@@ -9159,6 +9192,7 @@ RETCODE SCIPlpSolveAndEval(
    PROB*            prob,               /**< problem data */
    int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
+   Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
@@ -9184,6 +9218,7 @@ RETCODE SCIPlpSolveAndEval(
       Bool dualfeasible;
       Bool fastmip;
       Bool fromscratch;
+      int oldnlps;
 
       /* set initial LP solver settings */
       fastmip = set->lp_fastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1;
@@ -9191,8 +9226,9 @@ RETCODE SCIPlpSolveAndEval(
 
    SOLVEAGAIN:
       /* solve the LP */
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, fastmip, fromscratch, lperror) );
-      debugMessage("SCIPlpSolve() returned solstat %d (error=%d)\n", SCIPlpGetSolstat(lp), *lperror);
+      oldnlps = stat->nlps;
+      CHECK_OKAY( lpFlushAndSolve(lp, memhdr, set, stat, fastmip, fromscratch, keepsol, lperror) );
+      debugMessage("lpFlushAndSolve() returned solstat %d (error=%d)\n", SCIPlpGetSolstat(lp), *lperror);
 
       /* check for error */
       if( *lperror )
@@ -9214,7 +9250,7 @@ RETCODE SCIPlpSolveAndEval(
             primalfeasible = TRUE;
             dualfeasible = TRUE;
          }
-         if( primalfeasible && dualfeasible && aging && !lp->diving )
+         if( primalfeasible && dualfeasible && aging && !lp->diving && stat->nlps > oldnlps )
          {
             /* update ages and remove obsolete columns and rows from LP */
             CHECK_OKAY( SCIPlpUpdateAges(lp, set, stat) );
@@ -11000,7 +11036,7 @@ RETCODE SCIPlpEndDive(
     *       Just declare the LP to be solved at this point (remember the LP solution status beforehand).
     */
    /* resolve LP to reset solution */
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, &lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, FALSE, &lperror) );
    if( lperror )
    {
       infoMessage(set->disp_verblevel, SCIP_VERBLEVEL_FULL,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.68 2004/11/17 13:09:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.69 2004/11/17 15:53:57 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -830,6 +830,7 @@ RETCODE SCIPseparateKnapsackCardinality(
             Real cutfeas;
             char name[MAXSTRLEN];
             int v;
+            
             
             /* create LP row */
             sprintf(name, "%s_card%lld_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), i);

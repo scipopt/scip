@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.127 2004/11/01 14:51:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.128 2004/11/17 15:53:57 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -76,6 +76,9 @@
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
 #define DEFAULT_MAXPRESOLAGGRROUNDS  -1 /**< maximal number of presolving aggregation rounds (-1: no limit) */
+
+#define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
+#define KNAPSACKRELAX_MAXSCALE     1000 /**< maximal allowed scaling factor in knapsack relaxation */
 
 
 /** constraint data for linear constraints */
@@ -2474,10 +2477,12 @@ RETCODE separateRelaxedKnapsack(
    VAR** consvars;
    Real* binvals;
    Longint* consvals;
+   Real intscalar;
+   Bool success;
    int nbinvars;
    int nconsvars;
    int i;
-      
+
    assert(nknapvars > 0);
    assert(knapvars != NULL);
 
@@ -2486,6 +2491,9 @@ RETCODE separateRelaxedKnapsack(
 
    CHECK_OKAY( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
 
+   if(nbinvars == 0)
+      return SCIP_OKAY;
+      
    /* set up data structures */
    CHECK_OKAY( SCIPallocBufferArray(scip, &consvars, nbinvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &consvals, nbinvars) );
@@ -2498,9 +2506,8 @@ RETCODE separateRelaxedKnapsack(
     *      - a_j < 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with binary variable z
     *      - a_j > 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with binary variable z
     * 2. convert coefficients of all variables to positive integers:
-    *    (a) if a_j < 0, substitute  x~_j = 1 - x_j
-    *    (b) round down a_j 
-    *    the order of steps (a) and (b) can be switched
+    *      - scale all coefficients a_j to a~_j integral
+    *      - substitute  x~_j = 1 - x_j if a~_j < 0
     */ 
 
    /* replace integer and continuous variables with binary variables */
@@ -2510,16 +2517,18 @@ RETCODE separateRelaxedKnapsack(
 
       var = knapvars[i];
 
+      /* binary variable */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
-         /* binary variable */
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          debugMessage(" -> binary variable %+g<%s>\n", valscale * knapvals[i], SCIPvarGetName(var));
       }
+      /* continuous or integer variable */
       else
       {
-         /* continuous or integer variable */
+
+         /* a_j > 0: substitution with lb or vlb */
          if( valscale * knapvals[i] > 0 )
          {
             VAR** zvlb;
@@ -2529,8 +2538,7 @@ RETCODE separateRelaxedKnapsack(
             int bestlbtype;
             int nvlb;
             int j;
-
-            /* a_j > 0: substitution with lb or vlb */
+            
             nvlb = SCIPvarGetNVlbs(var);
             zvlb = SCIPvarGetVlbVars(var);
             bvlb = SCIPvarGetVlbCoefs(var);
@@ -2563,19 +2571,20 @@ RETCODE separateRelaxedKnapsack(
             if( bestlbtype == -1 )
             {
                rhs -= valscale * knapvals[i] * bestlbsol;
-               debugMessage(" -> non-binary variable %+g<%s> replaced with lower bound %g\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), bestlbsol);
+               debugMessage(" -> non-binary variable %+g<%s> replaced with lower bound %g (rhs=%g)\n",
+                  valscale * knapvals[i], SCIPvarGetName(var), bestlbsol, rhs);
             }
             else
             {
                assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
                rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
                binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
-               debugMessage(" -> non-binary variable %+g<%s> replaced with variable lower bound %+g<%s>(%g) %+g\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), 
-                  bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]), SCIPvarGetLPSol(zvlb[bestlbtype]), dvlb[bestlbtype]);
+               debugMessage(" -> non-binary variable %+g<%s> replaced with variable lower bound %+g<%s>(%g) %+g (rhs=%g)\n",
+                  valscale * knapvals[i], SCIPvarGetName(var), bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]), 
+                  SCIPvarGetLPSol(zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
             }
          }
+         /* a_j < 0: substitution with ub or vub */
          else
          {
             VAR** zvub;
@@ -2586,7 +2595,6 @@ RETCODE separateRelaxedKnapsack(
             int nvub;
             int j;
 
-            /* a_j < 0: substitution with ub or vub */
             nvub = SCIPvarGetNVubs(var);
             zvub = SCIPvarGetVubVars(var);
             bvub = SCIPvarGetVubCoefs(var);
@@ -2619,91 +2627,91 @@ RETCODE separateRelaxedKnapsack(
             if( bestubtype == -1 )
             {
                rhs -= valscale * knapvals[i] * bestubsol;
-               debugMessage(" -> non-binary variable %+g<%s> replaced with upper bound %g\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), bestubsol);
+               debugMessage(" -> non-binary variable %+g<%s> replaced with upper bound %g (rhs=%g)\n",
+                  valscale * knapvals[i], SCIPvarGetName(var), bestubsol, rhs);
             }
             else
             {
                assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
                rhs -= valscale * knapvals[i] * dvub[bestubtype];
                binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
-               debugMessage(" -> non-binary variable %+g<%s> replaced with variable upper bound %+g<%s>(%g) %+g\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), 
-                  bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]), SCIPvarGetLPSol(zvub[bestubtype]), dvub[bestubtype]);
+               debugMessage(" -> non-binary variable %+g<%s> replaced with variable upper bound %+g<%s>(%g) %+g (rhs=%g)\n",
+                  valscale * knapvals[i], SCIPvarGetName(var), bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]), 
+                  SCIPvarGetLPSol(zvub[bestubtype]), dvub[bestubtype], rhs);
             }
          }
       }
    }
 
    /* convert coefficents of all (now binary) variables to positive integers: 
-    * substitute x~_j = 1 - x_j if a_j < 0 and round down positive coefficients
+    *   - make all coefficients integral 
+    *   - make all coefficients positive (substitute negated variable)
     */
    nconsvars = 0;
+
+   /* calculate scalar which makes all coefficients integral */
+   CHECK_OKAY( SCIPcalcIntegralScalar(binvals, nbinvars, -SCIPepsilon(scip), KNAPSACKRELAX_MAXDELTA, 
+         KNAPSACKRELAX_MAXSCALE, KNAPSACKRELAX_MAXSCALE, &intscalar, &success) );
+   debugMessage(" -> intscalar = %g\n", intscalar);
+  
+   /* if coefficients can not be made integral, we have to use a scalar of 1.0 and only round fractional coefficients down */
+   if( !success )
+      intscalar = 1.0;
+
+   /* make all coefficients integral and positive:
+    *  - scale a~_j = a_j * intscalar
+    *  - substitute x~_j = 1 - x_j if a~_j < 0 */
+   rhs = rhs*intscalar;
+
+   debugMessage(" -> rhs = %g\n", rhs);
    for( i = 0; i < nbinvars; i++ )
    {
       VAR* var;
-      Longint valdownpositive;
+      Longint val;
 
-      if( SCIPisPositive(scip, binvals[i]) )
+      val = (Longint)SCIPfloor(scip, binvals[i]*intscalar);
+      if( val == 0 )
+         continue;
+
+      if( val > 0 )
       {
-         /* a_j > 0: round value down */
-         valdownpositive = (Longint)SCIPfloor(scip, binvals[i]);
-         if( valdownpositive > 0 )
-         {
-            var = binvars[i];
-            consvals[nconsvars] = valdownpositive;
-            consvars[nconsvars] = var;
-            nconsvars++;
-         }
+         var = binvars[i];
+         debugMessage(" -> positive scaled binary variable %+lld<%s> (unscaled %g): not changed (rhs=%g)\n",
+            val, SCIPvarGetName(var), binvals[i], rhs);
       }
-      else if( SCIPisNegative(scip, binvals[i]) )
+      else
       {
-         Real fracsum;
-
-         /* a_j < 0: either round value down and negate variable, or negate variable and round value down afterwards */
-         fracsum = SCIPfrac(scip, binvals[i]) + SCIPfrac(scip, rhs);
-         if( fracsum >= 1.0 )
-         {
-            /* round first */
-            valdownpositive = -(Longint)SCIPfloor(scip, binvals[i]);
-            rhs += valdownpositive;
-         }
-         else
-         {
-            /* substitute first */        
-            valdownpositive = (Longint)SCIPfloor(scip, -binvals[i]);
-            rhs -= binvals[i];
-         }
-
-         if( valdownpositive > 0 )
-         {
-            CHECK_OKAY( SCIPgetNegatedVar(scip, binvars[i], &var) );
-            consvals[nconsvars] = valdownpositive;
-            consvars[nconsvars] = var;
-            nconsvars++;
-         }
+         assert( val < 0 );
+      
+         CHECK_OKAY( SCIPgetNegatedVar(scip, binvars[i], &var) );
+         val = -val;
+         rhs += val;
+         debugMessage(" -> negative scaled binary variable %+lld<%s> (unscaled %g): substituted by (1 - <%s>) (rhs=%g)\n", 
+            -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
       }
+      
+      consvals[nconsvars] = val;
+      consvars[nconsvars] = var;
+      nconsvars++;
    }
 
-   /* separate lifted cut from relaxed knapsack constraint */
    if( nconsvars == 0 )
       goto TERMINATE;
-   else
-   {
-      assert(consvars != NULL);
-      assert(consvals != NULL);
+ 
+   /* separate lifted cut from relaxed knapsack constraint */
+   assert(consvars != NULL);
+   assert(consvals != NULL);
 
 #ifdef DEBUG
-      debugMessage(" -> relaxed to knapsack:");
-      for( i = 0; i < nconsvars; ++i )
-         printf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
-      printf(" <= %g\n", rhs);
+   debugMessage(" -> linear relaxed to knapsack:");
+   for( i = 0; i < nconsvars; ++i )
+      printf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
+   printf(" <= %lld\n", (Longint)SCIPfloor(scip, rhs));
 #endif
-
-      CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, 
-            (Longint)SCIPfloor(scip, rhs), ncuts) );
-   }
-
+  
+   CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, 
+         (Longint)SCIPfloor(scip, rhs), ncuts) );
+   
  TERMINATE:
    /* free data structures */
    SCIPfreeBufferArray(scip, &binvals);

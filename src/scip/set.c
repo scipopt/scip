@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.121 2004/11/17 13:09:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.122 2004/11/17 15:53:58 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2317,26 +2317,6 @@ Real SCIPsetPseudocostdelta(
    return set->num_pseudocostdelta;
 }
 
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
-Real SCIPsetRelDiff(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   )
-{
-   Real absval1;
-   Real absval2;
-   Real quot;
-
-   assert(set != NULL);
-
-   absval1 = REALABS(val1);
-   absval2 = REALABS(val2);
-   quot = MAX3(1.0, absval1, absval2);
-   
-   return (val1-val2)/quot;
-}
-
 /** checks, if values are in range of epsilon */
 Bool SCIPsetIsEQ(
    SET*             set,                /**< global SCIP settings */
@@ -2534,7 +2514,7 @@ Bool SCIPsetIsFeasEQ(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSZ(diff, set->num_feastol);
 }
@@ -2550,7 +2530,7 @@ Bool SCIPsetIsFeasLT(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSN(diff, set->num_feastol);
 }
@@ -2566,7 +2546,7 @@ Bool SCIPsetIsFeasLE(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return !EPSP(diff, set->num_feastol);
 }
@@ -2582,7 +2562,7 @@ Bool SCIPsetIsFeasGT(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSP(diff, set->num_feastol);
 }
@@ -2598,7 +2578,7 @@ Bool SCIPsetIsFeasGE(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_feastol);
 }
@@ -2686,7 +2666,7 @@ Bool SCIPsetIsRelEQ(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSZ(diff, set->num_epsilon);
 }
@@ -2702,7 +2682,7 @@ Bool SCIPsetIsRelLT(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSN(diff, set->num_epsilon);
 }
@@ -2718,7 +2698,7 @@ Bool SCIPsetIsRelLE(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return !EPSP(diff, set->num_epsilon);
 }
@@ -2734,7 +2714,7 @@ Bool SCIPsetIsRelGT(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSP(diff, set->num_epsilon);
 }
@@ -2750,7 +2730,7 @@ Bool SCIPsetIsRelGE(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_epsilon);
 }
@@ -2766,7 +2746,7 @@ Bool SCIPsetIsSumRelEQ(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSZ(diff, set->num_sumepsilon);
 }
@@ -2782,7 +2762,7 @@ Bool SCIPsetIsSumRelLT(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSN(diff, set->num_sumepsilon);
 }
@@ -2798,7 +2778,7 @@ Bool SCIPsetIsSumRelLE(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return !EPSP(diff, set->num_sumepsilon);
 }
@@ -2814,7 +2794,7 @@ Bool SCIPsetIsSumRelGT(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return EPSP(diff, set->num_sumepsilon);
 }
@@ -2830,7 +2810,7 @@ Bool SCIPsetIsSumRelGE(
 
    assert(set != NULL);
 
-   diff = SCIPsetRelDiff(set, val1, val2);
+   diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_sumepsilon);
 }

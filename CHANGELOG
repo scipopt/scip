@@ -4,6 +4,10 @@ current version
 interface:
 - new method SCIPvarIsInLP()
 - new methods SCIPgetLPColumnObjval() and SCIPgetLPLooseObjval()
+- new method SCIPcalcIntegralScalar() with arbitrary array of Real values
+
+features:
+- changed SCIProwCalcIntegralScalar() to a slightly different algorithm
 
 fixed bugs:
 - removed bug in knapsack constraint handler that appears if a variable is fixed to zero in knapsack presolving,

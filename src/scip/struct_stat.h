@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.26 2004/10/29 10:39:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.27 2004/11/17 15:53:59 bzfwolte Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -93,7 +93,7 @@ struct Stat
    int              marked_nvaridx;     /**< number of used variable indices before solving started */
    int              marked_ncolidx;     /**< number of used column indices before solving started */
    int              marked_nrowidx;     /**< number of used row indices before solving started */
-   int              lpcount;            /**< internal counter, where all SCIPlpSolve() calls are counted */
+   int              lpcount;            /**< internal counter, where all simplex calls are counted */
    int              nlps;               /**< total number of LPs solved (primal + dual) with at least 1 iteration */
    int              nresolvelps;        /**< number of LPs solved (primal + dual) with advanced start basis and at least
                                          *   1 iteration */

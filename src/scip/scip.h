@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.181 2004/11/17 13:09:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.182 2004/11/17 15:53:58 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2821,8 +2821,8 @@ extern
 RETCODE SCIPcalcRowIntegralScalar(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -2835,8 +2835,8 @@ extern
 RETCODE SCIPmakeRowIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.93 2004/10/29 13:19:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.94 2004/11/17 15:53:58 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -388,8 +388,8 @@ extern
 RETCODE SCIProwCalcIntegralScalar(
    ROW*             row,                /**< LP row */
    SET*             set,                /**< global SCIP settings */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal allowed scalar */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -404,8 +404,8 @@ RETCODE SCIProwMakeIntegral(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< current LP data */
-   Real             mindelta,           /**< minimal allowed difference s*c - i of scaled coefficient s*c and integral i */
-   Real             maxdelta,           /**< maximal allowed difference s*c - i of scaled coefficient s*c and integral i */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
    Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
    Real             maxscale,           /**< maximal value to scale row with */
    Bool             usecontvars,        /**< should the coefficients of the continuous variables also be made integral? */
@@ -746,18 +746,6 @@ RETCODE SCIPlpMarkFlushed(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
-extern
-RETCODE SCIPlpSolve(
-   LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
-   Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
-   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
-   );
-
 /** solves the LP with simplex algorithm, and copy the solution into the column's data */
 extern
 RETCODE SCIPlpSolveAndEval(
@@ -768,6 +756,7 @@ RETCODE SCIPlpSolveAndEval(
    PROB*            prob,               /**< problem data */
    int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
+   Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
    Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 

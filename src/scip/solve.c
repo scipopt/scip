@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.146 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.147 2004/11/17 15:53:59 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -626,7 +626,7 @@ RETCODE solveNodeInitialLP(
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
@@ -725,7 +725,7 @@ RETCODE priceAndCutLoop(
 
    /* solve initial LP of price-and-cut loop */
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
    assert(lp->flushed);
    assert(lp->solved);
 
@@ -799,7 +799,7 @@ RETCODE priceAndCutLoop(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
          assert(lp->flushed);
          assert(lp->solved || *lperror);
 
@@ -814,7 +814,7 @@ RETCODE priceAndCutLoop(
 
          /* solve LP again after resetting bounds (with dual simplex) */
          debugMessage("pricing: solve LP after resetting bounds\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, lperror) );
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, FALSE, lperror) );
          assert(lp->flushed);
          assert(lp->solved || *lperror);
 
@@ -929,7 +929,7 @@ RETCODE priceAndCutLoop(
             {
                /* solve LP (with dual simplex) */
                debugMessage("separation: solve LP\n");
-               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
+               CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
                assert(lp->flushed);
                assert(lp->solved || lperror);
                separateagain = TRUE;
@@ -984,7 +984,7 @@ RETCODE priceAndCutLoop(
 
                   /* solve LP (with dual simplex) */
                   debugMessage("separation: solve LP\n");
-                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, lperror) );
+                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, TRUE, FALSE, lperror) );
                   assert(lp->flushed);
                   assert(lp->solved || lperror);
 
@@ -1126,13 +1126,7 @@ RETCODE solveNodeLP(
       if( !lp->solved || !lp->flushed )
       {
          debugMessage("resolving LP after cleanup\n");
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->lp_fastmip, FALSE, lperror) );
-         
-         /* if the solution was valid before resolve, it is still valid (resolve didn't change the solution) */
-         if( lp->validsollp == stat->lpcount-1 )
-            lp->validsollp = stat->lpcount;
-         if( lp->validfarkaslp == stat->lpcount-1 )
-            lp->validfarkaslp = stat->lpcount;
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, -1, FALSE, TRUE, lperror) );
       }
    }
 #endif

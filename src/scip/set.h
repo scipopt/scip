@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.71 2004/11/17 13:09:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.72 2004/11/17 15:53:59 bzfwolte Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -632,14 +632,6 @@ Real SCIPsetPseudocostdelta(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
-extern
-Real SCIPsetRelDiff(
-   SET*             set,                /**< global SCIP settings */
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   );
-
 /** checks, if values are in range of epsilon */
 extern
 Bool SCIPsetIsEQ(
@@ -989,7 +981,6 @@ Real SCIPsetFrac(
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
-#define SCIPsetRelDiff(set, val1, val2)    ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )
@@ -1008,11 +999,11 @@ Real SCIPsetFrac(
 #define SCIPsetIsSumPositive(set, val)     ( EPSP(val, (set)->num_sumepsilon) )
 #define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->num_sumepsilon) )
 
-#define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->num_feastol) )
-#define SCIPsetIsFeasLT(set, val1, val2)   ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->num_feastol) )
-#define SCIPsetIsFeasLE(set, val1, val2)   ( !EPSP(SCIPsetRelDiff(set, val1, val2), (set)->num_feastol) )
-#define SCIPsetIsFeasGT(set, val1, val2)   ( EPSP(SCIPsetRelDiff(set, val1, val2), (set)->num_feastol) )
-#define SCIPsetIsFeasGE(set, val1, val2)   ( !EPSN(SCIPsetRelDiff(set, val1, val2), (set)->num_feastol) )
+#define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_feastol) )
+#define SCIPsetIsFeasLT(set, val1, val2)   ( EPSN(SCIPrelDiff(val1, val2), (set)->num_feastol) )
+#define SCIPsetIsFeasLE(set, val1, val2)   ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_feastol) )
+#define SCIPsetIsFeasGT(set, val1, val2)   ( EPSP(SCIPrelDiff(val1, val2), (set)->num_feastol) )
+#define SCIPsetIsFeasGE(set, val1, val2)   ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_feastol) )
 #define SCIPsetIsFeasZero(set, val)        ( EPSZ(val, (set)->num_feastol) )
 #define SCIPsetIsFeasPositive(set, val)    ( EPSP(val, (set)->num_feastol) )
 #define SCIPsetIsFeasNegative(set, val)    ( EPSN(val, (set)->num_feastol) )
@@ -1022,17 +1013,17 @@ Real SCIPsetFrac(
 #define SCIPsetIsEfficacious(set, root, efficacy) \
    ( root ? EPSP(efficacy, (set)->sepa_minefficacyroot) : EPSP(efficacy, (set)->sepa_minefficacy) )
 
-#define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->num_epsilon) )
-#define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->num_epsilon) )
-#define SCIPsetIsRelLE(set, val1, val2)    ( !EPSP(SCIPsetRelDiff(set, val1, val2), (set)->num_epsilon) )
-#define SCIPsetIsRelGT(set, val1, val2)    ( EPSP(SCIPsetRelDiff(set, val1, val2), (set)->num_epsilon) )
-#define SCIPsetIsRelGE(set, val1, val2)    ( !EPSN(SCIPsetRelDiff(set, val1, val2), (set)->num_epsilon) )
+#define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_epsilon) )
+#define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPrelDiff(val1, val2), (set)->num_epsilon) )
+#define SCIPsetIsRelLE(set, val1, val2)    ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_epsilon) )
+#define SCIPsetIsRelGT(set, val1, val2)    ( EPSP(SCIPrelDiff(val1, val2), (set)->num_epsilon) )
+#define SCIPsetIsRelGE(set, val1, val2)    ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_epsilon) )
 
-#define SCIPsetIsSumRelEQ(set, val1, val2) ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->num_sumepsilon) )
-#define SCIPsetIsSumRelLT(set, val1, val2) ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->num_sumepsilon) )
-#define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPsetRelDiff(set, val1, val2), (set)->num_sumepsilon) )
-#define SCIPsetIsSumRelGT(set, val1, val2) ( EPSP(SCIPsetRelDiff(set, val1, val2), (set)->num_sumepsilon) )
-#define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPsetRelDiff(set, val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsSumRelEQ(set, val1, val2) ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsSumRelLT(set, val1, val2) ( EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsSumRelLE(set, val1, val2) ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsSumRelGT(set, val1, val2) ( EPSP(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
+#define SCIPsetIsSumRelGE(set, val1, val2) ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_sumepsilon) )
 
 #define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->num_infinity )
 #define SCIPsetIsFeasible(set, val)        ( (val) >= -(set)->num_feastol )

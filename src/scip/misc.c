@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.28 2004/10/28 14:30:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.29 2004/11/17 15:53:58 bzfwolte Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2868,7 +2868,7 @@ Bool SCIPrealToRational(
    h1 = 0.0;
    delta0 = val - g0/h0;
    delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
-
+  
    while( (delta0 < mindelta || delta0 > maxdelta) && (delta1 < mindelta || delta1 > maxdelta) )
    {
       assert(EPSGT(b, a, epsilon));
@@ -2879,7 +2879,6 @@ Bool SCIPrealToRational(
       a = EPSFLOOR(b, epsilon);
 
       assert(a >= 0.0);
-
       gx = g0;
       hx = h0;
 
@@ -2924,6 +2923,270 @@ Bool SCIPrealToRational(
 
    return TRUE;
 }
+
+/** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
+static
+Bool isIntegralScalar(
+   Real             val,                /**< value that should be scaled to an integral value */
+   Real             scalar,             /**< scalar that should be tried */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta            /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   )
+{
+   Real sval;
+   Real abssval;
+   Real downval;
+   Real upval;
+
+   assert(mindelta <= 0.0);
+   assert(maxdelta >= 0.0);
+
+   sval = val * scalar;
+   downval = EPSFLOOR(sval, 0.0);
+   upval = EPSCEIL(sval, 0.0);
+
+   return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
+}
+
+/** additional scalars that are tried in integrality scaling */
+static const Real scalars[] = {3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0};
+static const int nscalars = 9;
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+RETCODE SCIPcalcIntegralScalar(
+   Real*            vals,               /**< values to scale */
+   int              nvals,              /**< number of values to scale */
+   Real             mindelta,           /**< minimal relative allowed difference of scaled coefficient s*c and integral i */
+   Real             maxdelta,           /**< maximal relative allowed difference of scaled coefficient s*c and integral i */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Real             maxscale,           /**< maximal allowed scalar */
+   Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
+   Bool*            success             /**< stores whether returned value is valid */
+   )
+{
+   Longint gcd;
+   Longint scm;
+   Longint nominator;
+   Longint denominator;
+   Real val;
+   Real minval;
+   Real usedtol;
+   Real absval;
+   Real scaleval;
+   Real twomultval;
+   Bool scalable;
+   Bool twomult;
+   Bool rational;
+   int c;
+   int s;
+
+   assert(vals != NULL);
+   assert(nvals > 0);
+   assert(maxdnom >= 1);
+   assert(mindelta < 0.0);
+   assert(maxdelta > 0.0);
+   assert(success != NULL);
+
+   debugMessage("trying to find rational representation for given values\n");
+
+   if( intscalar != NULL )
+      *intscalar = SCIP_INVALID;
+   *success = FALSE;
+
+   /* get minimal absolute non-zero value */
+   minval = REAL_MAX;
+   for( c = 0; c < nvals; ++c )
+   {
+      val = vals[c];
+      if( val < mindelta || val > maxdelta )
+      {
+         absval = REALABS(val);
+         minval = MIN(minval, absval);
+      }
+   }
+
+   if( minval == REAL_MAX )
+   {
+      /* all coefficients are zero (inside tolerances) */
+      if( intscalar != NULL )
+         *intscalar = 1.0;
+      *success = TRUE;
+      debugMessage(" -> all values are zero (inside tolerances)\n");
+
+      return SCIP_OKAY;
+   }
+   assert(minval > MIN(-mindelta, maxdelta));
+
+
+   /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
+   scalable = TRUE;
+   scaleval = 1.0/minval;
+   debugMessage("scalable-test:\n");
+   for( c = 0; c < nvals && scalable; ++c )
+   {
+      /* check, if the value can be scaled with a simple scalar */
+      val = vals[c];
+      if( val == 0.0 ) /* new */
+         continue;
+    
+      absval = REALABS(val);
+      while( scaleval <= maxscale
+         && (absval * scaleval < 0.5 || !isIntegralScalar(val, scaleval, mindelta, maxdelta)) )
+      {
+         for( s = 0; s < nscalars; ++s )
+         {
+            if( isIntegralScalar(val, scaleval * scalars[s], mindelta, maxdelta) )
+            {
+               scaleval *= scalars[s];
+               break;
+            }
+         }
+         if( s >= nscalars )
+            scaleval *= 2.0;
+      }
+      scalable = (scaleval <= maxscale);
+      debugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
+         val, scaleval, val*scaleval, scalable);
+   }
+   if( scalable )
+   {
+      /* make values integral by dividing them by the smallest value (and multiplying them with a power of 2) */
+      assert(scaleval <= maxscale);
+      if( intscalar != NULL )
+         *intscalar = scaleval;
+      *success = TRUE;
+      debugMessage(" -> integrality can be achieved by scaling with %g (minval=%g)\n", scaleval, minval);
+      
+      return SCIP_OKAY;
+   }
+
+   /* try, if values can be made integral by multiplying them by a power of 2 */
+   twomult = TRUE;
+   twomultval = 1.0;
+   debugMessage("twomult-test:\n");
+   for( c = 0; c < nvals && twomult; ++c )
+   {
+      /* check, if the value can be scaled with a simple scalar */
+      val = vals[c];
+      if( val == 0.0 ) /* new */
+         continue;
+      
+      absval = REALABS(val);
+      while( twomultval <= maxscale
+         && (absval * twomultval < 0.5 || !isIntegralScalar(val, twomultval, mindelta, maxdelta)) )
+      {
+         for( s = 0; s < nscalars; ++s )
+         {
+            if( isIntegralScalar(val, twomultval * scalars[s], mindelta, maxdelta) )
+            {
+               twomultval *= scalars[s];
+               break;
+            }
+         }
+         if( s >= nscalars )
+            twomultval *= 2.0;
+      }
+      twomult = (twomultval <= maxscale);
+      debugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
+         val, twomultval, val*twomultval, twomult);
+   }
+   if( twomult )
+   {
+      /* make values integral by multiplying them with a power of 2 */
+      assert(twomultval <= maxscale);
+      if( intscalar != NULL )
+         *intscalar = twomultval;
+      *success = TRUE;
+      debugMessage(" -> integrality can be achieved by scaling with %g (power of 2)\n", twomultval);
+      
+      return SCIP_OKAY;
+   }
+
+   /* convert each value into a rational number, calculate the greatest common divisor of the nominators
+    * and the smallest common multiple of the denominators
+    */
+   gcd = 1;
+   scm = 1;
+   rational = TRUE;
+   debugMessage("gcd-test:\n");
+   /* first value (to initialize gcd) */
+   for( c = 0; c < nvals && rational; ++c )
+   {
+      val = vals[c];
+      if( val == 0.0 ) /* new */
+         continue;
+      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
+      if( rational && nominator != 0 )
+      {
+         assert(denominator > 0);
+         gcd = ABS(nominator);
+         scm = denominator;
+         rational = ((Real)scm/(Real)gcd <= maxscale);
+         debugMessage(" -> c=%d first rational: val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+            c, val, nominator, denominator, gcd, scm, rational);
+         break;
+      }
+   }
+
+   /* remaining values */
+   for( ++c; c < nvals && rational; ++c )
+   {
+      val = vals[c];
+      if( val == 0.0 ) /* new */
+         continue;
+      rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
+      debugMessage(" -> c1=%d next rational : val: %g == %lld/%lld, rational=%d\n",
+         c, val, nominator, denominator, rational);
+      if( rational && nominator != 0 )
+      {
+         assert(denominator > 0);
+         gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
+         scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
+         rational = ((Real)scm/(Real)gcd <= maxscale);
+         debugMessage(" -> c2=%d next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+            c, val, nominator, denominator, gcd, scm, rational);
+      }
+   }
+
+   if( rational )
+   {
+      /* make values integral by multiplying them with the smallest common multiple of the denominators */
+      assert((Real)scm/(Real)gcd <= maxscale);
+      if( intscalar != NULL )
+         *intscalar = (Real)scm/(Real)gcd;
+      *success = TRUE;
+      debugMessage(" -> integrality can be achieved by scaling with %g (rational:%lld/%lld)\n", 
+         (Real)scm/(Real)gcd, scm, gcd);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+Real SCIPrelDiff(
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real absval1;
+   Real absval2;
+   Real quot;
+
+   absval1 = REALABS(val1);
+   absval2 = REALABS(val2);
+   quot = MAX3(1.0, absval1, absval2);
+   
+   return (val1-val2)/quot;
+}
+
+#endif
 
 
 
