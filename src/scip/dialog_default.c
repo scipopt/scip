@@ -113,6 +113,85 @@ DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display branching command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
+{
+   BRANCHRULE** branchrules;
+   BRANCHRULE** sorted;
+   int nbranchrules;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   branchrules = SCIPgetBranchrules(scip);
+   nbranchrules = SCIPgetNBranchrules(scip);
+
+   /* copy branchrules array into temporary memory for sorting */
+   CHECK_OKAY( SCIPduplicateBufferArray(scip, &sorted, branchrules, nbranchrules) );
+
+   /* sort the branching rules */
+   SCIPbsortPtr((void**)sorted, nbranchrules, SCIPbranchruleComp);
+
+   /* display sorted list of branching rules */
+   printf("\n");
+   printf(" branching rule       priority  description\n");
+   printf(" --------------       --------  -----------\n");
+   for( i = 0; i < nbranchrules; ++i )
+   {
+      printf(" %-20s ", SCIPbranchruleGetName(sorted[i]));
+      if( strlen(SCIPbranchruleGetName(sorted[i])) > 20 )
+         printf("\n                  --> ");
+      printf("%8d  ", SCIPbranchruleGetPriority(sorted[i]));
+      printf(SCIPbranchruleGetDesc(sorted[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   /* free temporary memory */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &sorted) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display conshdlrs command */
+DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
+{
+   CONSHDLR** conshdlrs;
+   int nconshdlrs;
+   int i;
+
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+
+   /* display list of constraint handlers */
+   printf("\n");
+   printf(" constraint handler   chckprio enfoprio sepaprio sepafreq propfreq  description\n");
+   printf(" ------------------   -------- -------- -------- -------- --------  -----------\n");
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      printf(" %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
+      if( strlen(SCIPconshdlrGetName(conshdlrs[i])) > 20 )
+         printf("\n                  --> ");
+      printf("%8d %8d %8d %8d %8d  ",
+         SCIPconshdlrGetCheckPriority(conshdlrs[i]),
+         SCIPconshdlrGetEnfoPriority(conshdlrs[i]),
+         SCIPconshdlrGetSepaPriority(conshdlrs[i]),
+         SCIPconshdlrGetSepaFreq(conshdlrs[i]),
+         SCIPconshdlrGetPropFreq(conshdlrs[i]));
+      printf(SCIPconshdlrGetDesc(conshdlrs[i]));
+      printf("\n");
+   }
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display statistics command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 {
@@ -568,6 +647,24 @@ RETCODE SCIPincludeDialogDefault(
    }
    if( SCIPdialogFindEntry(root, "display", &submenu) != 1 )
       return SCIP_PLUGINNOTFOUND;
+   
+   /* display branching */
+   if( !SCIPdialogHasEntry(submenu, "branching") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayBranching, NULL,
+                     "branching", "display branching rule priorities", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display conshdlrs */
+   if( !SCIPdialogHasEntry(submenu, "conshdlrs") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayConshdlrs, NULL,
+                     "conshdlrs", "display constraint handler settings", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
    
    /* display statistics */
    if( !SCIPdialogHasEntry(submenu, "statistics") )

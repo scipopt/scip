@@ -3295,10 +3295,16 @@ void SCIPprintReal(
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
                                                 freeBlockMemorySizeNull(SCIPmemhdr(scip), (ptr), (size))
 
-#define SCIPcaptureBufferArray(scip,ptr,num)    SCIPcaptureBuffer(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
-#define SCIPreleaseBufferArray(scip,ptr)        SCIPreleaseBuffer(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
-#define SCIPcaptureBufferSize(scip,ptr,size)    SCIPcaptureBuffer(scip, (void**)(ptr), size)
-#define SCIPreleaseBufferSize(scip,ptr)         SCIPreleaseBuffer(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
+#define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBuffer(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
+#define SCIPduplicateBufferArray(scip,ptr,source,num) \
+                                                SCIPduplicateBuffer(scip, (void**)(ptr), source, (num)*(int)sizeof(**(ptr)))
+#define SCIPreallocBufferArray(scip,ptr,num)    SCIPreallocBuffer(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
+#define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBuffer(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
+#define SCIPallocBufferSize(scip,ptr,size)      SCIPallocBuffer(scip, (void**)(ptr), size)
+#define SCIPduplicateBufferSize(scip,ptr,source,size) \
+                                                SCIPduplicateBuffer(scip, (void**)(ptr), source, size)
+#define SCIPreallocBufferSize(scip,ptr,size)    SCIPreallocBuffer(scip, (void**)(ptr), size)
+#define SCIPfreeBufferSize(scip,ptr)            SCIPfreeBuffer(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
 
 /** returns block memory to use at the current time */
 extern
@@ -3333,18 +3339,35 @@ RETCODE SCIPensureBlockMemoryArray_call(
 
 /** gets a memory buffer with at least the given size */
 extern
-RETCODE SCIPcaptureBuffer(
+RETCODE SCIPallocBuffer(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to store the buffer */
    int              size                /**< required size in bytes of buffer */
    );
 
-/** releases a memory buffer */
+/** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
 extern
-RETCODE SCIPreleaseBuffer(
+RETCODE SCIPduplicateBuffer(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to store the buffer */
-   int              dummysize           /**< used to get a safer define for SCIPreleaseBufferSize/Array */
+   void*            source,             /**< memory block to copy into the buffer */
+   int              size                /**< required size in bytes of buffer */
+   );
+
+/** reallocates a memory buffer to at least the given size */
+extern
+RETCODE SCIPreallocBuffer(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to the buffer */
+   int              size                /**< required size in bytes of buffer */
+   );
+
+/** frees a memory buffer */
+extern
+RETCODE SCIPfreeBuffer(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to the buffer */
+   int              dummysize           /**< used to get a safer define for SCIPfreeBufferSize/Array */
    );
 
 /**@} */

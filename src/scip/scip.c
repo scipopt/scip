@@ -1233,7 +1233,7 @@ RETCODE SCIPsetNodeselStdPriority(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetNodeselStdPriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIPnodeselSetStdPriority(nodesel, scip->set, scip->stat, priority);
+   SCIPnodeselSetStdPriority(nodesel, scip->set, priority);
 
    return SCIP_OKAY;
 }
@@ -1247,7 +1247,7 @@ RETCODE SCIPsetNodeselMemsavePriority(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetNodeselMemsavePriority", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIPnodeselSetMemsavePriority(nodesel, scip->set, scip->stat, priority);
+   SCIPnodeselSetMemsavePriority(nodesel, scip->set, priority);
 
    return SCIP_OKAY;
 }
@@ -7902,7 +7902,7 @@ RETCODE SCIPensureBlockMemoryArray_call(
 }
 
 /** gets a memory buffer with at least the given size */
-RETCODE SCIPcaptureBuffer(
+RETCODE SCIPallocBuffer(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to store the buffer */
    int              size                /**< required size in bytes of buffer */
@@ -7910,25 +7910,58 @@ RETCODE SCIPcaptureBuffer(
 {
    assert(ptr != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPcaptureBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPallocBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsetCaptureBufferSize(scip->set, ptr, size) );
+   CHECK_OKAY( SCIPsetAllocBufferSize(scip->set, ptr, size) );
 
    return SCIP_OKAY;
 }
 
-/** releases a memory buffer */
-RETCODE SCIPreleaseBuffer(
+/** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
+RETCODE SCIPduplicateBuffer(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to store the buffer */
-   int              dummysize           /**< used to get a safer define for SCIPreleaseBufferSize/Array */
+   void*            source,             /**< memory block to copy into the buffer */
+   int              size                /**< required size in bytes of buffer */
+   )
+{
+   assert(ptr != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPduplicateBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetDuplicateBufferSize(scip->set, ptr, source, size) );
+
+   return SCIP_OKAY;
+}
+
+/** reallocates a memory buffer to at least the given size */
+RETCODE SCIPreallocBuffer(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to the buffer */
+   int              size                /**< required size in bytes of buffer */
+   )
+{
+   assert(ptr != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPreallocBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetReallocBufferSize(scip->set, ptr, size) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a memory buffer */
+RETCODE SCIPfreeBuffer(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to the buffer */
+   int              dummysize           /**< used to get a safer define for SCIPfreeBufferSize/Array */
    )
 {  /*lint --e{715}*/
    assert(ptr != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPreleaseBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPfreeBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIPsetReleaseBufferSize(scip->set, ptr);
+   SCIPsetFreeBufferSize(scip->set, ptr);
    
    return SCIP_OKAY;
 }

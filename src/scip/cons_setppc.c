@@ -1318,8 +1318,8 @@ RETCODE branchLP(
       return SCIP_OKAY;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &sortcands, nlpcands) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &uses, nlpcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &sortcands, nlpcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &uses, nlpcands) );
    
    /* sort fractional variables by number of uses in enabled set partitioning / packing / covering constraints */
    nsortcands = 0;
@@ -1411,8 +1411,8 @@ RETCODE branchLP(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &uses) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &sortcands) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &uses) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &sortcands) );
 
    return SCIP_OKAY;
 }
@@ -1464,8 +1464,8 @@ RETCODE branchPseudo(
    assert(maxnbranchcands >= 1);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchcands, maxnbranchcands) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &canduses, maxnbranchcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, maxnbranchcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &canduses, maxnbranchcands) );
    
    /* sort unfixed variables by number of uses in enabled set partitioning / packing / covering constraints */
    nbranchcands = 0;
@@ -1530,8 +1530,8 @@ RETCODE branchPseudo(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &canduses) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &branchcands) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &canduses) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &branchcands) );
 
    return SCIP_OKAY;
 }
@@ -2228,7 +2228,7 @@ RETCODE createNormalizedSetppc(
    assert(mult == +1 || mult == -1);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &transvars, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &transvars, nvars) );
 
    /* negate positive or negative variables */
    for( v = 0; v < nvars; ++v )
@@ -2247,7 +2247,7 @@ RETCODE createNormalizedSetppc(
                   initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* release temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
 
    return SCIP_OKAY;
 }

@@ -404,9 +404,9 @@ DECL_HEUREXEC(SCIPheurExecRounding) /*lint --e{715}*/
    debugMessage("executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &activities, nlprows) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &violrows, nlprows) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &violrowpos, nlprows) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &activities, nlprows) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &violrows, nlprows) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &violrowpos, nlprows) );
 
    /* get the activities for all globally valid rows */
    for( r = 0; r < nlprows; ++r )
@@ -561,10 +561,10 @@ DECL_HEUREXEC(SCIPheurExecRounding) /*lint --e{715}*/
       }
    }
 
-   /* release memory buffers */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &violrowpos) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &violrows) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &activities) );
+   /* free memory buffers */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &violrowpos) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &violrows) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &activities) );
    
    return SCIP_OKAY;
 }

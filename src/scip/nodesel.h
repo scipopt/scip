@@ -286,7 +286,6 @@ extern
 void SCIPnodeselSetStdPriority(
    NODESEL*         nodesel,            /**< node selector */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
    int              priority            /**< new priority of the node selector */
    );
 
@@ -301,7 +300,6 @@ extern
 void SCIPnodeselSetMemsavePriority(
    NODESEL*         nodesel,            /**< node selector */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
    int              priority            /**< new priority of the node selector */
    );
 

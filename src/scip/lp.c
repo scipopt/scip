@@ -3453,13 +3453,13 @@ RETCODE lpFlushAddCols(
    assert(naddcols > 0);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &obj, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lb, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ub, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &beg, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &val, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &name, naddcols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &obj, naddcols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lb, naddcols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ub, naddcols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &beg, naddcols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &val, naddcoefs) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &name, naddcols) );
    
    /* fill temporary memory with column data */
    nnonz = 0;
@@ -3528,13 +3528,13 @@ RETCODE lpFlushAddCols(
    lp->lpifirstchgcol = lp->nlpicols;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &name);
-   SCIPsetReleaseBufferArray(set, &val);
-   SCIPsetReleaseBufferArray(set, &ind);
-   SCIPsetReleaseBufferArray(set, &beg);
-   SCIPsetReleaseBufferArray(set, &ub);
-   SCIPsetReleaseBufferArray(set, &lb);
-   SCIPsetReleaseBufferArray(set, &obj);
+   SCIPsetFreeBufferArray(set, &name);
+   SCIPsetFreeBufferArray(set, &val);
+   SCIPsetFreeBufferArray(set, &ind);
+   SCIPsetFreeBufferArray(set, &beg);
+   SCIPsetFreeBufferArray(set, &ub);
+   SCIPsetFreeBufferArray(set, &lb);
+   SCIPsetFreeBufferArray(set, &obj);
 
    return SCIP_OKAY;
 }
@@ -3641,12 +3641,12 @@ RETCODE lpFlushAddRows(
    assert(naddrows > 0);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lhs, naddrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rhs, naddrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &beg, naddrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &val, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &name, naddrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lhs, naddrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rhs, naddrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &beg, naddrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ind, naddcoefs) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &val, naddcoefs) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &name, naddrows) );
    
    /* fill temporary memory with row data */
    nnonz = 0;
@@ -3709,12 +3709,12 @@ RETCODE lpFlushAddRows(
    lp->lpifirstchgrow = lp->nlpirows;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &name);
-   SCIPsetReleaseBufferArray(set, &val);
-   SCIPsetReleaseBufferArray(set, &ind);
-   SCIPsetReleaseBufferArray(set, &beg);
-   SCIPsetReleaseBufferArray(set, &rhs);
-   SCIPsetReleaseBufferArray(set, &lhs);
+   SCIPsetFreeBufferArray(set, &name);
+   SCIPsetFreeBufferArray(set, &val);
+   SCIPsetFreeBufferArray(set, &ind);
+   SCIPsetFreeBufferArray(set, &beg);
+   SCIPsetFreeBufferArray(set, &rhs);
+   SCIPsetFreeBufferArray(set, &lhs);
    
    return SCIP_OKAY;
 }
@@ -3748,11 +3748,11 @@ RETCODE lpFlushChgCols(
    infinity = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &objind, lp->ncols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &obj, lp->ncols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &bdind, lp->ncols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lb, lp->ncols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ub, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &objind, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &obj, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdind, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lb, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ub, lp->ncols) );
 
    /* collect all cached bound and objective changes */
    nobjchg = 0;
@@ -3811,11 +3811,11 @@ RETCODE lpFlushChgCols(
    lp->nchgcols = 0;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &ub);
-   SCIPsetReleaseBufferArray(set, &lb);
-   SCIPsetReleaseBufferArray(set, &bdind);
-   SCIPsetReleaseBufferArray(set, &obj);
-   SCIPsetReleaseBufferArray(set, &objind);
+   SCIPsetFreeBufferArray(set, &ub);
+   SCIPsetFreeBufferArray(set, &lb);
+   SCIPsetFreeBufferArray(set, &bdind);
+   SCIPsetFreeBufferArray(set, &obj);
+   SCIPsetFreeBufferArray(set, &objind);
 
    return SCIP_OKAY;
 }
@@ -3848,9 +3848,9 @@ RETCODE lpFlushChgRows(
    infinity = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, lp->nrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lhs, lp->nrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rhs, lp->nrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ind, lp->nrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &lhs, lp->nrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rhs, lp->nrows) );
 
    /* collect all cached left and right hand side changes */
    nchg = 0;
@@ -3890,9 +3890,9 @@ RETCODE lpFlushChgRows(
    lp->nchgrows = 0;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &rhs);
-   SCIPsetReleaseBufferArray(set, &lhs);
-   SCIPsetReleaseBufferArray(set, &ind);
+   SCIPsetFreeBufferArray(set, &rhs);
+   SCIPsetFreeBufferArray(set, &lhs);
+   SCIPsetFreeBufferArray(set, &ind);
 
    return SCIP_OKAY;
 }
@@ -4760,8 +4760,8 @@ RETCODE SCIPlpCalcMIR(
    *success = FALSE;
 
    /* allocate temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &slacksign, lp->nrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &varsign, nvars) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &varsign, nvars) );
 
    /* calculate the row summation */
    sumMIRRow(set, stat, lp, nvars, weights, mircoef, &rhs, slacksign, &emptyrow);
@@ -4818,8 +4818,8 @@ RETCODE SCIPlpCalcMIR(
 
  TERMINATE:
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &varsign);
-   SCIPsetReleaseBufferArray(set, &slacksign);
+   SCIPsetFreeBufferArray(set, &varsign);
+   SCIPsetFreeBufferArray(set, &slacksign);
 
    return SCIP_OKAY;
 }
@@ -5399,10 +5399,10 @@ RETCODE SCIPlpGetSol(
       *infeasible = FALSE;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &primsol, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &dualsol, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &activity, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &redcost, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &activity, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &redcost, lp->nlpicols) );
    
    CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
 
@@ -5436,10 +5436,10 @@ RETCODE SCIPlpGetSol(
    }
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &redcost);
-   SCIPsetReleaseBufferArray(set, &activity);
-   SCIPsetReleaseBufferArray(set, &dualsol);
-   SCIPsetReleaseBufferArray(set, &primsol);
+   SCIPsetFreeBufferArray(set, &redcost);
+   SCIPsetFreeBufferArray(set, &activity);
+   SCIPsetFreeBufferArray(set, &dualsol);
+   SCIPsetFreeBufferArray(set, &primsol);
 
    return SCIP_OKAY;
 }
@@ -5469,9 +5469,9 @@ RETCODE SCIPlpGetUnboundedSol(
    assert(memhdr != NULL);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &primsol, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &activity, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ray, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &activity, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &ray, lp->nlpicols) );
 
    /* get primal feasible point */
    CHECK_OKAY( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
@@ -5514,9 +5514,9 @@ RETCODE SCIPlpGetUnboundedSol(
 
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &ray);
-   SCIPsetReleaseBufferArray(set, &activity);
-   SCIPsetReleaseBufferArray(set, &primsol);
+   SCIPsetFreeBufferArray(set, &ray);
+   SCIPsetFreeBufferArray(set, &activity);
+   SCIPsetFreeBufferArray(set, &primsol);
 
    return SCIP_OKAY;
 }
@@ -5539,7 +5539,7 @@ RETCODE SCIPlpGetDualfarkas(
    assert(memhdr != NULL);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &dualfarkas, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &dualfarkas, lp->nlpirows) );
 
    /* get dual farkas infeasibility proof */
    CHECK_OKAY( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
@@ -5553,7 +5553,7 @@ RETCODE SCIPlpGetDualfarkas(
    }
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, &dualfarkas);
+   SCIPsetFreeBufferArray(set, &dualfarkas);
    
    return SCIP_OKAY;
 }
@@ -5788,7 +5788,7 @@ RETCODE lpRemoveObsoleteCols(
    lpicols = lp->lpicols;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &coldstat, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
 
    /* mark obsolete columns to be deleted */
    ndelcols = 0;
@@ -5821,7 +5821,7 @@ RETCODE lpRemoveObsoleteCols(
    assert(lp->ncols == ncols - ndelcols);
 
    /* release temporary memory */
-   SCIPsetReleaseBufferArray(set, &coldstat);
+   SCIPsetFreeBufferArray(set, &coldstat);
       
    return SCIP_OKAY;
 }
@@ -5859,7 +5859,7 @@ RETCODE lpRemoveObsoleteRows(
    lpirows = lp->lpirows;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rowdstat, nrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
 
    /* mark obsolete rows to be deleted */
    ndelrows = 0;
@@ -5891,7 +5891,7 @@ RETCODE lpRemoveObsoleteRows(
    assert(lp->nrows == nrows - ndelrows);
 
    /* release temporary memory */
-   SCIPsetReleaseBufferArray(set, &rowdstat);
+   SCIPsetFreeBufferArray(set, &rowdstat);
       
    return SCIP_OKAY;
 }
@@ -5979,7 +5979,7 @@ RETCODE lpCleanupCols(
    lpicols = lp->lpicols;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &coldstat, ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &coldstat, ncols) );
 
    /* mark unused columns to be deleted */
    ndelcols = 0;
@@ -6008,7 +6008,7 @@ RETCODE lpCleanupCols(
    assert(lp->ncols == ncols - ndelcols);
 
    /* release temporary memory */
-   SCIPsetReleaseBufferArray(set, &coldstat);
+   SCIPsetFreeBufferArray(set, &coldstat);
       
    return SCIP_OKAY;
 }
@@ -6044,7 +6044,7 @@ RETCODE lpCleanupRows(
    lpirows = lp->lpirows;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rowdstat, nrows) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &rowdstat, nrows) );
 
    /* mark unused rows to be deleted */
    ndelrows = 0;
@@ -6073,7 +6073,7 @@ RETCODE lpCleanupRows(
    assert(lp->nrows == nrows - ndelrows);
 
    /* release temporary memory */
-   SCIPsetReleaseBufferArray(set, &rowdstat);
+   SCIPsetFreeBufferArray(set, &rowdstat);
 
    return SCIP_OKAY;
 }

@@ -67,7 +67,7 @@ void SCIPbufferFree(
 }
 
 /** allocates the next unused buffer */
-RETCODE SCIPbufferCapture(
+RETCODE SCIPbufferAllocMem(
    BUFFER*          buffer,             /**< memory buffer storage */
    const SET*       set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
@@ -78,7 +78,6 @@ RETCODE SCIPbufferCapture(
 
    assert(buffer != NULL);
    assert(buffer->firstfree <= buffer->ndata);
-   assert(set != NULL);
    assert(ptr != NULL);
    assert(size >= 0);
    
@@ -125,41 +124,108 @@ RETCODE SCIPbufferCapture(
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("captured buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
+   debugMessage("allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
    return SCIP_OKAY;
 }
 
-/** releases a buffer */
-void SCIPbufferRelease(
+/** allocates the next unused buffer and copies the given memory into the buffer */
+RETCODE SCIPbufferDuplicateMem(
+   BUFFER*          buffer,             /**< memory buffer storage */
+   const SET*       set,                /**< global SCIP settings */
+   void**           ptr,                /**< pointer to store the allocated memory buffer */
+   void*            source,             /**< memory block to copy into the buffer */
+   int              size                /**< minimal required size of the buffer */
+   )
+{
+   assert(source != NULL);
+
+   /* allocate a buffer of the given size */
+   CHECK_OKAY( SCIPbufferAllocMem(buffer, set, ptr, size) );
+
+   /* copy the source memory into the buffer */
+   copyMemorySize(*ptr, source, size);
+
+   return SCIP_OKAY;
+}
+
+/** reallocates the buffer to at least the given size */
+RETCODE SCIPbufferReallocMem(
+   BUFFER*          buffer,             /**< memory buffer storage */
+   const SET*       set,                /**< global SCIP settings */
+   void**           ptr,                /**< pointer to the allocated memory buffer */
+   int              size                /**< minimal required size of the buffer */
+   )
+{
+   int bufnum;
+
+   assert(buffer != NULL);
+   assert(buffer->firstfree <= buffer->ndata);
+   assert(buffer->firstfree >= 1);
+   assert(ptr != NULL);
+   assert(size >= 0);
+
+   /* Search the pointer in the buffer list
+    * Usally, buffers are allocated and freed like a stack, such that the currently used pointer is
+    * most likely at the end of the buffer list.
+    */
+   for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )
+   {
+   }
+   assert(buffer->data[bufnum] == *ptr);
+   assert(buffer->used[bufnum]);
+   assert(buffer->size[bufnum] >= 1);
+
+   /* check if the buffer has to be enlarged */
+   if( size > buffer->size[bufnum] )
+   {
+      int newsize;
+
+      /* enlarge buffer */
+      newsize = SCIPsetCalcMemGrowSize(set, size);
+      ALLOC_OKAY( reallocMemorySize(&buffer->data[bufnum], newsize) );
+      buffer->size[bufnum] = newsize;
+      *ptr = buffer->data[bufnum];
+   }
+   assert(buffer->size[bufnum] >= size);
+   assert(*ptr == buffer->data[bufnum]);
+
+   debugMessage("reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p\n", 
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+
+   return SCIP_OKAY;
+}
+
+/** frees a buffer */
+void SCIPbufferFreeMem(
    BUFFER*          buffer,             /**< memory buffer storage */
    void**           ptr,                /**< pointer to the allocated memory buffer */
-   int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */
+   int              dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
    )
 {  /*lint --e{715}*/
-   int i;
+   int bufnum;
 
    assert(buffer != NULL);
    assert(buffer->firstfree <= buffer->ndata);
    assert(buffer->firstfree >= 1);
 
    /* Search the pointer in the buffer list
-    * Usally, buffers are allocated and freed like a stack, such that the released pointer is
+    * Usally, buffers are allocated and freed like a stack, such that the freed pointer is
     * most likely at the end of the buffer list.
     */
-   for( i = buffer->firstfree-1; i >= 0 && buffer->data[i] != *ptr; --i )
+   for( bufnum = buffer->firstfree-1; bufnum >= 0 && buffer->data[bufnum] != *ptr; --bufnum )
    {
    }
-   assert(buffer->data[i] == *ptr);
-   assert(buffer->used[i]);
+   assert(buffer->data[bufnum] == *ptr);
+   assert(buffer->used[bufnum]);
 
    *ptr = NULL;
-   buffer->used[i] = FALSE;
+   buffer->used[bufnum] = FALSE;
 
    while( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
       buffer->firstfree--;
 
-   debugMessage("released buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
-      i, buffer->ndata, buffer->data[i], buffer->size[i], ptr, buffer->firstfree);
+   debugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
 }

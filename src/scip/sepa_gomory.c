@@ -141,9 +141,9 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    *result = SCIP_DIDNOTFIND;
 
    /* allocate temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &cutcoef, nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &basisind, nrows) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &binvrow, nrows) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &cutcoef, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &basisind, nrows) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &binvrow, nrows) );
    varsol = NULL; /* allocate this later, if needed */
 
    /* get basis indices */
@@ -198,7 +198,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   /* if this is the first successful cut, get the LP solution for all COLUMN variables */
                   if( varsol == NULL )
                   {
-                     CHECK_OKAY( SCIPcaptureBufferArray(scip, &varsol, nvars) );
+                     CHECK_OKAY( SCIPallocBufferArray(scip, &varsol, nvars) );
                      for( v = 0; v < nvars; ++v )
                      {
                         if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
@@ -208,8 +208,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   assert(varsol != NULL);
 
                   /* get temporary memory for storing the cut as sparse row */
-                  CHECK_OKAY( SCIPcaptureBufferArray(scip, &cutcols, nvars) );
-                  CHECK_OKAY( SCIPcaptureBufferArray(scip, &cutvals, nvars) );
+                  CHECK_OKAY( SCIPallocBufferArray(scip, &cutcols, nvars) );
+                  CHECK_OKAY( SCIPallocBufferArray(scip, &cutvals, nvars) );
 
                   /* store the cut as sparse row, calculate activity of cut */
                   cutlen = 0;
@@ -271,8 +271,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   }
 
                   /* free temporary memory */
-                  CHECK_OKAY( SCIPreleaseBufferArray(scip, &cutvals) );
-                  CHECK_OKAY( SCIPreleaseBufferArray(scip, &cutcols) );
+                  CHECK_OKAY( SCIPfreeBufferArray(scip, &cutvals) );
+                  CHECK_OKAY( SCIPfreeBufferArray(scip, &cutcols) );
                }
             }
          }
@@ -282,11 +282,11 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    /* free temporary memory */
    if( varsol != NULL )
    {
-      CHECK_OKAY( SCIPreleaseBufferArray(scip, &varsol) );
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &varsol) );
    }
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &binvrow) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &basisind) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &cutcoef) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &binvrow) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &basisind) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &cutcoef) );
 
    debugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
 

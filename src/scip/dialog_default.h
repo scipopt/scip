@@ -38,6 +38,14 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu);
 extern
 DECL_DIALOGEXEC(SCIPdialogExecMenuLazy);
 
+/** dialog execution method for the display branching command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching);
+
+/** dialog execution method for the display conshdlrs command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs);
+
 /** dialog execution method for the display statistics command */
 extern
 DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);

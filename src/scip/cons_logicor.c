@@ -1249,8 +1249,8 @@ RETCODE branchLP(
       return SCIP_OKAY;
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchcands, nlpcands) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &usescores, nlpcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, nlpcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, nlpcands) );
    
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -1365,8 +1365,8 @@ RETCODE branchLP(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &usescores) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &branchcands) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &usescores) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &branchcands) );
 
    return SCIP_OKAY;
 }
@@ -1427,8 +1427,8 @@ RETCODE branchPseudo(
    assert(maxnbranchcands >= 1);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchcands, maxnbranchcands) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &usescores, maxnbranchcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, maxnbranchcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, maxnbranchcands) );
    
    /* sort unfixed variables by number of uses in enabled logic or constraints */
    nbranchcands = 0;
@@ -1506,8 +1506,8 @@ RETCODE branchPseudo(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &usescores) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &branchcands) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &usescores) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &branchcands) );
 
    return SCIP_OKAY;
 }
@@ -1977,7 +1977,7 @@ RETCODE createNormalizedLogicor(
    assert(mult == +1 || mult == -1);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &transvars, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &transvars, nvars) );
 
    /* negate positive or negative variables */
    for( v = 0; v < nvars; ++v )
@@ -1995,8 +1995,8 @@ RETCODE createNormalizedLogicor(
    CHECK_OKAY( SCIPcreateConsLogicor(scip, cons, name, nvars, transvars,
                   initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
-   /* release temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
+   /* free temporary memory */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
 
    return SCIP_OKAY;
 }

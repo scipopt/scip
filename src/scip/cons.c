@@ -2267,6 +2267,26 @@ int SCIPconshdlrGetNChgSides(
    return conshdlr->nchgsides;
 }
 
+/** gets separation priority of constraint handler */
+int SCIPconshdlrGetSepaPriority(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->sepapriority;
+}
+
+/** gets enforcing priority of constraint handler */
+int SCIPconshdlrGetEnfoPriority(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->enfopriority;
+}
+
 /** gets checking priority of constraint handler */
 int SCIPconshdlrGetCheckPriority(
    CONSHDLR*        conshdlr            /**< constraint handler */

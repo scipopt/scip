@@ -995,11 +995,19 @@ Real SCIPsetFrac(
 #endif
 
 
-#define SCIPsetCaptureBufferArray(set,ptr,num)   ( SCIPbufferCapture((set)->buffer, set, (void**)(ptr), \
-                                                   (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetReleaseBufferArray(set,ptr)       ( SCIPbufferRelease((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
-#define SCIPsetCaptureBufferSize(set,ptr,size)   ( SCIPbufferCapture((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetReleaseBufferSize(set,ptr)        ( SCIPbufferRelease((set)->buffer, (void**)(ptr), 0) )
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
+                                                    (int)((num)*sizeof(**(ptr)))) )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) \
+                                                ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, \
+                                                    (int)((num)*sizeof(**(ptr)))) )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
+                                                    (int)((num)*sizeof(**(ptr)))) )
+#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
+#define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
+#define SCIPsetDuplicateBufferSize(set,ptr,source,size) \
+                                                ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
+#define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
+#define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 
 
 #endif

@@ -892,17 +892,14 @@ int SCIPnodeselGetStdPriority(
 void SCIPnodeselSetStdPriority(
    NODESEL*         nodesel,            /**< node selector */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
    int              priority            /**< new priority of the node selector */
    )
 {
    assert(nodesel != NULL);
    assert(set != NULL);
-   assert(stat != NULL);
 
    nodesel->stdpriority = priority;
-   if( !stat->memsavemode )
-      set->actnodesel = NULL;
+   set->actnodesel = NULL;
 }
 
 /** gets priority of node selector in memory saving mode */
@@ -919,17 +916,14 @@ int SCIPnodeselGetMemsavePriority(
 void SCIPnodeselSetMemsavePriority(
    NODESEL*         nodesel,            /**< node selector */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
    int              priority            /**< new priority of the node selector */
    )
 {
    assert(nodesel != NULL);
    assert(set != NULL);
-   assert(stat != NULL);
    
    nodesel->memsavepriority = priority;
-   if( stat->memsavemode )
-      set->actnodesel = NULL;
+   set->actnodesel = NULL;
 }
 
 /** gets user data of node selector */

@@ -1377,7 +1377,7 @@ RETCODE consdataSort(
       int nexti;
 
       /* get temporary memory to store the sorted permutation */
-      CHECK_OKAY( SCIPcaptureBufferArray(scip, &perm, consdata->nvars) );
+      CHECK_OKAY( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call bubble sort */
       SCIPbsort((void*)consdata, consdata->nvars, consdataCmpVar, perm);
@@ -1424,7 +1424,7 @@ RETCODE consdataSort(
 #endif
 
       /* free temporary memory */
-      CHECK_OKAY( SCIPreleaseBufferArray(scip, &perm) );
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &perm) );
    }
    assert(consdata->sorted);
 
@@ -3078,7 +3078,7 @@ RETCODE convertLongEquality(
       CHECK_OKAY( delCoefPos(scip, cons, bestslackpos) );
 
       /* allocate temporary memory */
-      CHECK_OKAY( SCIPcaptureBufferArray(scip, &scalars, consdata->nvars) );
+      CHECK_OKAY( SCIPallocBufferArray(scip, &scalars, consdata->nvars) );
 
       /* set up the multi-aggregation */
       debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
@@ -3096,7 +3096,7 @@ RETCODE convertLongEquality(
                      &infeasible) );
 
       /* free temporary memory */
-      CHECK_OKAY( SCIPreleaseBufferArray(scip, &scalars) );
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &scalars) );
 
       /* check for infeasible aggregation */
       if( infeasible )
@@ -3397,8 +3397,8 @@ RETCODE aggregateConstraints(
       debug(consdataPrint(scip, consdata1, NULL));
 
       /* get temporary memory for creating the new linear constraint */
-      CHECK_OKAY( SCIPcaptureBufferArray(scip, &newvars, bestnvars) );
-      CHECK_OKAY( SCIPcaptureBufferArray(scip, &newvals, bestnvars) );
+      CHECK_OKAY( SCIPallocBufferArray(scip, &newvars, bestnvars) );
+      CHECK_OKAY( SCIPallocBufferArray(scip, &newvals, bestnvars) );
 
       /* calculate the common coefficients */
       newnvars = 0;
@@ -3516,8 +3516,8 @@ RETCODE aggregateConstraints(
       CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
 
       /* free temporary memory */
-      CHECK_OKAY( SCIPreleaseBufferArray(scip, &newvals) );
-      CHECK_OKAY( SCIPreleaseBufferArray(scip, &newvars) );
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &newvals) );
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &newvars) );
    }
 
    return SCIP_OKAY;
@@ -3592,10 +3592,10 @@ RETCODE preprocessConstraintPairs(
    CHECK_OKAY( consdataSort(scip, consdata0) );
 
    /* get temporary memory for indices of common variables */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx0, consdata0->nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &commonidx1, consdata0->nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx0minus1, consdata0->nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, consdata0->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &commonidx0, consdata0->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &commonidx1, consdata0->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &diffidx0minus1, consdata0->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &diffidx1minus0, consdata0->nvars) );
    diffidx1minus0size = consdata0->nvars;
 
    /* check constraint against all prior constraints */
@@ -3630,8 +3630,8 @@ RETCODE preprocessConstraintPairs(
       /* make sure, we have enough memory for the index set of V_1 \ V_0 */
       if( consdata1->nvars > diffidx1minus0size )
       {
-         CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx1minus0) );
-         CHECK_OKAY( SCIPcaptureBufferArray(scip, &diffidx1minus0, consdata1->nvars) );
+         CHECK_OKAY( SCIPfreeBufferArray(scip, &diffidx1minus0) );
+         CHECK_OKAY( SCIPallocBufferArray(scip, &diffidx1minus0, consdata1->nvars) );
          diffidx1minus0size = consdata1->nvars;
       }
 
@@ -3890,10 +3890,10 @@ RETCODE preprocessConstraintPairs(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx1minus0) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &diffidx0minus1) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &commonidx1) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &commonidx0) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &diffidx1minus0) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &diffidx0minus1) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &commonidx1) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &commonidx0) );
 
    return SCIP_OKAY;
 }
@@ -4259,7 +4259,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
    }
 
    /* create array of ones for storing the coefficients: x1 + ... + xk >= 1 */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &vals, nconflictvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &vals, nconflictvars) );
    for( v = 0; v < nconflictvars; ++v )
       vals[v] = 1.0;
 
@@ -4269,7 +4269,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
                   FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
    /* release the vals buffer */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &vals) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &vals) );
 
    /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
    CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );

@@ -60,16 +60,35 @@ void SCIPbufferFree(
 
 /** allocates the next unused buffer */
 extern
-RETCODE SCIPbufferCapture(
+RETCODE SCIPbufferAllocMem(
    BUFFER*          buffer,             /**< memory buffer storage */
    const SET*       set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
    int              size                /**< minimal required size of the buffer */
    );
 
-/** releases a buffer */
+/** allocates the next unused buffer and copies the given memory into the buffer */
 extern
-void SCIPbufferRelease(
+RETCODE SCIPbufferDuplicateMem(
+   BUFFER*          buffer,             /**< memory buffer storage */
+   const SET*       set,                /**< global SCIP settings */
+   void**           ptr,                /**< pointer to store the allocated memory buffer */
+   void*            source,             /**< memory block to copy into the buffer */
+   int              size                /**< minimal required size of the buffer */
+   );
+
+/** reallocates the buffer to at least the given size */
+extern
+RETCODE SCIPbufferReallocMem(
+   BUFFER*          buffer,             /**< memory buffer storage */
+   const SET*       set,                /**< global SCIP settings */
+   void**           ptr,                /**< pointer to the allocated memory buffer */
+   int              size                /**< minimal required size of the buffer */
+   );
+
+/** frees a buffer */
+extern
+void SCIPbufferFreeMem(
    BUFFER*          buffer,             /**< memory buffer storage */
    void**           ptr,                /**< pointer to the allocated memory buffer */
    int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */

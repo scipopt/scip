@@ -191,9 +191,9 @@ RETCODE readCnf(
    CHECK_OKAY( SCIPgetBoolParam(scip, "reading/cnf/dynamicrows", &dynamicrows) );
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &vars, nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &clausevars, nvars) );
-   CHECK_OKAY( SCIPcaptureBufferArray(scip, &varsign, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &vars, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &clausevars, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &varsign, nvars) );
 
    /* create the variables */
    for( v = 0; v < nvars; ++v )
@@ -304,9 +304,9 @@ RETCODE readCnf(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &varsign) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &clausevars) );
-   CHECK_OKAY( SCIPreleaseBufferArray(scip, &vars) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &varsign) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &clausevars) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &vars) );
 
    return retcode;
 }

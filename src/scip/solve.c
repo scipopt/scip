@@ -492,7 +492,7 @@ RETCODE redcostStrengthening(
    SCIPclockStart(stat->redcoststrtime, set);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &cstat, lp->ncols) );
+   CHECK_OKAY( SCIPsetAllocBufferArray(set, &cstat, lp->ncols) );
 
    /* get basis status for columns and LP objective value */
    CHECK_OKAY( SCIPlpGetBase(lp, cstat, NULL) );
@@ -570,8 +570,8 @@ RETCODE redcostStrengthening(
       }
    }
 
-   /* release temporary memory */
-   SCIPsetReleaseBufferArray(set, &cstat);
+   /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &cstat);
 
    /* resolve the LP (the optimal solution should stay the same) */
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
