@@ -1,29 +1,27 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
-/*          SIP --- Solving Integer Programs                                 */
+/*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 1994-2002 Alexander Martin                               */
-/*                  1994-2002 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*                            Thorsten Koch                                  */
+/*                            Alexander Martin                               */
+/*                  2002-2002 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SIP is distributed under the terms of the SIP Academic Licence.          */
+/*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
 /*                                                                           */
-/*  You should have received a copy of the SIP Academic License              */
-/*  along with SIP; see the file COPYING. If not email to sip@zib.de.        */
+/*  You should have received a copy of the SCIP Academic License             */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* Allocates memory in large chunks. Structure is as follows:
- *
- * +--------+      +-------------------------------------+
- * | BLKHDR |------+            list of CHKHDR           |
- * +--------+      +-------------------------------------+
- *                     |         |         |         |
- *                 +-------+ +-------+ +-------+ +-------+
- *                 | STORE | | STORE | | STORE | | STORE |
- *                 +-------+ +-------+ +-------+ +-------+
+
+/**@file   memory.c
+ * @brief  memory allocation routines
+ * @author Tobias Achterberg
  */
-#pragma ident "$Id: memory.c,v 1.1 2002/10/25 13:54:40 bzfpfend Exp $"
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
 #include <stdlib.h>

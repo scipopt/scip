@@ -23,1136 +23,1152 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <assert.h>
 
-#if 0  /* ??? TODO */
-
-
-#include <stdlib.h>
 #include "cplex.h"
-#include "lp.h"
-#include "def.h"
-#include "misc.h"
+#include "bitencode.h"
+#include "lpi.h"
 
-#define CPX_NOTCALLED  -1
 
-struct cpxlp
-{
-   CPXLPptr cpxlpptr;    /* pointer to CPLEX LP                    */
-   int      cpxretval;   /* return value of last optimization call */
+#define CHECK_ZERO(x) { int _restat_; if( (_restat_ = (x)) != 0 ) { errorMessage("LP Error"); \
+                                                                    printf("-> CPLEX returned %d.\n", _restat_); \
+                                                                    return SCIP_LPERROR; } }
+#define NOTCALLED  -1
+
+
+typedef DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
+#define COLS_PER_PACKET DUALPACKETSIZE
+typedef SINGLEPACKET ROWPACKET;         /* each row needs one bit of information (basic/nonbasic) */
+#define ROWS_PER_PACKET SINGLEPACKETSIZE
+
+/* CPLEX parameter lists which can be changed */
+#define NUMINTPARAM  6
+static const int    intparam[NUMINTPARAM] = {
+   CPX_PARAM_ADVIND,
+   CPX_PARAM_ITLIM,
+   CPX_PARAM_FASTMIP,
+   CPX_PARAM_DPRIIND,
+   CPX_PARAM_SIMDISPLAY,
+   CPX_PARAM_SCRIND
 };
-typedef struct cpxlp CPXLP;
+#define NUMDBLPARAM  1
+static const double dblparam[NUMDBLPARAM] = {
+   CPX_PARAM_EPRHS
+};
 
-static int CPX_return_val = CPX_NOTCALLED;
-
-static void
-CPX_invalidateSolution( CPXLP *cpxlp )
+struct CPXParam                         /**< CPLEX parameter settings */
 {
-   assert( cpxlp != NULL );
-   cpxlp->cpxretval = CPX_NOTCALLED;
-}
+   int              intparval[NUMINTPARAM]; /**< integer parameter values */
+   double           dblparval[NUMDBLPARAM]; /**< double parameter values */
+};
+typedef struct CPXParam CPXPARAM;
 
-static int
-CPX_isValidSolution( CPXLP *cpxlp )
+enum OptAlgo                            /**< LP algorithm type */
 {
-   assert( cpxlp != NULL );
-   return( cpxlp->cpxretval == 0
-      || cpxlp->cpxretval == CPXERR_PRESLV_INForUNBD
-      || cpxlp->cpxretval == CPXERR_PRESLV_INF
-      || cpxlp->cpxretval == CPXERR_PRESLV_UNBD);
-}
+   INVALID       = 0,                   /**< problem is not optimized */
+   PRIMALSIMPLEX = 1,                   /**< primal simplex algorithm */
+   DUALSIMPLEX   = 2                    /**< dual simplex algorithm */
+};
+typedef enum OptAlgo OPTALGO;
 
-static int
-CPX_isInfeasibleSolution( CPXLP *cpxlp )
+struct LPi                              /**< LP interface */
 {
-   assert( cpxlp != NULL );
-   return( cpxlp->cpxretval == CPXERR_PRESLV_INForUNBD
-      || cpxlp->cpxretval == CPXERR_PRESLV_INF );
-}
+   CPXLPptr         cpxlp;              /**< CPLEX LP pointer */
+   OPTALGO          optalgo;            /**< last optimization algorithm */
+   int              retval;             /**< return value of last optimization call */
+   int              solstat;            /**< solution status of last optimization call */
+   CPXPARAM         cpxparam;           /**< actual parameter values for this LP */
+};
 
-static int
-CPX_isUnboundedSolution( CPXLP *cpxlp )
+struct LPState                          /**< LP state stores basis information */
 {
-   assert( cpxlp != NULL );
-   return( cpxlp->cpxretval == CPXERR_PRESLV_INForUNBD
-      || cpxlp->cpxretval == CPXERR_PRESLV_UNBD);
-}
+   int              numuses:24;         /**< number of times, this LP state is referenced */
+   unsigned int     ncol:20;            /**< number of LP columns */
+   unsigned int     nrow:20;            /**< number of LP rows */
+   COLPACKET*       packcstat;          /**< column basis status in compressed form */
+   ROWPACKET*       packrstat;          /**< row basis status in compressed form */
+   double*          dnorm;              /**< dual norms of variables */
+};
 
-static int
-CPX_isOptimalSolution( CPXLP *cpxlp )
+
+static CPXENVptr    cpxenv = NULL;      /**< CPLEX environment */
+static CPXPARAM     defparam;           /**< default CPLEX parameters */
+static CPXPARAM     actparam;           /**< actual CPLEX parameters in the environment */
+static int          numlp = 0;          /**< number of open LP objects */
+
+
+
+static
+RETCODE getParameterValues(CPXPARAM* cpxparam)
 {
-   assert( cpxlp != NULL );
-   return( cpxlp->cpxretval == 0 );
-}
-
-int
-SIPstrongbranch( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, double *psol,
-   int *cand, int ncand, double *down, double *up, int itlim )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   int   restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXstrongbranch( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr,
-         cand, ncand, down, up, itlim);
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXstrongbranch (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END STRONGBRANCH */
-
-int
-SIPoptLP( SIPInfaLP infaLP, SIPLP lptr )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-
-   assert( cpxlp != NULL );
-   cpxlp->cpxretval =
-      CPXdualopt( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr );
-   switch( cpxlp->cpxretval  )
-   {
-   case 0:
-   case CPXERR_PRESLV_INForUNBD:
-   case CPXERR_PRESLV_INF:
-   case CPXERR_PRESLV_UNBD:
-      return SIP_OKAY;
-   case CPXERR_NO_MEMORY:
-      return SIP_NOMEMORY;
-   default:
-      return SIP_LPERROR;
-   }
-}				/* END OPTLP */
-
-int
-SIPoptLPPrimal( SIPInfaLP infaLP, SIPLP lptr )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-
-   assert( cpxlp != NULL );
-   cpxlp->cpxretval =
-      CPXprimopt( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr );
-   switch( cpxlp->cpxretval )
-   {
-   case 0:
-   case CPXERR_PRESLV_INForUNBD:
-   case CPXERR_PRESLV_INF:
-   case CPXERR_PRESLV_UNBD:
-      return SIP_OKAY;
-   case CPXERR_NO_MEMORY:
-      return SIP_NOMEMORY;
-   default:
-      return SIP_LPERROR;
-   }
-}				/* END OPTLPPRIMAL */
-
-int
-SIPgetLPStatus( SIPInfaLP infaLP, SIPLP lptr, int *solstat )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-
-   assert( cpxlp != NULL );
-   if( CPX_isValidSolution( cpxlp ) )
-   {
-      /* first check for primal infeasible (= dual unbounded) solution,
-         because a CPXERR_PRESLV_INForUNBD should be considered primal
-         infeasible and dual unbounded */
-      if( CPX_isUnboundedSolution( cpxlp ) )
-	 *solstat = CPX_UNBOUNDED;
-      else if( CPX_isInfeasibleSolution( cpxlp ) )
-	 *solstat = CPX_INFEASIBLE;
-      else if( CPX_isOptimalSolution( cpxlp ) )
-      {
-	 *solstat =
-	    CPXgetstat( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr );
-	 if( *solstat == 0 )
-	    return SIP_LPERROR;
-      }
-      else
-	 return SIP_LPERROR;
-
-      return SIP_OKAY;
-   }
-
-   return SIP_LPERROR;
-}
-
-/* returns TRUE iff error occured during LP solve */
-int
-SIPerrorLP( SIPLP lptr, int solstat )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return !CPX_isValidSolution( cpxlp );
-}				/* END ERRORLP */
-
-/* returns TRUE iff LP solution is stable, ie
-   no numerical troubles occured */
-int
-SIPisStable( SIPLP lptr, int solstat )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return( CPX_isValidSolution( cpxlp )
-      && solstat != CPX_NUM_BEST_FEAS
-      && solstat != CPX_NUM_BEST_INFEAS
-      && solstat != CPX_OPTIMAL_INFEAS );
-}				/* END ISSTABLE */
-
-/* returns TRUE iff LP is primal infeasible */
-int
-SIPisPrimalInfeasible( SIPLP lptr, int solstat )
-{
-   /* primal infeasible means dual unbounded */
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return( CPX_isUnboundedSolution( cpxlp )
-      || solstat == CPX_UNBOUNDED );
-}				/* END ISPRESOLVED */
-
-/* returns TRUE iff LP is primal unbounded */
-int
-SIPisPrimalUnbounded( SIPLP lptr, int solstat )
-{
-   /* primal unbounded means dual infeasible */
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return( CPX_isInfeasibleSolution( cpxlp )
-      || solstat == CPX_INFEASIBLE );
-}				/* ISINFEAS */
-
-/* returns TRUE iff LP is solved to optimality */
-int
-SIPisOptimal( SIPLP lptr, int solstat )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return( CPX_isOptimalSolution( cpxlp )
-      && solstat == CPX_OPTIMAL );
-}				/* ISOPTIMAL */
-
-/* returns TRUE iff a dual feasible solution has been found */
-int
-SIPisDualValid( SIPLP lptr, int solstat )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return( CPX_isValidSolution( cpxlp )
-      && ( solstat == CPX_OPTIMAL
-	 || solstat == CPX_OBJ_LIM
-         || solstat == CPX_IT_LIM_FEAS
-	 || solstat == CPX_TIME_LIM_FEAS
-         || solstat == CPX_NUM_BEST_FEAS
-	 || solstat == CPX_ABORT_FEAS ) );
-}				/* ISFEASIBLE */
-
-/* returns TRUE iff objective limit is exceeded */
-int
-SIPexObjlim( SIPLP lptr, int solstat )
-{
-   CPXLP *cpxlp = (CPXLP*)lptr;
-   return( CPX_isUnboundedSolution( cpxlp )
-      || solstat == CPX_UNBOUNDED
-      || solstat == CPX_OBJ_LIM );
-}				/* END EXOBJLIM */
-
-/* TRUE iff iteration limit has been exceeded */
-int
-SIPiterlim( SIPLP lptr, int solstat )
-{
-   return( solstat == CPX_IT_LIM_FEAS
-      || solstat == CPX_IT_LIM_INFEAS );
-}				/* END ITERLIM */
-
-/* TRUE iff time limit has been exceeded */
-int
-SIPtimelim( SIPLP lptr, int solstat )
-{
-   return( solstat == CPX_TIME_LIM_FEAS
-      || solstat == CPX_TIME_LIM_INFEAS );
-}				/* END TIMELIM */
-
-int
-SIPsetbase( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, double *dnorm,
-   int *cstat, int *rstat, int pricing )
-{
-   CPXENVptr CPXenv = (CPXENVptr) (void *) infaLP;
-   CPXLP     *cpxlp = (CPXLP*)lptr;
-   int       restat;
-
-   assert( cpxlp != NULL );
-   CPX_invalidateSolution( cpxlp );
-
-   if( pricing == CPX_DPRIIND_STEEP && dnorm != NULL )
-   {
-      restat = CPXcopybasednorms( CPXenv, cpxlp->cpxlpptr, cstat, rstat, dnorm );
-      if( restat != 0 )
-      {
-	 fprintf(ferr, "Error in CPXloaddnorms (), %d returned\n", restat);
-	 return SIP_LPERROR;
-      }
-   }
-   else
-   {
-      restat = CPXcopybase( CPXenv, cpxlp->cpxlpptr, cstat, rstat );
-      if( restat != 0 )
-      {
-	 fprintf(ferr, "Error in CPXloadbase (), %d returned\n", restat);
-	 return SIP_LPERROR;
-      }
-   }
-
-   return SIP_OKAY;
-}				/* END SETBASE */
-
-int
-SIPgetsol(FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, double *objval,
-   double *psol, double *pi, double *slck, double *redcost)
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-   int     dummy;
-
-   assert( cpxlp != NULL );
-
-   restat =
-      CPXsolution( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr,
-         &dummy, objval, psol, pi, slck, redcost );
-   if( restat != 0 )
-   {
-      fprintf(ferr, "Error in CPXsolution (), %d returned.\n", restat);
-      return SIP_LPERROR;
-   }
+   int i;
    
-   return SIP_OKAY;
-}				/* END GETSOL */
+   assert(cpxenv != NULL);
+   assert(cpxparam != NULL);
 
-int
-SIPgetbase(FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, double *dnorm,
-   int *cstat, int *rstat)
+   for( i = 0; i < NUMINTPARAM; ++i )
+   {
+      CHECK_ZERO( CPXgetintparam(cpxenv, intparam[i], &(cpxparam->intparval[i])) );
+   }
+   for( i = 0; i < NUMDBLPARAM; ++i )
+   {
+      CHECK_ZERO( CPXgetdblparam(cpxenv, dblparam[i], &(cpxparam->dblparval[i])) );
+   }
+
+   return SCIP_OKAY;
+}
+   
+static
+void checkParameterValues(void)
 {
-   CPXLP   *cpxlp = (CPXLP*)lptr;
+#ifndef NDEBUG
+   CPXPARAM par;
+   int i;
+   
+   getParameterValues(&par);
+   for( i = 0; i < NUMINTPARAM; ++i )
+      assert(actparam.intparval[i] == par.intparval[i]);
+   for( i = 0; i < NUMDBLPARAM; ++i )
+      assert(actparam.dblparval[i] == par.dblparval[i]);
+#endif
+}
+
+static
+RETCODE setParameterValues(const CPXPARAM* cpxparam)
+{
+   int i;
+   
+   assert(cpxenv != NULL);
+   assert(cpxparam != NULL);
+   
+   for( i = 0; i < NUMINTPARAM; ++i )
+   {
+      if( actparam.intparval[i] != cpxparam->intparval[i] )
+      {
+         actparam.intparval[i] = cpxparam->intparval[i];
+         CHECK_ZERO( CPXsetintparam(cpxenv, intparam[i], actparam.intparval[i]) );
+      }
+   }
+   for( i = 0; i < NUMDBLPARAM; ++i )
+   {
+      if( actparam.dblparval[i] != cpxparam->dblparval[i] )
+      {
+         actparam.dblparval[i] = cpxparam->dblparval[i];
+         CHECK_ZERO( CPXsetdblparam(cpxenv, dblparam[i], actparam.dblparval[i]) );
+      }
+   }
+
+   checkParameterValues();
+
+   return SCIP_OKAY;
+}
+
+static
+void copyParameterValues(CPXPARAM* dest, const CPXPARAM* source)
+{
+   int i;
+
+   for( i = 0; i < NUMINTPARAM; ++i )
+      dest->intparval[i] = source->intparval[i];
+   for( i = 0; i < NUMDBLPARAM; ++i )
+      dest->dblparval[i] = source->dblparval[i];
+}
+
+static
+int getIntParam(LPI* lpi, const int param)
+{
+   int i;
+   
+   assert(lpi != NULL);
+
+   for( i = 0; i < NUMINTPARAM; ++i )
+      if( intparam[i] == param )
+         return lpi->cpxparam.intparval[i];
+
+   errorMessage("Unknown CPLEX integer parameter");
+   abort();
+}
+
+static
+double getDblParam(LPI* lpi, const int param)
+{
+   int i;
+
+   assert(lpi != NULL);
+
+   for( i = 0; i < NUMDBLPARAM; ++i )
+      if( dblparam[i] == param )
+         return lpi->cpxparam.dblparval[i];
+
+   errorMessage("Unknown CPLEX double parameter");
+   abort();
+}
+
+static
+void setIntParam(LPI* lpi, const int param, int parval)
+{
+   int i;
+
+   assert(lpi != NULL);
+
+   for( i = 0; i < NUMINTPARAM; ++i )
+      if( intparam[i] == param )
+      {
+         lpi->cpxparam.intparval[i] = parval;
+         return;
+      }
+
+   errorMessage("Unknown CPLEX integer parameter");
+   abort();
+}
+
+static
+void setDblParam(LPI* lpi, const int param, double parval)
+{
+   int i;
+
+   assert(lpi != NULL);
+
+   for( i = 0; i < NUMDBLPARAM; ++i )
+      if( dblparam[i] == param )
+      {
+         lpi->cpxparam.dblparval[i] = parval;
+         return;
+      }
+
+   errorMessage("Unknown CPLEX double parameter");
+   abort();
+}
+
+static
+void invalidateSolution(LPI* lpi)
+{
+   assert(lpi != NULL);
+   lpi->optalgo = INVALID;
+   lpi->retval = NOTCALLED;
+   lpi->solstat = -1;
+}
+
+static int
+isValidSolution(LPI* lpi)
+{
+   assert(lpi != NULL);
+   return( lpi->retval == 0
+      || lpi->retval == CPXERR_PRESLV_INForUNBD
+      || lpi->retval == CPXERR_PRESLV_INF
+      || lpi->retval == CPXERR_PRESLV_UNBD);
+}
+
+static int
+isInfeasibleSolution(LPI* lpi)
+{
+   assert(lpi != NULL);
+   return( lpi->retval == CPXERR_PRESLV_INForUNBD
+      || lpi->retval == CPXERR_PRESLV_INF );
+}
+
+static int
+isUnboundedSolution(LPI* lpi)
+{
+   assert(lpi != NULL);
+   return( lpi->retval == CPXERR_PRESLV_INForUNBD
+      || lpi->retval == CPXERR_PRESLV_UNBD);
+}
+
+static int
+isOptimalSolution(LPI* lpi)
+{
+   assert(lpi != NULL);
+   return( lpi->retval == 0 );
+}
+
+static
+int cpxObjsen(OBJSEN objsen)
+{
+   switch( objsen )
+   {
+   case SCIP_OBJSEN_MAXIMIZE:
+      return CPX_MIN;
+   case SCIP_OBJSEN_MINIMIZE:
+      return CPX_MAX;
+   default:
+      errorMessage("invalid objective sense");
+      abort();
+   }
+}
+
+
+
+RETCODE SCIPopenLP(                     /**< creates an LP problem object */
+   LPI**            lpi,                /**< pointer to an LP interface structure */
+   const char*      name                /**< name of the LP */
+   )
+{
    int     restat;
 
-   assert( cpxlp != NULL );
-   if( dnorm != NULL )
-   {
-      restat =
-	 CPXgetbasednorms( (CPXENVptr) (void *) infaLP,
-            cpxlp->cpxlpptr, cstat, rstat, dnorm );
-      if( restat != 0 )
-      {
-	 fprintf(ferr, "Error in CPXgetbasednorms (), returned %d\n", restat);
-	 return SIP_LPERROR;
-      }
-   }
-   else
-   {
-      restat =
-	 CPXgetbase( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr,
-            cstat, rstat );
-      if( restat != 0 )
-      {
-	 fprintf(ferr, "Error in CPXgetbase (), returned %d\n", restat);
-	 return SIP_LPERROR;
-      }
-   }
+   assert(lpi != NULL);
+   assert(numlp >= 0);
 
-   return SIP_OKAY;
-}				/* END GETBASE */
+   /* create environment */
+   if( cpxenv == NULL )
+   {
+      assert(numlp == 0);
+      cpxenv = CPXopenCPLEX(&restat);
+      CHECK_ZERO(restat);
 
-void
-SIPsetintparLP( SIPInfaLP infaLP, SIPLP lptr, int type, int ival )
+      /* get default parameter values */
+      getParameterValues(&defparam);
+      copyParameterValues(&actparam, &defparam);
+   }
+   assert(cpxenv != NULL);
+
+   /* create LP */
+   allocMemory(*lpi);
+   (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, (char*)name);
+   CHECK_ZERO(restat);
+   invalidateSolution(*lpi);
+   copyParameterValues(&((*lpi)->cpxparam), &defparam);
+   numlp++;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPcloseLP(                    /**< deletes an LP problem object */
+   LPI**            lpi                 /**< pointer to an LP interface structure */
+   )
 {
-   /* WARNING! CPLEX sets parameters in its environment, which
-    * affects all LPs
-    */
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(*lpi != NULL);
 
-   CPXENVptr CPXenv = (CPXENVptr) (void *) infaLP;
-   CPXLP     *cpxlp = (CPXLP*)lptr;
+   /* free LP */
+   CHECK_ZERO( CPXfreeprob(cpxenv, &((*lpi)->cpxlp)) );
+   freeMemory(*lpi);
 
-   assert( infaLP != NULL );
-   assert( cpxlp != NULL );
+   /* free environment */
+   numlp--;
+   if( numlp == 0 )
+   {
+      CHECK_ZERO( CPXcloseCPLEX(&cpxenv) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPcopyLP(                     /**< copies data into LP problem object */
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncol,               /**< number of columns */
+   int              nrow,               /**< number of rows */
+   OBJSEN           objsen,             /**< objective sense */
+   const double*    obj,                /**< objective function vector */
+   const double*    rhs,                /**< right hand side vector */
+   const char*      sen,                /**< row sense vector */
+   const int*       beg,                /**< start index of each column in ind- and val-array */
+   const int*       cnt,                /**< number of nonzeros for each column */
+   const int*       ind,                /**< row indices of constraint matrix entries */
+   const double*    val,                /**< values of constraint matrix entries */
+   const double*    lb,                 /**< lower bound vector */
+   const double*    ub,                 /**< upper bound vector */
+   const char**     cname,              /**< column names */
+   const char**     rname               /**< row names */
+   )
+{
+   int     restat;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXcopylpwnames(cpxenv, lpi->cpxlp, ncol, nrow, cpxObjsen(objsen), 
+                  (double*)obj, (double*)rhs, (char*)sen, (int*)beg, (int*)cnt, (int*)ind, (double*)val,
+                  (double*)lb, (double*)ub, NULL, (char**)cname, (char**)rname) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPaddLPRows(                  /**< adds rows to the LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int              nrow,               /**< number of rows to be added */
+   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   const double*    rhs,                /**< right hand side vector of new rows */
+   const char*      sen,                /**< row senses */
+   const int*       beg,                /**< start index of each row in ind- and val-array */
+   const int*       ind,                /**< column indices of constraint matrix entries */
+   const double*    val,                /**< values of constraint matrix entries */
+   const char**     name                /**< row names */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, (double*)rhs, (char*)sen,
+                  (int*)beg, (int*)ind, (double*)val, NULL, (char**)name) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPdelLPRows(                  /**< deletes rows from LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of rows
+                                         *   input:  neg. value if row should be deleted, non-neg. value if not
+                                         *   output: new position of row, -1 if row was deleted */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXdelsetrows(cpxenv, lpi->cpxlp, dstat) );
+
+   return SCIP_OKAY;   
+}
+
+RETCODE SCIPgetrowBinv(                 /**< get dense row of inverse basis matrix (A_B)^-1 */
+   LPI*             lpi,                /**< LP interface structure */
+   int              i,                  /**< row number */
+   double*          val                 /**< vector to return coefficients */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXbinvrow(cpxenv, lpi->cpxlp, i, val) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetrowBinvA(                /**< get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+   LPI*             lpi,                /**< LP interface structure */
+   int              i,                  /**< row number */
+   const double*    binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
+   double*          val                 /**< vector to return coefficients */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXbinvarow(cpxenv, lpi->cpxlp, i, val) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetLb(                      /**< gets lower bounds of variables */
+   LPI*             lpi,                /**< LP interface structure */
+   int              beg,                /**< first variable to get bound for */
+   int              end,                /**< last variable to get bound for */
+   double*          lb                  /**< vector to store the bounds */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXgetlb(cpxenv, lpi->cpxlp, lb, beg, end) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetUb(                      /**< gets upper bounds of variables */
+   LPI*             lpi,                /**< LP interface structure */
+   int              beg,                /**< first variable to get bound for */
+   int              end,                /**< last variable to get bound for */
+   double*          ub                  /**< vector to store the bounds */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXgetub(cpxenv, lpi->cpxlp, ub, beg, end) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPchgBd(                      /**< changes bounds of the variables in the LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int              n,                  /**< number of bounds to be changed */
+   const int*       ind,                /**< column indices */
+   const char*      lu,                 /**< specifies, if 'L'ower or 'U'pper bound should be changed */
+   const double*    bd                  /**< values for the new bounds */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXchgbds(cpxenv, lpi->cpxlp, n, (int*)ind, (char*)lu, (double*)bd) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPchgRhs(                     /**< changes right hand sides of rows in the LP */
+   LPI*             lpi,                /**< LP interface structure */
+   int              n,                  /**< number of rows to change */
+   const int*       ind,                /**< row indices */
+   const double*    rhs                 /**< new values for right hand sides */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, (int*)ind, (double*)rhs) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPchgObjsen(                  /**< changes the objective sense */
+   LPI*             lpi,                /**< LP interface structure */
+   OBJSEN           objsen              /**< new objective sense */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+   
+   CPXchgobjsen(cpxenv, lpi->cpxlp, cpxObjsen(objsen));
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetBind(                    /**< returns the indices of the basic columns and rows */
+   LPI*             lpi,                /**< LP interface structure */
+   int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXgetbhead(cpxenv, lpi->cpxlp, bind, NULL) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetLPIntpar(                /**< gets integer parameter of LP */
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   int*             ival                /**< buffer to store the parameter value */
+   )
+{
+   int advind;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(ival != NULL);
 
    switch( type )
    {
-   case SIP_FROMSCRATCH:
-      CPXsetintparam( CPXenv, CPX_PARAM_ADVIND,
-	 (ival == SIP_OFF) ? CPX_ON : CPX_OFF );
+   case SCIP_LPPAR_FROMSCRATCH:
+      if( getIntParam(lpi, CPX_PARAM_ADVIND) == CPX_ON )
+	 *ival = SCIP_DISABLED;
+      else
+	 *ival = SCIP_ENABLED;
       break;
-   case SIP_LPITLIM:
-      CPXsetintparam( CPXenv, CPX_PARAM_ITLIM, ival );
+   case SCIP_LPPAR_LPIT1:
+      *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp);
       break;
-   case SIP_FASTMIP:
-      assert( (ival == SIP_ON) || (ival == SIP_OFF) );
-      CPXsetintparam( CPXenv, CPX_PARAM_FASTMIP,
-	 (ival == SIP_ON) ? CPX_ON : CPX_OFF );
+   case SCIP_LPPAR_LPIT2:
+      *ival = CPXgetitcnt(cpxenv, lpi->cpxlp);
       break;
-   case SIP_PRICING:
-      switch( ival )
+   default:
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPsetLPIntpar(                /**< sets integer parameter of LP */
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   int              ival                /**< parameter value */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   switch( type )
+   {
+   case SCIP_LPPAR_FROMSCRATCH:
+      assert(ival == SCIP_ENABLED || ival == SCIP_DISABLED);
+      setIntParam(lpi, CPX_PARAM_ADVIND, (ival == SCIP_DISABLED) ? CPX_ON : CPX_OFF);
+      break;
+   case SCIP_LPPAR_LPITLIM:
+      setIntParam(lpi, CPX_PARAM_ITLIM, ival);
+      break;
+   case SCIP_LPPAR_FASTMIP:
+      assert(ival == SCIP_ENABLED || ival == SCIP_DISABLED);
+      setIntParam(lpi, CPX_PARAM_FASTMIP, (ival == SCIP_ENABLED) ? CPX_ON : CPX_OFF);
+      break;
+   case SCIP_LPPAR_PRICING:
+      switch( (PRICING)ival )
       {
-      case SIP_FULLPRICE:
-	 CPXsetintparam( CPXenv, CPX_PARAM_DPRIIND, CPX_DPRIIND_FULL );
+      case SCIP_PRICING_FULL:
+	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_FULL);
+         break;
+      case SCIP_PRICING_STEEP:
+	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEP);
 	 break;
-      case SIP_STEEPEDGE:
-	 CPXsetintparam( CPXenv, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEP );
-	 break;
-      case SIP_APPROXSTE:
-	 CPXsetintparam( CPXenv, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEPQSTART );
+      case SCIP_PRICING_STEEPQSTART:
+	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEPQSTART);
 	 break;
       default:
-         abort;
+         return SCIP_LPERROR;
       }
       break;
-   case SIP_LPINFO:
-      if( ival == SIP_ON )
+   case SCIP_LPPAR_LPINFO:
+      assert(ival == SCIP_ENABLED || ival == SCIP_DISABLED);
+      if( ival == SCIP_ENABLED )
       {
-	 CPXsetintparam( CPXenv, CPX_PARAM_SIMDISPLAY, CPX_ON );
-	 CPXsetintparam( CPXenv, CPX_PARAM_SCRIND, CPX_ON );
+	 setIntParam(lpi, CPX_PARAM_SIMDISPLAY, CPX_ON);
+	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_ON);
       }
       else 
       {
-         assert(ival == SIP_OFF);
-         
-	 CPXsetintparam( CPXenv, CPX_PARAM_SIMDISPLAY, CPX_OFF );
-	 CPXsetintparam( CPXenv, CPX_PARAM_SCRIND, CPX_OFF );
+	 setIntParam(lpi, CPX_PARAM_SIMDISPLAY, CPX_OFF);
+	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_OFF);
       }
       break;
    default:
-      abort();
+      return SCIP_LPERROR;
    }
+
+   return SCIP_OKAY;
 }
 
-void
-SIPsetdblparLP( SIPInfaLP infaLP, SIPLP lptr, int type, double dval )
+RETCODE SCIPgetLPDblpar(                /**< gets double parameter of LP */
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   double*          dval                /**< buffer to store the parameter value */
+   )
 {
-   /* WARNING! CPLEX sets parameters in its environment, which
-    * affects all LPs
-    */
-
-   CPXENVptr CPXenv = (CPXENVptr) (void *) infaLP;
-   CPXLP     *cpxlp = (CPXLP*)lptr;
-
-   assert( infaLP != NULL );
-   assert( cpxlp != NULL );
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(dval != NULL);
 
    switch( type )
    {
-   case SIP_FEASTOL:
-      CPXsetdblparam( CPXenv, CPX_PARAM_EPRHS, dval );
-      break;
-   case SIP_LOBJLIM:
-      CPXsetdblparam( CPXenv, CPX_PARAM_OBJLLIM, dval );
-      break;
-   case SIP_UOBJLIM:
-      CPXsetdblparam( CPXenv, CPX_PARAM_OBJULIM, dval );
-      break;
-   case SIP_LPTILIM:
-      CPXsetdblparam( CPXenv, CPX_PARAM_TILIM, dval );
+   case SCIP_LPPAR_FEASTOL:
+      *dval = getDblParam(lpi, CPX_PARAM_EPRHS);
       break;
    default:
-      abort();
-   }
-}
-
-int
-SIPgetintparLP( SIPInfaLP infaLP, SIPLP lptr, int type, int *ival )
-{
-   CPXENVptr CPXenv = (CPXENVptr) (void *) infaLP;
-   CPXLP     *cpxlp = (CPXLP*)lptr;
-   int       restat = SIP_OKAY;
-   int       advind;
-
-   assert( infaLP != NULL );
-   assert( cpxlp != NULL );
-   assert( ival != NULL );
-
-   switch( type )
-   {
-   case SIP_FROMSCRATCH:
-      CPXgetintparam( CPXenv, CPX_PARAM_ADVIND, &advind );
-      if( advind == CPX_ON )
-	 *ival = SIP_OFF;
-      else
-	 *ival = SIP_ON;
-      break;
-   case SIP_LPNROW:
-      assert( cpxlp->cpxlpptr != NULL );
-      *ival = CPXgetnumrows( CPXenv, cpxlp->cpxlpptr );
-      break;
-   case SIP_LPIT:
-      assert( cpxlp->cpxlpptr != NULL );
-      *ival = CPXgetitcnt( CPXenv, cpxlp->cpxlpptr );
-      break;
-   case SIP_LPIT1:
-      assert( cpxlp->cpxlpptr != NULL );
-      *ival = CPXgetphase1cnt( CPXenv, cpxlp->cpxlpptr );
-      break;
-   default:
-      restat = SIP_LPERROR;
+      return SCIP_LPERROR;
       break;
    }
-   return restat;
-}				/* END GETPARLP */
-
-int
-SIPgetdblparLP( SIPInfaLP infaLP, SIPLP lptr, int type, double *dval )
-{
-   CPXENVptr CPXenv = (CPXENVptr) (void *) infaLP;
-   CPXLP     *cpxlp = (CPXLP*)lptr;
-   int       restat = SIP_OKAY;
-   int       status;
-
-   assert( infaLP != NULL );
-   assert( cpxlp != NULL );
-   assert( dval != NULL );
-
-   switch( type )
-   {
-   case SIP_FEASTOL:
-      status = CPXgetdblparam( CPXenv, CPX_PARAM_EPRHS, dval );
-      if( status != 0 )
-	 restat = SIP_LPERROR;
-      break;
-   default:
-      restat = SIP_LPERROR;
-      break;
-   }
-   return restat;
-}				/* END GETPARLP */
-
-int
-SIPgetDefaultLPFeastol( SIPInfaLP infaLP, double* LPFeastol )
-{
-   CPXENVptr CPXenv = (CPXENVptr) (void *) infaLP;
-   int       restat = SIP_OKAY;
-   int       status;
-
-   status = CPXgetdblparam( CPXenv, CPX_PARAM_EPRHS, LPFeastol );
-   if( status != 0 )
-      restat = SIP_LPERROR;
-   return restat;
-}
-
-int
-SIPwriteLP( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, char *fname )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXlpwrite( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, fname );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXlpwrite, %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END WRITELP */
-
-int
-SIPwriteB( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, char *fname )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXmbasewrite( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, fname );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXmbasewrite (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END WRITEB */
-
-
-int
-SIPgetlb( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, double *lb, int beg,
-   int end )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXgetlb( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, lb, beg, end );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXgetlb (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END GETLB */
-
-int
-SIPgetub( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, double *ub, int beg,
-   int end )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXgetub( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, ub, beg, end );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXgetlb (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END GETUB */
-
-int
-SIPchgbds( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int n, int *ind, char *lu,
-   double *bd )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-
-   CPX_invalidateSolution( cpxlp );
-
-   restat =
-      CPXchgbds( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, n, ind, lu, bd );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXchgbds (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END CHGBDS */
-
-int
-SIPchgrhs( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int n, int *ind, 
-   double *rhs )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-
-   CPX_invalidateSolution( cpxlp );
-
-   restat =
-      CPXchgrhs( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, n, ind, rhs );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXchgrhs (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END CHGRHS */
-
-void
-SIPchgobjsen( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int objsen )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-
-   assert( cpxlp != NULL );
-
-   CPX_invalidateSolution( cpxlp );
-
-   CPXchgobjsen( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, objsen );
-}				/* END CHGOBJSEN */
-
-int
-SIPdelrows( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int *dstat )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-
-   CPX_invalidateSolution( cpxlp );
-
-   restat =
-      CPXdelsetrows( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr,
-         dstat );
-   if( restat != 0 )
-   {
-      fprintf(ferr, "Error in CPXdelsetrows (), %d returned\n", restat);
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END DELROWS */
-
-int
-SIPgetBind( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int *head )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-
-   restat =
-      CPXgetbhead( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, head,
-         NULL );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXgetbhead(), %d returned.\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END GETBIND */
-
-int
-SIPgetrow( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int i, double *val,
-   int *ind, int *nnonz )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-   int     beg[1];
-   int     surplus;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXgetrows( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, nnonz,
-         beg, ind, val, *nnonz, &surplus, i, i );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXgetrows(), %d returned.\n", restat );
-      return SIP_LPERROR;
-   }
-   *nnonz -= surplus;
-
-   return SIP_OKAY;
-}				/* END GETROW */
-
-int
-SIPgetrowBinv( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int i, double *val )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXbinvrow( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, i,
-         val );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXbinvrow(), %d returned.\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END GETROWBINV */
-
-int
-SIPgetrowBinvA( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int i, double *binv,
-   double *val )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXbinvarow( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, i,
-         val );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXbinarow(), %d returned.\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END GETROWBINVA */
-
-int
-SIPcopyLP( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int ncol, int nrow,
-   int objsen, double *obj, double *rhs, char *sen, int *beg, int *cnt,
-   int *ind, double *val, double *lb, double *ub, char **cname, char **rname )
-{
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
-
-   assert( cpxlp != NULL );
-   restat =
-      CPXcopylpwnames( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr,
-         ncol, nrow, objsen, obj, rhs, sen, beg, cnt, ind, val, lb, ub, NULL,
-         cname, rname );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Copying LP failed, %d returned\n", restat );
-      return SIP_LPERROR;
-   }
-
-   return SIP_OKAY;
-}				/* END COPYLP */
-
-int
-SIPopenLP( FILE * ferr, SIPInfaLP infaLP, SIPLP *lptr, char *name )
-{
-   CPXLP   *cpxlp;
-   int     restat;
-
-   *lptr = NULL;
-
-   ALLOC_OKAY( allocMemory(cpxlp) );
-
-   CPX_invalidateSolution( cpxlp );
-
-   cpxlp->cpxlpptr = CPXcreateprob( (CPXENVptr) (void *) infaLP, &restat, name );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Creating problem failed, %d returned\n", restat );
-      freeMemory(cpxlp);
-      return SIP_LPERROR;
-   }
-
-   *lptr = (SIPLP)cpxlp;
-   return SIP_OKAY;
-}				/* END OPENLP */
-
-int
-SIPfreeLP( FILE * ferr, SIPInfaLP infaLP, SIPLP *lptr )
-{
-   CPXLP **cpxlp = (CPXLP**)lptr;
-
-   if( *cpxlp != NULL )
-   {
-      int     restat;
-
-      restat = CPXfreeprob( (CPXENVptr) (void *) infaLP, &((*cpxlp)->cpxlpptr) );
-      if( restat != 0 )
-      {
-	 fprintf( ferr, "CPXfreeprob () failed, %d returned\n", restat );
-	 return SIP_LPERROR;
-      }
-      freeMemory(*cpxlp);
-      *cpxlp = NULL;
-   }
-   return SIP_OKAY;
-}				/* END FREELP */
-
-int
-SIPfreeInfa( FILE * ferr, SIPInfaLP *infaLP )
-{
-   int     restat;
    
-   /* close LP interface */
-   if( *infaLP != NULL )
-   {
-      restat = CPXcloseCPLEX( (CPXENVptr *) (void **) infaLP );
-      if( restat != 0 )
-      {
-         fprintf( ferr, "Error in CPXcloseCPLEX (), %d returned\n", restat );
-         return SIP_LPERROR;
-      }
-   }
-   return SIP_OKAY;
-}				/* END FREEINFA */
+   return SCIP_OKAY;
+}
 
-int
-SIPopenInfa( FILE * ferr, SIPInfaLP *infaLP )
+RETCODE SCIPsetLPDblpar(                /**< sets double parameter of LP */
+   LPI*             lpi,                /**< LP interface structure */
+   LPPARAM          type,               /**< parameter number */
+   double           dval                /**< parameter value */
+   )
 {
-   int restat;
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   *infaLP = (SIPInfaLP) (void *) CPXopenCPLEX( &restat );
-   if( restat != 0 )
+   switch( type )
    {
-      fprintf( ferr, "Error in CPXopenCPLEX (), %d returned.\n", restat );
-      return SIP_LPERROR;
+   case SCIP_LPPAR_FEASTOL:
+      setDblParam(lpi, CPX_PARAM_EPRHS, dval);
+      break;
+   case SCIP_LPPAR_LOBJLIM:
+      setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);
+      break;
+   case SCIP_LPPAR_UOBJLIM:
+      setDblParam(lpi, CPX_PARAM_OBJULIM, dval);
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      setDblParam(lpi, CPX_PARAM_TILIM, dval);
+      break;
+   default:
+      return SCIP_LPERROR;
    }
-   return SIP_OKAY;
-}				/* OPENINFA */
 
-int
-SIPaddrow( FILE * ferr, SIPInfaLP infaLP, SIPLP lptr, int nrow, int nnonz,
-   double *rhs, char *sen, int *beg, int *ind, double *val, char **name )
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetSol(                     /**< gets primal and dual solution vectors */
+   LPI*             lpi,                /**< LP interface structure */
+   double*          objval,             /**< stores the objective value */
+   double*          psol,               /**< primal solution vector */
+   double*          pi,                 /**< dual solution vector */
+   double*          slck,               /**< slack vector */
+   double*          redcost             /**< reduced cost vector */
+   )
 {
-   CPXLP   *cpxlp = (CPXLP*)lptr;
-   int     restat;
+   int dummy;
 
-   assert( cpxlp != NULL );
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   CPX_invalidateSolution( cpxlp);
+   CHECK_ZERO( CPXsolution(cpxenv, lpi->cpxlp, &dummy, objval, psol, pi, slck, redcost) );
+   assert(dummy == lpi->solstat);
 
-   restat =
-      CPXaddrows( (CPXENVptr) (void *) infaLP, cpxlp->cpxlpptr, 0,
-         nrow, nnonz, rhs, sen, beg, ind, val, NULL, name );
-   if( restat != 0 )
-   {
-      fprintf( ferr, "Error in CPXaddrows (), %d returned\n", restat );
-      return SIP_LPERROR;
-   }
+   return SCIP_OKAY;
+}
 
-   return SIP_OKAY;
-}				/* END ADDROW */
-
-int
-SIPreadFile( SET *set, MIP *mip, const char *filename )
+RETCODE SCIPstrongbranch(               /**< performs strong branching iterations on all candidates */
+   LPI*             lpi,                /**< LP interface structure */
+   const double*    psol,               /**< primal LP solution vector */
+   int              ncand,              /**< size of candidate list */
+   const int*       cand,               /**< candidate list */
+   int              itlim,              /**< iteration limit for strong branchings */
+   double*          down,               /**< stores dual bound after branching candidate down */
+   double*          up                  /**< stores dual bound after branching candidate up */
+   )
 {
-   CPXENVptr cpxenv = NULL;
-   CPXLPptr cpxlpptr = NULL;
-   SIPLP   siplp = NULL;
-   int     restat;
-   int     sipstat;
-   int     i;
-   int     numnz;
-   int     retnumnz;
-   int     surplus;
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   assert(set != NULL && mip != NULL && filename != NULL);
+   CHECK_ZERO( CPXstrongbranch(cpxenv, lpi->cpxlp, (int*)cand, ncand, down, up, itlim) );
 
-   restat = 0;
-   sipstat = SIP_LPERROR;
+   return SCIP_OKAY;
+}
 
-   /* check filename */
-   if( strlen(filename) == 0 )
+RETCODE SCIPoptLPPrimal(                /**< calls primal simplex to solve the LP */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   invalidateSolution(lpi);
+
+   setParameterValues(&(lpi->cpxparam));
+
+   lpi->optalgo = PRIMALSIMPLEX;
+   lpi->retval = CPXprimopt( cpxenv, lpi->cpxlp );
+   switch( lpi->retval  )
    {
-      fprintf(stderr, "No file specified\n");
-      sipstat = SIP_NOFILE;
-      goto ERROR;
-   }
-   /* open CPLEX LP (only for reading data) */
-   restat = SIPopenLP(stderr, set->inface->lp, &siplp, (char*)filename);
-   if( restat != 0 )
-   {
-      sipstat = SIP_LPERROR;
-      goto ERROR;
-   }
-   cpxenv = (CPXENVptr) (void *) (set->inface->lp);
-   cpxlpptr = ((CPXLP*)siplp)->cpxlpptr;
-
-   /* store filename in MIP structure */
-   allocMemoryArray(mip->name, strlen(filename)+1);
-   if( mip->name == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-   strcpy(mip->name, filename);
-
-   /* read file into CPLEX */
-   restat = CPXreadcopyprob(cpxenv, cpxlpptr, (char*)filename, NULL);
-   if( restat != 0 )
-   {
-      sipstat = SIP_NOFILE;
-      goto ERROR;
+   case 0:
+   case CPXERR_PRESLV_INForUNBD:
+   case CPXERR_PRESLV_INF:
+   case CPXERR_PRESLV_UNBD:
+      break;
+   case CPXERR_NO_MEMORY:
+      return SCIP_NOMEMORY;
+   default:
+      return SCIP_LPERROR;
    }
 
-   /* get matrix size */
-   numnz = CPXgetnumnz(cpxenv, cpxlpptr);
+   lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   
+   return SCIP_OKAY;
+}
 
-   /* get number of columns */
-   mip->ncol = CPXgetnumcols(cpxenv, cpxlpptr);
+RETCODE SCIPoptLPDual(                  /**< calls dual simplex to solve the LP */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   /* get matrix in column form */
-   allocMemory(mip->col);
-   if( mip->col == NULL )
+   invalidateSolution(lpi);
+
+   setParameterValues(&(lpi->cpxparam));
+
+   lpi->optalgo = DUALSIMPLEX;
+   lpi->retval = CPXdualopt( cpxenv, lpi->cpxlp );
+   switch( lpi->retval  )
    {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-   allocMemoryArray(mip->col->pnt, mip->ncol + 1);
-   allocMemoryArray(mip->col->ind, numnz);
-   allocMemoryArray(mip->col->val, numnz);
-   if( mip->col->pnt == NULL || mip->col->ind == NULL || mip->col->val == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-
-   restat = CPXgetcols(cpxenv, cpxlpptr, &retnumnz, mip->col->pnt, mip->col->ind,
-      mip->col->val, numnz, &surplus, 0, mip->ncol - 1);
-   if( restat != 0 )
-      goto ERROR;
-   assert(retnumnz == numnz && surplus == 0);
-   mip->col->pnt[mip->ncol] = numnz;
-
-   /* get objective function */
-   allocMemoryArray(mip->obj, mip->ncol);
-   if( mip->obj == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
+   case 0:
+   case CPXERR_PRESLV_INForUNBD:
+   case CPXERR_PRESLV_INF:
+   case CPXERR_PRESLV_UNBD:
+      break;
+   case CPXERR_NO_MEMORY:
+      return SCIP_NOMEMORY;
+   default:
+      return SCIP_LPERROR;
    }
 
-   restat = CPXgetobj(cpxenv, cpxlpptr, mip->obj, 0, mip->ncol - 1);
-   if( restat != 0 )
-      goto ERROR;
+   lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   
+   return SCIP_OKAY;
+}
 
-   /* get lower bounds */
-   allocMemoryArray(mip->lb, mip->ncol);
-   if( mip->lb == NULL )
+Bool SCIPisPrimalUnbounded(             /**< returns TRUE iff LP is primal unbounded */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   switch( lpi->optalgo )
    {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
+   case PRIMALSIMPLEX:
+      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_UNBOUNDED );
+   case DUALSIMPLEX:
+      /* primal unbounded means dual infeasible */
+      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_INFEASIBLE );
+   default:
+      errorMessage("LP not optimized");
+      return FALSE;
    }
+}
 
-   restat = CPXgetlb(cpxenv, cpxlpptr, mip->lb, 0, mip->ncol - 1);
-   if( restat != 0 )
-      goto ERROR;
+Bool SCIPisPrimalInfeasible(            /**< returns TRUE iff LP is primal infeasible */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   /* get upper bounds */
-   allocMemoryArray(mip->ub, mip->ncol);
-   if( mip->ub == NULL )
+   switch( lpi->optalgo )
    {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
+   case PRIMALSIMPLEX:
+      return( isInfeasibleSolution(lpi) || lpi->solstat == CPX_INFEASIBLE );
+   case DUALSIMPLEX:
+      /* primal infeasible means dual unbounded */
+      return( isUnboundedSolution(lpi) || lpi->solstat == CPX_UNBOUNDED );
+   default:
+      errorMessage("LP not optimized");
+      return FALSE;
    }
+}
 
-   restat = CPXgetub(cpxenv, cpxlpptr, mip->ub, 0, mip->ncol - 1);
-   if( restat != 0 )
-      goto ERROR;
+Bool SCIPisOptimal(                     /**< returns TRUE iff LP was solved to optimality */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   /* get type of variables */
-   allocMemoryArray(mip->ctype, mip->ncol);
-   if( mip->ctype == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
+   return( isOptimalSolution(lpi) && lpi->solstat == CPX_OPTIMAL );
+}
 
-   restat = CPXgetctype(cpxenv, cpxlpptr, mip->ctype, 0, mip->ncol - 1);
-   if( restat != 0 )
-      goto ERROR;
+Bool SCIPisDualValid(                   /**< returns TRUE iff actual LP solution is dual valid */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   /* get variable names */
-   allocMemoryArray(mip->cname, mip->ncol);
-   if( mip->cname == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
+   return( isValidSolution(lpi)
+      && ( lpi->solstat == CPX_OPTIMAL
+	 || lpi->solstat == CPX_OBJ_LIM
+         || lpi->solstat == CPX_IT_LIM_FEAS
+	 || lpi->solstat == CPX_TIME_LIM_FEAS
+         || lpi->solstat == CPX_NUM_BEST_FEAS
+	 || lpi->solstat == CPX_ABORT_FEAS ) );
+}
 
-   restat = CPXgetcolname(cpxenv, cpxlpptr, mip->cname, NULL, 0, &surplus, 0, mip->ncol - 1);
-   if( restat != 0 && restat != CPXERR_NEGATIVE_SURPLUS )
-      goto ERROR;
+Bool SCIPisStable(                      /**< returns TRUE iff actual LP basis is stable */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   assert(surplus <= 0);
-   mip->cstoresz = -surplus;
-   allocMemoryArray(mip->cstore, mip->cstoresz);
-   if( mip->cstore == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
+   return( isValidSolution(lpi)
+      && lpi->solstat != CPX_NUM_BEST_FEAS
+      && lpi->solstat != CPX_NUM_BEST_INFEAS
+      && lpi->solstat != CPX_OPTIMAL_INFEAS );
+}
 
-   restat = CPXgetcolname(cpxenv, cpxlpptr, mip->cname, mip->cstore, mip->cstoresz, &surplus, 0, mip->ncol - 1);
-   if( restat != 0 )
-      goto ERROR;
-   assert(surplus == 0);
+Bool SCIPisLPError(                     /**< returns TRUE iff an error occured while solving the LP */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   /* get number of rows */
-   mip->nrow = CPXgetnumrows(cpxenv, cpxlpptr);
+   return !isValidSolution(lpi);
+}
 
-#if 0	    /* The unpresolved matrix is not needed in row form */
-   /* get matrix in row form */
-   allocMemory(mip->row);
-   if( mip->row == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-   allocMemoryArray(mip->row->pnt, mip->nrow + 1);
-   allocMemoryArray(mip->row->ind, numnz);
-   allocMemoryArray(mip->row->val, numnz);
-   if( mip->row->pnt == NULL || mip->row->ind == NULL || mip->row->val == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-   restat = CPXgetrows(cpxenv, cpxlpptr, &retnumnz, mip->row->pnt, mip->row->ind,
-      mip->row->val, numnz, &surplus, 0, mip->nrow - 1);
-   if( restat != 0 )
-      goto ERROR;
-   assert(retnumnz == numnz && surplus == 0);
-   mip->row->pnt[mip->nrow] = numnz;
-#else
-   mip->row = NULL;
-#endif
+Bool SCIPisObjlimExc(                   /**< returns TRUE iff the objective limit was reached */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   /* get objective sense */
-   mip->objsen = CPXgetobjsen(cpxenv, cpxlpptr);
-   mip->objoff = 0.0;
+   return( isUnboundedSolution(lpi)
+      || lpi->solstat == CPX_UNBOUNDED
+      || lpi->solstat == CPX_OBJ_LIM );
+}
 
-   /* get right hand sides */
-   allocMemoryArray(mip->rhs, mip->nrow);
-   if( mip->rhs == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
+Bool SCIPisIterlimExc(                  /**< returns TRUE iff the iteration limit was reached */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   restat = CPXgetrhs(cpxenv, cpxlpptr, mip->rhs, 0, mip->nrow - 1);
-   if( restat != 0 )
-      goto ERROR;
+   return( lpi->solstat == CPX_IT_LIM_FEAS
+      || lpi->solstat == CPX_IT_LIM_INFEAS );
+}
 
-   /* get constraint senses */
-   allocMemoryArray(mip->sen, mip->nrow);
-   if( mip->sen == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
+Bool SCIPisTimelimExc(                  /**< returns TRUE iff the time limit was reached */
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
 
-   restat = CPXgetsense(cpxenv, cpxlpptr, mip->sen, 0, mip->nrow - 1);
-   if( restat != 0 )
-      goto ERROR;
-
-   /* get row names */
-   allocMemoryArray(mip->rname, mip->nrow);
-   if( mip->rname == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-
-   restat = CPXgetrowname(cpxenv, cpxlpptr, mip->rname, NULL, 0, &surplus, 0, mip->nrow - 1);
-   if( restat != 0 && restat != CPXERR_NEGATIVE_SURPLUS )
-      goto ERROR;
-
-   assert(surplus <= 0);
-   mip->rstoresz = -surplus;
-   allocMemoryArray(mip->rstore, mip->rstoresz);
-   if( mip->rstore == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-
-   restat = CPXgetrowname(cpxenv, cpxlpptr, mip->rname, mip->rstore, mip->rstoresz, &surplus, 0, mip->nrow - 1);
-   if( restat != 0 )
-      goto ERROR;
-   assert(surplus == 0);
-
-   /* get range values for ranged rows */
-   allocMemoryArray(mip->rngval, mip->nrow);
-   if( mip->rngval == NULL )
-   {
-      sipstat = SIP_NOMEMORY;
-      goto ERROR;
-   }
-
-   restat = CPXgetrngval(cpxenv, cpxlpptr, mip->rngval, 0, mip->nrow - 1);
-   if( restat == CPXERR_NO_RNGVAL )
-      for( i = 0; i < mip->nrow; ++i )
-	 mip->rngval[i] = 0.0;
-   else if( restat != 0 )
-      goto ERROR;
-
-   SIPfreeLP(stderr, set->inface->lp, &siplp);
-   return SIP_OKAY;
-
- ERROR:
-   if( restat != 0 )
-      printf( "Error (CPLEX:%d) reading file <%s>!\n", restat, filename );
-   else
-      printf( "Error (SIP:%d) reading file <%s>!\n", sipstat, filename );
-   if( siplp != NULL )
-      SIPfreeLP(stderr, set->inface->lp, &siplp);
-
-   return sipstat;
+   return( lpi->solstat == CPX_TIME_LIM_FEAS
+      || lpi->solstat == CPX_TIME_LIM_INFEAS );
 }
 
 
-#endif
+static 
+int colpacketNum(                       /**< returns the number of packets needed to store column packet information */
+   int              ncol                /**< number of columns to store */
+   )
+{
+   return (ncol+COLS_PER_PACKET-1)/COLS_PER_PACKET;
+}
+
+static 
+int rowpacketNum(                       /**< returns the number of packets needed to store row packet information */
+   int              nrow                /**< number of rows to store */
+   )
+{
+   return (nrow+ROWS_PER_PACKET-1)/ROWS_PER_PACKET;
+}
+
+static
+void packLPState(                       /**< store row and column basis status in a packed LP state object */
+   LPSTATE*        lpstate,             /**< pointer to LP state data */
+   const int*      cstat,               /**< basis status of columns in unpacked format */
+   const int*      rstat                /**< basis status of rows in unpacked format */
+   )
+{
+   assert(lpstate != NULL);
+   assert(lpstate->packcstat != NULL);
+   assert(lpstate->packrstat != NULL);
+
+   SCIPencodeDualBit(cstat, lpstate->packcstat, lpstate->ncol);
+   SCIPencodeSingleBit(rstat, lpstate->packrstat, lpstate->nrow);
+}
+
+static
+void unpackLPState(                     /**< unpack row and column basis status from a packed LP state object */
+   const LPSTATE*  lpstate,             /**< pointer to LP state data */
+   int*            cstat,               /**< buffer for storing basis status of columns in unpacked format */
+   int*            rstat                /**< buffer for storing basis status of rows in unpacked format */
+   )
+{
+   assert(lpstate != NULL);
+   assert(lpstate->packcstat != NULL);
+   assert(lpstate->packrstat != NULL);
+
+   SCIPdecodeDualBit(lpstate->packcstat, cstat, lpstate->ncol);
+   SCIPdecodeSingleBit(lpstate->packrstat, rstat, lpstate->nrow);
+}
+
+static
+LPSTATE* createLPState(
+   MEM*             mem,                /**< block memory buffers */
+   int              ncol,               /**< number of columns to store */
+   int              nrow                /**< number of rows to store */
+   )
+{
+   LPSTATE* lpstate;
+
+   assert(mem != NULL);
+   assert(ncol >= 0);
+   assert(nrow >= 0);
+
+   ALLOC_NULL( allocBlockMemory(mem->statemem, lpstate) );
+   ALLOC_NULL( allocBlockMemoryArray(mem->statemem, lpstate->packcstat, colpacketNum(ncol)) );
+   ALLOC_NULL( allocBlockMemoryArray(mem->statemem, lpstate->packrstat, rowpacketNum(nrow)) );
+   lpstate->dnorm = NULL;
+
+   return lpstate;
+}
+
+static
+void freeLPState(
+   MEM*             mem,                /**< block memory buffers */
+   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(mem != NULL);
+   assert(lpstate != NULL);
+   assert(*lpstate != NULL);
+   assert((*lpstate)->numuses == 0);
+
+   freeBlockMemoryArray(mem->statemem, (*lpstate)->packcstat, colpacketNum((*lpstate)->ncol));
+   freeBlockMemoryArray(mem->statemem, (*lpstate)->packrstat, rowpacketNum((*lpstate)->nrow));
+   freeBlockMemoryArrayNull(mem->statemem, (*lpstate)->dnorm, (*lpstate)->ncol);
+   freeBlockMemory(mem->statemem, *lpstate);
+}
+
+RETCODE SCIPsaveLPState(                /**< stores LP state (like basis information) */
+   MEM*             mem,                /**< block memory buffers */
+   LPI*             lpi,                /**< LP interface structure */
+   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   )
+{
+   int  ncol;
+   int  nrow;
+   int* cstat;
+   int* rstat;
+
+   assert(mem != NULL);
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpstate != NULL);
+
+   ncol = CPXgetnumcols(cpxenv, lpi->cpxlp);
+   nrow = CPXgetnumrows(cpxenv, lpi->cpxlp);
+   assert(0 <= ncol && ncol < SCIP_MAXNCOL);
+   assert(0 <= nrow && nrow < SCIP_MAXNROW);
+   
+   /* allocate lpstate data */
+   ALLOC_OKAY( *lpstate = createLPState(mem, ncol, nrow) );
+
+   /* allocate temporary buffer for storing uncompressed basis information */
+   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, cstat, ncol) );
+   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, rstat, nrow) );
+
+   if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
+   {
+      ALLOC_OKAY( allocBlockMemoryArray(mem->statemem, (*lpstate)->dnorm, ncol) );
+      CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, cstat, rstat, (*lpstate)->dnorm) );
+   }
+   else
+   {
+      (*lpstate)->dnorm = NULL;
+      CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, cstat, rstat) );
+   }
+
+   /* fill LP state data */
+   (*lpstate)->ncol = ncol;
+   (*lpstate)->nrow = nrow;
+   packLPState(*lpstate, cstat, rstat);
+
+   /* free temporary memory */
+   freeBlockMemoryArray(mem->tempmem, cstat, ncol);
+   freeBlockMemoryArray(mem->tempmem, rstat, nrow);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPloadLPState(                /**< loads LP state (like basis information) into solver */
+   MEM*             mem,                /**< block memory buffers */
+   LPI*             lpi,                /**< LP interface structure */
+   LPSTATE*         lpstate             /**< LP state information (like basis information) */
+   )
+{
+   int  pricing;
+   int* cstat;
+   int* rstat;
+
+   assert(mem != NULL);
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpstate != NULL);
+   assert(lpstate->ncol == CPXgetnumcols(cpxenv, lpi->cpxlp));
+   assert(lpstate->nrow == CPXgetnumrows(cpxenv, lpi->cpxlp));
+
+   /* allocate temporary buffer for storing uncompressed basis information */
+   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, cstat, lpstate->ncol) );
+   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, rstat, lpstate->nrow) );
+
+   unpackLPState(lpstate, cstat, rstat);
+   if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP && lpstate->dnorm != NULL )
+   {
+      CHECK_ZERO( CPXcopybasednorms(cpxenv, lpi->cpxlp, cstat, rstat, lpstate->dnorm) );
+   }
+   else
+   {
+      CHECK_ZERO( CPXcopybase(cpxenv, lpi->cpxlp, cstat, rstat) );
+   }
+
+   /* free temporary memory */
+   freeBlockMemoryArray(mem->tempmem, cstat, lpstate->ncol);
+   freeBlockMemoryArray(mem->tempmem, rstat, lpstate->nrow);
+
+   return SCIP_OKAY;
+}
+
+void SCIPcaptureLPState(                /**< increases usage counter of LP state */
+   LPSTATE*         lpstate             /**< LP state information (like basis information) */
+   )
+{
+   assert(lpstate != NULL);
+   assert(lpstate->numuses >= 0);
+
+   lpstate->numuses++;
+}
+
+void SCIPreleaseLPState(                /**< decreases usage counter of LP state, and frees memory if necessary */
+   MEM*             mem,                /**< block memory buffers */
+   LPSTATE**        lpstate             /**< LP state information (like basis information) */
+   )
+{
+   assert(mem != NULL);
+   assert(lpstate != NULL);
+   assert(*lpstate != NULL);
+   assert((*lpstate)->numuses >= 1);
+
+   (*lpstate)->numuses--;
+   if( (*lpstate)->numuses == 0 )
+      freeLPState(mem, lpstate);
+}
+
+RETCODE SCIPwriteLPState(               /**< writes LP state (like basis information) to a file */
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXmbasewrite(cpxenv, lpi->cpxlp, (char*)fname) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPwriteLP(                    /**< writes LP to a file */
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXlpwrite(cpxenv, lpi->cpxlp, (char*)fname) );
+
+   return SCIP_OKAY;
+}

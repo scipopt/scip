@@ -31,21 +31,43 @@
 
 enum Nodetype
 {
-   SCIP_NODETYPE_LEAF    = 0,           /**< unsolved child node without children */
-   SCIP_NODETYPE_FORK    = 1            /**< solved parent node with children */
+   SCIP_NODETYPE_LEAF    = 0,           /**< unsolved leaf of the tree */
+   SCIP_NODETYPE_FORK    = 1,           /**< solved fork, where rows were only added to the father */
+   SCIP_NODETYPE_SUBROOT = 2            /**< solved fork, where rows were added, deleted, or rearranged */
 };
 
 typedef enum Nodetype NODETYPE;         /**< type of node */
 typedef struct Leaf LEAF;               /**< data for leaf nodes */
 typedef struct Fork FORK;               /**< data for fork nodes */
+typedef struct Subroot SUBROOT;         /**< data for subroot nodes */
 typedef struct Node NODE;               /**< node data structure */
 typedef struct Tree TREE;               /**< branch and bound tree */
 
 
 extern
 NODE* SCIPcreateLeaf(                   /**< creates a leaf node */
+   MEM*             mem,                /**< block memory buffers */
    NODE*            parent,             /**< parent node in the tree */
-   BASIS*           basis               /**< pointer to LP basis information */
+   LPSTATE*         lpstate             /**< pointer to LP state information */
+   );
+
+extern
+void SCIPfreeNode(                      /**< frees node */
+   MEM*             mem,                /**< block memory buffers */
+   NODE**           node                /**< node data */
+   );
+
+extern
+RETCODE SCIPleafToFork(                 /**< converts a leaf into a fork node */
+   MEM*             mem,                /**< block memory buffers */
+   NODE*            node                /**< node to convert */
+   );
+
+extern
+RETCODE SCIPforkToSubroot(              /**< converts a fork into a subroot node */
+   MEM*             mem,                /**< block memory buffers */
+   NODE*            node,               /**< node to convert */
+   LP*              lp                  /**< actual LP data */
    );
 
 

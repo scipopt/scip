@@ -26,53 +26,49 @@
 #ifndef __LP_H__
 #define __LP_H__
 
-#include "memory.h"
 #include "lpi.h"
 
 
-typedef struct Basis BASIS;             /**< compressed LP basis information */
 typedef struct Row ROW;                 /**< row of an LP */
 typedef struct RowList ROWLIST;         /**< list of LP rows */
 
+struct Lp                               /**< actual LP data */
+{
+   LPI*             lpi;                /**< LP solver interface */
+   ROW*             rows;               /**< array with actual LP rows in correct order */
+   int              rowsize;            /**< available slots in row vector */
+   int              ncols;              /**< actual number of LP columns */
+   int              nrows;              /**< actual number of LP rows (number of used slots in row vector) */
+};
+typedef struct Lp LP;
+
 
 extern
-void SCIPunpackBasis(                   /**< unpack row and column basis status from a packed basis object */
-   const BASIS*    basis,               /**< pointer to basis data */
-   int             ncol,                /**< number of columns in the basis */
-   int             nrow,                /**< number of rows in the basis */
-   BASESTAT*       cstat,               /**< buffer for storing basis status of columns in unpacked format */
-   BASESTAT*       rstat                /**< buffer for storing basis status of rows in unpacked format */
+ROW* SCIPcreateRow(                     /**< creates an LP row */
+   MEM*             mem,                /**< block memory buffers */
+   int              len,                /**< number of nonzeros in the row */
+   int*             ind,                /**< column indices of row entries */
+   double*          val,                /**< coefficients of row entries */
+   Bool             equality,           /**< TRUE iff row is an equality, FALSE iff row is a less or equal inequality */
+   double           rhs,                /**< right hand side of row */
+   double           epsilon             /**< maximal normed violation of row */
    );
 
 extern
-BASIS* SCIPcreateBasis(                 /**< creates a basis object */
-   MEMHDR*         memhdr,              /**< block memory header */
-   int             ncol,                /**< number of columns in the basis */
-   int             nrow,                /**< number of rows in the basis */
-   const BASESTAT* cstat,               /**< basis status of columns in unpacked format */
-   const BASESTAT* rstat,               /**< basis status of rows in unpacked format */
-   const double*   dnorm                /**< optional dual norm vector (or NULL) */
+void SCIPfreeRow(                       /**< frees an LP row */
+   MEM*             mem,                /**< block memory buffers */
+   ROW**            row                 /**< pointer to LP row */
    );
 
 extern
-void SCIPfreeBasis(                     /**< free memory of basis data */
-   MEMHDR*         memhdr,              /**< block memory header */
-   BASIS**         basis,               /**< pointer to basis data */
-   int             ncol,                /**< number of columns in the basis */
-   int             nrow                 /**< number of rows in the basis */
+void SCIPcaptureRow(                    /**< increases usage counter of LP row */
+   ROW*             row                 /**< LP row */
    );
 
 extern
-void SCIPuseBasis(                      /**< announce, that the basis is referenced one more time */
-   BASIS*          basis                /**< basis data */
-   );
-
-extern
-void SCIPdiscardBasis(                  /**< announce, that basis is referenced one time less, free it if no longer used */
-   MEMHDR*         memhdr,              /**< block memory header */
-   BASIS**         basis,               /**< pointer to basis data */
-   int             ncol,                /**< number of columns in the basis */
-   int             nrow                 /**< number of rows in the basis */
+void SCIPreleaseRow(                    /**< decreases usage counter of LP row, and frees memory if necessary */
+   MEM*             mem,                /**< block memory buffers */
+   ROW**            row                 /**< pointer to LP row */
    );
 
 

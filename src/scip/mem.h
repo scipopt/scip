@@ -16,27 +16,27 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   domain.h
- * @brief  datastructures and methods for managing domains of variables
+/**@file   mem.h
+ * @brief  block memory pools
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __DOMAIN_H__
-#define __DOMAIN_H__
+#ifndef __MEM_H__
+#define __MEM_H__
 
-enum BoundType
+#include "memory.h"
+
+struct Mem                              /**< various block memory buffers */
 {
-   SCIP_BOUNDTYPE_LOWER = 0,            /**< lower bound */
-   SCIP_BOUNDTYPE_UPPER = 1             /**< upper bound */
+   MEMHDR*          treemem;            /**< ptr to memory blocks for the tree */
+   MEMHDR*          statemem;           /**< ptr to memory blocks for LP states */
+   MEMHDR*          lpmem;              /**< ptr to memory blocks for LP data */
+   MEMHDR*          primalmem;          /**< ptr to memory blocks for primal solutions */
+   MEMHDR*          tempmem;            /**< ptr to memory blocks for short living objects */
 };
-typedef enum BoundType BOUNDTYPE;
+typedef struct Mem MEM;
 
-typedef struct Domain DOMAIN;           /**< datastructures for storing domains of variables */
-typedef struct Holelist HOLELIST;       /**< list of holes in a domain of an integer variable */
-typedef struct DomainChg DOMAINCHG;     /**< changes in domains of variables */
-typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
-typedef struct HoldChg HOLECHG;         /**< changes in holelist of variables */
 
 #endif
