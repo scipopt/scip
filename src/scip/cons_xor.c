@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.16 2004/12/06 16:43:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.17 2004/12/10 12:54:23 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -814,9 +814,9 @@ RETCODE propagateCons(
  *   (1) all except one variable fixed  =>  fix remaining variable
  */
 static
-RETCODE resolveConflict(
+RETCODE resolvePropagation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< xor constraint to be processed */
+   CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the value */
    BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
@@ -1277,7 +1277,7 @@ DECL_CONSPRESOL(consPresolXor)
 static
 DECL_CONSRESPROP(consRespropXor)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
+   CHECK_OKAY( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.125 2004/12/06 14:11:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.126 2004/12/10 12:54:24 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2241,11 +2241,72 @@ int SCIPsetGetSepaMaxcuts(
 
    
 
-#ifndef NDEBUG
+/*
+ * simple functions implemented as defines
+ */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
+
+#undef SCIPsetInfinity
+#undef SCIPsetEpsilon
+#undef SCIPsetSumepsilon
+#undef SCIPsetFeastol
+#undef SCIPsetDualfeastol
+#undef SCIPsetPseudocosteps
+#undef SCIPsetPseudocostdelta
+#undef SCIPsetIsEQ
+#undef SCIPsetIsLT
+#undef SCIPsetIsLE
+#undef SCIPsetIsGT
+#undef SCIPsetIsGE
+#undef SCIPsetIsInfinity
+#undef SCIPsetIsZero
+#undef SCIPsetIsPositive
+#undef SCIPsetIsNegative
+#undef SCIPsetIsIntegral
+#undef SCIPsetIsScalingIntegral
+#undef SCIPsetIsFracIntegral
+#undef SCIPsetFloor
+#undef SCIPsetCeil
+#undef SCIPsetFrac
+#undef SCIPsetIsSumEQ
+#undef SCIPsetIsSumLT
+#undef SCIPsetIsSumLE
+#undef SCIPsetIsSumGT
+#undef SCIPsetIsSumGE
+#undef SCIPsetIsSumZero
+#undef SCIPsetIsSumPositive
+#undef SCIPsetIsSumNegative
+#undef SCIPsetIsFeasEQ
+#undef SCIPsetIsFeasLT
+#undef SCIPsetIsFeasLE
+#undef SCIPsetIsFeasGT
+#undef SCIPsetIsFeasGE
+#undef SCIPsetIsFeasZero
+#undef SCIPsetIsFeasPositive
+#undef SCIPsetIsFeasNegative
+#undef SCIPsetIsFeasIntegral
+#undef SCIPsetIsFeasFracIntegral
+#undef SCIPsetFeasFloor
+#undef SCIPsetFeasCeil
+#undef SCIPsetFeasFrac
+#undef SCIPsetIsLbBetter
+#undef SCIPsetIsUbBetter
+#undef SCIPsetIsEfficacious
+#undef SCIPsetIsRelEQ
+#undef SCIPsetIsRelLT
+#undef SCIPsetIsRelLE
+#undef SCIPsetIsRelGT
+#undef SCIPsetIsRelGE
+#undef SCIPsetIsSumRelEQ
+#undef SCIPsetIsSumRelLT
+#undef SCIPsetIsSumRelLE
+#undef SCIPsetIsSumRelGT
+#undef SCIPsetIsSumRelGE
 
 /** returns value treated as zero */
 Real SCIPsetEpsilon(
@@ -2957,5 +3018,3 @@ Bool SCIPsetIsSumRelGE(
 
    return !EPSN(diff, set->num_sumepsilon);
 }
-
-#endif

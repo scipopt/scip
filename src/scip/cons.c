@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.103 2004/12/09 10:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.104 2004/12/10 12:54:23 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4150,11 +4150,60 @@ RETCODE SCIPconsSetChecked(
 }
 
 
-#ifndef NDEBUG
+
+
+/*
+ * Hash functions
+ */
+
+/** gets the key (i.e. the name) of the given constraint */
+DECL_HASHGETKEY(SCIPhashGetKeyCons)
+{  /*lint --e{715}*/
+   CONS* cons = (CONS*)elem;
+
+   assert(cons != NULL);
+   return cons->name;
+}
+
+
+
+
+/*
+ * simple functions implemented as defines
+ */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
+
+#undef SCIPconsGetName
+#undef SCIPconsGetHdlr
+#undef SCIPconsGetData
+#undef SCIPconsGetNUses
+#undef SCIPconsGetActiveDepth
+#undef SCIPconsIsActive
+#undef SCIPconsIsEnabled
+#undef SCIPconsIsPropagationEnabled
+#undef SCIPconsIsDeleted
+#undef SCIPconsIsObsolete
+#undef SCIPconsGetAge
+#undef SCIPconsIsInitial
+#undef SCIPconsIsSeparated
+#undef SCIPconsIsEnforced
+#undef SCIPconsIsChecked
+#undef SCIPconsIsPropagated
+#undef SCIPconsIsGlobal
+#undef SCIPconsIsLocal
+#undef SCIPconsIsModifiable
+#undef SCIPconsIsRemoveable
+#undef SCIPconsIsInProb
+#undef SCIPconsIsOriginal
+#undef SCIPconsIsTransformed
+#undef SCIPconsIsLockedPos
+#undef SCIPconsIsLockedNeg
+#undef SCIPconsIsLocked
 
 /** returns the name of the constraint */
 const char* SCIPconsGetName(
@@ -4418,22 +4467,4 @@ Bool SCIPconsIsLocked(
    assert(cons != NULL);
 
    return (cons->nlockspos > 0 || cons->nlocksneg > 0);
-}
-
-#endif
-
-
-
-
-/*
- * Hash functions
- */
-
-/** gets the key (i.e. the name) of the given constraint */
-DECL_HASHGETKEY(SCIPhashGetKeyCons)
-{  /*lint --e{715}*/
-   CONS* cons = (CONS*)elem;
-
-   assert(cons != NULL);
-   return cons->name;
 }

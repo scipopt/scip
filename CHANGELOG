@@ -23,6 +23,10 @@ interface:
   methods return TRUE, if a ray exists and the solver can return it;
   new methods SCIPlpiExistsPrimalRay() and SCIPlpiExistsDualRay() check whether a ray exists without checking, if
   the solver knows and can return the ray
+- new method SCIPvarWasFixedAtIndex()
+- new method SCIPaddConflictBd()
+- even in optimized mode, the simple functions that are implemented as defines in the include files exist in the library,
+  s.t. one can include the include files without NDEBUG and use the optimized library
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.138 2004/12/09 10:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.139 2004/12/10 12:54:23 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2142,7 +2142,7 @@ RETCODE applyFixings(
 static
 RETCODE addConflictBounds(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< xor constraint to be processed */
+   CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced, or NULL */
    BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    Bool             reasonisrhs         /**< is the right hand side responsible for the bound change? */
@@ -2196,14 +2196,14 @@ RETCODE addConflictBounds(
    return SCIP_OKAY;
 }
 
-/** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
+/** resolves a propagation on the given variable by supplying the variables needed for applying the corresponding
  *  propagation rule (see propagateCons()):
  *   (1) activity residuals of all other variables tighten bounds of single variable
  */
 static
-RETCODE resolveConflict(
+RETCODE resolvePropagation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< xor constraint to be processed */
+   CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
    BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -2269,7 +2269,7 @@ RETCODE resolveConflict(
 static
 RETCODE analyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< xor constraint to be processed */
+   CONS*            cons,               /**< conflict detecting constraint */
    Bool             reasonisrhs         /**< is the right hand side responsible for the conflict? */
    )
 {
@@ -5091,7 +5091,7 @@ DECL_CONSPRESOL(consPresolLinear)
 static
 DECL_CONSRESPROP(consRespropLinear)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
+   CHECK_OKAY( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

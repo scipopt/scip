@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.127 2004/12/07 14:36:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.128 2004/12/10 12:54:25 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6099,554 +6099,6 @@ RETCODE SCIPvarGetProbvarSum(
    return SCIP_OKAY;
 }
 
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** get name of variable */
-const char* SCIPvarGetName(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->name;
-}
-
-/** returns the user data of the variable */
-VARDATA* SCIPvarGetData(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vardata;
-}
-
-/** gets status of variable */
-VARSTATUS SCIPvarGetStatus(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (VARSTATUS)(var->varstatus);
-}
-
-/** returns whether the variable belongs to the original problem */
-Bool SCIPvarIsOriginal(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
-
-   return (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
-      || (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && SCIPvarGetStatus(var->negatedvar) == SCIP_VARSTATUS_ORIGINAL));
-}
-
-/** returns whether the variable belongs to the transformed problem */
-Bool SCIPvarIsTransformed(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
-
-   return (SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL
-      && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_ORIGINAL));
-}
-
-/** returns whether the variable was created by negation of a different variable */
-Bool SCIPvarIsNegated(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-}
-
-/** gets type of variable */
-VARTYPE SCIPvarGetType(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (VARTYPE)(var->vartype);
-}
-
-/** returns whether variable is of integral type (binary, integer, or implicit integer) */
-Bool SCIPvarIsIntegral(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (var->vartype != SCIP_VARTYPE_CONTINUOUS);
-}
-
-/** returns whether variable's column should be present in the initial root LP */
-Bool SCIPvarIsInitial(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->initial;
-}
-
-/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
-Bool SCIPvarIsRemoveable(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->removeable;
-}
-
-/** returns whether variable is an active (neither fixed nor aggregated) variable */
-Bool SCIPvarIsActive(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (var->probindex >= 0);
-}
-
-/** gets unique index of variable */
-int SCIPvarGetIndex(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->index;
-}
-
-/** gets position of variable in problem, or -1 if variable is not active */
-int SCIPvarGetProbindex(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->probindex;
-}
-
-/** gets transformed variable of ORIGINAL variable */
-VAR* SCIPvarGetTransVar(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
-
-   return var->data.transvar;
-}
-
-/** gets column of COLUMN variable */
-COL* SCIPvarGetCol(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-
-   return var->data.col;
-}
-
-/** returns whether the variable is a COLUMN variable that is member of the current LP */
-Bool SCIPvarIsInLP(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return (var->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(var->data.col));
-}
-
-/** gets aggregation variable y of an aggregated variable x = a*y + c */
-VAR* SCIPvarGetAggrVar(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
-
-   return var->data.aggregate.var;
-}
-
-/** gets aggregation scalar a of an aggregated variable x = a*y + c */
-Real SCIPvarGetAggrScalar(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
-
-   return var->data.aggregate.scalar;
-}
-
-/** gets aggregation constant c of an aggregated variable x = a*y + c */
-Real SCIPvarGetAggrConstant(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
-
-   return var->data.aggregate.constant;
-}
-
-/** gets number n of aggregation variables of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-int SCIPvarGetMultaggrNVars(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
-
-   return var->data.multaggr.nvars;
-}
-
-/** gets vector of aggregation variables y of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-VAR** SCIPvarGetMultaggrVars(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
-
-   return var->data.multaggr.vars;
-}
-
-/** gets vector of aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-Real* SCIPvarGetMultaggrScalars(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
-
-   return var->data.multaggr.scalars;
-}
-
-/** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
-Real SCIPvarGetMultaggrConstant(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
-
-   return var->data.multaggr.constant;
-}
-
-/** gets the negation of the given variable; may return NULL, if no negation is existing yet */
-VAR* SCIPvarGetNegatedVar(
-   VAR*             var                 /**< negated problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->negatedvar;
-}
-
-/** gets the negation variable x of a negated variable x' = offset - x */
-VAR* SCIPvarGetNegationVar(
-   VAR*             var                 /**< negated problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-
-   return var->negatedvar;
-}
-
-/** gets the negation offset of a negated variable x' = offset - x */
-Real SCIPvarGetNegationConstant(
-   VAR*             var                 /**< negated problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-
-   return var->data.negate.constant;
-}
-
-/** gets objective function value of variable */
-Real SCIPvarGetObj(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->obj;
-}
-   
-/** gets global lower bound of variable */
-Real SCIPvarGetLbGlobal(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->glbdom.lb;
-}
-   
-/** gets global upper bound of variable */
-Real SCIPvarGetUbGlobal(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->glbdom.ub;
-}
-
-/** gets current lower bound of variable */
-Real SCIPvarGetLbLocal(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->locdom.lb;
-}
-   
-/** gets current upper bound of variable */
-Real SCIPvarGetUbLocal(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->locdom.ub;
-}
-
-/** gets the branch factor of the variable; this value can be used in the branching methods to scale the score
- *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
- */
-Real SCIPvarGetBranchFactor(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->branchfactor;
-}
-
-/** gets the branch priority of the variable; variables with higher priority should always be prefered to variables
- *  with lower priority
- */
-int SCIPvarGetBranchPriority(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->branchpriority;
-}
-
-/** gets the preferred branch direction of the variable (downwards, upwards, or auto) */
-BRANCHDIR SCIPvarGetBranchDirection(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->branchdirection;
-}
-
-/** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
-int SCIPvarGetNVlbs(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vlbs != NULL ? var->vlbs->len : 0;
-}
-
-/** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
-VAR** SCIPvarGetVlbVars(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vlbs != NULL ? var->vlbs->vars : NULL;
-}
-
-/** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
-Real* SCIPvarGetVlbCoefs(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vlbs != NULL ? var->vlbs->coefs : NULL;
-}
-
-/** gets array with bounding constants d_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
-Real* SCIPvarGetVlbConstants(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vlbs != NULL ? var->vlbs->constants : NULL;
-}
-
-/** gets number of variable upper bounds x <= b_i*z_i + d_i of given variable x */
-int SCIPvarGetNVubs(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vubs != NULL ? var->vubs->len : 0;
-}
-
-/** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
-VAR** SCIPvarGetVubVars(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vubs != NULL ? var->vubs->vars : NULL;
-}
-
-/** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
-Real* SCIPvarGetVubCoefs(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vubs != NULL ? var->vubs->coefs : NULL;
-}
-
-/** gets array with bounding constants d_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
-Real* SCIPvarGetVubConstants(
-   VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->vubs != NULL ? var->vubs->constants : NULL;
-}
-
-/** gets number of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x, 
- *  there are no implications for nonbinary variable x
- */
-int SCIPvarGetNimpl(
-   VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
-   )
-{
-   assert(var != NULL);
-
-   return var->implics != NULL ? var->implics->nimpls[i] : 0;
-}
-
-/** gets array with implication variables y of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
- *  there are no implications for nonbinary variable x
- */
-VAR** SCIPvarGetImplvars(
-   VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
-   )
-{
-   assert(var != NULL);
-
-   return var->implics != NULL ? var->implics->implvars[i] : NULL;
-}
-
-/** gets array with implication types of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x
- *  (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
- *  there are no implications for nonbinary variable x
- */
-BOUNDTYPE* SCIPvarGetImpltypes(
-   VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
-   )
-{
-   assert(var != NULL);
-
-   return var->implics != NULL ? var->implics->impltypes[i] : NULL;
-}
-
-/** gets array with implication bounds b of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
- *  there are no implications for nonbinary variable x
- */
-Real* SCIPvarGetImplbounds(
-   VAR*             var,                /**< problem variable */
-   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
-   )
-{
-   assert(var != NULL);
-
-   return var->implics != NULL ? var->implics->implbounds[i] : NULL;
-}
-
-/** includes event handler with given data in variable's event filter */
-RETCODE SCIPvarCatchEvent(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   EVENTTYPE        eventtype,          /**< event type to catch */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
-   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
-   assert(var->eventfilter != NULL);
-   assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
-   assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
-
-   debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
-      eventtype, var->name, eventhdlr, eventdata);
-
-   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
-
-   return SCIP_OKAY;
-}
-
-/** deletes event handler with given data from variable's event filter */
-RETCODE SCIPvarDropEvent(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
-   int              filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
-   assert(var->eventfilter != NULL);
-
-   debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
-
-   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
-
-   return SCIP_OKAY;
-}
-
-#endif
-
 /** gets objective value of variable in current LP; the value can be different from the bound stored in the variable's own
  *  data due to diving, that operate only on the LP without updating the variables
  */
@@ -8400,6 +7852,23 @@ Real SCIPvarGetBdAtIndex(
    }
 }
 
+/** returns whether the binary variable was fixed at the time given by the bound change index */
+Bool SCIPvarWasFixedAtIndex(
+   VAR*             var,                /**< problem variable */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   /* check the current bounds first in order to decide at which bound change information we have to look
+    * (which is expensive because we have to follow the aggregation tree to the active variable)
+    */
+   return ((SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetLbAtIndex(var, bdchgidx, after) > 0.5)
+      || (SCIPvarGetUbLocal(var) < 0.5 && SCIPvarGetUbAtIndex(var, bdchgidx, after) < 0.5));
+}
+
 /** bound change index representing the initial time before any bound changes took place */
 static BDCHGIDX initbdchgidx = {-2, 0};
 
@@ -8498,11 +7967,654 @@ Bool SCIPvarWasFixedEarlier(
    return SCIPbdchgidxIsEarlier(bdchgidx1, bdchgidx2);
 }
 
-#ifndef NDEBUG
+
+
+/*
+ * Hash functions
+ */
+
+/** gets the key (i.e. the name) of the given variable */
+DECL_HASHGETKEY(SCIPhashGetKeyVar)
+{  /*lint --e{715}*/
+   VAR* var = (VAR*)elem;
+
+   assert(var != NULL);
+   return var->name;
+}
+
+
+
+
+/*
+ * simple functions implemented as defines
+ */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
+
+#undef SCIPvarGetName
+#undef SCIPvarGetData
+#undef SCIPvarGetStatus
+#undef SCIPvarIsOriginal
+#undef SCIPvarIsTransformed
+#undef SCIPvarIsNegated
+#undef SCIPvarGetType
+#undef SCIPvarIsIntegral
+#undef SCIPvarIsInitial
+#undef SCIPvarIsRemoveable
+#undef SCIPvarIsActive
+#undef SCIPvarGetIndex
+#undef SCIPvarGetProbindex
+#undef SCIPvarGetTransVar
+#undef SCIPvarGetCol
+#undef SCIPvarIsInLP
+#undef SCIPvarGetAggrVar
+#undef SCIPvarGetAggrScalar
+#undef SCIPvarGetAggrConstant
+#undef SCIPvarGetMultaggrNVars
+#undef SCIPvarGetMultaggrVars
+#undef SCIPvarGetMultaggrScalars
+#undef SCIPvarGetMultaggrConstant
+#undef SCIPvarGetNegatedVar
+#undef SCIPvarGetNegationVar
+#undef SCIPvarGetNegationConstant
+#undef SCIPvarGetObj
+#undef SCIPvarGetLbGlobal
+#undef SCIPvarGetUbGlobal
+#undef SCIPvarGetLbLocal
+#undef SCIPvarGetUbLocal
+#undef SCIPvarGetBranchFactor
+#undef SCIPvarGetBranchPriority
+#undef SCIPvarGetBranchDirection
+#undef SCIPvarGetNVlbs
+#undef SCIPvarGetVlbVars
+#undef SCIPvarGetVlbCoefs
+#undef SCIPvarGetVlbConstants
+#undef SCIPvarGetNVubs
+#undef SCIPvarGetVubVars
+#undef SCIPvarGetVubCoefs
+#undef SCIPvarGetVubConstants
+#undef SCIPvarGetNimpl
+#undef SCIPvarGetImplvars
+#undef SCIPvarGetImpltypes
+#undef SCIPvarGetImplbounds
+#undef SCIPvarCatchEvent
+#undef SCIPvarDropEvent
+#undef SCIPbdchgidxIsEarlierNonNull
+#undef SCIPbdchgidxIsEarlier
+#undef SCIPbdchginfoGetOldbound
+#undef SCIPbdchginfoGetNewbound
+#undef SCIPbdchginfoGetVar
+#undef SCIPbdchginfoGetChgtype
+#undef SCIPbdchginfoGetBoundtype
+#undef SCIPbdchginfoGetDepth
+#undef SCIPbdchginfoGetPos
+#undef SCIPbdchginfoGetIdx
+#undef SCIPbdchginfoGetInferVar
+#undef SCIPbdchginfoGetInferCons
+#undef SCIPbdchginfoGetInferProp
+#undef SCIPbdchginfoGetInferInfo
+#undef SCIPbdchginfoGetInferBoundtype
+#undef SCIPbdchginfoHasInferenceReason
+
+/** get name of variable */
+const char* SCIPvarGetName(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->name;
+}
+
+/** returns the user data of the variable */
+VARDATA* SCIPvarGetData(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vardata;
+}
+
+/** gets status of variable */
+VARSTATUS SCIPvarGetStatus(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (VARSTATUS)(var->varstatus);
+}
+
+/** returns whether the variable belongs to the original problem */
+Bool SCIPvarIsOriginal(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
+
+   return (var->varstatus == SCIP_VARSTATUS_ORIGINAL
+      || (var->varstatus == SCIP_VARSTATUS_NEGATED && var->negatedvar->varstatus == SCIP_VARSTATUS_ORIGINAL));
+}
+
+/** returns whether the variable belongs to the transformed problem */
+Bool SCIPvarIsTransformed(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar != NULL);
+
+   return (var->varstatus != SCIP_VARSTATUS_ORIGINAL
+      && (var->varstatus != SCIP_VARSTATUS_NEGATED || var->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL));
+}
+
+/** returns whether the variable was created by negation of a different variable */
+Bool SCIPvarIsNegated(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->varstatus == SCIP_VARSTATUS_NEGATED);
+}
+
+/** gets type of variable */
+VARTYPE SCIPvarGetType(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (VARTYPE)(var->vartype);
+}
+
+/** returns whether variable is of integral type (binary, integer, or implicit integer) */
+Bool SCIPvarIsIntegral(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->vartype != SCIP_VARTYPE_CONTINUOUS);
+}
+
+/** returns whether variable's column should be present in the initial root LP */
+Bool SCIPvarIsInitial(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->initial;
+}
+
+/** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
+Bool SCIPvarIsRemoveable(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->removeable;
+}
+
+/** returns whether variable is an active (neither fixed nor aggregated) variable */
+Bool SCIPvarIsActive(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->probindex >= 0);
+}
+
+/** gets unique index of variable */
+int SCIPvarGetIndex(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->index;
+}
+
+/** gets position of variable in problem, or -1 if variable is not active */
+int SCIPvarGetProbindex(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->probindex;
+}
+
+/** gets transformed variable of ORIGINAL variable */
+VAR* SCIPvarGetTransVar(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+
+   return var->data.transvar;
+}
+
+/** gets column of COLUMN variable */
+COL* SCIPvarGetCol(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+
+   return var->data.col;
+}
+
+/** returns whether the variable is a COLUMN variable that is member of the current LP */
+Bool SCIPvarIsInLP(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP(var->data.col));
+}
+
+/** gets aggregation variable y of an aggregated variable x = a*y + c */
+VAR* SCIPvarGetAggrVar(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_AGGREGATED);
+
+   return var->data.aggregate.var;
+}
+
+/** gets aggregation scalar a of an aggregated variable x = a*y + c */
+Real SCIPvarGetAggrScalar(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_AGGREGATED);
+
+   return var->data.aggregate.scalar;
+}
+
+/** gets aggregation constant c of an aggregated variable x = a*y + c */
+Real SCIPvarGetAggrConstant(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_AGGREGATED);
+
+   return var->data.aggregate.constant;
+}
+
+/** gets number n of aggregation variables of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+int SCIPvarGetMultaggrNVars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   return var->data.multaggr.nvars;
+}
+
+/** gets vector of aggregation variables y of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+VAR** SCIPvarGetMultaggrVars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   return var->data.multaggr.vars;
+}
+
+/** gets vector of aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+Real* SCIPvarGetMultaggrScalars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   return var->data.multaggr.scalars;
+}
+
+/** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+Real SCIPvarGetMultaggrConstant(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   return var->data.multaggr.constant;
+}
+
+/** gets the negation of the given variable; may return NULL, if no negation is existing yet */
+VAR* SCIPvarGetNegatedVar(
+   VAR*             var                 /**< negated problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->negatedvar;
+}
+
+/** gets the negation variable x of a negated variable x' = offset - x */
+VAR* SCIPvarGetNegationVar(
+   VAR*             var                 /**< negated problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+
+   return var->negatedvar;
+}
+
+/** gets the negation offset of a negated variable x' = offset - x */
+Real SCIPvarGetNegationConstant(
+   VAR*             var                 /**< negated problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus == SCIP_VARSTATUS_NEGATED);
+
+   return var->data.negate.constant;
+}
+
+/** gets objective function value of variable */
+Real SCIPvarGetObj(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->obj;
+}
+   
+/** gets global lower bound of variable */
+Real SCIPvarGetLbGlobal(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->glbdom.lb;
+}
+   
+/** gets global upper bound of variable */
+Real SCIPvarGetUbGlobal(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->glbdom.ub;
+}
+
+/** gets current lower bound of variable */
+Real SCIPvarGetLbLocal(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->locdom.lb;
+}
+   
+/** gets current upper bound of variable */
+Real SCIPvarGetUbLocal(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->locdom.ub;
+}
+
+/** gets the branch factor of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
+ */
+Real SCIPvarGetBranchFactor(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->branchfactor;
+}
+
+/** gets the branch priority of the variable; variables with higher priority should always be prefered to variables
+ *  with lower priority
+ */
+int SCIPvarGetBranchPriority(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->branchpriority;
+}
+
+/** gets the preferred branch direction of the variable (downwards, upwards, or auto) */
+BRANCHDIR SCIPvarGetBranchDirection(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->branchdirection;
+}
+
+/** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
+int SCIPvarGetNVlbs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->len : 0;
+}
+
+/** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+VAR** SCIPvarGetVlbVars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->vars : NULL;
+}
+
+/** gets array with bounding coefficients b_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVlbCoefs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->coefs : NULL;
+}
+
+/** gets array with bounding constants d_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVlbConstants(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vlbs != NULL ? var->vlbs->constants : NULL;
+}
+
+/** gets number of variable upper bounds x <= b_i*z_i + d_i of given variable x */
+int SCIPvarGetNVubs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->len : 0;
+}
+
+/** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+VAR** SCIPvarGetVubVars(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->vars : NULL;
+}
+
+/** gets array with bounding coefficients b_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVubCoefs(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->coefs : NULL;
+}
+
+/** gets array with bounding constants d_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+Real* SCIPvarGetVubConstants(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->vubs != NULL ? var->vubs->constants : NULL;
+}
+
+/** gets number of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x, 
+ *  there are no implications for nonbinary variable x
+ */
+int SCIPvarGetNimpl(
+   VAR*             var,                /**< problem variable */
+   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->implics != NULL ? var->implics->nimpls[i] : 0;
+}
+
+/** gets array with implication variables y of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
+ *  there are no implications for nonbinary variable x
+ */
+VAR** SCIPvarGetImplvars(
+   VAR*             var,                /**< problem variable */
+   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->implics != NULL ? var->implics->implvars[i] : NULL;
+}
+
+/** gets array with implication types of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x
+ *  (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
+ *  there are no implications for nonbinary variable x
+ */
+BOUNDTYPE* SCIPvarGetImpltypes(
+   VAR*             var,                /**< problem variable */
+   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->implics != NULL ? var->implics->impltypes[i] : NULL;
+}
+
+/** gets array with implication bounds b of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
+ *  there are no implications for nonbinary variable x
+ */
+Real* SCIPvarGetImplbounds(
+   VAR*             var,                /**< problem variable */
+   Bool             i                   /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->implics != NULL ? var->implics->implbounds[i] : NULL;
+}
+
+/** includes event handler with given data in variable's event filter */
+RETCODE SCIPvarCatchEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
+   assert(var->eventfilter != NULL);
+   assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
+   assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
+
+   debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
+      eventtype, var->name, eventhdlr, eventdata);
+
+   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
+
+   return SCIP_OKAY;
+}
+
+/** deletes event handler with given data from variable's event filter */
+RETCODE SCIPvarDropEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int              filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
+   assert(var->eventfilter != NULL);
+
+   debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
+
+   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
+
+   return SCIP_OKAY;
+}
+
+/** returns whether first bound change index belongs to an earlier applied bound change than second one */
+Bool SCIPbdchgidxIsEarlierNonNull(
+   BDCHGIDX*        bdchgidx1,          /**< first bound change index */
+   BDCHGIDX*        bdchgidx2           /**< second bound change index */
+   )
+{
+   assert(bdchgidx1 != NULL);
+   assert(bdchgidx1->depth >= -2);
+   assert(bdchgidx1->pos >= 0);
+   assert(bdchgidx2 != NULL);
+   assert(bdchgidx2->depth >= -2);
+   assert(bdchgidx2->pos >= 0);
+
+   return (bdchgidx1->depth < bdchgidx2->depth)
+      || (bdchgidx1->depth == bdchgidx2->depth && (bdchgidx1->pos < bdchgidx2->pos));
+}
 
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
  *  if a bound change index is NULL, the bound change index represents the current time, i.e. the time after the
@@ -8523,24 +8635,8 @@ Bool SCIPbdchgidxIsEarlier(
    else if( bdchgidx2 == NULL )
       return TRUE;
    else
-      return SCIPbdchgidxIsEarlierNonNull(bdchgidx1, bdchgidx2);
-}
-
-/** returns whether first bound change index belongs to an earlier applied bound change than second one */
-Bool SCIPbdchgidxIsEarlierNonNull(
-   BDCHGIDX*        bdchgidx1,          /**< first bound change index */
-   BDCHGIDX*        bdchgidx2           /**< second bound change index */
-   )
-{
-   assert(bdchgidx1 != NULL);
-   assert(bdchgidx1->depth >= -2);
-   assert(bdchgidx1->pos >= 0);
-   assert(bdchgidx2 != NULL);
-   assert(bdchgidx2->depth >= -2);
-   assert(bdchgidx2->pos >= 0);
-
-   return (bdchgidx1->depth < bdchgidx2->depth)
-      || (bdchgidx1->depth == bdchgidx2->depth && (bdchgidx1->pos < bdchgidx2->pos));
+      return (bdchgidx1->depth < bdchgidx2->depth)
+         || (bdchgidx1->depth == bdchgidx2->depth && (bdchgidx1->pos < bdchgidx2->pos));
 }
 
 /** returns old bound that was overwritten for given bound change information */
@@ -8692,22 +8788,3 @@ Bool SCIPbdchginfoHasInferenceReason(
    return (bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)
       || (bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && bdchginfo->inferencedata.reason.prop != NULL);
 }
-
-#endif
-
-
-
-
-/*
- * Hash functions
- */
-
-/** gets the key (i.e. the name) of the given variable */
-DECL_HASHGETKEY(SCIPhashGetKeyVar)
-{  /*lint --e{715}*/
-   VAR* var = (VAR*)elem;
-
-   assert(var != NULL);
-   return var->name;
-}
-

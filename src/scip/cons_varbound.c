@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.17 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.18 2004/12/10 12:54:23 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -499,7 +499,7 @@ RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
-/** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
+/** resolves a propagation on the given variable by supplying the variables needed for applying the corresponding
  *  propagation rule (see propagateCons()):
  *   (1) left hand side and bounds on y -> lower bound on x
  *   (2) left hand side and upper bound on x -> bound on y
@@ -507,9 +507,9 @@ RETCODE propagateCons(
  *   (4) right hand side and lower bound on x -> bound on y
  */
 static
-RETCODE resolveConflict(
+RETCODE resolvePropagation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< xor constraint to be processed */
+   CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
    BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
@@ -877,7 +877,7 @@ DECL_CONSPRESOL(consPresolVarbound)
 static
 DECL_CONSRESPROP(consRespropVarbound)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
+   CHECK_OKAY( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.123 2004/11/26 14:22:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.124 2004/12/10 12:54:25 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1482,75 +1482,6 @@ void SCIPnodeUpdateLowerbound(
          stat->rootlowerbound = newbound;
    }
 }
-
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** gets the type of the node */
-NODETYPE SCIPnodeGetType(
-   NODE*            node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return (NODETYPE)(node->nodetype);
-}
-
-/** gets the depth of the node */
-int SCIPnodeGetDepth(
-   NODE*            node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return node->depth;
-}
-
-/** gets the lower bound of the node */
-Real SCIPnodeGetLowerbound(
-   NODE*            node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return node->lowerbound;
-}
-
-/** gets the node selection priority of the node assigned by the branching rule */
-Real SCIPnodeGetPriority(
-   NODE*            node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return node->priority;
-}
-
-/** returns whether node is in the path to the current node */
-Bool SCIPnodeIsActive(
-   NODE*            node                /**< node */
-   )
-{
-   assert(node != NULL);
-
-   return node->active;
-}
-
-/** returns whether the node is marked to be propagated again */
-Bool SCIPnodeIsPropagatedAgain(
-   NODE*            node                /**< node data */
-   )
-{
-   assert(node != NULL);
-
-   return node->reprop;
-}
-
-#endif
 
 
 
@@ -3399,195 +3330,6 @@ RETCODE SCIPtreeEndProbing(
    return SCIP_OKAY;
 }
 
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** gets number of children */
-int SCIPtreeGetNChildren(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->nchildren;
-}
-
-/** gets number of siblings */
-int SCIPtreeGetNSiblings(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->nsiblings;
-}
-
-/** gets number of leaves */
-int SCIPtreeGetNLeaves(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return SCIPnodepqLen(tree->leaves);
-}
-   
-/** gets number of nodes (children + siblings + leaves) */
-int SCIPtreeGetNNodes(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree);
-}
-
-/** returns whether the active path goes completely down to the focus node */
-Bool SCIPtreeIsPathComplete(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
-
-   return (tree->focusnode == NULL || tree->focusnode->depth < tree->pathlen);
-}
-
-/** gets focus node of the tree */
-NODE* SCIPtreeGetFocusNode(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
-
-   return tree->focusnode;
-}
-
-/** gets depth of focus node in the tree */
-int SCIPtreeGetFocusDepth(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
-
-   return tree->focusnode != NULL ? tree->focusnode->depth : -1;
-}
-
-/** returns, whether the LP was or is to be solved in the focus node */
-Bool SCIPtreeHasFocusNodeLP(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-
-   return tree->focusnodehaslp;
-}
-
-/** sets mark to solve or to ignore the LP while processing the focus node */
-void SCIPtreeSetFocusNodeLP(
-   TREE*            tree,               /**< branch and bound tree */
-   Bool             solvelp             /**< should the LP be solved in focus node? */
-   )
-{
-   assert(tree != NULL);
-
-   tree->focusnodehaslp = solvelp;
-}
-
-/** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
-NODE* SCIPtreeGetCurrentNode(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
-
-   return (tree->pathlen > 0 ? tree->path[tree->pathlen-1] : NULL);
-}
-
-/** gets depth of current node in the tree, i.e. the length of the active path minus 1, or -1 if no current node exists */
-int SCIPtreeGetCurrentDepth(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->focusnode != NULL || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->focusnode != NULL);
-   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
-   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
-   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
-   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
-
-   return tree->pathlen-1;
-}
-
-/** returns, whether the LP was or is to be solved in the current node */
-Bool SCIPtreeHasCurrentNodeLP(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(SCIPtreeIsPathComplete(tree));
-
-   return tree->probingnode != NULL ? FALSE : SCIPtreeHasFocusNodeLP(tree);
-}
-
-/** returns whether the current node is a temporary probing node */
-Bool SCIPtreeProbing(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
-
-   return (tree->probingnode != NULL);
-}
-
-/** returns the temporary probing node, or NULL if the current node is not the probing node */
-NODE* SCIPtreeGetProbingNode(
-   TREE*            tree                /**< branch and bound tree */
-   )
-{
-   assert(tree != NULL);
-   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
-
-   return tree->probingnode;
-}
-
-#endif
-
-
 /** gets the best child of the focus node w.r.t. the node selection priority assigned by the branching rule */
 NODE* SCIPtreeGetPrioChild(
    TREE*            tree                /**< branch and bound tree */
@@ -3870,3 +3612,275 @@ Real SCIPtreeGetAvgLowerbound(
    return nnodes == 0 ? 0.0 : lowerboundsum/nnodes;
 }
 
+
+
+
+/*
+ * simple functions implemented as defines
+ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPnodeGetType
+#undef SCIPnodeGetDepth
+#undef SCIPnodeGetLowerbound
+#undef SCIPnodeGetPriority
+#undef SCIPnodeIsActive
+#undef SCIPnodeIsPropagatedAgain
+#undef SCIPtreeGetNLeaves
+#undef SCIPtreeGetNChildren
+#undef SCIPtreeGetNSiblings
+#undef SCIPtreeGetNNodes
+#undef SCIPtreeIsPathComplete
+#undef SCIPtreeGetFocusNode
+#undef SCIPtreeGetFocusDepth
+#undef SCIPtreeHasFocusNodeLP
+#undef SCIPtreeSetFocusNodeLP
+#undef SCIPtreeGetCurrentNode
+#undef SCIPtreeGetCurrentDepth
+#undef SCIPtreeHasCurrentNodeLP
+#undef SCIPtreeProbing
+#undef SCIPtreeGetProbingNode
+
+/** gets the type of the node */
+NODETYPE SCIPnodeGetType(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return (NODETYPE)(node->nodetype);
+}
+
+/** gets the depth of the node */
+int SCIPnodeGetDepth(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->depth;
+}
+
+/** gets the lower bound of the node */
+Real SCIPnodeGetLowerbound(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->lowerbound;
+}
+
+/** gets the node selection priority of the node assigned by the branching rule */
+Real SCIPnodeGetPriority(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->priority;
+}
+
+/** returns whether node is in the path to the current node */
+Bool SCIPnodeIsActive(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->active;
+}
+
+/** returns whether the node is marked to be propagated again */
+Bool SCIPnodeIsPropagatedAgain(
+   NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->reprop;
+}
+
+/** gets number of children */
+int SCIPtreeGetNChildren(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nchildren;
+}
+
+/** gets number of siblings */
+int SCIPtreeGetNSiblings(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nsiblings;
+}
+
+/** gets number of leaves */
+int SCIPtreeGetNLeaves(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return SCIPnodepqLen(tree->leaves);
+}
+   
+/** gets number of nodes (children + siblings + leaves) */
+int SCIPtreeGetNNodes(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree);
+}
+
+/** returns whether the active path goes completely down to the focus node */
+Bool SCIPtreeIsPathComplete(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return (tree->focusnode == NULL || tree->focusnode->depth < tree->pathlen);
+}
+
+/** gets focus node of the tree */
+NODE* SCIPtreeGetFocusNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return tree->focusnode;
+}
+
+/** gets depth of focus node in the tree */
+int SCIPtreeGetFocusDepth(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return tree->focusnode != NULL ? tree->focusnode->depth : -1;
+}
+
+/** returns, whether the LP was or is to be solved in the focus node */
+Bool SCIPtreeHasFocusNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return tree->focusnodehaslp;
+}
+
+/** sets mark to solve or to ignore the LP while processing the focus node */
+void SCIPtreeSetFocusNodeLP(
+   TREE*            tree,               /**< branch and bound tree */
+   Bool             solvelp             /**< should the LP be solved in focus node? */
+   )
+{
+   assert(tree != NULL);
+
+   tree->focusnodehaslp = solvelp;
+}
+
+/** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
+NODE* SCIPtreeGetCurrentNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return (tree->pathlen > 0 ? tree->path[tree->pathlen-1] : NULL);
+}
+
+/** gets depth of current node in the tree, i.e. the length of the active path minus 1, or -1 if no current node exists */
+int SCIPtreeGetCurrentDepth(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->focusnode != NULL);
+   assert(tree->pathlen >= 2 || tree->probingnode == NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1] != NULL);
+   assert(tree->pathlen == 0 || tree->path[tree->pathlen-1]->depth == tree->pathlen-1);
+   assert(tree->probingnode == NULL || tree->path[tree->pathlen-1] == tree->probingnode);
+   assert(tree->probingnode != NULL || tree->focusnode == NULL || tree->focusnode->depth >= tree->pathlen-1);
+
+   return tree->pathlen-1;
+}
+
+/** returns, whether the LP was or is to be solved in the current node */
+Bool SCIPtreeHasCurrentNodeLP(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(SCIPtreeIsPathComplete(tree));
+
+   return tree->probingnode != NULL ? FALSE : SCIPtreeHasFocusNodeLP(tree);
+}
+
+/** returns whether the current node is a temporary probing node */
+Bool SCIPtreeProbing(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
+
+   return (tree->probingnode != NULL);
+}
+
+/** returns the temporary probing node, or NULL if the current node is not the probing node */
+NODE* SCIPtreeGetProbingNode(
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(tree->probingnode == NULL || tree->probingnode->nodetype == SCIP_NODETYPE_PROBINGNODE);
+
+   return tree->probingnode;
+}

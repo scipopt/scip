@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.32 2004/12/06 14:11:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.33 2004/12/10 12:54:24 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3406,32 +3406,6 @@ RETCODE SCIPcalcIntegralScalar(
 }
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
-Real SCIPrelDiff(
-   Real             val1,               /**< first value to be compared */
-   Real             val2                /**< second value to be compared */
-   )
-{
-   Real absval1;
-   Real absval2;
-   Real quot;
-
-   absval1 = REALABS(val1);
-   absval2 = REALABS(val2);
-   quot = MAX3(1.0, absval1, absval2);
-   
-   return (val1-val2)/quot;
-}
-
-#endif
-
-
 
 
 /*
@@ -3501,3 +3475,34 @@ void SCIPsplitFilename(
    }
 }
 
+
+
+
+/*
+ * simple functions implemented as defines
+ */
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
+ */
+
+#undef SCIPrelDiff
+
+/** returns the relative difference: (val1-val2)/max(|val1|,|val2|,1.0) */
+Real SCIPrelDiff(
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   Real absval1;
+   Real absval2;
+   Real quot;
+
+   absval1 = REALABS(val1);
+   absval2 = REALABS(val2);
+   quot = MAX3(1.0, absval1, absval2);
+   
+   return (val1-val2)/quot;
+}

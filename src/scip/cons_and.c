@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.41 2004/11/30 17:41:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.42 2004/12/10 12:54:23 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -1119,9 +1119,9 @@ RETCODE propagateCons(
  *   (4) r   = FALSE, v_i = TRUE for all i except j   =>  v_j = FALSE
  */
 static
-RETCODE resolveConflict(
+RETCODE resolvePropagation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< and constraint to be processed */
+   CONS*            cons,               /**< constraint that inferred the bound change */
    VAR*             infervar,           /**< variable that was deduced */
    PROPRULE         proprule,           /**< propagation rule that deduced the value */
    BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
@@ -1542,7 +1542,7 @@ DECL_CONSPRESOL(consPresolAnd)
 static
 DECL_CONSRESPROP(consRespropAnd)
 {  /*lint --e{715}*/
-   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
+   CHECK_OKAY( resolvePropagation(scip, cons, infervar, (PROPRULE)inferinfo, bdchgidx, result) );
 
    return SCIP_OKAY;
 }

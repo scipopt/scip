@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.234 2004/12/06 14:11:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.235 2004/12/10 12:54:24 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6343,7 +6343,8 @@ RETCODE SCIPprintVar(
  */
 
 /** initializes the conflict analysis by clearing the conflict candidate queue; this method must be called before
- *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), or SCIPaddConflictBinvar();
+ *  you enter the conflict variables by calling SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
+ *  or SCIPaddConflictBinvar();
  */
 RETCODE SCIPinitConflictAnalysis(
    SCIP*            scip                /**< SCIP data structure */
@@ -6380,7 +6381,7 @@ RETCODE SCIPaddConflictLb(
 
 /** adds upper bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
  *  this method should be called in one of the following two cases:
- *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictLb() should be called for each upper bound
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictUb() should be called for each upper bound
  *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
  *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictUb() should be called
  *      for each upper bound, whose current assignment lead to the deduction of the given conflict bound.
@@ -6396,6 +6397,29 @@ RETCODE SCIPaddConflictUb(
 
    CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
          var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+
+   return SCIP_OKAY;
+}
+
+/** adds lower or upper bound of variable at the time of the given bound change index to the conflict analysis' candidate
+ *  storage; this method should be called in one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictBd() should be called for each bound
+ *      that lead to the conflict (e.g. the infeasibility of globally or locally valid constraint).
+ *   2. In the propagation conflict resolving method of a constraint handler, SCIPaddConflictBd() should be called
+ *      for each bound, whose current assignment lead to the deduction of the given conflict bound.
+ */
+RETCODE SCIPaddConflictBd(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable whose upper bound should be added to conflict candidate queue */
+   BOUNDTYPE        boundtype,          /**< the type of the conflicting bound (lower or upper bound) */
+   BDCHGIDX*        bdchgidx            /**< bound change index representing time on path to current node, when the
+                                         *   conflicting bound was valid, NULL for current local bound */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
+         var, boundtype, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -6430,12 +6454,12 @@ RETCODE SCIPaddConflictBinvar(
 }
 
 /** analyzes conflict bounds that were added after a call to SCIPinitConflictAnalysis() with calls to
- *  SCIPconflictAddLb(), SCIPconflictAddUb(), or SCIPaddConflictBinvar();
+ *  SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(), or SCIPaddConflictBinvar();
  *  on success, calls the conflict handlers to create a conflict constraint out of the resulting conflict set;
  *  the given valid depth must be a depth level, at which the conflict set defined by calls to SCIPaddConflictLb(),
- *  SCIPaddConflictUb() and SCIPaddConflictBinvar() is valid for the whole subtree; if the conflict was found by a
- *  violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict() to make sure, that the correct
- *  valid depth is used
+ *  SCIPaddConflictUb(), SCIPconflictAddBd(), and SCIPaddConflictBinvar() is valid for the whole subtree;
+ *  if the conflict was found by a violated constraint, use SCIPanalyzeConflictCons() instead of SCIPanalyzeConflict()
+ *  to make sure, that the correct valid depth is used
  */
 RETCODE SCIPanalyzeConflict(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6451,12 +6475,12 @@ RETCODE SCIPanalyzeConflict(
    return SCIP_OKAY;
 }
 
-/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(),
+/** analyzes conflict bounds that were added with calls to SCIPconflictAddLb(), SCIPconflictAddUb(), SCIPconflictAddBd(),
  *  or SCIPaddConflictBinvar(); on success, calls the conflict handlers to create a conflict constraint out of the
  *  resulting conflict set;
  *  the given constraint must be the constraint that detected the conflict, i.e. the constraint that is infeasible
- *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(),
- *  and SCIPaddConflictBinvar())
+ *  in the local bounds of the initial conflict set (defined by calls to SCIPaddConflictLb(), SCIPaddConflictUb(), 
+ *  SCIPconflictAddBd(), and SCIPaddConflictBinvar())
  */
 RETCODE SCIPanalyzeConflictCons(
    SCIP*            scip,               /**< SCIP data structure */
@@ -11052,11 +11076,302 @@ RETCODE SCIPchgDualfeastol(
    return SCIP_OKAY;
 }
 
+/** outputs a real number, or "+infinity", or "-infinity" to a file */
+void SCIPprintReal(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val,                /**< value to print */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   )
+{
+   assert(scip != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   if( SCIPsetIsInfinity(scip->set, val) )
+      fprintf(file, "+infinity");
+   else if( SCIPsetIsInfinity(scip->set, -val) )
+      fprintf(file, "-infinity");
+   else
+      fprintf(file, "%f", val);
+}
+
+
+
+
+/*
+ * memory management
+ */
+
+/** returns block memory to use at the current time */
+MEMHDR* SCIPmemhdr(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPmemhdr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->mem != NULL);
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_INIT:
+   case SCIP_STAGE_PROBLEM:
+      return scip->mem->probmem;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      return scip->mem->solvemem;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return NULL;
+   }  /*lint !e788*/
+}
+
+/** returns the total number of bytes used in block memory */
+Longint SCIPgetMemUsed(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPmemGetUsed(scip->mem);
+}
+
+/** calculate memory size for dynamically allocated arrays */
+int SCIPcalcMemGrowSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPsetCalcMemGrowSize(scip->set, num);
+}
+
+/** extends a dynamically allocated block memory array to be able to store at least the given number of elements;
+ *  use SCIPensureBlockMemoryArray() define to call this method!
+ */
+RETCODE SCIPensureBlockMemoryArray_call(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           arrayptr,           /**< pointer to dynamically sized array */
+   size_t           elemsize,           /**< size in bytes of each element in array */
+   int*             arraysize,          /**< pointer to current array size */
+   int              minsize             /**< required minimal array size */
+   )
+{
+   assert(scip != NULL);
+   assert(arrayptr != NULL);
+   assert(elemsize > 0);
+   assert(arraysize != NULL);
+
+   if( minsize > *arraysize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(scip->set, minsize);
+      ALLOC_OKAY( reallocBlockMemorySize(SCIPmemhdr(scip), arrayptr, *arraysize * elemsize, newsize * elemsize) );
+      *arraysize = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets a memory buffer with at least the given size */
+RETCODE SCIPallocBufferSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to store the buffer */
+   int              size                /**< required size in bytes of buffer */
+   )
+{
+   assert(ptr != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPallocBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAllocBufferSize(scip->set, ptr, size) );
+
+   return SCIP_OKAY;
+}
+
+/** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
+RETCODE SCIPduplicateBufferSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to store the buffer */
+   void*            source,             /**< memory block to copy into the buffer */
+   int              size                /**< required size in bytes of buffer */
+   )
+{
+   assert(ptr != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPduplicateBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetDuplicateBufferSize(scip->set, ptr, source, size) );
+
+   return SCIP_OKAY;
+}
+
+/** reallocates a memory buffer to at least the given size */
+RETCODE SCIPreallocBufferSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to the buffer */
+   int              size                /**< required size in bytes of buffer */
+   )
+{
+   assert(ptr != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPreallocBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetReallocBufferSize(scip->set, ptr, size) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a memory buffer */
+void SCIPfreeBufferSize(
+   SCIP*            scip,               /**< SCIP data structure */
+   void**           ptr,                /**< pointer to the buffer */
+   int              dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
+   )
+{  /*lint --e{715}*/
+   assert(ptr != NULL);
+
+   CHECK_ABORT( checkStage(scip, "SCIPfreeBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIPsetFreeBufferSize(scip->set, ptr);
+}
+
+
+
+
+/*
+ * debugging methods
+ */
+
 #ifndef NDEBUG
+
+/** prints output about used memory */
+void SCIPdebugMemory(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   memoryDiagnostic();
+
+   printf("\nProblem Block Memory (%p):\n", scip->mem->probmem);
+   blockMemoryDiagnostic(scip->mem->probmem);
+
+   printf("\nSolution Block Memory (%p):\n", scip->mem->solvemem);
+   blockMemoryDiagnostic(scip->mem->solvemem);
+}
+
+#endif
+
+
+
+
+/*
+ * simple functions implemented as defines
+ */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
+
+#undef SCIPisInfinity
+#undef SCIPisEQ
+#undef SCIPisLT
+#undef SCIPisLE
+#undef SCIPisGT
+#undef SCIPisGE
+#undef SCIPisZero
+#undef SCIPisPositive
+#undef SCIPisNegative
+#undef SCIPisIntegral
+#undef SCIPisScalingIntegral
+#undef SCIPisFracIntegral
+#undef SCIPfloor
+#undef SCIPceil
+#undef SCIPfrac
+#undef SCIPisSumEQ
+#undef SCIPisSumLT
+#undef SCIPisSumLE
+#undef SCIPisSumGT
+#undef SCIPisSumGE
+#undef SCIPisSumZero
+#undef SCIPisSumPositive
+#undef SCIPisSumNegative
+#undef SCIPisFeasEQ
+#undef SCIPisFeasLT
+#undef SCIPisFeasLE
+#undef SCIPisFeasGT
+#undef SCIPisFeasGE
+#undef SCIPisFeasZero
+#undef SCIPisFeasPositive
+#undef SCIPisFeasNegative
+#undef SCIPisFeasIntegral
+#undef SCIPisFeasFracIntegral
+#undef SCIPfeasFloor
+#undef SCIPfeasCeil
+#undef SCIPfeasFrac
+#undef SCIPisLbBetter
+#undef SCIPisUbBetter
+#undef SCIPisRelEQ
+#undef SCIPisRelLT
+#undef SCIPisRelLE
+#undef SCIPisRelGT
+#undef SCIPisRelGE
+#undef SCIPisSumRelEQ
+#undef SCIPisSumRelLT
+#undef SCIPisSumRelLE
+#undef SCIPisSumRelGT
+#undef SCIPisSumRelGE
+#undef SCIPcreateRealarray
+#undef SCIPfreeRealarray
+#undef SCIPextendRealarray
+#undef SCIPclearRealarray
+#undef SCIPgetRealarrayVal
+#undef SCIPsetRealarrayVal
+#undef SCIPincRealarrayVal
+#undef SCIPgetRealarrayMinIdx
+#undef SCIPgetRealarrayMaxIdx
+#undef SCIPcreateIntarray
+#undef SCIPfreeIntarray
+#undef SCIPextendIntarray
+#undef SCIPclearIntarray
+#undef SCIPgetIntarrayVal
+#undef SCIPsetIntarrayVal
+#undef SCIPincIntarrayVal
+#undef SCIPgetIntarrayMinIdx
+#undef SCIPgetIntarrayMaxIdx
+#undef SCIPcreateBoolarray
+#undef SCIPfreeBoolarray
+#undef SCIPextendBoolarray
+#undef SCIPclearBoolarray
+#undef SCIPgetBoolarrayVal
+#undef SCIPsetBoolarrayVal
+#undef SCIPgetBoolarrayMinIdx
+#undef SCIPgetBoolarrayMaxIdx
+#undef SCIPcreatePtrarray
+#undef SCIPfreePtrarray
+#undef SCIPextendPtrarray
+#undef SCIPclearPtrarray
+#undef SCIPgetPtrarrayVal
+#undef SCIPsetPtrarrayVal
+#undef SCIPgetPtrarrayMinIdx
+#undef SCIPgetPtrarrayMaxIdx
 
 /** checks, if values are in range of epsilon */
 Bool SCIPisEQ(
@@ -11660,194 +11975,6 @@ Bool SCIPisSumRelGE(
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
 }
 
-#endif
-
-/** outputs a real number, or "+infinity", or "-infinity" to a file */
-void SCIPprintReal(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val,                /**< value to print */
-   FILE*            file                /**< output file (or NULL for standard output) */
-   )
-{
-   assert(scip != NULL);
-
-   if( file == NULL )
-      file = stdout;
-
-   if( SCIPsetIsInfinity(scip->set, val) )
-      fprintf(file, "+infinity");
-   else if( SCIPsetIsInfinity(scip->set, -val) )
-      fprintf(file, "-infinity");
-   else
-      fprintf(file, "%f", val);
-}
-
-
-
-
-/*
- * memory management
- */
-
-/** returns block memory to use at the current time */
-MEMHDR* SCIPmemhdr(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPmemhdr", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(scip->mem != NULL);
-
-   switch( scip->stage )
-   {
-   case SCIP_STAGE_INIT:
-   case SCIP_STAGE_PROBLEM:
-      return scip->mem->probmem;
-
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_FREESOLVE:
-   case SCIP_STAGE_FREETRANS:
-      return scip->mem->solvemem;
-
-   default:
-      errorMessage("invalid SCIP stage\n");
-      return NULL;
-   }  /*lint !e788*/
-}
-
-/** returns the total number of bytes used in block memory */
-Longint SCIPgetMemUsed(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetMemUsed", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   return SCIPmemGetUsed(scip->mem);
-}
-
-/** calculate memory size for dynamically allocated arrays */
-int SCIPcalcMemGrowSize(
-   SCIP*            scip,               /**< SCIP data structure */
-   int              num                 /**< minimum number of entries to store */
-   )
-{
-   assert(scip != NULL);
-
-   return SCIPsetCalcMemGrowSize(scip->set, num);
-}
-
-/** extends a dynamically allocated block memory array to be able to store at least the given number of elements;
- *  use SCIPensureBlockMemoryArray() define to call this method!
- */
-RETCODE SCIPensureBlockMemoryArray_call(
-   SCIP*            scip,               /**< SCIP data structure */
-   void**           arrayptr,           /**< pointer to dynamically sized array */
-   size_t           elemsize,           /**< size in bytes of each element in array */
-   int*             arraysize,          /**< pointer to current array size */
-   int              minsize             /**< required minimal array size */
-   )
-{
-   assert(scip != NULL);
-   assert(arrayptr != NULL);
-   assert(elemsize > 0);
-   assert(arraysize != NULL);
-
-   if( minsize > *arraysize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(scip->set, minsize);
-      ALLOC_OKAY( reallocBlockMemorySize(SCIPmemhdr(scip), arrayptr, *arraysize * elemsize, newsize * elemsize) );
-      *arraysize = newsize;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** gets a memory buffer with at least the given size */
-RETCODE SCIPallocBufferSize(
-   SCIP*            scip,               /**< SCIP data structure */
-   void**           ptr,                /**< pointer to store the buffer */
-   int              size                /**< required size in bytes of buffer */
-   )
-{
-   assert(ptr != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPallocBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   CHECK_OKAY( SCIPsetAllocBufferSize(scip->set, ptr, size) );
-
-   return SCIP_OKAY;
-}
-
-/** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
-RETCODE SCIPduplicateBufferSize(
-   SCIP*            scip,               /**< SCIP data structure */
-   void**           ptr,                /**< pointer to store the buffer */
-   void*            source,             /**< memory block to copy into the buffer */
-   int              size                /**< required size in bytes of buffer */
-   )
-{
-   assert(ptr != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPduplicateBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   CHECK_OKAY( SCIPsetDuplicateBufferSize(scip->set, ptr, source, size) );
-
-   return SCIP_OKAY;
-}
-
-/** reallocates a memory buffer to at least the given size */
-RETCODE SCIPreallocBufferSize(
-   SCIP*            scip,               /**< SCIP data structure */
-   void**           ptr,                /**< pointer to the buffer */
-   int              size                /**< required size in bytes of buffer */
-   )
-{
-   assert(ptr != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPreallocBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   CHECK_OKAY( SCIPsetReallocBufferSize(scip->set, ptr, size) );
-
-   return SCIP_OKAY;
-}
-
-/** frees a memory buffer */
-void SCIPfreeBufferSize(
-   SCIP*            scip,               /**< SCIP data structure */
-   void**           ptr,                /**< pointer to the buffer */
-   int              dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
-   )
-{  /*lint --e{715}*/
-   assert(ptr != NULL);
-
-   CHECK_ABORT( checkStage(scip, "SCIPfreeBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIPsetFreeBufferSize(scip->set, ptr);
-}
-
-
-
-
-/*
- * dynamic arrays
- */
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
 /** creates a dynamic array of real values */
 RETCODE SCIPcreateRealarray(
    SCIP*            scip,               /**< SCIP data structure */
@@ -12289,33 +12416,3 @@ int SCIPgetPtrarrayMaxIdx(
 
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
-
-#endif
-
-
-
-
-/*
- * debugging methods
- */
-
-#ifndef NDEBUG
-
-/** prints output about used memory */
-void SCIPdebugMemory(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->mem != NULL);
-
-   memoryDiagnostic();
-
-   printf("\nProblem Block Memory (%p):\n", scip->mem->probmem);
-   blockMemoryDiagnostic(scip->mem->probmem);
-
-   printf("\nSolution Block Memory (%p):\n", scip->mem->solvemem);
-   blockMemoryDiagnostic(scip->mem->solvemem);
-}
-
-#endif

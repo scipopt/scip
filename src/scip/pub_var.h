@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.31 2004/11/24 17:46:20 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.32 2004/12/10 12:54:24 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -757,6 +757,14 @@ extern
 Real SCIPvarGetBdAtIndex(
    VAR*             var,                /**< problem variable */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns whether the binary variable was fixed at the time given by the bound change index */
+extern
+Bool SCIPvarWasFixedAtIndex(
+   VAR*             var,                /**< problem variable */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
    );

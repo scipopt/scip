@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.13 2004/10/28 14:30:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.14 2004/12/10 12:54:23 bzfpfend Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -174,11 +174,31 @@ void SCIPhistoryUpdatePseudocost(
 }
 
 
-#ifndef NDEBUG
+
+
+/*
+ * simple functions implemented as defines
+ */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
+
+#undef SCIPbranchdirOpposite
+#undef SCIPhistoryGetPseudocost
+#undef SCIPhistoryGetPseudocostCount
+#undef SCIPhistoryIsPseudocostEmpty
+#undef SCIPhistoryIncNBranchings
+#undef SCIPhistoryIncNInferences
+#undef SCIPhistoryIncNCutoffs
+#undef SCIPhistoryGetNBranchings
+#undef SCIPhistoryGetNInferences
+#undef SCIPhistoryGetAvgInferences
+#undef SCIPhistoryGetNCutoffs
+#undef SCIPhistoryGetAvgCutoffs
+#undef SCIPhistoryGetAvgBranchdepth
 
 /** returns the opposite direction of the given branching direction */
 BRANCHDIR SCIPbranchdirOpposite(
@@ -350,5 +370,3 @@ Real SCIPhistoryGetAvgBranchdepth(
 
    return history->nbranchings[dir] > 0 ? (Real)history->branchdepthsum[dir]/(Real)history->nbranchings[dir] : 0;
 }
-
-#endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.165 2004/12/07 14:36:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.166 2004/12/10 12:54:24 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3166,201 +3166,6 @@ void SCIPcolPrint(
 }
 
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** gets objective value of column */
-Real SCIPcolGetObj(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->obj;
-}
-
-/** gets lower bound of column */
-Real SCIPcolGetLb(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->lb;
-}
-
-/** gets upper bound of column */
-Real SCIPcolGetUb(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->ub;
-}
-
-/** gets best bound of column with respect to the objective function */
-Real SCIPcolGetBestBound(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   if( col->obj >= 0.0 )
-      return col->lb;
-   else
-      return col->ub;
-}
-
-/** gets the primal LP solution of a column */
-Real SCIPcolGetPrimsol(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   if( col->lppos >= 0 )
-      return col->primsol;
-   else
-      return 0.0;
-}
-
-/** gets variable this column represents */
-VAR* SCIPcolGetVar(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->var;
-}
-
-/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
-Bool SCIPcolIsIntegral(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-   assert(SCIPvarIsIntegral(col->var) == col->integral);
-
-   return col->integral;
-}
-
-/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
-Bool SCIPcolIsRemoveable(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->removeable;
-}
-
-/** gets position of column in current LP, or -1 if it is not in LP */
-int SCIPcolGetLPPos(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-   assert((col->lppos == -1) == (col->lpdepth == -1));
-
-   return col->lppos;
-}
-
-/** gets depth in the tree where the column entered the LP, or -1 if it is not in LP */
-int SCIPcolGetLPDepth(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-   assert((col->lppos == -1) == (col->lpdepth == -1));
-
-   return col->lpdepth;
-}
-
-/** returns TRUE iff column is member of current LP */
-Bool SCIPcolIsInLP(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-   assert((col->lppos == -1) == (col->lpdepth == -1));
-
-   return (col->lppos >= 0);
-}
-
-/** get number of nonzero entries in column vector */
-int SCIPcolGetNNonz(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->len;
-}
-
-/** get number of nonzero entries in column vector, that correspond to rows currently in the LP;
- *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
- *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
- */
-int SCIPcolGetNLPNonz(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-   assert(col->nunlinked == 0);
-
-   return col->nlprows;
-}
-
-/** gets array with rows of nonzero entries */
-ROW** SCIPcolGetRows(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->rows;
-}
-
-/** gets array with coefficients of nonzero entries */
-Real* SCIPcolGetVals(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->vals;
-}
-
-/** gets node number of the last node in current branch and bound run, where strong branching was used on the
- *  given column, or -1 if strong branching was never applied to the column in current run
- */
-Longint SCIPcolGetStrongbranchNode(
-   COL*             col                 /**< LP column */
-   )
-{
-   assert(col != NULL);
-
-   return col->strongbranchnode;
-}
-
-/** gets opposite bound type of given bound type */
-BOUNDTYPE SCIPboundtypeOpposite(
-   BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
-   )
-{
-   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
-
-   return (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
-}
-
-#endif
-
-
 
 
 /*
@@ -5025,215 +4830,6 @@ void SCIProwPrint(
    /* print right hand side */
    fprintf(file, "<= %g\n", row->rhs);
 }
-
-
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
-
-/** get number of nonzero entries in row vector */
-int SCIProwGetNNonz(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->len;
-}
-
-/** get number of nonzero entries in row vector, that correspond to columns currently in the LP;
- *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
- *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
- */
-int SCIProwGetNLPNonz(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-   assert(row->nunlinked == 0);
-
-   return row->nlpcols;
-}
-
-/** gets array with columns of nonzero entries */
-COL** SCIProwGetCols(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->cols;
-}
-
-/** gets array with coefficients of nonzero entries */
-Real* SCIProwGetVals(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->vals;
-}
-
-/** gets constant shift of row */
-Real SCIProwGetConstant(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->constant;
-}
-
-/** gets euclidean norm of row vector */
-Real SCIProwGetNorm(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return sqrt(row->sqrnorm);
-}
-
-/** gets sum norm of row vector (sum of absolute values of coefficients) */
-Real SCIProwGetSumNorm(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->sumnorm;
-}
-
-/** returns the left hand side of the row */
-Real SCIProwGetLhs(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->lhs;
-}
-
-/** returns the right hand side of the row */
-Real SCIProwGetRhs(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->rhs;
-}
-
-/** gets the dual LP solution of a row */
-Real SCIProwGetDualsol(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   if( row->lppos >= 0 )
-      return row->dualsol;
-   else
-      return 0.0;
-}
-
-/** returns the name of the row */
-const char* SCIProwGetName(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->name;
-}
-
-/** gets unique index of row */
-int SCIProwGetIndex(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->index;
-}
-
-/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
-Bool SCIProwIsIntegral(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->integral;
-}
-
-/** returns TRUE iff row is only valid locally */
-Bool SCIProwIsLocal(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->local;
-}
-
-/** returns TRUE iff row is modifiable during node processing (subject to column generation) */
-Bool SCIProwIsModifiable(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->modifiable;
-}
-
-/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
-Bool SCIProwIsRemoveable(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->removeable;
-}
-
-/** gets position of row in current LP, or -1 if it is not in LP */
-int SCIProwGetLPPos(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-   assert((row->lppos == -1) == (row->lpdepth == -1));
-
-   return row->lppos;
-}
-
-/** gets depth in the tree where the row entered the LP, or -1 if it is not in LP */
-int SCIProwGetLPDepth(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-   assert((row->lppos == -1) == (row->lpdepth == -1));
-
-   return row->lpdepth;
-}
-
-/** returns TRUE iff row is member of current LP */
-Bool SCIProwIsInLP(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-   assert((row->lppos == -1) == (row->lpdepth == -1));
-
-   return (row->lppos >= 0);
-}
-
-#endif
 
 
 
@@ -11256,11 +10852,452 @@ RETCODE SCIPlpWrite(
 }
 
 
-#ifndef NDEBUG
+
+
+/*
+ * simple functions implemented as defines
+ */
 
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
+ * In optimized mode, the methods are implemented as defines to improve performance.
+ * However, we want to have them in the library anyways, so we have to undef the defines.
  */
+
+#undef SCIPcolGetObj
+#undef SCIPcolGetLb
+#undef SCIPcolGetUb
+#undef SCIPcolGetBestBound
+#undef SCIPcolGetPrimsol
+#undef SCIPcolGetVar
+#undef SCIPcolIsIntegral
+#undef SCIPcolIsRemoveable
+#undef SCIPcolGetLPPos
+#undef SCIPcolGetLPDepth
+#undef SCIPcolIsInLP
+#undef SCIPcolGetNNonz
+#undef SCIPcolGetNLPNonz
+#undef SCIPcolGetRows
+#undef SCIPcolGetVals
+#undef SCIPcolGetStrongbranchNode
+#undef SCIPboundtypeOpposite
+#undef SCIProwGetNNonz
+#undef SCIProwGetNLPNonz
+#undef SCIProwGetCols
+#undef SCIProwGetVals
+#undef SCIProwGetConstant
+#undef SCIProwGetNorm
+#undef SCIProwGetSumNorm
+#undef SCIProwGetLhs
+#undef SCIProwGetRhs
+#undef SCIProwGetDualsol
+#undef SCIProwGetName
+#undef SCIProwGetIndex
+#undef SCIProwIsIntegral
+#undef SCIProwIsLocal
+#undef SCIProwIsModifiable
+#undef SCIProwIsRemoveable
+#undef SCIProwGetLPPos
+#undef SCIProwGetLPDepth
+#undef SCIProwIsInLP
+#undef SCIPlpGetCols
+#undef SCIPlpGetNCols
+#undef SCIPlpGetRows
+#undef SCIPlpGetNRows
+#undef SCIPlpGetNewcols
+#undef SCIPlpGetNNewcols
+#undef SCIPlpGetNewrows
+#undef SCIPlpGetNNewrows
+#undef SCIPlpGetLPI
+#undef SCIPlpDiving
+#undef SCIPlpDivingObjChanged
+#undef SCIPlpMarkDivingObjChanged
+
+/** gets objective value of column */
+Real SCIPcolGetObj(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->obj;
+}
+
+/** gets lower bound of column */
+Real SCIPcolGetLb(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->lb;
+}
+
+/** gets upper bound of column */
+Real SCIPcolGetUb(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->ub;
+}
+
+/** gets best bound of column with respect to the objective function */
+Real SCIPcolGetBestBound(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->obj >= 0.0 )
+      return col->lb;
+   else
+      return col->ub;
+}
+
+/** gets the primal LP solution of a column */
+Real SCIPcolGetPrimsol(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   if( col->lppos >= 0 )
+      return col->primsol;
+   else
+      return 0.0;
+}
+
+/** gets variable this column represents */
+VAR* SCIPcolGetVar(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->var;
+}
+
+/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+Bool SCIPcolIsIntegral(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert(SCIPvarIsIntegral(col->var) == col->integral);
+
+   return col->integral;
+}
+
+/** returns TRUE iff column is removeable from the LP (due to aging or cleanup) */
+Bool SCIPcolIsRemoveable(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->removeable;
+}
+
+/** gets position of column in current LP, or -1 if it is not in LP */
+int SCIPcolGetLPPos(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert((col->lppos == -1) == (col->lpdepth == -1));
+
+   return col->lppos;
+}
+
+/** gets depth in the tree where the column entered the LP, or -1 if it is not in LP */
+int SCIPcolGetLPDepth(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert((col->lppos == -1) == (col->lpdepth == -1));
+
+   return col->lpdepth;
+}
+
+/** returns TRUE iff column is member of current LP */
+Bool SCIPcolIsInLP(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert((col->lppos == -1) == (col->lpdepth == -1));
+
+   return (col->lppos >= 0);
+}
+
+/** get number of nonzero entries in column vector */
+int SCIPcolGetNNonz(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->len;
+}
+
+/** get number of nonzero entries in column vector, that correspond to rows currently in the LP;
+ *  Warning! This method is only applicable on columns, that are completely linked to their rows (e.g. a column
+ *  that is in the current LP and the LP was solved, or a column that was in a solved LP and didn't change afterwards
+ */
+int SCIPcolGetNLPNonz(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+   assert(col->nunlinked == 0);
+
+   return col->nlprows;
+}
+
+/** gets array with rows of nonzero entries */
+ROW** SCIPcolGetRows(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->rows;
+}
+
+/** gets array with coefficients of nonzero entries */
+Real* SCIPcolGetVals(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->vals;
+}
+
+/** gets node number of the last node in current branch and bound run, where strong branching was used on the
+ *  given column, or -1 if strong branching was never applied to the column in current run
+ */
+Longint SCIPcolGetStrongbranchNode(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->strongbranchnode;
+}
+
+/** gets opposite bound type of given bound type */
+BOUNDTYPE SCIPboundtypeOpposite(
+   BOUNDTYPE        boundtype           /**< type of bound (lower or upper) */
+   )
+{
+   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+
+   return (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+}
+
+/** get number of nonzero entries in row vector */
+int SCIProwGetNNonz(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->len;
+}
+
+/** get number of nonzero entries in row vector, that correspond to columns currently in the LP;
+ *  Warning! This method is only applicable on rows, that are completely linked to their columns (e.g. a row
+ *  that is in the current LP and the LP was solved, or a row that was in a solved LP and didn't change afterwards
+ */
+int SCIProwGetNLPNonz(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert(row->nunlinked == 0);
+
+   return row->nlpcols;
+}
+
+/** gets array with columns of nonzero entries */
+COL** SCIProwGetCols(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->cols;
+}
+
+/** gets array with coefficients of nonzero entries */
+Real* SCIProwGetVals(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->vals;
+}
+
+/** gets constant shift of row */
+Real SCIProwGetConstant(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->constant;
+}
+
+/** gets euclidean norm of row vector */
+Real SCIProwGetNorm(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return sqrt(row->sqrnorm);
+}
+
+/** gets sum norm of row vector (sum of absolute values of coefficients) */
+Real SCIProwGetSumNorm(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->sumnorm;
+}
+
+/** returns the left hand side of the row */
+Real SCIProwGetLhs(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->lhs;
+}
+
+/** returns the right hand side of the row */
+Real SCIProwGetRhs(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->rhs;
+}
+
+/** gets the dual LP solution of a row */
+Real SCIProwGetDualsol(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   if( row->lppos >= 0 )
+      return row->dualsol;
+   else
+      return 0.0;
+}
+
+/** returns the name of the row */
+const char* SCIProwGetName(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->name;
+}
+
+/** gets unique index of row */
+int SCIProwGetIndex(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->index;
+}
+
+/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+Bool SCIProwIsIntegral(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->integral;
+}
+
+/** returns TRUE iff row is only valid locally */
+Bool SCIProwIsLocal(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->local;
+}
+
+/** returns TRUE iff row is modifiable during node processing (subject to column generation) */
+Bool SCIProwIsModifiable(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->modifiable;
+}
+
+/** returns TRUE iff row is removeable from the LP (due to aging or cleanup) */
+Bool SCIProwIsRemoveable(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->removeable;
+}
+
+/** gets position of row in current LP, or -1 if it is not in LP */
+int SCIProwGetLPPos(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert((row->lppos == -1) == (row->lpdepth == -1));
+
+   return row->lppos;
+}
+
+/** gets depth in the tree where the row entered the LP, or -1 if it is not in LP */
+int SCIProwGetLPDepth(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert((row->lppos == -1) == (row->lpdepth == -1));
+
+   return row->lpdepth;
+}
+
+/** returns TRUE iff row is member of current LP */
+Bool SCIProwIsInLP(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert((row->lppos == -1) == (row->lpdepth == -1));
+
+   return (row->lppos >= 0);
+}
 
 /** gets array with columns of the LP */
 COL** SCIPlpGetCols(
@@ -11386,5 +11423,3 @@ void SCIPlpMarkDivingObjChanged(
 
    lp->divingobjchg = TRUE;
 }
-
-#endif
