@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.50 2004/03/09 18:03:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.51 2004/03/15 15:40:18 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -48,6 +48,7 @@
                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                          {                                                                                   \
                            printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
+                           fflush(stdout);                                                                   \
                            abort();                                                                          \
                          }                                                                                   \
                        }
@@ -57,12 +58,14 @@
                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                          {                                                                                   \
                            printf("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);    \
+                           fflush(stdout);                                                                   \
                            return _restat_;                                                                  \
                          }                                                                                   \
                        }
 #define ALLOC_OKAY(x)  { if( NULL == (x) )                                                                   \
                          {                                                                                   \
                            printf("[%s:%d] No memory in function call\n", __FILE__, __LINE__);               \
+                           fflush(stdout);                                                                   \
                            return SCIP_NOMEMORY;                                                             \
                          }                                                                                   \
                        }

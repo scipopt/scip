@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.29 2004/02/26 13:53:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.30 2004/03/15 15:40:18 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -44,8 +44,8 @@
  * display column methods
  */
 
-static
-DECL_PARAMCHGD(paramChgdDispActive)
+/** parameter change information method to autoselect display columns again */
+DECL_PARAMCHGD(SCIPparamChgdDispActive)
 {
    /* automatically select the now active display columns */
    CHECK_OKAY( SCIPautoselectDisps(scip) );
@@ -104,7 +104,7 @@ RETCODE SCIPdispCreate(
    sprintf(paramname, "display/%s/active", name);
    sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, paramChgdDispActive, NULL) );
+                  (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
    return SCIP_OKAY;
 }
@@ -361,6 +361,7 @@ RETCODE SCIPdispPrintLine(
          }
       }
       printf("\n");
+      fflush(stdout);
 
       stat->lastdispnode = stat->nnodes;
       stat->ndisplines++;

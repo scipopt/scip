@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.18 2004/02/04 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.19 2004/03/15 15:40:18 bzfpfend Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -38,6 +38,10 @@
 #include "pub_disp.h"
 
 
+
+/** parameter change information method to autoselect display columns again */
+extern
+DECL_PARAMCHGD(SCIPparamChgdDispActive);
 
 /** creates a display column */
 extern

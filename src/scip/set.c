@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.90 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.91 2004/03/15 15:40:18 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -285,7 +285,7 @@ RETCODE SCIPsetCreate(
                   "display/dispwidth",
                   "maximal number of characters in a node information line",
                   &(*set)->dispwidth, SCIP_DEFAULT_DISPWIDTH, 0, INT_MAX,
-                  NULL, NULL) );
+                  SCIPparamChgdDispActive, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
                   "display/dispfreq",
                   "frequency for displaying node information lines",
