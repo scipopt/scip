@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.11 2004/09/29 19:17:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.12 2004/09/29 19:55:47 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (debug version)
@@ -686,9 +686,9 @@ RETCODE SCIPlpiAddRows(
    assert(lpi->spx != NULL);
    assert(lhs != NULL);
    assert(rhs != NULL);
-   assert(beg != NULL);
-   assert(ind != NULL);
-   assert(val != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SPxSCIP* spx = lpi->spx;
    LPRowSet rows(nrows);
@@ -701,11 +701,12 @@ RETCODE SCIPlpiAddRows(
    for( i = 0; i < nrows; ++i )
    {
       rowVector.clear();
-      
-      last = (i == nrows-1 ? nnonz : beg[i+1]);
-      for( j = beg[i]; j < last; ++j )
-         rowVector.add(ind[j], val[j]);
-      
+      if( nnonz > 0 )
+      {
+         last = (i == nrows-1 ? nnonz : beg[i+1]);
+         for( j = beg[i]; j < last; ++j )
+            rowVector.add(ind[j], val[j]);
+      }
       rows.add(lhs[i], rowVector, rhs[i]);
    }
    spx->addRows(rows);
