@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.100 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.101 2004/06/30 14:17:02 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4726,7 +4726,7 @@ void SCIPvarChgBranchPriority(
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
  */
-int SCIPvarCmp(
+int SCIPvarCompare(
    VAR*             var1,               /**< first problem variable */
    VAR*             var2                /**< second problem variable */
    )
@@ -4785,6 +4785,68 @@ VAR* SCIPvarGetProbvar(
       errorMessage("unknown variable status\n");
       abort();
    }
+}
+
+/** gets corresponding active problem variable of a binary variable and updates the given negation status;
+ *  for fixed variables, NULL is returned and the negation status is switched iff the variable is fixed to one
+ */
+RETCODE SCIPvarGetProbvarBinary(
+   VAR**            var,                /**< pointer to binary problem variable */
+   Bool*            negated             /**< pointer to update the negation status */
+   )
+{
+   assert(var != NULL);
+   assert(negated != NULL);
+
+   while( *var != NULL )
+   {
+      assert(SCIPvarGetType(*var) == SCIP_VARTYPE_BINARY);
+
+      switch( SCIPvarGetStatus(*var) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( (*var)->data.transvar == NULL )
+            return SCIP_OKAY;
+         *var = (*var)->data.transvar;
+         break;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         assert(SCIPvarGetLbGlobal(*var) > 0.5 || SCIPvarGetUbGlobal(*var) < 0.5);
+         *negated = *negated ^ (SCIPvarGetLbGlobal(*var) > 0.5);
+         *var = NULL;
+         break;
+
+      case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
+         assert((*var)->data.aggregate.var != NULL);
+         assert(SCIPvarGetType((*var)->data.aggregate.var) == SCIP_VARTYPE_BINARY);
+         assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
+         assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
+         assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
+         *negated = *negated ^ ((*var)->data.aggregate.scalar < 0.0);
+         *var = (*var)->data.aggregate.var;
+         break;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("multiple aggregated variable has no single corresponding active problem variable\n");
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
+         assert((*var)->negatedvar != NULL);
+         *negated = !(*negated);
+         *var = (*var)->negatedvar;
+         break;
+
+      default:
+         errorMessage("unknown variable status\n");
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** transforms given variable, boundtype and bound to the corresponding active variable values */

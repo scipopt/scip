@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.96 2004/06/02 13:48:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.97 2004/06/30 14:17:02 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -104,7 +104,7 @@ RETCODE treeEnsurePathMem(
  */
 
 /** node comparator for best lower bound */
-DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound)
+DECL_SORTPTRCOMP(SCIPnodeCompLowerbound)
 {  /*lint --e{715}*/
    assert(elem1 != NULL);
    assert(elem2 != NULL);

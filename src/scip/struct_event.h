@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.7 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.8 2004/06/30 14:17:01 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -85,7 +85,7 @@ struct EventFilter
    EVENTHDLR**      eventhdlrs;         /**< array with event handlers to process the event */
    EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
    int*             eventnuses;         /**< array with number of times, the eventhandler/data was added to the filter;
-                                         *   in update range: +1 if event should be added, -1 if event should be deleted
+                                         *   in update range: -1 if event should be added, -2 if event should be deleted
                                          */
    int              size;               /**< size of filter arrays (available slots in arrays) */
    int              len;                /**< number entries in filter arrays */

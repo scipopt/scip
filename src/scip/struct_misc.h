@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.5 2004/06/29 17:55:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.6 2004/06/30 14:17:01 bzfpfend Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -45,7 +45,7 @@
 struct PQueue
 {
    Real             sizefac;            /**< memory growing factor */
-   DECL_SORTPTRCOMP((*ptrcmp));         /**< compares two data elements */
+   DECL_SORTPTRCOMP((*ptrcomp));        /**< compares two data elements */
    void**           slots;              /**< array of element slots */
    int              len;                /**< number of used element slots */
    int              size;               /**< total number of available element slots */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.103 2004/06/24 15:34:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.104 2004/06/30 14:17:00 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1366,7 +1366,7 @@ RETCODE consdataTightenVarBounds(
 
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
-DECL_SORTINDCOMP(consdataCmpVar)
+DECL_SORTINDCOMP(consdataCompVar)
 {  /*lint --e{715}*/
    CONSDATA* consdata = (CONSDATA*)dataptr;
 
@@ -1374,7 +1374,7 @@ DECL_SORTINDCOMP(consdataCmpVar)
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
    
-   return SCIPvarCmp(consdata->vars[ind1], consdata->vars[ind2]);
+   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
 }
 
 /** sorts linear constraint's variables */
@@ -1402,7 +1402,7 @@ RETCODE consdataSort(
       CHECK_OKAY( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call bubble sort */
-      SCIPbsort((void*)consdata, consdata->nvars, consdataCmpVar, perm);
+      SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
 
       /* permute the variables in the linear constraint according to the resulting permutation */
       for( v = 0; v < consdata->nvars; ++v )
@@ -1439,7 +1439,7 @@ RETCODE consdataSort(
       /* check sorting */
       for( v = 0; v < consdata->nvars; ++v )
       {
-         assert(v == consdata->nvars-1 || SCIPvarCmp(consdata->vars[v], consdata->vars[v+1]) <= 0);
+         assert(v == consdata->nvars-1 || SCIPvarCompare(consdata->vars[v], consdata->vars[v+1]) <= 0);
          assert(perm[v] == v);
          assert(consdata->eventdatas[v]->varpos == v);
       }
@@ -1690,7 +1690,7 @@ RETCODE addCoef(
       consdata->sorted = TRUE;
    else
       consdata->sorted = consdata->sorted
-         && (SCIPvarCmp(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
+         && (SCIPvarCompare(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
 
    /* add the new coefficient to the LP row */
    if( consdata->row != NULL )
@@ -3936,7 +3936,7 @@ RETCODE preprocessConstraintPairs(
       {
          /* test, if variable appears in only one or in both constraints */
          if( v0 < consdata0->nvars && v1 < consdata1->nvars )
-            varcmp = SCIPvarCmp(consdata0->vars[v0], consdata1->vars[v1]);
+            varcmp = SCIPvarCompare(consdata0->vars[v0], consdata1->vars[v1]);
          else if( v0 < consdata0->nvars )
             varcmp = -1;
          else

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.19 2004/06/01 16:40:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.20 2004/06/30 14:17:01 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -186,7 +186,7 @@ Bool SCIPvarMayRoundUp(
  *  variable index; returns 0 if both indices are equal, which means both variables are equal
  */
 extern
-int SCIPvarCmp(
+int SCIPvarCompare(
    VAR*             var1,               /**< first problem variable */
    VAR*             var2                /**< second problem variable */
    );
@@ -195,6 +195,15 @@ int SCIPvarCmp(
 extern
 VAR* SCIPvarGetProbvar(
    VAR*             var                 /**< problem variable */
+   );
+
+/** gets corresponding active problem variable of a binary variable and updates the given negation status;
+ *  for fixed variables, NULL is returned, and the negation status is switched iff the variable is fixed to one
+ */
+extern
+RETCODE SCIPvarGetProbvarBinary(
+   VAR**            var,                /**< pointer to binary problem variable */
+   Bool*            negated             /**< pointer to update the negation status */
    );
 
 /** transforms given variable, boundtype and bound to the corresponding active variable values */

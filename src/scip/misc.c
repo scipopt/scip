@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.25 2004/06/30 10:47:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.26 2004/06/30 14:17:00 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -68,11 +68,11 @@ RETCODE SCIPpqueueCreate(
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
    Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    assert(pqueue != NULL);
-   assert(ptrcmp != NULL);
+   assert(ptrcomp != NULL);
 
    initsize = MAX(1, initsize);
    sizefac = MAX(1.0, sizefac);
@@ -82,7 +82,7 @@ RETCODE SCIPpqueueCreate(
    (*pqueue)->size = 0;
    (*pqueue)->sizefac = sizefac;
    (*pqueue)->slots = NULL;
-   (*pqueue)->ptrcmp = ptrcmp;
+   (*pqueue)->ptrcomp = ptrcomp;
    CHECK_OKAY( pqueueResize(*pqueue, initsize) );
 
    return SCIP_OKAY;
@@ -126,7 +126,7 @@ RETCODE SCIPpqueueInsert(
    /* insert element as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = pqueue->len;
    pqueue->len++;
-   while( pos > 0 && (*pqueue->ptrcmp)(elem, pqueue->slots[PQ_PARENT(pos)]) < 0 )
+   while( pos > 0 && (*pqueue->ptrcomp)(elem, pqueue->slots[PQ_PARENT(pos)]) < 0 )
    {
       pqueue->slots[pos] = pqueue->slots[PQ_PARENT(pos)];
       pos = PQ_PARENT(pos);
@@ -164,9 +164,9 @@ void* SCIPpqueueRemove(
    {
       childpos = PQ_LEFTCHILD(pos);
       brotherpos = PQ_RIGHTCHILD(pos);
-      if( brotherpos <= pqueue->len && (*pqueue->ptrcmp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
+      if( brotherpos <= pqueue->len && (*pqueue->ptrcomp)(pqueue->slots[brotherpos], pqueue->slots[childpos]) < 0 )
          childpos = brotherpos;
-      if( (*pqueue->ptrcmp)(last, pqueue->slots[childpos]) <= 0 )
+      if( (*pqueue->ptrcomp)(last, pqueue->slots[childpos]) <= 0 )
          break;
       pqueue->slots[pos] = pqueue->slots[childpos];
       pos = childpos;
@@ -2274,7 +2274,7 @@ RETCODE SCIPptrarraySetVal(
 void SCIPbsort(
    void*            dataptr,            /**< pointer to data field that is given to the external compare method */
    int              len,                /**< number of elements to be sorted (valid index range) */
-   DECL_SORTINDCOMP((*indcmp)),         /**< data element comparator */
+   DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
    int*             indarray            /**< pointer to store the sorted index array */
    )
 {
@@ -2284,7 +2284,7 @@ void SCIPbsort(
    int sortpos;
    int tmpind;
 
-   assert(indcmp != NULL);
+   assert(indcomp != NULL);
    assert(len == 0 || indarray != NULL);
 
    /* create identity permutation */
@@ -2301,18 +2301,18 @@ void SCIPbsort(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && indcmp(dataptr, indarray[pos], indarray[pos+1]) <= 0 )
+         while( pos < lastpos && indcomp(dataptr, indarray[pos], indarray[pos+1]) <= 0 )
             pos++;
          if( pos >= lastpos )
             break;
-         assert( indcmp(dataptr, indarray[pos], indarray[pos+1]) > 0 );
+         assert( indcomp(dataptr, indarray[pos], indarray[pos+1]) > 0 );
          tmpind = indarray[pos];
          do
          {
             indarray[pos] = indarray[pos+1];
             pos++;
          }
-         while( pos < lastpos && indcmp(dataptr, tmpind, indarray[pos+1]) > 0 );
+         while( pos < lastpos && indcomp(dataptr, tmpind, indarray[pos+1]) > 0 );
          indarray[pos] = tmpind;
          sortpos = pos;
          pos++;
@@ -2324,18 +2324,18 @@ void SCIPbsort(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && indcmp(dataptr, indarray[pos-1], indarray[pos]) <= 0 )
+         while( pos > firstpos && indcomp(dataptr, indarray[pos-1], indarray[pos]) <= 0 )
             pos--;
          if( pos <= firstpos )
             break;
-         assert( indcmp(dataptr, indarray[pos-1], indarray[pos]) > 0 );
+         assert( indcomp(dataptr, indarray[pos-1], indarray[pos]) > 0 );
          tmpind = indarray[pos];
          do
          {
             indarray[pos] = indarray[pos-1];
             pos--;
          }
-         while( pos > firstpos && indcmp(dataptr, indarray[pos-1], tmpind) > 0 );
+         while( pos > firstpos && indcomp(dataptr, indarray[pos-1], tmpind) > 0 );
          indarray[pos] = tmpind;
          sortpos = pos;
          pos--;
@@ -2348,7 +2348,7 @@ void SCIPbsort(
 void SCIPbsortPtr(
    void**           ptrarray,           /**< pointer array to be sorted */
    int              len,                /**< length of array */
-   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2358,7 +2358,7 @@ void SCIPbsortPtr(
    void* tmpptr;
 
    assert(len == 0 || ptrarray != NULL);
-   assert(ptrcmp != NULL);
+   assert(ptrcomp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -2369,18 +2369,18 @@ void SCIPbsortPtr(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
             pos++;
          if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos+1];
             pos++;
          }
-         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
          sortpos = pos;
          pos++;
@@ -2392,18 +2392,18 @@ void SCIPbsortPtr(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
             pos--;
          if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
          do
          {
             ptrarray[pos] = ptrarray[pos-1];
             pos--;
          }
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
          sortpos = pos;
          pos--;
@@ -2417,7 +2417,7 @@ void SCIPbsortPtrDbl(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2429,7 +2429,7 @@ void SCIPbsortPtrDbl(
 
    assert(len == 0 || ptrarray != NULL);
    assert(len == 0 || dblarray != NULL);
-   assert(ptrcmp != NULL);
+   assert(ptrcomp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -2440,11 +2440,11 @@ void SCIPbsortPtrDbl(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
             pos++;
          if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
          tmpdbl = dblarray[pos];
          do
@@ -2453,7 +2453,7 @@ void SCIPbsortPtrDbl(
             dblarray[pos] = dblarray[pos+1];
             pos++;
          }
-         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
          dblarray[pos] = tmpdbl;
          sortpos = pos;
@@ -2466,11 +2466,11 @@ void SCIPbsortPtrDbl(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
             pos--;
          if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
          tmpdbl = dblarray[pos];
          do
@@ -2479,7 +2479,7 @@ void SCIPbsortPtrDbl(
             dblarray[pos] = dblarray[pos-1];
             pos--;
          }
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
          dblarray[pos] = tmpdbl;
          sortpos = pos;
@@ -2495,7 +2495,7 @@ void SCIPbsortPtrDblInt(
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int*             intarray,           /**< int array to be permuted in the same way */
    int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2509,7 +2509,7 @@ void SCIPbsortPtrDblInt(
    assert(len == 0 || ptrarray != NULL);
    assert(len == 0 || dblarray != NULL);
    assert(len == 0 || intarray != NULL);
-   assert(ptrcmp != NULL);
+   assert(ptrcomp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -2520,11 +2520,11 @@ void SCIPbsortPtrDblInt(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
             pos++;
          if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
          tmpdbl = dblarray[pos];
          tmpint = intarray[pos];
@@ -2535,7 +2535,7 @@ void SCIPbsortPtrDblInt(
             intarray[pos] = intarray[pos+1];
             pos++;
          }
-         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
          dblarray[pos] = tmpdbl;
          intarray[pos] = tmpint;
@@ -2549,11 +2549,11 @@ void SCIPbsortPtrDblInt(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
             pos--;
          if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
          tmpdbl = dblarray[pos];
          tmpint = intarray[pos];
@@ -2564,7 +2564,7 @@ void SCIPbsortPtrDblInt(
             intarray[pos] = intarray[pos-1];
             pos--;
          }
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
          dblarray[pos] = tmpdbl;
          intarray[pos] = tmpint;
@@ -2582,7 +2582,7 @@ void SCIPbsortPtrDblIntInt(
    int*             intarray1,          /**< first int array to be permuted in the same way */
    int*             intarray2,          /**< second int array to be permuted in the same way */
    int              len,                /**< length of arrays */
-   DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2598,7 +2598,7 @@ void SCIPbsortPtrDblIntInt(
    assert(len == 0 || dblarray != NULL);
    assert(len == 0 || intarray1 != NULL);
    assert(len == 0 || intarray2 != NULL);
-   assert(ptrcmp != NULL);
+   assert(ptrcomp != NULL);
 
    firstpos = 0;
    lastpos = len-1;
@@ -2609,11 +2609,11 @@ void SCIPbsortPtrDblIntInt(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && ptrcmp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
+         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
             pos++;
          if( pos >= lastpos )
             break;
-         assert( ptrcmp(ptrarray[pos], ptrarray[pos+1]) > 0 );
+         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
          tmpptr = ptrarray[pos];
          tmpdbl = dblarray[pos];
          tmpint1 = intarray1[pos];
@@ -2626,7 +2626,7 @@ void SCIPbsortPtrDblIntInt(
             intarray2[pos] = intarray2[pos+1];
             pos++;
          }
-         while( pos < lastpos && ptrcmp(tmpptr, ptrarray[pos+1]) > 0 );
+         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
          ptrarray[pos] = tmpptr;
          dblarray[pos] = tmpdbl;
          intarray1[pos] = tmpint1;
@@ -2641,11 +2641,11 @@ void SCIPbsortPtrDblIntInt(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
             pos--;
          if( pos <= firstpos )
             break;
-         assert( ptrcmp(ptrarray[pos-1], ptrarray[pos]) > 0 );
+         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
          tmpptr = ptrarray[pos];
          tmpdbl = dblarray[pos];
          tmpint1 = intarray1[pos];
@@ -2658,7 +2658,7 @@ void SCIPbsortPtrDblIntInt(
             intarray2[pos] = intarray2[pos-1];
             pos--;
          }
-         while( pos > firstpos && ptrcmp(ptrarray[pos-1], tmpptr) > 0 );
+         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
          ptrarray[pos] = tmpptr;
          dblarray[pos] = tmpdbl;
          intarray1[pos] = tmpint1;

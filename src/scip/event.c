@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.33 2004/06/29 17:55:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.34 2004/06/30 14:17:00 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -806,7 +806,7 @@ RETCODE SCIPeventfilterAdd(
       eventfilter->eventtypes[eventfilter->len + eventfilter->updatelen] = eventtype;
       eventfilter->eventhdlrs[eventfilter->len + eventfilter->updatelen] = eventhdlr;
       eventfilter->eventdatas[eventfilter->len + eventfilter->updatelen] = eventdata;
-      eventfilter->eventnuses[eventfilter->len + eventfilter->updatelen] = +1;
+      eventfilter->eventnuses[eventfilter->len + eventfilter->updatelen] = -1;
       eventfilter->updatelen++;
    }
    else
@@ -943,14 +943,14 @@ RETCODE SCIPeventfilterDel(
    assert(set != NULL);
    assert(eventhdlr != NULL);
 
-   /* if updates are delayed, insert addition to the end of the update range */
+   /* if updates are delayed, insert deletion to the end of the update range */
    if( eventfilter->delayupdates )
    {
       CHECK_OKAY( eventfilterEnsureMem(eventfilter, memhdr, set, eventfilter->len + eventfilter->updatelen + 1) );
       eventfilter->eventtypes[eventfilter->len + eventfilter->updatelen] = eventtype;
       eventfilter->eventhdlrs[eventfilter->len + eventfilter->updatelen] = eventhdlr;
       eventfilter->eventdatas[eventfilter->len + eventfilter->updatelen] = eventdata;
-      eventfilter->eventnuses[eventfilter->len + eventfilter->updatelen] = -1;
+      eventfilter->eventnuses[eventfilter->len + eventfilter->updatelen] = -2;
       eventfilter->updatelen++;
    }
    else
@@ -1039,8 +1039,8 @@ RETCODE eventfilterProcessUpdates(
     */
    for( i = 0; i < updatelen; ++i )
    {
-      assert(eventfilter->eventnuses[len+i] == +1 || eventfilter->eventnuses[len+i] == -1);
-      if( eventfilter->eventnuses[len+i] == +1 )
+      assert(eventfilter->eventnuses[len+i] == -1 || eventfilter->eventnuses[len+i] == -2);
+      if( eventfilter->eventnuses[len+i] == -1 )
       {
          /* process the delayed addition */
          CHECK_OKAY( SCIPeventfilterAdd(eventfilter, memhdr, set, 

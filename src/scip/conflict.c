@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.44 2004/06/30 10:40:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.45 2004/06/30 14:17:00 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -406,7 +406,7 @@ Bool SCIPconflicthdlrIsInitialized(
  *  ordered prior to variables infered earlier
  */
 static
-DECL_SORTPTRCOMP(conflictVarCmp)
+DECL_SORTPTRCOMP(conflictVarComp)
 {  /*lint --e{715}*/
    VAR* var1;
    VAR* var2;
@@ -497,7 +497,7 @@ RETCODE SCIPconflictCreate(
    CHECK_OKAY( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPlpiCreate(&(*conflict)->lpi, "LPconflict") );
-   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->varqueue, set->memgrowinit, set->memgrowfac, conflictVarCmp) );
+   CHECK_OKAY( SCIPpqueueCreate(&(*conflict)->varqueue, set->memgrowinit, set->memgrowfac, conflictVarComp) );
    (*conflict)->conflictvars = NULL;
    (*conflict)->conflictvarssize = 0;
    (*conflict)->nconflictvars = 0;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.31 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.32 2004/06/30 14:17:00 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -372,7 +372,7 @@ RETCODE SCIPdispPrintLine(
 
 /** comparison method for display colums */
 static
-DECL_SORTPTRCOMP(dispCmp)
+DECL_SORTPTRCOMP(dispComp)
 {  /*lint --e{715}*/
    return ((DISP*)elem2)->priority - ((DISP*)elem1)->priority;
 }
@@ -391,7 +391,7 @@ RETCODE SCIPdispAutoActivate(
 
    /* sort display columns w.r. to their priority */
    ALLOC_OKAY( duplicateMemoryArray(&disps, set->disps, set->ndisps) );
-   SCIPbsortPtr((void**)disps, set->ndisps, dispCmp);
+   SCIPbsortPtr((void**)disps, set->ndisps, dispComp);
 
    totalwidth = 0;
 

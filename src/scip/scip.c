@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.177 2004/06/29 17:55:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.178 2004/06/30 14:17:01 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3848,6 +3848,36 @@ RETCODE SCIPgetNegatedVar(
    {
       assert(scip->stage != SCIP_STAGE_PROBLEM);
       CHECK_OKAY( SCIPvarNegate(var, scip->mem->solvemem, scip->set, scip->stat, negvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets a binary variable that is equal to the given binary variable, and that is either active or the negated
+ *  variable of an active binary variable; if the given variable is fixed, NULL is returned as representative,
+ *  and *negated is TRUE iff the variable is fixed to TRUE
+ */
+RETCODE SCIPgetBinvarRepresentative(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable to get binary representative for */
+   VAR**            repvar,             /**< pointer to store the binary representative */
+   Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
+   )
+{
+   assert(repvar != NULL);
+   assert(negated != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetBinvarRepresentative", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   /* get the active representative of the given variable */
+   *repvar = var;
+   *negated = FALSE;
+   CHECK_OKAY( SCIPvarGetProbvarBinary(repvar, &negated) );
+
+   /* negate the representative, if it corresponds to the negation of the given variable */
+   if( *repvar != NULL && *negated )
+   {
+      CHECK_OKAY( SCIPvarNegate(*repvar, scip->mem->solvemem, scip->set, scip->stat, repvar) );
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.4 2004/04/27 15:50:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.5 2004/06/30 14:17:01 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -43,7 +43,7 @@
 
 /** node comparator for best lower bound */
 extern
-DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);
+DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
 
 #ifndef NDEBUG
 
