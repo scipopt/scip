@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.178 2004/10/29 12:42:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.179 2004/11/02 17:34:11 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4061,13 +4061,17 @@ Bool SCIPisPrimalboundSol(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets current gap |(primalbound - dualbound)/dualbound| */
+/** gets current gap |(primalbound - dualbound)/dualbound| if both bounds have same sign, or infinity, if they have
+ *  opposite sign
+ */
 extern
 Real SCIPgetGap(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem */
+/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign, 
+ *  or infinity, if they have opposite sign
+ */
 extern
 Real SCIPgetTransGap(
    SCIP*            scip                /**< SCIP data structure */

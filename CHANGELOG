@@ -59,6 +59,8 @@ installation:
 
 interface:
 - added methods SCIPgetVarsLogicor() and SCIPgetNVarsLogicor() in logic or constraint handler
+- methode SCIPgetGap() and SCIPgetTransGap() now return infinity, if primal and dual bound have opposite sign
+  (this removes the oddness with the gap increasing while the dual bound approaches zero)
 
 parameters:
 - lp/colagelimit and lp/rowagelimit may now be set to -1 to disable deletion of columns/rows due to aging

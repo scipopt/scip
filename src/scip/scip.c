@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.223 2004/10/29 13:19:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.224 2004/11/02 17:34:11 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9780,7 +9780,9 @@ Bool SCIPisPrimalboundSol(
    return SCIPprimalUpperboundIsSol(scip->primal);
 }
 
-/** gets current gap |(primalbound - dualbound)/dualbound| */
+/** gets current gap |(primalbound - dualbound)/dualbound| if both bounds have same sign, or infinity, if they have
+ *  opposite sign
+ */
 Real SCIPgetGap(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -9796,15 +9798,19 @@ Real SCIPgetGap(
    primalbound = SCIPgetPrimalbound(scip);
    dualbound = SCIPgetDualbound(scip);
 
-   if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
-      return SCIPsetInfinity(scip->set);
-   else if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
+   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
       return 0.0;
+   else if( SCIPsetIsZero(scip->set, dualbound)
+      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
+      || primalbound * dualbound < 0.0 )
+      return SCIPsetInfinity(scip->set);
    else
       return REALABS((primalbound - dualbound)/dualbound);
 }
 
-/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem */
+/** gets current gap |(upperbound - lowerbound)/lowerbound| in transformed problem if both bounds have same sign, 
+ *  or infinity, if they have opposite sign
+ */
 Real SCIPgetTransGap(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -9819,10 +9825,12 @@ Real SCIPgetTransGap(
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
       return 0.0;
-   else if( SCIPsetIsZero(scip->set, lowerbound) || SCIPsetIsInfinity(scip->set, upperbound) )
-      return SCIPsetInfinity(scip->set);
    else if( SCIPsetIsEQ(scip->set, upperbound, lowerbound) )
       return 0.0;
+   else if( SCIPsetIsZero(scip->set, lowerbound)
+      || SCIPsetIsInfinity(scip->set, upperbound)
+      || lowerbound * upperbound < 0.0 )
+      return SCIPsetInfinity(scip->set);
    else
       return REALABS((upperbound - lowerbound)/lowerbound);
 }
