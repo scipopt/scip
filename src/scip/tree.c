@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.80 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.81 2004/02/26 13:53:55 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -1718,23 +1718,30 @@ RETCODE actnodeToFork(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    debugMessage("actnode %p to fork at depth %d\n", tree->actnode, tree->actnode->depth);
 
-   /* clean up newly created part of LP to keep only necessary columns and rows */
-   CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
-
-   /* resolve LP after cleaning up */
-   if( !lp->solved )
+   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
+    * and we have to forget about the LP and transform the node into a junction (see below)
+    */
+   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+      /* clean up newly created part of LP to keep only necessary columns and rows */
+      CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set, stat) );
+      
+      /* resolve LP after cleaning up */
+      if( !lp->solved )
+      {
+         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+      }
    }
    assert(lp->solved);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
+    *    (But in this case, all children should be cut off and the node should be converted
+    *    into a deadend instead of a fork.)
     *  - Something numerically weird happened after cleaning up.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
@@ -1744,6 +1751,10 @@ RETCODE actnodeToFork(
     */
    if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
+      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
+         stat->nnodes, stat->nlps);
+
       /* remove all additions to the LP at this node */
       CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
@@ -1813,28 +1824,36 @@ RETCODE actnodeToSubroot(
 
    debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
 
-   /* clean up whole LP to keep only necessary columns and rows */
+   /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
+    * and we have to forget about the LP and transform the node into a junction (see below)
+    */
+   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      /* clean up whole LP to keep only necessary columns and rows */
 #if 0
-   if( tree->actnode->depth == 0 )
-   {
-      CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
-   }
-   else
+      if( tree->actnode->depth == 0 )
+      {
+         CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
+      }
+      else
 #endif
-   {
-      CHECK_OKAY( SCIPlpRemoveAllObsoletes(lp, memhdr, set, stat) );
-   }
+      {
+         CHECK_OKAY( SCIPlpRemoveAllObsoletes(lp, memhdr, set, stat) );
+      }
 
-   /* resolve LP after cleaning up */
-   if( !lp->solved )
-   {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+      /* resolve LP after cleaning up */
+      if( !lp->solved )
+      {
+         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+      }
    }
    assert(lp->solved);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
     *    solution, that is better than the current node's lower bound.
+    *    (But in this case, all children should be cut off and the node should be converted
+    *    into a deadend instead of a subroot.)
     *  - Something numerically weird happened after cleaning up.
     * The only thing we can do, is to completely forget about the LP and treat the node as
     * if it was only a pseudo-solution node. Therefore we have to remove all additional
@@ -1844,6 +1863,10 @@ RETCODE actnodeToSubroot(
     */
    if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
+      infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+         "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 
+         stat->nnodes, stat->nlps);
+
       /* remove all additions to the LP at this node */
       CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );

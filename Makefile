@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.64 2004/02/25 16:49:52 bzfpfend Exp $
+# $Id: Makefile,v 1.65 2004/02/26 13:53:52 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -84,7 +84,7 @@ GXXWARN		=	-Wall -W -Wpointer-arith \
 			-Wno-unknown-pragmas \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth -Wundef \
-			-Wcast-qual -Wold-style-cast -Wshadow 
+			-Wcast-qual -Wshadow -Wno-unused # -Wold-style-cast
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)

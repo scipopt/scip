@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.55 2004/02/25 16:49:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.56 2004/02/26 13:53:54 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1881,6 +1881,18 @@ Bool SCIPlpiIsTimelimExc(
    assert(lpi->solstat >= 0);
 
    return (lpi->solstat == CPX_STAT_ABORT_TIME_LIM);
+}
+
+/** returns the internal solution status of the solver */
+int SCIPlpiGetInternalStatus(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   return lpi->solstat;
 }
 
 /** gets objective value of solution */

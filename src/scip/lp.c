@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.101 2004/02/25 16:49:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.102 2004/02/26 13:53:53 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4218,8 +4218,7 @@ RETCODE lpCheckIntpar(
       return SCIP_OKAY;
 
    /* check value */
-   if( lpivalue != value )
-      return SCIP_LPERROR;
+   assert(lpivalue == value);
 
    return retcode;
 }
@@ -5642,6 +5641,7 @@ RETCODE lpSolve(
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
+#if 0 /* SOPLEX may return with objective limit reached in any case, because it doesn't distinct btw. primal and dual */
       if( lp->lastwasprimal )
       {
          errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists\n");
@@ -5649,6 +5649,7 @@ RETCODE lpSolve(
          lp->lpobjval = -set->infinity;
          return SCIP_LPERROR;
       }
+#endif
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
       lp->lpobjval = set->infinity;
    }
@@ -5674,7 +5675,8 @@ RETCODE lpSolve(
    }
    else
    {
-      errorMessage("Unknown return status of %s simplex\n", lp->lastwasprimal ? "primal" : "dual");
+      errorMessage("Unknown return status of %s simplex (internal status: %d)\n", 
+         lp->lastwasprimal ? "primal" : "dual", SCIPlpiGetInternalStatus(lp->lpi));
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       return SCIP_LPERROR;
    }
@@ -5731,8 +5733,8 @@ RETCODE SCIPlpSolveAndEval(
    assert(prob != NULL);
    assert(prob->nvars >= lp->ncols);
 
-   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
-      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
+   debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d, diving=%d, cutoff=%g\n", 
+      lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved, lp->diving, lp->cutoffbound);
 
    if( !lp->solved )
    {

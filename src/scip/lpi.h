@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.35 2004/02/05 14:12:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.36 2004/02/26 13:53:53 bzfpfend Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -435,6 +435,12 @@ Bool SCIPlpiIsIterlimExc(
 /** returns TRUE iff the time limit was reached */
 extern 
 Bool SCIPlpiIsTimelimExc(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns the internal solution status of the solver */
+extern
+int SCIPlpiGetInternalStatus(
    LPI*             lpi                 /**< LP interface structure */
    );
 

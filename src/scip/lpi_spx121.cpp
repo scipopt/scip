@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.1 2004/02/25 16:50:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.2 2004/02/26 13:53:55 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -178,10 +178,8 @@ public:
    virtual Status solve()
    {
       if( getFromScratch() )
-      {
          SoPlex::reLoad();
-         setFromScratch(false);
-      }
+
       m_stat = SoPlex::solve();
 
       assert(rep() == COLUMN);

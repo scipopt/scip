@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.7 2004/02/25 16:49:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spxdbg.cpp,v 1.8 2004/02/26 13:53:55 bzfpfend Exp $"
 
-/**@file   lpi_spxdbg.cpp
+/**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (debug version)
  * @author Tobias Achterberg
  */
@@ -151,10 +151,8 @@ public:
    virtual Status solve()
    {
       if( getFromScratch() )
-      {
          SPxSolver::reLoad();
-         setFromScratch(false);
-      }
+
       m_stat = SPxSolver::solve();
 
       assert(rep() == COLUMN);
@@ -1263,6 +1261,7 @@ RETCODE spxSolve(
    assert(lpi->spx != NULL);
 
    SPxSolver::Status status = lpi->spx->solve();
+   debugMessage(" -> SOPLEX status: %d, basis status: %d\n", lpi->spx->getStatus(), lpi->spx->basis().status());
 
    switch( status )
    {
@@ -1485,7 +1484,8 @@ Bool SCIPlpiIsPrimalInfeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE);
+   return (lpi->spx->getStatus() == SPxSolver::INFEASIBLE
+      || (lpi->spx->getStatus() == SPxSolver::UNBOUNDED && lpi->spx->basis().status() != SPxBasis::PRIMAL));
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -1511,7 +1511,8 @@ Bool SCIPlpiIsDualInfeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED);
+   return (lpi->spx->getStatus() == SPxSolver::UNBOUNDED
+      || (lpi->spx->getStatus() == SPxSolver::INFEASIBLE && lpi->spx->basis().status() != SPxBasis::DUAL));
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -1577,6 +1578,19 @@ Bool SCIPlpiIsTimelimExc(
    assert(lpi->spx != NULL);
 
    return (lpi->spx->getStatus() == SPxSolver::ABORT_TIME);
+}
+
+/** returns the internal solution status of the solver */
+int SCIPlpiGetInternalStatus(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   debugMessage("calling SCIPlpiIsTimelimExc()\n");
+
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+
+   return lpi->spx->getStatus();
 }
 
 /** gets objective value of solution */

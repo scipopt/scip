@@ -1,6 +1,6 @@
 # verbosity level of output
 # [type: int, range: [0,4], default: 2]
-display/verblevel = 3
+display/verblevel = 4
 
 # maximal number of characters in a node information line
 # [type: int, range: [0,2147483647], default: 139]
