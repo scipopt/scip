@@ -198,7 +198,7 @@ RETCODE primalAddSol(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
    }
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
-   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    /* check, if the global upper bound has to be updated */
    if( SCIPsolGetObj(sol) < primal->upperbound )

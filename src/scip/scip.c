@@ -1923,10 +1923,20 @@ RETCODE SCIPgetLPColsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPColsData", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
-   if( cols != NULL )
-      *cols = scip->lp->cols;
-   if( ncols != NULL )
-      *ncols = scip->lp->ncols;
+   if( scip->tree->actnodehaslp )
+   {
+      if( cols != NULL )
+         *cols = scip->lp->cols;
+      if( ncols != NULL )
+         *ncols = scip->lp->ncols;
+   }
+   else
+   {
+      if( cols != NULL )
+         *cols = NULL;
+      if( ncols != NULL )
+         *ncols = scip->tree->pathnlpcols[scip->tree->pathlen-1];
+   }
 
    return SCIP_OKAY;
 }
@@ -1938,7 +1948,10 @@ COL** SCIPgetLPCols(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
-   return scip->lp->cols;
+   if( scip->tree->actnodehaslp )
+      return scip->lp->cols;
+   else
+      return NULL;
 }
 
 /** gets actual number of LP columns */
@@ -1948,7 +1961,10 @@ int SCIPgetNLPCols(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPCols", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
-   return scip->lp->ncols;
+   if( scip->tree->actnodehaslp )
+      return scip->lp->ncols;
+   else
+      return scip->tree->pathnlpcols[scip->tree->pathlen-1];
 }
 
 /** gets actual LP rows along with the actual number of LP rows */
@@ -1960,11 +1976,21 @@ RETCODE SCIPgetLPRowsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPRowsData", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
    
-   if( rows != NULL )
-      *rows = scip->lp->rows;
-   if( nrows != NULL )
-      *nrows = scip->lp->nrows;
-
+   if( scip->tree->actnodehaslp )
+   {
+      if( rows != NULL )
+         *rows = scip->lp->rows;
+      if( nrows != NULL )
+         *nrows = scip->lp->nrows;
+   }
+   else
+   {
+      if( rows != NULL )
+         *rows = NULL;
+      if( nrows != NULL )
+         *nrows = scip->tree->pathnlprows[scip->tree->pathlen-1];
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -1975,7 +2001,10 @@ ROW** SCIPgetLPRows(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
    
-   return scip->lp->rows;
+   if( scip->tree->actnodehaslp )
+      return scip->lp->rows;
+   else
+      return NULL;
 }
 
 /** gets actual number of LP rows */
@@ -1984,8 +2013,11 @@ int SCIPgetNLPRows(
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
-   
-   return scip->lp->nrows;
+
+   if( scip->tree->actnodehaslp )
+      return scip->lp->nrows;
+   else
+      return scip->tree->pathnlprows[scip->tree->pathlen-1];
 }
 
 /** returns TRUE iff all potential variables exist as columns in the LP, and FALSE, if there may be additional columns,

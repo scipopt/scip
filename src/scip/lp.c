@@ -1347,7 +1347,6 @@ RETCODE SCIPcolIncCoeff(
 /** notifies LP, that the bounds of a column were changed */
 RETCODE SCIPcolBoundChanged(
    COL*             col,                /**< LP column that changed */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -4220,7 +4219,7 @@ RETCODE lpRemoveObsoleteCols(
    /* mark obsolete columns to be deleted */
    ndelcols = 0;
    clearMemoryArray(coldstat, ncols);
-   for( c = lp->firstnewcol; c < ncols; ++c )
+   for( c = firstcol; c < ncols; ++c )
    {
       assert(cols[c] == lpicols[c]);
       assert(cols[c]->lppos == c);
@@ -4286,7 +4285,7 @@ RETCODE lpRemoveObsoleteRows(
    /* mark obsolete rows to be deleted */
    ndelrows = 0;
    clearMemoryArray(rowdstat, nrows);
-   for( r = lp->firstnewrow; r < nrows; ++r )
+   for( r = firstrow; r < nrows; ++r )
    {
       assert(rows[r] == lpirows[r]);
       assert(rows[r]->lppos == r);
@@ -4319,7 +4318,7 @@ RETCODE lpRemoveObsoleteRows(
 }
 
 /** removes all columns and rows in the part of the LP created at the current node, that are too old */
-RETCODE SCIPlpRemoveObsoletes(
+RETCODE SCIPlpRemoveNewObsoletes(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -4339,6 +4338,31 @@ RETCODE SCIPlpRemoveObsoletes(
    if( lp->firstnewrow < lp->nrows )
    {
       CHECK_OKAY( lpRemoveObsoleteRows(lp, memhdr, set, stat, lp->firstnewrow) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes all columns and rows in whole LP, that are too old */
+RETCODE SCIPlpRemoveAllObsoletes(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+
+   debugMessage("removing all obsolete columns and rows\n");
+
+   if( set->usepricing && 0 < lp->ncols )
+   {
+      CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, stat, 0) );
+   }
+   if( 0 < lp->nrows )
+   {
+      CHECK_OKAY( lpRemoveObsoleteRows(lp, memhdr, set, stat, 0) );
    }
 
    return SCIP_OKAY;
@@ -4478,11 +4502,11 @@ RETCODE SCIPlpCleanupNew(
    assert(lp->solved);
    assert(set != NULL);
 
-   if( set->usepricing && lp->firstnewcol < lp->ncols )
+   if( set->cleanupcols && set->usepricing && lp->firstnewcol < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, lp->firstnewcol) );
    }
-   if( lp->firstnewrow < lp->nrows )
+   if( set->cleanuprows && lp->firstnewrow < lp->nrows )
    {
       CHECK_OKAY( lpCleanupRows(lp, memhdr, set, lp->firstnewrow) );
    }
@@ -4501,11 +4525,11 @@ RETCODE SCIPlpCleanupAll(
    assert(lp->solved);
    assert(set != NULL);
 
-   if( set->usepricing && 0 < lp->ncols )
+   if( /*set->cleanupcols &&*/ set->usepricing && 0 < lp->ncols )
    {
       CHECK_OKAY( lpCleanupCols(lp, memhdr, set, 0) );
    }
-   if( 0 < lp->nrows )
+   if( /*set->cleanuprows &&*/ 0 < lp->nrows )
    {
       CHECK_OKAY( lpCleanupRows(lp, memhdr, set, 0) );
    }

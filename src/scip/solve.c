@@ -106,7 +106,7 @@ RETCODE solveLP(
 
          /* update ages and remove obsolete columns and rows from LP */
          CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
-         CHECK_OKAY( SCIPlpRemoveObsoletes(lp, memhdr, set, stat) );
+         CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
          
          if( !lp->solved )
          {
@@ -202,7 +202,7 @@ RETCODE solveNodeInitialLP(
    /* issue FIRSTLPSOLVED event */
    CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
    CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -366,6 +366,12 @@ RETCODE solveNodeLP(
          }
          assert(lp->solved);
       }
+
+      if( tree->actnode->depth == 0 )
+      {
+         /* display node information line for root node */
+         CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+      }
    }
 
    /* update lower bound w.r.t. the the LP solution */
@@ -383,7 +389,7 @@ RETCODE solveNodeLP(
    assert(lp->solved);
    CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
    CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -748,7 +754,7 @@ RETCODE SCIPsolveCIP(
       /* issue NODEACTIVATED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
       CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
       /* process the delayed events */
       CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, tree, lp, branchcand, eventfilter) );
@@ -850,7 +856,7 @@ RETCODE SCIPsolveCIP(
             /* issue NODEFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
             CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-            CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+            CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
                
             /* found a feasible solution */
             if( tree->actnodehaslp )
@@ -879,7 +885,7 @@ RETCODE SCIPsolveCIP(
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
          }
          CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-         CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+         CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
       }
 
       /* call primal heuristics */
@@ -889,7 +895,7 @@ RETCODE SCIPsolveCIP(
       }
       
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, FALSE) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, actnode->depth == 0) );
       
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
          SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));

@@ -350,7 +350,6 @@ RETCODE SCIPeventChgSol(
 extern
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
    LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */

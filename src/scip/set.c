@@ -67,16 +67,18 @@
 /* Pricing */
 
 #define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
-#define SCIP_DEFAULT_MAXPRICEVARS       32 /**< maximal number of variables priced in per pricing round */
-#define SCIP_DEFAULT_MAXPRICEVARSROOT 1024 /**< maximal number of priced variables at the root node */
+#define SCIP_DEFAULT_MAXPRICEVARS      128 /**< maximal number of variables priced in per pricing round */
+#define SCIP_DEFAULT_MAXPRICEVARSROOT 2048 /**< maximal number of priced variables at the root node */
 #define SCIP_DEFAULT_ABORTPRICEVARSFAC 2.0 /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */
+#define SCIP_DEFAULT_CLEANUPCOLS     FALSE /**< should new non-basic columns be removed after LP solving? */
 
 
 /* Cut Separation */
 
-#define SCIP_DEFAULT_MAXSEPACUTS       128 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_MAXSEPACUTS       256 /**< maximal number of cuts separated per separation round */
 #define SCIP_DEFAULT_MAXSEPACUTSROOT  4092 /**< maximal separated cuts at the root node */
 #define SCIP_DEFAULT_CUTAGELIMIT       128 /**< maximum age a cut can reach before it is deleted from global cut pool */
+#define SCIP_DEFAULT_CLEANUPROWS      TRUE /**< should new basic rows be removed after LP solving? */
 
 
 /* Constraint Settings */
@@ -192,6 +194,8 @@ RETCODE SCIPsetCreate(
    (*set)->lpsolvefreq = SCIP_DEFAULT_LPSOLVEFREQ;
    (*set)->lpsolvedepth = SCIP_DEFAULT_LPSOLVEDEPTH;
    (*set)->usepricing = SCIP_DEFAULT_USEPRICING;
+   (*set)->cleanupcols = SCIP_DEFAULT_CLEANUPCOLS;
+   (*set)->cleanuprows = SCIP_DEFAULT_CLEANUPROWS;
 
    return SCIP_OKAY;
 }

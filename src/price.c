@@ -465,6 +465,10 @@ RETCODE SCIPpriceVars(
       todoMessage("external reduced cost pricing");
    }
 
+   debugMessage("adding %d variables (%d bound violated and %d priced vars) to %d LP columns\n",
+      price->nvars + price->nbdviolvars - price->naddedbdviolvars, price->nbdviolvars - price->naddedbdviolvars,
+      price->nvars, lp->ncols);
+
    /* add the variables with violated bounds to LP */
    for( v = price->naddedbdviolvars; v < price->nbdviolvars; ++v )
    {

@@ -38,7 +38,7 @@
 
 #define SCIP_DEFAULT_MAXPLUNGEQUOT       1.5 /**< maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                               *   where plunging is performed */
-#define SCIP_DEFAULT_MAXPLUNGEDEPTH  INT_MAX /**< maximal plunging depth, before new best node is forced to be selected */
+#define SCIP_DEFAULT_MAXPLUNGEDEPTH      100 /**< maximal plunging depth, before new best node is forced to be selected */
 #define SCIP_DEFAULT_MINPLUNGEDEPTH       10 /**< minimal plunging depth, before new best node may be selected */
 
 

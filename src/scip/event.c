@@ -513,7 +513,6 @@ RETCODE SCIPeventChgSol(
 /** processes event by calling the appropriate event handlers */
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch and bound tree; only needed for BOUNDCHANGED events */
    LP*              lp,                 /**< actual LP data; only needed for BOUNDCHANGED events */
@@ -555,10 +554,10 @@ RETCODE SCIPeventProcess(
       {
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
-            CHECK_OKAY( SCIPcolBoundChanged(var->data.col, memhdr, set, lp, SCIP_BOUNDTYPE_LOWER,
+            CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, SCIP_BOUNDTYPE_LOWER,
                            event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          }
-         CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_LOWER,
+         CHECK_OKAY( SCIPtreeBoundChanged(tree, set, var, SCIP_BOUNDTYPE_LOWER,
                         event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -578,10 +577,10 @@ RETCODE SCIPeventProcess(
       {
          if( var->varstatus == SCIP_VARSTATUS_COLUMN )
          {
-            CHECK_OKAY( SCIPcolBoundChanged(var->data.col, memhdr, set, lp, SCIP_BOUNDTYPE_UPPER,
+            CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, SCIP_BOUNDTYPE_UPPER,
                            event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          }
-         CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_UPPER,
+         CHECK_OKAY( SCIPtreeBoundChanged(tree, set, var, SCIP_BOUNDTYPE_UPPER,
                         event->data.eventbdchg.oldbound, event->data.eventbdchg.newbound) );
          CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
@@ -1002,7 +1001,7 @@ RETCODE SCIPeventqueueAdd(
    if( !eventqueue->delayevents )
    {
       /* immediately process event */
-      CHECK_OKAY( SCIPeventProcess(*event, memhdr, set, tree, lp, branchcand, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(*event, set, tree, lp, branchcand, eventfilter) );
       CHECK_OKAY( SCIPeventFree(event, memhdr) );
    }
    else
@@ -1200,7 +1199,7 @@ RETCODE SCIPeventqueueProcess(
          event->data.eventbdchg.var->eventqueueindexub = -1;
       }
 
-      CHECK_OKAY( SCIPeventProcess(event, memhdr, set, tree, lp, branchcand, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(event, set, tree, lp, branchcand, eventfilter) );
 
       /* free the event immediately, because additionally raised events during event processing
        * can lead to a large event queue

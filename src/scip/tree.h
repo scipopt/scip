@@ -362,7 +362,6 @@ RETCODE SCIPtreeBranchVar(
 extern
 RETCODE SCIPtreeBoundChanged(
    TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */

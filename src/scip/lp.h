@@ -285,7 +285,6 @@ RETCODE SCIPcolIncCoeff(
 extern
 RETCODE SCIPcolBoundChanged(
    COL*             col,                /**< LP column that changed */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -904,7 +903,16 @@ RETCODE SCIPlpUpdateAges(
 
 /** removes all columns and rows in the part of the LP created at the current node, that are too old */
 extern
-RETCODE SCIPlpRemoveObsoletes(
+RETCODE SCIPlpRemoveNewObsoletes(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat                /**< problem statistics */
+   );
+
+/** removes all columns and rows in whole LP, that are too old */
+extern
+RETCODE SCIPlpRemoveAllObsoletes(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */

@@ -110,6 +110,8 @@ struct Set
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes */
    unsigned int     usepricing:1;       /**< use pricing of variables */
+   unsigned int     cleanupcols:1;      /**< should new non-basic columns be removed after LP solving? */
+   unsigned int     cleanuprows:1;      /**< should new basic rows be removed after LP solving? */
 };
 
 

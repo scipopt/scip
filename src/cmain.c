@@ -249,14 +249,14 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
-   /*CHECK_OKAY( SCIPincludeNodeselBfs(scip) );*/
+   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
-
-   CHECK_OKAY( includeTestEventHdlr(scip) );
+   
+   /*CHECK_OKAY( includeTestEventHdlr(scip) );*/
 
 
    /********************
@@ -383,9 +383,9 @@ main(
    todoMessage("implement remaining events");
    todoMessage("avoid addition of identical rows");
    todoMessage("avoid addition of identical constraints");
-   todoMessage("cuts created at the current node, that are not sharp at the end of the node's solving loop can be removed");
    todoMessage("pricing for pseudo solutions");
    todoMessage("integrality check on objective function, abort if gap is below 1.0");
+   todoMessage("numerical problems in tree->actpseudoobjval if variable's bounds are infinity");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

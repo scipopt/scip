@@ -1731,6 +1731,7 @@ RETCODE actnodeToFork(
       CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
    }
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
@@ -1784,7 +1785,14 @@ RETCODE actnodeToSubroot(
    debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
 
    /* clean up whole LP to keep only necessary columns and rows */
-   CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
+   if( tree->actnode->depth == 0 )
+   {
+      CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
+   }
+   else /* ???????????? */
+   {
+      CHECK_OKAY( SCIPlpRemoveAllObsoletes(lp, memhdr, set, stat) );
+   }
 
    /* resolve LP after cleaning up */
    if( !lp->solved )
@@ -1792,6 +1800,7 @@ RETCODE actnodeToSubroot(
       CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
    }
    assert(lp->solved);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
@@ -2369,7 +2378,6 @@ RETCODE SCIPtreeBranchVar(
 /** notifies tree, that a bound of a variable changed */
 RETCODE SCIPtreeBoundChanged(
    TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
