@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.63 2005/02/16 17:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.64 2005/03/15 14:09:29 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -487,9 +487,6 @@ RETCODE primalAddSol(
       /* issue BESTLPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
-      
-      /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, TRUE) );
    }
    else
    {
@@ -498,6 +495,12 @@ RETCODE primalAddSol(
    }
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
    CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+   /* display node information line */
+   if( insertpos == 0 )
+   {
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, TRUE) );
+   }
 
    return SCIP_OKAY;
 }
