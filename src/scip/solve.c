@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.166 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.167 2005/02/09 13:44:12 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -68,6 +68,9 @@ Bool SCIPsolveIsStopped(
    STAT*            stat                /**< dynamic problem statistics */
    )
 {
+   assert(set != NULL);
+   assert(stat != NULL);
+
    if( SCIPinterrupted() )
       stat->status = SCIP_STATUS_USERINTERRUPT;
    else if( set->limit_nodes >= 0 && stat->nnodes >= set->limit_nodes )
@@ -76,12 +79,12 @@ Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_TIMELIMIT;
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )
       stat->status = SCIP_STATUS_MEMLIMIT;
-   else if( SCIPgetStage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
+   else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
       stat->status = SCIP_STATUS_GAPLIMIT;
-   else if( set->limit_solutions >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
+   else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;
-   else if( set->limit_bestsol >= 0 && SCIPgetStage(set->scip) >= SCIP_STAGE_PRESOLVED
+   else if( set->limit_bestsol >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNBestSolsFound(set->scip) >= set->limit_bestsol )
       stat->status = SCIP_STATUS_BESTSOLLIMIT;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.262 2005/02/08 15:47:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.263 2005/02/09 13:44:12 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -103,7 +103,8 @@ RETCODE checkStage(
    assert(scip != NULL);
    assert(method != NULL);
 
-   debugMessage("called method <%s> at stage %d ------------------------------------------------\n", method, scip->stage);
+   debugMessage("called method <%s> at stage %d ------------------------------------------------\n", 
+      method, scip->set->stage);
 
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -111,7 +112,7 @@ RETCODE checkStage(
    assert(scip->dialoghdlr != NULL);
    assert(scip->totaltime != NULL);
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
       assert(scip->stat == NULL);
@@ -340,7 +341,7 @@ RETCODE checkStage(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }
 }
@@ -413,8 +414,6 @@ RETCODE SCIPcreate(
 
    ALLOC_OKAY( allocMemory(scip) );
 
-   (*scip)->stage = SCIP_STAGE_INIT;
-
    CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
    CHECK_OKAY( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
    CHECK_OKAY( SCIPinterruptCreate(&(*scip)->interrupt) );
@@ -448,7 +447,7 @@ RETCODE SCIPfree(
    CHECK_OKAY( checkStage(*scip, "SCIPfree", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPfreeProb(*scip) );
-   assert((*scip)->stage == SCIP_STAGE_INIT);
+   assert((*scip)->set->stage == SCIP_STAGE_INIT);
 
    CHECK_OKAY( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    CHECK_OKAY( SCIPdialoghdlrFree(&(*scip)->dialoghdlr) );
@@ -484,8 +483,9 @@ STAGE SCIPgetStage(
    )
 {
    assert(scip != NULL);
+   assert(scip->set != NULL);
 
-   return scip->stage;
+   return scip->set->stage;
 }
 
 /** outputs SCIP stage and solution status if applicable */
@@ -499,7 +499,7 @@ RETCODE SCIPprintStage(
    if( file == NULL )
       file = stdout;
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
       fprintf(file, "initialization");
@@ -551,7 +551,7 @@ RETCODE SCIPprintStage(
       fprintf(file, "freeing transformed problem");
       break;
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDDATA;
    }
 
@@ -565,7 +565,7 @@ STATUS SCIPgetStatus(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( scip->stage == SCIP_STAGE_INIT )
+   if( scip->set->stage == SCIP_STAGE_INIT )
       return SCIP_STATUS_UNKNOWN;
    else
    {
@@ -639,7 +639,7 @@ Bool SCIPisTransformed(
 {
    assert(scip != NULL);
 
-   return ((int)scip->stage >= (int)SCIP_STAGE_TRANSFORMING);
+   return ((int)scip->set->stage >= (int)SCIP_STAGE_TRANSFORMING);
 }
 
 /** returns whether the solution process should be provably correct */
@@ -2217,7 +2217,7 @@ RETCODE SCIPcreateProb(
    CHECK_OKAY( checkStage(scip, "SCIPcreateProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* switch stage to PROBLEM */
-   scip->stage = SCIP_STAGE_PROBLEM;
+   scip->set->stage = SCIP_STAGE_PROBLEM;
    
    CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
    CHECK_OKAY( SCIPprobCreate(&scip->origprob, scip->mem->probmem, name, 
@@ -2285,9 +2285,9 @@ RETCODE SCIPfreeProb(
    CHECK_OKAY( checkStage(scip, "SCIPfreeProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPfreeTransform(scip) );
-   assert(scip->stage == SCIP_STAGE_INIT || scip->stage == SCIP_STAGE_PROBLEM);
+   assert(scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_PROBLEM);
 
-   if( scip->stage == SCIP_STAGE_PROBLEM )
+   if( scip->set->stage == SCIP_STAGE_PROBLEM )
    {
       int p;
 
@@ -2303,9 +2303,9 @@ RETCODE SCIPfreeProb(
       CHECK_OKAY( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
       /* switch stage to INIT */
-      scip->stage = SCIP_STAGE_INIT;
+      scip->set->stage = SCIP_STAGE_INIT;
    }
-   assert(scip->stage == SCIP_STAGE_INIT);
+   assert(scip->set->stage == SCIP_STAGE_INIT);
 
    return SCIP_OKAY;
 }
@@ -2317,7 +2317,7 @@ PROBDATA* SCIPgetProbData(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetProbData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return SCIPprobGetData(scip->origprob);
@@ -2334,7 +2334,7 @@ PROBDATA* SCIPgetProbData(
       return SCIPprobGetData(scip->transprob);
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2347,7 +2347,7 @@ RETCODE SCIPsetProbData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetProbData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetData(scip->origprob, probdata);
@@ -2366,7 +2366,7 @@ RETCODE SCIPsetProbData(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2410,7 +2410,7 @@ RETCODE SCIPsetObjlimit(
 
    CHECK_OKAY( checkStage(scip, "SCIPsetObjlimit", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetObjlim(scip->origprob, objlimit);
@@ -2432,7 +2432,7 @@ RETCODE SCIPsetObjlimit(
             scip->tree, scip->lp) );
       break;
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -2456,7 +2456,7 @@ RETCODE SCIPsetObjIntegral(
 {
    CHECK_OKAY( checkStage(scip, "SCIPsetObjIntegral", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetObjIntegral(scip->origprob);
@@ -2470,7 +2470,7 @@ RETCODE SCIPsetObjIntegral(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2482,7 +2482,7 @@ Bool SCIPisObjIntegral(
 {
    CHECK_ABORT( checkStage(scip, "SCIPisObjIntegral", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       SCIPprobIsObjIntegral(scip->origprob);
@@ -2496,7 +2496,7 @@ Bool SCIPisObjIntegral(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2531,7 +2531,7 @@ RETCODE SCIPaddVar(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
@@ -2564,7 +2564,7 @@ RETCODE SCIPaddVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2628,7 +2628,7 @@ RETCODE SCIPgetVarsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetVarsData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       if( vars != NULL )
@@ -2665,7 +2665,7 @@ RETCODE SCIPgetVarsData(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -2679,7 +2679,7 @@ VAR** SCIPgetVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->vars;
@@ -2692,7 +2692,7 @@ VAR** SCIPgetVars(
       return scip->transprob->vars;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2704,7 +2704,7 @@ int SCIPgetNVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nvars;
@@ -2717,7 +2717,7 @@ int SCIPgetNVars(
       return scip->transprob->nvars;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2729,7 +2729,7 @@ int SCIPgetNBinVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNBinVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nbinvars;
@@ -2742,7 +2742,7 @@ int SCIPgetNBinVars(
       return scip->transprob->nbinvars;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2754,7 +2754,7 @@ int SCIPgetNIntVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNIntVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nintvars;
@@ -2767,7 +2767,7 @@ int SCIPgetNIntVars(
       return scip->transprob->nintvars;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2779,7 +2779,7 @@ int SCIPgetNImplVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nimplvars;
@@ -2792,7 +2792,7 @@ int SCIPgetNImplVars(
       return scip->transprob->nimplvars;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2804,7 +2804,7 @@ int SCIPgetNContVars(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNContVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->ncontvars;
@@ -2817,7 +2817,7 @@ int SCIPgetNContVars(
       return scip->transprob->ncontvars;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -2933,7 +2933,7 @@ RETCODE SCIPgetSolVarsData(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetSolVarsData", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( scip->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL) )
+   if( scip->set->stage == SCIP_STAGE_PROBLEM || (sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL) )
    {
       if( vars != NULL )
          *vars = scip->origprob->vars;
@@ -2979,7 +2979,7 @@ VAR* SCIPfindVar(
 
    CHECK_ABORT( checkStage(scip, "SCIPfindVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return SCIPprobFindVar(scip->origprob, name);
@@ -2998,7 +2998,7 @@ VAR* SCIPfindVar(
          return var;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -3028,7 +3028,7 @@ RETCODE SCIPaddCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->set, scip->stat, cons) );
@@ -3052,7 +3052,7 @@ RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -3069,7 +3069,7 @@ RETCODE SCIPdelCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(cons->addconssetchg == NULL);
@@ -3082,7 +3082,7 @@ RETCODE SCIPdelCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -3099,7 +3099,7 @@ CONS* SCIPfindCons(
 
    CHECK_ABORT( checkStage(scip, "SCIPfindCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return SCIPprobFindCons(scip->origprob, name);
@@ -3118,7 +3118,7 @@ CONS* SCIPfindCons(
          return cons;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }  /*lint !e788*/
 }
@@ -3215,7 +3215,7 @@ RETCODE SCIPdisableConsLocal(
 
    CHECK_OKAY( checkStage(scip, "SCIPdisableConsLocal", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(cons->addconssetchg == NULL);
@@ -3236,7 +3236,7 @@ RETCODE SCIPdisableConsLocal(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -3372,7 +3372,7 @@ RETCODE transformProb(
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
    assert(scip->stat->status == SCIP_STATUS_UNKNOWN);
-   assert(scip->stage == SCIP_STAGE_PROBLEM);
+   assert(scip->set->stage == SCIP_STAGE_PROBLEM);
 
    /* check, if a node selector exists */
    if( SCIPsetGetNodesel(scip->set, scip->stat) == NULL )
@@ -3389,7 +3389,7 @@ RETCODE transformProb(
    SCIPprobMarkNConss(scip->origprob);
    
    /* switch stage to TRANSFORMING */
-   scip->stage = SCIP_STAGE_TRANSFORMING;
+   scip->set->stage = SCIP_STAGE_TRANSFORMING;
 
    /* mark statistics before solving */
    SCIPstatMark(scip->stat);
@@ -3408,7 +3408,7 @@ RETCODE transformProb(
          scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
 
    /* switch stage to TRANSFORMED */
-   scip->stage = SCIP_STAGE_TRANSFORMED;
+   scip->set->stage = SCIP_STAGE_TRANSFORMED;
 
    /* update upper bound and cutoff bound due to objective limit in primal data */
    CHECK_OKAY( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -3452,7 +3452,7 @@ RETCODE initPresolve(
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
-   assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
    /* retransform all existing solutions to original problem space, because the transformed problem space may
     * get modified in presolving and the solutions may become invalid for the transformed problem
@@ -3466,7 +3466,7 @@ RETCODE initPresolve(
    scip->stat->nruns++;
 
    /* switch stage to PRESOLVING */
-   scip->stage = SCIP_STAGE_PRESOLVING;
+   scip->set->stage = SCIP_STAGE_PRESOLVING;
    
    /* create temporary presolving root node */
    CHECK_OKAY( SCIPtreeCreatePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
@@ -3491,7 +3491,7 @@ RETCODE exitPresolve(
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
-   assert(scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
    /* inform plugins that the presolving is finished, and perform final modifications */
    CHECK_OKAY( SCIPsetExitprePlugins(scip->set, unbounded, infeasible) );
@@ -3507,7 +3507,7 @@ RETCODE exitPresolve(
          scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
 
    /* switch stage to PRESOLVED */
-   scip->stage = SCIP_STAGE_PRESOLVED;
+   scip->set->stage = SCIP_STAGE_PRESOLVED;
 
    return SCIP_OKAY;
 }
@@ -3706,7 +3706,7 @@ RETCODE presolve(
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
-   assert(scip->stage == SCIP_STAGE_TRANSFORMED || scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
    assert(unbounded != NULL);
    assert(infeasible != NULL);
 
@@ -3724,11 +3724,11 @@ RETCODE presolve(
    SCIPclockStart(scip->stat->presolvingtime, scip->set);
 
    /* initialize presolving */
-   if( scip->stage == SCIP_STAGE_TRANSFORMED )
+   if( scip->set->stage == SCIP_STAGE_TRANSFORMED )
    {
       CHECK_OKAY( initPresolve(scip, unbounded, infeasible) );
    }
-   assert(scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
    maxnrounds = scip->set->presol_maxrounds;
    if( maxnrounds == -1 )
@@ -3802,7 +3802,7 @@ RETCODE presolve(
    if( finished )
    {
       CHECK_OKAY( exitPresolve(scip, unbounded, infeasible) );
-      assert(scip->stage == SCIP_STAGE_PRESOLVED);
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
    }
 
    /* print presolving statistics */
@@ -3825,7 +3825,7 @@ RETCODE initSolve(
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
-   assert(scip->stage == SCIP_STAGE_PRESOLVED);
+   assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
    /* reset statistics for current branch and bound run */
    SCIPstatResetCurrentRun(scip->stat);
@@ -3835,7 +3835,7 @@ RETCODE initSolve(
          scip->tree, scip->lp) );
 
    /* switch stage to INITSOLVE */
-   scip->stage = SCIP_STAGE_INITSOLVE;
+   scip->set->stage = SCIP_STAGE_INITSOLVE;
 
    /* create VBC output file */
    CHECK_OKAY( SCIPvbcInit(scip->stat->vbc, scip->mem->solvemem, scip->set) );
@@ -3847,7 +3847,7 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPtreeCreateRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
 
    /* switch stage to SOLVING */
-   scip->stage = SCIP_STAGE_SOLVING;
+   scip->set->stage = SCIP_STAGE_SOLVING;
 
    /* inform the transformed problem that the branch and bound process starts now */
    CHECK_OKAY( SCIPprobInitSolve(scip->transprob, scip->set) );
@@ -3903,7 +3903,7 @@ RETCODE freeSolve(
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
-   assert(scip->stage == SCIP_STAGE_SOLVING || scip->stage == SCIP_STAGE_SOLVED);
+   assert(scip->set->stage == SCIP_STAGE_SOLVING || scip->set->stage == SCIP_STAGE_SOLVED);
 
    /* remove focus from the current focus node */
    if( SCIPtreeGetFocusNode(scip->tree) != NULL )
@@ -3917,7 +3917,7 @@ RETCODE freeSolve(
    }
 
    /* switch stage to FREESOLVE */
-   scip->stage = SCIP_STAGE_FREESOLVE;
+   scip->set->stage = SCIP_STAGE_FREESOLVE;
 
    /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
@@ -3949,7 +3949,7 @@ RETCODE freeSolve(
    SCIPstatResetCurrentRun(scip->stat);
 
    /* switch stage to TRANSFORMED */
-   scip->stage = SCIP_STAGE_TRANSFORMED;
+   scip->set->stage = SCIP_STAGE_TRANSFORMED;
 
    return SCIP_OKAY;
 }
@@ -3963,13 +3963,13 @@ RETCODE freeTransform(
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
-   assert(scip->stage == SCIP_STAGE_TRANSFORMED || scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
 
    /* call exit methods of plugins */
    CHECK_OKAY( SCIPsetExitPlugins(scip->set) );
 
    /* switch stage to FREETRANS */
-   scip->stage = SCIP_STAGE_FREETRANS;
+   scip->set->stage = SCIP_STAGE_FREETRANS;
 
    /* free transformed problem data structures */
    CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
@@ -3991,7 +3991,7 @@ RETCODE freeTransform(
    SCIPstatReset(scip->stat);
 
    /* switch stage to PROBLEM */
-   scip->stage = SCIP_STAGE_PROBLEM;
+   scip->set->stage = SCIP_STAGE_PROBLEM;
 
    /* reset original variable's local and global bounds to their original values */
    CHECK_OKAY( SCIPprobResetBounds(scip->origprob, scip->mem->probmem, scip->set) );
@@ -4016,12 +4016,12 @@ RETCODE SCIPpresolve(
    if( scip->set->misc_catchctrlc )
       SCIPinterruptCapture(scip->interrupt);
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       /* initialize solving data structures and transform problem */
       CHECK_OKAY( transformProb(scip) );
-      assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+      assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
       /*lint -fallthrough */
 
@@ -4029,9 +4029,9 @@ RETCODE SCIPpresolve(
    case SCIP_STAGE_PRESOLVING:
       /* presolve problem */
       CHECK_OKAY( presolve(scip, &unbounded, &infeasible) );
-      assert(scip->stage == SCIP_STAGE_PRESOLVED || scip->stage == SCIP_STAGE_PRESOLVING);
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-      if( scip->stage == SCIP_STAGE_PRESOLVED )
+      if( scip->set->stage == SCIP_STAGE_PRESOLVED )
       {
          if( infeasible || unbounded )
          {
@@ -4039,7 +4039,7 @@ RETCODE SCIPpresolve(
             CHECK_OKAY( initSolve(scip) );
 
             /* switch stage to SOLVED */
-            scip->stage = SCIP_STAGE_SOLVED;
+            scip->set->stage = SCIP_STAGE_SOLVED;
 
             /* print solution message */
             if( infeasible )
@@ -4120,7 +4120,7 @@ RETCODE SCIPpresolve(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }
 
@@ -4160,32 +4160,32 @@ RETCODE SCIPsolve(
       if( restart )
       {
          /* free the solving process data in order to restart */
-         assert(scip->stage == SCIP_STAGE_SOLVING);
+         assert(scip->set->stage == SCIP_STAGE_SOLVING);
          SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
             "(run %d) restarting after %d root node bound changes\n\n",
             scip->stat->nruns, scip->stat->nrootboundchgsrun);
          CHECK_OKAY( SCIPfreeSolve(scip) );
-         assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+         assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }
       restart = FALSE;
 
-      switch( scip->stage )
+      switch( scip->set->stage )
       {
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
          /* initialize solving data structures, transform and problem */
          CHECK_OKAY( SCIPpresolve(scip) );
-         if( scip->stage == SCIP_STAGE_SOLVED || scip->stage == SCIP_STAGE_PRESOLVING )
+         if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
             break;
-         assert(scip->stage == SCIP_STAGE_PRESOLVED);
+         assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
          /*lint -fallthrough*/
 
       case SCIP_STAGE_PRESOLVED:
          /* initialize solving process data structures */
          CHECK_OKAY( initSolve(scip) );
-         assert(scip->stage == SCIP_STAGE_SOLVING);
+         assert(scip->set->stage == SCIP_STAGE_SOLVING);
          infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
       
          /*lint -fallthrough*/
@@ -4217,7 +4217,7 @@ RETCODE SCIPsolve(
             assert(!restart);
 
             /* tree is empty, and no current node exists -> problem is solved */
-            scip->stage = SCIP_STAGE_SOLVED;
+            scip->set->stage = SCIP_STAGE_SOLVED;
          }
          break;
 
@@ -4229,7 +4229,7 @@ RETCODE SCIPsolve(
          break;
 
       default:
-         errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+         errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
          return SCIP_ERROR;
       }  /*lint !e788*/
    }
@@ -4251,9 +4251,9 @@ RETCODE SCIPsolve(
             scip->stat->nnodes, scip->stat->ntotalnodes, scip->stat->nruns);
       else
          printf("Solving Nodes      : %lld\n", scip->stat->nnodes);
-      if( scip->stage >= SCIP_STAGE_TRANSFORMED && scip->stage <= SCIP_STAGE_FREESOLVE )
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
          printf("Primal Bound       : %+.14e (%lld solutions)\n", SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
-      if( scip->stage >= SCIP_STAGE_SOLVING && scip->stage <= SCIP_STAGE_SOLVED )
+      if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
          printf("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
          printf("Gap                : ");
@@ -4279,7 +4279,7 @@ RETCODE SCIPfreeSolve(
 
    CHECK_OKAY( checkStage(scip, "SCIPfreeSolve", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
@@ -4289,24 +4289,24 @@ RETCODE SCIPfreeSolve(
    case SCIP_STAGE_PRESOLVING:
       /* exit presolving */
       CHECK_OKAY( exitPresolve(scip, &unbounded, &infeasible) );
-      assert(scip->stage == SCIP_STAGE_PRESOLVED);
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       /* -lint fallthrough */
 
    case SCIP_STAGE_PRESOLVED:
       /* switch stage to TRANSFORMED */
-      scip->stage = SCIP_STAGE_TRANSFORMED;
+      scip->set->stage = SCIP_STAGE_TRANSFORMED;
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
       /* free solution process data structures */
       CHECK_OKAY( freeSolve(scip) );
-      assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+      assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4321,7 +4321,7 @@ RETCODE SCIPfreeTransform(
 
    CHECK_OKAY( checkStage(scip, "SCIPfreeTransform", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
@@ -4330,7 +4330,7 @@ RETCODE SCIPfreeTransform(
    case SCIP_STAGE_PRESOLVING:
       /* exit presolving */
       CHECK_OKAY( exitPresolve(scip, &unbounded, &infeasible) );
-      assert(scip->stage == SCIP_STAGE_PRESOLVED);
+      assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       /* -lint fallthrough */
 
@@ -4339,18 +4339,18 @@ RETCODE SCIPfreeTransform(
    case SCIP_STAGE_SOLVED:
       /* free solution process data */
       CHECK_OKAY( SCIPfreeSolve(scip) );
-      assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+      assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
       /*lint -fallthrough */
 
    case SCIP_STAGE_TRANSFORMED:
       /* free transformed problem data structures */
       CHECK_OKAY( freeTransform(scip) );
-      assert(scip->stage == SCIP_STAGE_PROBLEM);
+      assert(scip->set->stage == SCIP_STAGE_PROBLEM);
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4386,7 +4386,7 @@ RETCODE SCIPcreateVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat, 
@@ -4402,7 +4402,7 @@ RETCODE SCIPcreateVar(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -4433,7 +4433,7 @@ RETCODE SCIPreleaseVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseVar", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarRelease(var, scip->mem->probmem, scip->set, scip->lp) );
@@ -4457,7 +4457,7 @@ RETCODE SCIPreleaseVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -4593,7 +4593,7 @@ RETCODE SCIPgetNegatedVar(
    }
    else
    {
-      assert(scip->stage != SCIP_STAGE_PROBLEM);
+      assert(scip->set->stage != SCIP_STAGE_PROBLEM);
       CHECK_OKAY( SCIPvarNegate(var, scip->mem->solvemem, scip->set, scip->stat, negvar) );
    }
 
@@ -4809,7 +4809,7 @@ RETCODE SCIPaddVarLocks(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -4826,7 +4826,7 @@ RETCODE SCIPaddVarLocks(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -4866,7 +4866,7 @@ RETCODE SCIPlockVarCons(
          nlocksdown++;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -4883,7 +4883,7 @@ RETCODE SCIPlockVarCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -4923,7 +4923,7 @@ RETCODE SCIPunlockVarCons(
          nlocksdown++;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -4940,7 +4940,7 @@ RETCODE SCIPunlockVarCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -4954,7 +4954,7 @@ RETCODE SCIPchgVarObj(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarObj", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -4967,7 +4967,7 @@ RETCODE SCIPchgVarObj(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -4981,7 +4981,7 @@ RETCODE SCIPaddVarObj(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarObj", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -4996,7 +4996,7 @@ RETCODE SCIPaddVarObj(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -5045,7 +5045,7 @@ RETCODE SCIPchgVarLb(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarLb", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5068,7 +5068,7 @@ RETCODE SCIPchgVarLb(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -5085,7 +5085,7 @@ RETCODE SCIPchgVarUb(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarUb", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5108,7 +5108,7 @@ RETCODE SCIPchgVarUb(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -5198,7 +5198,7 @@ RETCODE SCIPtightenVarLb(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5215,7 +5215,7 @@ RETCODE SCIPtightenVarLb(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5268,7 +5268,7 @@ RETCODE SCIPtightenVarUb(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5285,7 +5285,7 @@ RETCODE SCIPtightenVarUb(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5340,7 +5340,7 @@ RETCODE SCIPinferVarLbCons(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5358,7 +5358,7 @@ RETCODE SCIPinferVarLbCons(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5413,7 +5413,7 @@ RETCODE SCIPinferVarUbCons(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5431,7 +5431,7 @@ RETCODE SCIPinferVarUbCons(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5484,7 +5484,7 @@ RETCODE SCIPinferBinvarCons(
    }
 
    /* apply the fixing */
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5524,7 +5524,7 @@ RETCODE SCIPinferBinvarCons(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5579,7 +5579,7 @@ RETCODE SCIPinferVarLbProp(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5597,7 +5597,7 @@ RETCODE SCIPinferVarLbProp(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5652,7 +5652,7 @@ RETCODE SCIPinferVarUbProp(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5670,7 +5670,7 @@ RETCODE SCIPinferVarUbProp(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5723,7 +5723,7 @@ RETCODE SCIPinferBinvarProp(
    }
 
    /* apply the fixing */
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -5763,7 +5763,7 @@ RETCODE SCIPinferBinvarProp(
       break;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 
@@ -5976,7 +5976,7 @@ RETCODE SCIPchgVarType(
 
    CHECK_OKAY( checkStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
@@ -6008,7 +6008,7 @@ RETCODE SCIPchgVarType(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/   
 }
@@ -6046,7 +6046,7 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
    }
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PRESOLVING:
       if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
@@ -6073,7 +6073,7 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -6115,7 +6115,7 @@ RETCODE aggregateActiveIntVars(
 
 #define MAXDNOM 1000000LL
 
-   assert(scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
    assert(!SCIPtreeProbing(scip->tree));
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
    assert(varx != NULL);
@@ -6278,7 +6278,7 @@ RETCODE aggregateActiveVars(
 {
    int agg;
 
-   assert(scip->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
    assert(!SCIPtreeProbing(scip->tree));
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
    assert(varx != NULL);
@@ -7059,7 +7059,7 @@ RETCODE SCIPcreateCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
@@ -7075,7 +7075,7 @@ RETCODE SCIPcreateCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -7104,7 +7104,7 @@ RETCODE SCIPreleaseCons(
 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsRelease(cons, scip->mem->probmem, scip->set) );
@@ -7128,7 +7128,7 @@ RETCODE SCIPreleaseCons(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
 }
@@ -10557,7 +10557,7 @@ int SCIPgetNGlobalConss(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetNGlobalConss", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
       return scip->origprob->nconss;
@@ -10569,7 +10569,7 @@ int SCIPgetNGlobalConss(
       return scip->transprob->nconss;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       abort();
    }
 }
@@ -11346,7 +11346,7 @@ void printSolutionStatistics(
    fprintf(file, "  Solutions found  : %10lld\n", scip->primal->nsolsfound);
    if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
-      if( scip->stage == SCIP_STAGE_SOLVED )
+      if( scip->set->stage == SCIP_STAGE_SOLVED )
       {
          if( scip->primal->nsols == 0 )
             fprintf(file, "  Primal Bound     : infeasible\n");
@@ -11407,7 +11407,7 @@ RETCODE SCIPprintStatistics(
    CHECK_OKAY( SCIPprintStage(scip, file) );
    fprintf(file, "\n");
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
       fprintf(file, "Original Problem   : no problem exists.\n");
@@ -11454,7 +11454,7 @@ RETCODE SCIPprintStatistics(
       return SCIP_OKAY;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
@@ -11476,7 +11476,7 @@ RETCODE SCIPprintBranchingStatistics(
    if( file == NULL )
       file = stdout;
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
@@ -11533,7 +11533,7 @@ RETCODE SCIPprintBranchingStatistics(
       return SCIP_OKAY;
       
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
@@ -11936,7 +11936,7 @@ BLKMEM* SCIPblkmem(
    assert(scip->set != NULL);
    assert(scip->mem != NULL);
 
-   switch( scip->stage )
+   switch( scip->set->stage )
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_PROBLEM:
@@ -11954,7 +11954,7 @@ BLKMEM* SCIPblkmem(
       return scip->mem->solvemem;
 
    default:
-      errorMessage("invalid SCIP stage <%d>\n", scip->stage);
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return NULL;
    }  /*lint !e788*/
 }

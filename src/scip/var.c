@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.147 2005/02/09 13:39:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.148 2005/02/09 13:44:12 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3716,6 +3716,7 @@ RETCODE SCIPvarChgObj(
    Real oldobj;
 
    assert(var != NULL);
+   assert(set != NULL);
 
    debugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
 
@@ -3729,7 +3730,10 @@ RETCODE SCIPvarChgObj(
             CHECK_OKAY( SCIPvarChgObj(var->data.original.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
          }
          else
+         {
+            assert(set->stage == SCIP_STAGE_PROBLEM);
             var->obj = newobj;
+         }
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -3771,6 +3775,7 @@ RETCODE SCIPvarAddObj(
 {
    assert(var != NULL);
    assert(set != NULL);
+   assert(set->stage < SCIP_STAGE_INITSOLVE);
 
    debugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
@@ -3787,7 +3792,10 @@ RETCODE SCIPvarAddObj(
             CHECK_OKAY( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
          }
          else
+         {
+            assert(set->stage == SCIP_STAGE_PROBLEM);
             var->obj += addobj;
+         }
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -3948,6 +3956,8 @@ RETCODE SCIPvarChgLbOriginal(
    assert(var != NULL);
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(set != NULL);
+   assert(set->stage == SCIP_STAGE_PROBLEM);
 
    debugMessage("changing original lower bound of <%s> from %g to %g\n", 
       var->name, var->data.original.origdom.lb, newbound);
@@ -3992,6 +4002,8 @@ RETCODE SCIPvarChgUbOriginal(
    assert(var != NULL);
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(set != NULL);
+   assert(set->stage == SCIP_STAGE_PROBLEM);
 
    debugMessage("changing original upper bound of <%s> from %g to %g\n", 
       var->name, var->data.original.origdom.ub, newbound);
@@ -4207,6 +4219,7 @@ RETCODE SCIPvarChgLbGlobal(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
 
    /* adjust bound for integral variables */
    SCIPvarAdjustLb(var, set, &newbound);
@@ -4229,6 +4242,7 @@ RETCODE SCIPvarChgLbGlobal(
       }
       else
       {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
          CHECK_OKAY( varProcessChgLbGlobal(var, set, newbound) );
       }
       break;
@@ -4297,6 +4311,7 @@ RETCODE SCIPvarChgUbGlobal(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
 
    /* adjust bound for integral variables */
    SCIPvarAdjustUb(var, set, &newbound);
@@ -4319,6 +4334,7 @@ RETCODE SCIPvarChgUbGlobal(
       }
       else
       {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
          CHECK_OKAY( varProcessChgUbGlobal(var, set, newbound) );
       }
       break;
@@ -4692,6 +4708,7 @@ RETCODE SCIPvarChgLbLocal(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
 
    /* adjust bound for integral variables */
    SCIPvarAdjustLb(var, set, &newbound);
@@ -4716,6 +4733,7 @@ RETCODE SCIPvarChgLbLocal(
       }
       else
       {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
          CHECK_OKAY( varProcessChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
@@ -4794,6 +4812,7 @@ RETCODE SCIPvarChgUbLocal(
    )
 {
    assert(var != NULL);
+   assert(set != NULL);
 
    /* adjust bound for integral variables */
    SCIPvarAdjustUb(var, set, &newbound);
@@ -4817,6 +4836,7 @@ RETCODE SCIPvarChgUbLocal(
       }
       else
       {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
          CHECK_OKAY( varProcessChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
@@ -5084,6 +5104,8 @@ RETCODE SCIPvarAddHoleOriginal(
    assert(var != NULL);
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(set != NULL);
+   assert(set->stage == SCIP_STAGE_PROBLEM);
 
    debugMessage("adding original hole (%g,%g) to <%s>\n", left, right, var->name);
 
@@ -5603,6 +5625,7 @@ void SCIPvarChgBranchFactor(
    int v;
 
    assert(var != NULL);
+   assert(set != NULL);
    assert(branchfactor >= 0.0);
 
    debugMessage("changing branch factor of <%s> from %g to %g\n", var->name, var->branchfactor, branchfactor);
@@ -5617,7 +5640,10 @@ void SCIPvarChgBranchFactor(
       if( var->data.original.transvar != NULL )
          SCIPvarChgBranchFactor(var->data.original.transvar, set, branchfactor);
       else
+      {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
          var->branchfactor = branchfactor;
+      }
       break;
          
    case SCIP_VARSTATUS_COLUMN:

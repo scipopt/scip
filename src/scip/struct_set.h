@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.42 2005/02/03 17:50:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.43 2005/02/09 13:44:12 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -52,6 +52,7 @@
 /** global SCIP settings */
 struct Set
 {
+   STAGE            stage;              /**< SCIP operation stage */
    SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    PARAMSET*        paramset;           /**< set of parameters */
    BUFFER*          buffer;             /**< memory buffers for short living temporary objects */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.138 2005/02/08 16:13:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.139 2005/02/09 13:44:12 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -286,6 +286,7 @@ RETCODE SCIPsetCreate(
 
    ALLOC_OKAY( allocMemory(set) );
 
+   (*set)->stage = SCIP_STAGE_INIT;
    (*set)->scip = scip;
 
    CHECK_OKAY( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
