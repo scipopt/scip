@@ -149,6 +149,7 @@ typedef double Real;                    /**< type used for floating point values
 #define SCIP_BLOCKMEMORY                /**< use block memory */
 #define SCIP_HASHSIZE_NAMES      131101 /**< size of hash table in name tables */
 #define SCIP_HASHSIZE_CUTPOOLS   131101 /**< size of hash table in cut pools */
+#define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in cut pools */
 
 
 

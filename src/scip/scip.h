@@ -138,19 +138,6 @@ RETCODE SCIPfree(
    SCIP**           scip                /**< pointer to SCIP data structure */
    );
 
-/** gets verbosity level for message output */
-extern
-VERBLEVEL SCIPverbLevel(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** sets verbosity level for message output */
-extern
-RETCODE SCIPsetVerbLevel(
-   SCIP*            scip,               /**< SCIP data structure */
-   VERBLEVEL        verblevel           /**< verbosity level for message output */
-   );
-
 /** prints a message depending on the verbosity level */
 extern
 void SCIPmessage(
@@ -166,6 +153,162 @@ STAGE SCIPstage(
    );
 
 /**@} */
+
+
+
+
+/*
+ * parameter settings
+ */
+
+/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPaddBoolParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Bool             defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a int parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPaddIntParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int              defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPaddLongintParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Longint          defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPaddRealParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Real             defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a char parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPaddCharParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char             defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a string parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPaddStringParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*      defaultvalue        /**< default value of the parameter */
+   );
+
+/** gets the value of an existing Bool parameter */
+RETCODE SCIPgetBoolParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Bool*            value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Int parameter */
+extern
+RETCODE SCIPgetIntParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   int*             value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Longint parameter */
+extern
+RETCODE SCIPgetLongintParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Longint*         value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Real parameter */
+extern
+RETCODE SCIPgetRealParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Real*            value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Char parameter */
+extern
+RETCODE SCIPgetCharParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char*            value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing String parameter */
+extern
+RETCODE SCIPgetStringParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char**           value               /**< pointer to store the parameter */
+   );
+
+/** changes the value of an existing Bool parameter */
+extern
+RETCODE SCIPsetBoolParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Bool             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Int parameter */
+extern
+RETCODE SCIPsetIntParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   int              value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Longint parameter */
+extern
+RETCODE SCIPsetLongintParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Longint          value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Real parameter */
+extern
+RETCODE SCIPsetRealParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Real             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Char parameter */
+extern
+RETCODE SCIPsetCharParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing String parameter */
+extern
+RETCODE SCIPsetStringParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   const char*      value               /**< new value of the parameter */
+   );
 
 
 

@@ -38,6 +38,7 @@ typedef struct Mem MEM;
 /** various block memory buffers */
 struct Mem
 {
+   MEMHDR*          setmem;             /**< memory blocks for parameter settings */
    MEMHDR*          probmem;            /**< memory blocks for original problem */
    MEMHDR*          solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
 };

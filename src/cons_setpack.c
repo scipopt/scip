@@ -932,7 +932,7 @@ DECL_CONSSEPA(consSepaSetpack)
    return SCIP_OKAY;
 }
 
-/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) == 0 */
+/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) == 0, and (ii) x(S) >= 1 */
 static
 RETCODE branchLP(
    SCIP*            scip,               /**< SCIP data structure */

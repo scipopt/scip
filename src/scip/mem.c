@@ -37,9 +37,11 @@ RETCODE SCIPmemCreate(
 
    ALLOC_OKAY( allocMemory(mem) );
 
+   ALLOC_OKAY( (*mem)->setmem = createBlockMemory(1, TRUE, 10 ) );
    ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10 ) );
    ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
 
+   debugMessage("created setmem   block memory at <%p>\n", (*mem)->setmem);
    debugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);
    debugMessage("created solvemem block memory at <%p>\n", (*mem)->solvemem);
 
@@ -53,8 +55,9 @@ RETCODE SCIPmemFree(
 {
    assert(mem != NULL);
 
-   destroyBlockMemory(&(*mem)->probmem);
    destroyBlockMemory(&(*mem)->solvemem);
+   destroyBlockMemory(&(*mem)->probmem);
+   destroyBlockMemory(&(*mem)->setmem);
 
    freeMemory(mem);
 

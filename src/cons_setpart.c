@@ -974,7 +974,194 @@ DECL_CONSSEPA(consSepaSetpart)
    return SCIP_OKAY;
 }
 
-/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) == 0 */
+
+#if 0 /* ZU LANGSAM UND ZU SCHLECHT */
+/** if fractional variables exist, chooses a set partitioning constraint C and a subset S of variables in C,
+ *  and branches on (i) x(S) == 1, and (ii) x(S) == 0
+ */
+static
+RETCODE branchLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLR*        conshdlr,           /**< set partitioning constraint handler */
+   CONS**           conss,              /**< active set partitioning constraints */
+   int              nconss,             /**< number of active set partitioning constraints */
+   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
+   )
+{
+   CONSHDLRDATA* conshdlrdata;
+   INTARRAY* varuses;
+   CONS* cons;
+   CONSDATA* consdata;
+   SETPARTCONS* setpartcons;
+   VAR** sortcands;
+   VAR* var;
+   NODE* node;
+   Real solval;
+   Real sum;
+   int nlpcands;
+   int bestcand;
+   int bestoverlap;
+   int thisoverlap;
+   int uses;
+   int nselcands;
+   int c;
+   int i;
+   int j;
+
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 1);
+   assert(result != NULL);
+
+   /* get fractional variables */
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &nlpcands) );
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   varuses = conshdlrdata->varuses;
+   assert(varuses != NULL);
+
+   /* find the set partitioning constraint, where the fractional variables overlap the most with other
+    * set partitioning constraints
+    */
+   bestcand = -1;
+   bestoverlap = -1;
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      setpartcons = consdata->setpartcons;
+      assert(setpartcons != NULL);
+
+      thisoverlap = 0;
+      for( i = 0; i < setpartcons->nvars; ++i )
+      {
+         solval = SCIPgetVarSol(scip, setpartcons->vars[i]);
+         assert(SCIPisGE(scip, solval, 0.0) && SCIPisLE(scip, solval, 1.0));
+         if( !SCIPisIntegral(scip, solval) )
+            thisoverlap += SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(setpartcons->vars[i]));
+      }
+      if( thisoverlap > bestoverlap )
+      {
+         bestcand = c;
+         bestoverlap = thisoverlap;
+      }
+   }
+   assert(0 <= bestcand && bestcand < nconss);
+   cons = conss[bestcand];
+   consdata = SCIPconsGetData(cons);
+   setpartcons = consdata->setpartcons;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &sortcands, setpartcons->nvars) );
+   
+   /* order the constraint's variables by their overlap */
+   for( i = 0; i < setpartcons->nvars; ++i )
+   {
+      var = setpartcons->vars[i];
+      uses = SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var));
+
+      for( j = i; j > 0 && uses > SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(sortcands[j-1])); --j )
+      {
+         sortcands[j] = sortcands[j-1];
+      }
+      assert(0 <= j && j <= i);
+      sortcands[j] = var;
+   }
+
+   /* find the candidate set by adding constraint's variables to the set ordered by their overlap until 0.5 is reached;
+    * afterwards, check if the last added variable should be member of the set or not
+    */
+   sum = 0.0;
+   solval = 0.0;
+   for( nselcands = 0; nselcands < setpartcons->nvars && sum < 0.5; ++nselcands )
+   {
+      solval = SCIPgetVarSol(scip, sortcands[nselcands]);
+      sum += solval;
+   }
+   assert(sum >= 0.5);
+   if( sum - 0.5 > 0.5 - (sum-solval) )
+   {
+      sum -= solval;
+      nselcands--;
+   }
+   assert(!SCIPisIntegral(scip, sum));
+
+   /* perform the set partitioning branching on the selected variables */
+   assert(0 < nselcands && nselcands < setpartcons->nvars);
+   
+   /* create left child, fix x_i = 0 for all i \in S */
+   CHECK_OKAY( SCIPcreateChild(scip, &node) );
+   for( i = 0; i < nselcands; ++i )
+   {
+      if( !SCIPisZero(scip, SCIPvarGetUb(sortcands[i])) )
+      {
+         CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
+      }
+   }
+   
+   /* create right child: add constraint x(S) == 1 */
+   CHECK_OKAY( SCIPcreateChild(scip, &node) );
+
+   /* all other variables of the constraint can be set to 0.0 */
+   for( i = nselcands; i < setpartcons->nvars; ++i )
+   {
+      if( !SCIPisZero(scip, SCIPvarGetUb(sortcands[i])) )
+      {
+         CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
+      }
+   }
+
+   if( nselcands == 1 )
+   {
+      /* only one candidate selected: fix it to 1.0 */
+      debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(sortcands[0]));
+      assert(SCIPisZero(scip, SCIPvarGetLb(sortcands[0])));
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[0], 1.0) );
+
+      /* if the constraint is unmodifiable, it can be disabled, because all other variables are already set to 0.0 */
+      if( !setpartcons->modifiable )
+      {
+         CHECK_OKAY( SCIPdisableConsNode(scip, node, cons) );
+      }
+   }
+   else if( setpartcons->modifiable )
+   {
+      CONS* newcons;
+      char name[255];
+         
+      /* for a modifiable constraint, add set partitioning constraint x(S) == 1, because this is stronger than
+       * the original constraint with adding x(C\S) == 0 */
+      sprintf(name, "SpB%lld", SCIPgetNodenum(scip));
+      
+      CHECK_OKAY( SCIPcreateConsSetpart(scip, &newcons, name, nselcands, sortcands,
+                     TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
+   }
+
+   *result = SCIP_BRANCHED;
+   
+#ifdef DEBUG
+   debugMessage("set partitioning branching: nselcands=%d/%d, weight(S)=%g, A={", 
+      nselcands, setpartcons->nvars, sum);
+   for( i = 0; i < nselcands; ++i )
+      printf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
+   printf(" }\n");
+#endif
+   
+   /* free temporary memory */
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &sortcands) );
+
+   return SCIP_OKAY;
+}
+
+#else
+
+/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) == 0, and (ii) x(S) >= 1 */
 static
 RETCODE branchLP(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1106,6 +1293,7 @@ RETCODE branchLP(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
  *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1

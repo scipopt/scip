@@ -324,7 +324,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* change settings */
-   CHECK_OKAY( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
+   CHECK_OKAY( SCIPsetIntParam(scip, "global_VerbLevel", SCIP_VERBLEVEL_FULL) );
 
    /* include user defined callbacks */
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );

@@ -130,6 +130,7 @@ int calcGrowSize(
 /** creates global SCIP settings */
 RETCODE SCIPsetCreate(
    SET**            set,                /**< pointer to SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
    SCIP*            scip                /**< SCIP data structure */   
    )
 {
@@ -139,20 +140,8 @@ RETCODE SCIPsetCreate(
    ALLOC_OKAY( allocMemory(set) );
 
    (*set)->scip = scip;
-   (*set)->verblevel = SCIP_DEFAULT_VERBLEVEL;
-   (*set)->infinity = SCIP_DEFAULT_INFINITY;
-   (*set)->epsilon = SCIP_DEFAULT_EPSILON;
-   (*set)->sumepsilon = SCIP_DEFAULT_SUMEPSILON;
-   (*set)->feastol = SCIP_DEFAULT_FEASTOL;
-   (*set)->cutvioleps = SCIP_DEFAULT_CUTVIOLEPS;
-   (*set)->memgrowfac = SCIP_DEFAULT_MEMGROWFAC;
-   (*set)->memgrowinit = SCIP_DEFAULT_MEMGROWINIT;
-   (*set)->treegrowfac = SCIP_DEFAULT_TREEGROWFAC;
-   (*set)->treegrowinit = SCIP_DEFAULT_TREEGROWINIT;
-   (*set)->pathgrowfac = SCIP_DEFAULT_PATHGROWFAC;
-   (*set)->pathgrowinit = SCIP_DEFAULT_PATHGROWINIT;
-   (*set)->branchscorefac = SCIP_DEFAULT_BRANCHSCOREFAC;
 
+   CHECK_OKAY( SCIPparamsetCreate(&(*set)->paramset) );
    CHECK_OKAY( SCIPbufferCreate(&(*set)->buffer) );
 
    (*set)->readers = NULL;
@@ -183,36 +172,88 @@ RETCODE SCIPsetCreate(
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
-   (*set)->dispwidth = SCIP_DEFAULT_DISPWIDTH;
-   (*set)->dispfreq = SCIP_DEFAULT_DISPFREQ;
-   (*set)->dispheaderfreq = SCIP_DEFAULT_DISPHEADERFREQ;
-   (*set)->maxpricevars = SCIP_DEFAULT_MAXPRICEVARS;
-   (*set)->maxpricevarsroot = SCIP_DEFAULT_MAXPRICEVARSROOT;
-   (*set)->abortpricevarsfac = SCIP_DEFAULT_ABORTPRICEVARSFAC;
-   (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
-   (*set)->maxsepacutsroot = SCIP_DEFAULT_MAXSEPACUTSROOT;
-   (*set)->colagelimit = SCIP_DEFAULT_COLAGELIMIT;
-   (*set)->rowagelimit = SCIP_DEFAULT_ROWAGELIMIT;
-   (*set)->cutagelimit = SCIP_DEFAULT_CUTAGELIMIT;
-   (*set)->consagelimit = SCIP_DEFAULT_CONSAGELIMIT;
-   (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
-   (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
-   (*set)->lpsolvefreq = SCIP_DEFAULT_LPSOLVEFREQ;
-   (*set)->lpsolvedepth = SCIP_DEFAULT_LPSOLVEDEPTH;
-   (*set)->cleanupcols = SCIP_DEFAULT_CLEANUPCOLS;
-   (*set)->cleanuprows = SCIP_DEFAULT_CLEANUPROWS;
+
+   /* SCIP parameters */
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_VerbLevel", &(*set)->verblevel, SCIP_DEFAULT_VERBLEVEL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_Infinity", &(*set)->infinity, SCIP_DEFAULT_INFINITY) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_Epsilon", &(*set)->epsilon, SCIP_DEFAULT_EPSILON) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_SumEpsilon", &(*set)->sumepsilon, SCIP_DEFAULT_SUMEPSILON) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_Feastol", &(*set)->feastol, SCIP_DEFAULT_FEASTOL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_CutViolEps", &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_MemGrowFac", &(*set)->memgrowfac, SCIP_DEFAULT_MEMGROWFAC) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_MemGrowInit", &(*set)->memgrowinit, SCIP_DEFAULT_MEMGROWINIT) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_TreeGrowFac", &(*set)->treegrowfac, SCIP_DEFAULT_TREEGROWFAC) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_TreeGrowInit", &(*set)->treegrowinit, SCIP_DEFAULT_TREEGROWINIT) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+                  "global_PathGrowFac", &(*set)->pathgrowfac, SCIP_DEFAULT_PATHGROWFAC) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_PathGrowInit", &(*set)->pathgrowinit, SCIP_DEFAULT_PATHGROWINIT) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_PathGrowFac", &(*set)->pathgrowfac, SCIP_DEFAULT_PATHGROWFAC) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+                  "global_BranchScoreFac", &(*set)->branchscorefac, SCIP_DEFAULT_BRANCHSCOREFAC) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+                  "global_DispWidth", &(*set)->dispwidth, SCIP_DEFAULT_DISPWIDTH) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+                  "global_DispFreq", &(*set)->dispfreq, SCIP_DEFAULT_DISPFREQ) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+                  "global_DispHeaderFreq", &(*set)->dispheaderfreq, SCIP_DEFAULT_DISPHEADERFREQ) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+                  "global_MaxPriceVars", &(*set)->maxpricevars, SCIP_DEFAULT_MAXPRICEVARS) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_MaxPriceVarsRoot", &(*set)->maxpricevarsroot, SCIP_DEFAULT_MAXPRICEVARSROOT) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global_AbortPriceVarsFac", &(*set)->abortpricevarsfac, SCIP_DEFAULT_ABORTPRICEVARSFAC) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_MaxSepaCuts", &(*set)->maxsepacuts, SCIP_DEFAULT_MAXSEPACUTS) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_MaxSepaCutsRoot", &(*set)->maxsepacutsroot, SCIP_DEFAULT_MAXSEPACUTSROOT) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_ColAgeLimit", &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_RowAgeLimit", &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_CutAgeLimit", &(*set)->cutagelimit, SCIP_DEFAULT_CUTAGELIMIT) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_ConsAgeLimit", &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_MaxSol", &(*set)->maxsol, SCIP_DEFAULT_MAXSOL) );
+   CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
+                  "global_NodeLimit", &(*set)->nodelimit, SCIP_DEFAULT_NODELIMIT) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_LpSolveFreq", &(*set)->lpsolvefreq, SCIP_DEFAULT_LPSOLVEFREQ) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global_LpSolveDepth", &(*set)->lpsolvedepth, SCIP_DEFAULT_LPSOLVEDEPTH) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "global_CleanupCols", &(*set)->cleanupcols, SCIP_DEFAULT_CLEANUPCOLS) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "global_CleanupRows", &(*set)->cleanuprows, SCIP_DEFAULT_CLEANUPROWS) );
 
    return SCIP_OKAY;
 }
 
 /** frees global SCIP settings */
 RETCODE SCIPsetFree(
-   SET**            set                 /**< pointer to SCIP settings */
+   SET**            set,                /**< pointer to SCIP settings */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    int i;
 
    assert(set != NULL);
+
+   /* free parameter set */
+   SCIPparamsetFree(&(*set)->paramset, memhdr);
 
    /* free memory buffers */
    SCIPbufferFree(&(*set)->buffer);
@@ -286,6 +327,270 @@ RETCODE SCIPsetFree(
 
    freeMemory(set);
 
+   return SCIP_OKAY;
+}
+
+/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPsetAddBoolParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Bool             defaultvalue        /**< default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetAddBool(set->paramset, memhdr, name, valueptr, defaultvalue) );
+   
+   return SCIP_OKAY;
+}
+
+/** creates a int parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPsetAddIntParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int              defaultvalue        /**< default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetAddInt(set->paramset, memhdr, name, valueptr, defaultvalue) );
+   
+   return SCIP_OKAY;
+}
+
+/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPsetAddLongintParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Longint          defaultvalue        /**< default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetAddLongint(set->paramset, memhdr, name, valueptr, defaultvalue) );
+   
+   return SCIP_OKAY;
+}
+
+/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPsetAddRealParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Real             defaultvalue        /**< default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetAddReal(set->paramset, memhdr, name, valueptr, defaultvalue) );
+   
+   return SCIP_OKAY;
+}
+
+/** creates a char parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPsetAddCharParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char             defaultvalue        /**< default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetAddChar(set->paramset, memhdr, name, valueptr, defaultvalue) );
+   
+   return SCIP_OKAY;
+}
+
+/** creates a string parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPsetAddStringParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*      defaultvalue        /**< default value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetAddString(set->paramset, memhdr, name, valueptr, defaultvalue) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Bool parameter */
+RETCODE SCIPsetGetBoolParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Bool*            value               /**< pointer to store the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetGetBool(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Int parameter */
+RETCODE SCIPsetGetIntParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   int*             value               /**< pointer to store the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetGetInt(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Longint parameter */
+RETCODE SCIPsetGetLongintParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Longint*         value               /**< pointer to store the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetGetLongint(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Real parameter */
+RETCODE SCIPsetGetRealParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Real*            value               /**< pointer to store the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetGetReal(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Char parameter */
+RETCODE SCIPsetGetCharParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   char*            value               /**< pointer to store the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetGetChar(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing String parameter */
+RETCODE SCIPsetGetStringParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   char**           value               /**< pointer to store the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetGetString(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Bool parameter */
+RETCODE SCIPsetSetBoolParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Bool             value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetSetBool(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Int parameter */
+RETCODE SCIPsetSetIntParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   int              value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetSetInt(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Longint parameter */
+RETCODE SCIPsetSetLongintParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Longint          value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetSetLongint(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Real parameter */
+RETCODE SCIPsetSetRealParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Real             value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetSetReal(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Char parameter */
+RETCODE SCIPsetSetCharParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   char             value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetSetChar(set->paramset, name, value) );
+   
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing String parameter */
+RETCODE SCIPsetSetStringParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   const char*      value               /**< new value of the parameter */
+   )
+{
+   assert(set != NULL);
+
+   CHECK_OKAY( SCIPparamsetSetString(set->paramset, name, value) );
+   
    return SCIP_OKAY;
 }
 

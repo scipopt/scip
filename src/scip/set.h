@@ -47,6 +47,7 @@ typedef struct Pricer PRICER;           /**< ?????????????? dummy structure for 
 #include "def.h"
 #include "misc.h"
 #include "scip.h"
+#include "paramset.h"
 #include "reader.h"
 #include "cons.h"
 #include "event.h"
@@ -64,19 +65,7 @@ typedef struct Pricer PRICER;           /**< ?????????????? dummy structure for 
 struct Set
 {
    SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
-   VERBLEVEL        verblevel;          /**< verbosity level of output */
-   Real             infinity;           /**< values larger than this are considered infinity */
-   Real             epsilon;            /**< absolute values smaller than this are considered zero */
-   Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
-   Real             feastol;            /**< LP feasibility tolerance */
-   Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
-   Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
-   int              memgrowinit;        /**< initial size of dynamically allocated arrays */
-   Real             treegrowfac;        /**< memory growing factor for tree array */
-   int              treegrowinit;       /**< initial size of tree array */
-   Real             pathgrowfac;        /**< memory growing factor for path array */
-   int              pathgrowinit;       /**< initial size of path array */
-   Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
+   PARAMSET*        paramset;           /**< set of parameters */
    BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
    READER**         readers;            /**< file readers */
    int              nreaders;           /**< number of file readers */
@@ -106,6 +95,19 @@ struct Set
    DISP**           disps;              /**< display columns */
    int              ndisps;             /**< number of display columns */
    int              dispssize;          /**< size of disps array */
+   int              verblevel;          /**< verbosity level of output */
+   Real             infinity;           /**< values larger than this are considered infinity */
+   Real             epsilon;            /**< absolute values smaller than this are considered zero */
+   Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
+   Real             feastol;            /**< LP feasibility tolerance */
+   Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
+   Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
+   int              memgrowinit;        /**< initial size of dynamically allocated arrays */
+   Real             treegrowfac;        /**< memory growing factor for tree array */
+   int              treegrowinit;       /**< initial size of tree array */
+   Real             pathgrowfac;        /**< memory growing factor for path array */
+   int              pathgrowinit;       /**< initial size of path array */
+   Real             branchscorefac;     /**< branching score factor to weigh downward and upward gain prediction */
    int              dispwidth;          /**< maximal number of characters in a node information line */
    int              dispfreq;           /**< frequency for displaying node information lines */
    int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
@@ -122,8 +124,8 @@ struct Set
    Longint          nodelimit;          /**< maximal number of nodes to process */
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes */
-   unsigned int     cleanupcols:1;      /**< should new non-basic columns be removed after LP solving? */
-   unsigned int     cleanuprows:1;      /**< should new basic rows be removed after LP solving? */
+   Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
+   Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
 };
 
 
@@ -131,13 +133,170 @@ struct Set
 extern
 RETCODE SCIPsetCreate(
    SET**            set,                /**< pointer to SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
 /** frees global SCIP settings */
 extern
 RETCODE SCIPsetFree(
-   SET**            set                 /**< pointer to SCIP settings */
+   SET**            set,                /**< pointer to SCIP settings */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPsetAddBoolParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Bool             defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a int parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPsetAddIntParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int              defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPsetAddLongintParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Longint          defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPsetAddRealParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Real             defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a char parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPsetAddCharParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char             defaultvalue        /**< default value of the parameter */
+   );
+
+/** creates a string parameter, sets it to its default value, and adds it to the parameter set */
+extern
+RETCODE SCIPsetAddStringParam(
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
+   const char*      name,               /**< name of the parameter */
+   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*      defaultvalue        /**< default value of the parameter */
+   );
+
+/** gets the value of an existing Bool parameter */
+RETCODE SCIPsetGetBoolParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Bool*            value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Int parameter */
+extern
+RETCODE SCIPsetGetIntParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   int*             value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Longint parameter */
+extern
+RETCODE SCIPsetGetLongintParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Longint*         value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Real parameter */
+extern
+RETCODE SCIPsetGetRealParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Real*            value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing Char parameter */
+extern
+RETCODE SCIPsetGetCharParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   char*            value               /**< pointer to store the parameter */
+   );
+
+/** gets the value of an existing String parameter */
+extern
+RETCODE SCIPsetGetStringParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   char**           value               /**< pointer to store the parameter */
+   );
+
+/** changes the value of an existing Bool parameter */
+extern
+RETCODE SCIPsetSetBoolParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Bool             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Int parameter */
+extern
+RETCODE SCIPsetSetIntParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   int              value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Longint parameter */
+extern
+RETCODE SCIPsetSetLongintParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Longint          value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Real parameter */
+extern
+RETCODE SCIPsetSetRealParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   Real             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing Char parameter */
+extern
+RETCODE SCIPsetSetCharParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   char             value               /**< new value of the parameter */
+   );
+
+/** changes the value of an existing String parameter */
+extern
+RETCODE SCIPsetSetStringParam(
+   SET*             set,                /**< global SCIP settings */
+   const char*      name,               /**< name of the parameter */
+   const char*      value               /**< new value of the parameter */
    );
 
 /** inserts file reader in file reader list */

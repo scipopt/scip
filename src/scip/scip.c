@@ -288,7 +288,7 @@ RETCODE SCIPcreate(
    (*scip)->stage = SCIP_STAGE_INIT;
 
    CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
-   CHECK_OKAY( SCIPsetCreate(&(*scip)->set, *scip) );
+   CHECK_OKAY( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
    (*scip)->origprob = NULL;
    (*scip)->stat = NULL;
    (*scip)->transprob = NULL;
@@ -317,34 +317,12 @@ RETCODE SCIPfree(
    CHECK_OKAY( SCIPfreeProb(*scip) );
    assert((*scip)->stage == SCIP_STAGE_INIT);
 
-   CHECK_OKAY( SCIPsetFree(&(*scip)->set) );
+   CHECK_OKAY( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
 
    freeMemory(scip);
 
    return SCIP_OKAY;
-}
-
-/** gets verbosity level for message output */
-VERBLEVEL SCIPverbLevel(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return scip->set->verblevel;
-}
-
-/** sets verbosity level for message output */
-RETCODE SCIPsetVerbLevel(
-   SCIP*            scip,               /**< SCIP data structure */
-   VERBLEVEL        verblevel           /**< verbosity level for message output */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPsetVerbLevel", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   return SCIPsetSetVerbLevel(scip->set, verblevel);
 }
 
 /** prints a message depending on the verbosity level */
@@ -367,6 +345,271 @@ STAGE SCIPstage(
    assert(scip != NULL);
 
    return scip->stage;
+}
+
+
+
+
+/*
+ * parameter settings
+ */
+
+/** creates a Bool parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPaddBoolParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Bool*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Bool             defaultvalue        /**< default value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAddBoolParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a int parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPaddIntParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   int*             valueptr,           /**< pointer to store the current parameter value, or NULL */
+   int              defaultvalue        /**< default value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a Longint parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPaddLongintParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Longint*         valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Longint          defaultvalue        /**< default value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAddLongintParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a Real parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPaddRealParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Real*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   Real             defaultvalue        /**< default value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a char parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPaddCharParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char*            valueptr,           /**< pointer to store the current parameter value, or NULL */
+   char             defaultvalue        /**< default value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+/** creates a string parameter, sets it to its default value, and adds it to the parameter set */
+RETCODE SCIPaddStringParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char**           valueptr,           /**< pointer to store the current parameter value, or NULL */
+   const char*      defaultvalue        /**< default value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetAddStringParam(scip->set, scip->mem->setmem, name, valueptr, defaultvalue) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Bool parameter */
+RETCODE SCIPgetBoolParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Bool*            value               /**< pointer to store the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetGetBoolParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Int parameter */
+RETCODE SCIPgetIntParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   int*             value               /**< pointer to store the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetGetIntParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Longint parameter */
+RETCODE SCIPgetLongintParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Longint*         value               /**< pointer to store the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetGetLongintParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Real parameter */
+RETCODE SCIPgetRealParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Real*            value               /**< pointer to store the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetGetRealParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing Char parameter */
+RETCODE SCIPgetCharParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char*            value               /**< pointer to store the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetGetCharParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the value of an existing String parameter */
+RETCODE SCIPgetStringParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char**           value               /**< pointer to store the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetGetStringParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Bool parameter */
+RETCODE SCIPsetBoolParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Bool             value               /**< new value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetBoolParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Int parameter */
+RETCODE SCIPsetIntParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   int              value               /**< new value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetIntParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Longint parameter */
+RETCODE SCIPsetLongintParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Longint          value               /**< new value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetLongintParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Real parameter */
+RETCODE SCIPsetRealParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   Real             value               /**< new value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetRealParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing Char parameter */
+RETCODE SCIPsetCharParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   char             value               /**< new value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetCharParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the value of an existing String parameter */
+RETCODE SCIPsetStringParam(
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of the parameter */
+   const char*      value               /**< new value of the parameter */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsetSetStringParam(scip->set, name, value) );
+
+   return SCIP_OKAY;
 }
 
 
@@ -741,7 +984,7 @@ RETCODE SCIPreadProb(
       sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
          scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
          scip->origprob->nconss);
-      infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
 #if 0
       printf(" var names :  ");
       SCIPhashtablePrintStatistics(scip->origprob->varnames);
@@ -1390,7 +1633,7 @@ RETCODE SCIPsolve(
       sprintf(s, "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
          scip->transprob->nvars, scip->transprob->nbin, scip->transprob->nint, scip->transprob->nimpl,
          scip->transprob->ncont, scip->transprob->nconss);
-      infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
 
       for( i = 0; i < scip->set->nconshdlrs; ++i )
       {
@@ -1400,7 +1643,7 @@ RETCODE SCIPsolve(
          if( nactiveconss > 0 )
          {
             sprintf(s, " %5d constraints of type <%s>", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
-            infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          }
       }
 
@@ -1414,7 +1657,7 @@ RETCODE SCIPsolve(
 
    case SCIP_STAGE_SOLVING:
       /* continue solution process */
-      infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_NORMAL, "");
+      infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "");
       CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                      scip->lp, scip->price, scip->sepastore, scip->branchcand, scip->cutpool, scip->primal,
                      scip->eventfilter, scip->eventqueue) );
@@ -1428,20 +1671,20 @@ RETCODE SCIPsolve(
          scip->stage = SCIP_STAGE_SOLVED;
 
          /* display most relevant statistics */
-         infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, "");
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "");
          if( scip->primal->nsols == 0 )
          {
             sprintf(s, "Solution Status    : infeasible");
          }
          else
             sprintf(s, "Solution Status    : optimal");
-         infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          sprintf(s, "Solution Nodes     : %lld", scip->stat->nnodes);
-         infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          if( scip->primal->nsols > 0 )
          {
             sprintf(s, "Objective          : %25.19e", SCIPgetPrimalBound(scip));
-            infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
+            infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, s);
          }
       }
       return SCIP_OKAY;
@@ -2521,7 +2764,7 @@ RETCODE SCIPaddVarToRow(
 }
 
 /** tries to find a rational representation of the row and multiplies coefficients with common denominator */
-extern
+
 RETCODE SCIPmakeRowRational(
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */

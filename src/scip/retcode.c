@@ -70,6 +70,12 @@ void SCIPretcodePrint(
    case SCIP_PLUGINNOTFOUND:
       fprintf(file, "a required plugin was not found");
       break;
+   case SCIP_UNKNOWNPARAMETER:
+      fprintf(file, "the parameter with the given name was not found");
+      break;
+   case SCIP_WRONGPARAMETERTYPE:
+      fprintf(file, "the parameter is not of the expected type");
+      break;
    default:
       fprintf(file, "unknown error code");
       break;
