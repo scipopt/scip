@@ -21,11 +21,11 @@
  * @author Thorsten Koch
  */
 
-/* $Id: xternal.c,v 1.2 2002/10/23 14:45:30 bzfpfend Exp $
+/* $Id: xternal.c,v 1.3 2002/10/25 13:54:39 bzfpfend Exp $
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
-   @version  0.0.1
+   @version  0.1
    @author   Tobias Achterberg
    @author   Thorsten Koch
    @author   Alexander Martin

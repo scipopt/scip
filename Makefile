@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 2002/10/23 14:45:30 bzfpfend Exp $
+# $Id: Makefile,v 1.4 2002/10/25 13:54:39 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -87,7 +87,14 @@ NAME		=	scip
 
 #-----------------------------------------------------------------------------
 
-LIBOBJ		=
+LIBOBJ		=	bitencode.o \
+			constraint.o \
+			domain.o \
+			lp.o \
+			memory.o \
+			scip.o \
+			sort.o \
+			tree.o
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
@@ -106,7 +113,7 @@ ifeq ($(LPS),cpx)
 	CPPFLAGS+=	-I$(LIBDIR)/cpxinc
 	OBJECT	=	cmain.o
 	LPSLIB	=	cplex.$(OSTYPE).$(ARCH)
-	LPIOBJ	=	cpx_lp.o
+	LPIOBJ	=	lp_cpx.o
 	LPILIB	=	$(LIBDIR)/libcpxlp.$(BASE).a
 	LPIXXX	=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
 	LPISRC  =	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
@@ -129,7 +136,7 @@ ifeq ($(LPS),spx)
 	CPPFLAGS+=	-I$(LIBDIR)/spxinc 
 	OBJECT	=	cppmain.o
 	LPSLIB	=	soplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-	LPIOBJ	=	spx_lp.o
+	LPIOBJ	=	lp_spx.o
 	LPILIB	=	$(LIBDIR)/libspxlp.$(BASE).a
 	LPIXXX	=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
 	LPISRC  =	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.cpp))
