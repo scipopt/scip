@@ -42,6 +42,7 @@ interface:
   be used to check, whether the returned values are correct dual bounds
 - new method SCIPisLPSolBasic() to check, whether the current LP solution is basic (i.e. due to a simplex algorithm
   or barrier with crossover)
+- event handlers are now available as C++ wrapper class
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
