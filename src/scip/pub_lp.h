@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.2 2004/01/15 09:12:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.3 2004/01/26 15:10:17 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -59,6 +59,12 @@ void SCIPcolPrint(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** gets objective value of column */
+extern
+Real SCIPcolGetObj(
+   COL*             col                 /**< LP column */
+   );
 
 /** gets lower bound of column */
 extern
@@ -140,6 +146,7 @@ Longint SCIPcolGetStrongbranchNode(
  * speed up the algorithms.
  */
 
+#define SCIPcolGetObj(col)              ((col)->obj)
 #define SCIPcolGetLb(col)               ((col)->lb)
 #define SCIPcolGetUb(col)               ((col)->ub)
 #define SCIPcolGetBestBound(col)        ((col)->obj >= 0.0 ? (col)->lb : (col)->ub)

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.28 2003/12/01 16:14:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.29 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -70,6 +70,7 @@ RETCODE SCIPheurCreate(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   int              freqofs,            /**< frequency offset for calling primal heuristic */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -85,6 +86,7 @@ RETCODE SCIPheurCreate(
    assert(name != NULL);
    assert(desc != NULL);
    assert(freq >= -1);
+   assert(freqofs >= 0);
    assert(heurexec != NULL);
 
    ALLOC_OKAY( allocMemory(heur) );
@@ -93,6 +95,7 @@ RETCODE SCIPheurCreate(
    (*heur)->dispchar = dispchar;
    (*heur)->priority = priority;
    (*heur)->freq = freq;
+   (*heur)->freqofs = freqofs;
    (*heur)->pseudonodes = pseudonodes;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
@@ -114,6 +117,10 @@ RETCODE SCIPheurCreate(
    sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
+   sprintf(paramname, "heuristics/%s/freqofs", name);
+   sprintf(paramdesc, "frequency offset for calling primal heuristic <%s>", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
+                  &(*heur)->freqofs, freqofs, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -212,6 +219,7 @@ RETCODE SCIPheurExec(
    assert(heur != NULL);
    assert(heur->heurexec != NULL);
    assert(heur->freq >= -1);
+   assert(heur->freqofs >= 0);
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(primal != NULL);
@@ -220,8 +228,8 @@ RETCODE SCIPheurExec(
 
    if( heur->pseudonodes )
    {
-      /* heuristic may be executed on every node: check, if the actual depth matches the execution frequency */
-      execute = (actdepth == 0 && heur->freq == 0) || (heur->freq > 0 && actdepth % heur->freq == 0);
+      /* heuristic may be executed on every node: check, if the actual depth matches the execution frequency and offset */
+      execute = (actdepth == 0 && heur->freq == 0) || (heur->freq > 0 && (actdepth - heur->freqofs) % heur->freq == 0);
    }
    else
    {
@@ -229,7 +237,10 @@ RETCODE SCIPheurExec(
        * execution frequency lies between the current node and the last LP node of the path
        */
       execute = actnodehaslp
-         && ((actdepth == 0 && heur->freq >= 0) || (heur->freq > 0 && (actdepth / heur->freq != lpforkdepth / heur->freq)));
+         && ((actdepth == 0 && heur->freq >= 0)
+            || (heur->freq > 0
+               && ((actdepth + heur->freq - heur->freqofs) / heur->freq
+                  != (lpforkdepth + heur->freq - heur->freqofs) / heur->freq)));
    }
 
    if( execute )
@@ -353,6 +364,16 @@ int SCIPheurGetFreq(
    assert(heur != NULL);
 
    return heur->freq;
+}
+
+/** gets frequency offset of primal heuristic */
+int SCIPheurGetFreqofs(
+   HEUR*            heur                /**< primal heuristic */
+   )
+{
+   assert(heur != NULL);
+
+   return heur->freqofs;
 }
 
 /** gets the number of times, the heuristic was called and tried to find a solution */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.3 2003/12/08 13:24:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.4 2004/01/26 15:10:17 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -55,6 +55,9 @@ public:
    /** frequency for calling primal heuristic */
    const int scip_freq_;
 
+   /** frequency offset for calling primal heuristic */
+   const int scip_freqofs_;
+
    /** call heuristic at nodes where only a pseudo solution exist? */
    const Bool scip_pseudonodes_;
 
@@ -65,6 +68,7 @@ public:
       char          dispchar,           /**< display character of primal heuristic */
       int           priority,           /**< priority of the primal heuristic */
       int           freq,               /**< frequency for calling primal heuristic */
+      int           freqofs,            /**< frequency offset for calling primal heuristic */
       Bool          pseudonodes         /**< call heuristic at nodes where only a pseudo solution exist? */
       )
       : scip_name_(name),
@@ -72,6 +76,7 @@ public:
         scip_dispchar_(dispchar),
         scip_priority_(priority),
         scip_freq_(freq),
+        scip_freqofs_(freqofs),
         scip_pseudonodes_(pseudonodes)
    {
    }

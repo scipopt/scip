@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.1 2004/01/24 17:21:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.2 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -32,8 +32,9 @@
 #define HEUR_NAME         "coefdiving"
 #define HEUR_DESC         "LP diving heuristic that chooses fixings w.r.t. the matrix coefficients"
 #define HEUR_DISPCHAR     'c'
-#define HEUR_PRIORITY     -1002000
+#define HEUR_PRIORITY     -1001000
 #define HEUR_FREQ         10
+#define HEUR_FREQOFS      2
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -83,8 +84,9 @@ struct HeurData
  * Callback methods
  */
 
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-DECL_HEURFREE(SCIPheurFreeCoefdiving) /*lint --e{715}*/
+DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -101,8 +103,10 @@ DECL_HEURFREE(SCIPheurFreeCoefdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** initialization method of primal heuristic (called when problem solving starts) */
 static
-DECL_HEURINIT(SCIPheurInitCoefdiving) /*lint --e{715}*/
+DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -122,8 +126,10 @@ DECL_HEURINIT(SCIPheurInitCoefdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** deinitialization method of primal heuristic (called when problem solving exits) */
 static
-DECL_HEUREXIT(SCIPheurExitCoefdiving) /*lint --e{715}*/
+DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -140,8 +146,10 @@ DECL_HEUREXIT(SCIPheurExitCoefdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** execution method of primal heuristic */
 static
-DECL_HEUREXEC(SCIPheurExecCoefdiving) /*lint --e{715}*/
+DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
    LPSOLSTAT lpsolstat;
@@ -500,8 +508,9 @@ RETCODE SCIPincludeHeurCoefdiving(
    CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
 
    /* include heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_PSEUDONODES,
-                  SCIPheurFreeCoefdiving, SCIPheurInitCoefdiving, SCIPheurExitCoefdiving, SCIPheurExecCoefdiving,
+   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+                  HEUR_PSEUDONODES,
+                  heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving, heurExecCoefdiving,
                   heurdata) );
 
    /* coefdiving heuristic parameters */

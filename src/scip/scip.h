@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.104 2004/01/24 17:21:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.105 2004/01/26 15:10:17 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -670,6 +670,7 @@ RETCODE SCIPincludeHeur(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   int              freqofs,            /**< frequency offset for calling primal heuristic */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -1999,6 +2000,13 @@ RETCODE SCIPchgVarUbDive(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
+   );
+
+/** gets variable's objective value in current dive */
+extern
+Real SCIPgetVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
    );
 
 /** gets variable's lower bound in current dive */

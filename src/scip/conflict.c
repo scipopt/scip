@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.24 2004/01/24 17:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.25 2004/01/26 15:10:15 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1219,12 +1219,12 @@ RETCODE lpconflictAnalyzeDualfarkas(
          if( row->dualfarkas > 0.0 )
          {
             assert(!SCIPsetIsInfinity(set, -row->lhs));
-            farkaslhs += row->dualfarkas * row->lhs;
+            farkaslhs += row->dualfarkas * (row->lhs - row->constant);
          }
          else
          {
             assert(!SCIPsetIsInfinity(set, row->rhs));
-            farkaslhs += row->dualfarkas * row->rhs;
+            farkaslhs += row->dualfarkas * (row->rhs - row->constant);
          }
       }
    }
@@ -1449,14 +1449,16 @@ RETCODE lpconflictAnalyzeDualsol(
          if( row->dualsol > 0.0 )
          {
             assert(!SCIPsetIsInfinity(set, -row->lhs));
-            duallhs += row->dualsol * row->lhs;
-            debugMessage(" global row <%s>: lhs=%g, dual=%g -> %g\n", SCIProwGetName(row), row->lhs, row->dualsol, duallhs);
+            duallhs += row->dualsol * (row->lhs - row->constant);
+            debugMessage(" global row <%s>: lhs=%g, dual=%g -> %g\n", 
+               SCIProwGetName(row), row->lhs - row->constant, row->dualsol, duallhs);
          }
          else
          {
             assert(!SCIPsetIsInfinity(set, row->rhs));
-            duallhs += row->dualsol * row->rhs;
-            debugMessage(" global row <%s>: rhs=%g, dual=%g -> %g\n", SCIProwGetName(row), row->rhs, row->dualsol, duallhs);
+            duallhs += row->dualsol * (row->rhs - row->constant);
+            debugMessage(" global row <%s>: rhs=%g, dual=%g -> %g\n", 
+               SCIProwGetName(row), row->rhs - row->constant, row->dualsol, duallhs);
          }
       }
    }
@@ -1480,8 +1482,8 @@ RETCODE lpconflictAnalyzeDualsol(
          {
             /* local bounds of non-binary variables cannot be used: use global bound */
             duallhs += col->redcost * SCIPvarGetLbGlobal(var);
-            debugMessage(" col <%s>: glb=%g, redcost=%g -> %g\n", 
-               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), col->redcost, duallhs);
+            debugMessage(" col <%s>: llb=%g, glb=%g, redcost=%g -> %g\n", 
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var), col->redcost, duallhs);
          }
       }
       else if( SCIPsetIsNegative(set, col->redcost) )
@@ -1497,8 +1499,8 @@ RETCODE lpconflictAnalyzeDualsol(
          {
             /* local bounds of non-binary variables cannot be used: use global bound */
             duallhs += col->redcost * SCIPvarGetUbGlobal(var);
-            debugMessage(" col <%s>: gub=%g, redcost=%g -> %g\n", 
-               SCIPvarGetName(var), SCIPvarGetUbGlobal(var), col->redcost, duallhs);
+            debugMessage(" col <%s>: lub=%g, gub=%g, redcost=%g -> %g\n", 
+               SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var), col->redcost, duallhs);
          }
       }
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.1 2003/12/23 12:13:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.2 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -34,6 +34,7 @@
 #define HEUR_DISPCHAR     'r'
 #define HEUR_PRIORITY     0
 #define HEUR_FREQ         1
+#define HEUR_FREQOFS      0
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -50,8 +51,13 @@ struct HeurData
  * Callback methods
  */
 
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+#define heurFreeSimplerounding NULL
+
+
+/** initialization method of primal heuristic (called when problem solving starts) */
 static
-DECL_HEURINIT(SCIPheurInitSimplerounding) /*lint --e{715}*/
+DECL_HEURINIT(heurInitSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -68,8 +74,10 @@ DECL_HEURINIT(SCIPheurInitSimplerounding) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** deinitialization method of primal heuristic (called when problem solving exits) */
 static
-DECL_HEUREXIT(SCIPheurExitSimplerounding) /*lint --e{715}*/
+DECL_HEUREXIT(heurExitSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -87,8 +95,10 @@ DECL_HEUREXIT(SCIPheurExitSimplerounding) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** execution method of primal heuristic */
 static
-DECL_HEUREXEC(SCIPheurExecSimplerounding) /*lint --e{715}*/
+DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
    SOL* sol;
@@ -204,8 +214,9 @@ RETCODE SCIPincludeHeurSimplerounding(
    )
 {
    /* include heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_PSEUDONODES,
-                  NULL, SCIPheurInitSimplerounding, SCIPheurExitSimplerounding, SCIPheurExecSimplerounding,
+   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+                  HEUR_PSEUDONODES,
+                  heurFreeSimplerounding, heurInitSimplerounding, heurExitSimplerounding, heurExecSimplerounding,
                   NULL) );
 
    return SCIP_OKAY;

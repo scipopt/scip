@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.2 2003/12/04 15:11:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.3 2004/01/26 15:10:18 bzfpfend Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -40,6 +40,7 @@ struct Heur
    char             dispchar;           /**< display character of primal heuristic */
    int              priority;           /**< priority of the primal heuristic */
    int              freq;               /**< frequency for calling primal heuristic */
+   int              freqofs;            /**< frequency offset for calling primal heuristic */
    DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
    DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.22 2004/01/15 12:09:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.23 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -50,6 +50,7 @@ RETCODE SCIPheurCreate(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   int              freqofs,            /**< frequency offset for calling primal heuristic */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */

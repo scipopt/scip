@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.14 2004/01/22 14:42:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.15 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -301,8 +301,8 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
 
    /* display list of primal heuristics */
    printf("\n");
-   printf(" primal heuristic     c priority freq  description\n");
-   printf(" ----------------     - -------- ----  -----------\n");
+   printf(" primal heuristic     c priority freq ofs  description\n");
+   printf(" ----------------     - -------- ---- ---  -----------\n");
    for( i = 0; i < nheurs; ++i )
    {
       printf(" %-20s ", SCIPheurGetName(heurs[i]));
@@ -310,7 +310,8 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
          printf("\n %20s ", "-->");
       printf("%c ", SCIPheurGetDispchar(heurs[i]));
       printf("%8d ", SCIPheurGetPriority(heurs[i]));
-      printf("%4d  ", SCIPheurGetFreq(heurs[i]));
+      printf("%4d ", SCIPheurGetFreq(heurs[i]));
+      printf("%3d  ", SCIPheurGetFreqofs(heurs[i]));
       printf(SCIPheurGetDesc(heurs[i]));
       printf("\n");
    }

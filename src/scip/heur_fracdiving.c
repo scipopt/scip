@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.1 2004/01/24 17:21:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.2 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -34,6 +34,7 @@
 #define HEUR_DISPCHAR     'f'
 #define HEUR_PRIORITY     -1000000
 #define HEUR_FREQ         10
+#define HEUR_FREQOFS      0
 #define HEUR_PSEUDONODES  FALSE         /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -83,8 +84,9 @@ struct HeurData
  * Callback methods
  */
 
+/** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-DECL_HEURFREE(SCIPheurFreeFracdiving) /*lint --e{715}*/
+DECL_HEURFREE(heurFreeFracdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -101,8 +103,10 @@ DECL_HEURFREE(SCIPheurFreeFracdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** initialization method of primal heuristic (called when problem solving starts) */
 static
-DECL_HEURINIT(SCIPheurInitFracdiving) /*lint --e{715}*/
+DECL_HEURINIT(heurInitFracdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -122,8 +126,10 @@ DECL_HEURINIT(SCIPheurInitFracdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** deinitialization method of primal heuristic (called when problem solving exits) */
 static
-DECL_HEUREXIT(SCIPheurExitFracdiving) /*lint --e{715}*/
+DECL_HEUREXIT(heurExitFracdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
 
@@ -140,8 +146,10 @@ DECL_HEUREXIT(SCIPheurExitFracdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+
+/** execution method of primal heuristic */
 static
-DECL_HEUREXEC(SCIPheurExecFracdiving) /*lint --e{715}*/
+DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    HEURDATA* heurdata;
    LPSOLSTAT lpsolstat;
@@ -492,8 +500,9 @@ RETCODE SCIPincludeHeurFracdiving(
    CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
 
    /* include heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_PSEUDONODES,
-                  SCIPheurFreeFracdiving, SCIPheurInitFracdiving, SCIPheurExitFracdiving, SCIPheurExecFracdiving,
+   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+                  HEUR_PSEUDONODES,
+                  heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, heurExecFracdiving,
                   heurdata) );
 
    /* fracdiving heuristic parameters */

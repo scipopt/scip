@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.123 2004/01/24 17:21:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.124 2004/01/26 15:10:17 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1248,6 +1248,7 @@ RETCODE SCIPincludeHeur(
    char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
+   int              freqofs,            /**< frequency offset for calling primal heuristic */
    Bool             pseudonodes,        /**< call heuristic at nodes where only a pseudo solution exist? */
    DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -1261,7 +1262,7 @@ RETCODE SCIPincludeHeur(
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-                  name, desc, dispchar, priority, freq, pseudonodes,
+                  name, desc, dispchar, priority, freq, freqofs, pseudonodes,
                   heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
@@ -5090,9 +5091,9 @@ RETCODE SCIPchgVarObjDive(
       return SCIP_INVALIDCALL;
    }
 
-   /**@todo implement SCIPchgVarObjDive() */
-   errorMessage("not implemented yet\n");
-   abort();  /*lint --e{527} --e{715}*/
+   CHECK_OKAY( SCIPvarChgObjDive(var, scip->set, scip->lp, newobj) );
+
+   return SCIP_OKAY;
 }
 
 /** changes variable's lower bound in current dive */
@@ -5133,6 +5134,23 @@ RETCODE SCIPchgVarUbDive(
    CHECK_OKAY( SCIPvarChgUbDive(var, scip->set, scip->lp, newbound) );
 
    return SCIP_OKAY;
+}
+
+/** gets variable's objective value in current dive */
+Real SCIPgetVarObjDive(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarObjDive", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   
+   if( !scip->lp->diving )
+   {
+      errorMessage("not in diving mode\n");
+      abort();
+   }
+
+   return SCIPvarGetObjDive(var, scip->set);
 }
 
 /** gets variable's lower bound in current dive */

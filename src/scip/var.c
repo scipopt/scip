@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.67 2004/01/24 17:21:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.68 2004/01/26 15:10:18 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2495,6 +2495,70 @@ RETCODE SCIPvarAddObj(
    return SCIP_OKAY;
 }
 
+/** changes objective value of variable in current dive */
+RETCODE SCIPvarChgObjDive(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newobj              /**< new objective value for variable */
+   )
+{
+   assert(var != NULL);
+   assert(lp != NULL);
+
+   debugMessage("changing objective of <%s> to %g in current dive\n", var->name, newobj);
+
+   if( SCIPsetIsZero(set, newobj) )
+      newobj = 0.0;
+
+   /* mark the LP's objective function invalid */
+   lp->divingobjchg = TRUE;
+
+   /* change objective value of attached variables */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      CHECK_OKAY( SCIPvarChgObjDive(var->data.transvar, set, lp, newobj) );
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      CHECK_OKAY( SCIPcolChgObj(var->data.col, set, lp, newobj) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      /* nothing to do here: only the constant shift in objective function would change */
+      break;
+      
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
+      CHECK_OKAY( SCIPvarChgObjDive(var->data.aggregate.var, set, lp, newobj / var->data.aggregate.scalar) );
+      /* the constant can be ignored, because it would only affect the objective shift */
+      break;
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      errorMessage("cannot change diving objective value of a multi-aggregated variable\n");
+      return SCIP_INVALIDDATA;
+      
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      CHECK_OKAY( SCIPvarChgObjDive(var->negatedvar, set, lp, -newobj) );
+      /* the offset can be ignored, because it would only affect the objective shift */
+      break;
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adjust lower bound to integral value, if variable is integral */
 void SCIPvarAdjustLb(
    VAR*             var,                /**< problem variable */
@@ -4326,6 +4390,49 @@ Real SCIPvarGetBranchingPriority(
 }
 
 #endif
+
+/** gets objective value of variable in current dive */
+Real SCIPvarGetObjDive(
+   VAR*             var,                /**< problem variable */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(var != NULL);
+
+   /* get bounds of attached variables */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.transvar != NULL);
+      return SCIPvarGetObjDive(var->data.transvar, set);
+         
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      return SCIPcolGetObj(var->data.col);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      return var->obj;
+      
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      return var->data.aggregate.scalar * SCIPvarGetObjDive(var->data.aggregate.var, set);
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      errorMessage("cannot get the objective value of a multiple aggregated variable\n");
+      abort();
+      
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      return -SCIPvarGetObjDive(var->negatedvar, set);
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
 
 /** gets lower bound of variable in current dive */
 Real SCIPvarGetLbDive(

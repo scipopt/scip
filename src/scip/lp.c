@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.94 2004/01/24 17:21:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.95 2004/01/26 15:10:17 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1956,6 +1956,16 @@ void SCIPcolPrint(
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  */
+
+/** gets objective value of column */
+Real SCIPcolGetObj(
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->obj;
+}
 
 /** gets lower bound of column */
 Real SCIPcolGetLb(
@@ -4212,6 +4222,7 @@ RETCODE SCIPlpCreate(
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->diving = FALSE;
+   (*lp)->divingobjchg = FALSE;
    (*lp)->lpiuobjlim = set->infinity;
    (*lp)->lpifeastol = set->feastol;
    (*lp)->lpidualfeastol = set->dualfeastol;
@@ -5816,6 +5827,23 @@ Real SCIPlpGetObjval(
       return lp->lpobjval + lp->looseobjval;
 }
 
+/** gets part of objective value of last solution that results from LOOSE variables only */
+Real SCIPlpGetLooseObjval(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->solved);
+   assert((lp->nloosevars > 0) || (lp->looseobjvalinf == 0 && lp->looseobjval == 0.0));
+   assert(set != NULL);
+
+   if( lp->looseobjvalinf > 0 )
+      return -set->infinity;
+   else
+      return lp->looseobjval;
+}
+
 /** gets current pseudo objective value */
 Real SCIPlpGetPseudoObjval(
    LP*              lp,                 /**< actual LP data */
@@ -6998,6 +7026,7 @@ RETCODE SCIPlpEndDive(
 
    /* switch to standard (non-diving) mode and remember the diving node */
    lp->diving = FALSE;
+   lp->divingobjchg = FALSE;
    stat->lastdivenode = stat->nnodes;
 
 #ifndef NDEBUG

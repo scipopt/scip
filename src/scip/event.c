@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.25 2004/01/24 17:21:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.26 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -558,9 +558,14 @@ RETCODE SCIPeventProcess(
       assert(var != NULL);
       assert(var->eventqueueindexobj == -1);
 
-      /* inform LP about the objective change to update the pseudo solution objective value */
+      /* inform LP about the objective change */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
+         assert(SCIPvarGetProbindex(var) >= 0);
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+         {
+            CHECK_OKAY( SCIPcolChgObj(SCIPvarGetCol(var), set, lp, event->data.eventobjchg.newobj) );
+         }
          CHECK_OKAY( SCIPlpUpdateVarObj(lp, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
       }
 
@@ -574,7 +579,7 @@ RETCODE SCIPeventProcess(
       assert(var != NULL);
       assert(var->eventqueueindexlb == -1);
 
-      /* inform LP about bound change */
+      /* inform LP about bound change and update branching candidates */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -597,7 +602,7 @@ RETCODE SCIPeventProcess(
       assert(var != NULL);
       assert(var->eventqueueindexub == -1);
 
-      /* inform LP about bound change */
+      /* inform LP about bound change and update branching candidates */
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          assert(SCIPvarGetProbindex(var) >= 0);

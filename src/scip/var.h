@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.49 2004/01/07 13:14:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.50 2004/01/26 15:10:18 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -327,6 +327,15 @@ RETCODE SCIPvarAddObj(
    Real             addobj              /**< additional objective value for variable */
    );
 
+/** changes objective value of variable in current dive */
+extern
+RETCODE SCIPvarChgObjDive(
+   VAR*             var,                /**< problem variable to change */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             newobj              /**< new objective value for variable */
+   );
+
 /** adjust lower bound to integral value, if variable is integral */
 extern
 void SCIPvarAdjustLb(
@@ -466,6 +475,13 @@ void SCIPvarChgBranchingPriority(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   );
+
+/** gets objective value of variable in current dive */
+extern
+Real SCIPvarGetObjDive(
+   VAR*             var,                /**< problem variable */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** gets lower bound of variable in current dive */

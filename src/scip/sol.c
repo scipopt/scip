@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.28 2004/01/24 17:21:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.29 2004/01/26 15:10:18 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods and datastructures for storing primal CIP solutions
@@ -210,6 +210,7 @@ RETCODE SCIPsolLinkLPSol(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
+   assert(lp->diving || !lp->divingobjchg);
 
    debugMessage("linking solution to LP\n");
 
@@ -227,7 +228,33 @@ RETCODE SCIPsolLinkLPSol(
    }
 
    /* link solution to LP solution */
-   sol->obj = SCIPlpGetObjval(lp, set);
+   if( lp->divingobjchg )
+   {
+      /* the objective value has to be calculated manually, because the LP's value is invalid;
+       * use objective values of variables, because columns objective values are changed to dive values
+       */
+      sol->obj = SCIPlpGetLooseObjval(lp, set);
+      if( !SCIPsetIsInfinity(set, -sol->obj) )
+      {
+         VAR* var;
+         COL** cols;
+         int ncols;
+         int c;
+         
+         cols = SCIPlpGetCols(lp);
+         ncols = SCIPlpGetNCols(lp);
+         for( c = 0; c < ncols; ++c )
+         {
+            var = SCIPcolGetVar(cols[c]);
+            sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
+         }
+      }
+   }
+   else
+   {
+      /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+      sol->obj = SCIPlpGetObjval(lp, set);
+   }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;

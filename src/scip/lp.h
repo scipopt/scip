@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.64 2004/01/22 14:42:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.65 2004/01/26 15:10:17 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -632,6 +632,13 @@ LPSOLSTAT SCIPlpGetSolstat(
 /** gets objective value of last solution */
 extern
 Real SCIPlpGetObjval(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets part of objective value of last solution that results from LOOSE variables only */
+extern
+Real SCIPlpGetLooseObjval(
    LP*              lp,                 /**< actual LP data */
    const SET*       set                 /**< global SCIP settings */
    );

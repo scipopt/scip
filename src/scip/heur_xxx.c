@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.2 2003/11/27 17:48:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.3 2004/01/26 15:10:16 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -33,6 +33,7 @@
 #define HEUR_DISPCHAR        '?'
 #define HEUR_PRIORITY        0
 #define HEUR_FREQ            1
+#define HEUR_FREQOFS         0
 #define HEUR_PSEUDONODES     TRUE       /** call heuristic at nodes where only a pseudo solution exist? */
 
 
@@ -142,7 +143,8 @@ RETCODE SCIPincludeHeurXxx(
    /* TODO: (optional) create primal heuristic specific data here */
 
    /* include primal heuristic */
-   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_PSEUDONODES,
+   CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+                  HEUR_PSEUDONODES,
                   heurFreeXxx, heurInitXxx, heurExitXxx, heurExecXxx,
                   heurdata) );
 
