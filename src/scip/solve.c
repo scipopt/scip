@@ -307,10 +307,14 @@ RETCODE solveNodeLP(
 
          assert(lp->solved);
 
+         enoughcuts = FALSE;
+
          /* global cut pool separation */
          debugMessage("global cut pool separation\n");
          assert(SCIPsepaGetNCuts(sepa) == 0);
-         CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepa, root) );
+         CHECK_OKAY( SCIPcutpoolSeparate(cutpool, memhdr, set, stat, lp, sepa, root, &result) );
+         cutoff |= (result == SCIP_CUTOFF);
+         enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
 
          /* constraint separation */
          debugMessage("constraint separation\n");
@@ -320,8 +324,8 @@ RETCODE solveNodeLP(
             SCIPconshdlrResetSepa(set->conshdlrs[h]);
          
          /* try separating constraints until the cut pool is at least half full */
-         enoughcuts = FALSE;
-         do
+         separateagain = TRUE;
+         while( !cutoff && separateagain && !enoughcuts )
          {
             separateagain = FALSE;
             for( h = 0; h < set->nconshdlrs && !cutoff && !enoughcuts; ++h )
@@ -332,10 +336,9 @@ RETCODE solveNodeLP(
                enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
             }
          }
-         while( !cutoff && separateagain && !enoughcuts );
          
          /* separate LP, if the cut pool is less than half full */
-         if( !cutoff &&!enoughcuts )
+         if( !cutoff && !enoughcuts )
          {
             todoMessage("cut separation");
          }
@@ -717,7 +720,7 @@ RETCODE SCIPsolveCIP(
       {
          /* update statistics */
          stat->nnodes++;
-         stat->maxdepth = MAX(stat->maxdepth, actnode->depth);
+         stat->maxdepth = MAX(stat->maxdepth, (int)(actnode->depth));
          if( actnode->nodetype == SCIP_NODETYPE_LEAF )
          {
             stat->plungedepth = 0;
@@ -786,7 +789,7 @@ RETCODE SCIPsolveCIP(
          debug(SCIPprobPrintPseudoSol(prob, set));
          
          /* check, if we want to solve the LP at the selected node */
-         tree->actnodehaslp = (actnode->depth <= set->lpsolvedepth
+         tree->actnodehaslp = ((int)(actnode->depth) <= set->lpsolvedepth
             && set->lpsolvefreq >= 1 && actnode->depth % set->lpsolvefreq == 0);
 
          /* solve at least the root LP, if there are continous variables present */

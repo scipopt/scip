@@ -305,7 +305,7 @@ RETCODE runSCIP(
    if( argc < 2 )
    {
       printf("syntax: %s <problem>\n", argv[0]);
-      return 0;
+      return SCIP_OKAY;
    }
 
    printf("\nread problem <%s>\n", argv[1]);

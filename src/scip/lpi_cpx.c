@@ -42,7 +42,7 @@ typedef DUALPACKET ROWPACKET;           /* each row needs two bit of information
 
 /* CPLEX parameter lists which can be changed */
 #define NUMINTPARAM  6
-static const int    intparam[NUMINTPARAM] = {
+static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_ADVIND,
    CPX_PARAM_ITLIM,
    CPX_PARAM_FASTMIP,
@@ -51,7 +51,7 @@ static const int    intparam[NUMINTPARAM] = {
    CPX_PARAM_SCRIND
 };
 #define NUMDBLPARAM  4
-static const double dblparam[NUMDBLPARAM] = {
+static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_EPRHS,
    CPX_PARAM_OBJLLIM,
    CPX_PARAM_OBJULIM,
@@ -89,8 +89,8 @@ struct LPi
 /** LPi state stores basis information */
 struct LPiState
 {
-   unsigned int     ncols:20;           /**< number of LP columns */
-   unsigned int     nrows:20;           /**< number of LP rows */
+   int              ncols;              /**< number of LP columns */
+   int              nrows;              /**< number of LP rows */
    COLPACKET*       packcstat;          /**< column basis status in compressed form */
    ROWPACKET*       packrstat;          /**< row basis status in compressed form */
    double*          dnorm;              /**< dual norms of variables */

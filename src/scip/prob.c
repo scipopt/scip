@@ -490,7 +490,7 @@ RETCODE SCIPprobChgVarType(
    assert(var != NULL);
    assert(var->probindex >= 0);
 
-   if( var->vartype == vartype )
+   if( (VARTYPE)(var->vartype) == vartype )
       return SCIP_OKAY;
 
    /* temporarily remove variable from problem */

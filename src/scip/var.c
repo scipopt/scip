@@ -998,7 +998,7 @@ RETCODE SCIPvarTransform(
    assert(transvar != NULL);
 
    /* convert 0/1 integer variables into binary variables */
-   vartype = origvar->vartype;
+   vartype = (VARTYPE)(origvar->vartype);
    if( vartype == SCIP_VARTYPE_INTEGER && SCIPsetIsEQ(set, origvar->dom.lb, 0.0) && SCIPsetIsEQ(set, origvar->dom.ub, 1.0) )
       vartype = SCIP_VARTYPE_BINARY;
 
@@ -2106,7 +2106,7 @@ VARSTATUS SCIPvarGetStatus(
 {
    assert(var != NULL);
 
-   return var->varstatus;
+   return (VARSTATUS)(var->varstatus);
 }
 
 /** gets type of variable */
@@ -2116,7 +2116,7 @@ VARTYPE SCIPvarGetType(
 {
    assert(var != NULL);
 
-   return var->vartype;
+   return (VARTYPE)(var->vartype);
 }
 
 /** gets unique index of variable */

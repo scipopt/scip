@@ -473,7 +473,7 @@ RETCODE nodeReleaseParent(
    assert(memhdr != NULL);
    
    debugMessage("releasing parent-child relationship of node %p at depth %d of type %d with parent %p of type %d\n",
-      node, node->depth, node->nodetype, node->parent, node->parent != NULL ? node->parent->nodetype : -1);
+      node, node->depth, node->nodetype, node->parent, node->parent != NULL ? (int)(node->parent->nodetype) : -1);
    parent = node->parent;
    if( parent != NULL )
    {
@@ -1026,7 +1026,7 @@ NODETYPE SCIPnodeGetType(
 {
    assert(node != NULL);
 
-   return node->nodetype;
+   return (NODETYPE)(node->nodetype);
 }
 
 /** gets the depth of the node */
@@ -1090,7 +1090,7 @@ void treeUpdatePathLPSize(
       node = tree->path[i];
       assert(node != NULL);
       assert(node->active);
-      assert(node->depth == i);
+      assert((int)(node->depth) == i);
       
       switch( node->nodetype )
       {
@@ -1149,7 +1149,7 @@ RETCODE treeShrinkPath(
    for( i = tree->pathlen-1; i > lastdepth; --i )
    {
       assert(tree->path[i] != NULL);
-      assert(tree->path[i]->depth == i);
+      assert((int)(tree->path[i]->depth) == i);
       CHECK_OKAY( nodeDeactivate(&(tree->path[i]), memhdr, set, lp, tree) );
    }
    tree->pathlen = lastdepth+1;
@@ -1215,7 +1215,7 @@ RETCODE treeSwitchPath(
             subroot = commonfork;
       }
    }
-   commonforkdepth = (commonfork == NULL ? -1 : commonfork->depth);
+   commonforkdepth = (commonfork == NULL ? -1 : (int)(commonfork->depth));
    assert(lpfork == NULL || !lpfork->active || lpfork == commonfork);
    assert(subroot == NULL || !subroot->active || subroot == commonfork);
    debugMessage("switch path: commonforkdepth=%d\n", commonforkdepth);
@@ -1223,7 +1223,7 @@ RETCODE treeSwitchPath(
    /* if not already found, continue searching the LP defining fork; it can not be deeper than the common fork */
    if( lpfork == NULL )
    {
-      if( tree->actlpfork != NULL && tree->actlpfork->depth > commonforkdepth )
+      if( tree->actlpfork != NULL && (int)(tree->actlpfork->depth) > commonforkdepth )
       {
          /* actlpfork is not on the same active path as the new node: we have to search again */
          lpfork = commonfork;
@@ -1235,16 +1235,16 @@ RETCODE treeSwitchPath(
          /* actlpfork is on the same active path as the new node: old and new node have the same lpfork */
          lpfork = tree->actlpfork;
       }
-      assert(lpfork == NULL || lpfork->depth <= commonforkdepth);
+      assert(lpfork == NULL || (int)(lpfork->depth) <= commonforkdepth);
    }
    assert(lpfork == NULL || lpfork->nodetype == SCIP_NODETYPE_FORK || lpfork->nodetype == SCIP_NODETYPE_SUBROOT);
-   lpforkdepth = (lpfork == NULL ? -1 : lpfork->depth);
+   lpforkdepth = (lpfork == NULL ? -1 : (int)(lpfork->depth));
    debugMessage("switch path: lpforkdepth=%d\n", lpforkdepth);
 
    /* if not already found, continue searching the subroot; it cannot be deeper than the LP fork and common fork */
    if( subroot == NULL )
    {
-      if( tree->actsubroot != NULL && tree->actsubroot->depth > commonforkdepth )
+      if( tree->actsubroot != NULL && (int)(tree->actsubroot->depth) > commonforkdepth )
       {
          if( lpforkdepth < commonforkdepth )
             subroot = lpfork;
@@ -1257,7 +1257,7 @@ RETCODE treeSwitchPath(
          subroot = tree->actsubroot;
    }
    assert(subroot == NULL || subroot->nodetype == SCIP_NODETYPE_SUBROOT);
-   subrootdepth = (subroot == NULL ? -1 : subroot->depth);
+   subrootdepth = (subroot == NULL ? -1 : (int)(subroot->depth));
    debugMessage("switch path: subrootdepth=%d\n", subrootdepth);
    assert(subrootdepth <= lpforkdepth);
    debugMessage("switch path: old correctlpdepth=%d\n", tree->correctlpdepth);
@@ -1273,7 +1273,7 @@ RETCODE treeSwitchPath(
    {
       /* we are in a different subtree: the LP is completely incorrect */
       assert(tree->actsubroot != NULL);
-      assert(subroot == NULL || !subroot->active || tree->actsubroot->depth > subrootdepth);
+      assert(subroot == NULL || !subroot->active || (int)(tree->actsubroot->depth) > subrootdepth);
       tree->correctlpdepth = -1;
    }
    debugMessage("switch path: new correctlpdepth=%d\n", tree->correctlpdepth);
@@ -1424,7 +1424,7 @@ void treeCheckPath(
    {
       node = tree->path[d];
       assert(node != NULL);
-      assert(node->depth == d);
+      assert((int)(node->depth) == d);
       switch( node->nodetype )
       {
       case SCIP_NODETYPE_JUNCTION:
@@ -1472,14 +1472,14 @@ RETCODE SCIPtreeLoadLP(
    assert(tree->pathlen > 0);
    assert(tree->actnode != NULL);
    assert(tree->actnode->nodetype == SCIP_NODETYPE_ACTNODE);
-   assert(tree->actnode->depth == tree->pathlen-1);
+   assert((int)(tree->actnode->depth) == tree->pathlen-1);
    assert(tree->actnode == tree->path[tree->pathlen-1]);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(lp != NULL);
 
    debugMessage("load LP for actual fork node %p at depth %d\n", 
-      tree->actlpfork, tree->actlpfork == NULL ? -1 : tree->actlpfork->depth);
+      tree->actlpfork, tree->actlpfork == NULL ? -1 : (int)(tree->actlpfork->depth));
    debugMessage("-> old LP has %d cols and %d rows\n", lp->ncols, lp->nrows);
    debugMessage("-> correct LP has %d cols and %d rows\n", 
       tree->correctlpdepth >= 0 ? tree->pathnlpcols[tree->correctlpdepth] : 0,
@@ -1536,7 +1536,7 @@ RETCODE SCIPtreeLoadLP(
    {
       pathnode = tree->path[d];
       assert(pathnode != NULL);
-      assert(pathnode->depth == d);
+      assert((int)(pathnode->depth) == d);
       assert(pathnode->nodetype == SCIP_NODETYPE_JUNCTION || pathnode->nodetype == SCIP_NODETYPE_FORK);
       if( pathnode->nodetype == SCIP_NODETYPE_FORK )
       {
@@ -1569,7 +1569,7 @@ RETCODE SCIPtreeLoadLP(
       assert(lp->dualfeasible);
 
       /* check the path from LP fork to active node for domain changes (destroying primal feasibility of LP basis) */
-      for( d = lpforkdepth; d < tree->actnode->depth && lp->primalfeasible; ++d )
+      for( d = lpforkdepth; d < (int)(tree->actnode->depth) && lp->primalfeasible; ++d )
       {
          assert(d < tree->pathlen);
          lp->primalfeasible &= (tree->path[d]->domchg == NULL || tree->path[d]->domchg->nboundchg == 0);
@@ -1619,7 +1619,7 @@ RETCODE nodeToLeaf(
    
    /* convert node into leaf */
    debugMessage("convert node %p at depth %d to leaf with lpfork %p at depth %d\n",
-      node, node->depth, lpfork, lpfork == NULL ? -1 : lpfork->depth);
+      node, node->depth, lpfork, lpfork == NULL ? -1 : (int)(lpfork->depth));
    node->nodetype = SCIP_NODETYPE_LEAF;
    node->data.leaf.lpfork = lpfork;
 

@@ -1932,7 +1932,7 @@ void SCIProwCapture(
 {
    assert(row != NULL);
    assert(row->nuses >= 0);
-   assert(row->nlocks <= row->nuses);
+   assert(row->nlocks <= (unsigned int)(row->nuses));
 
    debugMessage("capture row <%s> with nuses=%d and nlocks=%d\n", row->name, row->nuses, row->nlocks);
    row->nuses++;
@@ -1950,7 +1950,7 @@ RETCODE SCIProwRelease(
    assert(row != NULL);
    assert(*row != NULL);
    assert((*row)->nuses >= 1);
-   assert((*row)->nlocks < (*row)->nuses);
+   assert((*row)->nlocks < (unsigned int)((*row)->nuses));
 
    debugMessage("release row <%s> with nuses=%d and nlocks=%d\n", (*row)->name, (*row)->nuses, (*row)->nlocks);
    (*row)->nuses--;

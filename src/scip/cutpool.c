@@ -409,7 +409,7 @@ RETCODE SCIPcutpoolDelRow(
    assert(row != NULL);
 
    /* find the cut in hash table */
-   cut = SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
+   cut = (CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    if( cut == NULL )
    {
       char s[255];
@@ -432,7 +432,8 @@ RETCODE SCIPcutpoolSeparate(
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< actual LP data */
    SEPA*            sepa,               /**< separation storage */
-   Bool             root                /**< are we at the root node? */
+   Bool             root,               /**< are we at the root node? */
+   RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
    CUT* cut;
@@ -443,12 +444,17 @@ RETCODE SCIPcutpoolSeparate(
    assert(stat != NULL);
    assert(cutpool->processedlp <= stat->nlp);
    assert(cutpool->firstunprocessed <= cutpool->ncuts);
+   assert(result != NULL);
 
    if( cutpool->processedlp < stat->nlp )
       cutpool->firstunprocessed = 0;
    if( cutpool->firstunprocessed == cutpool->ncuts )
-      return SCIP_DIDNOTRUN;
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
+   *result = SCIP_DIDNOTFIND;
    found = FALSE;
 
    debugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
@@ -498,9 +504,9 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->firstunprocessed = cutpool->ncuts;
 
    if( found )
-      return SCIP_SEPARATED;
-   else
-      return SCIP_DIDNOTFIND;
+      *result = SCIP_SEPARATED;
+
+   return SCIP_OKAY;
 }
 
 /** get number of cuts in the cut pool */

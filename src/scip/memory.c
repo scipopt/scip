@@ -65,7 +65,7 @@ static long memused = 0;
 static void
 memListAdd(void *ptr, size_t size, const char *filename, int line)
 {
-   MEMLIST *list = malloc(sizeof(MEMLIST));
+   MEMLIST *list = (MEMLIST*)malloc(sizeof(MEMLIST));
 
    assert(list != NULL);
    assert(ptr != NULL && size > 0);

@@ -91,7 +91,8 @@ RETCODE SCIPcutpoolSeparate(
    STAT*            stat,               /**< problem statistics data */
    LP*              lp,                 /**< actual LP data */
    SEPA*            sepa,               /**< separation storage */
-   Bool             root                /**< are we at the root node? */
+   Bool             root,               /**< are we at the root node? */
+   RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
 /** get number of cuts in the cut pool */

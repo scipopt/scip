@@ -300,7 +300,7 @@ RETCODE SCIPpriceVars(
    root = (tree->actnode->depth == 0);
    maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
    assert(maxpricevars >= 1);
-   abortpricevars = set->abortpricevarsfac * maxpricevars;
+   abortpricevars = (int)(set->abortpricevarsfac * maxpricevars);
    assert(abortpricevars >= maxpricevars);
    
    todoMessage("test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ...");

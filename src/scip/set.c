@@ -121,7 +121,7 @@ int calcGrowSize(
    /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
    size = initsize;
    while( size < num )
-      size = growfac * size + 1;
+      size = (int)(growfac * size + 1);
 
    return size;
 }
