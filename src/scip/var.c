@@ -62,15 +62,6 @@ struct BoundChg
    BOUNDTYPE        boundtype;          /**< type of bound: lower or upper bound */
 };
 
-/** tracks changes of the variable's domains (fixed sized arrays) */
-struct DomChg
-{
-   BOUNDCHG*        boundchg;           /**< array with changes in bounds of variables */
-   HOLECHG*         holechg;            /**< array with changes in hole lists */
-   int              nboundchg;          /**< number of bound changes */
-   int              nholechg;           /**< number of hole list changes */
-};
-
 /** dynamic size attachment for domain change data */
 struct DomChgDyn
 {
@@ -348,6 +339,7 @@ RETCODE SCIPdomchgApply(                /**< applies domain change */
    const DOMCHG*    domchg,             /**< domain change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -372,10 +364,10 @@ RETCODE SCIPdomchgApply(                /**< applies domain change */
       switch( domchg->boundchg[i].boundtype )
       {
       case SCIP_BOUNDTYPE_LOWER:
-         CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, lp, tree, domchg->boundchg[i].newbound) );
+         CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, domchg->boundchg[i].newbound) );
          break;
       case SCIP_BOUNDTYPE_UPPER:
-         CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, lp, tree, domchg->boundchg[i].newbound) );
+         CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, stat, lp, tree, domchg->boundchg[i].newbound) );
          break;
       default:
          errorMessage("Unknown bound type");
@@ -394,6 +386,7 @@ RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
    const DOMCHG*    domchg,             /**< domain change to remove */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -418,10 +411,10 @@ RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
       switch( domchg->boundchg[i].boundtype )
       {
       case SCIP_BOUNDTYPE_LOWER:
-         CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, lp, tree, domchg->boundchg[i].oldbound) );
+         CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, domchg->boundchg[i].oldbound) );
          break;
       case SCIP_BOUNDTYPE_UPPER:
-         CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, lp, tree, domchg->boundchg[i].oldbound) );
+         CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, stat, lp, tree, domchg->boundchg[i].oldbound) );
          break;
       default:
          errorMessage("Unknown bound type");
@@ -969,6 +962,7 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound            /**< new bound for variable */
@@ -980,6 +974,11 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
 
    if( !SCIPsetIsEQ(set, var->dom.lb, newbound) )
    {
+      Real oldbound;
+   
+      stat->nboundchanges++;
+
+      oldbound = var->dom.lb;
       var->dom.lb = newbound;
       
       /* change bounds of attached variables */
@@ -988,7 +987,7 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarChgLb(var->data.transvar, memhdr, set, lp, tree, newbound) );
+            CHECK_OKAY( SCIPvarChgLb(var->data.transvar, memhdr, set, stat, lp, tree, newbound) );
          }
          break;
          
@@ -998,7 +997,7 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
          /* fallthrough */
          
       case SCIP_VARSTATUS_LOOSE:
-         CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_LOWER) );
+         CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_LOWER, oldbound) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -1010,13 +1009,13 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
          if( SCIPsetIsPos(set, var->data.aggregate.scalar) )
          {
             /* a > 0 -> change lower bound of y */
-            CHECK_OKAY( SCIPvarChgLb(var->data.aggregate.var, memhdr, set, lp, tree, 
+            CHECK_OKAY( SCIPvarChgLb(var->data.aggregate.var, memhdr, set, stat, lp, tree, 
                            (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
          }
          else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
          {
             /* a < 0 -> change upper bound of y */
-            CHECK_OKAY( SCIPvarChgUb(var->data.aggregate.var, memhdr, set, lp, tree, 
+            CHECK_OKAY( SCIPvarChgUb(var->data.aggregate.var, memhdr, set, stat, lp, tree, 
                            (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
          }
          else
@@ -1043,6 +1042,7 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound            /**< new bound for variable */
@@ -1054,6 +1054,11 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
 
    if( !SCIPsetIsEQ(set, var->dom.ub, newbound) )
    {
+      Real oldbound;
+
+      stat->nboundchanges++;
+
+      oldbound = var->dom.ub;
       var->dom.ub = newbound;
       
       /* change bounds of attached variables */
@@ -1062,7 +1067,7 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarChgUb(var->data.transvar, memhdr, set, lp, tree, newbound) );
+            CHECK_OKAY( SCIPvarChgUb(var->data.transvar, memhdr, set, stat, lp, tree, newbound) );
          }
          break;
          
@@ -1072,7 +1077,7 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
          /* fallthrough */
          
       case SCIP_VARSTATUS_LOOSE:
-         CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_UPPER) );
+         CHECK_OKAY( SCIPtreeBoundChanged(tree, memhdr, set, var, SCIP_BOUNDTYPE_UPPER, oldbound) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -1084,13 +1089,13 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
          if( SCIPsetIsPos(set, var->data.aggregate.scalar) )
          {
             /* a > 0 -> change upper bound of y */
-            CHECK_OKAY( SCIPvarChgUb(var->data.aggregate.var, memhdr, set, lp, tree, 
+            CHECK_OKAY( SCIPvarChgUb(var->data.aggregate.var, memhdr, set, stat, lp, tree, 
                            (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
          }
          else if( SCIPsetIsNeg(set, var->data.aggregate.scalar) )
          {
             /* a < 0 -> change lower bound of y */
-            CHECK_OKAY( SCIPvarChgLb(var->data.aggregate.var, memhdr, set, lp, tree, 
+            CHECK_OKAY( SCIPvarChgLb(var->data.aggregate.var, memhdr, set, stat, lp, tree, 
                            (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
          }
          else
@@ -1117,6 +1122,7 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound,           /**< new bound for variable */
@@ -1127,9 +1133,9 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    switch( boundtype )
    {
    case SCIP_BOUNDTYPE_LOWER:
-      return SCIPvarChgLb(var, memhdr, set, lp, tree, newbound);
+      return SCIPvarChgLb(var, memhdr, set, stat, lp, tree, newbound);
    case SCIP_BOUNDTYPE_UPPER:
-      return SCIPvarChgUb(var, memhdr, set, lp, tree, newbound);
+      return SCIPvarChgUb(var, memhdr, set, stat, lp, tree, newbound);
    default:
       errorMessage("Unknown bound type");
       return SCIP_INVALIDDATA;
@@ -1183,7 +1189,8 @@ Real SCIPvarGetUb(                      /**< gets upper bound of variable */
    return var->dom.ub;
 }
 
-Real SCIPvarGetBestBound(               /**< gets best bound of variable with respect to the objective function */
+static
+Real varGetBestBound(                   /**< gets best bound of variable with respect to the objective function */
    VAR*             var                 /**< problem variable */
    )
 {
@@ -1195,7 +1202,7 @@ Real SCIPvarGetBestBound(               /**< gets best bound of variable with re
       return var->dom.ub;
 }
 
-Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of variable */
+Real SCIPvarGetLPSol(                   /**< get primal LP solution value of variable */
    VAR*             var                 /**< problem variable */
    )
 {
@@ -1209,7 +1216,7 @@ Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of var
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetPrimsol(var->data.transvar);
+      return SCIPvarGetLPSol(var->data.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
       assert(var->dom.lb <= 0.0 && var->dom.ub >= 0.0);
@@ -1225,7 +1232,7 @@ Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of var
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      return var->data.aggregate.scalar * SCIPvarGetPrimsol(var->data.aggregate.var) + var->data.aggregate.constant;
+      return var->data.aggregate.scalar * SCIPvarGetLPSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
       assert(var->data.multaggr.vars != NULL);
@@ -1233,7 +1240,7 @@ Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of var
       assert(var->data.multaggr.nvars >= 2);
       primsol = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         primsol += var->data.multaggr.scalars[i] * SCIPvarGetPrimsol(var->data.multaggr.vars[i]);
+         primsol += var->data.multaggr.scalars[i] * SCIPvarGetLPSol(var->data.multaggr.vars[i]);
       return primsol;
 
    default:
@@ -1242,35 +1249,25 @@ Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of var
    }
 }
 
-Real SCIPvarGetSol(                     /**< get solution value of variable at actual node: if LP was solved at the node,
-                                           the method returns the LP primal solution value, otherwise the best bound */
-   VAR*             var,                /**< problem variable */
-   LP*              lp                  /**< actual LP data */
+Real SCIPvarGetPseudoSol(               /**< get pseudo solution value of variable at actual node */
+   VAR*             var                 /**< problem variable */
    )
 {
-   Real sol;
+   Real pseudosol;
    int i;
 
    assert(var != NULL);
-   assert(lp != NULL);
 
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
          return SCIP_INVALID;
-      return SCIPvarGetSol(var->data.transvar, lp);
+      return SCIPvarGetPseudoSol(var->data.transvar);
 
    case SCIP_VARSTATUS_LOOSE:
-      assert(!lp->solved || SCIPvarGetBestBound(var) == 0.0);
-      return SCIPvarGetBestBound(var);
-
    case SCIP_VARSTATUS_COLUMN:
-      assert(var->data.col != NULL);
-      if( lp->solved )
-         return var->data.col->primsol;
-      else
-         return SCIPvarGetBestBound(var);
+      return varGetBestBound(var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(var->dom.lb == var->dom.ub);
@@ -1278,21 +1275,35 @@ Real SCIPvarGetSol(                     /**< get solution value of variable at a
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      return var->data.aggregate.scalar * SCIPvarGetSol(var->data.aggregate.var, lp) + var->data.aggregate.constant;
+      return var->data.aggregate.scalar * SCIPvarGetPseudoSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
       assert(var->data.multaggr.nvars >= 2);
-      sol = var->data.multaggr.constant;
+      pseudosol = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         sol += var->data.multaggr.scalars[i] * SCIPvarGetSol(var->data.multaggr.vars[i], lp);
-      return sol;
+         pseudosol += var->data.multaggr.scalars[i] * SCIPvarGetPseudoSol(var->data.multaggr.vars[i]);
+      return pseudosol;
 
    default:
       errorMessage("Unknown variable status");
       return SCIP_INVALIDDATA;
    }
+}
+
+Real SCIPvarGetSol(                     /**< get solution value of variable at actual node: if LP was solved at the node,
+                                           the method returns the LP primal solution value, otherwise the pseudo solution */
+   VAR*             var,                /**< problem variable */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   if( tree->actnodehaslp )
+      return SCIPvarGetLPSol(var);
+   else
+      return SCIPvarGetPseudoSol(var);
 }
 
 RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and adds them with the coefficient to the row */

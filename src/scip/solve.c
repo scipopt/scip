@@ -83,6 +83,8 @@ RETCODE solveLP(                        /**< solves the LP with simplex algorith
 {
    assert(lp != NULL);
 
+   debugMessage("solving LP: primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
+      lp->primalfeasible, lp->dualfeasible, lp->solved);
    if( !lp->solved )
    {
       if( lp->dualfeasible || !lp->primalfeasible )
@@ -217,7 +219,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
 
          /* reset bounds temporarily set by pricer to their original values */
          debugMessage("reset bounds\n");
-         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, lp, tree) );
+         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, stat, lp, tree) );
          mustprice |= !lp->solved;
          mustsepar |= !lp->solved;
 
@@ -231,7 +233,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
       }
       assert(lp->solved);
 
-      /* update lower bound */
+      /* update lower bound w.r.t. the the LP solution */
       tree->actnode->lowerbound = SCIPlpGetObjval(lp);
       tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
 
@@ -273,8 +275,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
       }
    }
 
-   /* remember that this node is solved correctly */
-   tree->correctlpdepth = tree->actnode->depth;
+   /* update lower bound w.r.t. the the LP solution */
    tree->actnode->lowerbound = SCIPlpGetObjval(lp);
    tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
 
@@ -299,8 +300,9 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    CONSHDLR** conshdlrs_chck;
    NODE* actnode;
    RESULT result;
-   Bool feasible;
+   Bool infeasible;
    Bool resolved;
+   Bool solveagain;
    int h;
 
    assert(set != NULL);
@@ -313,6 +315,8 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    assert(sepa != NULL);
    assert(cutpool != NULL);
    assert(primal != NULL);
+
+   todoMessage("every variable, where zero is not the best bound (w.r.t. objective function) has to be in the problem");
 
    /* sort constraint handlers by priorities */
    duplicateMemoryArray(conshdlrs_sepa, set->conshdlrs, set->nconshdlrs);
@@ -333,104 +337,250 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
          stat->nnodes++;
          stat->maxdepth = MAX(stat->maxdepth, actnode->depth);
          if( actnode->nodetype == SCIP_NODETYPE_CHILD )
+         {
             stat->plungedepth++;
-         else if( actnode->nodetype != SCIP_NODETYPE_SIBLING )
+            debugMessage("selected child node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
+         }
+         else if( actnode->nodetype == SCIP_NODETYPE_SIBLING )
+         {
+            debugMessage("selected sibling node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
+         }
+         else
+         {
+            assert(actnode->nodetype == SCIP_NODETYPE_LEAF);            
             stat->plungedepth = 0;
+            debugMessage("selected leaf node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
+         }
       }
       
       /* activate selected node */
-      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, lp, tree) );
+      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, lp, tree) );
 
       /* if no more node was selected, we finished optimisation */
       if( actnode == NULL )
          break;
 
-      debugMessage("Processing node %d in depth %d\n", stat->nnodes, SCIPnodeGetDepth(actnode));
+      debugMessage("Processing node %d in depth %d\n", stat->nnodes, actnode->depth);
       
       /* presolve node */
       todoMessage("node presolving + domain propagation");
       
-#ifndef NDEBUG
-      debugMessage("actual pseudosolution: ");
-      debug( SCIPsolPrint(tree->actpseudosol, set, NULL) );
-#endif
+      debugMessage("actual pseudosolution: obj=%g", tree->actpseudoobjval);
+      debug(SCIPprobPrintPseudoSol(prob, set));
       
-      /* solve node */
-      todoMessage("decide whether to solve the LP or not");
-#if 0
-      if( ... )
+      /* check, if we want to solve the LP at the selected node */
+      tree->actnodehaslp = (set->lpsolvefreq >= 1 && actnode->depth % set->lpsolvefreq == 0);
+      /* solve at least the root LP, if there are continous variables present */
+      tree->actnodehaslp |= (actnode->depth == 0 && prob->ncont > 0);
+
+      /* external node solving loop */
+      do
       {
-         CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, conshdlrs_sepa) );
-      }
-      else
-      {
-         CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
-      }
-#else
-      CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, conshdlrs_sepa) );
-#endif
-      
-      /* check for infeasible node */
-      if( SCIPsetIsGE(set, actnode->lowerbound, primal->upperbound) )
-      {
-         debugMessage("node is infeasible (lower=%g, upper=%g)\n", actnode->lowerbound, primal->upperbound);
-         feasible = FALSE;
-         resolved = TRUE;
-      }
-      else
-      {
-         /* enforce constraints by branching, applying additional cutting planes, or introducing new constraints */
-         assert(SCIPsepaGetNCuts(sepa) == 0);
-         feasible = TRUE;
-         resolved = FALSE;
-         for( h = 0; h < set->nconshdlrs && !resolved; ++h )
+         /* check, if we want to solve the LP at this node */
+         if( tree->actnodehaslp )
          {
-            CHECK_OKAY( SCIPconshdlrEnforce(conshdlrs_enfo[h], set, &result) );
-            switch( result )
+            /* solve the LP */
+            CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, price, sepa, cutpool, primal, conshdlrs_sepa) );
+            assert(lp->solved);
+         }
+
+         /* update lower bound w.r.t. the pseudo solution */
+         tree->actnode->lowerbound = MAX(tree->actnode->lowerbound, tree->actpseudoobjval);
+         tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+         
+         /* check for infeasible node */
+         if( SCIPsetIsGE(set, actnode->lowerbound, primal->upperbound) )
+         {
+            debugMessage("node is infeasible (lower=%g, upper=%g)\n", actnode->lowerbound, primal->upperbound);
+            infeasible = TRUE;
+            resolved = TRUE;
+            solveagain = FALSE;
+         }
+         else
+         {
+            todoMessage("avoid checking the same pseudosolution twice");
+
+            /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
+             * introducing new constraints, or tighten the domains
+             */
+            assert(SCIPsepaGetNCuts(sepa) == 0);
+
+            debugMessage("enforcing constraints\n");
+
+            infeasible = FALSE;
+            resolved = FALSE;
+            solveagain = FALSE;
+            for( h = 0; h < set->nconshdlrs && !resolved; ++h )
             {
-            case SCIP_BRANCHED:
-            case SCIP_REDUCEDDOM:
-            case SCIP_SEPARATED:
-               resolved = TRUE;
-               feasible = FALSE;
-               break;
-            case SCIP_INFEASIBLE:
-               feasible = FALSE;
-               break;
-            case SCIP_FEASIBLE:
-               break;
-            default:
+               CHECK_OKAY( SCIPconshdlrEnforce(conshdlrs_enfo[h], set, tree->actnodehaslp, &result) );
+               switch( result )
                {
-                  char s[255];
-                  sprintf(s, "invalid result code <%d> from enforcing method of constraint handler <%s>",
-                     result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
-                  errorMessage(s);
-                  return SCIP_INVALIDRESULT;
+               case SCIP_BRANCHED:
+                  infeasible = TRUE;
+                  resolved = TRUE;
+                  break;
+               case SCIP_REDUCEDDOM:
+                  infeasible = TRUE;
+                  resolved = TRUE;
+                  solveagain = TRUE;
+                  break;
+               case SCIP_SEPARATED:
+                  if( !tree->actnodehaslp )
+                  {
+                     char s[255];
+                     sprintf(s, "enforcing method of constraint handler <%s> separated cuts, but LP is not processed",
+                        SCIPconshdlrGetName(conshdlrs_enfo[h]));
+                     errorMessage(s);
+                     return SCIP_INVALIDRESULT;
+                  }
+                  infeasible = TRUE;
+                  resolved = TRUE;
+                  solveagain = TRUE;
+                  break;
+               case SCIP_INFEASIBLE:
+                  infeasible = TRUE;
+                  break;
+               case SCIP_FEASIBLE:
+                  break;
+               default:
+                  {
+                     char s[255];
+                     sprintf(s, "invalid result code <%d> from enforcing method of constraint handler <%s>",
+                        result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
+                     errorMessage(s);
+                     return SCIP_INVALIDRESULT;
+                  }
+                  break;
                }
-               break;
+               assert(!solveagain || (resolved && infeasible));
+            }
+            debugMessage(" -> enforcing result: infeasible=%d, resolved=%d, solveagain=%d\n",
+               infeasible, resolved, solveagain);
+         }
+
+         if( infeasible && !resolved )
+         {
+            VAR* var;
+            Real solval;
+            int v;
+            
+            assert(!solveagain);
+
+            /* the node is infeasible, but no constraint handler could resolve the infeasibility
+             * -> select non-fixed binary or integer variable x with value x', create three sons: 
+             *    x <= x'-1, x = x', and x >= x'+1.
+             *    In the left and right branch, the actual solution is cutted off. In the middle
+             *    branch, the constraints can hopefully reduce domains of other variables to cut
+             *    off the actual solution.
+             */
+            todoMessage("select variable fixing");
+            
+            /* the following is just a temporary implementation of variable fixing */
+            
+            /* scan the integer variables for a non-fixed variable */
+            for( v = 0; v < prob->nbin + prob->nint + prob->nimpl && !resolved; ++v )
+            {
+               var = prob->vars[v];
+               /* check, if variable is already fixed */
+               if( !SCIPsetIsEQ(set, var->dom.lb, var->dom.ub) )
+               {
+                  NODE* node;
+                  Real fixval;
+                  
+                  /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
+                  solval = SCIPvarGetSol(var, tree);
+                  fixval = SCIPsetCeil(set, solval);
+                  assert(SCIPsetIsEQ(set, SCIPsetCeil(set, solval), SCIPsetFloor(set, solval)));
+                  assert(SCIPsetIsIntegral(set, solval));
+                  assert(SCIPsetIsIntegral(set, var->dom.lb));
+                  assert(SCIPsetIsIntegral(set, var->dom.ub));
+                  assert(SCIPsetIsGE(set, solval, var->dom.lb));
+                  assert(SCIPsetIsLE(set, solval, var->dom.ub));
+                  
+                  debugMessage("selected variable <%s> with value %g to fix to %g\n", var->name, solval, fixval);
+                  
+                  /* create child node with x = x' */
+                  debugMessage(" -> creating child: <%s> == %g\n", var->name, SCIPsetCeil(set, solval));
+                  /*CHECK_OKAY( SCIPcreateChild(scip, &node) );
+                    CHECK_OKAY( SCIPchgNodeUb(scip, node, var, SCIPceil(scip, primsol)) );
+                    CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPfloor(scip, primsol)) );*/
+                  CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+                  if( !SCIPsetIsEQ(set, var->dom.lb, fixval) )
+                  {
+                     CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, var, fixval,
+                                    SCIP_BOUNDTYPE_LOWER) );
+                  }
+                  if( !SCIPsetIsEQ(set, var->dom.ub, fixval) )
+                  {
+                     CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, var, fixval, 
+                                    SCIP_BOUNDTYPE_UPPER) );
+                  }
+                  
+                  /* create child node with x <= x'-1, if this would be feasible */
+                  if( SCIPsetIsGE(set, fixval-1, var->dom.lb) )
+                  {
+                     debugMessage(" -> creating child: <%s> <= %g\n", var->name, fixval-1);
+                     /*CHECK_OKAY( SCIPcreateChild(scip, &node) );
+                       CHECK_OKAY( SCIPchgNodeUb(scip, node, var, SCIPceil(scip, primsol)-1) );*/
+                     CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+                     CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, var, fixval-1,
+                                    SCIP_BOUNDTYPE_UPPER) );
+                  }
+                  
+                  /* create child node with x >= x'+1, if this would be feasible */
+                  if( SCIPsetIsLE(set, fixval+1, var->dom.ub) )
+                  {
+                     debugMessage(" -> creating child: <%s> >= %g\n", var->name, fixval+1);
+                     /*CHECK_OKAY( SCIPcreateChild(scip, &node) );
+                       CHECK_OKAY( SCIPchgNodeLb(scip, node, var, SCIPfloor(scip, primsol)+1) );*/
+                     CHECK_OKAY( SCIPnodeCreate(&node, memhdr, set, tree) );
+                     CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, lp, tree, var, fixval+1,
+                                    SCIP_BOUNDTYPE_LOWER) );
+                  }
+                  
+                  resolved = TRUE;
+               }
+            }
+            
+            if( !resolved && prob->ncont == 0 )
+            {
+               /* node is infeasible, because all variables are fixed, and the pseudo solution (the only point in the
+                * given bounds) is infeasible
+                */
+               resolved = TRUE;
+            }
+            
+            if( !resolved )
+            {
+               /* we didn't resolve the infeasibility, but the node may be feasible due to contious variables
+                * (this can only happen, if the LP was not solved)
+                *  -> we have no other possibility than solving the LP
+                */
+               assert(prob->ncont > 0);
+               assert(!tree->actnodehaslp);
+               
+               /* solve the LP in the next loop */
+               tree->actnodehaslp = TRUE;
+               solveagain = TRUE;
             }
          }
       }
+      while( solveagain );
       
-      if( !feasible && !resolved )
-      {
-         /* the node is infeasible, but no constraint handler could resolve the infeasibility
-          * -> select non-fixed binary or integer variable x with value x', create three sons: 
-          *    x <= x'-1, x = x', and x >= x'+1.
-          *    In the left and right branch, the actual solution is cutted off. In the middle
-          *    branch, the constraints can hopefully reduce domains of other variables to cut
-          *    off the actual solution.
-          */
-         todoMessage("standard resolve for infeasible nodes -> 3-way branching on single variable");
-      }
-      
-      if( feasible )
+      if( !infeasible )
       {
          SOL* sol;
          
          /* found a feasible solution */
          assert(!resolved);
-         CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, lp) );
+         if( tree->actnodehaslp )
+         {
+            CHECK_OKAY( SCIPsolCreateLPSol(&sol, memhdr, set, stat, lp) );
+         }
+         else
+         {
+            CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, set, stat, prob) );
+         }
          CHECK_OKAY( SCIPprimalAddSol(primal, memhdr, set, stat, tree, lp, &sol) );
          CHECK_OKAY( SCIPsolRelease(&sol, memhdr, set, lp) );
       }

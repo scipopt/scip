@@ -133,9 +133,9 @@ DECL_HASHKEYVAL(hashKeyValCut)
    assert(row != NULL);
 
    keyval =
-      + row->nummaxval << 29
-      + row->len << 22
-      + row->minidx << 11
+      + (row->nummaxval << 29)
+      + (row->len << 22)
+      + (row->minidx << 11)
       + row->maxidx;
 
    return keyval;

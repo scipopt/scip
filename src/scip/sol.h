@@ -36,6 +36,7 @@ typedef struct Sol SOL;                 /**< primal CIP solution */
 #include "stat.h"
 #include "var.h"
 #include "heur.h"
+#include "prob.h"
 
 
 /** primal CIP solution (variables with index < firstindex or index >= firstindex+nvals have solution value 0.0) */
@@ -68,6 +69,15 @@ RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP sol
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    LP*              lp                  /**< actual LP data */
+   );
+
+extern
+RETCODE SCIPsolCreatePseudoSol(         /**< copys pseudo solution to primal CIP solution, and captures solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob                /**< problem data */
    );
 
 extern

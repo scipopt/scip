@@ -212,6 +212,7 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    VAR*             var                 /**< variable, where zero violates the bounds */
@@ -247,11 +248,11 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
     */
    if( SCIPsetIsPos(set, var->dom.lb) )
    {
-      CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, lp, tree, 0.0) );
+      CHECK_OKAY( SCIPvarChgLb(var, memhdr, set, stat, lp, tree, 0.0) );
    }
    else
    {
-      CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, lp, tree, 0.0) );
+      CHECK_OKAY( SCIPvarChgUb(var, memhdr, set, stat, lp, tree, 0.0) );
    }
 
    return SCIP_OKAY;
@@ -285,6 +286,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    assert(lp->solved);
    assert(tree != NULL);
    assert(tree->actnode != NULL);
+   assert(tree->actnodehaslp);
 
    root = (tree->actnode->depth == 0);
    maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
@@ -312,7 +314,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          {
             if( SCIPsetIsNeg(set, var->dom.ub) )
             {
-               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, lp, tree, var) );
+               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
             }
             else if( SCIPsetIsPos(set, var->obj) )
             {
@@ -323,7 +325,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          {
             if( SCIPsetIsPos(set, var->dom.lb) )
             {
-               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, lp, tree, var) );
+               CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
             }
             else if( SCIPsetIsNeg(set, var->obj) )
             {
@@ -339,43 +341,76 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          assert(col->inlp || col->lpipos == -1);
          assert(!col->inlp || col->lpipos >= 0);
          assert(col->len >= 0);
-
+            
          /*debugMessage("price column variable <%s> in bounds [%g,%g], inlp=%d\n", 
            var->name, var->dom.lb, var->dom.ub, col->inlp);*/
          if( !col->inlp )
          {
             Real feasibility;
-
-            /* a column not in LP must have zero in its bounds */
-            assert(col->var->dom.lb <= 0.0 && 0.0 <= col->var->dom.ub);
-
-            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+            Bool added;
+   
+            /* add variable, if zero is not best bound w.r.t. objective function */
+            added = FALSE;
+            if( SCIPsetIsNeg(set, var->dom.lb) )
             {
-               /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
-                * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
-                * inequality most feasible solution) x' defined by 
-                *    x'_i = ub_i, if y^T A_i > 0
-                *    x'_i = 0   , if y^T A_i = 0
-                *    x'_i = lb_i, if y^T A_i < 0.
-                * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
-                */
-               feasibility = -SCIPcolGetFarkas(col, stat);
-               debugMessage("  <%s> farkas feasibility: %g\n", col->var->name, feasibility);
+               if( SCIPsetIsNeg(set, var->dom.ub) )
+               {
+                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
+                  added = TRUE;
+               }
+               else if( SCIPsetIsPos(set, var->obj) )
+               {
+                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.lb, root) );
+                  added = TRUE;
+               }
             }
-            else
+            else if( SCIPsetIsPos(set, var->dom.ub) )
             {
-               /* The dual LP is feasible, and we have a feasible dual solution. Pricing in this case means to
-                * add variables with negative feasibility, that is negative reduced costs for non-negative
-                * variables, and non-zero reduced costs for variables that can be negative.
-                */
-               feasibility = SCIPcolGetFeasibility(col, stat);
-               debugMessage("  <%s> reduced cost feasibility: %g\n", col->var->name, feasibility);
+               if( SCIPsetIsPos(set, var->dom.lb) )
+               {
+                  CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, lp, tree, var) );
+                  added = TRUE;
+               }
+               else if( SCIPsetIsNeg(set, var->obj) )
+               {
+                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->dom.ub, root) );
+                  added = TRUE;
+               }
             }
-
-            /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns */
-            if( !SCIPsetIsFeasible(set, feasibility) )
+            
+            if( !added )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -feasibility / (col->len+1), root) );
+               /* a column not in LP that doesn't have zero in its bounds was added by bound checking above */
+               assert(col->var->dom.lb <= 0.0 && 0.0 <= col->var->dom.ub);
+               
+               if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+               {
+                  /* The LP was proven infeasible, so we have an infeasibility proof by the dual farkas values y.
+                   * The valid inequality  y^T A x >= y^T b  is violated by all x, especially by the (for this
+                   * inequality most feasible solution) x' defined by 
+                   *    x'_i = ub_i, if y^T A_i > 0
+                   *    x'_i = 0   , if y^T A_i = 0
+                   *    x'_i = lb_i, if y^T A_i < 0.
+                   * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
+                   */
+                  feasibility = -SCIPcolGetFarkas(col, stat);
+                  debugMessage("  <%s> farkas feasibility: %g\n", col->var->name, feasibility);
+               }
+               else
+               {
+                  /* The dual LP is feasible, and we have a feasible dual solution. Pricing in this case means to
+                   * add variables with negative feasibility, that is negative reduced costs for non-negative
+                   * variables, and non-zero reduced costs for variables that can be negative.
+                   */
+                  feasibility = SCIPcolGetFeasibility(col, stat);
+                  debugMessage("  <%s> reduced cost feasibility: %g\n", col->var->name, feasibility);
+               }
+               
+               /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns */
+               if( !SCIPsetIsFeasible(set, feasibility) )
+               {
+                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -feasibility / (col->len+1), root) );
+               }
             }
          }
          break;
@@ -401,7 +436,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    for( v = price->naddedbdviolvars; v < price->nbdviolvars; ++v )
    {
       var = price->bdviolvars[v];
-      assert(var->varstatus == SCIP_VARSTATUS_LOOSE);
+      assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
 
       /* add variable to problem, if needed */
       if( var->probindex == -1 )
@@ -411,9 +446,11 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       assert(var->probindex >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
-      /* transform loose variable into column variable */
-      CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
-
+      if( var->varstatus == SCIP_VARSTATUS_LOOSE )
+      {
+         /* transform loose variable into column variable */
+         CHECK_OKAY( SCIPvarColumn(var, memhdr, set, lp, stat) );
+      }
       assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
 
       col = var->data.col;
@@ -430,6 +467,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    for( v = 0; v < price->nvars; ++v )
    {
       var = price->vars[v];
+      assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
 
       /* add variable to problem, if needed */
       if( var->probindex == -1 )
@@ -468,6 +506,7 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    TREE*            tree                /**< branch-and-bound tree */
    )
@@ -488,8 +527,8 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
       debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", price->bdviolvars[v]->name, 
          price->bdviolvars[v]->dom.lb, price->bdviolvars[v]->dom.ub,
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
-      CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], memhdr, set, lp, tree, price->bdviolvarslb[v]) );
-      CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], memhdr, set, lp, tree, price->bdviolvarsub[v]) );
+      CHECK_OKAY( SCIPvarChgLb(price->bdviolvars[v], memhdr, set, stat, lp, tree, price->bdviolvarslb[v]) );
+      CHECK_OKAY( SCIPvarChgUb(price->bdviolvars[v], memhdr, set, stat, lp, tree, price->bdviolvarsub[v]) );
       CHECK_OKAY( SCIPvarRelease(&price->bdviolvars[v], memhdr, set, lp) );
    }
    price->naddedbdviolvars = 0;

@@ -40,7 +40,7 @@
 #define DISP_NAME_NODENUM       "nodenum"
 #define DISP_DESC_NODENUM       "number of processed nodes"
 #define DISP_HEAD_NODENUM       "node"
-#define DISP_WIDT_NODENUM       10
+#define DISP_WIDT_NODENUM       9
 #define DISP_PRIO_NODENUM       100000
 #define DISP_POSI_NODENUM       100
 #define DISP_STRI_NODENUM       TRUE
@@ -180,7 +180,7 @@ DECL_DISPOUTP(SCIPdispOutpNodenum)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetNodenum(scip, &nodenum) );
-   fprintf(file, "%9d ", nodenum);
+   SCIPdispDecimal(file, nodenum, DISP_WIDT_NODENUM);
 
    return SCIP_OKAY;
 }
@@ -195,7 +195,7 @@ DECL_DISPOUTP(SCIPdispOutpNodesleft)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetNNodesLeft(scip, &nnodes) );
-   fprintf(file, "%8d ", nnodes);
+   SCIPdispDecimal(file, nnodes, DISP_WIDT_NODESLEFT);
 
    return SCIP_OKAY;
 }
@@ -210,7 +210,7 @@ DECL_DISPOUTP(SCIPdispOutpLpiterations)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetNLPIterations(scip, &lpiterations) );
-   fprintf(file, "%10d ", lpiterations);
+   SCIPdispDecimal(file, lpiterations, DISP_WIDT_LPITERATIONS);
 
    return SCIP_OKAY;
 }
@@ -225,7 +225,7 @@ DECL_DISPOUTP(SCIPdispOutpActdepth)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
-   fprintf(file, "%4d ", actdepth);
+   SCIPdispDecimal(file, actdepth, DISP_WIDT_ACTDEPTH);
 
    return SCIP_OKAY;
 }
@@ -240,7 +240,7 @@ DECL_DISPOUTP(SCIPdispOutpMaxdepth)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetMaxDepth(scip, &maxdepth) );
-   fprintf(file, "%4d ", maxdepth);
+   SCIPdispDecimal(file, maxdepth, DISP_WIDT_MAXDEPTH);
 
    return SCIP_OKAY;
 }
@@ -255,7 +255,7 @@ DECL_DISPOUTP(SCIPdispOutpActcols)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetActNCols(scip, &actcols) );
-   fprintf(file, "%5d ", actcols);
+   SCIPdispDecimal(file, actcols, DISP_WIDT_ACTCOLS);
 
    return SCIP_OKAY;
 }
@@ -270,7 +270,7 @@ DECL_DISPOUTP(SCIPdispOutpActrows)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetActNRows(scip, &actrows) );
-   fprintf(file, "%5d ", actrows);
+   SCIPdispDecimal(file, actrows, DISP_WIDT_ACTROWS);
 
    return SCIP_OKAY;
 }
@@ -285,7 +285,7 @@ DECL_DISPOUTP(SCIPdispOutpPoolsize)
    assert(scip != NULL);
 
    CHECK_OKAY( SCIPgetPoolsize(scip, &poolsize) );
-   fprintf(file, "%5d ", poolsize);
+   SCIPdispDecimal(file, poolsize, DISP_WIDT_POOLSIZE);
 
    return SCIP_OKAY;
 }

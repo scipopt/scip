@@ -62,6 +62,13 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
 
    debugMessage("Enfo method of integrality constraint\n");
 
+   if( !lpvalid )
+   {
+      /* we have to enforce the pseudo solution, which is always integral */
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
    CHECK_OKAY( SCIPgetVars(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
    todoMessage("variable selection rules");
@@ -69,7 +76,7 @@ DECL_CONSENFO(SCIPconsEnfoIntegral)
    for( v = 0; v < nbin+nint; ++v )
    {
       var = vars[v];
-      primsol = SCIPvarGetPrimsol(var);
+      CHECK_OKAY( SCIPgetActVarSol(scip, var, &primsol) );
       if( !SCIPisIntegral(scip, primsol) )
       {
          NODE* node;

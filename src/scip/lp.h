@@ -134,6 +134,7 @@ struct Row
    Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
    Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
+   Real             pseudoactivity;     /**< row activity value in pseudo solution, or SCIP_INVALID if not yet calculated */
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
@@ -144,6 +145,7 @@ struct Row
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
+   int              validpsactivitybc;  /**< bound change number for which pseudo activity value is valid */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
    unsigned int     validminmaxidx:1;   /**< are minimal and maximal column index valid? */
    unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
@@ -182,10 +184,10 @@ struct Lp
    int              nrows;              /**< actual number of LP rows (number of used slots in rows vector) */
    int              firstnewcol;        /**< first column added at the active node */
    int              firstnewrow;        /**< first row added at the active node */
-   unsigned int     flushed:1;          /**< TRUE iff all cached changes are applied to the LP solver */
-   unsigned int     solved:1;           /**< TRUE iff current LP is solved */
-   unsigned int     primalfeasible:1;   /**< actual LP basis is primal feasible */
-   unsigned int     dualfeasible:1;     /**< actual LP basis is dual feasible */
+   unsigned int     flushed:1;          /**< are all cached changes applied to the LP solver? */
+   unsigned int     solved:1;           /**< is current LP solved? */
+   unsigned int     primalfeasible:1;   /**< is actual LP basis primal feasible? */
+   unsigned int     dualfeasible:1;     /**< is actual LP basis dual feasible? */
 };
 
 
@@ -451,6 +453,18 @@ Real SCIProwGetActivity(                /**< returns the activity of a row in th
 
 extern
 Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in the last solution or after recalc */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
+   );
+
+extern
+Real SCIProwGetPseudoActivity(          /**< returns the activity of a row for the actual pseudo solution */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
+   );
+
+extern
+Real SCIProwGetPseudoFeasibility(       /**< returns the feasibility of a row in the actual pseudo solution */
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );

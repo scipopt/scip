@@ -136,5 +136,12 @@ RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting
    const SET*       set                 /**< global SCIP settings */
    );
 
+extern
+void SCIPdispDecimal(                   /**< displays an integer in decimal form fitting in a given width */
+   FILE*            file,               /**< output stream */
+   int              val,                /**< value to display */
+   int              width               /**< width to fit into */
+   );
+
 
 #endif

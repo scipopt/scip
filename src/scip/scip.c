@@ -496,7 +496,7 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
       CHECK_OKAY( SCIPprobDeactivate(scip->transprob) );
 
       /* deactivate the active node */
-      CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->lp, scip->tree) );
+      CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree) );
 
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
       CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
@@ -725,6 +725,22 @@ RETCODE SCIPfindVar(                    /**< finds variable of given name in the
    }
 }
 
+RETCODE SCIPgetActVarSol(               /**< gets solution value for variable in active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get solution value for */
+   Real*            solval              /**< pointer to store the solution value */
+   )
+{
+   assert(var != NULL);
+   assert(solval != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetActVarSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *solval = SCIPvarGetSol(var, scip->tree);
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
@@ -842,6 +858,22 @@ RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetRowPseudoFeasibility(    /**< returns the feasibility of a row for the actual pseudo solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real*            feasibility         /**< pointer to store the row's feasibility */
+   )
+{
+   assert(row != NULL);
+   assert(feasibility != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *feasibility = SCIProwGetPseudoFeasibility(row, scip->stat);
+   
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPprintRow(                   /**< output row to file stream */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
@@ -868,6 +900,12 @@ RETCODE SCIPaddCut(                     /**< adds cut to separation storage */
    CHECK_OKAY( checkStage(scip, "SCIPaddCut", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    assert(scip->tree->actnode != NULL);
+
+   if( !scip->tree->actnodehaslp )
+   {
+      errorMessage("cannot add cuts, because node LP is not processed");
+      return SCIP_INVALIDCALL;
+   }
 
    CHECK_OKAY( SCIPsepaAddCut(scip->sepa, scip->mem->solvemem, scip->set, scip->lp,
                   cut, score, (scip->tree->actnode->depth == 0)) );
@@ -1196,7 +1234,7 @@ RETCODE SCIPchgNodeBd(                  /**< changes bound of variable at the gi
    if( node == NULL )
       node = scip->tree->actnode;
    
-   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->lp, scip->tree,
+   CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree,
                   var, newbound, boundtype) );
    
    return SCIP_OKAY;
@@ -1259,7 +1297,7 @@ RETCODE SCIPchgLb(                      /**< changes lower bound of variable in 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->probmem, scip->set, scip->lp, scip->tree, newbound) );
+      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -1269,7 +1307,7 @@ RETCODE SCIPchgLb(                      /**< changes lower bound of variable in 
          errorMessage("cannot change bounds of original variables while solving the problem");
          return SCIP_INVALIDCALL;
       }
-      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->solvemem, scip->set, scip->lp, scip->tree, newbound) );
+      CHECK_OKAY( SCIPvarChgLb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, newbound) );
       return SCIP_OKAY;
 
    default:
@@ -1291,7 +1329,7 @@ RETCODE SCIPchgUb(                      /**< changes upper bound of variable in 
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->probmem, scip->set, scip->lp, scip->tree, newbound) );
+      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->probmem, scip->set, scip->stat, scip->lp, scip->tree, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
@@ -1301,7 +1339,7 @@ RETCODE SCIPchgUb(                      /**< changes upper bound of variable in 
          errorMessage("cannot change bounds of original variables while solving the problem");
          return SCIP_INVALIDCALL;
       }
-      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->solvemem, scip->set, scip->lp, scip->tree, newbound) );
+      CHECK_OKAY( SCIPvarChgUb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->tree, newbound) );
       return SCIP_OKAY;
 
    default:

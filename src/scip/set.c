@@ -53,6 +53,11 @@
 #define SCIP_DEFAULT_PATHGROWINIT      256
 
 
+/* LP solving */
+
+#define SCIP_DEFAULT_LPSOLVEFREQ         2 /**< frequency for solving LP at the nodes */
+
+
 /* Pricing */
 
 #define SCIP_DEFAULT_USEPRICING       TRUE /**< activate pricing of variables */
@@ -76,13 +81,13 @@
 /* Tree */
 
 /*#define SCIP_DEFAULT_NODELIMIT     INT_MAX*/ /**< maximal number of nodes to create */
-#define SCIP_DEFAULT_NODELIMIT        1000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT      100000 /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ            1 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -159,6 +164,7 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->agelimit = SCIP_DEFAULT_AGELIMIT;
    (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
    (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
+   (*set)->lpsolvefreq = SCIP_DEFAULT_LPSOLVEFREQ;
    (*set)->usepricing = SCIP_DEFAULT_USEPRICING;
 
    return SCIP_OKAY;

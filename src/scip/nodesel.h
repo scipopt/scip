@@ -127,6 +127,11 @@ NODE* SCIPnodepqFirst(                  /**< returns the best node of the queue 
    );
 
 extern
+NODE** SCIPnodepqNodes(                 /**< returns the nodes array of the queue */
+   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   );
+
+extern
 int SCIPnodepqLen(                      /**< returns the number of nodes stored in the node priority queue */
    const NODEPQ*    nodepq              /**< pointer to a node priority queue */
    );

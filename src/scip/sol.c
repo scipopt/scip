@@ -274,6 +274,93 @@ RETCODE SCIPsolCreateLPSol(             /**< copys LP solution to primal CIP sol
    return SCIP_OKAY;
 }
 
+RETCODE SCIPsolCreatePseudoSol(         /**< copys pseudo solution to primal CIP solution, and captures solution */
+   SOL**            sol,                /**< pointer to primal CIP solution */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob                /**< problem data */
+   )
+{
+   VAR* var;
+   Real solval;
+   int firstindex;
+   int lastindex;
+   int index;
+   int pos;
+   int v;
+
+   assert(sol != NULL);
+   assert(prob != NULL);
+
+   debugMessage("creating solution from pseudo solution\n");
+
+   CHECK_OKAY( SCIPsolCreate(sol, memhdr, stat, NULL) );
+
+   /* find the non-zero variables in pseudo solution with smallest and largest index */
+   firstindex = INT_MAX;
+   lastindex = INT_MIN;
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      var = prob->vars[v];
+      assert(var != NULL);
+      assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
+      solval = SCIPvarGetPseudoSol(var);
+
+      if( !SCIPsetIsZero(set, solval) )
+      {
+         index = var->index;
+         
+         if( index < firstindex )
+            firstindex = index;
+         if( index > lastindex )
+            lastindex = index;
+      }
+   }
+
+   if( firstindex <= lastindex )
+   {
+      assert((*sol)->vars == NULL);
+      assert((*sol)->vals == NULL);
+      assert((*sol)->valssize == 0);
+      assert((*sol)->obj == 0.0);
+      
+      /* get memory to store all non-zero variables of pseudo solution */
+      (*sol)->nvals = lastindex - firstindex + 1;
+      (*sol)->firstindex = firstindex;
+      (*sol)->valssize = SCIPsetCalcMemGrowSize(set, (*sol)->nvals);
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*sol)->vars, (*sol)->valssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*sol)->vals, (*sol)->valssize) );
+      for( pos = 0; pos < (*sol)->nvals; ++pos )
+      {
+         (*sol)->vars[pos] = NULL;
+         (*sol)->vals[pos] = 0.0;
+      }
+      
+      /* store the variables of pseudo solution */
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         var = prob->vars[v];
+         assert(var != NULL);
+         assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
+         solval = SCIPvarGetPseudoSol(var);
+         
+         if( !SCIPsetIsZero(set, solval) )
+         {
+            pos = var->index - (*sol)->firstindex;
+            assert(0 <= pos && pos < (*sol)->nvals);
+            
+            (*sol)->vars[pos] = var;
+            (*sol)->vals[pos] = solval;
+            (*sol)->obj += var->obj * (*sol)->vals[pos];
+            SCIPvarCapture(var);
+         }
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPsolFree(                    /**< frees primal CIP solution */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */

@@ -93,6 +93,7 @@ struct Set
    int              agelimit;           /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    int              nodelimit;          /**< maximal number of nodes to process */
+   int              lpsolvefreq;        /**< frequency for solving LP at the nodes */
    unsigned int     usepricing:1;       /**< use pricing of variables */
 };
 

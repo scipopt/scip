@@ -60,6 +60,7 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    VAR*             var                 /**< variable, where zero violates the bounds */
@@ -82,6 +83,7 @@ RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< LP data */
    TREE*            tree                /**< branch-and-bound tree */
    );

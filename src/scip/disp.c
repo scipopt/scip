@@ -334,3 +334,51 @@ RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting
 
    return SCIP_OKAY;
 }
+
+static
+const char powerchar[] = {' ', 'k', 'M', 'G', 'T'};
+
+void SCIPdispDecimal(                   /**< displays an integer in decimal form fitting in a given width */
+   FILE*            file,               /**< output stream */
+   int              val,                /**< value to display */
+   int              width               /**< width to fit into */
+   )
+{
+   assert(width >= 1);
+
+   if( width == 1 )
+   {
+      if( val < 0 )
+         fprintf(file, "-");
+      else if( val < 10 )
+         fprintf(file, "%d", val);
+      else
+         fprintf(file, "+");
+   }
+   else
+   {
+      char format[255];
+      int maxval;
+      int power;
+      int i;
+
+      maxval = 1;
+      for( i = 0; i < width-1; ++i )
+         maxval *= 10;
+      if( val < 0 )
+         maxval /= 10;
+      power = 0;
+      while( ABS(val) >= maxval )
+      {
+         power++;
+         val /= 1000;
+      }
+      assert(power <= 4);
+      sprintf(format, "%%%dd%c", width-1, powerchar[power]);
+
+      if( width == 2 && val < 0 )
+         fprintf(file, "-%c", powerchar[power]);
+      else
+         fprintf(file, format, val);
+   }
+}

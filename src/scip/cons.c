@@ -363,6 +363,7 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
 RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
+   Bool             lpvalid,            /**< is the LP being processed at the current node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -373,7 +374,7 @@ RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constrain
    if( conshdlr->consenfo != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
       debugMessage("enforcing constraints of handler <%s>\n", conshdlr->name);
-      CHECK_OKAY( conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
+      CHECK_OKAY( conshdlr->consenfo(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, lpvalid, result) );
       if( *result != SCIP_BRANCHED
          && *result != SCIP_REDUCEDDOM
          && *result != SCIP_SEPARATED

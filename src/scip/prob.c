@@ -529,3 +529,22 @@ CONS* SCIPprobFindCons(                 /**< returns constraint of the problem w
    return (CONS*)(SCIPhashtableRetrieve(prob->consnames, (void*)name));
 }
 
+void SCIPprobPrintPseudoSol(            /**< displays actual pseudo solution */
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   VAR* var;
+   Real solval;
+   int v;
+   
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      var = prob->vars[v];
+      assert(var != NULL);
+      solval = SCIPvarGetPseudoSol(var);
+      if( !SCIPsetIsZero(set, solval) )
+         printf(" <%s>=%g", SCIPvarGetName(var), solval);
+   }
+   printf("\n");
+}

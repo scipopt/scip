@@ -98,13 +98,18 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 
 /** constraint enforcing method of constraint handler
  *
- *  The method is called after the LP at the node was solved, which means, that an optimal LP solution exists.
- *  The LP solution has to be checked for feasibility, and if possible, an infeasibility should be resolved by
+ *  The method is called at the end of the node processing loop. The parameter "lpvalid" indicates, if the
+ *  LP was processed at the current node. If "lpvalid" is TRUE, an optimal LP solution exists, and the LP
+ *  solution has to be checked for feasibility. If possible, an infeasibility should be resolved by
  *  branching, reducing a variable's domain to exclude the solution or separating the solution with a valid
  *  cutting plane.
+ *  If "lpvalid" is FALSE, only the pseudosolution exists, which has to be checked for feasibility. If possible,
+ *  an infeasibility should be resolved by branching or reducing a variable's domain. Separating a cutting plane
+ *  is not allowed, because this would only work at nodes, where the LP is solved.
  *
  *  The enforcing methods of the active constraint handlers are called in decreasing order of their enforcing
- *  priorities until the first constraint handler returned with the value SCIP_BRANCHED or SCIP_SEPARATED. 
+ *  priorities until the first constraint handler returned with the value SCIP_BRANCHED, SCIP_REDUCEDDOM, or
+ *  SCIP_SEPARATED. 
  *  The integrality constraint handler has an enforcing priority of zero. A constraint handler which can
  *  (or wants) to enforce its constraints only for integral solutions should have a negative enforcing priority
  *  (e.g. the alldiff-constraint can only operate on integral solutions).
@@ -120,16 +125,17 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    lpvalid         : is the LP being processed at the current node? (see above)
  *    result          : pointer to store the result of the enforcing call
  *
  *  possible return values for *result:
- *    SCIP_BRANCHED   : at least one constraint of the handler is infeasible, and branching was applied
- *    SCIP_REDUCEDDOM : at least one constraint of the handler is infeasible, and a domain was reduced
- *    SCIP_SEPARATED  : at least one constraint of the handler is infeasible, and a cutting plane was generated
- *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible, but it was not resolved
+ *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied
+ *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced
+ *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated (only if "lpvalid" is TRUE)
+ *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSENFO(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, RESULT* result)
+#define DECL_CONSENFO(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, Bool lpvalid, RESULT* result)
 
 /** feasibility check method of constraint handler for integral solutions
  *
@@ -251,6 +257,7 @@ extern
 RETCODE SCIPconshdlrEnforce(            /**< calls enforcing method of constraint handler */
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
+   Bool             lpvalid,            /**< is the LP being processed at the current node? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

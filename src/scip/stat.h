@@ -49,6 +49,7 @@ struct Stat
    int              nprimallpiterations;/**< number of iterations in primal simplex */
    int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nnodes;             /**< number of nodes processed (including active node) */
+   int              nboundchanges;      /**< number of times a variable's bound has been changed */
    int              lastdispnode;       /**< last node for which an information line was displayed */
    int              ndisplines;         /**< number of displayed information lines */
    int              maxdepth;           /**< maximal depth of all processed nodes */

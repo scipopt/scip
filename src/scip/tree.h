@@ -143,9 +143,9 @@ struct Tree
    DOMCHGDYN*       actnodedomchg;      /**< domain changes of the active node */
    DOMCHGDYN**      childrendomchg;     /**< domain changes of the child nodes */
    DOMCHGDYN**      siblingsdomchg;     /**< domain changes of the sibling nodes */
-   SOL*             actpseudosol;       /**< actual pseudosolution with all variables set to their best bounds */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
+   Real             actpseudoobjval;    /**< actual pseudosolution value with all variables set to their best bounds */
    int              pathlen;            /**< length of the actual path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
@@ -153,6 +153,7 @@ struct Tree
    int              nchildren;          /**< actual number of children (number of used slots in children vector) */
    int              siblingssize;       /**< available slots in siblings vector */
    int              nsiblings;          /**< actual number of siblings (number of used slots in siblings vector) */
+   unsigned int     actnodehaslp:1;     /**< is LP being processed in the active node? */
 };
 
 
@@ -199,6 +200,7 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    NODE*            node,               /**< leaf node to activate (or NULL to deactivate all nodes) */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    );
@@ -216,6 +218,7 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to actual node, c
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    VAR*             var,                /**< variable to change the bounds for */
@@ -320,7 +323,8 @@ RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a va
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< problem variable that changed */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   Real             oldbound            /**< old bound value */
    );
 
 extern

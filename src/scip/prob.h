@@ -51,7 +51,7 @@ struct Prob
 {
    char*            name;               /**< problem name */
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */
-   VAR**            vars;               /**< array with non-fixed variables ordered binary, integer, implicit, continous */
+   VAR**            vars;               /**< array with mutable variables ordered binary, integer, implicit, continous */
    HASHTABLE*       varnames;           /**< hash table storing variable's names */
    CONSLIST*        conslist;           /**< list of constraints of the problem */
    HASHTABLE*       consnames;          /**< hash table storing constraints' names */
@@ -61,7 +61,7 @@ struct Prob
    int              fixedvarssize;      /**< available slots in fixedvars array */
    int              nfixedvars;         /**< number of fixed and aggregated variables in the problem */
    int              varssize;           /**< available slots in vars array */
-   int              nvars;              /**< number of variables in the problem (number of used slots in vars array) */
+   int              nvars;              /**< number of mutable variables in the problem (used slots in vars array) */
    int              nbin;               /**< number of binary variables */
    int              nint;               /**< number of general integer variables */
    int              nimpl;              /**< number of implicit integer variables */
@@ -174,6 +174,12 @@ extern
 CONS* SCIPprobFindCons(                 /**< returns constraint of the problem with given name */
    PROB*            prob,               /**< problem data */
    const char*      name                /**< name of variable to find */
+   );
+
+extern
+void SCIPprobPrintPseudoSol(            /**< displays actual pseudo solution */
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 

@@ -1306,13 +1306,8 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncol, nrow) );
 
    /* allocate temporary buffer for storing uncompressed basis information */
-#if 0 /* ??? */
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, ncol) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, nrow) );
-#else
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, cstat, ncol) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, rstat, nrow) );
-#endif
 
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
@@ -1331,13 +1326,8 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    lpistatePack(*lpistate, cstat, rstat);
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, cstat, ncol);
-   freeBlockMemoryArray(memhdr, rstat, nrow);
-#else
    SCIPsetReleaseBufferArray(set, rstat);
    SCIPsetReleaseBufferArray(set, cstat);
-#endif
 
    return SCIP_OKAY;
 }

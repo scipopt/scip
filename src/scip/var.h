@@ -71,6 +71,15 @@ typedef struct Var VAR;                 /**< variable of the problem */
 #include "prob.h"
 
 
+/** tracks changes of the variable's domains (fixed sized arrays) */
+struct DomChg
+{
+   BOUNDCHG*        boundchg;           /**< array with changes in bounds of variables */
+   HOLECHG*         holechg;            /**< array with changes in hole lists */
+   int              nboundchg;          /**< number of bound changes */
+   int              nholechg;           /**< number of hole list changes */
+};
+
 /** domain of a variable */
 struct Dom
 {
@@ -134,6 +143,7 @@ RETCODE SCIPdomchgApply(                /**< applies domain change */
    const DOMCHG*    domchg,             /**< domain change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    );
@@ -143,6 +153,7 @@ RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
    const DOMCHG*    domchg,             /**< domain change to remove */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree                /**< branch-and-bound tree */
    );
@@ -322,6 +333,7 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound            /**< new bound for variable */
@@ -332,6 +344,7 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound            /**< new bound for variable */
@@ -342,6 +355,7 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound,           /**< new bound for variable */
@@ -370,20 +384,20 @@ Real SCIPvarGetUb(                      /**< gets upper bound of variable */
    );
 
 extern
-Real SCIPvarGetBestBound(               /**< gets best bound of variable with respect to the objective function */
+Real SCIPvarGetLPSol(                   /**< get primal LP solution value of variable */
    VAR*             var                 /**< problem variable */
    );
 
 extern
-Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of variable */
+Real SCIPvarGetPseudoSol(               /**< get pseudo solution value of variable at actual node */
    VAR*             var                 /**< problem variable */
    );
 
 extern
 Real SCIPvarGetSol(                     /**< get solution value of variable at actual node: if LP was solved at the node,
-                                           the method returns the LP primal solution value, otherwise the best bound */
+                                           the method returns the LP primal solution value, otherwise the pseudo solution */
    VAR*             var,                /**< problem variable */
-   LP*              lp                  /**< actual LP data */
+   TREE*            tree                /**< branch-and-bound tree */
    );
 
 extern

@@ -218,6 +218,13 @@ RETCODE SCIPfindVar(                    /**< finds variable of given name in the
    );
 
 extern
+RETCODE SCIPgetActVarSol(               /**< gets solution value for variable in active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to get solution value for */
+   Real*            solval              /**< pointer to store the solution value */
+   );
+
+extern
 RETCODE SCIPcreateRow(                  /**< creates and captures an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
@@ -266,6 +273,13 @@ RETCODE SCIPaddVarToRow(                /**< resolves variable to columns and ad
 
 extern
 RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in the last LP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real*            feasibility         /**< pointer to store the row's feasibility */
+   );
+
+extern
+RETCODE SCIPgetRowPseudoFeasibility(    /**< returns the feasibility of a row for the actual pseudo solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Real*            feasibility         /**< pointer to store the row's feasibility */

@@ -352,6 +352,8 @@ void coefChanged(                       /**< announces, that the given coefficie
       }
       lp->flushed = FALSE;
       lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->primalfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -1339,6 +1341,7 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
       
       lp->flushed = FALSE;
       lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -1580,6 +1583,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->validactivitylp = -1;
+   (*row)->validpsactivitybc = -1;
    (*row)->sorted = FALSE;
    (*row)->validminmaxidx = FALSE;
    (*row)->lhschanged = FALSE;
@@ -1948,7 +1952,7 @@ Real SCIProwGetActivity(                /**< returns the activity of a row in th
    assert(row != NULL);
    assert(row->validactivitylp <= stat->nlp);
 
-   if( row->validactivitylp < stat->nlp )
+   if( row->validactivitylp != stat->nlp )
       rowCalcActivity(row);
    assert(row->activity < SCIP_INVALID);
    row->validactivitylp = stat->nlp;
@@ -1968,6 +1972,54 @@ Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in
    activity = SCIProwGetActivity(row, stat);
 
    return MIN(row->rhs - activity, activity - row->lhs);
+}
+
+static
+void rowCalcPseudoActivity(             /**< recalculates the actual pseudo activity of a row */
+   ROW*             row                 /**< LP row */
+   )
+{
+   COL* col;
+   int c;
+
+   assert(row != NULL);
+
+   row->pseudoactivity = 0.0;
+   for( c = 0; c < row->len; ++c )
+   {
+      col = row->col[c];
+      row->pseudoactivity += row->val[c] * SCIPvarGetPseudoSol(col->var);
+   }
+}
+
+Real SCIProwGetPseudoActivity(          /**< returns the activity of a row for the actual pseudo solution */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(row != NULL);
+   assert(row->validpsactivitybc <= stat->nboundchanges);
+
+   if( row->validpsactivitybc != stat->nboundchanges )
+      rowCalcPseudoActivity(row);
+   assert(row->pseudoactivity < SCIP_INVALID);
+   row->validpsactivitybc = stat->nboundchanges;
+
+   return row->pseudoactivity;
+}
+
+Real SCIProwGetPseudoFeasibility(       /**< returns the feasibility of a row in the actual pseudo solution */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
+   )
+{
+   Real pseudoactivity;
+
+   assert(row != NULL);
+
+   pseudoactivity = SCIProwGetPseudoActivity(row, stat);
+
+   return MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
 }
 
 int SCIProwGetNNonz(                    /**< get number of nonzero entries in row vector */
@@ -2039,6 +2091,7 @@ RETCODE SCIProwSideChanged(             /**< notifies LP row, that its sides wer
       
       lp->flushed = FALSE;
       lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
 
@@ -2481,7 +2534,7 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
 }
 
 static
-RETCODE lpFlushChgcols(                 /**< applies all cached column changes to the LP */
+RETCODE lpFlushChgCols(                 /**< applies all cached column changes to the LP */
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
@@ -2551,7 +2604,7 @@ RETCODE lpFlushChgcols(                 /**< applies all cached column changes t
 }
 
 static
-RETCODE lpFlushChgrows(                 /**< applies all cached row changes to the LP */
+RETCODE lpFlushChgRows(                 /**< applies all cached row changes to the LP */
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
@@ -2641,8 +2694,8 @@ RETCODE lpFlush(                        /**< applies all cached changes to the L
 
    CHECK_OKAY( lpFlushDelCols(lp) );
    CHECK_OKAY( lpFlushDelRows(lp) );
-   CHECK_OKAY( lpFlushChgcols(lp, memhdr, set) );
-   CHECK_OKAY( lpFlushChgrows(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushChgCols(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushChgRows(lp, memhdr, set) );
    CHECK_OKAY( lpFlushAddCols(lp, memhdr, set) );
    CHECK_OKAY( lpFlushAddRows(lp, memhdr, set) );
 

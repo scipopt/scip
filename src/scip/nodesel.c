@@ -60,7 +60,7 @@ struct Nodesel
 
 /* node priority queue methods */
 
-#define PQ_PARENT(q) (((q)-1)/2)
+#define PQ_PARENT(q) (((q)+1)/2-1)
 #define PQ_LEFTCHILD(p) (2*(p)+1)
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
 
@@ -279,7 +279,7 @@ Bool nodepqDelPos(                      /**< deletes node at given position from
    if( !parentfelldown )
    {
       /* downward moving of parents was not successful -> move children upwards */
-      while( freepos < PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
+      while( freepos <= PQ_PARENT(nodepq->len-1) ) /* as long as free slot has children... */
       {
          /* select the better child of free slot */
          childpos = PQ_LEFTCHILD(freepos);
@@ -334,6 +334,15 @@ NODE* SCIPnodepqFirst(                  /**< returns the best node of the queue 
    assert(nodepq->slots[0] != NULL);
 
    return nodepq->slots[0];
+}
+
+NODE** SCIPnodepqNodes(                 /**< returns the nodes array of the queue */
+   const NODEPQ*    nodepq              /**< pointer to a node priority queue */
+   )
+{
+   assert(nodepq != NULL);
+
+   return nodepq->slots;
 }
 
 int SCIPnodepqLen(                      /**< returns the number of nodes stored in the node priority queue */

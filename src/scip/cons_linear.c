@@ -204,7 +204,7 @@ RETCODE linconsAddCoef(                 /**< adds coefficient in linear constrai
 }
 
 static
-Real linconsGetActivity(                /**< calculates the activity for the linear constraint */
+Real linconsGetActivity(                /**< calculates the activity of the linear constraint for LP solution */
    LINCONS*         lincons             /**< linear constraint data object */
    )
 {
@@ -215,15 +215,13 @@ Real linconsGetActivity(                /**< calculates the activity for the lin
    
    activity = 0.0;
    for( v = 0; v < lincons->nvars; ++v )
-   {
-      activity += SCIPvarGetPrimsol(lincons->vars[v]) * lincons->vals[v];
-   }
+      activity += SCIPvarGetLPSol(lincons->vars[v]) * lincons->vals[v];
 
    return activity;
 }
 
 static
-Real linconsGetFeasibility(             /**< calculates the feasibility for the linear constraint */
+Real linconsGetFeasibility(             /**< calculates the feasibility of the linear constraint for LP solution */
    LINCONS*         lincons             /**< linear constraint data object */
    )
 {
@@ -232,6 +230,37 @@ Real linconsGetFeasibility(             /**< calculates the feasibility for the 
    assert(lincons != NULL);
 
    activity = linconsGetActivity(lincons);
+
+   return MIN(lincons->rhs - activity, activity - lincons->lhs);
+}
+
+static
+Real linconsGetPseudoActivity(          /**< calculates the activity of the linear constraint for pseudo solution */
+   LINCONS*         lincons             /**< linear constraint data object */
+   )
+{
+   Real activity;
+   int v;
+
+   assert(lincons != NULL);
+   
+   activity = 0.0;
+   for( v = 0; v < lincons->nvars; ++v )
+      activity += SCIPvarGetPseudoSol(lincons->vars[v]) * lincons->vals[v];
+
+   return activity;
+}
+
+static
+Real linconsGetPseudoFeasibility(       /**< calculates the feasibility of the linear constraint for pseudo solution */
+   LINCONS*         lincons             /**< linear constraint data object */
+   )
+{
+   Real activity;
+
+   assert(lincons != NULL);
+
+   activity = linconsGetPseudoActivity(lincons);
 
    return MIN(lincons->rhs - activity, activity - lincons->lhs);
 }
@@ -262,7 +291,7 @@ RETCODE linconsToRow(                   /**< creates an LP row from a linear con
 }
 
 static
-RETCODE applyConstraints(               /**< separates violated inequalities; called from Sepa and Enfo methods */
+RETCODE separateConstraints(            /**< separates violated inequalities; called from Sepa and Enfo methods */
    CONSHDLR*        conshdlr,           /**< linear constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< array of constraints to process */
@@ -283,13 +312,13 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
 
    *found = FALSE;
 
-   debugMessage("applying %d linear constraints at %p\n", nconss, conss);
+   debugMessage("separating %d linear constraints at %p\n", nconss, conss);
    for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
       assert(cons != NULL);
 
-      debugMessage("applying linear constraint <%s>\n", SCIPconsGetName(cons));
+      debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(cons));
       consdata = SCIPconsGetConsdata(cons);
       assert(consdata != NULL);
 
@@ -316,10 +345,10 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
          LINCONS* lincons = consdata->data.lincons;
          Real feasibility;
          
-         /* check feasibility of linear constraint; if it's an equality, add the cut in any case */
+         /* check feasibility of linear constraint */
          feasibility = linconsGetFeasibility(lincons);
          debugMessage("  lincons feasibility = %g\n", feasibility);
-         if( !SCIPisFeasible(scip, feasibility) || SCIPisEQ(scip, lincons->lhs, lincons->rhs) )
+         if( !SCIPisFeasible(scip, feasibility) )
          {
             ROW* row;
             
@@ -344,6 +373,62 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
             CHECK_OKAY( SCIPaddCut(scip, row, -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1)) );
             *found = TRUE;
          }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE checkConstraints(               /**< checks pseudo solution for violated inequalities */
+   CONSHDLR*        conshdlr,           /**< linear constraint handler */
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           conss,              /**< array of constraints to process */
+   int              nconss,             /**< number of constraints to process */
+   Bool*            found               /**< pointer to store information, if a violated constraint has been found */
+   )
+{
+   CONS* cons;
+   CONSDATA* consdata;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(nconss == 0 || conss != NULL);
+   assert(nconss >= 0);
+   assert(found != NULL);
+
+   *found = FALSE;
+
+   debugMessage("checking pseudo solution for %d linear constraints at %p\n", nconss, conss);
+   for( c = 0; c < nconss && !(*found); ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+
+      debugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
+      consdata = SCIPconsGetConsdata(cons);
+      assert(consdata != NULL);
+
+      if( consdata->islprow )
+      {
+         ROW* row = consdata->data.row;
+         Real feasibility;
+
+         CHECK_OKAY( SCIPgetRowPseudoFeasibility(scip, row, &feasibility) );
+         debugMessage("  row feasibility = %g\n", feasibility);
+         *found |= !SCIPisFeasible(scip, feasibility);
+      }
+      else
+      {
+         LINCONS* lincons = consdata->data.lincons;
+         Real feasibility;
+         
+         /* check feasibility of linear constraint */
+         feasibility = linconsGetPseudoFeasibility(lincons);
+         debugMessage("  lincons feasibility = %g\n", feasibility);
+         *found |= !SCIPisFeasible(scip, feasibility);
       }
    }
 
@@ -452,8 +537,8 @@ DECL_CONSSEPA(SCIPconsSepaLinear)
 
    debugMessage("Sepa method of linear constraints\n");
 
-   /* check for violated constraints */
-   CHECK_OKAY( applyConstraints(conshdlr, scip, conss, nconss, &found) );
+   /* separate violated constraints */
+   CHECK_OKAY( separateConstraints(conshdlr, scip, conss, nconss, &found) );
 
    if( found )
       *result = SCIP_SEPARATED;
@@ -476,12 +561,26 @@ DECL_CONSENFO(SCIPconsEnfoLinear)
    debugMessage("Enfo method of linear constraints\n");
 
    /* check for violated constraints */
-   CHECK_OKAY( applyConstraints(conshdlr, scip, conss, nconss, &found) );
-
-   if( found )
-      *result = SCIP_SEPARATED;
+   if( lpvalid )
+   {
+      /* LP is processed at current node -> we can add violated linear constraints to the LP */
+      CHECK_OKAY( separateConstraints(conshdlr, scip, conss, nconss, &found) );
+      
+      if( found )
+         *result = SCIP_SEPARATED;
+      else
+         *result = SCIP_FEASIBLE;
+   }
    else
-      *result = SCIP_FEASIBLE;
+   {
+      /* LP is not processed at current node -> we just have to check pseudo solution for feasibility */
+      CHECK_OKAY( checkConstraints(conshdlr, scip, conss, nconss, &found) );
+      
+      if( found )
+         *result = SCIP_INFEASIBLE;
+      else
+         *result = SCIP_FEASIBLE;
+   }
 
    return SCIP_OKAY;
 }
