@@ -215,153 +215,189 @@ RETCODE SCIPsetCreate(
 
    /* SCIP parameters */
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_VerbLevel", "verbosity level of output",
+                  "global/display/verblevel",
+                  "verbosity level of output",
                   &(*set)->verblevel, SCIP_DEFAULT_VERBLEVEL, SCIP_VERBLEVEL_NONE, SCIP_VERBLEVEL_FULL,
                   NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-                  "global_CatchCtrlC", "should the CTRL-C interrupt be catched by SCIP?",
-                  &(*set)->catchctrlc, SCIP_DEFAULT_CATCHCTRLC,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_Infinity", "values larger than this are considered infinity",
-                  &(*set)->infinity, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_Epsilon", "absolute values smaller than this are considered zero",
-                  &(*set)->epsilon, SCIP_DEFAULT_EPSILON, machineeps, SCIP_MAXEPSILON,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_SumEpsilon", "absolute values of sums smaller than this are considered zero",
-                  &(*set)->sumepsilon, SCIP_DEFAULT_SUMEPSILON, machineeps*1e+03, SCIP_MAXEPSILON,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_Feastol", "LP feasibility tolerance",
-                  &(*set)->feastol, SCIP_DEFAULT_FEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
-                  paramChgdFeastol, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_CutViolEps", "epsilon for deciding if a cut is violated",
-                  &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_MAXEPSILON,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_MemGrowFac", "memory growing factor for dynamically allocated arrays",
-                  &(*set)->memgrowfac, SCIP_DEFAULT_MEMGROWFAC, 1.0, 10.0,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_MemGrowInit", "initial size of dynamically allocated arrays",
-                  &(*set)->memgrowinit, SCIP_DEFAULT_MEMGROWINIT, 0, INT_MAX,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_TreeGrowFac", "memory growing factor for tree array",
-                  &(*set)->treegrowfac, SCIP_DEFAULT_TREEGROWFAC, 1.0, 10.0,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_TreeGrowInit", "initial size of tree array",
-                  &(*set)->treegrowinit, SCIP_DEFAULT_TREEGROWINIT, 0, INT_MAX,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-                  "global_PathGrowFac", "memory growing factor for path array",
-                  &(*set)->pathgrowfac, SCIP_DEFAULT_PATHGROWFAC, 1.0, 10.0,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_PathGrowInit", "initial size of path array",
-                  &(*set)->pathgrowinit, SCIP_DEFAULT_PATHGROWINIT, 0, INT_MAX,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-                  "global_BranchScoreFac", "branching score factor to weigh downward and upward gain prediction",
-                  &(*set)->branchscorefac, SCIP_DEFAULT_BRANCHSCOREFAC, 0.0, 1.0,
-                  NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-                  "global_DispWidth", "maximal number of characters in a node information line",
+                  "global/display/dispwidth",
+                  "maximal number of characters in a node information line",
                   &(*set)->dispwidth, SCIP_DEFAULT_DISPWIDTH, 0, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-                  "global_DispFreq", "frequency for displaying node information lines",
+                  "global/display/dispfreq",
+                  "frequency for displaying node information lines",
                   &(*set)->dispfreq, SCIP_DEFAULT_DISPFREQ, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-                  "global_DispHeaderFreq", "frequency for displaying header lines (every n'th node information line)",
+                  "global/display/dispheaderfreq",
+                  "frequency for displaying header lines (every n'th node information line)",
                   &(*set)->dispheaderfreq, SCIP_DEFAULT_DISPHEADERFREQ, -1, INT_MAX,
                   NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/numerics/infinity",
+                  "values larger than this are considered infinity",
+                  &(*set)->infinity, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/numerics/epsilon",
+                  "absolute values smaller than this are considered zero",
+                  &(*set)->epsilon, SCIP_DEFAULT_EPSILON, machineeps, SCIP_MAXEPSILON,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/numerics/sumepsilon",
+                  "absolute values of sums smaller than this are considered zero",
+                  &(*set)->sumepsilon, SCIP_DEFAULT_SUMEPSILON, machineeps*1e+03, SCIP_MAXEPSILON,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/numerics/feastol",
+                  "LP feasibility tolerance",
+                  &(*set)->feastol, SCIP_DEFAULT_FEASTOL, machineeps*1e+03, SCIP_MAXEPSILON,
+                  paramChgdFeastol, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/numerics/cutvioleps",
+                  "epsilon for deciding if a cut is violated",
+                  &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_MAXEPSILON,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/memory/memgrowfac",
+                  "memory growing factor for dynamically allocated arrays",
+                  &(*set)->memgrowfac, SCIP_DEFAULT_MEMGROWFAC, 1.0, 10.0,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global/memory/memgrowinit",
+                  "initial size of dynamically allocated arrays",
+                  &(*set)->memgrowinit, SCIP_DEFAULT_MEMGROWINIT, 0, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
+                  "global/memory/treegrowfac",
+                  "memory growing factor for tree array",
+                  &(*set)->treegrowfac, SCIP_DEFAULT_TREEGROWFAC, 1.0, 10.0,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global/memory/treegrowinit",
+                  "initial size of tree array",
+                  &(*set)->treegrowinit, SCIP_DEFAULT_TREEGROWINIT, 0, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+                  "global/memory/pathgrowfac",
+                  "memory growing factor for path array",
+                  &(*set)->pathgrowfac, SCIP_DEFAULT_PATHGROWFAC, 1.0, 10.0,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global/memory/pathgrowinit",
+                  "initial size of path array",
+                  &(*set)->pathgrowinit, SCIP_DEFAULT_PATHGROWINIT, 0, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
+                  "global/branching/branchscorefac",
+                  "branching score factor to weigh downward and upward gain prediction",
+                  &(*set)->branchscorefac, SCIP_DEFAULT_BRANCHSCOREFAC, 0.0, 1.0,
+                  NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-                  "global_MaxPresolRounds", "maximal number of presolving rounds (-1: unlimited)",
+                  "global/presolving/maxpresolrounds",
+                  "maximal number of presolving rounds (-1: unlimited)",
                   &(*set)->maxpresolrounds, SCIP_DEFAULT_MAXPRESOLROUNDS, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
-                  "global_PresolAbortFac",
+                  "global/presolving/presolabortfac",
                   "abort presolve, if less than this fraction of the problem was changed in last presolve round",
                   &(*set)->presolabortfac, SCIP_DEFAULT_PRESOLABORTFAC, 0.0, 1.0,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
-                  "global_MaxPriceVars", "maximal number of variables priced in per pricing round",
+                  "global/pricing/maxpricevars",
+                  "maximal number of variables priced in per pricing round",
                   &(*set)->maxpricevars, SCIP_DEFAULT_MAXPRICEVARS, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_MaxPriceVarsRoot", "maximal number of priced variables at the root node",
+                  "global/pricing/maxpricevarsroot",
+                  "maximal number of priced variables at the root node",
                   &(*set)->maxpricevarsroot, SCIP_DEFAULT_MAXPRICEVARSROOT, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_AbortPriceVarsFac", "pricing is aborted, if fac * maxpricevars pricing candidates were found",
+                  "global/pricing/abortpricevarsfac",
+                  "pricing is aborted, if fac * maxpricevars pricing candidates were found",
                   &(*set)->abortpricevarsfac, SCIP_DEFAULT_ABORTPRICEVARSFAC, 1.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_MaxSepaCuts", "maximal number of cuts separated per separation round",
+                  "global/separating/maxsepacuts",
+                  "maximal number of cuts separated per separation round",
                   &(*set)->maxsepacuts, SCIP_DEFAULT_MAXSEPACUTS, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_MaxSepaCutsRoot", "maximal number of separated cuts at the root node",
+                  "global/separating/maxsepacutsroot",
+                  "maximal number of separated cuts at the root node",
                   &(*set)->maxsepacutsroot, SCIP_DEFAULT_MAXSEPACUTSROOT, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_ColAgeLimit", "maximum age a column can reach before it is deleted from the LP",
-                  &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT, 1, INT_MAX,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_RowAgeLimit", "maximum age a row can reach before it is deleted from the LP",
-                  &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 1, INT_MAX,
-                  NULL, NULL) );
-   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_CutAgeLimit", "maximum age a cut can reach before it is deleted from the global cut pool",
+                  "global/separating/cutagelimit",
+                  "maximum age a cut can reach before it is deleted from the global cut pool",
                   &(*set)->cutagelimit, SCIP_DEFAULT_CUTAGELIMIT, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_ConsAgeLimit", "maximum age an unnecessary constraint can reach before it is deleted",
+                  "global/constraints/consagelimit",
+                  "maximum age an unnecessary constraint can reach before it is deleted",
                   &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_MaxSol", "maximal number of solutions to store in the solution storage",
+                  "global/solutions/maxsol",
+                  "maximal number of solutions to store in the solution storage",
                   &(*set)->maxsol, SCIP_DEFAULT_MAXSOL, 1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
-                  "global_NodeLimit", "maximal number of nodes to process (-1: no limit)",
+                  "global/limits/nodelimit",
+                  "maximal number of nodes to process (-1: no limit)",
                   &(*set)->nodelimit, SCIP_DEFAULT_NODELIMIT, -1, LONGINT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
-                  "global_TimeLimit", "maximal time in seconds to run",
+                  "global/limits/timelimit",
+                  "maximal time in seconds to run",
                   &(*set)->timelimit, SCIP_DEFAULT_TIMELIMIT, 0.0, REAL_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_LpSolveFreq", "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
+                  "global/lp/lpsolvefreq",
+                  "frequency for solving LP at the nodes (-1: never; 0: only root LP)",
                   &(*set)->lpsolvefreq, SCIP_DEFAULT_LPSOLVEFREQ, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_LpSolveDepth", "maximal depth for solving LP at the nodes (-1: no depth limit)",
+                  "global/lp/lpsolvedepth",
+                  "maximal depth for solving LP at the nodes (-1: no depth limit)",
                   &(*set)->lpsolvedepth, SCIP_DEFAULT_LPSOLVEDEPTH, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-                  "global_CleanupCols", "should new non-basic columns be removed after LP solving?",
+                  "global/lp/cleanupcols",
+                  "should new non-basic columns be removed after LP solving?",
                   &(*set)->cleanupcols, SCIP_DEFAULT_CLEANUPCOLS,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-                  "global_CleanupRows", "should new basic rows be removed after LP solving?",
+                  "global/lp/cleanuprows",
+                  "should new basic rows be removed after LP solving?",
                   &(*set)->cleanuprows, SCIP_DEFAULT_CLEANUPROWS,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_ClockType", "default clock type (1: CPU user seconds, 2: wall clock time)",
+                  "global/lp/colagelimit",
+                  "maximum age a column can reach before it is deleted from the LP",
+                  &(*set)->colagelimit, SCIP_DEFAULT_COLAGELIMIT, 1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global/lp/rowagelimit",
+                  "maximum age a row can reach before it is deleted from the LP",
+                  &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "global/timing/clocktype",
+                  "default clock type (1: CPU user seconds, 2: wall clock time)",
                   &(*set)->clocktype, SCIP_DEFAULT_CLOCKTYPE, 1, 2,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
-                  "global_ClocksEnabled", "is timing enabled?",
+                  "global/timing/clocksenabled",
+                  "is timing enabled?",
                   &(*set)->clocksenabled, SCIP_DEFAULT_CLOCKSENABLED,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "global/catchctrlc",
+                  "should the CTRL-C interrupt be catched by SCIP?",
+                  &(*set)->catchctrlc, SCIP_DEFAULT_CATCHCTRLC,
                   NULL, NULL) );
 
    return SCIP_OKAY;

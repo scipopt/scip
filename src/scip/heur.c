@@ -54,6 +54,8 @@ struct Heur
 /** creates a primal heuristic */
 RETCODE SCIPheurCreate(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
    char             dispchar,           /**< display character of primal heuristic */
@@ -67,6 +69,8 @@ RETCODE SCIPheurCreate(
    HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
+   char paramname[MAXSTRLEN];
+
    assert(heur != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -89,6 +93,12 @@ RETCODE SCIPheurCreate(
    (*heur)->ncalls = 0;
    (*heur)->nsolsfound = 0;
    (*heur)->initialized = FALSE;
+
+   /* add parameters */
+   sprintf(paramname, "heuristic/%s/freq", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
+                  paramname, "frequency for calling primal heuristic (-1: never, 0: only in root node)",
+                  &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

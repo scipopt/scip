@@ -52,6 +52,8 @@ struct Sepa
 /** creates a separator */
 RETCODE SCIPsepaCreate(
    SEPA**           sepa,               /**< pointer to separator data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of separator */
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of the separator */
@@ -63,6 +65,8 @@ RETCODE SCIPsepaCreate(
    SEPADATA*        sepadata            /**< separator data */
    )
 {
+   char paramname[MAXSTRLEN];
+
    assert(sepa != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -83,6 +87,12 @@ RETCODE SCIPsepaCreate(
    (*sepa)->ncalls = 0;
    (*sepa)->ncutsfound = 0;
    (*sepa)->initialized = FALSE;
+
+   /* add parameters */
+   sprintf(paramname, "separator/%s/freq", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
+                  paramname, "frequency for calling separator (-1: never, 0: only in root node)",
+                  &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

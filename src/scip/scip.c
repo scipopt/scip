@@ -752,8 +752,8 @@ RETCODE SCIPincludeConsHdlr(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeConsHdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, 
-                  needscons, 
+   CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
+                  name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
                   consfree, consinit, consexit, consdelete, constrans, conssepa, consenfolp, consenfops, conscheck,
                   consprop, conspresol, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
@@ -829,7 +829,8 @@ RETCODE SCIPincludeSepa(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsepaCreate(&sepa, name, desc, priority, freq,
+   CHECK_OKAY( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
+                  name, desc, priority, freq,
                   sepafree, sepainit, sepaexit, sepaexec, sepadata) );
    CHECK_OKAY( SCIPsetIncludeSepa(scip->set, sepa) );
    
@@ -869,7 +870,8 @@ RETCODE SCIPincludeHeur(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPheurCreate(&heur, name, desc, dispchar, priority, freq, pseudonodes,
+   CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
+                  name, desc, dispchar, priority, freq, pseudonodes,
                   heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
@@ -1009,6 +1011,7 @@ RETCODE SCIPincludeDisp(
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DISPSTATUS       dispstatus,         /**< display activation status of display column */
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
@@ -1024,7 +1027,8 @@ RETCODE SCIPincludeDisp(
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPdispCreate(&disp, name, desc, header, dispfree, dispinit, dispexit, dispoutput, dispdata,
+   CHECK_OKAY( SCIPdispCreate(&disp, scip->set, scip->mem->setmem,
+                  name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispoutput, dispdata,
                   width, priority, position, stripline) );
    CHECK_OKAY( SCIPsetIncludeDisp(scip->set, disp) );
    

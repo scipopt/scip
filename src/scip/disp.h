@@ -25,6 +25,14 @@
 #ifndef __DISP_H__
 #define __DISP_H__
 
+/** display activation status of display column */
+enum DispStatus
+{
+   SCIP_DISPSTATUS_OFF  = 0,            /**< display column is not displayed */
+   SCIP_DISPSTATUS_AUTO = 1,            /**< display column is switched on and off automatically */
+   SCIP_DISPSTATUS_ON   = 2             /**< display column is displayed */
+};
+typedef enum DispStatus DISPSTATUS;
 
 typedef struct Disp DISP;               /**< display column data structure */
 typedef struct DispData DISPDATA;       /**< display column specific data */
@@ -78,9 +86,12 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
 extern
 RETCODE SCIPdispCreate(
    DISP**           disp,               /**< pointer to store display column */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DISPSTATUS       dispstatus,         /**< display activation status of display column */
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */

@@ -43,9 +43,10 @@ struct Disp
    int              width;              /**< width of display column (no. of chars used) */
    int              priority;           /**< priority of display column */
    int              position;           /**< relative position of display column */
-   unsigned int     stripline:1;        /**< should the column be separated with a line from its right neighbour? */
-   unsigned int     initialized:1;      /**< is display column initialized? */
-   unsigned int     active:1;           /**< should column be displayed to the screen? */
+   int              dispstatus;         /**< display activation status of display column */
+   Bool             stripline;          /**< should the column be separated with a line from its right neighbour? */
+   Bool             initialized;        /**< is display column initialized? */
+   Bool             active;             /**< should column be displayed to the screen? */
 };
 
 
@@ -55,9 +56,12 @@ struct Disp
 /** creates a display column */
 RETCODE SCIPdispCreate(
    DISP**           disp,               /**< pointer to store display column */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DISPSTATUS       dispstatus,         /**< display activation status of display column */
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */
@@ -69,6 +73,8 @@ RETCODE SCIPdispCreate(
    Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
    )
 {
+   char paramname[MAXSTRLEN];
+
    assert(disp != NULL);
    assert(name != NULL);
    assert(desc != NULL);
@@ -80,6 +86,7 @@ RETCODE SCIPdispCreate(
    ALLOC_OKAY( duplicateMemoryArray(&(*disp)->name, name, strlen(name)+1) );
    ALLOC_OKAY( duplicateMemoryArray(&(*disp)->desc, desc, strlen(desc)+1) );
    ALLOC_OKAY( duplicateMemoryArray(&(*disp)->header, header, strlen(header)+1) );
+   (*disp)->dispstatus = dispstatus;
    (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
    (*disp)->dispexit = dispexit;
@@ -90,7 +97,13 @@ RETCODE SCIPdispCreate(
    (*disp)->position = position;
    (*disp)->stripline = stripline;
    (*disp)->initialized = FALSE;
-   (*disp)->active = FALSE;
+   (*disp)->active = (dispstatus == SCIP_DISPSTATUS_ON);
+
+   /* add parameters */
+   sprintf(paramname, "display/%s/active", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
+                  paramname, "display activation status of display column (0: off, 1: auto, 2:on)",
+                  &(*disp)->dispstatus, dispstatus, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -331,25 +344,46 @@ RETCODE SCIPdispAutoActivate(
    ALLOC_OKAY( duplicateMemoryArray(&disps, set->disps, set->ndisps) );
    SCIPbsortPtr((void**)disps, set->ndisps, dispCmp);
 
-   /* beginning with highest priority display column, activate columns as long as it fits into display width */
    width = 0;
+
+   /* first activate all columns with display status ON */
    for( i = 0; i < set->ndisps; ++i )
    {
       actwidth = disps[i]->width;
       if( disps[i]->stripline )
          actwidth++;
-      if( width + actwidth <= set->dispwidth )
+      if( disps[i]->dispstatus == SCIP_DISPSTATUS_ON )
       {
          disps[i]->active = TRUE;
          width += actwidth;
       }
       else
-      {
-         char s[MAXSTRLEN];
-         
          disps[i]->active = FALSE;
-         sprintf(s, "deactivated display column <%s>", disps[i]->name);
-         infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+   }
+
+   /* beginning with highest priority display column, activate AUTO columns as long as it fits into display width */
+   for( i = 0; i < set->ndisps; ++i )
+   {
+      if( disps[i]->dispstatus == SCIP_DISPSTATUS_AUTO )
+      {
+         assert(!disps[i]->active);
+
+         actwidth = disps[i]->width;
+         if( disps[i]->stripline )
+            actwidth++;
+         if( width + actwidth <= set->dispwidth )
+         {
+            disps[i]->active = TRUE;
+            width += actwidth;
+         }
+         else
+         {
+            char s[MAXSTRLEN];
+            
+            disps[i]->active = FALSE;
+            sprintf(s, "deactivated display column <%s>", disps[i]->name);
+            infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL, s);
+         }
       }
    }
 

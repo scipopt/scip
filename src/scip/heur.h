@@ -85,6 +85,8 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
 extern
 RETCODE SCIPheurCreate(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
    char             dispchar,           /**< display character of primal heuristic */

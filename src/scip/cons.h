@@ -401,6 +401,8 @@ DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 extern
 RETCODE SCIPconshdlrCreate(
    CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
    int              sepapriority,       /**< priority of the constraint handler for separation */

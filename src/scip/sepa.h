@@ -88,6 +88,8 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
 extern
 RETCODE SCIPsepaCreate(
    SEPA**           sepa,               /**< pointer to separator data structure */
+   SET*             set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of separator */
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of separator */

@@ -692,7 +692,7 @@ RETCODE readRows(
          if( cons != NULL )
             break;
 
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reader_MPS_DynamicConss", &dynamicconss) );
+         CHECK_OKAY( SCIPgetBoolParam(scip, "reader/mps/dynamicconss", &dynamicconss) );
 
          switch(*mpsinputField1(mpsi))
          {
@@ -771,7 +771,7 @@ RETCODE readCols(
 
          strcpy(colname, mpsinputField1(mpsi));
 
-         CHECK_OKAY( SCIPgetBoolParam(scip, "reader_MPS_DynamicVars", &dynamicvars) );
+         CHECK_OKAY( SCIPgetBoolParam(scip, "reader/mps/dynamicvars", &dynamicvars) );
 
          if( mpsinputIsInteger(mpsi) )
          {
@@ -1315,18 +1315,18 @@ RETCODE SCIPincludeReaderMPS(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   /* add MPS reader parameters */
-   CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader_MPS_DynamicVars", "should variables be added and removed dynamically to the problem?",
-                  NULL, TRUE, NULL, NULL) );
-   CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader_MPS_DynamicConss", "should constraints be added and removed dynamically to the problem?",
-                  NULL, TRUE, NULL, NULL) );
-   
    /* include MPS reader */
    CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
                   NULL, SCIPreaderReadMPS, NULL) );
 
+   /* add MPS reader parameters */
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+                  "reader/mps/dynamicvars", "should variables be added and removed dynamically to the problem?",
+                  NULL, TRUE, NULL, NULL) );
+   CHECK_OKAY( SCIPaddBoolParam(scip,
+                  "reader/mps/dynamicconss", "should constraints be added and removed dynamically to the problem?",
+                  NULL, TRUE, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 

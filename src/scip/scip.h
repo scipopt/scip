@@ -546,6 +546,7 @@ RETCODE SCIPincludeDisp(
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
    const char*      header,             /**< head line of display column */
+   DISPSTATUS       dispstatus,         /**< display activation status of display column */
    DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    DECL_DISPINIT    ((*dispinit)),      /**< initialise display column */
    DECL_DISPEXIT    ((*dispexit)),      /**< deinitialise display column */

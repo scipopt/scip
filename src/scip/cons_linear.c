@@ -3638,12 +3638,6 @@ RETCODE SCIPincludeConsHdlrLinear(
    /* create constraint handler data */
    CHECK_OKAY( conshdlrdataCreate(scip, &conshdlrdata) );
 
-   /* add linear constraint handler parameters */
-   CHECK_OKAY( SCIPaddIntParam(scip,
-                  "conshdlr_linear_TightenBoundsFreq",
-                  "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
-                  &conshdlrdata->tightenboundsfreq, TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
-
    /* include constraint handler in SCIP */
    CHECK_OKAY( SCIPincludeConsHdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_SEPAFREQ,
@@ -3653,6 +3647,12 @@ RETCODE SCIPincludeConsHdlrLinear(
                   consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, consPropLinear, consPresolLinear,
                   NULL, NULL,
                   conshdlrdata) );
+
+   /* add linear constraint handler parameters */
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "conshdlr/linear/tightenboundsfreq",
+                  "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
+                  &conshdlrdata->tightenboundsfreq, TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
