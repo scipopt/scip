@@ -172,8 +172,8 @@ typedef double Real;                    /**< type used for floating point values
  * Global debugging settings
  */
 
-/*#define DEBUG 1*/
-/*#define TODOMESSAGE 1*/
+/*#define DEBUG*/
+/*#define TODOMESSAGE*/
 
 
 #endif

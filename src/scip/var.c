@@ -30,147 +30,6 @@
 
 
 
-/** hole in a domain */
-struct Hole
-{
-   Real             left;               /**< left bound of open interval defining the hole $(left,right)$ */
-   Real             right;              /**< right bound of open interval defining the hole $(left,right)$ */
-};
-
-/** list of domain holes */
-struct Holelist
-{
-   HOLE             hole;               /**< this hole */
-   HOLELIST*        next;               /**< next hole in list */
-};
-
-/** change in a hole list */
-struct HoleChg
-{
-   HOLELIST**       ptr;                /**< changed list pointer */
-   HOLELIST*        newlist;            /**< new value of list pointer */
-   HOLELIST*        oldlist;            /**< old value of list pointer */
-};
-
-/** change in one bound of a variable */
-struct BoundChg
-{
-   VAR*             var;                /**< active variable to change the bounds for */
-   CONS*            infercons;          /**< constraint that infered this bound change, or NULL */
-   VAR*             infervar;           /**< variable that was changed (parent of var, or var itself) */
-   Real             newbound;           /**< new value for bound */
-   Real             oldbound;           /**< old value for bound */
-   unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
-   unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
-   unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
-};
-
-/** dynamic size attachment for domain change data */
-struct DomChgDyn
-{
-   DOMCHG**         domchg;             /**< pointer to domain change data */
-   int              boundchgssize;      /**< size of bound changes array */
-   int              holechgssize;       /**< size of hole changes array */
-};
-
-
-
-
-/*
- * memory growing methods for dynamically allocated arrays
- */
-
-/** creates empty fixed size domain change data */
-static
-RETCODE domchgCreate(
-   DOMCHG**         domchg,             /**< pointer to fixed size domain change data */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(domchg != NULL);
-   assert(memhdr != NULL);
-
-   ALLOC_OKAY( allocBlockMemory(memhdr, domchg) );
-   (*domchg)->boundchgs = NULL;
-   (*domchg)->holechgs = NULL;
-   (*domchg)->nboundchgs = 0;
-   (*domchg)->nholechgs = 0;
-
-   return SCIP_OKAY;
-}
-
-/** ensures, that boundchgs array can store at least num entries */
-static
-RETCODE ensureDynBoundchgsSize(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of entries to store */
-   )
-{
-   DOMCHG** domchg;
-
-   assert(domchgdyn != NULL);
-   assert(domchgdyn->domchg != NULL);
-
-   domchg = domchgdyn->domchg;
-   assert(*domchg != NULL || domchgdyn->boundchgssize == 0);
-   assert(*domchg == NULL || (*domchg)->nboundchgs <= domchgdyn->boundchgssize);
-
-   if( num > domchgdyn->boundchgssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      if( *domchg == NULL )
-      {
-         CHECK_OKAY( domchgCreate(domchg, memhdr) );
-      }
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->boundchgs, domchgdyn->boundchgssize, newsize) );
-      domchgdyn->boundchgssize = newsize;
-   }
-   assert(num <= domchgdyn->boundchgssize);
-
-   return SCIP_OKAY;
-}
-
-/** ensures, that holechgs array can store at least num additional entries */
-static
-RETCODE ensureHolechgsSize(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   int              num                 /**< minimum number of additional entries to store */
-   )
-{
-   DOMCHG** domchg;
-
-   assert(domchgdyn != NULL);
-   assert(domchgdyn->domchg != NULL);
-
-   domchg = domchgdyn->domchg;
-   assert(*domchg != NULL || domchgdyn->holechgssize == 0);
-   assert(*domchg == NULL || (*domchg)->nholechgs <= domchgdyn->holechgssize);
-
-   if( num > domchgdyn->holechgssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      if( *domchg == NULL )
-      {
-         CHECK_OKAY( domchgCreate(domchg, memhdr) );
-      }
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->holechgs, domchgdyn->holechgssize, newsize) );
-      domchgdyn->holechgssize = newsize;
-   }
-   assert(num <= domchgdyn->holechgssize);
-
-   return SCIP_OKAY;
-}
-
-
-
 
 /*
  * hole, holelist, and domain methods
@@ -327,32 +186,14 @@ RETCODE domMerge(
 }
 
 
+
+
 /*
  * domain change methods
  */
 
-/** frees fixed size domain change data */
-RETCODE SCIPdomchgFree(
-   DOMCHG**         domchg,             /**< pointer to domain change */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(domchg != NULL);
-   assert(memhdr != NULL);
-
-   if( *domchg != NULL )
-   {
-      freeBlockMemoryArrayNull(memhdr, &(*domchg)->boundchgs, (*domchg)->nboundchgs);
-      freeBlockMemoryArrayNull(memhdr, &(*domchg)->holechgs, (*domchg)->nholechgs);
-      freeBlockMemory(memhdr, domchg);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** applies single bound change */
-static
-RETCODE boundchgApply(
+RETCODE SCIPboundchgApply(
    BOUNDCHG*        boundchg,           /**< bound change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -387,8 +228,7 @@ RETCODE boundchgApply(
 }
 
 /** undoes single bound change */
-static
-RETCODE boundchgUndo(
+RETCODE SCIPboundchgUndo(
    BOUNDCHG*        boundchg,           /**< bound change to remove */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -422,6 +262,235 @@ RETCODE boundchgUndo(
    return SCIP_OKAY;
 }
 
+/** creates empty domain change data with dynamic arrays */
+static
+RETCODE domchgCreate(
+   DOMCHG**         domchg,             /**< pointer to domain change data */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(domchg != NULL);
+   assert(memhdr != NULL);
+
+   ALLOC_OKAY( allocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN)) );
+   (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC;
+   (*domchg)->domchgdyn.nboundchgs = 0;
+   (*domchg)->domchgdyn.boundchgs = NULL;
+   (*domchg)->domchgdyn.nholechgs = 0;
+   (*domchg)->domchgdyn.holechgs = NULL;
+   (*domchg)->domchgdyn.boundchgssize = 0;
+   (*domchg)->domchgdyn.holechgssize = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees domain change data */
+RETCODE SCIPdomchgFree(
+   DOMCHG**         domchg,             /**< pointer to domain change */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(domchg != NULL);
+   assert(memhdr != NULL);
+
+   if( *domchg != NULL )
+   {
+      switch( (*domchg)->domchgdyn.domchgtype )
+      {
+      case SCIP_DOMCHGTYPE_BOUND:
+         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgbound.boundchgs, (*domchg)->domchgbound.nboundchgs);
+         freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOUND));
+         break;
+      case SCIP_DOMCHGTYPE_BOTH:
+         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgboth.boundchgs, (*domchg)->domchgboth.nboundchgs);
+         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgboth.holechgs, (*domchg)->domchgboth.nholechgs);
+         freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOTH));
+         break;
+      case SCIP_DOMCHGTYPE_DYNAMIC:
+         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgdyn.boundchgs, (*domchg)->domchgdyn.boundchgssize);
+         freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
+         freeBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN));
+         break;
+      default:
+         errorMessage("invalid domain change type");
+         abort();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** converts a static domain change data into a dynamic one */
+static
+RETCODE domchgMakeDynamic(
+   DOMCHG**         domchg,             /**< pointer to domain change data */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(domchg != NULL);
+   assert(memhdr != NULL);
+
+   debugMessage("making domain change data %p pointing to %p dynamic\n", domchg, *domchg);
+
+   if( *domchg == NULL )
+   {
+      CHECK_OKAY( domchgCreate(domchg, memhdr) );
+   }
+   else
+   {
+      switch( (*domchg)->domchgdyn.domchgtype )
+      {
+      case SCIP_DOMCHGTYPE_BOUND:
+         ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOUND), sizeof(DOMCHGDYN)) );
+         (*domchg)->domchgdyn.nholechgs = 0;
+         (*domchg)->domchgdyn.holechgs = NULL;
+         (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
+         (*domchg)->domchgdyn.holechgssize = 0;
+         (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC;
+         break;
+      case SCIP_DOMCHGTYPE_BOTH:
+         ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOTH), sizeof(DOMCHGDYN)) );
+         (*domchg)->domchgdyn.boundchgssize = (*domchg)->domchgdyn.nboundchgs;
+         (*domchg)->domchgdyn.holechgssize = (*domchg)->domchgdyn.nholechgs;
+         (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_DYNAMIC;
+         break;
+      case SCIP_DOMCHGTYPE_DYNAMIC:
+         break;
+      default:
+         errorMessage("invalid domain change type");
+         abort();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
+RETCODE SCIPdomchgMakeStatic(
+   DOMCHG**         domchg,             /**< pointer to domain change data */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   assert(domchg != NULL);
+   assert(memhdr != NULL);
+
+   debugMessage("making domain change data %p pointing to %p static\n", domchg, *domchg);
+
+   if( *domchg != NULL )
+   {
+      switch( (*domchg)->domchgdyn.domchgtype )
+      {
+      case SCIP_DOMCHGTYPE_BOUND:
+         if( (*domchg)->domchgbound.nboundchgs == 0 )
+         {
+            CHECK_OKAY( SCIPdomchgFree(domchg, memhdr) );
+         }
+         break;
+      case SCIP_DOMCHGTYPE_BOTH:
+         if( (*domchg)->domchgboth.nholechgs == 0 )
+         {
+            if( (*domchg)->domchgbound.nboundchgs == 0 )
+            {
+               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr) );
+            }
+            else
+            {
+               ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGBOTH), sizeof(DOMCHGBOUND)) );
+               (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOUND;
+            }
+         }
+         break;
+      case SCIP_DOMCHGTYPE_DYNAMIC:
+         if( (*domchg)->domchgboth.nholechgs == 0 )
+         {
+            if( (*domchg)->domchgbound.nboundchgs == 0 )
+            {
+               CHECK_OKAY( SCIPdomchgFree(domchg, memhdr) );
+            }
+            else
+            {
+               /* shrink dynamic size arrays to their minimal sizes */
+               ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->domchgdyn.boundchgs,
+                              (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+               freeBlockMemoryArrayNull(memhdr, &(*domchg)->domchgdyn.holechgs, (*domchg)->domchgdyn.holechgssize);
+            
+               /* convert into static domain change */
+               ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN), sizeof(DOMCHGBOUND)) );
+               (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOUND;
+            }
+         }
+         else
+         {
+            /* shrink dynamic size arrays to their minimal sizes */
+            ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->domchgdyn.boundchgs,
+                           (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
+            ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->domchgdyn.holechgs,
+                           (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
+
+            /* convert into static domain change */
+            ALLOC_OKAY( reallocBlockMemorySize(memhdr, domchg, sizeof(DOMCHGDYN), sizeof(DOMCHGBOTH)) );
+            (*domchg)->domchgdyn.domchgtype = SCIP_DOMCHGTYPE_BOTH;
+         }
+         break;
+      default:
+         errorMessage("invalid domain change type");
+         abort();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that boundchgs array can store at least num entries */
+static
+RETCODE domchgEnsureBoundchgsSize(
+   DOMCHG*          domchg,             /**< domain change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(domchg != NULL);
+   assert(domchg->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC);
+
+   if( num > domchg->domchgdyn.boundchgssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &domchg->domchgdyn.boundchgs, domchg->domchgdyn.boundchgssize, newsize) );
+      domchg->domchgdyn.boundchgssize = newsize;
+   }
+   assert(num <= domchg->domchgdyn.boundchgssize);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that holechgs array can store at least num additional entries */
+static
+RETCODE domchgEnsureHolechgsSize(
+   DOMCHG*          domchg,             /**< domain change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of additional entries to store */
+   )
+{
+   assert(domchg != NULL);
+   assert(domchg->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC);
+
+   if( num > domchg->domchgdyn.holechgssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &domchg->domchgdyn.holechgs, domchg->domchgdyn.holechgssize, newsize) );
+      domchg->domchgdyn.holechgssize = newsize;
+   }
+   assert(num <= domchg->domchgdyn.holechgssize);
+
+   return SCIP_OKAY;
+}
+
 /** applies domain change */
 RETCODE SCIPdomchgApply(
    DOMCHG*          domchg,             /**< domain change to apply */
@@ -441,17 +510,22 @@ RETCODE SCIPdomchgApply(
    debugMessage("applying domain changes at %p\n", domchg);
    if( domchg == NULL )
       return SCIP_OKAY;
-   debugMessage(" -> %d bound changes, %d hole changes\n", domchg->nboundchgs, domchg->nholechgs);
 
    /* apply bound changes */
-   for( i = 0; i < domchg->nboundchgs; ++i )
+   for( i = 0; i < domchg->domchgbound.nboundchgs; ++i )
    {
-      CHECK_OKAY( boundchgApply(&domchg->boundchgs[i], memhdr, set, stat, tree, lp, branchcand, eventqueue) );
+      CHECK_OKAY( SCIPboundchgApply(&domchg->domchgbound.boundchgs[i], memhdr, set, stat, tree, lp,
+                     branchcand, eventqueue) );
    }
-
+   debugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
+   
    /* apply holelist changes */
-   for( i = 0; i < domchg->nholechgs; ++i )
-      *(domchg->holechgs[i].ptr) = domchg->holechgs[i].newlist;
+   if( domchg->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_BOUND )
+   {
+      for( i = 0; i < domchg->domchgboth.nholechgs; ++i )
+         *(domchg->domchgboth.holechgs[i].ptr) = domchg->domchgboth.holechgs[i].newlist;
+      debugMessage(" -> %d hole changes\n", domchg->domchgboth.nholechgs);
+   }
 
    return SCIP_OKAY;
 }
@@ -475,173 +549,29 @@ RETCODE SCIPdomchgUndo(
    debugMessage("undoing domain changes at %p\n", domchg);
    if( domchg == NULL )
       return SCIP_OKAY;
-   debugMessage(" -> %d bound changes, %d hole changes\n", domchg->nboundchgs, domchg->nholechgs);
-
-   /* undo bound changes */
-   for( i = domchg->nboundchgs-1; i >= 0; --i )
-   {
-      CHECK_OKAY( boundchgUndo(&domchg->boundchgs[i], memhdr, set, stat, tree, lp, branchcand, eventqueue) );
-   }
 
    /* undo holelist changes */
-   for( i = domchg->nholechgs-1; i >= 0; --i )
-      *(domchg->holechgs[i].ptr) = domchg->holechgs[i].oldlist;
+   if( domchg->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_BOUND )
+   {
+      for( i = domchg->domchgboth.nholechgs-1; i >= 0; --i )
+         *(domchg->domchgboth.holechgs[i].ptr) = domchg->domchgboth.holechgs[i].oldlist;
+      debugMessage(" -> %d hole changes\n", domchg->domchgboth.nholechgs);
+   }
+
+   /* undo bound changes */
+   for( i = domchg->domchgbound.nboundchgs-1; i >= 0; --i )
+   {
+      CHECK_OKAY( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], memhdr, set, stat, tree, lp,
+                     branchcand, eventqueue) );
+   }
+   debugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
 
    return SCIP_OKAY;
 }
 
-
-/*
- * dynamic size attachment methods
- */
-
-/** creates a dynamic size attachment for a domain change data structure */
-RETCODE SCIPdomchgdynCreate(
-   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(domchgdyn != NULL);
-
-   ALLOC_OKAY( allocBlockMemory(memhdr, domchgdyn) );
-
-   (*domchgdyn)->domchg = NULL;
-   (*domchgdyn)->boundchgssize = 0;
-   (*domchgdyn)->holechgssize = 0;
-
-   return SCIP_OKAY;
-}
-
-/** frees a dynamic size attachment for a domain change data structure */
-void SCIPdomchgdynFree(
-   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(domchgdyn != NULL);
-   assert(*domchgdyn != NULL);
-   assert((*domchgdyn)->domchg == NULL);
-   assert((*domchgdyn)->boundchgssize == 0);
-   assert((*domchgdyn)->holechgssize == 0);
-
-   freeBlockMemory(memhdr, domchgdyn);
-}
-
-/** attaches dynamic size information to domain change data */
-void SCIPdomchgdynAttach(
-   DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
-   DOMCHG**         domchg              /**< pointer to static domain change */
-   )
-{
-   assert(domchgdyn != NULL);
-   assert(domchgdyn->domchg == NULL);
-   assert(domchgdyn->boundchgssize == 0);
-   assert(domchgdyn->holechgssize == 0);
-   assert(domchg != NULL);
-
-   debugMessage("attaching dynamic size information at %p to domain change data at %p\n", domchgdyn, domchg);
-   domchgdyn->domchg = domchg;
-   if( *domchg != NULL )
-   {
-      domchgdyn->boundchgssize = (*domchg)->nboundchgs;
-      domchgdyn->holechgssize = (*domchg)->nholechgs;
-   }
-   else
-   {
-      domchgdyn->boundchgssize = 0;
-      domchgdyn->holechgssize = 0;
-   }
-}
-
-/** detaches dynamic size information and shrinks domain change data */
-RETCODE SCIPdomchgdynDetach(
-   DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(domchgdyn != NULL);
-   debugMessage("detaching dynamic size information at %p from domain change data at %p\n", domchgdyn, domchgdyn->domchg);
-   assert(domchgdyn->domchg != NULL);
-   assert(domchgdyn->boundchgssize == 0 || *domchgdyn->domchg != NULL);
-   assert(domchgdyn->boundchgssize == 0 || (*domchgdyn->domchg)->nboundchgs <= domchgdyn->boundchgssize);
-   assert(domchgdyn->holechgssize == 0 || *domchgdyn->domchg != NULL);
-   assert(domchgdyn->holechgssize == 0 || (*domchgdyn->domchg)->nholechgs <= domchgdyn->holechgssize);
-
-   /* shrink static domain change data to the size of the used elements */
-   if( *domchgdyn->domchg != NULL )
-   {
-      if( (*domchgdyn->domchg)->nboundchgs == 0 )
-      {
-         freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->boundchgs, domchgdyn->boundchgssize);
-      }
-      else
-      {
-         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchgdyn->domchg)->boundchgs,
-                        domchgdyn->boundchgssize, (*domchgdyn->domchg)->nboundchgs) );
-      }
-      if( (*domchgdyn->domchg)->nholechgs == 0 )
-      {
-         freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->holechgs, domchgdyn->holechgssize);
-      }
-      else
-      {
-         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchgdyn->domchg)->holechgs,
-                        domchgdyn->holechgssize, (*domchgdyn->domchg)->nholechgs) );
-      }
-      if( (*domchgdyn->domchg)->nboundchgs == 0 && (*domchgdyn->domchg)->nholechgs == 0 )
-      {
-         CHECK_OKAY( SCIPdomchgFree(domchgdyn->domchg, memhdr) );
-      }
-   }
-   else
-   {
-      assert(domchgdyn->boundchgssize == 0);
-      assert(domchgdyn->holechgssize == 0);
-   }
-
-   /* detach domain change data */
-   domchgdyn->domchg = NULL;
-   domchgdyn->boundchgssize = 0;
-   domchgdyn->holechgssize = 0;
-
-   return SCIP_OKAY;
-}
-
-/** frees attached domain change data and detaches dynamic size attachment */
-RETCODE SCIPdomchgdynDiscard(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(domchgdyn != NULL);
-   debugMessage("discarding dynamic size information at %p from domain change data at %p\n", domchgdyn, domchgdyn->domchg);
-   assert(domchgdyn->domchg != NULL);
-   assert(domchgdyn->boundchgssize == 0 || *domchgdyn->domchg != NULL);
-   assert(domchgdyn->boundchgssize == 0 || (*domchgdyn->domchg)->nboundchgs <= domchgdyn->boundchgssize);
-   assert(domchgdyn->holechgssize == 0 || *domchgdyn->domchg != NULL);
-   assert(domchgdyn->holechgssize == 0 || (*domchgdyn->domchg)->nholechgs <= domchgdyn->holechgssize);
-
-   /* free static domain change data */
-   if( *domchgdyn->domchg != NULL )
-   {      
-      freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->boundchgs, domchgdyn->boundchgssize);
-      (*domchgdyn->domchg)->nboundchgs = 0;
-      freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->holechgs, domchgdyn->holechgssize);
-      (*domchgdyn->domchg)->nholechgs = 0;
-      CHECK_OKAY( SCIPdomchgFree(domchgdyn->domchg, memhdr) );
-      domchgdyn->boundchgssize = 0;
-      domchgdyn->holechgssize = 0;
-   }
-
-   /* detach domain change data */
-   domchgdyn->domchg = NULL;
-
-   return SCIP_OKAY;
-}
-
-/** adds bound change to domain changes, and applies bound change immediately, if the given node is the active node */
-RETCODE SCIPdomchgdynAddBoundchg(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+/** adds bound change to domain changes */
+RETCODE SCIPdomchgAddBoundchg(
+   DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -658,11 +588,9 @@ RETCODE SCIPdomchgdynAddBoundchg(
    VAR*             infervar            /**< variable that was changed (parent of var, or var itself) */
    )
 {
-   DOMCHG* domchg;
-   int nboundchgs;
+   BOUNDCHG* boundchg;
 
-   assert(domchgdyn != NULL);
-   assert(domchgdyn->domchg != NULL);
+   assert(domchg != NULL);
    assert(var != NULL);
    assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
@@ -671,40 +599,42 @@ RETCODE SCIPdomchgdynAddBoundchg(
    assert(var->vartype == SCIP_VARTYPE_BINARY || infercons == NULL);
 
    debugMessage("adding bound change <%s>: %g -> %g of variable <%s> to domain change at %p pointing to %p\n",
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchgdyn->domchg,
-      *domchgdyn->domchg);
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", oldbound, newbound, var->name, domchg, *domchg);
+
+   /* if domain change data doesn't exist, create it;
+    * if domain change is static, convert it into dynamic change
+    */
+   if( *domchg == NULL )
+   {
+      CHECK_OKAY( domchgCreate(domchg, memhdr) );
+   }
+   else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC )
+   {
+      CHECK_OKAY( domchgMakeDynamic(domchg, memhdr) );
+   }
+   assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC);
 
    /* get memory for additional bound change */
-   nboundchgs = (*domchgdyn->domchg == NULL ? 0 : (*domchgdyn->domchg)->nboundchgs);
-   CHECK_OKAY( ensureDynBoundchgsSize(domchgdyn, memhdr, set, nboundchgs+1) );
+   CHECK_OKAY( domchgEnsureBoundchgsSize(*domchg, memhdr, set, (*domchg)->domchgdyn.nboundchgs+1) );
 
    /* fill in the bound change data */
-   domchg = *domchgdyn->domchg;
-   assert(domchg != NULL);
-
-   domchg->boundchgs[domchg->nboundchgs].var = var;
-   domchg->boundchgs[domchg->nboundchgs].infercons = infercons;
-   domchg->boundchgs[domchg->nboundchgs].infervar = infervar;
-   domchg->boundchgs[domchg->nboundchgs].newbound = newbound;
-   domchg->boundchgs[domchg->nboundchgs].oldbound = oldbound;
-   domchg->boundchgs[domchg->nboundchgs].inferdepth = node->depth;
-   domchg->boundchgs[domchg->nboundchgs].infernum = domchg->nboundchgs;
-   domchg->boundchgs[domchg->nboundchgs].boundtype = boundtype;
-   domchg->nboundchgs++;
-
-   /* if node is the active node, apply the bound change immediately */
-   if( node->nodetype == SCIP_NODETYPE_ACTNODE )
-   {
-      CHECK_OKAY( boundchgApply(&domchg->boundchgs[domchg->nboundchgs-1], memhdr, set, stat, tree, lp,
-                     branchcand, eventqueue) );
-   }
+   boundchg = &(*domchg)->domchgdyn.boundchgs[(*domchg)->domchgdyn.nboundchgs];
+   boundchg->var = var;
+   boundchg->infercons = infercons;
+   boundchg->infervar = infervar;
+   boundchg->newbound = newbound;
+   boundchg->oldbound = oldbound;
+   boundchg->inferdepth = node->depth;
+   boundchg->infernum = (*domchg)->domchgdyn.nboundchgs;
+   boundchg->boundtype = boundtype;
+   (*domchg)->domchgdyn.nboundchgs++;
 
    return SCIP_OKAY;
 }
 
 /** adds hole change to domain changes */
-RETCODE SCIPdomchgdynAddHolechg(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+RETCODE SCIPdomchgAddHolechg(
+   DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    HOLELIST**       ptr,                /**< changed list pointer */
@@ -712,36 +642,38 @@ RETCODE SCIPdomchgdynAddHolechg(
    HOLELIST*        oldlist             /**< old value of list pointer */
    )
 {
-   DOMCHG* domchg;
-   int nholechgs;
+   HOLECHG* holechg;
 
-   assert(domchgdyn != NULL);
-   assert(domchgdyn->domchg != NULL);
+   assert(domchg != NULL);
    assert(ptr != NULL);
 
-   nholechgs = (*domchgdyn->domchg == NULL ? 0 : (*domchgdyn->domchg)->nholechgs);
-   CHECK_OKAY( ensureHolechgsSize(domchgdyn, memhdr, set, nholechgs+1) );
+   /* if domain change data doesn't exist, create it;
+    * if domain change is static, convert it into dynamic change
+    */
+   if( *domchg == NULL )
+   {
+      CHECK_OKAY( domchgCreate(domchg, memhdr) );
+   }
+   else if( (*domchg)->domchgdyn.domchgtype != SCIP_DOMCHGTYPE_DYNAMIC )
+   {
+      CHECK_OKAY( domchgMakeDynamic(domchg, memhdr) );
+   }
+   assert(*domchg != NULL && (*domchg)->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC);
 
-   domchg = *domchgdyn->domchg;
-   assert(domchg != NULL);
+   /* get memory for additional hole change */
+   CHECK_OKAY( domchgEnsureHolechgsSize(*domchg, memhdr, set, (*domchg)->domchgdyn.nholechgs+1) );
 
-   domchg->holechgs[domchg->nholechgs].ptr = ptr;
-   domchg->holechgs[domchg->nholechgs].newlist = newlist;
-   domchg->holechgs[domchg->nholechgs].oldlist = oldlist;
-   domchg->nholechgs++;
+   /* fill in the hole change data */
+   holechg = &(*domchg)->domchgdyn.holechgs[(*domchg)->domchgdyn.nholechgs];
+   holechg->ptr = ptr;
+   holechg->newlist = newlist;
+   holechg->oldlist = oldlist;
+   (*domchg)->domchgdyn.nholechgs++;
 
    return SCIP_OKAY;
 }
 
-/** gets pointer to domain change data the dynamic size information references */
-DOMCHG** SCIPdomchgdynGetDomchgPtr(
-   DOMCHGDYN*       domchgdyn           /**< dynamically sized domain change data structure */
-   )
-{
-   assert(domchgdyn != NULL);
 
-   return domchgdyn->domchg;
-}
 
 
 /*

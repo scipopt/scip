@@ -50,6 +50,25 @@
 
 
 /*
+ * Data structures
+ */
+
+/* TODO: fill in the necessary constraint data */
+
+/** constraint data for xxx constraints */
+struct ConsData
+{
+};
+
+/** constraint handler data */
+struct ConsHdlrData
+{
+};
+
+
+
+
+/*
  * Local methods
  */
 

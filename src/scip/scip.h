@@ -1179,6 +1179,14 @@ RETCODE SCIPreleaseCons(
    CONS**           cons                /**< pointer to constraint */
    );
 
+/** copies original constraint into transformed constraint, that is captured */
+extern
+RETCODE SCIPtransformCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            origcons,           /**< original constraint */
+   CONS**           transcons           /**< pointer to store the transformed constraint */
+   );
+
 /** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
  *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
  *  deduced.
@@ -2904,6 +2912,12 @@ RETCODE SCIPreleaseBuffer(
 /**@name Dynamic Arrays */
 /**@{ */
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** creates a dynamic array of real values */
 extern
 RETCODE SCIPcreateRealarray(
@@ -3062,6 +3076,48 @@ RETCODE SCIPsetBoolarrayVal(
    int              idx,                /**< array index to set value for */
    Bool             val                 /**< value to set array index to */
    );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcreateRealarray(scip, realarray) SCIPrealarrayCreate(realarray, SCIPmemhdr(scip))
+#define SCIPfreeRealarray(scip, realarray)   SCIPrealarrayFree(realarray)
+#define SCIPextendRealarray(scip, realarray, minidx, maxidx) \
+                                             SCIPrealarrayExtend(realarray, (scip)->set, minidx, maxidx)
+#define SCIPclearRealarray(scip, realarray)  SCIPrealarrayClear(realarray)
+#define SCIPgetRealarrayVal(scip, realarray, idx) \
+                                             SCIPrealarrayGetVal(realarray, idx)
+#define SCIPsetRealarrayVal(scip, realarray, idx, val) \
+                                             SCIPrealarraySetVal(realarray, (scip)->set, idx, val)
+#define SCIPincRealarrayVal(scip, realarray, idx, incval) \
+                                             SCIPrealarrayIncVal(realarray, scip->set, idx, incval)
+
+#define SCIPcreateIntarray(scip, intarray)   SCIPintarrayCreate(intarray, SCIPmemhdr(scip))
+#define SCIPfreeIntarray(scip, intarray)     SCIPintarrayFree(intarray)
+#define SCIPextendIntarray(scip, intarray, minidx, maxidx) \
+                                             SCIPintarrayExtend(intarray, (scip)->set, minidx, maxidx)
+#define SCIPclearIntarray(scip, intarray)    SCIPintarrayClear(intarray)
+#define SCIPgetIntarrayVal(scip, intarray, idx) \
+                                             SCIPintarrayGetVal(intarray, idx)
+#define SCIPsetIntarrayVal(scip, intarray, idx, val) \
+                                             SCIPintarraySetVal(intarray, (scip)->set, idx, val)
+#define SCIPincIntarrayVal(scip, intarray, idx, incval) \
+                                             SCIPintarrayIncVal(intarray, scip->set, idx, incval)
+
+#define SCIPcreateBoolarray(scip, boolarray) SCIPboolarrayCreate(boolarray, SCIPmemhdr(scip))
+#define SCIPfreeBoolarray(scip, boolarray)   SCIPboolarrayFree(boolarray)
+#define SCIPextendBoolarray(scip, boolarray, minidx, maxidx) \
+                                             SCIPboolarrayExtend(boolarray, (scip)->set, minidx, maxidx)
+#define SCIPclearBoolarray(scip, boolarray)  SCIPboolarrayClear(boolarray)
+#define SCIPgetBoolarrayVal(scip, boolarray, idx) \
+                                             SCIPboolarrayGetVal(boolarray, idx)
+#define SCIPsetBoolarrayVal(scip, boolarray, idx, val) \
+                                             SCIPboolarraySetVal(boolarray, (scip)->set, idx, val)
+
+#endif
 
 /**@} */
 

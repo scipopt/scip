@@ -829,7 +829,7 @@ RETCODE SCIPrealarrayExtend(
 }
 
 /** clears a dynamic real array */
-void SCIPrealarrayClear(
+RETCODE SCIPrealarrayClear(
    REALARRAY*       realarray           /**< dynamic real array */
    )
 {
@@ -857,6 +857,8 @@ void SCIPrealarrayClear(
    }
    assert(realarray->minusedidx == INT_MAX);
    assert(realarray->maxusedidx == INT_MIN);
+
+   return SCIP_OKAY;
 }
 
 /** gets value of entry in dynamic array */
@@ -1175,7 +1177,7 @@ RETCODE SCIPintarrayExtend(
 }
 
 /** clears a dynamic int array */
-void SCIPintarrayClear(
+RETCODE SCIPintarrayClear(
    INTARRAY*        intarray            /**< dynamic int array */
    )
 {
@@ -1203,6 +1205,8 @@ void SCIPintarrayClear(
    }
    assert(intarray->minusedidx == INT_MAX);
    assert(intarray->maxusedidx == INT_MIN);
+
+   return SCIP_OKAY;
 }
 
 /** gets value of entry in dynamic array */
@@ -1521,7 +1525,7 @@ RETCODE SCIPboolarrayExtend(
 }
 
 /** clears a dynamic bool array */
-void SCIPboolarrayClear(
+RETCODE SCIPboolarrayClear(
    BOOLARRAY*       boolarray           /**< dynamic bool array */
    )
 {
@@ -1549,6 +1553,8 @@ void SCIPboolarrayClear(
    }
    assert(boolarray->minusedidx == INT_MAX);
    assert(boolarray->maxusedidx == INT_MIN);
+
+   return SCIP_OKAY;
 }
 
 /** gets value of entry in dynamic array */

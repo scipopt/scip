@@ -2963,6 +2963,20 @@ RETCODE SCIPreleaseCons(
    }
 }
 
+/** copies original constraint into transformed constraint, that is captured */
+RETCODE SCIPtransformCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            origcons,           /**< original constraint */
+   CONS**           transcons           /**< pointer to store the transformed constraint */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPtransformCons", FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconsTransform(transcons, scip->mem->solvemem, scip->set, origcons) );
+
+   return SCIP_OKAY;
+}
+
 /** increases age of constraint; should be called in constraint separation, if no cut was found for this constraint,
  *  in constraint enforcing, if constraint was feasible, and in constraint propagation, if no domain reduction was
  *  deduced.
@@ -6475,6 +6489,12 @@ RETCODE SCIPreleaseBuffer(
  * dynamic arrays
  */
 
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** creates a dynamic array of real values */
 RETCODE SCIPcreateRealarray(
    SCIP*            scip,               /**< SCIP data structure */
@@ -6539,8 +6559,6 @@ Real SCIPgetRealarrayVal(
    CHECK_OKAY( checkStage(scip, "SCIPgetRealarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    return SCIPrealarrayGetVal(realarray, idx);
-   
-   return SCIP_OKAY;
 }
 
 /** sets value of entry in dynamic array */
@@ -6637,8 +6655,6 @@ int SCIPgetIntarrayVal(
    CHECK_OKAY( checkStage(scip, "SCIPgetIntarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    return SCIPintarrayGetVal(intarray, idx);
-   
-   return SCIP_OKAY;
 }
 
 /** sets value of entry in dynamic array */
@@ -6735,8 +6751,6 @@ Bool SCIPgetBoolarrayVal(
    CHECK_OKAY( checkStage(scip, "SCIPgetBoolarray", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
    return SCIPboolarrayGetVal(boolarray, idx);
-   
-   return SCIP_OKAY;
 }
 
 /** sets value of entry in dynamic array */
@@ -6753,6 +6767,8 @@ RETCODE SCIPsetBoolarrayVal(
    
    return SCIP_OKAY;
 }
+
+#endif
 
 
 

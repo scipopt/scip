@@ -560,7 +560,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
 
       if( stored )
       {
-#if DEBUG
+#ifdef DEBUG
          printf("found feasible rounded solution:\n");
          SCIPprintSol(scip, sol, NULL);
 #endif

@@ -49,8 +49,19 @@ enum Vartype
 };
 typedef enum Vartype VARTYPE;
 
-typedef struct DomChg DOMCHG;           /**< changes in domains of variables (fixed sized arrays) */
-typedef struct DomChgDyn DOMCHGDYN;     /**< changes in domains of variables (dynamically sized arrays) */
+/** domain change data type */
+enum DomchgType
+{
+   SCIP_DOMCHGTYPE_DYNAMIC = 0,         /**< dynamic bound changes with size information of arrays */
+   SCIP_DOMCHGTYPE_BOTH    = 1,         /**< static domain changes: number of entries equals size of arrays */
+   SCIP_DOMCHGTYPE_BOUND   = 2          /**< static domain changes without any hole changes */
+};
+typedef enum DomchgType DOMCHGTYPE;
+
+typedef struct DomChgBound DOMCHGBOUND; /**< static domain change for bound changes */
+typedef struct DomChgBoth DOMCHGBOTH;   /**< static domain change for bound and hole changes */
+typedef struct DomChgDyn DOMCHGDYN;     /**< dynamic domain change for bound and hole changes */
+typedef union DomChg DOMCHG;            /**< changes in domains of variables */
 typedef struct BoundChg BOUNDCHG;       /**< changes in bounds of variables */
 typedef struct HoleChg HOLECHG;         /**< changes in holelist of variables */
 typedef struct Hole HOLE;               /**< hole in a domain of an integer variable */
@@ -75,13 +86,77 @@ typedef struct Var VAR;                 /**< variable of the problem */
 #include "event.h"
 
 
-/** tracks changes of the variable's domains (fixed sized arrays) */
-struct DomChg
+/** hole in a domain */
+struct Hole
 {
+   Real             left;               /**< left bound of open interval defining the hole $(left,right)$ */
+   Real             right;              /**< right bound of open interval defining the hole $(left,right)$ */
+};
+
+/** list of domain holes */
+struct Holelist
+{
+   HOLE             hole;               /**< this hole */
+   HOLELIST*        next;               /**< next hole in list */
+};
+
+/** change in a hole list */
+struct HoleChg
+{
+   HOLELIST**       ptr;                /**< changed list pointer */
+   HOLELIST*        newlist;            /**< new value of list pointer */
+   HOLELIST*        oldlist;            /**< old value of list pointer */
+};
+
+/** change in one bound of a variable */
+struct BoundChg
+{
+   VAR*             var;                /**< active variable to change the bounds for */
+   CONS*            infercons;          /**< constraint that infered this bound change, or NULL */
+   VAR*             infervar;           /**< variable that was changed (parent of var, or var itself) */
+   Real             newbound;           /**< new value for bound */
+   Real             oldbound;           /**< old value for bound */
+   unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
+   unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
+   unsigned int     boundtype:1;        /**< type of bound for var: lower or upper bound */
+};
+
+/** tracks changes of the variable's domains (static arrays, bound changes only) */
+struct DomChgBound
+{
+   unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
+   unsigned int     nboundchgs:30;      /**< number of bound changes */
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
-   HOLECHG*         holechgs;           /**< array with changes in hole lists */
-   int              nboundchgs;         /**< number of bound changes */
+};
+
+/** tracks changes of the variable's domains (static arrays, bound and hole changes) */
+struct DomChgBoth
+{
+   unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
+   unsigned int     nboundchgs:30;      /**< number of bound changes */
+   BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
    int              nholechgs;          /**< number of hole list changes */
+   HOLECHG*         holechgs;           /**< array with changes in hole lists */
+};
+
+/** tracks changes of the variable's domains (dynamic arrays) */
+struct DomChgDyn
+{
+   unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
+   unsigned int     nboundchgs:30;      /**< number of bound changes */
+   BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
+   int              nholechgs;          /**< number of hole list changes */
+   HOLECHG*         holechgs;           /**< array with changes in hole lists */
+   int              boundchgssize;      /**< size of bound changes array */
+   int              holechgssize;       /**< size of hole changes array */
+};
+
+/** tracks changes of the variable's domains */
+union DomChg
+{
+   DOMCHGBOUND      domchgbound;        /**< bound changes */
+   DOMCHGBOTH       domchgboth;         /**< bound and hole changes */
+   DOMCHGDYN        domchgdyn;          /**< bound and hole changes with dynamic arrays */
 };
 
 /** domain of a variable */
@@ -156,14 +231,48 @@ struct Var
 
 
 
+
 /*
  * domain change methods
  */
 
-/** frees fixed size domain change data */
+/** applies single bound change */
+extern
+RETCODE SCIPboundchgApply(
+   BOUNDCHG*        boundchg,           /**< bound change to apply */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
+/** undoes single bound change */
+extern
+RETCODE SCIPboundchgUndo(
+   BOUNDCHG*        boundchg,           /**< bound change to remove */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue          /**< event queue */
+   );
+
+/** frees domain change data */
 extern
 RETCODE SCIPdomchgFree(
    DOMCHG**         domchg,             /**< pointer to domain change */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+/** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
+extern
+RETCODE SCIPdomchgMakeStatic(
+   DOMCHG**         domchg,             /**< pointer to domain change data */
    MEMHDR*          memhdr              /**< block memory */
    );
 
@@ -193,50 +302,10 @@ RETCODE SCIPdomchgUndo(
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
-
-/*
- * dynamic size attachment methods
- */
-
-/** creates a dynamic size attachment for a domain change data structure */
+/** adds bound change to domain changes */
 extern
-RETCODE SCIPdomchgdynCreate(
-   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-/** frees a dynamic size attachment for a domain change data structure */
-extern
-void SCIPdomchgdynFree(
-   DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-/** attaches dynamic size information to domain change data */
-extern
-void SCIPdomchgdynAttach(
-   DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
-   DOMCHG**         domchg              /**< pointer to static domain change */
-   );
-
-/** detaches dynamic size information and shrinks domain change data */
-extern
-RETCODE SCIPdomchgdynDetach(
-   DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-/** frees attached domain change data and detaches dynamic size attachment */
-extern
-RETCODE SCIPdomchgdynDiscard(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-/** adds bound change to domain changes, and applies bound change immediately, if the given node is the active node */
-extern
-RETCODE SCIPdomchgdynAddBoundchg(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+RETCODE SCIPdomchgAddBoundchg(
+   DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -255,8 +324,8 @@ RETCODE SCIPdomchgdynAddBoundchg(
 
 /** adds hole change to domain changes */
 extern
-RETCODE SCIPdomchgdynAddHolechg(
-   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+RETCODE SCIPdomchgAddHolechg(
+   DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    HOLELIST**       ptr,                /**< changed list pointer */
@@ -264,11 +333,6 @@ RETCODE SCIPdomchgdynAddHolechg(
    HOLELIST*        oldlist             /**< old value of list pointer */
    );
 
-/** gets pointer to domain change data the dynamic size information references */
-extern
-DOMCHG** SCIPdomchgdynGetDomchgPtr(
-   DOMCHGDYN*       domchgdyn           /**< dynamically sized domain change data structure */
-   );
 
 
 

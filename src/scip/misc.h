@@ -232,7 +232,7 @@ RETCODE SCIPrealarrayExtend(
 
 /** clears a dynamic real array */
 extern
-void SCIPrealarrayClear(
+RETCODE SCIPrealarrayClear(
    REALARRAY*       realarray           /**< dynamic real array */
    );
 
@@ -293,7 +293,7 @@ RETCODE SCIPintarrayExtend(
 
 /** clears a dynamic int array */
 extern
-void SCIPintarrayClear(
+RETCODE SCIPintarrayClear(
    INTARRAY*        intarray            /**< dynamic int array */
    );
 
@@ -354,7 +354,7 @@ RETCODE SCIPboolarrayExtend(
 
 /** clears a dynamic bool array */
 extern
-void SCIPboolarrayClear(
+RETCODE SCIPboolarrayClear(
    BOOLARRAY*       boolarray           /**< dynamic bool array */
    );
 

@@ -47,17 +47,9 @@ RETCODE treeEnsureChildrenMem(
    if( num > tree->childrensize )
    {
       int newsize;
-      int i;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       ALLOC_OKAY( reallocMemoryArray(&tree->children, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(&tree->childrenconssetchg, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(&tree->childrendomchg, newsize) );
-      for( i = tree->childrensize; i < newsize; ++i )
-      {
-         CHECK_OKAY( SCIPconssetchgdynCreate(&tree->childrenconssetchg[i], memhdr) );
-         CHECK_OKAY( SCIPdomchgdynCreate(&tree->childrendomchg[i], memhdr) );
-      }
       tree->childrensize = newsize;
    }
    assert(num <= tree->childrensize);
@@ -447,8 +439,6 @@ RETCODE nodeAssignParent(
    /* register node in the childlist of the active (the parent) node */
    CHECK_OKAY( treeEnsureChildrenMem(tree, memhdr, set, tree->nchildren+1) );
    tree->children[tree->nchildren] = node;
-   SCIPconssetchgdynAttach(tree->childrenconssetchg[tree->nchildren], &node->conssetchg);
-   SCIPdomchgdynAttach(tree->childrendomchg[tree->nchildren], &node->domchg);
    node->data.child.arraypos = tree->nchildren;
 
    tree->nchildren++;
@@ -575,8 +565,6 @@ void treeRemoveSibling(
    NODE*            sibling             /**< sibling node to remove */
    )
 {
-   CONSSETCHGDYN* conssetchgdyn;
-   DOMCHGDYN* domchgdyn;
    int delpos;
 
    assert(tree != NULL);
@@ -587,16 +575,6 @@ void treeRemoveSibling(
    assert(tree->siblings[tree->nsiblings-1]->nodetype == SCIP_NODETYPE_SIBLING);
 
    delpos = sibling->data.sibling.arraypos;
-
-   /* switch constraint set change data of removed sibling and last sibling in array */
-   conssetchgdyn = tree->siblingsconssetchg[delpos];
-   tree->siblingsconssetchg[delpos] = tree->siblingsconssetchg[tree->nsiblings-1];
-   tree->siblingsconssetchg[tree->nsiblings-1] = conssetchgdyn;
-
-   /* switch domain change data of removed sibling and last sibling in array */
-   domchgdyn = tree->siblingsdomchg[delpos];
-   tree->siblingsdomchg[delpos] = tree->siblingsdomchg[tree->nsiblings-1];
-   tree->siblingsdomchg[tree->nsiblings-1] = domchgdyn;
 
    /* move last sibling in array to position of removed sibling */
    tree->siblings[delpos] = tree->siblings[tree->nsiblings-1];
@@ -612,8 +590,6 @@ void treeRemoveChild(
    NODE*            child               /**< child node to remove */
    )
 {
-   CONSSETCHGDYN* conssetchgdyn;
-   DOMCHGDYN* domchgdyn;
    int delpos;
 
    assert(tree != NULL);
@@ -624,16 +600,6 @@ void treeRemoveChild(
    assert(tree->children[tree->nchildren-1]->nodetype == SCIP_NODETYPE_CHILD);
 
    delpos = child->data.child.arraypos;
-
-   /* switch constraint set change data of removed child and last child in array */
-   conssetchgdyn = tree->childrenconssetchg[delpos];
-   tree->childrenconssetchg[delpos] = tree->childrenconssetchg[tree->nchildren-1];
-   tree->childrenconssetchg[tree->nchildren-1] = conssetchgdyn;
-
-   /* switch domain change data of removed child and last child in array */
-   domchgdyn = tree->childrendomchg[delpos];
-   tree->childrendomchg[delpos] = tree->childrendomchg[tree->nchildren-1];
-   tree->childrendomchg[tree->nchildren-1] = domchgdyn;
 
    /* move last child in array to position of removed child */
    tree->children[delpos] = tree->children[tree->nchildren-1];
@@ -662,8 +628,6 @@ RETCODE SCIPnodeFree(
    switch((*node)->nodetype)
    {
    case SCIP_NODETYPE_ACTNODE:
-      CHECK_OKAY( SCIPconssetchgdynDiscard(tree->actnodeconssetchg, memhdr, set) );
-      CHECK_OKAY( SCIPdomchgdynDiscard(tree->actnodedomchg, memhdr) );
       if( tree->actlpfork != NULL )
       {
          assert(tree->actlpfork->nodetype == SCIP_NODETYPE_FORK || tree->actlpfork->nodetype == SCIP_NODETYPE_SUBROOT);
@@ -673,8 +637,6 @@ RETCODE SCIPnodeFree(
    case SCIP_NODETYPE_SIBLING:
       assert((*node)->data.sibling.arraypos >= 0);
       assert((*node)->data.sibling.arraypos < tree->nsiblings);
-      CHECK_OKAY( SCIPconssetchgdynDiscard(tree->siblingsconssetchg[(*node)->data.sibling.arraypos], memhdr, set) );
-      CHECK_OKAY( SCIPdomchgdynDiscard(tree->siblingsdomchg[(*node)->data.sibling.arraypos], memhdr) );
       if( tree->actlpfork != NULL )
       {
          assert(tree->actlpfork->nodetype == SCIP_NODETYPE_FORK || tree->actlpfork->nodetype == SCIP_NODETYPE_SUBROOT);
@@ -685,8 +647,6 @@ RETCODE SCIPnodeFree(
    case SCIP_NODETYPE_CHILD:
       assert((*node)->data.child.arraypos >= 0);
       assert((*node)->data.child.arraypos < tree->nchildren);
-      CHECK_OKAY( SCIPconssetchgdynDiscard(tree->childrenconssetchg[(*node)->data.child.arraypos], memhdr, set) );
-      CHECK_OKAY( SCIPdomchgdynDiscard(tree->childrendomchg[(*node)->data.child.arraypos], memhdr) );
       /* The children capture the LPI state at the moment, where the active node is
        * converted into a junction, fork, or subroot, and a new node is activated.
        * At the same time, they become siblings or leaves, such that freeing a child
@@ -701,9 +661,7 @@ RETCODE SCIPnodeFree(
       }
       break;
    case SCIP_NODETYPE_DEADEND:
-      break;
    case SCIP_NODETYPE_JUNCTION:
-      /*CHECK_OKAY( junctionFree(&((*node)->data.junction), memhdr) );*/
       break;
    case SCIP_NODETYPE_FORK:
       CHECK_OKAY( forkFree(&((*node)->data.fork), memhdr, set, lp) );
@@ -796,7 +754,7 @@ RETCODE nodeDeactivate(
    return SCIP_OKAY;
 }
 
-/** adds local constraint to the node and captures it */
+/** adds local constraint to the node and captures it; activates constraint, if node is active */
 RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -810,39 +768,15 @@ RETCODE SCIPnodeAddCons(
    assert(cons->node == NULL);
    assert(cons->arraypos == -1);
 
-   switch( node->nodetype )
+   /* add constraint addition to the node's constraint set change data */
+   CHECK_OKAY( SCIPconssetchgAddAddedCons(&node->conssetchg, memhdr, set, node, cons) );
+
+   /* activate constraint, if node is active */
+   if( node->active )
    {
-   case SCIP_NODETYPE_ACTNODE:
-      assert(tree->actnode == node);
-      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->actnodeconssetchg, memhdr, set, node, cons) );
       CHECK_OKAY( SCIPconsActivate(cons, set) );
-      break;
-
-   case SCIP_NODETYPE_SIBLING:
-      assert(node->data.sibling.arraypos >= 0 && node->data.sibling.arraypos < tree->nsiblings);
-      assert(tree->siblings[node->data.sibling.arraypos] == node);
-      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->siblingsconssetchg[node->data.sibling.arraypos],
-                     memhdr, set, node, cons) );
-      break;
-
-   case SCIP_NODETYPE_CHILD:
-      assert(node->data.child.arraypos >= 0 && node->data.child.arraypos < tree->nchildren);
-      assert(tree->children[node->data.child.arraypos] == node);
-      CHECK_OKAY( SCIPconssetchgdynAddAddedCons(tree->childrenconssetchg[node->data.child.arraypos], 
-                     memhdr, set, node, cons) );
-      break;
-
-   case SCIP_NODETYPE_LEAF:
-   case SCIP_NODETYPE_DEADEND:
-   case SCIP_NODETYPE_JUNCTION:
-   case SCIP_NODETYPE_FORK:
-   case SCIP_NODETYPE_SUBROOT:
-      errorMessage("cannot add constraints to nodes stored in the tree");
-      return SCIP_INVALIDDATA;
-   default:
-      errorMessage("unknown node type");
-      return SCIP_ERROR;
    }
+
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
    assert(cons->node == node);
@@ -852,7 +786,9 @@ RETCODE SCIPnodeAddCons(
    return SCIP_OKAY;
 }
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint */
+/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint;
+ *  disables constraint, if node is active
+ */
 RETCODE SCIPnodeDisableCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -869,39 +805,17 @@ RETCODE SCIPnodeDisableCons(
 
    debugMessage("disabling constraint <%s> at node in depth %d\n", cons->name, node->depth);
 
-   switch( node->nodetype )
+   /* add constraint disabling to the node's constraint set change data */
+   CHECK_OKAY( SCIPconssetchgAddDisabledCons(&node->conssetchg, memhdr, set, cons) );
+
+   /* disable constraint, if node is active */
+   if( node->active )
    {
-   case SCIP_NODETYPE_ACTNODE:
-      assert(node == tree->actnode);
-      CHECK_OKAY( SCIPconssetchgdynAddDisabledCons(tree->actnodeconssetchg, memhdr, set, cons) );
       CHECK_OKAY( SCIPconsDisable(cons, set) );
-      return SCIP_OKAY;
-
-   case SCIP_NODETYPE_SIBLING:
-      assert(node->data.sibling.arraypos >= 0 && node->data.sibling.arraypos < tree->nsiblings);
-      assert(tree->siblings[node->data.sibling.arraypos] == node);
-      CHECK_OKAY( SCIPconssetchgdynAddDisabledCons(tree->siblingsconssetchg[node->data.sibling.arraypos],
-                     memhdr, set, cons) );
-      return SCIP_OKAY;
-
-   case SCIP_NODETYPE_CHILD:
-      assert(node->data.child.arraypos >= 0 && node->data.child.arraypos < tree->nchildren);
-      assert(tree->children[node->data.child.arraypos] == node);
-      CHECK_OKAY( SCIPconssetchgdynAddDisabledCons(tree->childrenconssetchg[node->data.child.arraypos], 
-                     memhdr, set, cons) );
-      return SCIP_OKAY;
-
-   case SCIP_NODETYPE_LEAF:
-   case SCIP_NODETYPE_DEADEND:
-   case SCIP_NODETYPE_JUNCTION:
-   case SCIP_NODETYPE_FORK:
-   case SCIP_NODETYPE_SUBROOT:
-      errorMessage("cannot disable constraints in nodes stored in the tree");
-      return SCIP_INVALIDDATA;
-   default:
-      errorMessage("unknown node type");
-      return SCIP_ERROR;
    }
+
+   assert(node->conssetchg != NULL);
+   assert(node->conssetchg->disabledconss != NULL);
 
    return SCIP_OKAY;
 }
@@ -928,6 +842,7 @@ RETCODE SCIPnodeAddBoundchg(
    assert(node != NULL);
    assert(var != NULL);
    assert(var->vartype == SCIP_VARTYPE_BINARY || infercons == NULL);
+   assert(node->nodetype == SCIP_NODETYPE_ACTNODE || infercons == NULL);
 
    debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
       node->depth, var->name, var->actdom.lb, var->actdom.ub, 
@@ -970,42 +885,35 @@ RETCODE SCIPnodeAddBoundchg(
          return SCIP_INVALIDDATA;
       }
    }
-
-   switch( node->nodetype )
+   
+   /* remember the bound change */
+   CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+                  var, newbound, oldbound, boundtype, node, infercons, infervar) );
+   assert(node->domchg != NULL);
+   assert(node->domchg->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC);
+   assert(node->domchg->domchgdyn.boundchgs != NULL);
+   assert(node->domchg->domchgdyn.nboundchgs > 0);
+   assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
+   assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].newbound == newbound);
+   assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].oldbound == oldbound);
+   
+   /* if node is active, apply the bound change immediately */
+   if( node->active )
    {
-   case SCIP_NODETYPE_ACTNODE:
-      assert(tree->actnode == node);
+      CHECK_OKAY( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
+                     memhdr, set, stat, tree, lp, branchcand, eventqueue) );
       if( node->depth == 0 )
       {
-         /* changed bound in root node: update the local and global bound, ignoring the inferenc information */
-         CHECK_OKAY( SCIPvarChgBdLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, newbound, boundtype,
-                        NULL, NULL, 0, 0) );
+         /* changed bound in root node: update the global bound */
          CHECK_OKAY( SCIPvarChgBdGlobal(var, set, newbound, boundtype) );
       }
-      else
-      {
-         /* changed bound in sub node: remember the bound change, thus changing the local bound automatically */
-         CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->actnodedomchg, memhdr, set, stat, tree, lp,
-                        branchcand, eventqueue, var, newbound, oldbound, boundtype, node, infercons, infervar) );
-      }
-      return SCIP_OKAY;
+   }
 
-   case SCIP_NODETYPE_SIBLING:
-      assert(node->data.sibling.arraypos >= 0 && node->data.sibling.arraypos < tree->nsiblings);
-      assert(tree->siblings[node->data.sibling.arraypos] == node);
-      assert(infercons == NULL);
-      CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->siblingsdomchg[node->data.sibling.arraypos], memhdr, set, stat, tree, lp,
-                     branchcand, eventqueue, var, newbound, oldbound, boundtype, node, infercons, infervar) );
-      return SCIP_OKAY;
+   /* if the node is a child, update its lower bound from changed pseudo solution */
+   if( node->nodetype == SCIP_NODETYPE_CHILD )
+   {
+      assert(!node->active);
 
-   case SCIP_NODETYPE_CHILD:
-      assert(node->data.child.arraypos >= 0 && node->data.child.arraypos < tree->nchildren);
-      assert(tree->children[node->data.child.arraypos] == node);
-      assert(infercons == NULL);
-      CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->childrendomchg[node->data.child.arraypos], memhdr, set, stat, tree, lp,
-                     branchcand, eventqueue, var, newbound, oldbound, boundtype, node, infercons, infervar) );
-
-      /* update the child's lower bound from changed pseudo solution */
       if( var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN )
       {
          Real pseudoobjval;
@@ -1045,20 +953,9 @@ RETCODE SCIPnodeAddBoundchg(
          if( pseudoobjvalinf == 0 )
             node->lowerbound = MAX(node->lowerbound, pseudoobjval);
       }
-
-      return SCIP_OKAY;
-
-   case SCIP_NODETYPE_LEAF:
-   case SCIP_NODETYPE_DEADEND:
-   case SCIP_NODETYPE_JUNCTION:
-   case SCIP_NODETYPE_FORK:
-   case SCIP_NODETYPE_SUBROOT:
-      errorMessage("cannot add bound changes in nodes stored in the tree");
-      return SCIP_INVALIDDATA;
-   default:
-      errorMessage("unknown node type");
-      return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
 }
 
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
@@ -1632,7 +1529,7 @@ RETCODE SCIPtreeLoadLP(
       for( d = lpforkdepth; d < (int)(tree->actnode->depth) && lp->primalfeasible; ++d )
       {
          assert(d < tree->pathlen);
-         lp->primalfeasible &= (tree->path[d]->domchg == NULL || tree->path[d]->domchg->nboundchgs == 0);
+         lp->primalfeasible &= (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
       }
    }
 
@@ -1657,6 +1554,7 @@ RETCODE SCIPtreeLoadLP(
 static
 RETCODE nodeToLeaf(
    NODE*            node,               /**< child or sibling node to convert */
+   MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    NODE*            lpfork              /**< LP fork of the node */
@@ -1686,6 +1584,9 @@ RETCODE nodeToLeaf(
    /* insert leaf in node queue */
    CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, node) );
 
+   /* make the domain change data static to save memory */
+   CHECK_OKAY( SCIPdomchgMakeStatic(&node->domchg, memhdr) );
+
    return SCIP_OKAY;
 }
 
@@ -1706,10 +1607,6 @@ RETCODE actnodeToDeadend(
    assert(tree->nchildren == 0);
 
    debugMessage("actnode to deadend at depth %d\n", tree->actnode->depth);
-
-   /* detach dynamic size data from constraint set and domain change data of old active node */
-   CHECK_OKAY( SCIPconssetchgdynDetach(tree->actnodeconssetchg, memhdr, set) );
-   CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
 
    tree->actnode->nodetype = SCIP_NODETYPE_DEADEND;
 
@@ -1738,10 +1635,6 @@ RETCODE actnodeToJunction(
 
    debugMessage("actnode to junction at depth %d\n", tree->actnode->depth);
 
-   /* detach dynamic size data from constraint set and domain change data of old active node */
-   CHECK_OKAY( SCIPconssetchgdynDetach(tree->actnodeconssetchg, memhdr, set) );
-   CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
-
    tree->actnode->nodetype = SCIP_NODETYPE_JUNCTION;
 
    CHECK_OKAY( junctionInit(&tree->actnode->data.junction, tree) );
@@ -1754,6 +1647,9 @@ RETCODE actnodeToJunction(
    {
       CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
    }
+
+   /* make the domain change data static to save memory */
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr) );
 
    return SCIP_OKAY;
 }
@@ -1796,10 +1692,7 @@ RETCODE actnodeToFork(
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
 
-   /* detach dynamic size data from constraint set and domain change data of old active node */
-   CHECK_OKAY( SCIPconssetchgdynDetach(tree->actnodeconssetchg, memhdr, set) );
-   CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
-
+   /* create fork data */
    CHECK_OKAY( forkCreate(&fork, memhdr, set, tree, lp) );
    
    tree->actnode->nodetype = SCIP_NODETYPE_FORK;
@@ -1816,6 +1709,9 @@ RETCODE actnodeToFork(
 
    /* set new actual LP fork */
    tree->actlpfork = tree->actnode;
+
+   /* make the domain change data static to save memory */
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr) );
 
    return SCIP_OKAY;
 }
@@ -1867,10 +1763,7 @@ RETCODE actnodeToSubroot(
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
 
-   /* detach dynamic size data from constraint set and domain change data of old active node */
-   CHECK_OKAY( SCIPconssetchgdynDetach(tree->actnodeconssetchg, memhdr, set) );
-   CHECK_OKAY( SCIPdomchgdynDetach(tree->actnodedomchg, memhdr) );
-
+   /* create subroot data */
    CHECK_OKAY( subrootCreate(&subroot, memhdr, set, tree, lp) );
 
    tree->actnode->nodetype = SCIP_NODETYPE_SUBROOT;
@@ -1889,6 +1782,9 @@ RETCODE actnodeToSubroot(
    tree->actlpfork = tree->actnode;
    tree->actsubroot = tree->actnode;
 
+   /* make the domain change data static to save memory */
+   CHECK_OKAY( SCIPdomchgMakeStatic(&tree->actnode->domchg, memhdr) );
+
    return SCIP_OKAY;
 }
 
@@ -1899,8 +1795,6 @@ RETCODE treeNodesToQueue(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    NODE**           nodes,              /**< array of nodes to put on the queue */
-   CONSSETCHGDYN**  conssetchgdyn,      /**< array of dynamic constraint set changes */
-   DOMCHGDYN**      domchgdyn,          /**< array of dynamic domain changes */
    int*             nnodes,             /**< pointer to number of nodes in the array */
    NODE*            lpfork              /**< LP fork of the nodes */
    )
@@ -1912,19 +1806,11 @@ RETCODE treeNodesToQueue(
    assert(set != NULL);
    assert(nnodes != NULL);
    assert(*nnodes == 0 || nodes != NULL);
-   assert(*nnodes == 0 || conssetchgdyn != NULL);
-   assert(*nnodes == 0 || domchgdyn != NULL);
 
    for( i = 0; i < *nnodes; ++i )
    {
-      node = nodes[i];
-
-      /* detach dynamic size attachment to shrink the node's constraint set and domain change data */
-      CHECK_OKAY( SCIPconssetchgdynDetach(conssetchgdyn[i], memhdr, set) );
-      CHECK_OKAY( SCIPdomchgdynDetach(domchgdyn[i], memhdr) );
-
       /* convert node to LEAF and put it into leaves queue */
-      nodeToLeaf(node, set, tree, lpfork);
+      CHECK_OKAY( nodeToLeaf(nodes[i], memhdr, set, tree, lpfork) );
    }
    *nnodes = 0;
 
@@ -1938,8 +1824,6 @@ void treeChildrenToSiblings(
    )
 {
    NODE** tmpnodes;
-   CONSSETCHGDYN** tmpconssetchg;
-   DOMCHGDYN** tmpdomchg;
    int tmpnodessize;
    int i;
 
@@ -1947,19 +1831,13 @@ void treeChildrenToSiblings(
    assert(tree->nsiblings == 0);
 
    tmpnodes = tree->siblings;
-   tmpconssetchg = tree->siblingsconssetchg;
-   tmpdomchg = tree->siblingsdomchg;
    tmpnodessize = tree->siblingssize;
 
    tree->siblings = tree->children;
-   tree->siblingsconssetchg = tree->childrenconssetchg;
-   tree->siblingsdomchg = tree->childrendomchg;
    tree->nsiblings = tree->nchildren;
    tree->siblingssize = tree->childrensize;
 
    tree->children = tmpnodes;
-   tree->childrenconssetchg = tmpconssetchg;
-   tree->childrendomchg = tmpdomchg;
    tree->nchildren = 0;
    tree->childrensize = tmpnodessize;
    
@@ -2043,34 +1921,18 @@ RETCODE SCIPnodeActivate(
    if( node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsconssetchg, tree->siblingsdomchg,
-                     &tree->nsiblings, oldlpfork) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, &tree->nsiblings, oldlpfork) );
 
       /* move children to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrenconssetchg, tree->childrendomchg,
-                     &tree->nchildren, newlpfork) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
    }
    else
    {
-      CONSSETCHGDYN* conssetchgdyn;
-      DOMCHGDYN* domchgdyn;
-
       switch( node->nodetype )
       {
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrenconssetchg, tree->childrendomchg,
-                        &tree->nchildren, newlpfork) );
-
-         /* switch constraint set change data of sibling and active node */
-         conssetchgdyn = tree->actnodeconssetchg;
-         tree->actnodeconssetchg = tree->siblingsconssetchg[node->data.sibling.arraypos];
-         tree->siblingsconssetchg[node->data.sibling.arraypos] = conssetchgdyn;
-
-         /* switch domain change data of sibling and active node */
-         domchgdyn = tree->actnodedomchg;
-         tree->actnodedomchg = tree->siblingsdomchg[node->data.sibling.arraypos];
-         tree->siblingsdomchg[node->data.sibling.arraypos] = domchgdyn;
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
 
          /* remove selected sibling from the siblings array */
          treeRemoveSibling(tree, node);
@@ -2082,18 +1944,7 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_CHILD:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsconssetchg, tree->siblingsdomchg,
-                        &tree->nsiblings, oldlpfork) );
-
-         /* switch constraint set change data of child and active node */
-         conssetchgdyn = tree->actnodeconssetchg;
-         tree->actnodeconssetchg = tree->childrenconssetchg[node->data.child.arraypos];
-         tree->childrenconssetchg[node->data.child.arraypos] = conssetchgdyn;
-
-         /* switch domain change data of child and active node */
-         domchgdyn = tree->actnodedomchg;
-         tree->actnodedomchg = tree->childrendomchg[node->data.child.arraypos];
-         tree->childrendomchg[node->data.child.arraypos] = domchgdyn;
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, &tree->nsiblings, oldlpfork) );
 
          /* remove selected child from the children array */      
          treeRemoveChild(tree, node);
@@ -2105,16 +1956,10 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_LEAF:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsconssetchg, tree->siblingsdomchg,
-                        &tree->nsiblings, oldlpfork) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, &tree->nsiblings, oldlpfork) );
          
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrenconssetchg, tree->childrendomchg,
-                        &tree->nchildren, newlpfork) );
-
-         /* attach dynamic size data to constraint set and domain changes of the active node */
-         SCIPconssetchgdynAttach(tree->actnodeconssetchg, &node->conssetchg);
-         SCIPdomchgdynAttach(tree->actnodedomchg, &node->domchg);
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
 
          /* remove node from the queue */
          CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, node) );
@@ -2136,32 +1981,6 @@ RETCODE SCIPnodeActivate(
    assert(node == NULL || tree->path[tree->pathlen-1] == node);
    assert(tree->nchildren == 0);
    tree->actnode = node;
-
-#ifndef NDEBUG
-   {
-      int i;
-      for( i = 0; i < tree->nchildren; ++i )
-      {
-         assert(SCIPconssetchgdynGetConssetchgPtr(tree->childrenconssetchg[i]) == &tree->children[i]->conssetchg);
-         assert(SCIPdomchgdynGetDomchgPtr(tree->childrendomchg[i]) == &tree->children[i]->domchg);
-      }
-      for( i = 0; i < tree->nsiblings; ++i )
-      {
-         assert(SCIPconssetchgdynGetConssetchgPtr(tree->siblingsconssetchg[i]) == &tree->siblings[i]->conssetchg);
-         assert(SCIPdomchgdynGetDomchgPtr(tree->siblingsdomchg[i]) == &tree->siblings[i]->domchg);
-      }
-      if( tree->actnode != NULL )
-      {
-         assert(SCIPconssetchgdynGetConssetchgPtr(tree->actnodeconssetchg) == &tree->actnode->conssetchg);
-         assert(SCIPdomchgdynGetDomchgPtr(tree->actnodedomchg) == &tree->actnode->domchg);
-      }
-      else
-      {
-         assert(SCIPconssetchgdynGetConssetchgPtr(tree->actnodeconssetchg) == NULL);
-         assert(SCIPdomchgdynGetDomchgPtr(tree->actnodedomchg) == NULL);
-      }
-   }
-#endif
 
    return SCIP_OKAY;
 }   
@@ -2199,15 +2018,6 @@ RETCODE SCIPtreeCreate(
    (*tree)->actsubroot = NULL;
    (*tree)->children = NULL;
    (*tree)->siblings = NULL;
-
-   CHECK_OKAY( SCIPconssetchgdynCreate(&(*tree)->actnodeconssetchg, memhdr) );
-   (*tree)->childrenconssetchg = NULL;
-   (*tree)->siblingsconssetchg = NULL;
-
-   CHECK_OKAY( SCIPdomchgdynCreate(&(*tree)->actnodedomchg, memhdr) );
-   (*tree)->childrendomchg = NULL;
-   (*tree)->siblingsdomchg = NULL;
-
    (*tree)->actpseudoobjval = 0.0;
    (*tree)->actpseudoobjvalinf = 0;
    (*tree)->pathnlpcols = NULL;
@@ -2225,9 +2035,9 @@ RETCODE SCIPtreeCreate(
    /* create root node */
    CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, *tree) );
    assert((*tree)->nchildren == 1);
+
    /* move root to the queue, convert it to LEAF */
-   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, (*tree)->children, (*tree)->childrenconssetchg, (*tree)->childrendomchg,
-                  &(*tree)->nchildren, NULL) );
+   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, (*tree)->children, &(*tree)->nchildren, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2240,8 +2050,6 @@ RETCODE SCIPtreeFree(
    LP*              lp                  /**< actual LP data */
    )
 {
-   int i;
-
    assert(tree != NULL);
    assert(*tree != NULL);
    assert((*tree)->nchildren == 0);
@@ -2253,28 +2061,10 @@ RETCODE SCIPtreeFree(
    /* free node queue */
    CHECK_OKAY( SCIPnodepqFree(&(*tree)->leaves, memhdr, set, *tree, lp) );
    
-   /* free dynamic size constraint set and domain change attachments */
-   for( i = 0; i < (*tree)->childrensize; ++i )
-   {
-      SCIPconssetchgdynFree(&(*tree)->childrenconssetchg[i], memhdr);
-      SCIPdomchgdynFree(&(*tree)->childrendomchg[i], memhdr);
-   }
-   for( i = 0; i < (*tree)->siblingssize; ++i )
-   {
-      SCIPconssetchgdynFree(&(*tree)->siblingsconssetchg[i], memhdr);
-      SCIPdomchgdynFree(&(*tree)->siblingsdomchg[i], memhdr);
-   }
-   SCIPconssetchgdynFree(&(*tree)->actnodeconssetchg, memhdr);
-   SCIPdomchgdynFree(&(*tree)->actnodedomchg, memhdr);
-
    /* free pointer arrays */
    freeMemoryArrayNull(&(*tree)->path);
    freeMemoryArrayNull(&(*tree)->children);
    freeMemoryArrayNull(&(*tree)->siblings);   
-   freeMemoryArrayNull(&(*tree)->childrenconssetchg);
-   freeMemoryArrayNull(&(*tree)->siblingsconssetchg);   
-   freeMemoryArrayNull(&(*tree)->childrendomchg);
-   freeMemoryArrayNull(&(*tree)->siblingsdomchg);   
    freeMemoryArrayNull(&(*tree)->pathnlpcols);
    freeMemoryArrayNull(&(*tree)->pathnlprows);
 

@@ -31,7 +31,6 @@ typedef struct Cons CONS;               /**< constraint data structure */
 typedef struct ConsHdlrData CONSHDLRDATA; /**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
 typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
-typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for constraint set change data */
 
 
 
@@ -451,7 +450,9 @@ struct ConsSetChg
 {
    CONS**           addedconss;         /**< constraints added to the set of active constraints */
    CONS**           disabledconss;      /**< constraints disabled in the set of active constraints */
+   int              addedconsssize;     /**< size of added constraints array */
    int              naddedconss;        /**< number of added constraints */
+   int              disabledconsssize;  /**< size of disabled constraints array */
    int              ndisabledconss;     /**< number of disabled constraints */
 };
 
@@ -838,12 +839,31 @@ Bool SCIPconshdlrIsInitialized(
  * Constraint set change methods
  */
 
-/** frees fixed size constraint set change data and releases all included constraints */
+/** frees constraint set change data and releases all included constraints */
 extern
 RETCODE SCIPconssetchgFree(
    CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** adds constraint addition to constraint set changes, and captures constraint */
+extern
+RETCODE SCIPconssetchgAddAddedCons(
+   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   NODE*            node,               /**< node that the constraint set change belongs to */
+   CONS*            cons                /**< added constraint */
+   );
+
+/** adds constraint disabling to constraint set changes, and captures constraint */
+extern
+RETCODE SCIPconssetchgAddDisabledCons(
+   CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< disabled constraint */
    );
 
 /** applies constraint set change */
@@ -860,75 +880,6 @@ RETCODE SCIPconssetchgUndo(
    CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
-   );
-
-
-
-
-/*
- * dynamic size attachment methods for constraint set changes
- */
-
-/** creates a dynamic size attachment for a constraint set change data structure */
-extern
-RETCODE SCIPconssetchgdynCreate(
-   CONSSETCHGDYN**  conssetchgdyn,      /**< pointer to dynamic size attachment */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-/** frees a dynamic size attachment for a constraint set change data structure */
-extern
-void SCIPconssetchgdynFree(
-   CONSSETCHGDYN**  conssetchgdyn,      /**< pointer to dynamic size attachment */
-   MEMHDR*          memhdr              /**< block memory */
-   );
-
-/** attaches dynamic size information to constraint set change data */
-extern
-void SCIPconssetchgdynAttach(
-   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamic size information */
-   CONSSETCHG**     conssetchg          /**< pointer to static constraint set change */
-   );
-
-/** detaches dynamic size information and shrinks constraint set change data */
-extern
-RETCODE SCIPconssetchgdynDetach(
-   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamic size information */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** frees attached constraint set change data and detaches dynamic size attachment */
-extern
-RETCODE SCIPconssetchgdynDiscard(
-   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-/** adds constraint addition to constraint set changes, and captures constraint */
-extern
-RETCODE SCIPconssetchgdynAddAddedCons(
-   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   NODE*            node,               /**< node that the constraint set change belongs to */
-   CONS*            cons                /**< added constraint */
-   );
-
-/** adds constraint disabling to constraint set changes, and captures constraint */
-extern
-RETCODE SCIPconssetchgdynAddDisabledCons(
-   CONSSETCHGDYN*   conssetchgdyn,      /**< dynamically sized constraint set change data structure */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   CONS*            cons                /**< disabled constraint */
-   );
-
-/** gets pointer to constraint set change data the dynamic size information references */
-extern
-CONSSETCHG** SCIPconssetchgdynGetConssetchgPtr(
-   CONSSETCHGDYN*   conssetchgdyn       /**< dynamically sized constraint set change data structure */
    );
 
 
@@ -1074,6 +1025,17 @@ RETCODE SCIPconsResolveConflictVar(
    CONS*            cons,               /**< constraint that deduced the assignment */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< conflict variable, that was deduced by the constraint */
+   );
+
+/** checks single constraint for feasibility of the given solution */
+extern
+RETCODE SCIPconsCheck(
+   CONS*            cons,               /**< constraint to check */
+   const SET*       set,                /**< global SCIP settings */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             checkintegrality,   /**< has integrality to be checked? */
+   Bool             checklprows,        /**< have current LP rows to be checked? */
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 #ifndef NDEBUG

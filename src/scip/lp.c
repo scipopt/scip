@@ -294,6 +294,7 @@ void rowBSort(
 
    assert(row != NULL);
 
+   todoMessage("do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?)");
    cols = row->cols;
    vals = row->vals;
    probindex = row->cols_probindex;
@@ -391,6 +392,7 @@ void colBSort(
 
    assert(col != NULL);
 
+   todoMessage("do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?)");
    rows = col->rows;
    vals = col->vals;
    linkpos = col->linkpos;
@@ -2972,6 +2974,7 @@ void rowMerge(
          t++;
       assert(t <= row->len);
       row->len = t;
+      row->nunlinked = t;
    }
 }
 

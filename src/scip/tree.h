@@ -141,12 +141,6 @@ struct Tree
    NODE*            actsubroot;         /**< root of the active subtree */
    NODE**           children;           /**< array with children of the active node */
    NODE**           siblings;           /**< array with siblings of the active node */
-   CONSSETCHGDYN*   actnodeconssetchg;  /**< constraint set changed of the active node */
-   CONSSETCHGDYN**  childrenconssetchg; /**< constraint set changed of the child nodes */
-   CONSSETCHGDYN**  siblingsconssetchg; /**< constraint set changed of the sibling nodes */
-   DOMCHGDYN*       actnodedomchg;      /**< domain changes of the active node */
-   DOMCHGDYN**      childrendomchg;     /**< domain changes of the child nodes */
-   DOMCHGDYN**      siblingsdomchg;     /**< domain changes of the sibling nodes */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
    Real             actpseudoobjval;    /**< actual pseudo solution value with all variables set to their best bounds,
@@ -162,6 +156,7 @@ struct Tree
    unsigned int     actnodehaslp:1;     /**< is LP being processed in the active node? */
    unsigned int     cutoffdelayed:1;    /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
+
 
 
 
@@ -220,7 +215,7 @@ RETCODE SCIPnodeActivate(
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
-/** adds local constraint to the node and captures it */
+/** adds local constraint to the node and captures it; activates constraint, if node is active */
 extern
 RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
@@ -230,7 +225,9 @@ RETCODE SCIPnodeAddCons(
    CONS*            cons                /**< constraint to add */
    );
 
-/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint */
+/** disables constraint's separation, enforcing, and propagation capabilities at the node, and captures constraint;
+ *  disables constraint, if node is active
+ */
 extern
 RETCODE SCIPnodeDisableCons(
    NODE*            node,               /**< node to add constraint to */
