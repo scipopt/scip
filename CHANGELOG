@@ -30,6 +30,7 @@ interface:
   SCIPpresolWasDelayed(), SCIPconshdlrIsSeparationDelayed(), SCIPconshdlrIsPropagationDelayed(), 
   SCIPconshdlrIsPresolvingDelayed(), SCIPconshdlrWasSeparationDelayed(), SCIPconshdlrWasPropagationDelayed(), and
   SCIPconshdlrWasPresolvingDelayed()
+- new method SCIPinProbing()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.48 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.49 2005/02/08 15:47:21 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -193,7 +193,7 @@
 #define DISP_DESC_AVGDUALBOUND  "average dual bound of all unprocessed nodes"
 #define DISP_HEAD_AVGDUALBOUND  "avgdualbound"
 #define DISP_WIDT_AVGDUALBOUND  14
-#define DISP_PRIO_AVGDUALBOUND  50000
+#define DISP_PRIO_AVGDUALBOUND  700
 #define DISP_POSI_AVGDUALBOUND  8000
 #define DISP_STRI_AVGDUALBOUND  TRUE
 

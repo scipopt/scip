@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.261 2005/02/08 14:22:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.262 2005/02/08 15:47:21 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8603,6 +8603,16 @@ Longint SCIPgetLastDivenode(
 /*
  * probing methods
  */
+
+/** returns whether we are in probing mode */
+Bool SCIPinProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPinProbing", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPtreeProbing(scip->tree);
+}
 
 /** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), SCIPfixVarProbing() and
  *  SCIPpropagateProbing() available

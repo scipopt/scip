@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.208 2005/02/08 14:22:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.209 2005/02/08 15:47:22 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3255,6 +3255,12 @@ Longint SCIPgetLastDivenode(
 
 /**@name LP Diving Methods */
 /**@{ */
+
+/** returns whether we are in probing mode */
+extern
+Bool SCIPinProbing(
+   SCIP*            scip                /**< SCIP data structure */
+   );
 
 /** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), SCIPfixVarProbing() and
  *  SCIPpropagateProbing() available

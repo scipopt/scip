@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.136 2005/02/07 14:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.137 2005/02/08 15:47:22 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -264,6 +264,15 @@ DECL_PARAMCHGD(paramChgdDualfeastol)
    return SCIP_OKAY;
 }
 
+/** parameter change information method to autoselect display columns again */
+DECL_PARAMCHGD(SCIPparamChgdDispWidth)
+{
+   /* automatically select the now active display columns */
+   CHECK_OKAY( SCIPautoselectDisps(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** creates global SCIP settings */
 RETCODE SCIPsetCreate(
    SET**            set,                /**< pointer to SCIP settings */
@@ -425,7 +434,7 @@ RETCODE SCIPsetCreate(
          "display/width",
          "maximal number of characters in a node information line",
          &(*set)->disp_width, SCIP_DEFAULT_DISP_WIDTH, 0, INT_MAX,
-         NULL, NULL) );
+         SCIPparamChgdDispWidth, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
          "display/freq",
          "frequency for displaying node information lines",
