@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.37 2005/01/21 09:16:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.38 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -44,7 +44,7 @@
 
 #define MINPLUNGEDEPTH               -1 /**< minimal plunging depth, before new best node may be selected (-1 for dynamic setting) */
 #define MAXPLUNGEDEPTH               -1 /**< maximal plunging depth, before new best node is forced to be selected (-1 for dynamic setting) */
-#define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
+#define MAXPLUNGEQUOT              0.25 /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where plunging is performed */
 
 
@@ -52,7 +52,7 @@
 /** node selector data for best first search node selection */
 struct NodeselData
 {
-   Real             maxplungequot;      /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
+   Real             maxplungequot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where plunging is performed */
    int              minplungedepth;     /**< minimal plunging depth, before new best node may be selected
                                          *   (-1 for dynamic setting) */
@@ -138,18 +138,18 @@ DECL_NODESELSELECT(nodeselSelectBfs)
    {
       NODE* node;
       Real lowerbound;
-      Real upperbound;
+      Real cutoffbound;
       Real maxbound;
 
-      /* get global lower and upper bound */
+      /* get global lower and cutoff bound */
       lowerbound = SCIPgetLowerbound(scip);
-      upperbound = SCIPgetUpperbound(scip);
+      cutoffbound = SCIPgetCutoffbound(scip);
 
-      /* if we didn't find a solution yet, the upper bound is usually very bad:
-       * use only 20% of the gap as upper bound
+      /* if we didn't find a solution yet, the cutoff bound is usually very bad:
+       * use only 20% of the gap as cutoff bound
        */
       if( SCIPgetNSolsFound(scip) == 0 )
-         upperbound = lowerbound + 0.2 * (upperbound - lowerbound);
+         cutoffbound = lowerbound + 0.2 * (cutoffbound - lowerbound);
          
       /* check, if plunging is forced at the current depth */
       if( plungedepth < minplungedepth )
@@ -157,11 +157,11 @@ DECL_NODESELSELECT(nodeselSelectBfs)
       else
       {
          /* calculate maximal plunging bound */
-         maxbound = lowerbound + nodeseldata->maxplungequot * (upperbound - lowerbound);
+         maxbound = lowerbound + nodeseldata->maxplungequot * (cutoffbound - lowerbound);
       }
 
       debugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
-         minplungedepth, maxplungedepth, plungedepth, lowerbound, upperbound, maxbound);
+         minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);
 
       /* we want to plunge again: prefer children over siblings, and siblings over leaves,
        * but only select a child or sibling, if its dual bound is small enough;
@@ -310,7 +310,7 @@ RETCODE SCIPincludeNodeselBfs(
                   &nodeseldata->maxplungedepth, MAXPLUNGEDEPTH, -1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
                   "nodeselection/bfs/maxplungequot",
-                  "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where plunging is performed",
+                  "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
                   &nodeseldata->maxplungequot, MAXPLUNGEQUOT, 0.0, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;

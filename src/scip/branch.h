@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.35 2005/01/31 12:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.36 2005/02/03 16:57:44 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -198,7 +198,7 @@ RETCODE SCIPbranchruleExecLPSol(
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -210,7 +210,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -275,7 +275,7 @@ RETCODE SCIPbranchExecLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
@@ -290,7 +290,7 @@ RETCODE SCIPbranchExecPseudo(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );

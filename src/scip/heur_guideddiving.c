@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.6 2005/02/02 19:34:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.7 2005/02/03 16:57:44 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -48,7 +48,7 @@
 #define DEFAULT_MINRELDEPTH         0.0  /**< minimal relative depth to start diving */
 #define DEFAULT_MAXRELDEPTH         1.0  /**< maximal relative depth to start diving */
 #define DEFAULT_MAXLPITERQUOT       0.02 /**< maximal fraction of diving LP iterations compared to total iteration number */
-#define DEFAULT_MAXDIVEUBQUOT       0.8  /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
+#define DEFAULT_MAXDIVEUBQUOT       0.8  /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                           *   where diving is performed */
 #define DEFAULT_MAXDIVEAVGQUOT      4.0  /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                           *   where diving is performed */
@@ -64,7 +64,7 @@ struct HeurData
    Real             minreldepth;        /**< minimal relative depth to start diving */
    Real             maxreldepth;        /**< maximal relative depth to start diving */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
-   Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound)
+   Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
                                          *   where diving is performed */
    Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where diving is performed */
@@ -241,7 +241,7 @@ DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
    /* calculate the objective search bound */
    searchubbound = SCIPgetLowerbound(scip)
-      + heurdata->maxdiveubquot * (SCIPgetUpperbound(scip) - SCIPgetLowerbound(scip));
+      + heurdata->maxdiveubquot * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
    searchavgbound = SCIPgetLowerbound(scip)
       + heurdata->maxdiveavgquot * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
    searchbound = MIN(searchubbound, searchavgbound);
@@ -544,7 +544,7 @@ RETCODE SCIPincludeHeurGuideddiving(
          &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/guideddiving/maxdiveubquot",
-         "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
+         "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed",
          &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
          "heuristics/guideddiving/maxdiveavgquot", 

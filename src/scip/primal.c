@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.59 2005/02/02 20:06:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.60 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -148,6 +148,64 @@ RETCODE SCIPprimalFree(
    return SCIP_OKAY;
 }
 
+/** sets the cutoff bound in primal data and in LP solver */
+static
+RETCODE primalSetCutoffbound(
+   PRIMAL*          primal,             /**< primal data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   Real             cutoffbound         /**< new cutoff bound */
+   )
+{
+   assert(primal != NULL);
+   assert(cutoffbound <= SCIPsetInfinity(set));
+   assert(cutoffbound <= primal->upperbound);
+
+   debugMessage("changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
+
+   primal->cutoffbound = cutoffbound;
+   
+   /* set cut off value in LP solver */
+   CHECK_OKAY( SCIPlpSetCutoffbound(lp, set, primal->cutoffbound) );
+   
+   /* cut off leaves of the tree */
+   CHECK_OKAY( SCIPtreeCutoff(tree, blkmem, set, stat, lp, primal->cutoffbound) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the cutoff bound in primal data and in LP solver */
+RETCODE SCIPprimalSetCutoffbound(
+   PRIMAL*          primal,             /**< primal data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   Real             cutoffbound         /**< new cutoff bound */
+   )
+{
+   assert(primal != NULL);
+   assert(cutoffbound <= SCIPsetInfinity(set));
+   assert(cutoffbound <= primal->upperbound);
+
+   if( cutoffbound < primal->cutoffbound )
+   {
+      /* update cutoff bound */
+      CHECK_OKAY( primalSetCutoffbound(primal, blkmem, set, stat, tree, lp, cutoffbound) );
+   }
+   else if( cutoffbound > primal->cutoffbound )
+   {
+      errorMessage("invalid increase in cutoff bound\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** sets upper bound in primal data and in LP solver */
 static
 RETCODE primalSetUpperbound(
@@ -161,8 +219,9 @@ RETCODE primalSetUpperbound(
    Real             upperbound          /**< new upper bound */
    )
 {
+   Real cutoffbound;
+
    assert(primal != NULL);
-   assert(set != NULL);
    assert(stat != NULL);
    assert(upperbound <= SCIPsetInfinity(set));
    assert(upperbound <= primal->upperbound || stat->nnodes == 0);
@@ -178,16 +237,16 @@ RETCODE primalSetUpperbound(
 
       delta = 100.0*SCIPsetFeastol(set);
       delta = MIN(delta, 0.1);
-      primal->cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
+      cutoffbound = SCIPsetFeasCeil(set, upperbound) - (1.0 - delta);
    }
    else
-      primal->cutoffbound = upperbound;
+      cutoffbound = upperbound;
 
-   /* set cut off value in LP solver */
-   CHECK_OKAY( SCIPlpSetCutoffbound(lp, set, primal->cutoffbound) );
-
-   /* cut off leaves of the tree */
-   CHECK_OKAY( SCIPtreeCutoff(tree, blkmem, set, stat, lp, primal->cutoffbound) );
+   /* update cutoff bound */
+   if( cutoffbound < primal->cutoffbound )
+   {
+      CHECK_OKAY( primalSetCutoffbound(primal, blkmem, set, stat, tree, lp, cutoffbound) );
+   }
 
    /* update upper bound in VBC output */
    if( SCIPtreeGetCurrentDepth(tree) >= 0 )
@@ -227,8 +286,42 @@ RETCODE SCIPprimalSetUpperbound(
    return SCIP_OKAY;
 }
 
-/** recalculates upper bound in primal data after a change of the problem's objective offset */
-RETCODE SCIPprimalUpdateUpperbound(
+/** updates upper bound and cutoff bound in primal data after a tightening of the problem's objective limit */
+RETCODE SCIPprimalUpdateObjlimit(
+   PRIMAL*          primal,             /**< primal data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp                  /**< current LP data */
+   )
+{
+   Real objlimit;
+
+   assert(primal != NULL);
+
+   /* get internal objective limit */
+   objlimit = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set));
+   objlimit = MIN(objlimit, SCIPsetInfinity(set));
+
+   /* update the cutoff bound */
+   if( objlimit < primal->cutoffbound )
+   {
+      CHECK_OKAY( primalSetCutoffbound(primal, blkmem, set, stat, tree, lp, objlimit) );
+   }
+
+   /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
+   if( objlimit < primal->upperbound )
+   {
+      CHECK_OKAY( primalSetUpperbound(primal, blkmem, set, stat, prob, tree, lp, objlimit) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** recalculates upper bound and cutoff bound in primal data after a change of the problem's objective offset */
+RETCODE SCIPprimalUpdateObjoffset(
    PRIMAL*          primal,             /**< primal data */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
@@ -244,7 +337,7 @@ RETCODE SCIPprimalUpdateUpperbound(
    int i;
    int j;
 
-   assert(set != NULL);
+   assert(primal != NULL);
 
    /* recalculate internal objective limit */
    upperbound = SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set));
@@ -270,7 +363,10 @@ RETCODE SCIPprimalUpdateUpperbound(
    if( primal->nsols > 0 )
       upperbound = MIN(upperbound, SCIPsolGetObj(primal->sols[0], set, prob));
 
-   /* set new upper bound */
+   /* reset the cutoff bound */
+   CHECK_OKAY( primalSetCutoffbound(primal, blkmem, set, stat, tree, lp, upperbound) );
+
+   /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    if( upperbound != primal->upperbound )
    {
       CHECK_OKAY( primalSetUpperbound(primal, blkmem, set, stat, prob, tree, lp, upperbound) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.29 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.30 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -57,6 +57,18 @@ RETCODE SCIPprimalFree(
    BLKMEM*          blkmem              /**< block memory */
    );
 
+/** sets the cutoff bound in primal data and in LP solver */
+extern
+RETCODE SCIPprimalSetCutoffbound(
+   PRIMAL*          primal,             /**< primal data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp,                 /**< current LP data */
+   Real             cutoffbound         /**< new cutoff bound */
+   );
+
 /** sets upper bound in primal data and in LP solver */
 extern
 RETCODE SCIPprimalSetUpperbound(
@@ -70,9 +82,21 @@ RETCODE SCIPprimalSetUpperbound(
    Real             upperbound          /**< new upper bound */
    );
 
-/** recalculates upper bound in primal data after a change of the problem's objective offset */
+/** updates upper bound and cutoff bound in primal data after a tightening of the problem's objective limit */
 extern
-RETCODE SCIPprimalUpdateUpperbound(
+RETCODE SCIPprimalUpdateObjlimit(
+   PRIMAL*          primal,             /**< primal data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   LP*              lp                  /**< current LP data */
+   );
+
+/** recalculates upper bound and cutoff bound in primal data after a change of the problem's objective offset */
+extern
+RETCODE SCIPprimalUpdateObjoffset(
    PRIMAL*          primal,             /**< primal data */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.251 2005/02/03 12:29:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.252 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2402,7 +2402,7 @@ RETCODE SCIPsetObjlimit(
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
       SCIPprobSetObjlim(scip->transprob, objlimit);
-      CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+      CHECK_OKAY( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
             scip->tree, scip->lp) );
       break;
    default:
@@ -3384,8 +3384,8 @@ RETCODE transformProb(
    /* switch stage to TRANSFORMED */
    scip->stage = SCIP_STAGE_TRANSFORMED;
 
-   /* update upper bound (e.g. objective limit) in primal data */
-   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+   /* update upper bound and cutoff bound due to objective limit in primal data */
+   CHECK_OKAY( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->tree, scip->lp) );
 
    /* print transformed problem statistics */
@@ -3561,8 +3561,8 @@ RETCODE presolve(
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
 
-   /* update upper bound (e.g. objective limit) in primal data */
-   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+   /* update upper bound and cutoff bound due to objective limit in primal data */
+   CHECK_OKAY( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->tree, scip->lp) );
 
    /* start presolving timer */
@@ -3731,8 +3731,8 @@ RETCODE initSolve(
    /* reset statistics for current branch and bound run */
    SCIPstatResetCurrentRun(scip->stat);
 
-   /* update upper bound (e.g. objective limit) in primal data */
-   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+   /* update upper bound and cutoff bound due to objective limit in primal data */
+   CHECK_OKAY( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->tree, scip->lp) );
 
    /* switch stage to INITSOLVE */
@@ -3799,10 +3799,10 @@ RETCODE initSolve(
       }
 
       /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
-      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->upperbound) )
+      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->cutoffbound) )
       {
-         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat,
-               scip->transprob, scip->tree, scip->lp, objbound + 1.0) );
+         CHECK_OKAY( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+               scip->lp, objbound + 1.0) );
       }
    }
 
@@ -8961,7 +8961,7 @@ RETCODE SCIPbranchLP(
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecLP(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->upperbound, TRUE, result) );
+         scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -8975,7 +8975,7 @@ RETCODE SCIPbranchPseudo(
    CHECK_OKAY( checkStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecPseudo(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->branchcand, scip->eventqueue, scip->primal->upperbound, TRUE, result) );
+         scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }
@@ -10569,7 +10569,8 @@ Real SCIPgetUpperbound(
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
  *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
- *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
+ *  additionally, due to objective function domain propagation, the cutoff bound can be further reduced
  */
 Real SCIPgetCutoffbound(
    SCIP*            scip                /**< SCIP data structure */

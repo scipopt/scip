@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.137 2005/02/03 12:19:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.138 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3801,13 +3801,13 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_FIXED:
          assert(SCIPsetIsEQ(set, var->locdom.lb, var->locdom.ub));
          SCIPprobAddObjoffset(prob, var->locdom.lb * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
          break;
 
       case SCIP_VARSTATUS_AGGREGATED:
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(prob, var->data.aggregate.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
          CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, blkmem, set, stat, prob, primal, tree, lp, eventqueue,
                         var->data.aggregate.scalar * addobj) );
          break;
@@ -3815,7 +3815,7 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_MULTAGGR:
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, prob, primal, tree, lp, 
@@ -3829,7 +3829,7 @@ RETCODE SCIPvarAddObj(
          assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(prob, var->data.negate.constant * addobj);
-         CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, blkmem, set, stat, prob, tree, lp) );
+         CHECK_OKAY( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
          CHECK_OKAY( SCIPvarAddObj(var->negatedvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, -addobj) );
          break;
 

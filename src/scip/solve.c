@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.163 2005/02/02 19:34:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.164 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -694,7 +694,6 @@ RETCODE priceAndCutLoop(
    EVENT event;
    Real loclowerbound;
    Real glblowerbound;
-   Real upperbound;
    Bool separate;
    Bool mustprice;
    Bool mustsepar;
@@ -731,8 +730,8 @@ RETCODE priceAndCutLoop(
    /* check, if we want to separate at this node */
    loclowerbound = SCIPnodeGetLowerbound(focusnode);
    glblowerbound = SCIPtreeGetLowerbound(tree, set);
-   upperbound = primal->upperbound;
-   separate = SCIPsetIsLE(set, loclowerbound - glblowerbound, set->sepa_maxbounddist * (upperbound - glblowerbound));
+   separate = SCIPsetIsLE(set, loclowerbound - glblowerbound, 
+      set->sepa_maxbounddist * (primal->cutoffbound - glblowerbound));
 
    /* get maximal number of separation rounds */
    maxseparounds = (root ? set->sepa_maxroundsroot : set->sepa_maxrounds);
@@ -1786,7 +1785,7 @@ RETCODE solveNode(
             debugMessage("infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
                SCIPnodeGetDepth(focusnode), nlpcands);
             CHECK_OKAY( SCIPbranchExecLP(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue, 
-                  primal->upperbound, FALSE, &result) );
+                  primal->cutoffbound, FALSE, &result) );
             assert(result != SCIP_DIDNOTRUN);
          }
          else
@@ -1795,7 +1794,7 @@ RETCODE solveNode(
             debugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
                SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
             CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, 
-                  primal->upperbound, TRUE, &result) );
+                  primal->cutoffbound, TRUE, &result) );
          }
 
          switch( result )
@@ -2241,7 +2240,7 @@ RETCODE SCIPsolveCIP(
                else
                {
                   CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, 
-                        primal->upperbound, FALSE, &result) );
+                        primal->cutoffbound, FALSE, &result) );
                   assert(result != SCIP_DIDNOTRUN);
                }
             }

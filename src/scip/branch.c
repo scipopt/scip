@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.59 2005/01/31 12:20:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.60 2005/02/03 16:57:44 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -908,7 +908,7 @@ RETCODE SCIPbranchruleExecLPSol(
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
    SEPASTORE*       sepastore,          /**< separation storage */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -929,7 +929,7 @@ RETCODE SCIPbranchruleExecLPSol(
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (upperbound - glblowerbound)) )
+      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          Longint oldndomchgs;
          int oldncutsstored;
@@ -995,7 +995,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    TREE*            tree,               /**< branch and bound tree */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -1015,7 +1015,7 @@ RETCODE SCIPbranchruleExecPseudoSol(
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (upperbound - glblowerbound)) )
+      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          Longint oldndomchgs;
          Longint oldnactiveconss;
@@ -1351,7 +1351,7 @@ RETCODE SCIPbranchExecLP(
    SEPASTORE*       sepastore,          /**< separation storage */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
@@ -1380,7 +1380,7 @@ RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, upperbound, allowaddcons,
+      CHECK_OKAY( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoffbound, allowaddcons,
             result) );
       assert(*result != SCIP_DIDNOTRUN);
       return SCIP_OKAY;
@@ -1392,7 +1392,7 @@ RETCODE SCIPbranchExecLP(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, upperbound, allowaddcons, 
+      CHECK_OKAY( SCIPbranchruleExecLPSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, 
             result) );
    }
 
@@ -1445,7 +1445,7 @@ RETCODE SCIPbranchExecPseudo(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             upperbound,         /**< global upper bound */
+   Real             cutoffbound,        /**< global upper cutoff bound */
    Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
    RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
@@ -1469,7 +1469,7 @@ RETCODE SCIPbranchExecPseudo(
    /* try all branching rules until one succeeded to branch */
    for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
    {
-      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, upperbound, allowaddcons, result) );
+      CHECK_OKAY( SCIPbranchruleExecPseudoSol(set->branchrules[i], set, stat, tree, cutoffbound, allowaddcons, result) );
    }
 
    if( *result == SCIP_DIDNOTRUN )

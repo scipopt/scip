@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.201 2005/02/02 19:34:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.202 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4225,7 +4225,8 @@ Real SCIPgetUpperbound(
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
  *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
- *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
+ *  additionally, due to objective function domain propagation, the cutoff bound can be further reduced
  */
 extern
 Real SCIPgetCutoffbound(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.36 2005/02/02 19:34:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.37 2005/02/03 16:57:45 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -241,7 +241,7 @@ RETCODE selectRounding(
                {
                   roundval = SCIPfeasFloor(scip, solval);
                   deltaobj = obj * (roundval - solval);
-                  if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetUpperbound(scip) )
+                  if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetCutoffbound(scip) )
                   {
                      minnlocks = nlocks;
                      bestdeltaobj = deltaobj;
@@ -260,7 +260,7 @@ RETCODE selectRounding(
                {
                   roundval = SCIPfeasCeil(scip, solval);
                   deltaobj = obj * (roundval - solval);
-                  if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetUpperbound(scip) )
+                  if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetCutoffbound(scip) )
                   {
                      minnlocks = nlocks;
                      bestdeltaobj = deltaobj;
@@ -358,7 +358,7 @@ RETCODE selectEssentialRounding(
          {
             roundval = SCIPfeasFloor(scip, solval);
             deltaobj = obj * (roundval - solval);
-            if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetUpperbound(scip) )
+            if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetCutoffbound(scip) )
             {
                maxnlocks = nlocks;
                bestdeltaobj = deltaobj;
@@ -374,7 +374,7 @@ RETCODE selectEssentialRounding(
          {
             roundval = SCIPfeasCeil(scip, solval);
             deltaobj = obj * (roundval - solval);
-            if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetUpperbound(scip) )
+            if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetCutoffbound(scip) )
             {
                maxnlocks = nlocks;
                bestdeltaobj = deltaobj;
@@ -533,7 +533,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
 
    /* calculate the minimal objective value possible after rounding fractional variables */
    minobj = SCIPgetSolTransObj(scip, sol);
-   assert(minobj < SCIPgetUpperbound(scip));
+   assert(minobj < SCIPgetCutoffbound(scip));
    for( c = 0; c < nlpcands; ++c )
    {
       obj = SCIPvarGetObj(lpcands[c]);
@@ -551,7 +551,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       debugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
 
-      assert(minobj < SCIPgetUpperbound(scip)); /* otherwise, the rounding variable selection should have returned NULL */
+      assert(minobj < SCIPgetCutoffbound(scip)); /* otherwise, the rounding variable selection should have returned NULL */
 
       /* choose next variable to process:
        *  - if a violated row exists, round a variable decreasing the violation, that has least impact on other rows
