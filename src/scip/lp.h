@@ -116,6 +116,7 @@ struct Col
    int              validredcostlp;     /**< lp number for which reduced cost value is valid */
    int              validfarkaslp;      /**< lp number for which farkas value is valid */
    int              strongitlim;        /**< strong branching iteration limit used to get strongdown and strongup, or -1 */
+   int              age;                /**< number of successive times this variable was in LP and was 0.0 in solution */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
@@ -155,6 +156,7 @@ struct Row
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
+   int              age;                /**< number of successive times this row was in LP and was not sharp in solution */
    unsigned int     sorted:1;           /**< are column indices sorted in increasing order? */
    unsigned int     validpsactivity:1;  /**< is the pseudo activity valid? */
    unsigned int     validactivitybds:1; /**< are the activity bounds minactivity/maxactivity valid? */
@@ -520,48 +522,6 @@ RETCODE SCIProwChgRhs(
    Real             rhs                 /**< new right hand side */
    );
 
-/** returns the left hand side of the row */
-extern
-Real SCIProwGetLhs(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns the right hand side of the row */
-extern
-Real SCIProwGetRhs(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns the name of the row */
-extern
-const char* SCIProwGetName(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets unique index of row */
-extern
-int SCIProwGetIndex(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is only valid locally */
-extern
-Bool SCIProwIsLocal(
-   ROW*             row                 /**< LP row */
-   );
-
-/** gets position of row in actual LP, or -1 if it is not in LP */
-extern
-int SCIProwGetLPPos(
-   ROW*             row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is member of actual LP */
-extern
-Bool SCIProwIsInLP(
-   ROW*             row                 /**< LP row */
-   );
-
 /** returns the activity of a row in the last LP or after recalculation */
 extern
 Real SCIProwGetActivity(
@@ -648,6 +608,26 @@ RETCODE SCIProwInvalidActivityBounds(
    ROW*             row                 /**< LP row */
    );
 
+/** gets maximal absolute value of row vector coefficients */
+extern
+Real SCIProwGetMaxval(
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** output row to file stream */
+extern
+void SCIProwPrint(
+   ROW*             row,                /**< LP row */
+   FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** get number of nonzero entries in row vector */
 extern
 int SCIProwGetNNonz(
@@ -678,19 +658,70 @@ Real SCIProwGetNorm(
    ROW*             row                 /**< LP row */
    );
 
-/** gets maximal absolute value of row vector coefficients */
+/** returns the left hand side of the row */
 extern
-Real SCIProwGetMaxval(
-   ROW*             row,                /**< LP row */
-   const SET*       set                 /**< global SCIP settings */
+Real SCIProwGetLhs(
+   ROW*             row                 /**< LP row */
    );
 
-/** output row to file stream */
+/** returns the right hand side of the row */
 extern
-void SCIProwPrint(
-   ROW*             row,                /**< LP row */
-   FILE*            file                /**< output file (or NULL for standard output) */
+Real SCIProwGetRhs(
+   ROW*             row                 /**< LP row */
    );
+
+/** returns the name of the row */
+extern
+const char* SCIProwGetName(
+   ROW*             row                 /**< LP row */
+   );
+
+/** gets unique index of row */
+extern
+int SCIProwGetIndex(
+   ROW*             row                 /**< LP row */
+   );
+
+/** returns TRUE iff row is only valid locally */
+extern
+Bool SCIProwIsLocal(
+   ROW*             row                 /**< LP row */
+   );
+
+/** gets position of row in actual LP, or -1 if it is not in LP */
+extern
+int SCIProwGetLPPos(
+   ROW*             row                 /**< LP row */
+   );
+
+/** returns TRUE iff row is member of actual LP */
+extern
+Bool SCIProwIsInLP(
+   ROW*             row                 /**< LP row */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIProwGetNNonz(row)            (row->len)
+#define SCIProwGetCols(row)             (row->cols)
+#define SCIProwGetVals(row)             (row->vals)
+#define SCIProwGetConstant(row)         (row->constant)
+#define SCIProwGetNorm(row)             (sqrt(row->sqrnorm))
+#define SCIProwGetLhs(row)              (row->lhs)
+#define SCIProwGetRhs(row)              (row->rhs)
+#define SCIProwGetName(row)             (row->name)
+#define SCIProwGetIndex(row)            (row->index)
+#define SCIProwIsLocal(row)             (row->local)
+#define SCIProwGetLPPos(row)            (row->lppos)
+#define SCIProwIsInLP(row)              (row->lppos >= 0)
+
+#endif
+
+
 
 
 /*
@@ -878,5 +909,37 @@ RETCODE SCIPlpGetIterations(
    int*             iterations          /**< pointer to store the iteration count */
    );
 
+/** increases age of columns with solution value 0.0 and rows with activity not at its bounds,
+ *  resets age of non-zero columns and sharp rows
+ */
+extern
+RETCODE SCIPlpUpdateAges(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** removes all columns and rows in the part of the LP created at the current node, that are too old */
+extern
+RETCODE SCIPlpRemoveObsoletes(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** removes all columns at 0.0 and rows not at their bound in the part of the LP created at the current node */
+extern
+RETCODE SCIPlpCleanupNew(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** removes all columns at 0.0 and rows not at their bound in the whole LP */
+extern
+RETCODE SCIPlpCleanupAll(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   );
 
 #endif

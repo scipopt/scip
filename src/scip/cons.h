@@ -96,6 +96,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *    result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
+ *    SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
  *    SCIP_SEPARATED  : at least one cutting plane was generated
  *    SCIP_CONSADDED  : at least one additional constraint was generated
  *    SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane

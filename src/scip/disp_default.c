@@ -84,34 +84,42 @@
 #define DISP_POSI_MAXDEPTH      2100
 #define DISP_STRI_MAXDEPTH      TRUE
 
+#define DISP_NAME_ACTVARS       "actvars"
+#define DISP_DESC_ACTVARS       "number of variables in actual node"
+#define DISP_HEAD_ACTVARS       "vars"
+#define DISP_WIDT_ACTVARS       5
+#define DISP_PRIO_ACTVARS       120
+#define DISP_POSI_ACTVARS       3000
+#define DISP_STRI_ACTVARS       TRUE
+
+#define DISP_NAME_ACTCONSS      "actconss"
+#define DISP_DESC_ACTCONSS      "number of enabled constraints in actual node"
+#define DISP_HEAD_ACTCONSS      "cons"
+#define DISP_WIDT_ACTCONSS      5
+#define DISP_PRIO_ACTCONSS      130
+#define DISP_POSI_ACTCONSS      3100
+#define DISP_STRI_ACTCONSS      TRUE
+
 #define DISP_NAME_ACTCOLS       "actcols"
 #define DISP_DESC_ACTCOLS       "number of LP columns in actual node"
 #define DISP_HEAD_ACTCOLS       "cols"
-#define DISP_WIDT_ACTCOLS       6
+#define DISP_WIDT_ACTCOLS       5
 #define DISP_PRIO_ACTCOLS       100
-#define DISP_POSI_ACTCOLS       3000
+#define DISP_POSI_ACTCOLS       3200
 #define DISP_STRI_ACTCOLS       TRUE
 
 #define DISP_NAME_ACTROWS       "actrows"
 #define DISP_DESC_ACTROWS       "number of LP rows in actual node"
 #define DISP_HEAD_ACTROWS       "rows"
-#define DISP_WIDT_ACTROWS       6
+#define DISP_WIDT_ACTROWS       5
 #define DISP_PRIO_ACTROWS       110
-#define DISP_POSI_ACTROWS       3100
+#define DISP_POSI_ACTROWS       3300
 #define DISP_STRI_ACTROWS       TRUE
-
-#define DISP_NAME_ACTCONSS      "actconss"
-#define DISP_DESC_ACTCONSS      "number of enabled constraints in actual node"
-#define DISP_HEAD_ACTCONSS      "cons"
-#define DISP_WIDT_ACTCONSS      6
-#define DISP_PRIO_ACTCONSS      120
-#define DISP_POSI_ACTCONSS      3200
-#define DISP_STRI_ACTCONSS      TRUE
 
 #define DISP_NAME_POOLSIZE      "poolsize"
 #define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
 #define DISP_HEAD_POOLSIZE      "pool"
-#define DISP_WIDT_POOLSIZE      6
+#define DISP_WIDT_POOLSIZE      5
 #define DISP_PRIO_POOLSIZE      80
 #define DISP_POSI_POOLSIZE      3300
 #define DISP_STRI_POOLSIZE      TRUE
@@ -276,6 +284,36 @@ DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
 }
 
 static
+DECL_DISPOUTPUT(SCIPdispOutputActvars)
+{
+   int nvars;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTVARS) == 0);
+   assert(scip != NULL);
+
+   CHECK_OKAY( SCIPgetVars(scip, NULL, &nvars, NULL, NULL, NULL, NULL) );
+   SCIPdispDecimal(file, nvars, DISP_WIDT_ACTVARS);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_DISPOUTPUT(SCIPdispOutputActconss)
+{
+   int actconss;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCONSS) == 0);
+   assert(scip != NULL);
+
+   CHECK_OKAY( SCIPgetNEnabledConss(scip, &actconss) );
+   SCIPdispDecimal(file, actconss, DISP_WIDT_ACTCONSS);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_DISPOUTPUT(SCIPdispOutputActcols)
 {
    int actcols;
@@ -301,21 +339,6 @@ DECL_DISPOUTPUT(SCIPdispOutputActrows)
 
    CHECK_OKAY( SCIPgetLPRows(scip, NULL, &actrows) );
    SCIPdispDecimal(file, actrows, DISP_WIDT_ACTROWS);
-
-   return SCIP_OKAY;
-}
-
-static
-DECL_DISPOUTPUT(SCIPdispOutputActconss)
-{
-   int actconss;
-
-   assert(disp != NULL);
-   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCONSS) == 0);
-   assert(scip != NULL);
-
-   CHECK_OKAY( SCIPgetNEnabledConss(scip, &actconss) );
-   SCIPdispDecimal(file, actconss, DISP_WIDT_ACTCONSS);
 
    return SCIP_OKAY;
 }
@@ -460,15 +483,18 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_MAXDEPTH, DISP_DESC_MAXDEPTH, DISP_HEAD_MAXDEPTH,
                   NULL, NULL, NULL, SCIPdispOutputMaxdepth, NULL, 
                   DISP_WIDT_MAXDEPTH, DISP_PRIO_MAXDEPTH, DISP_POSI_MAXDEPTH, DISP_STRI_MAXDEPTH) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTVARS, DISP_DESC_ACTVARS, DISP_HEAD_ACTVARS,
+                  NULL, NULL, NULL, SCIPdispOutputActvars, NULL, 
+                  DISP_WIDT_ACTVARS, DISP_PRIO_ACTVARS, DISP_POSI_ACTVARS, DISP_STRI_ACTVARS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCONSS, DISP_DESC_ACTCONSS, DISP_HEAD_ACTCONSS,
+                  NULL, NULL, NULL, SCIPdispOutputActconss, NULL, 
+                  DISP_WIDT_ACTCONSS, DISP_PRIO_ACTCONSS, DISP_POSI_ACTCONSS, DISP_STRI_ACTCONSS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCOLS, DISP_DESC_ACTCOLS, DISP_HEAD_ACTCOLS,
                   NULL, NULL, NULL, SCIPdispOutputActcols, NULL, 
                   DISP_WIDT_ACTCOLS, DISP_PRIO_ACTCOLS, DISP_POSI_ACTCOLS, DISP_STRI_ACTCOLS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTROWS, DISP_DESC_ACTROWS, DISP_HEAD_ACTROWS,
                   NULL, NULL, NULL, SCIPdispOutputActrows, NULL, 
                   DISP_WIDT_ACTROWS, DISP_PRIO_ACTROWS, DISP_POSI_ACTROWS, DISP_STRI_ACTROWS) );
-   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCONSS, DISP_DESC_ACTCONSS, DISP_HEAD_ACTCONSS,
-                  NULL, NULL, NULL, SCIPdispOutputActconss, NULL, 
-                  DISP_WIDT_ACTCONSS, DISP_PRIO_ACTCONSS, DISP_POSI_ACTCONSS, DISP_STRI_ACTCONSS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
                   NULL, NULL, NULL, SCIPdispOutputPoolsize, NULL, 
                   DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );

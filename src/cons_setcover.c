@@ -560,7 +560,7 @@ RETCODE branchLP(
    int i;
    int j;
 
-   todoMessage("use a better set covering branching");
+   todoMessage("use a better set covering branching on LP solution");
 
    assert(conshdlr != NULL);
    assert(result != NULL);
@@ -585,15 +585,26 @@ RETCODE branchLP(
    {
       var = lpcands[i];
       uses = SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var));
-      for( j = nsortcands; j > 0 && uses > SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(sortcands[j-1])); --j )
+      if( uses > 0 )
       {
-         sortcands[j] = sortcands[j-1];
+         for( j = nsortcands; j > 0 && uses > SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(sortcands[j-1])); --j )
+         {
+            sortcands[j] = sortcands[j-1];
+         }
+         assert(0 <= j && j <= nsortcands);
+         sortcands[j] = var;
+         nsortcands++;
       }
-      assert(0 <= j && j <= nsortcands);
-      sortcands[j] = var;
-      nsortcands++;
    }
-   assert(nsortcands == nlpcands);
+   assert(nsortcands <= nlpcands);
+
+   if( nsortcands == 0 )
+   {
+      /* none of the fractional variables is member of a set covering constraint
+       * -> we are not responsible for doing the branching
+       */
+      return SCIP_OKAY;
+   }
 
 #if 0
    /* select the first variables from the sorted candidate list, until MINBRANCHWEIGHT is reached */
@@ -638,7 +649,7 @@ RETCODE branchLP(
       if( nselcands == 1 )
       {
          /* only one candidate selected: fix it to 1.0 */
-         debugMessage("fixing variable <%s> to 1.0 in left child node\n", SCIPvarGetName(sortcands[0]));
+         debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(sortcands[0]));
          CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[0], 1.0) );
       }
       else
@@ -675,6 +686,113 @@ RETCODE branchLP(
 
    return SCIP_OKAY;
 }
+
+static
+RETCODE branchPseudo(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLR*        conshdlr,           /**< set covering constraint handler */
+   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
+   )
+{
+   CONSHDLRDATA* conshdlrdata;
+   INTARRAY* varuses;
+   VAR** pseudocands;
+   VAR** sortcands;
+   VAR* var;
+   NODE* node;
+   int npseudocands;
+   int nsortcands;
+   int nbranchcands;
+   int uses;
+   int i;
+   int j;
+
+   todoMessage("use a better set covering branching on pseudo solution");
+
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   varuses = conshdlrdata->varuses;
+   assert(varuses != NULL);
+
+   /* get fractional variables */
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands) );
+   if( npseudocands == 0 )
+      return SCIP_OKAY;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPcaptureBufferArray(scip, &sortcands, npseudocands) );
+   
+   /* sort fractional variables by number of uses in enabled set covering constraints */
+   nsortcands = 0;
+   for( i = 0; i < npseudocands; ++i )
+   {
+      var = pseudocands[i];
+      uses = SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var));
+      if( uses > 0 )
+      {
+         for( j = nsortcands; j > 0 && uses > SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(sortcands[j-1])); --j )
+         {
+            sortcands[j] = sortcands[j-1];
+         }
+         assert(0 <= j && j <= nsortcands);
+         sortcands[j] = var;
+         nsortcands++;
+      }
+   }
+   assert(nsortcands <= npseudocands);
+
+   if( nsortcands == 0 )
+   {
+      /* none of the fractional variables is member of a set covering constraint
+       * -> we are not responsible for doing the branching
+       */
+      return SCIP_OKAY;
+   }
+   
+   /* branch on the first part of the sorted candidates:
+    * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
+    * - create an additional child node x_0 = ... = x_n = 0
+    */
+   nbranchcands = (nsortcands+9)/10;
+   assert(nbranchcands >= 1);
+   for( i = 0; i < nbranchcands; ++i )
+   {            
+      /* create child with x_0 = ... = x_i-1 = 0, x_i = 1 */
+      CHECK_OKAY( SCIPcreateChild(scip, &node) );
+      for( j = 0; j < i; ++j )
+      {
+         CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[j], 0.0) );
+      }
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, sortcands[i], 1.0) );
+   }
+   /* create child with x_0 = ... = x_n = 0 */
+   CHECK_OKAY( SCIPcreateChild(scip, &node) );
+   for( i = 0; i < nbranchcands; ++i )
+   {
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
+   }
+
+   *result = SCIP_BRANCHED;
+
+#if DEBUG
+   {
+      int nchildren;
+      CHECK_OKAY( SCIPgetChildren(scip, NULL, &nchildren) );
+      debugMessage("branched on set cover constraint in pseudo solution: %d children\n", nchildren);
+   }
+#endif
+
+   /* free temporary memory */
+   CHECK_OKAY( SCIPreleaseBufferArray(scip, &sortcands) );
+
+   return SCIP_OKAY;
+}
+
+
 
 static
 DECL_CONSENFOLP(consEnfolpSetcover)
@@ -717,127 +835,107 @@ DECL_CONSENFOPS(consEnfopsSetcover)
 {
    CONSDATA* consdata;
    SETCOVERCONS* setcovercons;
-   VAR** vars;
-   Real solval;
-   int nvars;
+   int bestbranchcons;
+   int bestscore;
+   int score;
    int c;
-   int v;
-   Bool found;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   abort(); /* ???????????????? */
-
    *result = SCIP_FEASIBLE;
 
    /* check all set covering constraints for feasibility */
-   for( c = 0; c < nconss; ++c )
+   bestbranchcons = -1;
+   bestscore = 0;
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE); ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
       setcovercons = consdata->setcovercons;
       assert(setcovercons != NULL);
-
-      /* search all variables of the constraint until one is found with solution value 1.0 */
-      vars = setcovercons->vars;
-      nvars = setcovercons->nvars;
-      found = FALSE;
-      for( v = 0; v < nvars && !found; ++v )
+      
+      if( setcovercons->nfixedzeros == setcovercons->nvars )
       {
-         assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
-         CHECK_OKAY( SCIPgetSolVal(scip, NULL, vars[v], &solval) );
-         assert(SCIPisEQ(scip, solval, 0.0) || SCIPisEQ(scip, solval, 1.0));
-         found = SCIPisEQ(scip, solval, 1.0);
-      }
-      if( !found )
-      {
-         VAR** branchvars;
-         int nbranchvars;
-
+         /* the constraint cannot be feasible, because all variables are fixed to zero */
+         if( setcovercons->modifiable )
+         {
+            errorMessage("modifiable infeasible set covering constraint detected; pricing on pseudo solution not implemented yet");
+            abort();
+         }
          CHECK_OKAY( SCIPresetConsAge(scip, conss[c]) );
-
-         /* constraint is violated: branch on pseudo solution */
-
-         /* get temporary memory */
-         CHECK_OKAY( SCIPcaptureBufferArray(scip, &branchvars, nvars) );
-
-         /* find the non-fixed variables in the constraint */
-         nbranchvars = 0;
-         for( v = 0; v < nvars; ++v )
-         {
-            if( SCIPisEQ(scip, SCIPvarGetUb(vars[v]), 1.0) )
-            {
-               branchvars[nbranchvars] = vars[v];
-               nbranchvars++;
-            }
-         }
-
-         if( nbranchvars == 0 )
-         {
-            /* all variables in the constraint are fixed to 0.0
-             * -> if constraint is modifiable, we have to price in additional variables
-             * -> if constraint is not modifiable (subject to column generation), the node can be cut off
-             */
-            if( setcovercons->modifiable )
-            {
-               errorMessage("modifiable infeasible set covering constraint detected; pricing on pseudo solution not implemented yet");
-               abort();
-            }
-            else
-               *result = SCIP_CUTOFF;
-
-            debugMessage("set cover constraint <%s> cuts off node\n", SCIPconsGetName(conss[c]));
-         }
-         else
-         {
-            NODE* node;
-
-            /* for each non-fixed variable v, create a child node x_0 = ... = x_v-1 = 0, x_v = 1
-             * if the constraint is modifiable, we need the additional child x_0 = ... = x_n = 0 which forces
-             * the pricing of new variables to fulfil the constraint
-             */
-            for( v = 0; v < nbranchvars; ++v )
-            {
-               int u;
-
-               /* create child with x_0 = ... = x_v-1 = 0, x_v = 1 */
-               CHECK_OKAY( SCIPcreateChild(scip, &node) );
-               for( u = 0; u < v; ++u )
-               {
-                  CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchvars[u], 0.0) );
-               }
-               CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchvars[v], 1.0) );
-            }
-            if( setcovercons->modifiable )
-            {
-               /* create child with x_0 = ... = x_v = 0 */
-               CHECK_OKAY( SCIPcreateChild(scip, &node) );
-               for( v = 0; v < nbranchvars; ++v )
-               {
-                  CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchvars[v], 0.0) );
-               }
-            }
-            *result = SCIP_BRANCHED;
-
-#if DEBUG
-            {
-               int nchildren;
-               CHECK_OKAY( SCIPgetChildren(scip, NULL, &nchildren) );
-               debugMessage("branched on set cover constraint in pseudo solution: %d children\n", nchildren);
-            }
-#endif
-         }
+         *result = SCIP_CUTOFF;
+      }
+      else if( setcovercons->nfixedones >= 1 )
+      {
+         /* constraint is feasible anyway, because one of its variables if fixed to one -> constraint can be disabled */
+         CHECK_OKAY( SCIPdisableConsLocal(scip, conss[c]) );
+      }
+      else if( setcovercons->nfixedzeros == setcovercons->nvars-1 && !setcovercons->modifiable )
+      {
+         VAR** vars;
+         Real solval;
+         int nvars;
+         int foundvar;
+         int v;
          
-         /* free temporary memory */
-         CHECK_OKAY( SCIPreleaseBufferArray(scip, &branchvars) );
+         /* all except one variable are fixed to zero: fix the remaining variable to one */
 
-         return SCIP_OKAY;
+         /* search all variables of the constraint until the non-fixed one is found */
+         vars = setcovercons->vars;
+         nvars = setcovercons->nvars;
+         foundvar = -1;
+         for( v = 0; v < nvars && foundvar == -1; ++v )
+         {
+            assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+            if( SCIPisEQ(scip, SCIPvarGetUb(vars[v]), 1.0) )
+               foundvar = v;
+         }
+         assert(0 <= foundvar && foundvar < nvars);
+
+         /* fix variable to one */
+         CHECK_OKAY( SCIPchgVarLb(scip, vars[foundvar], 1.0) );
+
+         *result = SCIP_REDUCEDDOM;
+      }
+      else if( *result == SCIP_FEASIBLE )
+      {
+         VAR** vars;
+         Real solval;
+         Bool found;
+         int nvars;
+         int v;
+         
+         /* search all variables of the constraint until one is found with solution value 1.0 */
+         vars = setcovercons->vars;
+         nvars = setcovercons->nvars;
+         found = FALSE;
+         for( v = 0; v < nvars && !found; ++v )
+         {
+            assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+            CHECK_OKAY( SCIPgetSolVal(scip, NULL, vars[v], &solval) );
+            assert(SCIPisEQ(scip, solval, 0.0) || SCIPisEQ(scip, solval, 1.0));
+            found = SCIPisEQ(scip, solval, 1.0);
+         }
+         if( !found )
+         {
+            /* constraint is violated by pseudo solution */
+            CHECK_OKAY( SCIPresetConsAge(scip, conss[c]) );
+            *result = SCIP_INFEASIBLE;
+         }
       }
    }
    
+   if( *result == SCIP_INFEASIBLE )
+   {
+      /* at least one constraint is violated by pseudo solution and we didn't find a better way to resolve this:
+       * -> branch on pseudo solution
+       */
+      CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
+   }
+
    return SCIP_OKAY;
 }
 

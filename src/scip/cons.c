@@ -243,8 +243,6 @@ RETCODE conshdlrMarkConsObsolete(
    assert(cons != NULL);
    assert(!cons->obsolete);
 
-   cons->obsolete = TRUE;
-
    if( !cons->check )
    {
       /* constraint is not needed for feasibility -> it should be deleted completely */
@@ -253,6 +251,8 @@ RETCODE conshdlrMarkConsObsolete(
    else
    {
       CONS* tmpcons;
+
+      cons->obsolete = TRUE;
 
       /* constraint is needed for feasibility -> it should be moved to the last positions in the conss arrays */
       if( cons->active )
@@ -763,7 +763,7 @@ RETCODE conshdlrProcessUpdates(
    int i;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->delayupdates);
+   assert(!conshdlr->delayupdates);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -881,12 +881,11 @@ RETCODE conshdlrForceUpdates(
    assert(conshdlr != NULL);
    assert(conshdlr->delayupdates);
    
+   debugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
+   conshdlr->delayupdates = FALSE;
+
    CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, prob) );
    assert(conshdlr->nupdateconss == 0);
-
-   debugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
-
-   conshdlr->delayupdates = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1174,7 +1173,8 @@ RETCODE SCIPconshdlrSeparate(
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
 
-         if( *result != SCIP_SEPARATED
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_SEPARATED
             && *result != SCIP_CONSADDED
             && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
@@ -2298,6 +2298,7 @@ RETCODE SCIPconssetchgUndo(
    const SET*       set                 /**< global SCIP settings */
    )
 {
+   CONS* cons;
    int i;
 
    debugMessage("undoing constraint set changes at %p\n", conssetchg);
@@ -2311,14 +2312,22 @@ RETCODE SCIPconssetchgUndo(
    /* undo constraint disablings */
    for( i = conssetchg->ndisabledconss-1; i >= 0; --i )
    {
-      CHECK_OKAY( SCIPconsEnable(conssetchg->disabledconss[i], set) );
+      cons = conssetchg->disabledconss[i];
+      if( cons != NULL )
+      {
+         CHECK_OKAY( SCIPconsEnable(cons, set) );
+      }
    }
 
    /* undo constraint additions */
    for( i = conssetchg->naddedconss-1; i >= 0; --i )
    {
-      CHECK_OKAY( SCIPconsDeactivate(conssetchg->addedconss[i], set) );
-      assert(!conssetchg->addedconss[i]->active || conssetchg->addedconss[i]->updatedeactivate);
+      cons = conssetchg->addedconss[i];
+      if( cons != NULL )
+      {
+         CHECK_OKAY( SCIPconsDeactivate(cons, set) );
+         assert(!cons->active || cons->updatedeactivate);
+      }
    }
 
    return SCIP_OKAY;

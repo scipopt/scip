@@ -831,7 +831,7 @@ RETCODE SCIPlpiDelCols(
    return SCIP_OKAY;   
 }
 
-/** deletes columns from LP */
+/** deletes columns from LP; the new position of a column must not be greater that its old position */
 RETCODE SCIPlpiDelColset(
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of columns
@@ -903,7 +903,7 @@ RETCODE SCIPlpiDelRows(
    return SCIP_OKAY;   
 }
 
-/** deletes rows from LP */
+/** deletes rows from LP; the new position of a row must not be greater that its old position */
 RETCODE SCIPlpiDelRowset(
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
@@ -1375,12 +1375,16 @@ Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
+   Bool primalfeasible;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_UNBOUNDED);
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
+   
+   return (lpi->solstat == CPX_STAT_UNBOUNDED && primalfeasible);
 }
 
 /** returns TRUE iff LP is primal infeasible */
@@ -1388,12 +1392,52 @@ Bool SCIPlpiIsPrimalInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
+   Bool primalfeasible;
+
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD);
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
+
+   return (lpi->solstat == CPX_STAT_INFEASIBLE
+      || (lpi->solstat == CPX_STAT_UNBOUNDED && !primalfeasible)
+      || lpi->solstat == CPX_STAT_INForUNBD);
+}
+
+/** returns TRUE iff LP is dual unbounded */
+Bool SCIPlpiIsDualUnbounded(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   Bool dualfeasible;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
+
+   return ((lpi->solstat == CPX_STAT_INFEASIBLE && dualfeasible) || lpi->solstat == CPX_STAT_INForUNBD);
+}
+
+/** returns TRUE iff LP is dual infeasible */
+Bool SCIPlpiIsDualInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   Bool dualfeasible;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(lpi->solstat >= 0);
+
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
+
+   return (lpi->solstat == CPX_STAT_UNBOUNDED || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible));
 }
 
 /** returns TRUE iff LP was solved to optimality */

@@ -1298,6 +1298,7 @@ RETCODE SCIPcolCreate(
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
    (*col)->strongitlim = -1;
+   (*col)->age = 0;
    (*col)->sorted = TRUE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
@@ -2014,6 +2015,7 @@ RETCODE SCIProwCreate(
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
    (*row)->validactivitylp = -1;
+   (*row)->age = 0;
    (*row)->sorted = FALSE;
    (*row)->validpsactivity = FALSE;
    (*row)->validactivitybds = FALSE;
@@ -2876,56 +2878,6 @@ RETCODE SCIProwInvalidActivityBounds(
    return SCIP_OKAY;
 }
 
-/** get number of nonzero entries in row vector */
-int SCIProwGetNNonz(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->len;
-}
-
-/** gets array with columns of nonzero entries */
-COL** SCIProwGetCols(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->cols;
-}
-
-/** gets array with coefficients of nonzero entries */
-Real* SCIProwGetVals(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->vals;
-}
-
-/** gets constant shift of row */
-Real SCIProwGetConstant(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return row->constant;
-}
-
-/** get euclidean norm of row vector */
-Real SCIProwGetNorm(
-   ROW*             row                 /**< LP row */
-   )
-{
-   assert(row != NULL);
-
-   return sqrt(row->sqrnorm);
-}
-
 /** gets maximal absolute value of row vector coefficients */
 Real SCIProwGetMaxval(
    ROW*             row,                /**< LP row */
@@ -2978,6 +2930,63 @@ RETCODE SCIProwChgRhs(
    }
 
    return SCIP_OKAY;
+}
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** get number of nonzero entries in row vector */
+int SCIProwGetNNonz(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->len;
+}
+
+/** gets array with columns of nonzero entries */
+COL** SCIProwGetCols(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->cols;
+}
+
+/** gets array with coefficients of nonzero entries */
+Real* SCIProwGetVals(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->vals;
+}
+
+/** gets constant shift of row */
+Real SCIProwGetConstant(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->constant;
+}
+
+/** get euclidean norm of row vector */
+Real SCIProwGetNorm(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return sqrt(row->sqrnorm);
 }
 
 /** returns the left hand side of the row */
@@ -3050,6 +3059,9 @@ Bool SCIProwIsInLP(
    return (row->lppos >= 0);
 }
 
+#endif
+
+
 /** output row to file stream */
 void SCIProwPrint(
    ROW*             row,                /**< LP row */
@@ -3088,6 +3100,25 @@ void SCIProwPrint(
  * LP solver data update
  */
 
+/** resets column data to represent a column not in the LP solver */
+static
+void markColDeleted(
+   COL*             col                 /**< column to be marked deleted */
+   )
+{
+   assert(col != NULL);
+
+   col->lpipos = -1;
+   col->primsol = 0.0;
+   col->redcost = SCIP_INVALID;
+   col->farkas = SCIP_INVALID;
+   col->strongdown = SCIP_INVALID;
+   col->strongup = SCIP_INVALID;
+   col->validredcostlp = -1;
+   col->validfarkaslp = -1;
+   col->strongitlim = -1;
+}
+
 /** applies all cached column removals to the LP solver */
 static
 RETCODE lpFlushDelCols(
@@ -3117,15 +3148,7 @@ RETCODE lpFlushDelCols(
       CHECK_OKAY( SCIPlpiDelCols(lp->lpi, lp->lpifirstchgcol, lp->nlpicols-1) );
       for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
       {
-         lp->lpicols[i]->lpipos = -1;
-         lp->lpicols[i]->primsol = 0.0;
-         lp->lpicols[i]->redcost = SCIP_INVALID;
-         lp->lpicols[i]->farkas = SCIP_INVALID;
-         lp->lpicols[i]->strongdown = SCIP_INVALID;
-         lp->lpicols[i]->strongup = SCIP_INVALID;
-         lp->lpicols[i]->validredcostlp = -1;
-         lp->lpicols[i]->validfarkaslp = -1;
-         lp->lpicols[i]->strongitlim = -1;
+         markColDeleted(lp->lpicols[i]);
       }
       lp->nlpicols = lp->lpifirstchgcol;
    }
@@ -3274,6 +3297,21 @@ RETCODE lpFlushAddCols(
    return SCIP_OKAY;
 }
 
+/** resets row data to represent a row not in the LP solver */
+static
+void markRowDeleted(
+   ROW*             row                 /**< row to be marked deleted */
+   )
+{
+   assert(row != NULL);
+
+   row->lpipos = -1;
+   row->dualsol = 0.0;
+   row->activity = SCIP_INVALID;
+   row->dualfarkas = 0.0;
+   row->validactivitylp = -1;
+}
+
 /** applies all cached row removals to the LP solver */
 static
 RETCODE lpFlushDelRows(
@@ -3303,11 +3341,7 @@ RETCODE lpFlushDelRows(
       CHECK_OKAY( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
       for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
       {
-         lp->lpirows[i]->lpipos = -1;
-         lp->lpirows[i]->dualsol = 0.0;
-         lp->lpirows[i]->activity = SCIP_INVALID;
-         lp->lpirows[i]->dualfarkas = 0.0;
-         lp->lpirows[i]->validactivitylp = -1;
+         markRowDeleted(lp->lpirows[i]);
       }
       lp->nlpirows = lp->lpifirstchgrow;
    }
@@ -3738,6 +3772,7 @@ RETCODE SCIPlpAddCol(
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
+   col->age = 0;
    lp->ncols++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
@@ -3765,6 +3800,7 @@ RETCODE SCIPlpAddRow(
    CHECK_OKAY( ensureRowsSize(lp, set, lp->nrows+1) );
    lp->rows[lp->nrows] = row;
    row->lppos = lp->nrows;
+   row->age = 0;
    lp->nrows++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
@@ -4068,7 +4104,7 @@ RETCODE SCIPlpSolvePrimal(
    stat->nlpiterations += iterations;
    stat->nprimallpiterations += iterations;
 
-   debugMessage("solving primal LP returned solstat=%d\n", lp->lpsolstat);
+   debugMessage("solving primal LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
 
    return SCIP_OKAY;
 }
@@ -4152,7 +4188,7 @@ RETCODE SCIPlpSolveDual(
    stat->nlpiterations += iterations;
    stat->nduallpiterations += iterations;
 
-   debugMessage("solving dual LP returned solstat=%d\n", lp->lpsolstat);
+   debugMessage("solving dual LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
 
    return SCIP_OKAY;
 }
@@ -4188,6 +4224,8 @@ RETCODE SCIPlpGetSol(
    STAT*            stat                /**< problem statistics */
    )
 {
+   COL** lpicols;
+   ROW** lpirows;
    Real* primsol;
    Real* dualsol;
    Real* activity;
@@ -4211,22 +4249,25 @@ RETCODE SCIPlpGetSol(
 
    debugMessage("LP solution: obj=%f\n", lp->objval);
 
+   lpicols = lp->lpicols;
+   lpirows = lp->lpirows;
+
    for( c = 0; c < lp->nlpicols; ++c )
    {
-      lp->lpicols[c]->primsol = primsol[c];
-      lp->lpicols[c]->redcost = redcost[c];
-      lp->lpicols[c]->validredcostlp = stat->nlp;
+      lpicols[c]->primsol = primsol[c];
+      lpicols[c]->redcost = redcost[c];
+      lpicols[c]->validredcostlp = stat->nlp;
       debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
-         lp->lpicols[c]->var->name, lp->lpicols[c]->primsol, lp->lpicols[c]->redcost);
+         lpicols[c]->var->name, lpicols[c]->primsol, lpicols[c]->redcost);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
    {
-      lp->lpirows[r]->dualsol = dualsol[r];
-      lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
-      lp->lpirows[r]->validactivitylp = stat->nlp;
+      lpirows[r]->dualsol = dualsol[r];
+      lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
+      lpirows[r]->validactivitylp = stat->nlp;
       debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
-         lp->lpirows[r]->name, lp->lpirows[r]->dualsol, lp->lpirows[r]->activity);
+         lpirows[r]->name, lpirows[r]->dualsol, lpirows[r]->activity);
    }
 
    /* free temporary memory */
@@ -4372,3 +4413,479 @@ RETCODE SCIPlpGetIterations(
 
    return SCIP_OKAY;
 }
+
+/** increases age of columns with solution value 0.0 and rows with activity not at its bounds,
+ *  resets age of non-zero columns and sharp rows
+ */
+RETCODE SCIPlpUpdateAges(
+   LP*              lp,                 /**< actual LP data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   COL** lpicols;
+   ROW** lpirows;
+   int c;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->solved);
+
+   debugMessage("updating LP ages\n");
+
+   lpicols = lp->lpicols;
+   lpirows = lp->lpirows;
+
+   for( c = 0; c < lp->nlpicols; ++c )
+   {
+      if( SCIPsetIsZero(set, lpicols[c]->primsol) )
+         lpicols[c]->age++;
+      else
+         lpicols[c]->age = 0;
+      debugMessage(" -> col <%s>: age=%d\n", lpicols[c]->var->name, lpicols[c]->age);
+   }
+
+   for( r = 0; r < lp->nlpirows; ++r )
+   {
+      if( SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
+         && SCIPsetIsLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+         lpirows[r]->age++;
+      else
+         lpirows[r]->age = 0;
+      debugMessage(" -> row <%s>: age=%d\n", lpirows[r]->name, lpirows[r]->age);
+   }
+
+   return SCIP_OKAY;
+}
+
+/* deletes the marked columns from the LP and the LP interface */
+static
+RETCODE lpDelColset(
+   LP*              lp,                 /**< actual LP data */
+   int*             coldstat            /**< deletion status of columns:  1 if column should be deleted, 0 if not */
+   )
+{
+   int ncols;
+   int c;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->ncols == lp->nlpicols);
+   assert(coldstat != NULL);
+
+   ncols = lp->ncols;
+
+   /* delete columns in LP solver */
+   CHECK_OKAY( SCIPlpiDelColset(lp->lpi, coldstat) );
+
+   /* update LP data respectively */
+   for( c = 0; c < ncols; ++c )
+   {
+      assert(lp->cols[c] == lp->lpicols[c]);
+      assert(coldstat[c] <= c);
+      lp->cols[c]->lppos = coldstat[c];
+      if( coldstat[c] == -1 )
+      {
+         markColDeleted(lp->cols[c]);
+         lp->cols[c] = NULL;
+         lp->lpicols[c] = NULL;
+         lp->ncols--;
+         lp->nlpicols--;
+      }
+      else if( coldstat[c] < c )
+      {
+         assert(lp->cols[coldstat[c]] == NULL);
+         assert(lp->lpicols[coldstat[c]] == NULL);
+         lp->cols[coldstat[c]] = lp->cols[c];
+         lp->lpicols[coldstat[c]] = lp->cols[c];
+         lp->cols[coldstat[c]]->lppos = coldstat[c];
+         lp->cols[coldstat[c]]->lpipos = coldstat[c];
+         lp->cols[c] = NULL;
+         lp->lpicols[c] = NULL;
+      }
+   }
+
+   /* mark LP to be unsolved */
+   if( lp->ncols < ncols )
+   {
+      assert(lp->ncols == lp->nlpicols);
+      assert(lp->nchgcols == 0);
+      assert(lp->flushed == TRUE);
+      lp->lpifirstchgcol = lp->nlpicols;
+      lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+
+   return SCIP_OKAY;
+}
+
+/* deletes the marked rows from the LP and the LP interface */
+static
+RETCODE lpDelRowset(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int*             rowdstat            /**< deletion status of rows:  1 if row should be deleted, 0 if not */
+   )
+{
+   int nrows;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->nrows == lp->nlpirows);
+   assert(rowdstat != NULL);
+
+   nrows = lp->nrows;
+
+   /* delete rows in LP solver */
+   CHECK_OKAY( SCIPlpiDelRowset(lp->lpi, rowdstat) );
+
+   /* update LP data respectively */
+   for( r = 0; r < nrows; ++r )
+   {
+      assert(lp->rows[r] == lp->lpirows[r]);
+      assert(rowdstat[r] <= r);
+      lp->rows[r]->lppos = rowdstat[r];
+      if( rowdstat[r] == -1 )
+      {
+         markRowDeleted(lp->rows[r]);
+         CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
+         assert(lp->rows[r] == NULL);
+         lp->lpirows[r] = NULL;
+         lp->nrows--;
+         lp->nlpirows--;
+      }
+      else if( rowdstat[r] < r )
+      {
+         assert(lp->rows[rowdstat[r]] == NULL);
+         assert(lp->lpirows[rowdstat[r]] == NULL);
+         lp->rows[rowdstat[r]] = lp->rows[r];
+         lp->lpirows[rowdstat[r]] = lp->rows[r];
+         lp->rows[rowdstat[r]]->lppos = rowdstat[r];
+         lp->rows[rowdstat[r]]->lpipos = rowdstat[r];
+         lp->rows[r] = NULL;
+         lp->lpirows[r] = NULL;
+      }
+   }
+
+   /* mark LP to be unsolved */
+   if( lp->nrows < nrows )
+   {
+      assert(lp->nrows == lp->nlpirows);
+      assert(lp->nchgrows == 0);
+      assert(lp->flushed == TRUE);
+      lp->lpifirstchgrow = lp->nlpirows;
+      lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
+      lp->primalfeasible = FALSE;
+      lp->objval = SCIP_INVALID;
+      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes all columns, that are too old, beginning with the given firstcol */
+static
+RETCODE lpRemoveObsoleteCols(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              firstcol            /**< first column to check for clean up */
+   )
+{
+   COL** cols;
+   COL** lpicols;
+   int* coldstat;
+   int ncols;
+   int ndelcols;
+   int c;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->ncols == lp->nlpicols);
+
+   ncols = lp->ncols;
+   cols = lp->cols;
+   lpicols = lp->lpicols;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &coldstat, ncols) );
+
+   /* mark obsolete columns to be deleted */
+   ndelcols = 0;
+   clearMemoryArray(coldstat, ncols);
+   for( c = lp->firstnewcol; c < ncols; ++c )
+   {
+      assert(cols[c] == lpicols[c]);
+      assert(cols[c]->lppos == c);
+      assert(cols[c]->lpipos == c);
+      if( cols[c]->age > set->colagelimit )
+      {
+         coldstat[c] = 1;
+         ndelcols++;
+      }
+   }
+
+   debugMessage("removing %d/%d obsolete columns from LP\n", ndelcols, ncols);
+
+   /* delete the marked columns in the LP solver interface, update the LP respectively */
+   if( ndelcols > 0 )
+   {
+      CHECK_OKAY( lpDelColset(lp, coldstat) );
+   }
+   assert(lp->ncols == ncols - ndelcols);
+
+   /* release temporary memory */
+   SCIPsetReleaseBufferArray(set, &coldstat);
+      
+   return SCIP_OKAY;
+}
+
+/** removes all rows, that are too old, beginning with the given firstrow */
+static
+RETCODE lpRemoveObsoleteRows(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              firstrow            /**< first row to check for clean up */
+   )
+{
+   ROW** rows;
+   ROW** lpirows;
+   int* rowdstat;
+   int nrows;
+   int ndelrows;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->nrows == lp->nlpirows);
+
+   nrows = lp->nrows;
+   rows = lp->rows;
+   lpirows = lp->lpirows;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rowdstat, nrows) );
+
+   /* mark obsolete rows to be deleted */
+   ndelrows = 0;
+   clearMemoryArray(rowdstat, nrows);
+   for( r = lp->firstnewrow; r < nrows; ++r )
+   {
+      assert(rows[r] == lpirows[r]);
+      assert(rows[r]->lppos == r);
+      assert(rows[r]->lpipos == r);
+      if( rows[r]->age > set->rowagelimit )
+      {
+         rowdstat[r] = 1;
+         ndelrows++;
+      }
+   }
+
+   debugMessage("removing %d/%d obsolete rows from LP\n", ndelrows, nrows);
+
+   /* delete the marked rows in the LP solver interface, update the LP respectively */
+   if( ndelrows > 0 )
+   {
+      CHECK_OKAY( lpDelRowset(lp, memhdr, set, rowdstat) );
+   }
+   assert(lp->nrows == nrows - ndelrows);
+
+   /* release temporary memory */
+   SCIPsetReleaseBufferArray(set, &rowdstat);
+      
+   return SCIP_OKAY;
+}
+
+/** removes all columns and rows in the part of the LP created at the current node, that are too old */
+RETCODE SCIPlpRemoveObsoletes(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+
+   debugMessage("removing obsolete columns starting with %d/%d, obsolete rows starting with %d/%d\n",
+      lp->firstnewcol, lp->ncols, lp->firstnewrow, lp->nrows);
+
+   if( lp->firstnewcol < lp->ncols )
+   {
+      CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, lp->firstnewcol) );
+   }
+   if( lp->firstnewrow < lp->nrows )
+   {
+      CHECK_OKAY( lpRemoveObsoleteRows(lp, memhdr, set, lp->firstnewrow) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes all columns at 0.0 beginning with the given firstcol */
+static
+RETCODE lpCleanupCols(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              firstcol            /**< first column to check for clean up */
+   )
+{
+   COL** cols;
+   COL** lpicols;
+   int* coldstat;
+   int ncols;
+   int ndelcols;
+   int c;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->ncols == lp->nlpicols);
+   assert(0 <= firstcol && firstcol < lp->ncols);
+
+   ncols = lp->ncols;
+   cols = lp->cols;
+   lpicols = lp->lpicols;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &coldstat, ncols) );
+
+   /* mark unused columns to be deleted */
+   ndelcols = 0;
+   clearMemoryArray(coldstat, ncols);
+   for( c = firstcol; c < ncols; ++c )
+   {
+      assert(cols[c] == lpicols[c]);
+      assert(cols[c]->lppos == c);
+      assert(cols[c]->lpipos == c);
+      if( SCIPsetIsZero(set, lpicols[c]->primsol) )
+      {
+         coldstat[c] = 1;
+         ndelcols++;
+      }
+   }
+
+   debugMessage("removing %d/%d unused columns from LP\n", ndelcols, ncols);
+
+   /* delete the marked columns in the LP solver interface, update the LP respectively */
+   if( ndelcols > 0 )
+   {
+      CHECK_OKAY( lpDelColset(lp, coldstat) );
+   }
+   assert(lp->ncols == ncols - ndelcols);
+
+   /* release temporary memory */
+   SCIPsetReleaseBufferArray(set, &coldstat);
+      
+   return SCIP_OKAY;
+}
+
+/** removes all rows not at one of their bounds beginning with the given firstrow */
+static
+RETCODE lpCleanupRows(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              firstrow            /**< first row to check for clean up */
+   )
+{
+   ROW** rows;
+   ROW** lpirows;
+   int* rowdstat;
+   int nrows;
+   int ndelrows;
+   int r;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(lp->ncols == lp->nlpicols);
+   assert(lp->nrows == lp->nlpirows);
+   assert(0 <= firstrow && firstrow < lp->nrows);
+
+   nrows = lp->nrows;
+   rows = lp->rows;
+   lpirows = lp->lpirows;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rowdstat, nrows) );
+
+   /* mark unused rows to be deleted */
+   ndelrows = 0;
+   clearMemoryArray(rowdstat, nrows);
+   for( r = firstrow; r < nrows; ++r )
+   {
+      assert(rows[r] == lpirows[r]);
+      assert(rows[r]->lppos == r);
+      assert(rows[r]->lpipos == r);
+      if( SCIPsetIsGT(set, lpirows[r]->activity, lpirows[r]->lhs)
+         && SCIPsetIsLT(set, lpirows[r]->activity, lpirows[r]->rhs) )
+      {
+         rowdstat[r] = 1;
+         ndelrows++;
+      }
+   }
+
+   debugMessage("removing %d/%d unused rows from LP\n", ndelrows, nrows);
+
+   /* delete the marked rows in the LP solver interface, update the LP respectively */
+   if( ndelrows > 0 )
+   {
+      CHECK_OKAY( lpDelRowset(lp, memhdr, set, rowdstat) );
+   }
+   assert(lp->nrows == nrows - ndelrows);
+
+   /* release temporary memory */
+   SCIPsetReleaseBufferArray(set, &rowdstat);
+
+   return SCIP_OKAY;
+}
+
+/** removes all columns at 0.0 and rows not at their bound in the part of the LP created at the current node */
+RETCODE SCIPlpCleanupNew(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->solved);
+
+   if( lp->firstnewcol < lp->ncols )
+   {
+      CHECK_OKAY( lpCleanupCols(lp, memhdr, set, lp->firstnewcol) );
+   }
+   if( lp->firstnewrow < lp->nrows )
+   {
+      CHECK_OKAY( lpCleanupRows(lp, memhdr, set, lp->firstnewrow) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes all columns at 0.0 and rows not at their bound in the whole LP */
+RETCODE SCIPlpCleanupAll(
+   LP*              lp,                 /**< actual LP data */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->solved);
+
+   if( 0 < lp->ncols )
+   {
+      CHECK_OKAY( lpCleanupCols(lp, memhdr, set, 0) );
+   }
+   if( 0 < lp->nrows )
+   {
+      CHECK_OKAY( lpCleanupRows(lp, memhdr, set, 0) );
+   }
+
+   return SCIP_OKAY;
+}
+

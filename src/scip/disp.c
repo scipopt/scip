@@ -272,10 +272,10 @@ RETCODE SCIPdispPrintLine(
                if( stripline )
                   printf("|");
                fillspace = set->disps[i]->width - strlen(set->disps[i]->header);
-               for( j = 0; j < (fillspace+1)/2; ++j )
+               for( j = 0; j < (fillspace)/2; ++j )
                   printf(" ");
                printf(set->disps[i]->header);
-               for( j = 0; j < fillspace/2; ++j )
+               for( j = 0; j < (fillspace+1)/2; ++j )
                   printf(" ");
                stripline = set->disps[i]->stripline;
             }

@@ -210,6 +210,13 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
 }
 
 void
+clearMemory_call(void* ptr, size_t size)
+{
+   assert(ptr != NULL);
+   memset(ptr, 0, size);
+}
+
+void
 copyMemory_call(void* ptr, const void* source, size_t size)
 {
    assert(ptr != NULL);

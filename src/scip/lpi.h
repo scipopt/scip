@@ -175,7 +175,7 @@ RETCODE SCIPlpiDelCols(
    int              lastcol             /**< last column to be deleted */
    );
 
-/** deletes columns from LP */
+/** deletes columns from LP; the new position of a column must not be greater that its old position */
 extern 
 RETCODE SCIPlpiDelColset(
    LPI*             lpi,                /**< LP interface structure */
@@ -206,7 +206,7 @@ RETCODE SCIPlpiDelRows(
    int              lastrow             /**< last row to be deleted */
    );
 
-/** deletes rows from LP */
+/** deletes rows from LP; the new position of a row must not be greater that its old position */
 extern 
 RETCODE SCIPlpiDelRowset(
    LPI*             lpi,                /**< LP interface structure */
@@ -382,6 +382,18 @@ Bool SCIPlpiIsPrimalUnbounded(
 /** returns TRUE iff LP is primal infeasible */
 extern 
 Bool SCIPlpiIsPrimalInfeasible(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is dual unbounded */
+extern 
+Bool SCIPlpiIsDualUnbounded(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** returns TRUE iff LP is dual infeasible */
+extern 
+Bool SCIPlpiIsDualInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    );
 

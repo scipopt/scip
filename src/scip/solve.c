@@ -103,31 +103,52 @@ RETCODE solveLP(
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
          CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+
+         /* update ages and remove obsolete columns and rows from LP */
+         CHECK_OKAY( SCIPlpUpdateAges(lp, set) );
+         CHECK_OKAY( SCIPlpRemoveObsoletes(lp, memhdr, set) );
+         
+         if( !lp->solved )
+         {
+            /* resolve LP after removing obsolete columns and rows */
+            debugMessage("remove obsoletes: resolve LP again\n");
+            CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+            assert(lp->solved);
+            assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
+            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+         }
          break;
+
       case SCIP_LPSOLSTAT_INFEASIBLE:
          if( set->usepricing )
          {
             CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set) );
          }
          break;
+
       case SCIP_LPSOLSTAT_UNBOUNDED:
          CHECK_OKAY( SCIPlpGetUnboundedSol(lp, memhdr, set, stat) );
          break;
+
       case SCIP_LPSOLSTAT_OBJLIMIT:
          if( set->usepricing )
          {
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
          }
          break;
+
       case SCIP_LPSOLSTAT_ITERLIMIT:
          errorMessage("LP solver reached iteration limit -- this should not happen!");
          return SCIP_ERROR;
+
       case SCIP_LPSOLSTAT_TIMELIMIT:
          todoMessage("time limit exceeded processing");
          return SCIP_ERROR;
+
       case SCIP_LPSOLSTAT_ERROR:
          errorMessage("Error in LP solver");
          return SCIP_LPERROR;
+
       default:
          errorMessage("Unknown LP solution status");
          return SCIP_ERROR;
@@ -205,6 +226,7 @@ RETCODE solveNodeLP(
    EVENT event;
    Bool mustprice;
    Bool mustsepar;
+   Bool cutoff;
    Bool root;
    int h;
 
@@ -230,7 +252,8 @@ RETCODE solveNodeLP(
    /* price-and-cut loop */
    mustprice = TRUE;
    mustsepar = TRUE;
-   while( (set->usepricing && mustprice) || mustsepar )
+   cutoff = FALSE;
+   while( !cutoff && ((set->usepricing && mustprice) || mustsepar) )
    {
       debugMessage("-------- node solving loop --------\n");
 
@@ -238,7 +261,7 @@ RETCODE solveNodeLP(
       mustprice &= (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
 
       /* pricing (has to be done completely to get a valid lower bound) */
-      while( set->usepricing && mustprice )
+      while( !cutoff && set->usepricing && mustprice )
       {
          assert(lp->solved);
          assert(lp->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDED);
@@ -304,38 +327,56 @@ RETCODE solveNodeLP(
          do
          {
             separateagain = FALSE;
-            for( h = 0; h < set->nconshdlrs && !enoughcuts; ++h )
+            for( h = 0; h < set->nconshdlrs && !cutoff && !enoughcuts; ++h )
             {
                CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, tree->actnode->depth, &result) );
                separateagain |= (result == SCIP_CONSADDED);
+               cutoff |= (result == SCIP_CUTOFF);
                enoughcuts |= (SCIPsepaGetNCuts(sepa) >= SCIPsetGetMaxsepacuts(set, root)/2);
             }
          }
-         while( separateagain && !enoughcuts );
+         while( !cutoff && separateagain && !enoughcuts );
          
          /* separate LP, if the cut pool is less than half full */
-         if( !enoughcuts )
+         if( !cutoff &&!enoughcuts )
          {
             todoMessage("cut separation");
          }
 
-         /* apply found cuts */
-         CHECK_OKAY( SCIPsepaApplyCuts(sepa, memhdr, set, tree, lp) );
-         mustprice |= !lp->solved;
-         mustsepar = !lp->solved;
-         
-         /* solve LP (with dual simplex) */
-         debugMessage("separation: solve LP\n");
-         CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+         if( cutoff )
+         {
+            /* the found cuts are of no use, because the node is infeasible anyway */
+            CHECK_OKAY( SCIPsepaClearCuts(sepa, memhdr, set, lp) );
+         }
+         else
+         {
+            /* apply found cuts */
+            CHECK_OKAY( SCIPsepaApplyCuts(sepa, memhdr, set, tree, lp) );
+
+            mustprice |= !lp->solved;
+            mustsepar = !lp->solved;
+
+            /* solve LP (with dual simplex) */
+            debugMessage("separation: solve LP\n");
+            CHECK_OKAY( solveLP(memhdr, set, lp, stat) );
+         }
          assert(lp->solved);
       }
    }
 
    /* update lower bound w.r.t. the the LP solution */
-   tree->actnode->lowerbound = SCIPlpGetObjval(lp);
-   tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+   if( cutoff )
+   {
+      tree->actnode->lowerbound = primal->upperbound;
+   }
+   else
+   {
+      tree->actnode->lowerbound = SCIPlpGetObjval(lp);
+      tree->actnode->lowerbound = MIN(tree->actnode->lowerbound, primal->upperbound);
+   }
 
    /* issue LPSOLVED event */
+   assert(lp->solved);
    CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
    CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
    CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );

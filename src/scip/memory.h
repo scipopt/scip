@@ -45,6 +45,9 @@
 #define allocMemoryArrayCPP(num,size)      allocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
 #define reallocMemoryArray(ptr,num)        (*(ptr) = reallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define reallocMemorySize(ptr,size)        (*(ptr) = reallocMemory_call( *(ptr), (size_t)(size), __FILE__, __LINE__ ))
+#define clearMemory(ptr)                   clearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
+#define clearMemoryArray(ptr, num)         clearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
+#define clearMemorySize(ptr, size)         clearMemory_call( (void*)(ptr), (size_t)(size) )
 #define copyMemory(ptr, source)            copyMemory_call( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
 #define copyMemoryArray(ptr, source, num)  copyMemory_call( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
 #define copyMemorySize(ptr, source, size)  copyMemory_call( (void*)(ptr), (const void*)source, (size_t)(size) )
@@ -65,6 +68,7 @@
 
 void*  allocMemory_call(size_t size, const char *filename, int line);
 void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
+void   clearMemory_call(void* ptr, size_t size);
 void   copyMemory_call(void* ptr, const void* source, size_t size);
 void*  duplicateMemory_call(const void* source, size_t size, const char *filename, int line);
 void   freeMemory_call(void** ptr, const char *filename, int line);

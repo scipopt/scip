@@ -1692,6 +1692,7 @@ static
 RETCODE actnodeToFork(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    )
@@ -1709,6 +1710,16 @@ RETCODE actnodeToFork(
    assert(lp->solved);
 
    debugMessage("actnode %p to fork at depth %d\n", tree->actnode, tree->actnode->depth);
+
+   /* clean up newly created part of LP to keep only necessary columns and rows */
+   CHECK_OKAY( SCIPlpCleanupNew(lp, memhdr, set) );
+
+   /* resolve LP after cleaning up */
+   if( !lp->solved )
+   {
+      CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+   }
+   assert(lp->solved);
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
@@ -1742,6 +1753,7 @@ static
 RETCODE actnodeToSubroot(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    )
@@ -1759,6 +1771,16 @@ RETCODE actnodeToSubroot(
    assert(lp->solved);
 
    debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
+
+   /* clean up whole LP to keep only necessary columns and rows */
+   CHECK_OKAY( SCIPlpCleanupAll(lp, memhdr, set) );
+
+   /* resolve LP after cleaning up */
+   if( !lp->solved )
+   {
+      CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+   }
+   assert(lp->solved);
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
@@ -1907,8 +1929,16 @@ RETCODE SCIPnodeActivate(
          if( tree->actnodehaslp )
          {
             todoMessage("decide: old active node becomes fork or subroot");
-            /* convert old active node into a fork node */
-            CHECK_OKAY( actnodeToFork(memhdr, set, tree, lp) );
+            if( tree->actnode->depth % 15 == 0 ) /* ????????????? */
+            {
+               /* convert old active node into a subroot node */
+               CHECK_OKAY( actnodeToSubroot(memhdr, set, stat, tree, lp) );
+            }
+            else
+            {
+               /* convert old active node into a fork node */
+               CHECK_OKAY( actnodeToFork(memhdr, set, stat, tree, lp) );
+            }
          }
          else
          {

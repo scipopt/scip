@@ -56,6 +56,8 @@
 
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes */
 #define SCIP_DEFAULT_LPSOLVEDEPTH  INT_MAX /**< maximal depth for solving LPs */
+#define SCIP_DEFAULT_COLAGELIMIT         8 /**< maximum age a column can reach before it is deleted from the LP */
+#define SCIP_DEFAULT_ROWAGELIMIT         8 /**< maximum age a row can reach before it is deleted from the LP */
 
 
 /* Pricing */
@@ -85,12 +87,12 @@
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT  10000 /*LONGINT_MAX*/ /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX /**< maximal number of nodes to create */
 
 
 /* Display */
 
-#define SCIP_DEFAULT_DISPWIDTH         134 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
@@ -176,6 +178,8 @@ RETCODE SCIPsetCreate(
    (*set)->abortpricevarsfac = SCIP_DEFAULT_ABORTPRICEVARSFAC;
    (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
    (*set)->maxsepacutsroot = SCIP_DEFAULT_MAXSEPACUTSROOT;
+   (*set)->colagelimit = SCIP_DEFAULT_COLAGELIMIT;
+   (*set)->rowagelimit = SCIP_DEFAULT_ROWAGELIMIT;
    (*set)->cutagelimit = SCIP_DEFAULT_CUTAGELIMIT;
    (*set)->consagelimit = SCIP_DEFAULT_CONSAGELIMIT;
    (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
