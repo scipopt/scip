@@ -78,14 +78,18 @@
 #define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
 #endif
 
-#define EPSEQ(x,y,eps) (ABS((x)-(y)) <= (eps))
-#define EPSLT(x,y,eps) ((x)-(y) < -(eps))
-#define EPSLE(x,y,eps) ((x)-(y) <= (eps))
-#define EPSGT(x,y,eps) ((x)-(y) > (eps))
-#define EPSGE(x,y,eps) ((x)-(y) >= -(eps))
-#define EPSZ(x,eps)    (ABS(x) <= (eps))
-#define EPSP(x,eps)    ((x) > (eps))
-#define EPSN(x,eps)    ((x) < -(eps))
+#define EPSEQ(x,y,eps)    (ABS((x)-(y)) <= (eps))
+#define EPSLT(x,y,eps)    ((x)-(y) < -(eps))
+#define EPSLE(x,y,eps)    ((x)-(y) <= (eps))
+#define EPSGT(x,y,eps)    ((x)-(y) > (eps))
+#define EPSGE(x,y,eps)    ((x)-(y) >= -(eps))
+#define EPSZ(x,eps)       (ABS(x) <= (eps))
+#define EPSP(x,eps)       ((x) > (eps))
+#define EPSN(x,eps)       ((x) < -(eps))
+#define EPSFLOOR(x,eps)   (floor((x)+(eps)))
+#define EPSCEIL(x,eps)    (ceil((x)-(eps)))
+#define EPSFRAC(x,eps)    ((x)-EPSFLOOR(x,eps))
+#define EPSISINT(x,eps)   (EPSCEIL(x,eps)-(x) <= (eps))
 
 
 
@@ -120,10 +124,11 @@ typedef long long Longint;              /**< type used for long integer values *
  */
 
 typedef double Real;                    /**< type used for floating point values */
+#define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
 #define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON  1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
-#define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
+#define SCIP_DEFAULT_CUTVIOLEPS  1e-03  /**< default epsilon for deciding if a cut is violated */
 #define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */
 
 

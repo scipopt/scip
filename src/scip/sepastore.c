@@ -33,13 +33,14 @@
 
 
 /** storage for separated cuts */
-struct Sepastore
+struct SepaStore
 {
    ROW**            cuts;               /**< array with separated cuts sorted by score */
    Real*            score;              /**< score for each separated cut (e.g. violation/(eucnorm * #nonzeros)) */
    int              cutssize;           /**< size of cuts and score arrays */
    int              ncuts;              /**< number of separated cuts (max. is set->maxsepacuts) */
    int              ncutsfound;         /**< total number of cuts found so far */
+   int              ncutsapplied;       /**< total number of cuts applied to the LPs */
 };
 
 
@@ -89,6 +90,7 @@ RETCODE SCIPsepastoreCreate(
    (*sepastore)->cutssize = 0;
    (*sepastore)->ncuts = 0;
    (*sepastore)->ncutsfound = 0;
+   (*sepastore)->ncutsapplied = 0;
 
    return SCIP_OKAY;
 }
@@ -191,12 +193,16 @@ RETCODE SCIPsepastoreApplyCuts(
    assert(set != NULL);
    assert(lp != NULL);
 
+   todoMessage("avoid applying redundant cuts");
+
    debugMessage("applying %d cuts\n", sepastore->ncuts);
 
    for( c = 0; c < sepastore->ncuts; ++c )
    {
       debugMessage("apply cut: ");
       debug( SCIProwPrint(sepastore->cuts[c], NULL) );
+
+      sepastore->ncutsapplied++;
 
       /* add cut to the LP and capture it */
       CHECK_OKAY( SCIPlpAddRow(lp, set, sepastore->cuts[c]) );
@@ -249,6 +255,16 @@ int SCIPsepastoreGetNCuts(
 
 /** get total number of cuts found so far */
 int SCIPsepastoreGetNCutsFound(
+   SEPASTORE*            sepastore                /**< separation storage */
+   )
+{
+   assert(sepastore != NULL);
+
+   return sepastore->ncutsfound;
+}
+
+/** get total number of cuts applied to the LPs */
+int SCIPsepastoreGetNCutsApplied(
    SEPASTORE*            sepastore                /**< separation storage */
    )
 {

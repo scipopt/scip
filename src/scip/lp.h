@@ -142,6 +142,7 @@ struct Row
    Real             rhs;                /**< right hand side of row */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
    Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
+   Real             minval;             /**< minimal absolute non-zero value of row vector, only valid if numminval > 0 */
    Real             dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
    Real             activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
    Real             dualfarkas;         /**< multiplier value in dual farkas infeasibility proof */
@@ -158,6 +159,7 @@ struct Row
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefs with absolute value equal to maxval, zero if maxval invalid */
+   int              numminval;          /**< number of coefs with absolute value equal to minval, zero if minval invalid */
    int              validactivitylp;    /**< lp number for which activity value is valid */
    Longint          validpsactivitybdchg; /**< bound change number for which pseudo activity value is valid */
    Longint          validactivitybdsbdchg;/**< bound change number for which activity bound values are valid */
@@ -563,6 +565,16 @@ RETCODE SCIProwChgRhs(
    Real             rhs                 /**< new right hand side */
    );
 
+/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+extern
+RETCODE SCIProwMakeRational(
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Bool*            success             /**< stores whether row could be made rational */
+   );
+
 /** returns the activity of a row in the actual LP solution */
 extern
 Real SCIProwGetLPActivity(
@@ -630,6 +642,13 @@ Real SCIProwGetMaxActivity(
 /** gets maximal absolute value of row vector coefficients */
 extern
 Real SCIProwGetMaxval(
+   ROW*             row,                /**< LP row */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** gets minimal absolute value of row vector's non-zero coefficients */
+extern
+Real SCIProwGetMinval(
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
@@ -832,6 +851,52 @@ ROW** SCIPlpGetNewrows(
 extern
 int SCIPlpGetNumNewrows(
    const LP*        lp                  /**< actual LP data */
+   );
+
+/** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
+extern
+RETCODE SCIPlpGetBasisInd(
+   LP*              lp,                 /**< LP data */
+   int*             basisind            /**< pointer to store the basis indices */
+   );
+
+/** gets a row from the inverse basis matrix B^-1 */
+extern
+RETCODE SCIPlpGetBInvRow(
+   LP*              lp,                 /**< LP data */
+   int              r,                  /**< row number */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   );
+
+/** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
+ *  LP row are swapped in the summation
+ */
+extern
+RETCODE SCIPlpSumRows(
+   LP*              lp,                 /**< LP data */
+   const SET*       set,                /**< global SCIP settings */
+   int              nvars,              /**< number of active variables in the problem */
+   Real*            weights,            /**< row weights in row summation */
+   REALARRAY*       sumcoef,            /**< array to store sum coefficients indexed by variables' probindex */
+   Real*            sumlhs,             /**< pointer to store the left hand side of the row summation */
+   Real*            sumrhs              /**< pointer to store the right hand side of the row summation */
+   );
+
+/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ * rows cannot participate in a MIR cut.
+ */
+extern
+RETCODE SCIPlpCalcMIR(
+   LP*              lp,                 /**< LP data */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   int              nvars,              /**< number of active variables in the problem */
+   VAR**            vars,               /**< active variables in the problem */
+   Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   Real*            weights,            /**< row weights in row summation */
+   REALARRAY*       mircoef,            /**< array to store MIR coefficients indexed by variables' probindex */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    );
 
 /** stores LP state (like basis information) into LP state object */

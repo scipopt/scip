@@ -573,6 +573,16 @@ DECL_CONSSEPA(consSepaSetcover)
    /* step 2: combine set covering constraints to get more cuts */
    todoMessage("further cuts of set covering constraints");
 
+   /* step 3: if no cuts were found and we are in the root node, check remaining constraints for feasibility */
+   if( SCIPgetActDepth(scip) == 0 )
+   {
+      for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
+      {
+         /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+         CHECK_OKAY( separate(scip, conss[c], result) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 

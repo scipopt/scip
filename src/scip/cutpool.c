@@ -25,7 +25,7 @@
 #include <assert.h>
 
 #include "cutpool.h"
-#include "sort.h"
+#include "misc.h"
 
 
 /** datastructure for cuts in a cut pool */

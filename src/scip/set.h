@@ -41,7 +41,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include <math.h>
 
 #include "def.h"
-#include "sort.h"
+#include "misc.h"
 #include "scip.h"
 #include "reader.h"
 #include "cons.h"
@@ -61,10 +61,11 @@ struct Set
 {
    SCIP*            scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    VERBLEVEL        verblevel;          /**< verbosity level of output */
+   Real             infinity;           /**< values larger than this are considered infinity */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
    Real             sumepsilon;         /**< absolute values of sums smaller than this are considered zero */
-   Real             infinity;           /**< values larger than this are considered infinity */
    Real             feastol;            /**< LP feasibility tolerance */
+   Real             cutvioleps;         /**< epsilon for deciding if a cut is violated */
    Real             memgrowfac;         /**< memory growing factor for dynamically allocated arrays */
    int              memgrowinit;        /**< initial size of dynamically allocated arrays */
    Real             treegrowfac;        /**< memory growing factor for tree array */
@@ -309,6 +310,26 @@ Real SCIPsetRelDiff(
    Real             val2                /**< second value to be compared */
    );
 
+/** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
+ *  successful
+ */
+extern
+Bool SCIPsetRealToRational(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val,                /**< real value to convert into rational number */
+   Longint          maxdnom,            /**< maximal denominator allowed */
+   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator of the rational number */
+   );
+
+/** calculates the greatest common divisor of the two given values */
+extern
+Longint SCIPsetGreComDiv(
+   const SET*       set,                /**< global SCIP settings */
+   Longint          val1,               /**< first value of greatest common devisor calculation */
+   Longint          val2                /**< second value of greatest common devisor calculation */
+   );
+
 
 #ifndef NDEBUG
 
@@ -499,6 +520,16 @@ Bool SCIPsetIsFeasNegative(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
+ *  both, the activity and the rhs, should be normed
+ */
+extern
+Bool SCIPsetIsCutViolated(
+   const SET*       set,                /**< global SCIP settings */
+   Real             cutactivity,        /**< activity of the cut */
+   Real             cutrhs              /**< right hand side value of the cut */
+   );
+
 /** checks, if relative difference of values is in range of epsilon */
 extern
 Bool SCIPsetIsRelEQ(
@@ -593,14 +624,14 @@ Bool SCIPsetIsFeasible(
    Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value down to the next integer */
+/** rounds value + feasibility tolerance down to the next integer */
 extern
 Real SCIPsetFloor(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value up to the next integer */
+/** rounds value - feasibility tolerance up to the next integer */
 extern
 Real SCIPsetCeil(
    const SET*       set,                /**< global SCIP settings */
@@ -660,14 +691,16 @@ Bool SCIPsetIsFixed(
 #define SCIPsetIsSumPositive(set, val)     ( EPSP(val, (set)->sumepsilon) )
 #define SCIPsetIsSumNegative(set, val)     ( EPSN(val, (set)->sumepsilon) )
 
-#define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSEQ(val1, val2, (set)->feastol) )
-#define SCIPsetIsFeasLT(set, val1, val2)   ( EPSLT(val1, val2, (set)->feastol) )
-#define SCIPsetIsFeasLE(set, val1, val2)   ( EPSLE(val1, val2, (set)->feastol) )
-#define SCIPsetIsFeasGT(set, val1, val2)   ( EPSGT(val1, val2, (set)->feastol) )
-#define SCIPsetIsFeasGE(set, val1, val2)   ( EPSGE(val1, val2, (set)->feastol) )
+#define SCIPsetIsFeasEQ(set, val1, val2)   ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->feastol) )
+#define SCIPsetIsFeasLT(set, val1, val2)   ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->feastol) )
+#define SCIPsetIsFeasLE(set, val1, val2)   ( !EPSP(SCIPsetRelDiff(set, val1, val2), (set)->feastol) )
+#define SCIPsetIsFeasGT(set, val1, val2)   ( EPSP(SCIPsetRelDiff(set, val1, val2), (set)->feastol) )
+#define SCIPsetIsFeasGE(set, val1, val2)   ( !EPSN(SCIPsetRelDiff(set, val1, val2), (set)->feastol) )
 #define SCIPsetIsFeasZero(set, val)        ( EPSZ(val, (set)->feastol) )
 #define SCIPsetIsFeasPositive(set, val)    ( EPSP(val, (set)->feastol) )
 #define SCIPsetIsFeasNegative(set, val)    ( EPSN(val, (set)->feastol) )
+
+#define SCIPsetIsCutViolated(set, act,rhs) ( EPSGT(act, rhs, (set)->cutvioleps) )
 
 #define SCIPsetIsRelEQ(set, val1, val2)    ( EPSZ(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
 #define SCIPsetIsRelLT(set, val1, val2)    ( EPSN(SCIPsetRelDiff(set, val1, val2), (set)->epsilon) )
@@ -683,10 +716,10 @@ Bool SCIPsetIsFixed(
 
 #define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->infinity )
 #define SCIPsetIsFeasible(set, val)        ( (val) >= -(set)->feastol )
-#define SCIPsetFloor(set, val)             ( floor((val) + (set)->feastol) )
-#define SCIPsetCeil(set, val)              ( ceil((val) - (set)->feastol) )
-#define SCIPsetFrac(set, val)              ( (val) - SCIPsetFloor(set, val) )
-#define SCIPsetIsIntegral(set, val)        ( EPSLE(SCIPsetCeil(set, val), val, (set)->feastol) )
+#define SCIPsetFloor(set, val)             ( EPSFLOOR((val), (set)->feastol) )
+#define SCIPsetCeil(set, val)              ( EPSCEIL((val), (set)->feastol) )
+#define SCIPsetFrac(set, val)              ( EPSFRAC((val), (set)->feastol) )
+#define SCIPsetIsIntegral(set, val)        ( EPSISINT((val), (set)->feastol) )
 #define SCIPsetIsFracIntegral(set, val)    ( !EPSP(val, (set)->feastol) )
 #define SCIPsetIsFixed(set, lb, ub)        ( SCIPsetIsEQ(set, lb, ub) )
 

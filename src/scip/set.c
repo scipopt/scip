@@ -98,7 +98,7 @@
 
 /* Display */
 
-#define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPWIDTH         138 /**< maximal number of characters in a node information line */
 #define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
@@ -141,10 +141,11 @@ RETCODE SCIPsetCreate(
 
    (*set)->scip = scip;
    (*set)->verblevel = SCIP_DEFAULT_VERBLEVEL;
+   (*set)->infinity = SCIP_DEFAULT_INFINITY;
    (*set)->epsilon = SCIP_DEFAULT_EPSILON;
    (*set)->sumepsilon = SCIP_DEFAULT_SUMEPSILON;
-   (*set)->infinity = SCIP_DEFAULT_INFINITY;
    (*set)->feastol = SCIP_DEFAULT_FEASTOL;
+   (*set)->cutvioleps = SCIP_DEFAULT_CUTVIOLEPS;
    (*set)->memgrowfac = SCIP_DEFAULT_MEMGROWFAC;
    (*set)->memgrowinit = SCIP_DEFAULT_MEMGROWINIT;
    (*set)->treegrowfac = SCIP_DEFAULT_TREEGROWFAC;
@@ -860,6 +861,113 @@ Real SCIPsetRelDiff(
    return (val1-val2)/quot;
 }
 
+/** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
+ *  successful
+ */
+Bool SCIPsetRealToRational(
+   const SET*       set,                /**< global SCIP settings */
+   Real             val,                /**< real value to convert into rational number */
+   Longint          maxdnom,            /**< maximal denominator allowed */
+   Longint*         nominator,          /**< pointer to store the nominator of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator of the rational number */
+   )
+{
+   Real a;
+   Real b;
+   Real g0;
+   Real g1;
+   Real gx;
+   Real h0;
+   Real h1;
+   Real hx;
+
+   assert(nominator != NULL);
+   assert(denominator != NULL);
+
+   b = val;
+   a = SCIPsetFloor(set, b);
+   g0 = a;
+   g1 = 1.0;
+   h0 = 1.0;
+   h1 = 0.0;
+
+   while( !SCIPsetIsFeasZero(set, val - g0/h0) )
+   {
+      assert(SCIPsetIsGT(set, b, a));
+      assert(h0 >= 0.0);
+      assert(h1 >= 0.0);
+
+      b = 1.0 / (b - a);
+      a = SCIPsetFloor(set, b);
+
+      assert(a >= 0.0);
+
+      gx = g0;
+      hx = h0;
+
+      g0 = a * g0 + g1;
+      h0 = a * h0 + h1;
+
+      g1 = gx;
+      h1 = hx;
+      
+      if( h0 > maxdnom )
+         return FALSE;
+   }
+
+   if( ABS(g0) > (LONGINT_MAX << 4) || h0 > (LONGINT_MAX << 4) )
+      return FALSE;
+
+   assert(h0 >= 0.0);
+
+   *nominator = (Longint)g0;
+   *denominator = (Longint)h0;
+
+   return TRUE;
+}
+
+/** calculates the greatest common divisor of the two given values */
+Longint SCIPsetGreComDiv(
+   const SET*       set,                /**< global SCIP settings */
+   Longint          val1,               /**< first value of greatest common devisor calculation */
+   Longint          val2                /**< second value of greatest common devisor calculation */
+   )
+{
+   Longint t;
+   Longint gcd;
+
+   assert(val1 >= 0);
+   assert(val2 >= 0);
+
+   /* extract all prime factors 2 */
+   gcd = 1;
+   while( !(val1 & 1) && !(val2 & 1) )
+   {
+      val1 /= 2;
+      val2 /= 2;
+      gcd *= 2;
+   }
+
+   t = val1 & 1 ? -val2 : val1;
+   do
+   {
+      while( !(t & 1) )
+	 t /= 2;
+
+      if( t > 0 )
+	 val1 = t;
+      else
+	 val2 = -t;
+
+      t = val1 - val2;
+   }
+   while( t != 0 );
+   gcd *= val1;
+
+   return gcd;
+}
+
+
 
 #ifndef NDEBUG
 
@@ -1053,64 +1161,84 @@ Bool SCIPsetIsSumNegative(
    return EPSN(val, set->sumepsilon);
 }
 
-/** checks, if values are in range of feasibility tolerance */
+/** checks, if relative difference of values is in range of feastol */
 Bool SCIPsetIsFeasEQ(
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return EPSEQ(val1, val2, set->feastol);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSZ(diff, set->feastol);
 }
 
-/** checks, if val1 is (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is lower than feastol */
 Bool SCIPsetIsFeasLT(
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return EPSLT(val1, val2, set->feastol);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSN(diff, set->feastol);
 }
 
-/** checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is not greater than feastol */
 Bool SCIPsetIsFeasLE(
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return EPSLE(val1, val2, set->feastol);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return !EPSP(diff, set->feastol);
 }
 
-/** checks, if val1 is (more than feasibility tolerance) greater than val2 */
+/** checks, if relative difference of val1 and val2 is greater than feastol */
 Bool SCIPsetIsFeasGT(
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return EPSGT(val1, val2, set->feastol);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return EPSP(diff, set->feastol);
 }
 
-/** checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+/** checks, if relative difference of val1 and val2 is not lower than -feastol */
 Bool SCIPsetIsFeasGE(
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    )
 {
+   Real diff;
+
    assert(set != NULL);
 
-   return EPSGE(val1, val2, set->feastol);
+   diff = SCIPsetRelDiff(set, val1, val2);
+
+   return !EPSN(diff, set->feastol);
 }
 
 /** checks, if value is in range feasibility tolerance of 0.0 */
@@ -1144,6 +1272,20 @@ Bool SCIPsetIsFeasNegative(
    assert(set != NULL);
 
    return EPSN(val, set->feastol);
+}
+
+/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
+ *  both, the activity and the rhs, should be normed
+ */
+Bool SCIPsetIsCutViolated(
+   const SET*       set,                /**< global SCIP settings */
+   Real             cutactivity,        /**< activity of the cut */
+   Real             cutrhs              /**< right hand side value of the cut */
+   )
+{
+   assert(set != NULL);
+
+   return EPSGT(cutactivity, cutrhs, set->cutvioleps);
 }
 
 /** checks, if relative difference of values is in range of epsilon */
@@ -1328,7 +1470,7 @@ Bool SCIPsetIsFeasible(
    return (val >= -set->feastol);
 }
 
-/** rounds value down to the next integer */
+/** rounds value + feasibility tolerance down to the next integer */
 Real SCIPsetFloor(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
@@ -1336,10 +1478,10 @@ Real SCIPsetFloor(
 {
    assert(set != NULL);
 
-   return floor(val + set->feastol);
+   return EPSFLOOR(val, set->feastol);
 }
 
-/** rounds value up to the next integer */
+/** rounds value - feasibility tolerance up to the next integer */
 Real SCIPsetCeil(
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value to be compared against zero */
@@ -1347,7 +1489,7 @@ Real SCIPsetCeil(
 {
    assert(set != NULL);
 
-   return ceil(val - set->feastol);
+   return EPSCEIL(val, set->feastol);
 }
 
 /** returns fractional part of value, i.e. x - floor(x) */
@@ -1358,7 +1500,7 @@ Real SCIPsetFrac(
 {
    assert(set != NULL);
 
-   return val - SCIPsetFloor(set, val);
+   return EPSFRAC(val, set->feastol);
 }
 
 /** checks, if value is integral within the LP feasibility bounds */
@@ -1369,7 +1511,7 @@ Bool SCIPsetIsIntegral(
 {
    assert(set != NULL);
 
-   return (SCIPsetCeil(set, val) - val <= set->feastol);
+   return EPSISINT(val, set->feastol);
 }
 
 /** checks, if given fractional part is smaller than feastol */

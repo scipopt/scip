@@ -39,6 +39,7 @@
 #include "branch_leastinf.h"
 #include "heur_diving.h"
 #include "heur_rounding.h"
+#include "sepa_gomory.h"
 
 
 
@@ -121,6 +122,60 @@ RETCODE includeTestEventHdlr(
 
 
 
+#if 1
+static const int   nrows = 2;
+static const int   nvars = 2;
+
+static const OBJSENSE objsen  = SCIP_OBJSENSE_MAXIMIZE;
+static const char* var_name[] = { "var1"  , "var2"   };
+static const Real  var_obj [] = {  1.0    ,  1.0     };     /* max  +x1 +x2 */
+static const Real  var_lb  [] = {  0.0    ,  0.0     };     /*   0 <= x1 <= 10 integer */
+static const Real  var_ub  [] = { 10.0    ,  5.0     };     /*   0 <= x2 <= 5  integer */
+
+static const char* row_name[] = { "lin1"  , "lin2"   };     /* such that */
+static const int   row_len [] = {        2,        2 };     /*   lin1:      +2x1 + x2 <= 2 */
+static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2:      + x1 +2x2 <= 2 */
+static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0 };
+static const Real  row_lhs [] = {   -1e+20,   -1e+20 };
+static const Real  row_rhs [] = {      2.0,      2.0 };
+#endif
+
+#if 0
+static const int   nrows = 2;
+static const int   nvars = 2;
+
+static const OBJSENSE objsen  = SCIP_OBJSENSE_MAXIMIZE;
+static const char* var_name[] = { "var1"  , "var2"   };
+static const Real  var_obj [] = {  1.0    ,  1.0     };     /* max  +x1 +x2 */
+static const Real  var_lb  [] = {  0.0    ,  0.0     };     /*   0 <= x1 <= 10 integer */
+static const Real  var_ub  [] = { 10.0    ,  5.0     };     /*   0 <= x2 <= 5  integer */
+
+static const char* row_name[] = { "lin1"  , "lin2"   };     /* such that */
+static const int   row_len [] = {        2,        2 };     /*   lin1:       +2x1 + x2 <= 2 */
+static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2: -2 <= - x1 -2x2      */
+static const Real  row_val [] = { 2.0, 1.0,-1.0,-2.0 };
+static const Real  row_lhs [] = {   -1e+20,     -2.0 };
+static const Real  row_rhs [] = {      2.0,    1e+20 };
+#endif
+
+#if 0
+static const int   nrows = 2;
+static const int   nvars = 2;
+
+static const OBJSENSE objsen  = SCIP_OBJSENSE_MAXIMIZE;
+static const char* var_name[] = { "var1"  , "var2"   };
+static const Real  var_obj [] = { -1.0    ,  1.0     };
+static const Real  var_lb  [] = { -9.0    ,  0.0     };
+static const Real  var_ub  [] = {  1.0    ,  5.0     };
+
+static const char* row_name[] = { "lin1"  , "lin2"   };
+static const int   row_len [] = {        2,        2 };
+static const int   row_idx [] = {   0,   1,   0,   1 };
+static const Real  row_val [] = {-2.0,+1.0, 1.0,-2.0 };
+static const Real  row_lhs [] = {   -1e+20,     -1.0 };
+static const Real  row_rhs [] = {      0.0,    1e+20 };
+#endif
+
 #if 0
 static const int   nrows = 2;
 static const int   nvars = 2;
@@ -132,11 +187,29 @@ static const Real  var_lb  [] = {  1.0    ,  0.0     };     /*   1 <= x1 <= 10 i
 static const Real  var_ub  [] = { 10.0    ,  5.0     };     /*   0 <= x2 <= 5  integer */
 
 static const char* row_name[] = { "lin1"  , "lin2"   };     /* such that */
-static const int   row_len [] = {        2,        2 };     /*   lin1: 0 <= +2x1 + x2 <= 4 */
-static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2: 0 <= + x1 +2x2 <= 3 */
+static const int   row_len [] = {        2,        2 };     /*   lin1:      +2x1 + x2 <= 4 */
+static const int   row_idx [] = {   0,   1,   0,   1 };     /*   lin2:      + x1 +2x2 <= 3 */
 static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0 };
-static const Real  row_lhs [] = {      0.0,      0.0 };
+static const Real  row_lhs [] = {   -1e+20,   -1e+20 };
 static const Real  row_rhs [] = {      4.0,      3.0 };
+#endif
+
+#if 0
+static const int   nrows = 4;
+static const int   nvars = 4;
+
+static const OBJSENSE objsen  = SCIP_OBJSENSE_MAXIMIZE;
+static const char* var_name[] = { "var1"  , "var2"  , "var3"  , "var4"  };
+static const Real  var_obj [] = {  1.0    ,  1.0    ,  1.0    ,  1.0    };     /* max  +x1 +x2 +x3 +x4 */
+static const Real  var_lb  [] = {  1.0    ,  0.0    ,  1.0    ,  0.0    };     /*   1 <= x1,x3 <= 10 integer */
+static const Real  var_ub  [] = { 10.0    ,  5.0    , 10.0    ,  5.0    };     /*   0 <= x2,x4 <= 5  integer */
+
+static const char* row_name[] = { "lin1"  , "lin2"  , "lin3"  , "lin4"  };     /* such that */
+static const int   row_len [] = {        2,        2,        2,        2};     /*   lin1:      +2x1 + x2 <= 4 */
+static const int   row_idx [] = {   0,   1,   0,   1,   2,   3,   2,   3};     /*   lin2:      + x1 +2x2 <= 3 */
+static const Real  row_val [] = { 2.0, 1.0, 1.0, 2.0,-2.0,-1.0,-1.0,-2.0};     /*   lin3:-4 <= -2x1 - x2      */
+static const Real  row_lhs [] = {   -1e+20,   -1e+20,     -4.0,     -3.0};     /*   lin4:-3 <= - x1 -2x2      */
+static const Real  row_rhs [] = {      4.0,      3.0,    1e+20,    1e+20};
 #endif
 
 #if 0
@@ -193,7 +266,7 @@ static const Real  row_lhs [] = {           1.0,      0.0,      0.0 };
 static const Real  row_rhs [] = {      100000.0, 100000.0,     30.0 };
 #endif
 
-#if 1
+#if 0
 static const int   nrows = 3;
 static const int   nvars = 3;
 
@@ -259,11 +332,12 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
+   /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/
    CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
    CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
    CHECK_OKAY( SCIPincludeHeurDiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRounding(scip) );
+   CHECK_OKAY( SCIPincludeSepaGomory(scip) );
    
    /*CHECK_OKAY( includeTestEventHdlr(scip) );*/
 
@@ -274,15 +348,17 @@ RETCODE runSCIP(
 
 #if 0
    printf("\ncreate problem\n");
+   printf("==============\n\n");
 
    /* create problem */
-   CHECK_OKAY( SCIPcreateProb(scip, "test.lp") );
+   CHECK_OKAY( SCIPcreateProb(scip, "test.lp", NULL, NULL, NULL) );
    CHECK_OKAY( SCIPsetObjsense(scip, objsen) );
 
    /* create necessary variables */
    for( v = 0; v < nvars; ++v )
    {
-      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], SCIP_VARTYPE_INTEGER) );
+      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], 
+                     SCIP_VARTYPE_INTEGER, FALSE) );
       CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
    }
 
@@ -299,7 +375,7 @@ RETCODE runSCIP(
          pos++;
       }
       CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals,
-                     row_lhs[r], row_rhs[r], TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+                     row_lhs[r], row_rhs[r], TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
       CHECK_OKAY( SCIPaddCons(scip, cons) ); /* add as a global constraint */
       CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
@@ -405,6 +481,7 @@ main(
    todoMessage("pricing for pseudo solutions");
    todoMessage("integrality check on objective function, abort if gap is below 1.0");
    todoMessage("numerical problems in tree->actpseudoobjval if variable's bounds are infinity");
+   todoMessage("implement reduced cost fixing");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

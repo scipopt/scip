@@ -15,8 +15,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sort.c
- * @brief  datastructures and algorithms for sorting and queueing data elements
+/**@file   misc.c
+ * @brief  miscellaneous datastructures and methods
  * @author Tobias Achterberg
  */
 
@@ -38,7 +38,7 @@
 #include "memory.h"
 #include "message.h"
 #include "retcode.h"
-#include "sort.h"
+#include "misc.h"
 
 
 #if 0 /* PRIORITY QUEUE NOT NEEDED */

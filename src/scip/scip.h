@@ -79,7 +79,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "event.h"
 #include "sepa.h"
 #include "heur.h"
-#include "sort.h"
+#include "misc.h"
 #include "price.h"
 #include "sepastore.h"
 #include "cutpool.h"
@@ -149,6 +149,14 @@ extern
 RETCODE SCIPsetVerbLevel(
    SCIP*            scip,               /**< SCIP data structure */
    VERBLEVEL        verblevel           /**< verbosity level for message output */
+   );
+
+/** prints a message depending on the verbosity level */
+extern
+void SCIPmessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*      msg                 /**< message to display */
    );
 
 /** returns current stage of SCIP */
@@ -815,6 +823,46 @@ Bool SCIPallVarsInLP(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
+extern
+RETCODE SCIPgetLPBasisInd(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             basisind            /**< pointer to store the basis indices */
+   );
+
+/** gets a row from the inverse basis matrix B^-1 */
+extern
+RETCODE SCIPgetLPBInvRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              r,                  /**< row number */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   );
+
+/** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
+ *  LP row are swapped in the summation
+ */
+extern
+RETCODE SCIPsumLPRows(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            weights,            /**< row weights in row summation */
+   REALARRAY*       sumcoef,            /**< array to store sum coefficients indexed by variables' probindex */
+   Real*            sumlhs,             /**< pointer to store the left hand side of the row summation */
+   Real*            sumrhs              /**< pointer to store the right hand side of the row summation */
+   );
+
+/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ * rows cannot participate in a MIR cut.
+ */
+extern
+RETCODE SCIPcalcMIR(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   Real*            weights,            /**< row weights in row summation */
+   REALARRAY*       mircoef,            /**< array to store MIR coefficients indexed by variables' probindex */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   );
+
 /** writes actual LP to a file */
 extern
 RETCODE SCIPwriteLP(
@@ -969,6 +1017,15 @@ RETCODE SCIPaddVarToRow(
    ROW*             row,                /**< LP row */
    VAR*             var,                /**< problem variable */
    Real             val                 /**< value of coefficient */
+   );
+
+/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+extern
+RETCODE SCIPmakeRowRational(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Bool*            success             /**< stores whether row could be made rational */
    );
 
 /** returns the minimal activity of a row w.r.t. the column's bounds */
@@ -1532,6 +1589,24 @@ int SCIPgetNSepaRounds(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** get actual number of cuts in the cut store */
+extern
+int SCIPgetNCuts(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get total number of cuts found so far */
+extern
+int SCIPgetNCutsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get total number of cuts applied to the LPs */
+extern
+int SCIPgetNCutsApplied(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets depth of active node, or -1 if no active node exists */
 extern
 int SCIPgetActDepth(
@@ -1848,6 +1923,16 @@ Bool SCIPisFeasNegative(
    Real             val                 /**< value to be compared against zero */
    );
 
+/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
+ *  both, the activity and the rhs, should be normed
+ */
+extern
+Bool SCIPisCutViolated(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             cutactivity,        /**< activity of the cut */
+   Real             cutrhs              /**< right hand side value of the cut */
+   );
+
 /** checks, if relative difference of values is in range of epsilon */
 extern
 Bool SCIPisRelEQ(
@@ -1935,14 +2020,14 @@ Bool SCIPisInfinity(
    Real             val                 /**< value to be compared against infinity */
    );
 
-/** rounds value down to the next integer */
+/** rounds value + feasibility tolerance down to the next integer */
 extern
 Real SCIPfloor(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value up to the next integer */
+/** rounds value - feasibility tolerance up to the next integer */
 extern
 Real SCIPceil(
    SCIP*            scip,               /**< SCIP data structure */

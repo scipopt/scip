@@ -76,7 +76,7 @@ typedef enum BaseStat BASESTAT;
 
 
 #include "def.h"
-#include "mem.h"
+#include "memory.h"
 #include "retcode.h"
 
 
@@ -489,22 +489,22 @@ RETCODE SCIPlpiSetBase(
 
 /** returns the indices of the basic columns and rows */
 extern 
-RETCODE SCIPlpiGetBind(
+RETCODE SCIPlpiGetBasisInd(
    LPI*             lpi,                /**< LP interface structure */
    int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
    );
 
-/** get dense row of inverse basis matrix (A_B)^-1 */
+/** get dense row of inverse basis matrix B^-1 */
 extern 
-RETCODE SCIPlpiGetBinvRow(
+RETCODE SCIPlpiGetBInvRow(
    LPI*             lpi,                /**< LP interface structure */
-   int              i,                  /**< row number */
-   Real*            val                 /**< vector to return coefficients */
+   int              r,                  /**< row number */
+   Real*            coef                /**< pointer to store the coefficients of the row */
    );
 
-/** get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
 extern 
-RETCODE SCIPlpiGetBinvARow(
+RETCODE SCIPlpiGetBInvARow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */

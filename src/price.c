@@ -287,6 +287,7 @@ RETCODE SCIPpriceVars(
    
    assert(price != NULL);
    assert(price->nvars == 0);
+   assert(price->nfoundvars == 0);
    assert(price->naddedbdviolvars == price->nbdviolvars);
    assert(set != NULL);
    assert(prob != NULL);
@@ -351,8 +352,8 @@ RETCODE SCIPpriceVars(
          assert((col->lppos >= 0) ^ (col->lpipos == -1));
          assert(col->len >= 0);
             
-         /*debugMessage("price column variable <%s> in bounds [%g,%g], inlp=%d\n", 
-           var->name, var->dom.lb, var->dom.ub, col->inlp);*/
+         /*debugMessage("price column variable <%s> in bounds [%g,%g], col->lppos=%d\n", 
+           var->name, var->dom.lb, var->dom.ub, col->lppos);*/
          if( col->lppos == -1 )
          {
             Real feasibility;
@@ -427,7 +428,7 @@ RETCODE SCIPpriceVars(
                    * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
                    */
                   feasibility = -SCIPcolGetFarkas(col, stat);
-                  debugMessage("  <%s> farkas feasibility: %g\n", col->var->name, feasibility);
+                  debugMessage("  <%s> farkas feasibility: %e\n", col->var->name, feasibility);
                }
                else
                {
@@ -436,11 +437,14 @@ RETCODE SCIPpriceVars(
                    * variables, and non-zero reduced costs for variables that can be negative.
                    */
                   feasibility = SCIPcolGetFeasibility(col, stat);
-                  debugMessage("  <%s> reduced cost feasibility: %g\n", col->var->name, feasibility);
+                  debugMessage("  <%s> reduced cost feasibility: %e\n", col->var->name, feasibility);
                }
                
-               /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns */
-               if( !SCIPsetIsFeasible(set, feasibility) )
+               /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns
+                * we must add variables with negative feasibility, but in order to not get a too large lower bound
+                * due to missing columns, we better also add variables, that have a very small feasibility
+                */
+               if( !SCIPsetIsPositive(set, feasibility) )
                {
                   CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -feasibility / (col->len+1), root) );
                }

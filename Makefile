@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.25 2003/04/29 13:40:38 bzfpfend Exp $
+# $Id: Makefile,v 1.26 2003/05/07 14:35:11 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -6,7 +6,6 @@
 #*                                                                           *
 #*    Copyright (C) 2002-2002 Tobias Achterberg                              *
 #*                            Thorsten Koch                                  *
-#*                            Andreas Martin                                 *
 #*                  2002-2002 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
@@ -107,6 +106,7 @@ LIBOBJ		=	branch.o \
 			mem.o \
 			memory.o \
 			message.o \
+			misc.o \
 			nodesel.o \
 			nodesel_bfs.o \
 			nodesel_dfs.o \
@@ -118,11 +118,11 @@ LIBOBJ		=	branch.o \
 			retcode.o \
 			scip.o \
 			sepa.o \
+			sepa_gomory.o \
 			sepastore.o \
 			set.o \
 			sol.o \
 			solve.o \
-			sort.o \
 			stat.o \
 			tree.o \
 			var.o

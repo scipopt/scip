@@ -121,10 +121,12 @@ RETCODE SCIPsolveLP(
          {
             CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set) );
          }
+         debugMessage(" -> LP infeasible\n");
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDED:
          CHECK_OKAY( SCIPlpGetUnboundedSol(lp, memhdr, set, stat) );
+         debugMessage(" -> LP unbounded\n");
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -132,6 +134,7 @@ RETCODE SCIPsolveLP(
          {
             CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
          }
+         debugMessage(" -> LP objective limit reached\n");
          break;
 
       case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -226,6 +229,7 @@ RETCODE solveNodeLP(
    Bool cutoff;
    Bool root;
    int h;
+   int s;
 
    assert(set != NULL);
    assert(memhdr != NULL);
@@ -342,7 +346,11 @@ RETCODE solveNodeLP(
          /* separate LP, if the cut pool is less than half full */
          if( !cutoff && !enoughcuts )
          {
-            todoMessage("cut separation");
+            for( s = 0; s < set->nsepas && !enoughcuts; ++s )
+            {
+               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, sepastore, tree->actnode->depth, &result) );
+               enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+            }
          }
 
          if( cutoff )

@@ -27,6 +27,7 @@
 #include "cplex.h"
 #include "bitencode.h"
 #include "lpi.h"
+#include "message.h"
 
 
 #define CHECK_ZERO(x) { int _restat_; if( (_restat_ = (x)) != 0 ) { errorMessage("LP Error"); \
@@ -50,9 +51,10 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND
 };
-#define NUMDBLPARAM  4
+#define NUMDBLPARAM  5
 static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_EPRHS,
+   CPX_PARAM_EPOPT,
    CPX_PARAM_OBJLLIM,
    CPX_PARAM_OBJULIM,
    CPX_PARAM_TILIM
@@ -1656,7 +1658,7 @@ RETCODE SCIPlpiSetBase(
 }
 
 /** returns the indices of the basic columns and rows */
-RETCODE SCIPlpiGetBind(
+RETCODE SCIPlpiGetBasisInd(
    LPI*             lpi,                /**< LP interface structure */
    int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
    )
@@ -1670,24 +1672,24 @@ RETCODE SCIPlpiGetBind(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix (A_B)^-1 */
-RETCODE SCIPlpiGetBinvRow(
+/** get dense row of inverse basis matrix B^-1 */
+RETCODE SCIPlpiGetBInvRow(
    LPI*             lpi,                /**< LP interface structure */
-   int              i,                  /**< row number */
-   Real*            val                 /**< vector to return coefficients */
+   int              r,                  /**< row number */
+   Real*            coef                /**< pointer to store the coefficients of the row */
    )
 {
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   CHECK_ZERO( CPXbinvrow(cpxenv, lpi->cpxlp, i, val) );
+   CHECK_ZERO( CPXbinvrow(cpxenv, lpi->cpxlp, r, coef) );
 
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
-RETCODE SCIPlpiGetBinvARow(
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+RETCODE SCIPlpiGetBInvARow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
@@ -1871,9 +1873,9 @@ RETCODE SCIPlpiGetIntpar(
    {
    case SCIP_LPPAR_FROMSCRATCH:
       if( getIntParam(lpi, CPX_PARAM_ADVIND) == CPX_ON )
-	 *ival = SCIP_DISABLED;
+	 *ival = FALSE;
       else
-	 *ival = SCIP_ENABLED;
+	 *ival = TRUE;
       break;
    case SCIP_LPPAR_LPIT1:
       *ival = CPXgetphase1cnt(cpxenv, lpi->cpxlp);
@@ -1902,15 +1904,15 @@ RETCODE SCIPlpiSetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      assert(ival == SCIP_ENABLED || ival == SCIP_DISABLED);
-      setIntParam(lpi, CPX_PARAM_ADVIND, (ival == SCIP_DISABLED) ? CPX_ON : CPX_OFF);
+      assert(ival == TRUE || ival == FALSE);
+      setIntParam(lpi, CPX_PARAM_ADVIND, (ival == FALSE) ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_LPITLIM:
       setIntParam(lpi, CPX_PARAM_ITLIM, ival);
       break;
    case SCIP_LPPAR_FASTMIP:
-      assert(ival == SCIP_ENABLED || ival == SCIP_DISABLED);
-      setIntParam(lpi, CPX_PARAM_FASTMIP, (ival == SCIP_ENABLED) ? CPX_ON : CPX_OFF);
+      assert(ival == TRUE || ival == FALSE);
+      setIntParam(lpi, CPX_PARAM_FASTMIP, (ival == TRUE) ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_PRICING:
       switch( (PRICING)ival )
@@ -1929,8 +1931,8 @@ RETCODE SCIPlpiSetIntpar(
       }
       break;
    case SCIP_LPPAR_LPINFO:
-      assert(ival == SCIP_ENABLED || ival == SCIP_DISABLED);
-      if( ival == SCIP_ENABLED )
+      assert(ival == TRUE || ival == FALSE);
+      if( ival == TRUE )
       {
 	 setIntParam(lpi, CPX_PARAM_SIMDISPLAY, CPX_ON);
 	 setIntParam(lpi, CPX_PARAM_SCRIND, CPX_ON);
@@ -1965,9 +1967,17 @@ RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_FEASTOL:
       *dval = getDblParam(lpi, CPX_PARAM_EPRHS);
       break;
+   case SCIP_LPPAR_LOBJLIM:
+      *dval = getDblParam(lpi, CPX_PARAM_OBJLLIM);
+      break;
+   case SCIP_LPPAR_UOBJLIM:
+      *dval = getDblParam(lpi, CPX_PARAM_OBJULIM);
+      break;
+   case SCIP_LPPAR_LPTILIM:
+      *dval = getDblParam(lpi, CPX_PARAM_TILIM);
+      break;
    default:
       return SCIP_LPERROR;
-      break;
    }
    
    return SCIP_OKAY;
@@ -1988,6 +1998,7 @@ RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
+      setDblParam(lpi, CPX_PARAM_EPOPT, dval);
       break;
    case SCIP_LPPAR_LOBJLIM:
       setDblParam(lpi, CPX_PARAM_OBJLLIM, dval);

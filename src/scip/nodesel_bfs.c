@@ -83,7 +83,6 @@ DECL_NODESELSELECT(SCIPnodeselSelectBfs)
    Real actlowerbound;
    Real avglowerbound;
    Real lowerbound;
-   Real maxplungequot;
    int plungedepth;
 
    assert(nodesel != NULL);
@@ -97,11 +96,6 @@ DECL_NODESELSELECT(SCIPnodeselSelectBfs)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 
-   /* if no solution was found yet, double maxplungequot */
-   maxplungequot = nodeseldata->maxplungequot;
-   if( SCIPgetNSolsFound(scip) == 0 )
-      maxplungequot *= 2;
-
    /* check, if we want to plunge once more */
    actlowerbound = SCIPgetActTransLowerBound(scip);
    avglowerbound = SCIPgetAvgTransLowerBound(scip);
@@ -110,7 +104,7 @@ DECL_NODESELSELECT(SCIPnodeselSelectBfs)
    if( plungedepth < nodeseldata->minplungedepth
       || (plungedepth < nodeseldata->maxplungedepth
          && (SCIPisEQ(scip, avglowerbound, lowerbound)
-            || (actlowerbound - lowerbound)/(avglowerbound - lowerbound) < maxplungequot)) )
+            || (actlowerbound - lowerbound)/(avglowerbound - lowerbound) < nodeseldata->maxplungequot)) )
    {
       /* we want to plunge again: prefer children over siblings, and siblings over leaves */
       *selnode = SCIPgetBestChild(scip);

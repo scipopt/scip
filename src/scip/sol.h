@@ -41,7 +41,7 @@ typedef struct Sol SOL;                 /**< primal CIP solution */
 #include "def.h"
 #include "retcode.h"
 #include "memory.h"
-#include "sort.h"
+#include "misc.h"
 #include "stat.h"
 #include "var.h"
 #include "heur.h"

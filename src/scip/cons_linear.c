@@ -1401,7 +1401,7 @@ RETCODE check(
       else if( sol == NULL && !SCIPhasActnodeLP(scip) )
          feasibility = linconsGetPseudoFeasibility(scip, consdata->lincons);
       else
-         feasibility = SCIPgetRowFeasibility(scip, row);
+         feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
    }
    else
       feasibility = linconsGetFeasibility(scip, consdata->lincons, sol);
@@ -1586,6 +1586,16 @@ DECL_CONSSEPA(consSepaLinear)
 
    /* step 2: combine linear constraints to get more cuts */
    todoMessage("further cuts of linear constraints");
+
+   /* step 3: if no cuts were found and we are in the root node, check remaining linear constraints for feasibility */
+   if( SCIPgetActDepth(scip) == 0 )
+   {
+      for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
+      {
+         /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
+         CHECK_OKAY( separate(scip, conss[c], result) );
+      }
+   }
 
    return SCIP_OKAY;
 }

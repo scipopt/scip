@@ -26,7 +26,7 @@
 #define __SEPASTORE_H__
 
 
-typedef struct Sepastore SEPASTORE;     /**< storage for separated variables */
+typedef struct SepaStore SEPASTORE;     /**< storage for separated variables */
 
 
 #include "def.h"
@@ -90,6 +90,12 @@ int SCIPsepastoreGetNCuts(
 extern
 int SCIPsepastoreGetNCutsFound(
    SEPASTORE*       sepastore           /**< separation storage */
+   );
+
+/** get total number of cuts applied to the LPs */
+extern
+int SCIPsepastoreGetNCutsApplied(
+   SEPASTORE*            sepastore                /**< separation storage */
    );
 
 

@@ -347,6 +347,18 @@ RETCODE SCIPsetVerbLevel(
    return SCIPsetSetVerbLevel(scip->set, verblevel);
 }
 
+/** prints a message depending on the verbosity level */
+void SCIPmessage(
+   SCIP*            scip,               /**< SCIP data structure */
+   VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
+   const char*      msg                 /**< message to display */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPmessage", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   infoMessage(scip->set->verblevel, msgverblevel, msg);
+}
+
 /** returns current stage of SCIP */
 STAGE SCIPstage(
    SCIP*            scip                /**< SCIP data structure */
@@ -2109,6 +2121,71 @@ Bool SCIPallVarsInLP(
    return (scip->lp->ncols == scip->transprob->nvars);
 }
 
+/** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
+RETCODE SCIPgetLPBasisInd(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             basisind            /**< pointer to store the basis indices */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPBasisInd", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPlpGetBasisInd(scip->lp, basisind) );
+
+   return SCIP_OKAY;
+}
+
+/** gets a row from the inverse basis matrix B^-1 */
+RETCODE SCIPgetLPBInvRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              r,                  /**< row number */
+   Real*            coef                /**< pointer to store the coefficients of the row */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPBInvRow", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPlpGetBInvRow(scip->lp, r, coef) );
+
+   return SCIP_OKAY;
+}
+
+/** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
+ *  LP row are swapped in the summation
+ */
+RETCODE SCIPsumLPRows(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            weights,            /**< row weights in row summation */
+   REALARRAY*       sumcoef,            /**< array to store sum coefficients indexed by variables' probindex */
+   Real*            sumlhs,             /**< pointer to store the left hand side of the row summation */
+   Real*            sumrhs              /**< pointer to store the right hand side of the row summation */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsumLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPlpSumRows(scip->lp, scip->set, scip->transprob->nvars, weights, sumcoef, sumlhs, sumrhs) );
+
+   return SCIP_OKAY;
+}
+
+/* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
+ * rows cannot participate in a MIR cut.
+ */
+RETCODE SCIPcalcMIR(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   Real*            weights,            /**< row weights in row summation */
+   REALARRAY*       mircoef,            /**< array to store MIR coefficients indexed by variables' probindex */
+   Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob->nvars, scip->transprob->vars,
+                  minfrac, weights, mircoef, mirrhs, success) );
+
+   return SCIP_OKAY;
+}
+
 /** writes actual LP to a file */
 RETCODE SCIPwriteLP(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2421,6 +2498,22 @@ RETCODE SCIPaddVarToRow(
 
    CHECK_OKAY( SCIPvarAddToRow(var, scip->mem->solvemem, scip->set, scip->lp, scip->stat, row, val) );
    
+   return SCIP_OKAY;
+}
+
+/** tries to find a rational representation of the row and multiplies coefficients with common denominator */
+extern
+RETCODE SCIPmakeRowRational(
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Longint          maxdnom,            /**< maximal denominator allowed in rational numbers */
+   Bool*            success             /**< stores whether row could be made rational */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPmakeRowRational", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwMakeRational(row, scip->set, scip->lp, maxdnom, success) );
+
    return SCIP_OKAY;
 }
 
@@ -3501,6 +3594,36 @@ int SCIPgetNSepaRounds(
    return scip->stat->nseparounds;
 }
 
+/** get actual number of cuts in the cut store */
+int SCIPgetNCuts(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNCuts", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPsepastoreGetNCuts(scip->sepastore);
+}
+
+/** get total number of cuts found so far */
+int SCIPgetNCutsFound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNCutsFound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPsepastoreGetNCutsFound(scip->sepastore);
+}
+
+/** get total number of cuts applied to the LPs */
+int SCIPgetNCutsApplied(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNCutsApplied", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   return SCIPsepastoreGetNCutsApplied(scip->sepastore);
+}
+
 /** gets depth of active node, or -1 if no active node exists */
 int SCIPgetActDepth(
    SCIP*            scip                /**< SCIP data structure */
@@ -4268,6 +4391,21 @@ Bool SCIPisFeasNegative(
    return SCIPsetIsFeasNegative(scip->set, val);
 }
 
+/** checks, if the cut's activity is more then cutvioleps larger than the given right hand side;
+ *  both, the activity and the rhs, should be normed
+ */
+Bool SCIPisCutViolated(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             cutactivity,        /**< activity of the cut */
+   Real             cutrhs              /**< right hand side value of the cut */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsCutViolated(scip->set, cutactivity, cutrhs);
+}
+
 /** checks, if relative difference of values is in range of epsilon */
 Bool SCIPisRelEQ(
    SCIP*            scip,               /**< SCIP data structure */
@@ -4410,7 +4548,7 @@ Bool SCIPisInfinity(
    return SCIPsetIsInfinity(scip->set, val);
 }
 
-/** rounds value down to the next integer */
+/** rounds value + feasibility tolerance down to the next integer */
 Real SCIPfloor(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
@@ -4422,7 +4560,7 @@ Real SCIPfloor(
    return SCIPsetFloor(scip->set, val);
 }
 
-/** rounds value up to the next integer */
+/** rounds value - feasibility tolerance up to the next integer */
 Real SCIPceil(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */

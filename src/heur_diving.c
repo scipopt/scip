@@ -267,7 +267,7 @@ RETCODE SCIPincludeHeurDiving(
 {
    HEURDATA* heurdata;
 
-   /* allocate and initialise node selector data; this has to be freed in the destructor */
+   /* allocate and initialise heuristic data; this has to be freed in the destructor */
    CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
    heurdata->maxdiveubquot = SCIP_DEFAULT_MAXDIVEUBQUOT;
    heurdata->maxdiveavgquot = SCIP_DEFAULT_MAXDIVEAVGQUOT;

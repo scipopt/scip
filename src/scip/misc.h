@@ -15,15 +15,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sort.h
- * @brief  datastructures and algorithms for sorting and queueing data elements
+/**@file   misc.h
+ * @brief  miscellaneous datastructures and methods
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SORT_H__
-#define __SORT_H__
+#ifndef __MISC_H__
+#define __MISC_H__
 
 
 #if 0
