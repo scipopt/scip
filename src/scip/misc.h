@@ -26,10 +26,7 @@
 #define __MISC_H__
 
 
-#if 0
 typedef struct PQueue PQUEUE;           /**< priority queue */
-#endif
-
 typedef struct HashTable HASHTABLE;     /**< hash table */
 typedef struct RealArray REALARRAY;     /**< dynamic array for storing Real values */
 typedef struct IntArray INTARRAY;       /**< dynamic array for storing int values */
@@ -71,11 +68,14 @@ typedef struct BoolArray BOOLARRAY;     /**< dynamic array for storing Bool valu
 
 
 
-#if 0 /* PRIORITY QUEUE NOT NEEDED */
 
-/** initializes priority queue */
+/*
+ * Priority Queue
+ */
+
+/** creates priority queue */
 extern
-RETCODE SCIPpqueueInit(
+RETCODE SCIPpqueueCreate(
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
    Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
@@ -88,25 +88,44 @@ void SCIPpqueueFree(
    PQUEUE**         pqueue              /**< pointer to a priority queue */
    );
 
+/** clears the priority queue, but doesn't free the data elements themselves */
+extern
+void SCIPpqueueClear(
+   PQUEUE*          pqueue              /**< priority queue */
+   );
+
 /** inserts element into priority queue */
 extern
 RETCODE SCIPpqueueInsert(
-   PQUEUE*          pqueue,             /**< pointer to a priority queue */
+   PQUEUE*          pqueue,             /**< priority queue */
    void*            elem                /**< element to be inserted */
    );
 
 /** removes and returns best element from the priority queue */
 extern
 void* SCIPpqueueRemove(
-   PQUEUE*          pqueue              /**< pointer to a priority queue */
+   PQUEUE*          pqueue              /**< priority queue */
    );
 
 /** returns the best element of the queue without removing it */
 extern
 void* SCIPpqueueFirst(
-   const PQUEUE*    pqueue              /**< pointer to a priority queue */
+   PQUEUE*          pqueue              /**< priority queue */
    );
-#endif
+
+/** returns the number of elements in the queue */
+extern
+int SCIPpqueueNElems(
+   PQUEUE*          pqueue              /**< priority queue */
+   );
+
+/** returns the elements of the queue; changing the returned array may destroy the queue's ordering! */
+extern
+void** SCIPpqueueElems(
+   PQUEUE*          pqueue              /**< priority queue */
+   );
+
+
 
 
 /*
@@ -459,6 +478,15 @@ Bool SCIPrealToRational(
 extern
 Bool SCIPfileExists(
    const char*      filename            /**< file name */
+   );
+
+/** splits filename into path, name, and extension */
+extern
+void SCIPsplitFilename(
+   char*            filename,           /**< filename to split; is destroyed (but not freed) during process */
+   char**           path,               /**< pointer to store path, or NULL if not needed */
+   char**           name,               /**< pointer to store name, or NULL if not needed */
+   char**           extension           /**< pointer to store extension, or NULL if not needed */
    );
 
 #endif

@@ -301,6 +301,59 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
    int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, RESULT* result)
 
 
+/** conflict variable resolving method of constraint handler
+ *
+ *  This method is called during conflict analysis. If the conflict handler wants to support conflict analysis,
+ *  it should call SCIPinferBinVar() in domain propagation in order to fix binary variables to deduced values.
+ *  In this call, the handler provides the constraint, that deduced the variable's assignment. The conflict
+ *  variable resolving method must then be implemented, to provide the "reasons" for the variable assignment,
+ *  i.e. the fixed binary variables, that forced the constraint to set the conflict variable to its current
+ *  value. The variables that form the reason of the assignment must be provided by calls to SCIPaddConflictVar().
+ *
+ *  For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE, if both, x and y, are assigned
+ *  to FALSE. It uses SCIPinferBinVar(scip, z, 1.0, c) to apply this assignment. In the conflict analysis, the
+ *  constraint handler may be asked to resolve variable z. With a call to SCIPvarGetLbLocal(z), the handler can find
+ *  out, that variable z is currently assigned to TRUE, and should call SCIPaddConflictVar(scip, x) and
+ *  SCIPaddConflictVar(scip, y) to tell SCIP, that the assignments to x and y are the reason for the deduction of z.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that deduced the assignment of the conflict variable
+ *  - infervar        : the binary conflict variable that has to be resolved
+ */
+#define DECL_CONSRESCVAR(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons, VAR* infervar)
+
+/** constraint activation notification method of constraint handler
+ *
+ *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
+ *  the corresponding bound change event was not yet processed.
+ *
+ *  This method is always called after a constraint of the constraint handler was activated. The constraint
+ *  handler may use this call to update his own (statistical) data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that has been activated
+ */
+#define DECL_CONSACTIVE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+
+/** constraint deactivation notification method of constraint handler
+ *
+ *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
+ *  the corresponding bound change event was not yet processed.
+ *
+ *  This method is always called before a constraint of the constraint handler is deactivated. The constraint
+ *  handler may use this call to update his own (statistical) data.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint that will be deactivated
+ */
+#define DECL_CONSDEACTIVE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
+
 /** constraint enabling notification method of constraint handler
  *
  *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
@@ -312,7 +365,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - cons            : the constraint that has been activated
+ *  - cons            : the constraint that has been enabled
  */
 #define DECL_CONSENABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
 
@@ -327,7 +380,7 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - cons            : the constraint that will be deactivated
+ *  - cons            : the constraint that will be disabled
  */
 #define DECL_CONSDISABLE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS* cons)
 
@@ -428,6 +481,9 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -977,6 +1033,16 @@ RETCODE SCIPconsResetAge(
    SET*             set                 /**< global SCIP settings */
    );
 
+/** resolves the given conflict var, that was deduced by the given constraint, by putting all "reason" variables
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictVar()
+ */
+extern
+RETCODE SCIPconsResolveConflictVar(
+   CONS*            cons,               /**< constraint that deduced the assignment */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< conflict variable, that was deduced by the constraint */
+   );
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -1004,6 +1070,12 @@ CONSDATA* SCIPconsGetData(
 /** returns TRUE iff constraint is active in the current node */
 extern
 Bool SCIPconsIsActive(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is enabled in the current node */
+extern
+Bool SCIPconsIsEnabled(
    CONS*            cons                /**< constraint */
    );
 
@@ -1047,6 +1119,7 @@ Bool SCIPconsIsOriginal(
 #define SCIPconsGetHdlr(cons)           (cons)->conshdlr
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
+#define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check

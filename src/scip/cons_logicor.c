@@ -560,6 +560,49 @@ void logicorconsPrint(
    fprintf(file, ")\n");
 }
 
+/** analyzes conflicting assignment on given constraint, and adds conflict clause to problem */
+static
+RETCODE analyzeConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   LOGICORCONS*     logicorcons         /**< logic or constraint to be analyzed */
+   )
+{
+   CONS* cons;
+   VAR** conflictvars;
+   char consname[MAXSTRLEN];
+   Bool success;
+   int nconflictvars;
+   int maxsize;
+   int v;
+
+   assert(logicorcons != NULL);
+
+   /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+   for( v = 0; v < logicorcons->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPaddConflictVar(scip, logicorcons->vars[v]) );
+   }
+
+   /* analyze the conflict */
+   maxsize = SCIPgetNBinVars(scip);
+   maxsize *= 0.02; /*???????????????????*/
+   maxsize = MAX(maxsize, 8); /*???????????????????*/
+   CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
+
+   /* create a logicor constraint out of the conflict set */
+   if( success )
+   {
+      sprintf(consname, "cf%d", SCIPgetNConss(scip));
+      CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, consname, nconflictvars, conflictvars, 
+                     TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks constraint for violation only looking at the watched variables, applies fixings if possible */
 static
 RETCODE processWatchedVars(
@@ -748,7 +791,13 @@ RETCODE processWatchedVars(
       if( logicorcons->modifiable )
          *addcut = TRUE;
       else
+      {
+         /* use conflict analysis to get a conflict clause out of the conflicting assignment */
+         CHECK_OKAY( analyzeConflict(scip, logicorcons) );
+
+         /* mark the node to be cut off */
          *cutoff = TRUE;
+      }
    }
    else if( watchedvar2 == -1 )
    {
@@ -764,9 +813,9 @@ RETCODE processWatchedVars(
       else
       {
          /* fixed remaining variable to one and disable constraint */
-         debugMessage("single-literal constraint <%s> (fix <%s> to 1.0)\n", 
-            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]));
-         CHECK_OKAY( SCIPchgVarLb(scip, vars[watchedvar1], 1.0) );
+         debugMessage("single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
+            SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetActDepth(scip));
+         CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], 1.0, cons) ); /* provide cons for conflict analysis */
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          *reduceddom = TRUE;
@@ -1482,19 +1531,21 @@ DECL_CONSENFOLP(consEnfolpLogicOr)
       CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
+   /* step 2: check all obsolete logic or constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+   }
+
+#if 0
+   /* step 3: if solution is not integral, choose a variable set to branch on */
    if( !cutoff && !separated && !reduceddom )
    {
-      /* step 2: if solution is not integral, choose a variable set to branch on */
       CHECK_OKAY( branchLP(scip, conshdlr, result) );
       if( *result != SCIP_FEASIBLE )
          return SCIP_OKAY;
-      
-      /* step 3: check all obsolete logic or constraints for feasibility */
-      for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-      {
-         CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-      }
    }
+#endif
 
    /* return the correct result */
    if( cutoff )
@@ -1792,11 +1843,62 @@ DECL_CONSPRESOL(consPresolLogicOr)
 
 
 /*
+ * conflict analysis resolving
+ */
+
+static
+DECL_CONSRESCVAR(consRescvarLogicOr)
+{
+   CONSDATA* consdata;
+   LOGICORCONS* logicorcons;
+   Bool confvarfound;
+   int v;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(cons != NULL);
+   assert(infervar != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   logicorcons = consdata->logicorcons;
+   assert(logicorcons != NULL);
+
+   debugMessage("conflict resolving method of logic or constraint handler\n");
+
+   /* the only deductions are variables infered to 1.0 on logic or constraints where all other variables
+    * are assigned to zero
+    */
+   assert(SCIPvarGetLbLocal(logicorcons->vars[v]) > 0.5); /* the inference variable must be assigned to zero */
+
+   confvarfound = FALSE;
+   for( v = 0; v < logicorcons->nvars; ++v )
+   {
+      if( logicorcons->vars[v] != infervar )
+      {
+         assert(SCIPvarGetUbLocal(logicorcons->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
+         CHECK_OKAY( SCIPaddConflictVar(scip, logicorcons->vars[v]) );
+      }
+      else
+      {
+         assert(!confvarfound);
+         confvarfound = TRUE;
+      }
+   }
+   assert(confvarfound);
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * variable usage counting
  */
 
 static
-DECL_CONSENABLE(consEnableLogicOr)
+DECL_CONSENABLE(consActiveLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
@@ -1815,7 +1917,7 @@ DECL_CONSENABLE(consEnableLogicOr)
    logicorcons = consdata->logicorcons;
    assert(logicorcons != NULL);
 
-   debugMessage("enabling information method of logic or constraint handler\n");
+   debugMessage("activation information method of logic or constraint handler\n");
 
    /* increase the number of uses for each variable in the constraint */
    for( v = 0; v < logicorcons->nvars; ++v )
@@ -1827,7 +1929,7 @@ DECL_CONSENABLE(consEnableLogicOr)
 }
 
 static
-DECL_CONSDISABLE(consDisableLogicOr)
+DECL_CONSDISABLE(consDeactiveLogicOr)
 {
    CONSHDLRDATA* conshdlrdata;
    INTARRAY* varuses;
@@ -1847,7 +1949,7 @@ DECL_CONSDISABLE(consDisableLogicOr)
    logicorcons = consdata->logicorcons;
    assert(logicorcons != NULL);
 
-   debugMessage("disabling information method of logic or constraint handler\n");
+   debugMessage("deactivation information method of logic or constraint handler\n");
 
    /* decrease the number of uses for each variable in the constraint */
    for( v = 0; v < logicorcons->nvars; ++v )
@@ -2011,8 +2113,8 @@ RETCODE SCIPincludeConsHdlrLogicOr(
                   consFreeLogicOr, NULL, NULL,
                   consDeleteLogicOr, consTransLogicOr, 
                   consSepaLogicOr, consEnfolpLogicOr, consEnfopsLogicOr, consCheckLogicOr, 
-                  consPropLogicOr, consPresolLogicOr,
-                  consEnableLogicOr, consDisableLogicOr,
+                  consPropLogicOr, consPresolLogicOr, consRescvarLogicOr,
+                  consActiveLogicOr, consDeactiveLogicOr, NULL, NULL,
                   conshdlrdata) );
 
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */

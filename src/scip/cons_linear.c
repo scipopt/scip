@@ -3907,7 +3907,8 @@ RETCODE SCIPincludeConsHdlrLinear(
                   consFreeLinear, NULL, NULL,
                   consDeleteLinear, consTransLinear, 
                   consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, consPropLinear, consPresolLinear,
-                  NULL, NULL,
+                  NULL,
+                  NULL, NULL, NULL, NULL,
                   conshdlrdata) );
 
    /* add linear constraint handler parameters */

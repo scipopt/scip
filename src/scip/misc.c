@@ -32,9 +32,13 @@
 #include "misc.h"
 
 
-#if 0 /* PRIORITY QUEUE NOT NEEDED */
 
-#define PQ_PARENT(q) (((q)-1)/2)
+
+/*
+ * Priority Queue
+ */
+
+#define PQ_PARENT(q) (((q)+1)/2-1)
 #define PQ_LEFTCHILD(p) (2*(p)+1)
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
 
@@ -76,8 +80,8 @@ RETCODE pqueueResize(
    return SCIP_OKAY;
 }
 
-/** initializes priority queue */
-RETCODE SCIPpqueueInit(
+/** creates priority queue */
+RETCODE SCIPpqueueCreate(
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
    Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
@@ -112,9 +116,19 @@ void SCIPpqueueFree(
    freeMemory(pqueue);
 }
 
+/** clears the priority queue, but doesn't free the data elements themselves */
+void SCIPpqueueClear(
+   PQUEUE*          pqueue              /**< priority queue */
+   )
+{
+   assert(pqueue != NULL);
+
+   pqueue->len = 0;
+}
+
 /** inserts element into priority queue */
 RETCODE SCIPpqueueInsert(
-   PQUEUE*          pqueue,             /**< pointer to a priority queue */
+   PQUEUE*          pqueue,             /**< priority queue */
    void*            elem                /**< element to be inserted */
    )
 {
@@ -141,7 +155,7 @@ RETCODE SCIPpqueueInsert(
 
 /** removes and returns best element from the priority queue */
 void* SCIPpqueueRemove(
-   PQUEUE*          pqueue              /**< pointer to a priority queue */
+   PQUEUE*          pqueue              /**< priority queue */
    )
 {
    void* root;
@@ -157,12 +171,13 @@ void* SCIPpqueueRemove(
       return NULL;
 
    /* remove root element of the tree, move the better child to its parents position until the last element
-    * of the queue could be placed in the empty slot */
+    * of the queue could be placed in the empty slot
+    */
    root = pqueue->slots[0];
    last = pqueue->slots[pqueue->len-1];
    pqueue->len--;
    pos = 0;
-   while( pos < PQ_PARENT(pqueue->len-1) )
+   while( pos <= PQ_PARENT(pqueue->len-1) )
    {
       childpos = PQ_LEFTCHILD(pos);
       brotherpos = PQ_RIGHTCHILD(pos);
@@ -181,7 +196,7 @@ void* SCIPpqueueRemove(
 
 /** returns the best element of the queue without removing it */
 void* SCIPpqueueFirst(
-   const PQUEUE*    pqueue              /**< pointer to a priority queue */
+   PQUEUE*          pqueue              /**< priority queue */
    )
 {
    assert(pqueue != NULL);
@@ -193,7 +208,27 @@ void* SCIPpqueueFirst(
    return pqueue->slots[0];
 }
 
-#endif
+/** returns the number of elements in the queue */
+int SCIPpqueueNElems(
+   PQUEUE*          pqueue              /**< priority queue */
+   )
+{
+   assert(pqueue != NULL);
+   assert(pqueue->len >= 0);
+
+   return pqueue->len;
+}
+
+/** returns the elements of the queue; changing the returned array may destroy the queue's ordering! */
+void** SCIPpqueueElems(
+   PQUEUE*          pqueue              /**< priority queue */
+   )
+{
+   assert(pqueue != NULL);
+   assert(pqueue->len >= 0);
+
+   return pqueue->slots;
+}
 
 
 
@@ -2185,3 +2220,48 @@ Bool SCIPfileExists(
 
    return TRUE;
 }
+
+/** splits filename into path, name, and extension */
+void SCIPsplitFilename(
+   char*            filename,           /**< filename to split; is destroyed (but not freed) during process */
+   char**           path,               /**< pointer to store path, or NULL if not needed */
+   char**           name,               /**< pointer to store name, or NULL if not needed */
+   char**           extension           /**< pointer to store extension, or NULL if not needed */
+   )
+{
+   char* lastslash;
+   char* lastdot;
+
+   assert(filename != NULL);
+
+   lastslash = strrchr(filename, '/');
+   if( lastslash == NULL )
+   {
+      if( path != NULL )
+         *path = NULL;
+      if( name != NULL )
+         *name = filename;
+   }
+   else
+   {
+      if( path != NULL )
+         *path = filename;
+      if( name != NULL )
+         *name = lastslash+1;
+      *lastslash = '\0';
+   }
+
+   lastdot = strrchr(*name, '.');
+   if( lastdot == NULL )
+   {
+      if( extension != NULL )
+         *extension = NULL;
+   }
+   else
+   {
+      if( extension != NULL )
+         *extension = lastdot+1;
+      *lastdot = '\0';
+   }
+}
+

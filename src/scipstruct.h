@@ -38,6 +38,7 @@
 #include "sepa.h"
 #include "branch.h"
 #include "cutpool.h"
+#include "conflict.h"
 #include "primal.h"
 #include "event.h"
 
@@ -59,6 +60,7 @@ struct Scip
    SEPASTORE*       sepastore;          /**< storage for separated cuts */
    BRANCHCAND*      branchcand;         /**< storage for branching candidates */
    CUTPOOL*         cutpool;            /**< global cut pool */
+   CONFLICT*        conflict;           /**< conflict analysis data */
    PRIMAL*          primal;             /**< primal data and solution storage */
    EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue;         /**< event queue to cache events and process them later (bound change events) */

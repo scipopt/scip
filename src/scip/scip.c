@@ -80,6 +80,7 @@ RETCODE checkStage(
       assert(scip->sepastore == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->conflict == NULL);
       assert(scip->primal == NULL);
       assert(scip->eventfilter == NULL);
       assert(scip->eventqueue == NULL);
@@ -102,6 +103,7 @@ RETCODE checkStage(
       assert(scip->sepastore == NULL);
       assert(scip->branchcand == NULL);
       assert(scip->cutpool == NULL);
+      assert(scip->conflict == NULL);
       assert(scip->primal == NULL);
       assert(scip->eventfilter == NULL);
       assert(scip->eventqueue == NULL);
@@ -137,6 +139,7 @@ RETCODE checkStage(
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->primal == NULL);
       assert(scip->eventfilter != NULL);
       assert(scip->eventqueue != NULL);
@@ -159,6 +162,7 @@ RETCODE checkStage(
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->primal != NULL);
       assert(scip->eventfilter != NULL);
       assert(scip->eventqueue != NULL);
@@ -181,6 +185,7 @@ RETCODE checkStage(
       assert(scip->sepastore != NULL);
       assert(scip->branchcand != NULL);
       assert(scip->cutpool != NULL);
+      assert(scip->conflict != NULL);
       assert(scip->primal != NULL);
       assert(scip->eventfilter != NULL);
       assert(scip->eventqueue != NULL);
@@ -292,6 +297,7 @@ RETCODE SCIPcreate(
    (*scip)->sepastore = NULL;
    (*scip)->branchcand = NULL;
    (*scip)->cutpool = NULL;
+   (*scip)->conflict = NULL;
    (*scip)->primal = NULL;
    (*scip)->eventfilter = NULL;
    (*scip)->eventqueue = NULL;
@@ -730,6 +736,9 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -742,7 +751,7 @@ RETCODE SCIPincludeConsHdlr(
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
                   name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
                   consfree, consinit, consexit, consdelete, constrans, conssepa, consenfolp, consenfops, conscheck,
-                  consprop, conspresol, consenable, consdisable, conshdlrdata) );
+                  consprop, conspresol, consrescvar, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConsHdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
@@ -2021,6 +2030,7 @@ RETCODE SCIPpresolve(
    CHECK_OKAY( SCIPpriceCreate(&scip->price) );
    CHECK_OKAY( SCIPsepastoreCreate(&scip->sepastore) );
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->set->cutagelimit) );
+   CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPeventfilterCreate(&scip->eventfilter, scip->mem->solvemem) );
    CHECK_OKAY( SCIPeventqueueCreate(&scip->eventqueue) );
    CHECK_OKAY( SCIPbranchcandCreate(&scip->branchcand) );
@@ -2226,6 +2236,7 @@ RETCODE SCIPfreeSolve(
       CHECK_OKAY( SCIPbranchcandFree(&scip->branchcand) );
       CHECK_OKAY( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
       CHECK_OKAY( SCIPeventqueueFree(&scip->eventqueue) );
+      CHECK_OKAY( SCIPconflictFree(&scip->conflict) );
       CHECK_OKAY( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPsepastoreFree(&scip->sepastore) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
@@ -2485,7 +2496,8 @@ RETCODE SCIPaddVarObj(
 }
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value
+ *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  that this change is treated like a branching decision
  */
 RETCODE SCIPchgVarLb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2501,20 +2513,20 @@ RETCODE SCIPchgVarLb(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->tree, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
       return SCIP_OKAY;
 
    default:
@@ -2524,7 +2536,8 @@ RETCODE SCIPchgVarLb(
 }
 
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value
+ *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  that this change is treated like a branching decision
  */
 RETCODE SCIPchgVarUb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2540,20 +2553,20 @@ RETCODE SCIPchgVarUb(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->tree, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+                     scip->branchcand, scip->eventqueue, newbound, NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL) );
       return SCIP_OKAY;
 
    default:
@@ -2562,7 +2575,9 @@ RETCODE SCIPchgVarUb(
    }
 }
 
-/** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes lower bound of variable in the given node; if possible, adjust bound to integral value; the bound change
+ *  is treated like a branching decision, and no inference information is stored
+ */
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
@@ -2575,12 +2590,14 @@ RETCODE SCIPchgVarLbNode(
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, NULL) );
    
    return SCIP_OKAY;
 }
 
-/** changes upper bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes upper bound of variable in the given node; if possible, adjust bound to integral value; the bound change
+ *  is treated like a branching decision, and no inference information is stored
+ */
 RETCODE SCIPchgVarUbNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
@@ -2593,9 +2610,64 @@ RETCODE SCIPchgVarUbNode(
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, NULL ) );
    
    return SCIP_OKAY;
+}
+
+/** fixes binary variable to given value; in problem creation or preprocessing stage, the variable is converted
+ *  into a fixed variable, and the given inference constraint is ignored; in solving stage, the variable is fixed
+ *  locally at the given node, and the given inference constraint is stored, such that the conflict analysis is
+ *  able to find out the reason for the deduction of the variable fixing
+ */
+RETCODE SCIPinferBinVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable, that is deduced to a fixed value */
+   Bool             fixedval,           /**< value to fix binary variable to */
+   CONS*            infercons           /**< constraint that deduced the fixing */
+   )
+{
+   Bool infeasible;
+
+   CHECK_OKAY( checkStage(scip, "SCIPinferBinVar", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      if( fixedval == TRUE )
+      {
+         CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+                     scip->branchcand, scip->eventqueue, (Real)fixedval, &infeasible) );
+      assert(!infeasible);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVING:
+      if( fixedval == TRUE )
+      {
+         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                        scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, infercons) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                        scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, infercons) );
+      }
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
 }
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -2720,6 +2792,68 @@ RETCODE SCIPmultiaggregateVar(
    CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
                   scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
 
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
+ * conflict analysis methods
+ */
+
+/** initializes the conflict analysis by clearing the conflict variable candidate queue */
+RETCODE SCIPinitConflictAnalysis(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPinitConflictAnalysis", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconflictInit(scip->conflict) );
+
+   return SCIP_OKAY;
+}
+
+/** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
+ *  one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
+ *      whose current assignment lead to the conflict (i.e. the infeasibility of a constraint).
+ *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
+ *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
+ */
+RETCODE SCIPaddConflictVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< conflict variable to add to conflict candidate queue */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddConflictVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconflictAddVar(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, var) );
+
+   return SCIP_OKAY;
+}
+
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and returns a conflict set, that
+ *  can be used to create a conflict constraint; the variables in the conflict set lead to a conflict (i.e. an
+ *  infeasibility) when all set to FALSE; thus, a feasible conflict constraint must demand, that at least one of
+ *  the variables in the conflict set is set to TRUE; the method stores the reference to the buffer with the
+ *  conflict set in the given conflictvars pointer, and the number of variables in the set in the given
+ *  nconflictvars pointer; this buffer may be modified at any time by SCIP, so the user must copy the needed
+ *  information from the conflict set buffer, if he wants to use it later
+ */
+RETCODE SCIPanalyzeConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   VAR***           conflictvars,       /**< pointer to store the reference to the buffer, where the conflict set
+                                         *   is stored (user must not change this array) */
+   int*             nconflictvars,      /**< pointer to store the number of conflict variables */
+   Bool*            success             /**< pointer to store whether the conflict set is valid */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->set, maxsize, conflictvars, nconflictvars, success) );
+   
    return SCIP_OKAY;
 }
 
@@ -5042,6 +5176,19 @@ void printConstraintStatistics(
 }
 
 static
+void printConflictStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   fprintf(file, "Conflict analysis  :         Time        Calls    Conflicts\n");
+   fprintf(file, "  total            : %12.2f %12lld %12lld\n",
+      SCIPconflictGetTime(scip->conflict),
+      SCIPconflictGetNCalls(scip->conflict),
+      SCIPconflictGetNConflicts(scip->conflict));
+}
+
+static
 void printSeparatorStatistics(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file */
@@ -5334,6 +5481,7 @@ RETCODE SCIPprintStatistics(
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
+      printConflictStatistics(scip, file);
       printSeparatorStatistics(scip, file);
       printPricerStatistics(scip, file);
       printHeuristicStatistics(scip, file);

@@ -65,10 +65,6 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "sepa.h"
 #include "heur.h"
 #include "misc.h"
-#include "price.h"
-#include "sepastore.h"
-#include "cutpool.h"
-#include "primal.h"
 #include "paramset.h"
 #include "clock.h"
 
@@ -403,6 +399,9 @@ RETCODE SCIPincludeConsHdlr(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -977,7 +976,8 @@ RETCODE SCIPaddVarObj(
    );
 
 /** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value
+ *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  that this change is treated like a branching decision
  */
 extern
 RETCODE SCIPchgVarLb(
@@ -987,7 +987,8 @@ RETCODE SCIPchgVarLb(
    );
 
 /** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjust bound to integral value
+ *  if possible, adjust bound to integral value; doesn't store any inference information in the bound change, such
+ *  that this change is treated like a branching decision
  */
 extern
 RETCODE SCIPchgVarUb(
@@ -996,7 +997,9 @@ RETCODE SCIPchgVarUb(
    Real             newbound            /**< new value for bound */
    );
 
-/** changes lower bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes lower bound of variable in the given node; if possible, adjust bound to integral value; the bound change
+ *  is treated like a branching decision, and no inference information is stored
+ */
 extern
 RETCODE SCIPchgVarLbNode(
    SCIP*            scip,               /**< SCIP data structure */
@@ -1005,13 +1008,28 @@ RETCODE SCIPchgVarLbNode(
    Real             newbound            /**< new value for bound */
    );
 
-/** changes upper bound of variable in the given node; if possible, adjust bound to integral value */
+/** changes upper bound of variable in the given node; if possible, adjust bound to integral value; the bound change
+ *  is treated like a branching decision, and no inference information is stored
+ */
 extern
 RETCODE SCIPchgVarUbNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
+   );
+
+/** fixes binary variable to given value; in problem creation or preprocessing stage, the variable is converted
+ *  into a fixed variable, and the given inference constraint is ignored; in solving stage, the variable is fixed
+ *  locally at the given node, and the given inference constraint is stored, such that the conflict analysis is
+ *  able to find out the reason for the deduction of the variable fixing
+ */
+extern
+RETCODE SCIPinferBinVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< binary variable, that is deduced to a fixed value */
+   Bool             fixedval,           /**< value to fix binary variable to */
+   CONS*            infercons           /**< constraint that deduced the fixing */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -1060,6 +1078,55 @@ RETCODE SCIPmultiaggregateVar(
    Real*            scalars,            /**< multipliers $a_i$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Real             constant,           /**< constant shift $c$ in aggregation $x = a_1*y_1 + ... + a_n*y_n + c$ */
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
+   );
+
+/**@} */
+
+
+
+
+/*
+ * conflict analysis methods
+ */
+
+/**@name Conflict Analysis Methods */
+/**@{ */
+
+/** initializes the conflict analysis by clearing the conflict variable candidate queue */
+extern
+RETCODE SCIPinitConflictAnalysis(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** adds currently fixed binary variable to the conflict analysis' candidate storage; this method should be called in
+ *  one of the following two cases:
+ *   1. Before calling the SCIPanalyzeConflict() method, SCIPaddConflictVar() should be called for each variable,
+ *      whose current assignment lead to the conflict (i.e. the infeasibility of a constraint).
+ *   2. In the conflict variable resolution method of a constraint handler, SCIPaddConflictVar() should be called
+ *      for each variable, whose current assignment lead to the deduction of the given conflict variable.
+ */
+extern
+RETCODE SCIPaddConflictVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< conflict variable to add to conflict candidate queue */
+   );
+
+/** analyzes conflict variables that were added with calls to SCIPconflictAddVar(), and returns a conflict set, that
+ *  can be used to create a conflict constraint; the variables in the conflict set lead to a conflict (i.e. an
+ *  infeasibility) when all set to FALSE; thus, a feasible conflict constraint must demand, that at least one of
+ *  the variables in the conflict set is set to TRUE; the method stores the reference to the buffer with the
+ *  conflict set in the given conflictvars pointer, and the number of variables in the set in the given
+ *  nconflictvars pointer; this buffer may be modified at any time by SCIP, so the user must copy the needed
+ *  information from the conflict set buffer, if he wants to use it later
+ */
+extern
+RETCODE SCIPanalyzeConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              maxsize,            /**< maximal size of the conflict set or -1 for no restriction */
+   VAR***           conflictvars,       /**< pointer to store the reference to the buffer, where the conflict set
+                                         *   is stored (user must not change this array) */
+   int*             nconflictvars,      /**< pointer to store the number of conflict variables */
+   Bool*            success             /**< pointer to store whether the conflict set is valid */
    );
 
 /**@} */

@@ -114,8 +114,8 @@ RETCODE SCIPincludeConsHdlrKnapsack(
                   CONSHDLR_NEEDSCONS,
                   NULL, NULL, NULL,
                   NULL, NULL, 
-                  NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL,
+                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                  NULL, NULL, NULL, NULL,
                   NULL) );
 
    /* include the linear constraint upgrade in the linear constraint handler */

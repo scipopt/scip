@@ -252,14 +252,17 @@ RETCODE SCIPpriceAddBdviolvar(
     * dual feasibility (by adding columns) and primal feasibility (by introducing violated bounds)
     * at the same time.
     * The correct bounds must be reset with a call to SCIPpriceResetBounds().
+    * The inference information is unimportant for this temporary bound change.
     */
    if( SCIPsetIsPositive(set, var->actdom.lb) )
    {
-      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 0.0,
+                     NULL, NULL, 0, 0) );
    }
    else
    {
-      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 0.0,
+                     NULL, NULL, 0, 0) );
    }
 
    return SCIP_OKAY;
@@ -589,16 +592,18 @@ RETCODE SCIPpriceResetBounds(
    assert(price->nvars == 0);
    assert(price->naddedbdviolvars == price->nbdviolvars);
 
-   /* reset variables' bounds, release them, and clear the boundviolation storage */
+   /* reset variables' bounds, release them, and clear the boundviolation storage;
+    * the inference information is unimportant in these removals of temporary bound changes
+    */
    for( v = 0; v < price->nbdviolvars; ++v )
    {
       debugMessage("resetting bounds of <%s> from [%g,%g] to [%g,%g]\n", price->bdviolvars[v]->name, 
          price->bdviolvars[v]->actdom.lb, price->bdviolvars[v]->actdom.ub,
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
       CHECK_OKAY( SCIPvarChgLbLocal(price->bdviolvars[v], memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                     price->bdviolvarslb[v]) );
+                     price->bdviolvarslb[v], NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarChgUbLocal(price->bdviolvars[v], memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                     price->bdviolvarsub[v]) );
+                     price->bdviolvarsub[v], NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarRelease(&price->bdviolvars[v], memhdr, set, lp) );
    }
    price->naddedbdviolvars = 0;

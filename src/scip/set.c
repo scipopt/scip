@@ -320,7 +320,7 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "global/numerics/cutvioleps",
                   "epsilon for deciding if a cut is violated",
-                  &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_MAXEPSILON,
+                  &(*set)->cutvioleps, SCIP_DEFAULT_CUTVIOLEPS, machineeps*1e+03, SCIP_INVALID/10.0,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr, 
                   "global/memory/memsavefac",

@@ -95,46 +95,6 @@ RETCODE SCIPreaderFree(
    return SCIP_OKAY;
 }
 
-/** splits filename into path, name, and extension */
-static
-void splitFilename(
-   char*            filename,           /**< filename to split; is destroyed (but not freed) during process */
-   char**           path,               /**< pointer to store path */
-   char**           name,               /**< pointer to store name */
-   char**           extension           /**< pointer to store extension */
-   )
-{
-   char* lastslash;
-   char* lastdot;
-
-   assert(filename != NULL);
-   assert(path != NULL);
-   assert(name != NULL);
-   assert(extension != NULL);
-
-   lastslash = strrchr(filename, '/');
-   if( lastslash == NULL )
-   {
-      *path = NULL;
-      *name = filename;
-   }
-   else
-   {
-      *path = filename;
-      *name = lastslash+1;
-      *lastslash = '\0';
-   }
-
-   lastdot = strrchr(*name, '.');
-   if( lastdot == NULL )
-      *extension = NULL;
-   else
-   {
-      *extension = lastdot+1;
-      *lastdot = '\0';
-   }
-}
-
 /** returns TRUE, if reader is responsible for files with the given extension */
 static
 Bool readerIsApplicable(
@@ -171,7 +131,7 @@ RETCODE SCIPreaderRead(
 
    /* get path, name and extension from filename */
    ALLOC_OKAY( duplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
-   splitFilename(tmpfilename, &path, &name, &extension);
+   SCIPsplitFilename(tmpfilename, &path, &name, &extension);
 
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) )

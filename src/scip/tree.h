@@ -253,7 +253,8 @@ RETCODE SCIPnodeAddBoundchg(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   CONS*            infercons           /**< constraint that deduced the bound change (binary variables only), or NULL */
    );
 
 /** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */

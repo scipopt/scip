@@ -50,6 +50,9 @@ struct ConsHdlr
    DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop));      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol));    /**< presolving method */
+   DECL_CONSRESCVAR ((*consrescvar));   /**< conflict variable resolving method */
+   DECL_CONSACTIVE  ((*consactive));    /**< activation notification method */
+   DECL_CONSDEACTIVE((*consdeactive));  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
@@ -736,6 +739,12 @@ RETCODE conshdlrActivateCons(
       conshdlr->ncheckconss++;
    }
 
+   /* call constraint handler's activation notification method */
+   if( conshdlr->consactive != NULL )
+   {
+      CHECK_OKAY( conshdlr->consactive(set->scip, conshdlr, cons) );
+   }
+
    /* enable separation, enforcement, and propagation of constraint */
    CHECK_OKAY( conshdlrEnableCons(conshdlr, set, cons) );
 
@@ -772,6 +781,12 @@ RETCODE conshdlrDeactivateCons(
       CHECK_OKAY( conshdlrDisableCons(conshdlr, set, cons) );
    }
    assert(!cons->enabled);
+
+   /* call constraint handler's deactivation notification method */
+   if( conshdlr->consdeactive != NULL )
+   {
+      CHECK_OKAY( conshdlr->consdeactive(set->scip, conshdlr, cons) );
+   }
 
    /* delete constraint from the check array */
    if( cons->check )
@@ -1036,6 +1051,9 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method */
+   DECL_CONSRESCVAR ((*consrescvar)),   /**< conflict variable resolving method */
+   DECL_CONSACTIVE  ((*consactive)),    /**< activation notification method */
+   DECL_CONSDEACTIVE((*consdeactive)),  /**< deactivation notification method */
    DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
@@ -1069,6 +1087,9 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->conscheck = conscheck;
    (*conshdlr)->consprop = consprop;
    (*conshdlr)->conspresol = conspresol;
+   (*conshdlr)->consrescvar = consrescvar;
+   (*conshdlr)->consactive = consactive;
+   (*conshdlr)->consdeactive = consdeactive;
    (*conshdlr)->consenable = consenable;
    (*conshdlr)->consdisable = consdisable;
    (*conshdlr)->conshdlrdata = conshdlrdata;
@@ -1099,11 +1120,11 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastnsepaconss = 0;
    (*conshdlr)->lastnenfoconss = 0;
 
-   SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT);
-   SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT);
-   SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT);
-   SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT);
-   SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT);
+   CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*conshdlr)->nsepacalls = 0;
    (*conshdlr)->nenfolpcalls = 0;
@@ -3012,12 +3033,12 @@ RETCODE SCIPconsDelete(
 
    if( cons->node == NULL )
    {
-      /* deactivate and remove problem constraint from the problem */
+      /* remove problem constraint from the problem */
       CHECK_OKAY( SCIPprobDelCons(prob, memhdr, set, cons) );
    }
    else
    {
-      /* deactivate and remove constraint from the node's addedconss array */
+      /* remove constraint from the node's addedconss array */
       CHECK_OKAY( conssetchgDelAddedCons(cons->node->conssetchg, memhdr, set, cons) );
    }
 
@@ -3035,6 +3056,7 @@ RETCODE SCIPconsTransform(
    assert(transcons != NULL);
    assert(memhdr != NULL);
    assert(origcons != NULL);
+   assert(origcons->conshdlr != NULL);
 
    if( origcons->conshdlr->constrans != NULL )
    {
@@ -3245,6 +3267,32 @@ RETCODE SCIPconsResetAge(
    return SCIP_OKAY;
 }
 
+/** resolves the given conflict var, that was deduced by the given constraint, by putting all "reason" variables
+ *  leading to the deduction into the conflict queue with calls to SCIPaddConflictVar()
+ */
+RETCODE SCIPconsResolveConflictVar(
+   CONS*            cons,               /**< constraint that deduced the assignment */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var                 /**< conflict variable, that was deduced by the constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(var != NULL);
+   assert(var->infercons == cons);
+   assert(var->infervar == var);
+
+   if( cons->conshdlr->consrescvar == NULL )
+   {
+      errorMessage("inference constraint is unable to resolve conflict variable due to missing resolving method");
+      return SCIP_INVALIDDATA;
+   }
+
+   CHECK_OKAY( cons->conshdlr->consrescvar(set->scip, cons->conshdlr, cons, var) );
+
+   return SCIP_OKAY;
+}
+
 #ifndef NDEBUG
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -3289,6 +3337,16 @@ Bool SCIPconsIsActive(
    assert(cons != NULL);
 
    return cons->updateactivate || (cons->active && !cons->updatedeactivate);
+}
+
+/** returns TRUE iff constraint is enabled in the current node */
+Bool SCIPconsIsEnabled(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updateenable || (cons->enabled && !cons->updatedisable);
 }
 
 /** returns TRUE iff constraint should be separated during LP processing */

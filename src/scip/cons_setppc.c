@@ -36,7 +36,7 @@
 #define CONSHDLR_ENFOPRIORITY   +700000
 #define CONSHDLR_CHECKPRIORITY  -700000
 #define CONSHDLR_SEPAFREQ             4
-#define CONSHDLR_PROPFREQ            -1
+#define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_NEEDSCONS         TRUE
 
 #define EVENTHDLR_NAME         "setppc"
@@ -667,6 +667,107 @@ void setppcconsPrint(
    }
 }
 
+/** analyzes conflicting assignment on given constraint where all of the variables where assigned to zero,
+ *  and adds conflict clause to problem
+ */
+static
+RETCODE analyzeConflictZero(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPPCCONS*      setppccons          /**< set partitioning / packing / covering constraint object */
+   )
+{
+   CONS* cons;
+   VAR** conflictvars;
+   char consname[MAXSTRLEN];
+   Bool success;
+   int nconflictvars;
+   int maxsize;
+   int v;
+
+   assert(setppccons != NULL);
+   assert(setppccons->setppctype == SCIP_SETPPCTYPE_PARTITIONING
+      || setppccons->setppctype == SCIP_SETPPCTYPE_COVERING);
+
+   /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
+   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+   for( v = 0; v < setppccons->nvars; ++v )
+   {
+      CHECK_OKAY( SCIPaddConflictVar(scip, setppccons->vars[v]) );
+   }
+
+   /* analyze the conflict */
+   maxsize = SCIPgetNBinVars(scip);
+   maxsize *= 0.05; /*???????????????????*/
+   maxsize = MAX(maxsize, 8); /*???????????????????*/
+   CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
+
+   /* create a set covering constraint out of the conflict set */
+   if( success )
+   {
+      sprintf(consname, "cf%d", SCIPgetNConss(scip));
+      CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
+                     TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** analyzes conflicting assignment on given constraint where two of the variables where assigned to one,
+ *  and adds conflict clause to problem
+ */
+static
+RETCODE analyzeConflictOne(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPPCCONS*      setppccons          /**< set partitioning / packing / covering constraint object */
+   )
+{
+   CONS* cons;
+   VAR** conflictvars;
+   char consname[MAXSTRLEN];
+   Bool success;
+   int nconflictvars;
+   int maxsize;
+   int v;
+   int n;
+
+   assert(setppccons != NULL);
+   assert(setppccons->setppctype == SCIP_SETPPCTYPE_PARTITIONING
+      || setppccons->setppctype == SCIP_SETPPCTYPE_PACKING);
+
+   /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
+   CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+   n = 0;
+   for( v = 0; v < setppccons->nvars && n < 2; ++v )
+   {
+      if( SCIPvarGetLbLocal(setppccons->vars[v]) > 0.5 )
+      {
+         CHECK_OKAY( SCIPaddConflictVar(scip, setppccons->vars[v]) );
+         n++;
+      }
+   }
+   assert(n == 2);
+
+   /* analyze the conflict */
+   maxsize = SCIPgetNBinVars(scip);
+   maxsize *= 0.02; /*???????????????????*/
+   maxsize = MAX(maxsize, 8); /*???????????????????*/
+   CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
+
+   /* create a set covering constraint out of the conflict set */
+   if( success )
+   {
+      sprintf(consname, "cf%d", SCIPgetNConss(scip));
+      CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
+                     TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
+      CHECK_OKAY( SCIPaddCons(scip, cons) );
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks constraint for violation only looking at the fixed variables, applies further fixings if possible */
 static
 RETCODE processFixings(
@@ -713,6 +814,7 @@ RETCODE processFixings(
       else
       {
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         CHECK_OKAY( analyzeConflictOne(scip, setppccons) );
          *cutoff = TRUE;
       }
    }
@@ -751,7 +853,7 @@ RETCODE processFixings(
                {
                   if( SCIPvarGetUbLocal(var) > 0.5 )
                   {
-                     CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
+                     CHECK_OKAY( SCIPinferBinVar(scip, var, 0.0, cons) ); /* provide cons for conflict analysis */
                      fixed = TRUE;
                   }
                }
@@ -797,7 +899,10 @@ RETCODE processFixings(
          if( setppccons->modifiable )
             *addcut = TRUE;
          else
+         {
+            CHECK_OKAY( analyzeConflictZero(scip, setppccons) );
             *cutoff = TRUE;
+         }
       }
    }
    else if( setppccons->nfixedzeros == setppccons->nvars - 1 )
@@ -836,7 +941,7 @@ RETCODE processFixings(
             assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
-               CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
+               CHECK_OKAY( SCIPinferBinVar(scip, var, 1.0, cons) ); /* provide cons for conflict analysis */
                fixed = TRUE;
             }
          }
@@ -1291,7 +1396,7 @@ RETCODE branchLP(
             sprintf(name, "BSB%lld", SCIPgetNodenum(scip));
 
             CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
-                           TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
+                           TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
@@ -1461,19 +1566,21 @@ DECL_CONSENFOLP(consEnfolpSetppc)
       CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
+   /* step 2: check all obsolete set partitioning / packing / covering constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
+   }
+
+#if 0
    if( !cutoff && !separated && !reduceddom )
    {
-      /* step 2: if solution is not integral, choose a variable set to branch on */
+      /* step 3: if solution is not integral, choose a variable set to branch on */
       CHECK_OKAY( branchLP(scip, conshdlr, result) );
       if( *result != SCIP_FEASIBLE )
          return SCIP_OKAY;
-      
-      /* step 3: check all obsolete set partitioning / packing / covering constraints for feasibility */
-      for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-      {
-         CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
-      }
    }
+#endif
 
    /* return the correct result */
    if( cutoff )
@@ -1586,6 +1693,51 @@ DECL_CONSCHECK(consCheckSetppc)
       }
    }
    
+   return SCIP_OKAY;
+}
+
+static
+DECL_CONSPROP(consPropSetppc)
+{
+   Bool cutoff;
+   Bool reduceddom;
+   Bool addcut;
+   Bool mustcheck;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTFIND;
+
+   debugMessage("propagating %d/%d set partitioning / packing / covering constraints\n", nusefulconss, nconss);
+
+   cutoff = FALSE;
+   reduceddom = FALSE;
+
+   /* step 1: propagate all useful set partitioning / packing / covering constraints */
+   for( c = 0; c < nusefulconss && !cutoff; ++c )
+   {
+      CHECK_OKAY( processFixings(scip, conss[c], &cutoff, &reduceddom, &addcut, &mustcheck) );
+   }
+
+   /* step 2: if no reduction was found, propagate all obsolete set partitioning / packing / covering constraints */
+   if( !cutoff && !reduceddom )
+   {
+      for( c = nusefulconss; c < nconss && !cutoff; ++c )
+      {
+         CHECK_OKAY( processFixings(scip, conss[c], &cutoff, &reduceddom, &addcut, &mustcheck) );
+      }
+   }
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
    return SCIP_OKAY;
 }
 
@@ -1874,6 +2026,80 @@ DECL_CONSPRESOL(consPresolSetppc)
 
 
 /*
+ * conflict analysis resolving
+ */
+
+static
+DECL_CONSRESCVAR(consRescvarSetppc)
+{
+   CONSDATA* consdata;
+   SETPPCCONS* setppccons;
+   int v;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(cons != NULL);
+   assert(infervar != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   setppccons = consdata->setppccons;
+   assert(setppccons != NULL);
+
+   debugMessage("conflict resolving method of set partitioning / packing / covering constraint handler\n");
+
+   if( SCIPvarGetLbLocal(infervar) > 0.5 )
+   {
+      Bool confvarfound;
+
+      /* the inference variable was infered to 1.0:
+       * the inference constraint has to be a set partitioning or covering constraint, and the reason for
+       * the deduction is the assignment to zero of all other variables
+       */
+      confvarfound = FALSE;
+      for( v = 0; v < setppccons->nvars; ++v )
+      {
+         if( setppccons->vars[v] != infervar )
+         {
+            assert(SCIPvarGetUbLocal(setppccons->vars[v]) < 0.5); /* the reason variable must be assigned to zero */
+            CHECK_OKAY( SCIPaddConflictVar(scip, setppccons->vars[v]) );
+         }
+         else
+         {
+            assert(!confvarfound);
+            confvarfound = TRUE;
+         }
+      }
+      assert(confvarfound);
+   }
+   else
+   {
+      Bool reasonvarfound;
+
+      /* the inference variable was infered to 0.0:
+       * the inference constraint has to be a set partitioning or packing constraint, and the reason for
+       * the deduction is the assignment to 1.0 of a single different variable
+       */
+      assert(SCIPvarGetUbLocal(infervar) < 0.5);
+      reasonvarfound = FALSE;
+      for( v = 0; v < setppccons->nvars && !reasonvarfound; ++v )
+      {
+         if( SCIPvarGetLbLocal(setppccons->vars[v]) > 0.5 )
+         {
+            CHECK_OKAY( SCIPaddConflictVar(scip, setppccons->vars[v]) );
+            reasonvarfound = TRUE;
+         }
+      }
+      assert(reasonvarfound);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * variable usage counting
  */
 
@@ -1951,6 +2177,7 @@ RETCODE createConsSetppc(
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
@@ -1991,8 +2218,8 @@ RETCODE createConsSetppc(
    }
    consdata->row = NULL;
 
-   /* create constraint (propagation is never used for set partitioning / packing / covering constraints) */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, FALSE) );
+   /* create constraint */
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, propagate) );
 
    return SCIP_OKAY;
 }
@@ -2011,6 +2238,7 @@ RETCODE createNormalizedSetppc(
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
@@ -2040,7 +2268,7 @@ RETCODE createNormalizedSetppc(
 
    /* create the constraint */
    CHECK_OKAY( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
-      separate, enforce, check, local, modifiable, removeable) );
+      separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* release temporary memory */
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &transvars) );
@@ -2082,8 +2310,8 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
          /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
          CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
                         SCIP_SETPPCTYPE_PARTITIONING,
-                        SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                        local, FALSE, removeable) );
+                        SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons), 
+                        SCIPconsIsPropagated(cons), local, FALSE, removeable) );
       }
       else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1 - ncoeffsnone))
          || (SCIPisEQ(scip, lhs, ncoeffspone - 1) && SCIPisInfinity(scip, rhs)) )
@@ -2097,7 +2325,7 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
          CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
                         SCIP_SETPPCTYPE_PACKING,
                         SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                        local, FALSE, removeable) );
+                        SCIPconsIsPropagated(cons), local, FALSE, removeable) );
       }
       else if( (SCIPisEQ(scip, lhs, 1 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
          || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1)) )
@@ -2111,7 +2339,7 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
          CHECK_OKAY( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
                         SCIP_SETPPCTYPE_COVERING,
                         SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                        local, FALSE, removeable) );
+                        SCIPconsIsPropagated(cons), local, FALSE, removeable) );
       }
    }
 
@@ -2201,8 +2429,9 @@ RETCODE SCIPincludeConsHdlrSetppc(
                   CONSHDLR_NEEDSCONS,
                   consFreeSetppc, NULL, NULL,
                   consDeleteSetppc, consTransSetppc, 
-                  consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, NULL, consPresolSetppc,
-                  consEnableSetppc, consDisableSetppc,
+                  consSepaSetppc, consEnfolpSetppc, consEnfopsSetppc, consCheckSetppc, consPropSetppc,
+                  consPresolSetppc, consRescvarSetppc,
+                  NULL, NULL, consEnableSetppc, consDisableSetppc,
                   conshdlrdata) );
 
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */
@@ -2228,13 +2457,14 @@ RETCODE SCIPcreateConsSetpart(
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PARTITIONING,
-      separate, enforce, check, local, modifiable, removeable);
+      separate, enforce, check, propagate, local, modifiable, removeable);
 }
 
 /** creates and captures a set packing constraint */
@@ -2247,13 +2477,14 @@ RETCODE SCIPcreateConsSetpack(
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_PACKING,
-      separate, enforce, check, local, modifiable, removeable);
+      separate, enforce, check, propagate, local, modifiable, removeable);
 }
 
 /** creates and captures a set covering constraint */
@@ -2266,12 +2497,13 @@ RETCODE SCIPcreateConsSetcover(
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
+   Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is set partitioning constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
    return createConsSetppc(scip, cons, name, nvars, vars, SCIP_SETPPCTYPE_COVERING,
-      separate, enforce, check, local, modifiable, removeable);
+      separate, enforce, check, propagate, local, modifiable, removeable);
 }
 

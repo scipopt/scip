@@ -35,6 +35,8 @@
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of gomory separation rounds per node */
 #define DEFAULT_MAXROUNDSROOT         6 /**< maximal number of gomory separation rounds in the root node */
+#define DEFAULT_MAXSEPACUTS          32 /**< maximal number of gomory cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT     128 /**< maximal number of gomory cuts separated per separation round in root node */
 
 
 /** separator data */
@@ -42,6 +44,8 @@ struct SepaData
 {
    int              maxrounds;          /**< maximal number of gomory separation rounds per node */
    int              maxroundsroot;      /**< maximal number of gomory separation rounds in the root node */
+   int              maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
+   int              maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
 };
 
 
@@ -87,6 +91,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    int ncalls;
    int actdepth;
    int maxdepth;
+   int maxsepacuts;
+   int ncuts;
    int c;
    int i;
 
@@ -132,8 +138,6 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    else
       maxdnom = 1;
 
-   debugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%lld\n", ncols, nrows, maxdnom);
-
    *result = SCIP_DIDNOTFIND;
 
    /* allocate temporary memory */
@@ -145,8 +149,17 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    /* get basis indices */
    CHECK_OKAY( SCIPgetLPBasisInd(scip, basisind) );
 
+   /* get the maximal number of cuts allowed in a separation round */
+   if( actdepth == 0 )
+      maxsepacuts = sepadata->maxsepacutsroot;
+   else
+      maxsepacuts = sepadata->maxsepacuts;
+
+   debugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%lld, maxcuts=%d\n", ncols, nrows, maxdnom, maxsepacuts);
+
    /* for all basic columns belonging to integer variables, try to generate a gomory cut */
-   for( i = 0; i < nrows; ++i )
+   ncuts = 0;
+   for( i = 0; i < nrows && ncuts < maxsepacuts; ++i )
    {
       c = basisind[i];
       if( c >= 0 )
@@ -229,8 +242,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
                                  TRUE, FALSE, TRUE) );
-                     /*debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f:", cutname, cutact, cutrhs);
-                       debug(SCIProwPrint(cut, NULL));*/
+                     /*debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
+                       cutname, cutact, cutrhs, cutnorm);*/
 
                      /* try to scale the cut to integral values */
                      CHECK_OKAY( SCIPmakeRowRational(scip, cut, maxdnom, &success) );
@@ -245,11 +258,11 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                            && SCIPisFeasGT(scip, cutact, cutrhs)
                            && SCIPisCutViolated(scip, cutact/cutnorm, cutrhs/cutnorm) )
                         {
-                           debugMessage(" -> found integral gomory cut <%s>: activity=%f, rhs=%f:",
-                              cutname, cutact, cutrhs);
-                           debug(SCIProwPrint(cut, NULL));
+                           debugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, viol=%f\n",
+                              cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
                            CHECK_OKAY( SCIPaddCut(scip, cut, (cutact-cutrhs)/cutnorm/(cutlen+1)) );
                            *result = SCIP_SEPARATED;
+                           ncuts++;
                         }
                      }
 
@@ -275,7 +288,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &basisind) );
    CHECK_OKAY( SCIPreleaseBufferArray(scip, &cutcoef) );
 
-   debugMessage("end searching gomory cuts\n");
+   debugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
 
    return SCIP_OKAY;
 }
@@ -312,7 +325,15 @@ RETCODE SCIPincludeSepaGomory(
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "separator/gomory/maxroundsroot",
                   "maximal number of gomory separation rounds in the root node",
-                  &sepadata->maxrounds, DEFAULT_MAXROUNDS, 0, INT_MAX, NULL, NULL) );
+                  &sepadata->maxroundsroot, DEFAULT_MAXROUNDSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "separator/gomory/maxsepacuts",
+                  "maximal number of gomory cuts separated per separation round",
+                  &sepadata->maxsepacuts, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "separator/gomory/maxsepacutsroot",
+                  "maximal number of gomory cuts separated per separation round in the root node",
+                  &sepadata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -131,6 +131,8 @@ struct Var
    VAR**            parentvars;         /**< parent variables in the aggregation tree */
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
+   CONS*            infercons;          /**< constraint that deduced the assignment (binary variables only), or NULL */
+   VAR*             infervar;           /**< variable that was assigned (parent of var, or var itself) */
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              actdom;             /**< domain of variable in actual subproblem */
    Real             obj;                /**< objective function value of variable */
@@ -145,9 +147,11 @@ struct Var
    int              nuses;              /**< number of times, this variable is referenced */
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
+   unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
+   unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
+   unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
-   unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
 };
 
 
@@ -229,16 +233,24 @@ RETCODE SCIPdomchgdynDiscard(
    MEMHDR*          memhdr              /**< block memory */
    );
 
-/** adds bound change to domain changes */
+/** adds bound change to domain changes, and applies bound change immediately, if the given node is the active node */
 extern
 RETCODE SCIPdomchgdynAddBoundchg(
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    Real             oldbound,           /**< old value for bound */
-   BOUNDTYPE        boundtype           /**< type of bound for var: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
+   NODE*            node,               /**< node where this bound change appears */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   VAR*             infervar            /**< variable that was changed (parent of var, or var itself) */
    );
 
 /** adds hole change to domain changes */
@@ -550,7 +562,11 @@ RETCODE SCIPvarChgLbLocal(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound            /**< new bound for variable */
+   Real             newbound,           /**< new bound for variable */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   int              inferdepth,         /**< depth in the tree, where this bound change took place */
+   int              infernum            /**< bound change index for each node representing the order of changes */
    );
 
 /** changes current local upper bound of variable */
@@ -564,7 +580,11 @@ RETCODE SCIPvarChgUbLocal(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             newbound            /**< new bound for variable */
+   Real             newbound,           /**< new bound for variable */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   int              inferdepth,         /**< depth in the tree, where this bound change took place */
+   int              infernum            /**< bound change index for each node representing the order of changes */
    );
 
 /** changes current local bound of variable */
@@ -579,7 +599,11 @@ RETCODE SCIPvarChgBdLocal(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
+   int              inferdepth,         /**< depth in the tree, where this bound change took place */
+   int              infernum            /**< bound change index for each node representing the order of changes */
    );
 
 /** adjust lower bound to integral value, if variable is integral */
@@ -653,7 +677,7 @@ VAR* SCIPvarGetProbvar(
 
 /** transforms given variable, boundtype and bound to the corresponding active variable values */
 extern
-RETCODE SCIPvarTransformBound(
+RETCODE SCIPvarGetProbvarBound(
    VAR**            var,                /**< pointer to problem variable */
    Real*            bound,              /**< pointer to bound value to transform */
    BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
@@ -761,6 +785,30 @@ Real SCIPvarGetUbLocal(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets inference constraint of variable (constraint that deduced the current assignment), or NULL */
+extern
+CONS* SCIPvarGetInferCons(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets inference variable of variable (variable that was assigned: parent of var, or var itself), or NULL */
+extern
+VAR* SCIPvarGetInferVar(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets inference depth level of variable */
+extern
+int SCIPvarGetInferDepth(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets inference number of variable (inference index in variable's inference depth level) */
+extern
+int SCIPvarGetInferNum(
+   VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -772,7 +820,7 @@ Real SCIPvarGetUbLocal(
 #define SCIPvarIsTransformed(var)       ((var)->varstatus != SCIP_VARSTATUS_ORIGINAL \
       && ((var)->varstatus != SCIP_VARSTATUS_NEGATED || (var)->negatedvar->varstatus != SCIP_VARSTATUS_ORIGINAL))
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
-#define SCIPvarGetType(var)             (VARTYPE)((var)->vartype)
+#define SCIPvarGetType(var)             ((VARTYPE)((var)->vartype))
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbIndex(var)        (var)->probindex
 #define SCIPvarGetCol(var)              (var)->data.col
@@ -784,6 +832,10 @@ Real SCIPvarGetUbLocal(
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub
 #define SCIPvarGetLbLocal(var)          (var)->actdom.lb
 #define SCIPvarGetUbLocal(var)          (var)->actdom.ub
+#define SCIPvarGetInferCons(var)        (var)->infercons
+#define SCIPvarGetInferVar(var)         (var)->infervar
+#define SCIPvarGetInferDepth(var)       ((int)((var)->inferdepth))
+#define SCIPvarGetInferNum(var)         ((int)((var)->infernum))
 
 #endif
 
