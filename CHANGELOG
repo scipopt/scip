@@ -12,6 +12,7 @@ interface:
 - additional parameter "maxproprounds" in SCIPpropagateProbing()
 - changed memory interface (see memory.h), MEMHDR is now called BLKMEM
 - additional parameter "aggregated" in SCIPmultiaggregateVars()
+- new method SCIPgetObjNorm()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);

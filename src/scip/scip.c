@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.247 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.248 2005/02/02 10:26:48 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2464,6 +2464,16 @@ Bool SCIPisObjIntegral(
       errorMessage("invalid SCIP stage <%d>\n", scip->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+}
+
+/** returns the Euclidean norm of the objective function vector (available only for transformed problem) */
+Real SCIPgetObjNorm(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetObjNorm", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPlpGetObjNorm(scip->lp);
 }
 
 /** adds variable to the problem */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.199 2005/01/31 12:21:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.200 2005/02/02 10:26:48 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1197,6 +1197,12 @@ RETCODE SCIPsetObjIntegral(
 /** returns whether the objective value is known to be integral in every feasible solution */
 extern
 Bool SCIPisObjIntegral(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns the Euclidean norm of the objective function vector (available only for transformed problem) */
+extern
+Real SCIPgetObjNorm(
    SCIP*            scip                /**< SCIP data structure */
    );
 
