@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.204 2004/09/02 13:08:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.205 2004/09/03 08:35:24 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8715,6 +8715,32 @@ Real SCIPgetLowerbound(
    return SCIPtreeGetLowerbound(scip->tree, scip->set);
 }
 
+/** gets dual bound of the root node */
+Real SCIPgetDualboundRoot(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   Real lowerbound;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   lowerbound = SCIPnodeGetLowerbound(scip->tree->root);
+   if( SCIPsetIsInfinity(scip->set, lowerbound) )
+      return SCIPgetPrimalbound(scip);
+   else
+      return SCIPprobExternObjval(scip->origprob, scip->set, SCIPprobExternObjval(scip->transprob, scip->set, lowerbound));
+}
+
+/** gets lower (dual) bound in transformed problem of the root node */
+Real SCIPgetLowerboundRoot(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPnodeGetLowerbound(scip->tree->root);
+}
+
 /** gets global primal bound (objective value of best solution or user objective limit) */
 Real SCIPgetPrimalbound(
    SCIP*            scip                /**< SCIP data structure */
@@ -9305,6 +9331,7 @@ void printSolutionStatistics(
 {
    Real primalbound;
    Real dualbound;
+   Real dualboundroot;
    Real bestsol;
    Real gap;
 
@@ -9315,6 +9342,7 @@ void printSolutionStatistics(
 
    primalbound = SCIPgetPrimalbound(scip);
    dualbound = SCIPgetDualbound(scip);
+   dualboundroot = SCIPgetDualboundRoot(scip);
    gap = SCIPgetGap(scip);
 
    fprintf(file, "Solution           :\n");
@@ -9361,6 +9389,10 @@ void printSolutionStatistics(
       fprintf(file, "  Gap              :   infinite\n");
    else
       fprintf(file, "  Gap              : %10.2f %%\n", 100.0 * gap);
+   if( SCIPsetIsInfinity(scip->set, ABS(dualboundroot)) )
+      fprintf(file, "  Root Dual Bound  :          -\n");
+   else
+      fprintf(file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);
 }
 
 /** outputs SCIP status */

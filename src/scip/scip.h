@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.162 2004/09/02 13:08:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.163 2004/09/03 08:35:24 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3653,6 +3653,18 @@ Real SCIPgetDualbound(
 /** gets global lower (dual) bound in transformed problem */
 extern
 Real SCIPgetLowerbound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets dual bound of the root node */
+extern
+Real SCIPgetDualboundRoot(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets lower (dual) bound in transformed problem of the root node */
+extern
+Real SCIPgetLowerboundRoot(
    SCIP*            scip                /**< SCIP data structure */
    );
 
