@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.27 2005/02/07 14:08:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.28 2005/02/08 16:13:22 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -37,7 +37,6 @@
 #include "type_prob.h"
 #include "type_tree.h"
 #include "type_conflict.h"
-#include "type_scip.h"
 #include "pub_conflict.h"
 
 

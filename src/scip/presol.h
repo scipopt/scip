@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.23 2005/02/07 18:12:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.24 2005/02/08 16:13:23 bzfpfend Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -32,7 +32,6 @@
 #include "type_retcode.h"
 #include "type_result.h"
 #include "type_set.h"
-#include "type_scip.h"
 #include "type_presol.h"
 #include "pub_presol.h"
 

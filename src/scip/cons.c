@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.114 2005/02/08 14:22:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.115 2005/02/08 16:13:22 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -34,7 +34,6 @@
 #include "prob.h"
 #include "tree.h"
 #include "sepastore.h"
-#include "scip.h"
 #include "cons.h"
 
 #ifndef NDEBUG
@@ -989,7 +988,6 @@ RETCODE conshdlrActivateCons(
    assert(cons->checkconsspos == -1);
    assert(cons->propconsspos == -1);
    assert(depth >= -1);
-   assert(depth == -1 || depth <= SCIPgetDepth(set->scip));
 
    debugMessage("activate constraint <%s> in constraint handler <%s> (depth %d)\n", cons->name, conshdlr->name, depth);
 
@@ -3872,7 +3870,6 @@ RETCODE SCIPconsActivate(
    assert(!cons->updateobsolete);
    assert(cons->activedepth == -2);
    assert(cons->conshdlr != NULL);
-   assert(depth == -1 || depth <= SCIPgetDepth(set->scip));
 
    if( cons->conshdlr->delayupdates )
    {

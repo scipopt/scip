@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.35 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.36 2005/02/08 16:13:23 bzfpfend Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -33,7 +33,6 @@
 #include "type_result.h"
 #include "type_set.h"
 #include "type_primal.h"
-#include "type_scip.h"
 #include "type_heur.h"
 #include "pub_heur.h"
 

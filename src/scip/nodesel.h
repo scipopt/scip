@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.37 2005/02/07 14:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.38 2005/02/08 16:13:23 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -34,7 +34,6 @@
 #include "type_stat.h"
 #include "type_lp.h"
 #include "type_tree.h"
-#include "type_scip.h"
 #include "pub_nodesel.h"
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.7 2005/02/08 14:22:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.8 2005/02/08 16:13:23 bzfpfend Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -33,7 +33,6 @@
 #include "type_result.h"
 #include "type_set.h"
 #include "type_stat.h"
-#include "type_scip.h"
 #include "type_lp.h"
 #include "type_var.h"
 #include "type_prop.h"

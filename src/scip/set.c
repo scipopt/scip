@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.137 2005/02/08 15:47:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.138 2005/02/08 16:13:24 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -265,6 +265,7 @@ DECL_PARAMCHGD(paramChgdDualfeastol)
 }
 
 /** parameter change information method to autoselect display columns again */
+static
 DECL_PARAMCHGD(SCIPparamChgdDispWidth)
 {
    /* automatically select the now active display columns */

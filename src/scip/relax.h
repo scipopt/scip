@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.6 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.7 2005/02/08 16:13:24 bzfpfend Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -33,7 +33,6 @@
 #include "type_result.h"
 #include "type_set.h"
 #include "type_stat.h"
-#include "type_scip.h"
 #include "type_relax.h"
 #include "pub_relax.h"
 

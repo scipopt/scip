@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.35 2005/02/08 14:22:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.36 2005/02/08 16:13:24 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -34,7 +34,6 @@
 #include "type_set.h"
 #include "type_stat.h"
 #include "type_sepastore.h"
-#include "type_scip.h"
 #include "type_sepa.h"
 #include "pub_sepa.h"
 

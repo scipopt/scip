@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.144 2005/02/07 10:21:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.145 2005/02/08 16:13:24 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -37,8 +37,8 @@
 #include "var.h"
 #include "prob.h"
 #include "primal.h"
-#include "scip.h"
 #include "cons.h"
+#include "prop.h"
 
 
 
@@ -3695,7 +3695,6 @@ RETCODE varEventObjChanged(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldobj, newobj));
-   assert(SCIPisTransformed(set->scip));
 
    CHECK_OKAY( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
    CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
@@ -3730,10 +3729,7 @@ RETCODE SCIPvarChgObj(
             CHECK_OKAY( SCIPvarChgObj(var->data.original.transvar, blkmem, set, primal, lp, eventqueue, newobj) );
          }
          else
-         {
-            assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
             var->obj = newobj;
-         }
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -3775,7 +3771,6 @@ RETCODE SCIPvarAddObj(
 {
    assert(var != NULL);
    assert(set != NULL);
-   assert(SCIPgetStage(set->scip) < SCIP_STAGE_INITSOLVE);
 
    debugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
 
@@ -3792,10 +3787,7 @@ RETCODE SCIPvarAddObj(
             CHECK_OKAY( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, prob, primal, tree, lp, eventqueue, addobj) );
          }
          else
-         {
-            assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
             var->obj += addobj;
-         }
          break;
 
       case SCIP_VARSTATUS_LOOSE:
@@ -3956,7 +3948,6 @@ RETCODE SCIPvarChgLbOriginal(
    assert(var != NULL);
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-   assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
 
    debugMessage("changing original lower bound of <%s> from %g to %g\n", 
       var->name, var->data.original.origdom.lb, newbound);
@@ -4001,7 +3992,6 @@ RETCODE SCIPvarChgUbOriginal(
    assert(var != NULL);
    assert(!SCIPvarIsTransformed(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-   assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
 
    debugMessage("changing original upper bound of <%s> from %g to %g\n", 
       var->name, var->data.original.origdom.ub, newbound);
@@ -4239,7 +4229,6 @@ RETCODE SCIPvarChgLbGlobal(
       }
       else
       {
-         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          CHECK_OKAY( varProcessChgLbGlobal(var, set, newbound) );
       }
       break;
@@ -4330,7 +4319,6 @@ RETCODE SCIPvarChgUbGlobal(
       }
       else
       {
-         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          CHECK_OKAY( varProcessChgUbGlobal(var, set, newbound) );
       }
       break;
@@ -4429,7 +4417,6 @@ RETCODE varEventLbChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
-   assert(SCIPisTransformed(set->scip));
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
@@ -4466,7 +4453,6 @@ RETCODE varEventUbChanged(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
    assert(!SCIPsetIsEQ(set, oldbound, newbound));
-   assert(SCIPisTransformed(set->scip));
 
    /* check, if the variable is being tracked for bound changes
     * COLUMN and LOOSE variables are tracked always, because row activities and LP changes have to be updated
@@ -4730,7 +4716,6 @@ RETCODE SCIPvarChgLbLocal(
       }
       else
       {
-         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
          CHECK_OKAY( varProcessChgLbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
@@ -4832,7 +4817,6 @@ RETCODE SCIPvarChgUbLocal(
       }
       else
       {
-         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          stat->domchgcount++;
          CHECK_OKAY( varProcessChgUbLocal(var, blkmem, set, stat, lp, branchcand, eventqueue, newbound) );
       }
@@ -5165,7 +5149,6 @@ RETCODE SCIPvarResetBounds(
 {
    assert(var != NULL);
    assert(SCIPvarIsOriginal(var));
-   assert(!SCIPisTransformed(set->scip));
 
    /* copy the original bounds back to the global and local bounds */
    var->glbdom.lb = var->data.original.origdom.lb;
@@ -5624,10 +5607,7 @@ void SCIPvarChgBranchFactor(
       if( var->data.original.transvar != NULL )
          SCIPvarChgBranchFactor(var->data.original.transvar, set, branchfactor);
       else
-      {
-         assert(SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM);
          var->branchfactor = branchfactor;
-      }
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -8684,7 +8664,6 @@ RETCODE SCIPvarCatchEvent(
    assert(var->eventfilter != NULL);
    assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
-   assert(SCIPisTransformed(set->scip));
    assert(SCIPvarIsTransformed(var));
 
    debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
@@ -8709,7 +8688,6 @@ RETCODE SCIPvarDropEvent(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(SCIPisTransformed(set->scip));
 
    debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
 

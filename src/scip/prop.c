@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.8 2005/02/08 14:22:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.9 2005/02/08 16:13:23 bzfpfend Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -32,6 +32,7 @@
 #include "stat.h"
 #include "clock.h"
 #include "paramset.h"
+#include "var.h"
 #include "scip.h"
 #include "prop.h"
 

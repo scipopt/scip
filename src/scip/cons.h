@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.86 2005/02/08 14:22:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.87 2005/02/08 16:13:22 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -41,7 +41,6 @@
 #include "type_sol.h"
 #include "type_tree.h"
 #include "type_sepastore.h"
-#include "type_scip.h"
 #include "type_cons.h"
 #include "pub_cons.h"
 
