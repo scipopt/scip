@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.3 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.4 2004/05/03 11:26:57 bzfpfend Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -45,7 +45,6 @@ VAR* getBranchVar(
    NODE*            node                /**< new node, that was created */
    )
 {
-   VAR* branchvar;
    DOMCHGBOUND* domchgbound;
 
    assert(node != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.60 2004/04/15 10:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.61 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1794,7 +1794,6 @@ RETCODE SCIPlpiStrongbranch(
       Real newlb;
       Real newub;
       int objsen;
-      int solstat;
       int olditlim;
       int it;
 

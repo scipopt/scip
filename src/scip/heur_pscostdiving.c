@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.3 2004/04/27 15:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.4 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -212,8 +212,6 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
    Real searchbound;
    Real objval;
    Real oldobjval;
-   Real objgain;
-   Real bestobjgain;
    Real frac;
    Real pscostquot;
    Real bestpscostquot;
@@ -333,7 +331,6 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
        *   - round variable in the objective value direction
        */
       bestcand = -1;
-      bestobjgain = SCIPinfinity(scip);
       bestpscostquot = -1.0;
       bestcandmayrounddown = TRUE;
       bestcandmayroundup = TRUE;

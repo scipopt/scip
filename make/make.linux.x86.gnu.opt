@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86.gnu.opt,v 1.5 2004/02/25 17:59:24 bzfpfend Exp $
-FLAGS		+=	-DNDEBUG -DWITH_READLINE -O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+#--- $Id: make.linux.x86.gnu.opt,v 1.6 2004/05/03 11:26:55 bzfpfend Exp $
+FLAGS		+=	-DNDEBUG -DROUNDING_FE -DWITH_READLINE -O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	
 CXXFLAGS	+=	-fno-exceptions
 ARFLAGS		=	crs

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.105 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.106 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -493,7 +493,6 @@ RETCODE initRootLP(
    )
 {
    VAR* var;
-   COL* col;
    int v;
    int h;
    Bool lperror;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.39 2004/04/29 15:20:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.40 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1529,7 +1529,6 @@ RETCODE conflictAnalyzeLPDualsol(
    Real dualactdelta;
    Real bd;
    Real redcost;
-   Bool dualfeasible;
    Bool havelocal;
    int nrows;
    int ncols;
@@ -1888,7 +1887,6 @@ RETCODE conflictAnalyzeLP(
    )
 {
    LPI* lpi;
-   Real oldcutoffbound;
    Real objval;
    Bool valid;
    Bool error;
@@ -2092,16 +2090,11 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
 {
    int* cstat;
    int* rstat;
-   RETCODE retcode;
    Real oldlb;
    Real oldub;
    Real newlb;
    Real newub;
-   Real strongbranchdown;
-   Real strongbranchup;
-   Bool infeasible;
    Bool found;
-   int olditlim;
    int iterations;
 
    assert(lp != NULL);

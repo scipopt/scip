@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.159 2004/05/03 09:21:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.160 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3113,7 +3113,6 @@ RETCODE initSolve(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   RESULT result;
    int h;
 
    assert(scip != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.1 2004/03/19 09:42:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.2 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -32,6 +32,7 @@
 
 
 
+#ifdef ROUNDING_FE
 /*
  * Linux rounding operations
  */
@@ -65,6 +66,45 @@ ROUNDMODE getRoundingMode(
 {
    return fegetround();
 }
+#endif
+
+
+
+#ifdef ROUNDING_FP
+/*
+ * OSF rounding operations
+ */
+
+/** OSF rounding mode settings */
+enum RoundMode
+{
+   SCIP_ROUND_DOWNWARDS = FP_RND_RM,    /**< round always down */
+   SCIP_ROUND_UPWARDS   = FP_RND_RP     /**< round always up */
+};
+typedef enum RoundMode ROUNDMODE;
+
+/** sets rounding mode of floating point operations */
+static
+void setRoundingMode(
+   ROUNDMODE        roundmode           /**< rounding mode to activate */
+   )
+{
+   if( write_rnd(roundmode) != 0 )
+   {
+      errorMessage("error setting rounding mode to %d\n", roundmode);
+      abort();
+   }
+}
+
+/** gets current rounding mode of floating point operations */
+static
+ROUNDMODE getRoundingMode(
+   void
+   )
+{
+   return read_rnd();
+}
+#endif
 
 
 

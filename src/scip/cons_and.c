@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.20 2004/05/03 08:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.21 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -393,8 +393,6 @@ RETCODE consdataCreate(
    VAR*             resvar              /**< resultant variable */
    )
 {
-   int i;
-
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(resvar != NULL);
@@ -787,8 +785,6 @@ RETCODE propagateCons(
    CONSDATA* consdata;
    VAR* resvar;
    VAR** vars;
-   Real lb;
-   Real ub;
    int nvars;
    int watchedvar1;
    int watchedvar2;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.4 2004/05/03 08:13:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.5 2004/05/03 11:26:56 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -393,8 +393,6 @@ RETCODE consdataCreate(
    VAR*             resvar              /**< resultant variable */
    )
 {
-   int i;
-
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(resvar != NULL);
@@ -455,8 +453,6 @@ RETCODE consdataFree(
    EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
-   int r;
-
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
@@ -789,8 +785,6 @@ RETCODE propagateCons(
    CONSDATA* consdata;
    VAR* resvar;
    VAR** vars;
-   Real lb;
-   Real ub;
    int nvars;
    int watchedvar1;
    int watchedvar2;
