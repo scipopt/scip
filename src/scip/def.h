@@ -118,7 +118,7 @@ typedef double Real;                    /**< type used for floating point values
  */
 
 #define SCIP_SAFEMEMORY                 /**< use memory leakage detection in debug mode */
-//#define SCIP_BLOCKMEMORY                /**< use block memory */
+#define SCIP_BLOCKMEMORY                /**< use block memory */
 
 
 

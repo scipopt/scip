@@ -124,6 +124,7 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    PROB*            source,             /**< problem to transform */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB**           target              /**< pointer to target problem data structure */
    )
 {
@@ -145,7 +146,7 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
    for( v = 0; v < source->nvars; ++v )
    {
-      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, &targetvar) );
+      CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, &targetvar) );
       CHECK_OKAY( SCIPprobAddVar(*target, set, targetvar) );
    }
    assert((*target)->nvars == source->nvars);

@@ -167,7 +167,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
          assert(lp->solved);
 
          debugMessage("pricing\n");
-         CHECK_OKAY( SCIPpriceVars(price, set, memhdr, stat, prob, lp) );
+         CHECK_OKAY( SCIPpriceVars(price, set, memhdr, stat, prob, lp, tree) );
          mustprice = !lp->solved;
          mustsepar |= !lp->solved;
             
@@ -178,7 +178,7 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
          
          /* reset bounds temporarily set by pricer to their original values */
          debugMessage("reset bounds\n");
-         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, lp) );
+         CHECK_OKAY( SCIPpriceResetBounds(price, memhdr, set, lp, tree) );
          mustprice = !lp->solved;
          mustsepar |= !lp->solved;
 
@@ -246,6 +246,8 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    Bool feasible;
    Bool resolved;
    int h;
+   int NODES = 0;
+   todoMessage("+++++++++++++++++++++++++++++++ REMOVE NODES");
 
    assert(set != NULL);
    assert(memhdr != NULL);
@@ -278,6 +280,11 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
          /* presolve node */
          todoMessage("node presolving + domain propagation");
          
+#ifndef NDEBUG
+         debugMessage("actual pseudosolution: ");
+         SCIPsolPrint(tree->actpseudosol, set, NULL);
+#endif
+
          /* solve node */
          todoMessage("decide whether to solve the LP or not");
          if( TRUE )
@@ -342,9 +349,11 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
          
          debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
             SCIPnodeGetDepth(actnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
+         debugMessage("**********************************************************************\n");
       }
+      NODES++; /* ??? */
    }
-   while( actnode != NULL );
+   while( actnode != NULL && NODES < 2 ); /* ??? */
 
    debugMessage("Problem solving finished\n");
 

@@ -56,6 +56,7 @@ typedef struct Tree TREE;               /**< branch and bound tree */
 #include "cons.h"
 #include "nodesel.h"
 #include "prob.h"
+#include "sol.h"
 
 
 
@@ -142,6 +143,7 @@ struct Tree
    DOMCHGDYN*       actnodedomchg;      /**< domain changes of the active node */
    DOMCHGDYN**      childrendomchg;     /**< domain changes of the child nodes */
    DOMCHGDYN**      siblingsdomchg;     /**< domain changes of the sibling nodes */
+   SOL*             actpseudosol;       /**< actual pseudosolution with all variables set to their best bounds */
    int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
    int              pathlen;            /**< length of the actual path (== depth of the current node + 1) */
@@ -277,7 +279,8 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   PROB*            prob                /**< problem data */
    );
 
 extern
@@ -310,6 +313,15 @@ RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the probl
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
+   );
+
+extern
+RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a variable changed */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
 extern

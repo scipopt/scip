@@ -257,16 +257,18 @@ RETCODE SCIPsolve(                      /**< solves problem */
       scip->stage = SCIP_STAGE_SOLVING;
 
       /* init solve data structures */
-      CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->set, SCIPprobGetName(scip->origprob)) );
-      CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+      CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
       CHECK_OKAY( SCIPpriceCreate(&scip->price) );
       CHECK_OKAY( SCIPsepaCreate(&scip->sepa) );
 
       /* copy problem in solve memory */
-      CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, &scip->transprob) );
+      CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, &scip->transprob) );
 
       /* activate constraints in the problem */
       CHECK_OKAY( SCIPprobActivate(scip->transprob, scip->set) );
+
+      /* create branch-and-bound tree */
+      CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->transprob) );
       
       /* presolve problem */
       /* ??? */
@@ -359,10 +361,10 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
       CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->lp, scip->tree) );
 
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
+      CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPprobFree(&scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPsepaFree(&scip->sepa) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
-      CHECK_OKAY( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
 
       clearBlockMemoryNull(scip->mem->solvemem);
@@ -409,7 +411,7 @@ RETCODE SCIPcreateVar(                  /**< create problem variable */
       assert(scip->price == NULL);
       assert(scip->sepa == NULL);
 
-      CHECK_OKAY( SCIPvarCreate(var, scip->mem->probmem, scip->set, name, lb, ub, obj, vartype) );
+      CHECK_OKAY( SCIPvarCreate(var, scip->mem->probmem, scip->set, scip->stat, name, lb, ub, obj, vartype) );
 
       return SCIP_OKAY;
 
@@ -422,7 +424,7 @@ RETCODE SCIPcreateVar(                  /**< create problem variable */
       assert(scip->price != NULL);
       assert(scip->sepa != NULL);
 
-      CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, name, lb, ub, obj, vartype) );
+      CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat, name, lb, ub, obj, vartype) );
 
       return SCIP_OKAY;
 
@@ -700,6 +702,8 @@ RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, 
    )
 {
    assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->mem != NULL);
    assert(row != NULL);
 
    switch( scip->stage )
@@ -713,11 +717,7 @@ RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, 
    case SCIP_STAGE_SOLVED:
       assert(scip->origprob != NULL);
       assert(scip->stat != NULL);
-      assert(scip->transprob != NULL);
-      assert(scip->tree != NULL);
       assert(scip->lp != NULL);
-      assert(scip->price != NULL);
-      assert(scip->sepa != NULL);
 
       SCIProwRelease(row, scip->mem->solvemem, scip->set, scip->lp);
 

@@ -34,7 +34,7 @@ DECL_CONSINIT(SCIPconsInitLinear);
 DECL_CONSEXIT(SCIPconsExitLinear);
 DECL_CONSFREE(SCIPconsFreeLinear);
 DECL_CONSTRAN(SCIPconsTranLinear);
-DECL_CONSCHCK(SCIPconsSepaLinear);
+DECL_CONSSEPA(SCIPconsSepaLinear);
 DECL_CONSENFO(SCIPconsEnfoLinear);
 DECL_CONSCHCK(SCIPconsChckLinear);
 DECL_CONSPROP(SCIPconsPropLinear);

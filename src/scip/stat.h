@@ -36,6 +36,7 @@ typedef struct Stat STAT;               /**< problem and runtime specific statis
 /** problem and runtime specific statistics */
 struct Stat
 {
+   int              numvaridx;          /**< number of used variable indices */
    int              numcolidx;          /**< number of used column indices */
    int              numrowidx;          /**< number of used row indices */
 };

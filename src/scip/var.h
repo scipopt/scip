@@ -65,6 +65,7 @@ typedef struct Var VAR;                 /**< variable of the problem */
 #include "retcode.h"
 #include "lp.h"
 #include "stat.h"
+#include "tree.h"
 
 
 /** domain of a variable */
@@ -74,6 +75,7 @@ struct Dom
    Real             lb;                 /**< lower bounds of variables */
    Real             ub;                 /**< upper bounds of variables */
 };
+
 /** aggregation information: $x = a*y + c$ */
 struct Aggregate
 {
@@ -95,6 +97,7 @@ struct Var
    char*            name;               /**< name of the variable */
    DOM              dom;                /**< domain of variable */
    Real             obj;                /**< objective function value of variable */
+   int              index;              /**< consecutively numbered variable identifier */
    int              numuses;            /**< number of times, this variable is referenced */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
@@ -116,15 +119,19 @@ void SCIPdomchgFree(                    /**< frees fixed size domain change data
 extern
 RETCODE SCIPdomchgApply(                /**< applies domain change */
    const DOMCHG*    domchg,             /**< domain change to apply */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   TREE*            tree                /**< branch-and-bound tree */
    );
 
 extern
 RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
    const DOMCHG*    domchg,             /**< domain change to remove */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   TREE*            tree                /**< branch-and-bound tree */
    );
 
 
@@ -199,6 +206,7 @@ RETCODE SCIPvarCreate(                  /**< creates an original problem variabl
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable */
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
@@ -211,6 +219,7 @@ RETCODE SCIPvarCreateTransformed(       /**< creates a variable belonging only t
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable */
    Real             lb,                 /**< lower bound of variable */
    Real             ub,                 /**< upper bound of variable */
@@ -253,6 +262,7 @@ RETCODE SCIPvarTransform(               /**< copies original variable into trans
    VAR*             origvar,            /**< original problem variable */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    VAR**            transvar            /**< pointer to transformed variable */
    );
 
@@ -290,17 +300,32 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
 extern
 RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    VAR*             var,                /**< problem variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
+   TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound            /**< new bound for variable */
    );
 
 extern
 RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    VAR*             var,                /**< problem variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
+   TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound            /**< new bound for variable */
+   );
+
+extern
+RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
+   VAR*             var,                /**< problem variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   TREE*            tree,               /**< branch-and-bound tree */
+   Real             newbound,           /**< new bound for variable */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
 extern
@@ -319,8 +344,20 @@ Real SCIPvarGetUb(                      /**< gets upper bound of variable */
    );
 
 extern
-Real SCIPvarGetPrimsol(                 /**< get primal solution value of variable */
+Real SCIPvarGetBestBound(               /**< gets best bound of variable with respect to the objective function */
    VAR*             var                 /**< problem variable */
+   );
+
+extern
+Real SCIPvarGetPrimsol(                 /**< get primal LP solution value of variable */
+   VAR*             var                 /**< problem variable */
+   );
+
+extern
+Real SCIPvarGetSol(                     /**< get solution value of variable at actual node: if LP was solved at the node,
+                                           the method returns the LP primal solution value, otherwise the best bound */
+   VAR*             var,                /**< problem variable */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern

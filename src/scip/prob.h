@@ -35,6 +35,7 @@ typedef struct Prob PROB;               /**< main problem to solve */
 #include "cons.h"
 #include "lp.h"
 #include "var.h"
+#include "stat.h"
 
 
 /** main problem to solve */
@@ -76,6 +77,7 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    PROB*            source,             /**< problem to transform */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
    PROB**           target              /**< pointer to target problem data structure */
    );
 

@@ -34,7 +34,7 @@ DECL_CONSINIT(SCIPconsInitIntegral);
 DECL_CONSEXIT(SCIPconsExitIntegral);
 DECL_CONSFREE(SCIPconsFreeIntegral);
 DECL_CONSTRAN(SCIPconsTranIntegral);
-DECL_CONSCHCK(SCIPconsSepaIntegral);
+DECL_CONSSEPA(SCIPconsSepaIntegral);
 DECL_CONSENFO(SCIPconsEnfoIntegral);
 DECL_CONSCHCK(SCIPconsChckIntegral);
 DECL_CONSPROP(SCIPconsPropIntegral);

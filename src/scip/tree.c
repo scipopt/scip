@@ -461,6 +461,7 @@ RETCODE nodeAssignParent(               /**< makes node a child of the given par
    assert(tree->actnode == parent);
    assert(parent == NULL || parent->nodetype == SCIP_NODETYPE_ACTNODE);
 
+   debugMessage("assigning parent %p to node %p in depth %d\n", parent, node, node->depth);
    /* link node to parent */
    node->parent = parent;
    if( parent != NULL )
@@ -792,11 +793,7 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to active node, c
    case SCIP_NODETYPE_ACTNODE:
       assert(tree->actnode == node);
       CHECK_OKAY( SCIPdomchgdynAddBoundchg(tree->actnodedomchg, memhdr, set, var, newbound, oldbound, boundtype) );
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN )
-      {
-         assert(var->data.col != NULL);
-         CHECK_OKAY( SCIPcolBoundChanged(var->data.col, set, lp, boundtype) );
-      }
+      CHECK_OKAY( SCIPvarChgBd(var, memhdr, set, lp, tree, newbound, boundtype) );
       return SCIP_OKAY;
 
    case SCIP_NODETYPE_SIBLING:
@@ -1070,7 +1067,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    for( i = tree->pathlen-1; i > commonforkdepth; --i )
    {
       debugMessage("switch path: undo domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, set, lp) );
+      CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, lp, tree) );
    }
 
    /* shrink active path to the common fork and deactivate the corresponding nodes */
@@ -1095,7 +1092,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
       debugMessage("switch path: apply domain changes in depth %d\n", i);
-      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, set, lp) );
+      CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, lp, tree) );
    }
 
    /* remember LP defining fork and subroot */
@@ -1289,6 +1286,36 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
  */
 
 static
+RETCODE nodeToLeaf(                     /**< converts node into LEAF and puts it in the array on the node queue */
+   NODE*            node,               /**< child or sibling node to convert */
+   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   NODE* lpfork;
+
+   assert(node->nodetype == SCIP_NODETYPE_SIBLING || node->nodetype == SCIP_NODETYPE_CHILD);
+   
+   /* find the lpfork for the node */
+   lpfork = tree->actlpfork;
+   if( node->parent != NULL )
+   {
+      if( node->parent->nodetype == SCIP_NODETYPE_FORK || node->parent->nodetype == SCIP_NODETYPE_SUBROOT )
+         lpfork = node->parent;
+   }
+   
+   /* convert node into leaf */
+   debugMessage("convert node %p at depth %d to leaf with lpfork %p\n", node, node->depth, lpfork);
+   node->nodetype = SCIP_NODETYPE_LEAF;
+   node->data.leaf.lpfork = lpfork;
+   
+   /* insert leaf in node queue */
+   CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, node) );
+
+   return SCIP_OKAY;
+}
+
+static
 RETCODE treeNodesToQueue(               /**< puts all nodes in the array on the node queue and makes them LEAFs */
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory buffers */
@@ -1310,16 +1337,12 @@ RETCODE treeNodesToQueue(               /**< puts all nodes in the array on the 
    for( i = 0; i < *nnodes; ++i )
    {
       node = nodes[i];
-      assert(node->nodetype == SCIP_NODETYPE_SIBLING || node->nodetype == SCIP_NODETYPE_CHILD);
 
       /* detach the dynamic size attachment of the domain change data to shrink the node's domain change data */
       CHECK_OKAY( SCIPdomchgdynDetach(domchgdyn[i], memhdr) );
 
-      /* convert node into leaf */
-      node->nodetype = SCIP_NODETYPE_LEAF;
-      
-      /* insert leaf in node queue */
-      CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, nodes[i]) );
+      /* convert node to LEAF and put it into leaves queue */
+      nodeToLeaf(node, set, tree);
    }
    *nnodes = 0;
 
@@ -1697,14 +1720,19 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   LP*              lp                  /**< actual LP data */
+   LP*              lp,                 /**< actual LP data */
+   PROB*            prob                /**< problem data */
    )
 {
+   VAR* var;
+   int v;
+
    assert(tree != NULL);
    assert(set != NULL);
    assert(set->treeGrowInit >= 0);
    assert(set->treeGrowFac >= 1.0);
    assert(lp != NULL);
+   assert(prob != NULL);
 
    ALLOC_OKAY( allocMemory(*tree) );
 
@@ -1722,6 +1750,15 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    CHECK_OKAY( SCIPdomchgdynCreate(&(*tree)->actnodedomchg, memhdr) );
    (*tree)->childrendomchg = NULL;
    (*tree)->siblingsdomchg = NULL;
+
+   /* create root pseudo solution */
+   CHECK_OKAY( SCIPsolCreate(&(*tree)->actpseudosol, memhdr) );
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      var = prob->vars[v];
+      assert(SCIPsolGetVal((*tree)->actpseudosol, var) == 0.0);
+      CHECK_OKAY( SCIPsolSetVal((*tree)->actpseudosol, memhdr, set, var, SCIPvarGetBestBound(var)) );
+   }
 
    (*tree)->pathnlpcols = NULL;
    (*tree)->pathnlprows = NULL;
@@ -1750,19 +1787,19 @@ RETCODE SCIPtreeFree(                   /**< frees tree data structure */
 
    assert(tree != NULL);
    assert(*tree != NULL);
+   assert((*tree)->nchildren == 0);
+   assert((*tree)->nsiblings == 0);
+   assert((*tree)->actnode == NULL);
 
    debugMessage("free tree\n");
 #ifdef SCIP_BLOCKMEMORY
    /* we don't need to free the nodes and domain changes, because they are stored in block memory
     * we just need to free the queue data structure
     */
-   SCIPnodepqDestroy(&(*tree)->leaves);
-#else
-   /* deactivate all nodes and store children in node queue */
-   assert((*tree)->nchildren == 0);
-   assert((*tree)->nsiblings == 0);
-   assert((*tree)->actnode == NULL);
-
+   /* SCIPnodepqDestroy(&(*tree)->leaves); */
+   todoMessage("don't free the tree, but in some way release all variables and constraints");
+#endif
+   /* #else */
    /* free node queue */
    CHECK_OKAY( SCIPnodepqFree(&(*tree)->leaves, memhdr, set, *tree, lp) );
    
@@ -1772,7 +1809,10 @@ RETCODE SCIPtreeFree(                   /**< frees tree data structure */
    for( i = 0; i < (*tree)->siblingssize; ++i )
       SCIPdomchgdynFree(&(*tree)->siblingsdomchg[i], memhdr);
    SCIPdomchgdynFree(&(*tree)->actnodedomchg, memhdr);
-#endif
+
+   /* free actual pseudo solution */
+   SCIPsolFree(&(*tree)->actpseudosol, memhdr, set, lp);
+   /* #endif */
 
    /* free pointer arrays */
    freeMemoryArrayNull((*tree)->path);
@@ -1816,6 +1856,44 @@ RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the probl
 
    /* add constraint to root node and capture it */
    CHECK_OKAY( SCIPnodeAddCons(tree->root, memhdr, set, cons) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a variable changed */
+   TREE*            tree,               /**< branch-and-bound tree */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< problem variable that changed */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      assert(tree != NULL);
+      if( var->obj > 0.0 && boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         CHECK_OKAY( SCIPsolSetVal(tree->actpseudosol, memhdr, set, var, var->dom.lb) );
+      }
+      else if( var->obj < 0.0 && boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         CHECK_OKAY( SCIPsolSetVal(tree->actpseudosol, memhdr, set, var, var->dom.ub) );
+      }
+      break;
+
+   case SCIP_VARSTATUS_ORIGINAL:
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+      errorMessage("tree was informed of a bound change of a non-mutable variable");
+      return SCIP_INVALIDDATA;
+   default:
+      errorMessage("unknown variable status");
+      abort();
+   }
 
    return SCIP_OKAY;
 }

@@ -767,6 +767,51 @@ RETCODE SCIPcolIncCoeff(                /**< increases value of an existing or n
    return SCIP_OKAY;
 }
 
+RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a column were changed */
+   COL*             col,                /**< LP column that changed */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   assert(col != NULL);
+   assert(lp != NULL);
+   
+   if( col->lpipos >= 0 )
+   {
+      /* insert column in the chgcols list (if not already there) */
+      if( !col->lbchanged && !col->ubchanged )
+      {
+         CHECK_OKAY( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
+         lp->chgcols[lp->nchgcols] = col;
+         lp->nchgcols++;
+      }
+      
+      /* mark bound change in the column */
+      switch( boundtype )
+      {
+      case SCIP_BOUNDTYPE_LOWER:
+         col->lbchanged = TRUE;
+         break;
+      case SCIP_BOUNDTYPE_UPPER:
+         col->ubchanged = TRUE;
+         break;
+      default:
+         errorMessage("Unknown bound type");
+         return SCIP_INVALIDDATA;
+      }
+      
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
+      lp->objval = SCIP_INVALID;
+      
+      assert(lp->nchgcols > 0);
+   }  
+
+   return SCIP_OKAY;
+}
+
 void SCIPcolCalcRedcost(                /**< calculates the reduced costs of a column */
    COL*             col                 /**< LP column */
    )
@@ -815,49 +860,6 @@ Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in
       return -ABS(redcost);
    else
       return redcost;
-}
-
-RETCODE SCIPcolBoundChanged(            /**< notifies LP column, that its bounds were changed */
-   COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
-   LP*              lp,                 /**< actual LP data */
-   BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   )
-{
-   assert(col != NULL);
-   assert(lp != NULL);
-
-   if( col->lpipos >= 0 )
-   {
-      /* insert column in the chgcols list (if not already there) */
-      if( !col->lbchanged && !col->ubchanged )
-      {
-         CHECK_OKAY( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
-         lp->chgcols[lp->nchgcols] = col;
-         lp->nchgcols++;
-      }
-      
-      /* mark bound change in the column */
-      switch( boundtype )
-      {
-      case SCIP_BOUNDTYPE_LOWER:
-         col->lbchanged = TRUE;
-         break;
-      case SCIP_BOUNDTYPE_UPPER:
-         col->ubchanged = TRUE;
-         break;
-      default:
-         errorMessage("Unknown bound type");
-         abort();
-      }
-      
-      lp->flushed = FALSE;
-      lp->solved = FALSE;
-      lp->objval = SCIP_INVALID;
-      
-      assert(lp->nchgcols > 0);
-   }  
-   return SCIP_OKAY;
 }
 
 Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member of actual LP */
@@ -1172,6 +1174,8 @@ void SCIProwRelease(                    /**< decreases usage counter of LP row, 
    (*row)->numuses--;
    if( (*row)->numuses == 0 )
       SCIProwFree(row, memhdr, set, lp);
+
+   *row = NULL;
 }
 
 RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
@@ -2013,6 +2017,7 @@ RETCODE lpFlush(                        /**< applies all cached changes to the L
 
 RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    LP**             lp,                 /**< pointer to LP data object */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< problem name */
    )
@@ -2074,6 +2079,7 @@ RETCODE SCIPlpFree(                     /**< frees LP data object */
    {
       CHECK_OKAY( SCIPlpiFree(&((*lp)->lpi)) );
    }
+
    freeMemoryArrayNull((*lp)->lpicols);
    freeMemoryArrayNull((*lp)->lpirows);
    freeMemoryArrayNull((*lp)->chgcols);

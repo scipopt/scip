@@ -98,12 +98,12 @@ typedef struct Lp LP;                   /**< actual LP data */
 /** variable of the problem and corresponding LP column */
 struct Col
 {
-   const VAR*       var;                /**< variable, this column represents; there cannot be a column without variable */
+   VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */
    ROW**            row;                /**< rows of column entries, that may have a nonzero dual solution value */
    Real*            val;                /**< coefficients of column entries */
    Real             primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
    Real             redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
-   int              index;              /**< consecutively numbered variable identifier */
+   int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
@@ -248,8 +248,9 @@ RETCODE SCIPcolIncCoeff(                /**< increases value of an existing or n
    );
 
 extern
-RETCODE SCIPcolBoundChanged(            /**< notifies LP column, that its bounds were changed */
-   COL*             col,                /**< LP column */
+RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a column were changed */
+   COL*             col,                /**< LP column that changed */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
@@ -425,6 +426,7 @@ void SCIProwPrint(                      /**< output row to file stream */
 extern
 RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    LP**             lp,                 /**< pointer to LP data object */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< problem name */
    );

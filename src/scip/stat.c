@@ -36,6 +36,7 @@ RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
    assert(stat != NULL);
 
    ALLOC_OKAY( allocMemory(*stat) );
+   (*stat)->numvaridx = 0;
    (*stat)->numcolidx = 0;
    (*stat)->numrowidx = 0;
 

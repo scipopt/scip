@@ -33,10 +33,13 @@ typedef struct ConsList CONSLIST;       /**< list of constraints */
 typedef void CONSHDLRDATA;              /**< constraint handler data */
 typedef struct ConsData CONSDATA;       /**< locally defined constraint type specific data */
 
+
 /** initialization method of constraint handler
+ *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *
  *  possible return values:
  *    SCIP_OKAY       : normal termination
  *    neg. values     : error codes
@@ -44,9 +47,11 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 #define DECL_CONSINIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
 /** deinitialization method of constraint handler
+ *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
+ *
  *  possible return values:
  *    SCIP_OKAY       : normal termination
  *    neg. values     : error codes
@@ -54,10 +59,12 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 #define DECL_CONSEXIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
 /** frees specific constraint data
+ *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    consdata        : pointer to the constraint data to free
+ *
  *  possible return values:
  *    SCIP_OKAY       : normal termination
  *    neg. values     : error codes
@@ -65,11 +72,13 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 #define DECL_CONSFREE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONSDATA** consdata)
 
 /** transforms constraint data into data belonging to the transformed problem
+ *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    sourcedata      : constraint data to transform
  *    targetdata      : pointer to constraint data where to store transformed data
+ *
  *  possible return values:
  *    SCIP_OKAY       : normal termination
  *    neg. values     : error codes
@@ -78,13 +87,15 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 
 /** separation method of constraint handler
  *
- *  Separates all constraints of the constraint handler.
+ *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
+ *  which means that a valid LP solution exists.
  *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *
  *  possible return values:
  *    SCIP_SEPARATED  : at least one cutting plane was generated
  *    SCIP_FAILURE    : the separator searched, but didn't found a cutting plane
@@ -94,6 +105,11 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 #define DECL_CONSSEPA(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss)
 
 /** constraint enforcing method of constraint handler
+ *
+ *  The method is called after the LP at the node was solved, which means, that an optimal LP solution exists.
+ *  The LP solution has to be checked for feasibility, and if possible, an infeasibility should be resolved by
+ *  branching, reducing a variable's domain to exclude the solution or separating the solution with a valid
+ *  cutting plane.
  *
  *  The enforcing methods of the active constraint handlers are called in decreasing order of their enforcing
  *  priorities until the first constraint handler returned with the value SCIP_BRANCHED or SCIP_SEPARATED. 
@@ -112,6 +128,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *
  *  possible return values:
  *    SCIP_BRANCHED   : at least one constraint of the handler is infeasible, and branching was applied
  *    SCIP_REDUCEDDOM : at least one constraint of the handler is infeasible, and a domain was reduced
@@ -124,29 +141,30 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 
 /** feasibility check method of constraint handler for integral solutions
  *
- *  The method is called, if the check priority of the constraint handler is greater than the highest priority
- *  of all found infeasibilities. The integrality condition has a check priority of zero. A constraint handler
- *  which can (or wants) to decide and resolve feasibility only for integral solutions should have a
- *  negative check priority (e.g. the alldiff-constraint can only operate on integral solutions).
- *  A constraint handler which wants to incorporate its own branching strategy even on non-integral
- *  solutions must have a check priority greater than zero (e.g. the SOS-constraint incorporates SOS-branching
- *  on non-integral solutions).
- *
- *  In the case, the constraint is violated, the feasibility check method should remember how to resolve
- *  the infeasibility (branching in a specific matter, separating a cutting plane, ...), because if it
- *  stays the highest priority infeasibility, the resolve method of the constraint handler is called.
+ *  The given solution has to be checked for feasibility.
+ *  
+ *  The check methods of the active constraint handlers are called in decreasing order of their check
+ *  priorities until the first constraint handler returned with the value SCIP_INFEASIBLE.
+ *  The integrality constraint handler has a check priority of zero. A constraint handler which can
+ *  (or wants) to check its constraints only for integral solutions should have a negative check priority
+ *  (e.g. the alldiff-constraint can only operate on integral solutions).
+ *  A constraint handler which wants to check feasibility even on non-integral solutions must have a
+ *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
+ *  integrality).
  *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
+ *    sol             : the solution to check feasibility for
+ *
  *  possible return values:
- *    SCIP_FEASIBLE   : constraint is feasible
- *    SCIP_INFEASIBLE : constraint is infeasible
+ *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
+ *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  *    neg. values     : error codes
  */
-#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss)
+#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, SOL* sol)
 
 /** domain propagation method of constraint handler
  *  input:
@@ -168,6 +186,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
 #include "retcode.h"
 #include "mem.h"
 #include "lp.h"
+#include "sol.h"
 
 
 /** linked list of constraints */

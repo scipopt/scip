@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.11 2003/01/28 16:25:13 bzfpfend Exp $
+# $Id: Makefile,v 1.12 2003/01/29 16:10:24 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -103,6 +103,7 @@ LIBOBJ		=	bab.o \
 			scip.o \
 			sepa.o \
 			set.o \
+			sol.o \
 			solve.o \
 			sort.o \
 			stat.o \
