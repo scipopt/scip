@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.75 2004/11/12 13:03:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.76 2004/11/15 10:24:01 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3518,7 +3518,6 @@ RETCODE conflictAnalyzeLP(
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
          assert(-1 <= lbchginfoposs[v] && lbchginfoposs[v] <= var->nlbchginfos);
          assert(-1 <= ubchginfoposs[v] && ubchginfoposs[v] <= var->nubchginfos);
-         assert(lbchginfoposs[v] < var->nlbchginfos || ubchginfoposs[v] < var->nubchginfos);
 
          /* bound change has to be undone, if it is a strong branching/diving bound change */
          changed = FALSE;
