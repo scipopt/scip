@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.16 2005/02/07 14:08:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.17 2005/02/07 14:54:04 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -41,10 +41,12 @@
 #define HEUR_DURINGPLUNGING   FALSE      /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to total iteration number */
-#define DEFAULT_MAXLOOPS           -1   /**< maximal number of pumping rounds (-1: no limit) */
+#define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MINFLIPS           10   /**< minimum number of random variables to flip, if a 1-cycle is encountered */
 #define DEFAULT_CYCLELENGTH         3   /**< maximum length of cycles to be checked explicitly in each round */
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
+#define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
+                                         * 1.0 for dynamic, depending on solutions already found */
 
 
 /** primal heuristic data */
@@ -54,6 +56,8 @@ struct HeurData
    SOL*             roundedsol;         /**< rounded solution */ 
    Longint          nlpiterations;      /**< number of LP iterations used in this heuristic */
    Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
+   Real             objfactor;          /**< factor by which the regard of the objective is decreased in each round, 
+                                         * 1.0 for dynamic, depending on solutions already found */
    int              maxloops;           /**< maximum number of loops (-1: no limit) */ 
    int              minflips;           /**< minimum number of random variables to flip, if a 1-cycle is encountered */
    int              cyclelength;        /**< maximum length of cycles to be checked explicitly in each round */
@@ -113,29 +117,32 @@ RETCODE handle1Cycle(
    SCIP*            scip,               /**< SCIP data structure  */
    HEURDATA*        heurdata,           /**< data of this special heuristic */
    VAR**            mostfracvars,       /**< sorted array of the currently most fractional variables */
-   int              nflipcands          /**< number of variables to flip */
+   int              nflipcands,          /**< number of variables to flip */
+   Real             alpha               /**< factor how much the original objective is regarded */
    )
 {
    VAR* var;
    Real solval;
    Real frac;
-   Real newobjcoeff;
+   Real newobjcoeff;  
+   Real orgobjcoeff;
    int  i;
 
    /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
    for( i = 0; i < nflipcands; i++ )
    {
       var = mostfracvars[i];
-      solval = SCIPvarGetLPSol(var); 
+      solval = SCIPvarGetLPSol(var);   
+      orgobjcoeff = SCIPvarGetObj(var);
       frac = SCIPfeasFrac(scip, solval);
       if( frac > 0.5 )
       {
-         newobjcoeff = 1.0;
+         newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
          solval = SCIPfeasFloor(scip, solval);
       }         
       else
       {
-         newobjcoeff = -1.0;
+         newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
          solval = SCIPfeasCeil(scip, solval);
       }
       /* updating the rounded solution and the objective */
@@ -151,13 +158,15 @@ RETCODE handleCycle(
    SCIP*            scip,               /**< SCIP data structure  */
    HEURDATA*        heurdata,           /**< data of this special heuristic */
    VAR**            vars,               /**< array of all variables */
-   int              nbinandintvars      /**< number of general integer and 0-1 variables */   
+   int              nbinandintvars,      /**< number of general integer and 0-1 variables */
+   Real             alpha               /**< factor how much the original objective is regarded */
    )
 {
    VAR* var;
    Real solval;
    Real frac;
-   Real newobjcoeff;
+   Real newobjcoeff;  
+   Real orgobjcoeff;
    Real flipprob;
    int i;
 
@@ -166,7 +175,8 @@ RETCODE handleCycle(
    {
       /* decide arbitraryly whether the variable will be flipped or not */
       var = vars[i];
-      solval = SCIPvarGetLPSol(var); 
+      solval = SCIPvarGetLPSol(var);   
+      orgobjcoeff = SCIPvarGetObj(var);
       frac = SCIPfeasFrac(scip, solval);
       flipprob = -0.3 + ((Real)(rand_r(&heurdata->randseed) % 1000000))/1000000.0 ;
 
@@ -175,12 +185,12 @@ RETCODE handleCycle(
       {
          if( frac > 0.5 )
          {
-            newobjcoeff = 1.0;
+            newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
             solval = SCIPfeasFloor(scip, solval);
          }         
          else
          {
-            newobjcoeff = -1.0;
+            newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
             solval = SCIPfeasCeil(scip, solval);
          } 
          CHECK_OKAY( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
@@ -279,20 +289,24 @@ DECL_HEUREXEC(heurExecFeaspump)
 
    Real* mostfracvals;   /* the values of the variables above */
    Real newobjcoeff;     /* used for changing the objective */
+   Real orgobjcoeff;     /* used for regarding the original objective */
    Real oldsolval;       /* one value of the last solution */ 
    Real solval;          /* one value of the actual solution */ 
    Real frac;            /* the fractional part of the value above */  
+   Real objfactor;       /* factor by which the regard of the objective is decreased in each round, in [0;0.99] */
+   Real alpha;           /* factor how the original objective is regarded, used for convex combination of two functions */
+   Real objnorm;         /* Euclidean norm of the objective function, used for scaling */
 
    int nvars;            /* number of variables  */
    int nbinvars;         /* number of 0-1-variables */
    int nintvars;         /* number of integer variables */
    int nstartfracs;      /* number of fractional variables that should be integer at the beginning of the heuristic */
-   int nfracs;           /* number of fractional variables updated after each pumping cycle*/
+   int nfracs;           /* number of fractional variables updated after each pumping round*/
    int i;
    int j;
    int nflipcands;       /* how many flipcands (most frac. var.) have been found */
    int maxnflipcands;    /* maximal number of candidates to flip in the current pumping round */
-   int nloops;           /* how many pumping cycles have been made */
+   int nloops;           /* how many pumping rounds have been made */
    int maxflips;         /* maximum number of flips, if a 1-cycle is found (depending on heurdata->minflips) */ 
    int maxloops;         /* maximum number of pumping rounds */
 
@@ -368,12 +382,22 @@ DECL_HEUREXEC(heurExecFeaspump)
    /* lp was solved optimal */
    lperror = FALSE;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+
+   objnorm = SCIPgetObjNorm(scip);
+   objnorm = MAX(objnorm, 1.0);
+   nsolsfound = SCIPgetNSolsFound(scip);
+   if( heurdata->objfactor == 1.0 )
+      objfactor = MIN( 1 - 0.5 / (1 + nsolsfound) , 0.99 );
+   else  
+      objfactor = heurdata->objfactor;
+   alpha = 1.0;
    nstartfracs = nfracs;
    nloops = 0;
    /* pumping rounds */
    while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops )
    {
       nloops++;
+      alpha *= objfactor;
 
       debugMessage("feasibility pump loop %d: %d fractional variables\n", nloops, nfracs);
 
@@ -404,7 +428,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       {
          var = vars[i];
          solval = SCIPvarGetLPSol(var);
-
+         orgobjcoeff = SCIPvarGetObj(var) * SQRT(nbinvars + nintvars) / objnorm;
          /* handle all integer variables*/
          if( i < nbinvars + nintvars )
          {  
@@ -414,11 +438,11 @@ DECL_HEUREXEC(heurExecFeaspump)
             {
                /* variables at their bounds should be hold there */
                if( SCIPisFeasEQ(scip, solval, SCIPvarGetLbLocal(var)) )
-                  newobjcoeff = 1.0;
+                  newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
                else if( SCIPisFeasEQ(scip, solval, SCIPvarGetUbLocal(var)) )
-                  newobjcoeff = -1.0;
+                  newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
                else  
-                  newobjcoeff = 0.0;
+                  newobjcoeff =  alpha * orgobjcoeff;
             }
             else 
             {
@@ -427,12 +451,12 @@ DECL_HEUREXEC(heurExecFeaspump)
                   insertFlipCand(mostfracvars,mostfracvals,&nflipcands,maxnflipcands, var,frac);
                if( frac > 0.5 )
                {
-                  newobjcoeff = -1.0;
+                  newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
                   solval = SCIPfeasCeil(scip, solval);
                }            
                else
                {
-                  newobjcoeff = 1.0;
+                  newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
                   solval = SCIPfeasFloor(scip, solval);
                }
                /* update the rounded solution */
@@ -440,7 +464,7 @@ DECL_HEUREXEC(heurExecFeaspump)
             }
          }
          else
-            newobjcoeff = 0.0;
+            newobjcoeff = alpha * orgobjcoeff;
          
          /* change one coefficient of the objective */
          CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobjcoeff) );
@@ -462,7 +486,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       if( nloops % heurdata->perturbfreq == 0 )
       {
          debugMessage(" -> random perturbation\n");
-         CHECK_OKAY( handleCycle(scip, heurdata, vars, nintvars+nbinvars) );
+         CHECK_OKAY( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
       }
       else 
       {
@@ -475,12 +499,12 @@ DECL_HEUREXEC(heurExecFeaspump)
                if( j == 0 )
                {
                   debugMessage(" -> avoiding 1-cycle: flipping %d candidates\n", nflipcands);
-                  CHECK_OKAY( handle1Cycle(scip, heurdata, mostfracvars, nflipcands) );
+                  CHECK_OKAY( handle1Cycle(scip, heurdata, mostfracvars, nflipcands, alpha) );
                }
                else 
                {
                   debugMessage(" -> avoiding %d-cycle by random flip\n", j+1);
-                  CHECK_OKAY( handleCycle(scip, heurdata, vars, nintvars+nbinvars) );
+                  CHECK_OKAY( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
                }
                break;
             }
@@ -532,13 +556,8 @@ DECL_HEUREXEC(heurExecFeaspump)
    SCIPfreeBufferArray(scip, &mostfracvals);
    SCIPfreeBufferArray(scip, &mostfracvars);
 
-   debugMessage("finished feasibility pump heuristic %lld/%lld\n",heurdata->nlpiterations,maxnlpiterations);
-
    return SCIP_OKAY;
 }
-
-
-
 
 
 /*
@@ -567,6 +586,10 @@ RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/maxlpiterquot", 
          "maximal fraction of diving LP iterations compared to total iteration number",
          &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+         "heuristics/feaspump/objfactor", 
+         "factor by which the regard of the objective is decreased in each round, 1.0 for dynamic",
+         &heurdata->objfactor, DEFAULT_OBJFACTOR, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "heuristics/feaspump/maxloops",
          "maximal number of pumping loops (-1: no limit)",
@@ -583,6 +606,5 @@ RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/perturbfreq", 
          "number of iterations until a random perturbation is forced",
          &heurdata->perturbfreq, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
-
    return SCIP_OKAY;
 }
