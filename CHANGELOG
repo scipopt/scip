@@ -29,6 +29,8 @@ fixed bugs:
 - removed conflict analysis of infeasible diving LP if pricing is activated
 - removed bug in knapsack constraint handler with merging multiple items if more than two items of the same
   variable appear in the constraint
+- fixed bug in SCIProwCalcIntegralScalar() with rows consisting of only continuous variables (appeared in
+  gomory cut separator on miplib/dcmulti.mps)
 
 known bugs:
 - after a resolve and further preprocessing, existing primal solutions may get corrupted due to aggregations or

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.168 2005/01/13 16:20:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.169 2005/01/17 16:53:42 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3994,6 +3994,7 @@ RETCODE SCIProwCalcIntegralScalar(
     */
    scalable = TRUE;
    scaleval = 1.0/minval;
+   scalable = (scaleval <= maxscale);
    for( c = 0; c < row->len && scalable; ++c )
    {
       /* don't look at continuous variables, if we don't have to */
@@ -4038,6 +4039,7 @@ RETCODE SCIProwCalcIntegralScalar(
    /* try, if row coefficients can be made integral by multiplying them by a power of 2 */
    twomult = TRUE;
    twomultval = 1.0;
+   twomult = (twomultval <= maxscale);
    for( c = 0; c < row->len && twomult; ++c )
    {
       /* don't look at continuous variables, if we don't have to */
