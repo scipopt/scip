@@ -55,8 +55,9 @@ struct Price
  * dynamic memory arrays
  */
 
+/** resizes vars and score arrays to be able to store at least num entries */
 static
-RETCODE priceEnsureVarsMem(             /**< resizes vars and score arrays to be able to store at least num entries */
+RETCODE priceEnsureVarsMem(
    PRICE*           price,              /**< pricing storage */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -79,8 +80,9 @@ RETCODE priceEnsureVarsMem(             /**< resizes vars and score arrays to be
    return SCIP_OKAY;
 }
 
+/** resizes bdviolvars arrays to be able to store at least num entries */
 static
-RETCODE priceEnsureBdviolvarsMem(       /**< resizes bdviolvars arrays to be able to store at least num entries */
+RETCODE priceEnsureBdviolvarsMem(
    PRICE*           price,              /**< pricing storage */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -105,7 +107,8 @@ RETCODE priceEnsureBdviolvarsMem(       /**< resizes bdviolvars arrays to be abl
 }
 
 
-RETCODE SCIPpriceCreate(                /**< creates pricing storage */
+/** creates pricing storage */
+RETCODE SCIPpriceCreate(
    PRICE**          price               /**< pointer to store pricing storage */
    )
 {
@@ -128,7 +131,8 @@ RETCODE SCIPpriceCreate(                /**< creates pricing storage */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPpriceFree(                  /**< frees pricing storage */
+/** frees pricing storage */
+RETCODE SCIPpriceFree(
    PRICE**          price               /**< pointer to store pricing storage */
    )
 {
@@ -144,7 +148,8 @@ RETCODE SCIPpriceFree(                  /**< frees pricing storage */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage and capture it */
+/** adds variable to pricing storage and capture it */
+RETCODE SCIPpriceAddVar(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -207,7 +212,8 @@ RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage an
    return SCIP_OKAY;
 }
 
-RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates the bounds to pricing storage, capture it */
+/** adds variable where zero violates the bounds to pricing storage, capture it */
+RETCODE SCIPpriceAddBdviolvar(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -259,8 +265,8 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    return SCIP_OKAY;
 }
 
-RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices problem variables, and adds some columns
-                                           with negative reduced costs to the LP */
+/** calls all external pricer, prices problem variables, and adds some columns with negative reduced costs to the LP */
+RETCODE SCIPpriceVars(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -506,7 +512,8 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
    return SCIP_OKAY;
 }
 
-RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by zero to its original value */
+/** reset variables' bounds violated by zero to its original value */
+RETCODE SCIPpriceResetBounds(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */

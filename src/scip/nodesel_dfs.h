@@ -29,8 +29,9 @@
 #include "scip.h"
 
 
+/** creates the node selector for depth first search and includes it in SCIP */
 extern
-RETCODE SCIPincludeNodeselDfs(          /**< creates the node selector for depth first search and includes it in SCIP */
+RETCODE SCIPincludeNodeselDfs(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -55,22 +55,25 @@ typedef enum VerbLevel VERBLEVEL;
 #endif
 
 
+/** prints an error message */
 extern
-void errorMessage_call(                 /**< prints an error message */
+void errorMessage_call(
    const char*      msg,                /**< message to print */
    const char*      filename,           /**< name of the file, where the error occured */
    int              line                /**< line of the file, where the error occured */
    );
 
+/** prints a todo message */
 extern
-void todoMessage_call(                  /**< prints a todo message */
+void todoMessage_call(
    const char*      msg,                /**< message to print */
    const char*      filename,           /**< name of the file, where the error occured */
    int              line                /**< line of the file, where the error occured */
    );
 
+/** prints a message depending on the verbosity level */
 extern
-void infoMessage(                       /**< prints a message depending on the verbosity level */
+void infoMessage(
    VERBLEVEL        verblevel,          /**< actual verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
    const char*      msg                 /**< message to print */

@@ -65,8 +65,9 @@ struct BranchRule
  * memory growing methods for dynamically allocated arrays
  */
 
+/** ensures, that lpcands array can store at least num entries */
 static
-RETCODE ensureLpcandsSize(              /**< ensures, that lpcands array can store at least num entries */
+RETCODE ensureLpcandsSize(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
@@ -89,8 +90,9 @@ RETCODE ensureLpcandsSize(              /**< ensures, that lpcands array can sto
    return SCIP_OKAY;
 }
 
+/** ensures, that pseudocands array can store at least num entries */
 static
-RETCODE ensurePseudocandsSize(          /**< ensures, that pseudocands array can store at least num entries */
+RETCODE ensurePseudocandsSize(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
@@ -117,7 +119,8 @@ RETCODE ensurePseudocandsSize(          /**< ensures, that pseudocands array can
  * branching candidate storage methods
  */
 
-RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate storage */
+/** creates a branching candidate storage */
+RETCODE SCIPbranchcandCreate(
    BRANCHCAND**     branchcand,         /**< pointer to store branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
@@ -149,7 +152,8 @@ RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate stora
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchcandFree(             /**< frees branching candidate storage */
+/** frees branching candidate storage */
+RETCODE SCIPbranchcandFree(
    BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
    )
 {
@@ -164,7 +168,8 @@ RETCODE SCIPbranchcandFree(             /**< frees branching candidate storage *
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP solution branching (fractional variables) */
+/** gets branching candidates for LP solution branching (fractional variables) */
+RETCODE SCIPbranchcandGetLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -247,7 +252,8 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchcandGetPseudoCands(   /**< gets branching candidates for pseudo solution branching (nonfixed variables) */
+/** gets branching candidates for pseudo solution branching (nonfixed variables) */
+RETCODE SCIPbranchcandGetPseudoCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
@@ -303,7 +309,8 @@ RETCODE SCIPbranchcandGetPseudoCands(   /**< gets branching candidates for pseud
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchcandUpdateVar(        /**< updates branching candidate list for a given variable */
+/** updates branching candidate list for a given variable */
+RETCODE SCIPbranchcandUpdateVar(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< variable that changed its bounds */
@@ -351,7 +358,8 @@ RETCODE SCIPbranchcandUpdateVar(        /**< updates branching candidate list fo
  * branching rule methods
  */
 
-RETCODE SCIPbranchruleCreate(           /**< creates a branching rule */
+/** creates a branching rule */
+RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
@@ -382,8 +390,9 @@ RETCODE SCIPbranchruleCreate(           /**< creates a branching rule */
 
    return SCIP_OKAY;
 }
-   
-RETCODE SCIPbranchruleFree(             /**< frees memory of branching rule */
+
+/** frees memory of branching rule */   
+RETCODE SCIPbranchruleFree(
    BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -405,7 +414,8 @@ RETCODE SCIPbranchruleFree(             /**< frees memory of branching rule */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchruleInit(             /**< initializes branching rule */
+/** initializes branching rule */
+RETCODE SCIPbranchruleInit(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -430,7 +440,8 @@ RETCODE SCIPbranchruleInit(             /**< initializes branching rule */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchruleExit(             /**< deinitializes branching rule */
+/** deinitializes branching rule */
+RETCODE SCIPbranchruleExit(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -455,7 +466,8 @@ RETCODE SCIPbranchruleExit(             /**< deinitializes branching rule */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchruleExecLPSol(        /**< executes branching rule for fractional LP solution */
+/** executes branching rule for fractional LP solution */
+RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -486,7 +498,8 @@ RETCODE SCIPbranchruleExecLPSol(        /**< executes branching rule for fractio
    return SCIP_OKAY;
 }
 
-RETCODE SCIPbranchruleExecPseudoSol(    /**< executes branching rule for not completely fixed pseudo solution */
+/** executes branching rule for not completely fixed pseudo solution */
+RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -516,7 +529,8 @@ RETCODE SCIPbranchruleExecPseudoSol(    /**< executes branching rule for not com
    return SCIP_OKAY;
 }
 
-const char* SCIPbranchruleGetName(      /**< gets name of branching rule */
+/** gets name of branching rule */
+const char* SCIPbranchruleGetName(
    BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
@@ -525,7 +539,8 @@ const char* SCIPbranchruleGetName(      /**< gets name of branching rule */
    return branchrule->name;
 }
 
-int SCIPbranchruleGetPriority(          /**< gets priority of branching rule */
+/** gets priority of branching rule */
+int SCIPbranchruleGetPriority(
    BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
@@ -534,7 +549,8 @@ int SCIPbranchruleGetPriority(          /**< gets priority of branching rule */
    return branchrule->priority;
 }
 
-BRANCHRULEDATA* SCIPbranchruleGetData(  /**< gets user data of branching rule */
+/** gets user data of branching rule */
+BRANCHRULEDATA* SCIPbranchruleGetData(
    BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
@@ -543,7 +559,8 @@ BRANCHRULEDATA* SCIPbranchruleGetData(  /**< gets user data of branching rule */
    return branchrule->branchruledata;
 }
 
-void SCIPbranchruleSetData(             /**< sets user data of branching rule; user has to free old data in advance! */
+/** sets user data of branching rule; user has to free old data in advance! */
+void SCIPbranchruleSetData(
    BRANCHRULE*      branchrule,         /**< branching rule */
    BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    )
@@ -553,7 +570,8 @@ void SCIPbranchruleSetData(             /**< sets user data of branching rule; u
    branchrule->branchruledata = branchruledata;
 }
 
-Bool SCIPbranchruleIsInitialized(       /**< is branching rule initialized? */
+/** is branching rule initialized? */
+Bool SCIPbranchruleIsInitialized(
    BRANCHRULE*      branchrule          /**< branching rule */
    )
 {

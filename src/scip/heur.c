@@ -46,7 +46,8 @@ struct Heur
 
 
 
-RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
+/** creates a primal heuristic */
+RETCODE SCIPheurCreate(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
@@ -82,7 +83,8 @@ RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPheurFree(                   /**< calls destructor and frees memory of primal heuristic */
+/** calls destructor and frees memory of primal heuristic */
+RETCODE SCIPheurFree(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -105,7 +107,8 @@ RETCODE SCIPheurFree(                   /**< calls destructor and frees memory o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPheurInit(                   /**< initializes primal heuristic */
+/** initializes primal heuristic */
+RETCODE SCIPheurInit(
    HEUR*            heur,               /**< primal heuristic */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -130,7 +133,8 @@ RETCODE SCIPheurInit(                   /**< initializes primal heuristic */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPheurExit(                   /**< calls exit method of primal heuristic */
+/** calls exit method of primal heuristic */
+RETCODE SCIPheurExit(
    HEUR*            heur,               /**< primal heuristic */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -155,7 +159,8 @@ RETCODE SCIPheurExit(                   /**< calls exit method of primal heurist
    return SCIP_OKAY;
 }
 
-RETCODE SCIPheurExec(                   /**< calls execution method of primal heuristic */
+/** calls execution method of primal heuristic */
+RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    const SET*       set,                /**< global SCIP settings */
    int              actdepth,           /**< depth of active node */
@@ -192,7 +197,8 @@ RETCODE SCIPheurExec(                   /**< calls execution method of primal he
 }
 
 
-const char* SCIPheurGetName(            /**< gets name of primal heuristic */
+/** gets name of primal heuristic */
+const char* SCIPheurGetName(
    HEUR*            heur                /**< primal heuristic */
    )
 {
@@ -201,7 +207,8 @@ const char* SCIPheurGetName(            /**< gets name of primal heuristic */
    return heur->name;
 }
 
-char SCIPheurGetDispchar(               /**< gets display character of primal heuristic */
+/** gets display character of primal heuristic */
+char SCIPheurGetDispchar(
    HEUR*            heur                /**< primal heuristic */
    )
 {
@@ -211,7 +218,8 @@ char SCIPheurGetDispchar(               /**< gets display character of primal he
       return heur->dispchar;
 }
 
-HEURDATA* SCIPheurGetData(              /**< gets user data of primal heuristic */
+/** gets user data of primal heuristic */
+HEURDATA* SCIPheurGetData(
    HEUR*            heur                /**< primal heuristic */
    )
 {
@@ -220,7 +228,8 @@ HEURDATA* SCIPheurGetData(              /**< gets user data of primal heuristic 
    return heur->heurdata;
 }
 
-void SCIPheurSetData(                   /**< sets user data of primal heuristic; user has to free old data in advance! */
+/** sets user data of primal heuristic; user has to free old data in advance! */
+void SCIPheurSetData(
    HEUR*            heur,               /**< primal heuristic */
    HEURDATA*        heurdata            /**< new primal heuristic user data */
    )
@@ -230,7 +239,8 @@ void SCIPheurSetData(                   /**< sets user data of primal heuristic;
    heur->heurdata = heurdata;
 }
 
-int SCIPheurGetFreq(                    /**< gets frequency of primal heuristic */
+/** gets frequency of primal heuristic */
+int SCIPheurGetFreq(
    HEUR*            heur                /**< primal heuristic */
    )
 {
@@ -239,7 +249,8 @@ int SCIPheurGetFreq(                    /**< gets frequency of primal heuristic 
    return heur->freq;
 }
 
-Bool SCIPheurIsInitialized(             /**< is primal heuristic initialized? */
+/** is primal heuristic initialized? */
+Bool SCIPheurIsInitialized(
    HEUR*            heur                /**< primal heuristic */
    )
 {

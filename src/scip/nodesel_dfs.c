@@ -91,7 +91,8 @@ DECL_NODESELCOMP(SCIPnodeselCompDfs)
  * dfs specific interface methods
  */
 
-RETCODE SCIPincludeNodeselDfs(          /**< creates the node selector for depth first search and includes it in SCIP */
+/** creates the node selector for depth first search and includes it in SCIP */
+RETCODE SCIPincludeNodeselDfs(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

@@ -33,8 +33,9 @@
  * memory growing methods for dynamically allocated arrays
  */
 
+/** ensures, that sols array can store at least num entries */
 static
-RETCODE ensureSolsSize(                 /**< ensures, that sols array can store at least num entries */
+RETCODE ensureSolsSize(
    PRIMAL*          primal,             /**< primal data */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
@@ -58,8 +59,9 @@ RETCODE ensureSolsSize(                 /**< ensures, that sols array can store 
 
 
 
+/** sets upper bound in primal data and in LP solver */
 static
-RETCODE primalSetUpperbound(            /**< sets upper bound in primal data and in LP solver */
+RETCODE primalSetUpperbound(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -91,7 +93,8 @@ RETCODE primalSetUpperbound(            /**< sets upper bound in primal data and
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprimalCreate(               /**< creates primal data */
+/** creates primal data */
+RETCODE SCIPprimalCreate(
    PRIMAL**         primal,             /**< pointer to primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -113,7 +116,8 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprimalFree(                 /**< frees primal data */
+/** frees primal data */
+RETCODE SCIPprimalFree(
    PRIMAL**         primal,             /**< pointer to primal data */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -133,8 +137,9 @@ RETCODE SCIPprimalFree(                 /**< frees primal data */
    return SCIP_OKAY;
 }
 
+/** adds primal solution to solution storage at given position */
 static
-RETCODE primalAddSol(                   /**< adds primal solution to solution storage at given position */
+RETCODE primalAddSol(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -192,8 +197,9 @@ RETCODE primalAddSol(                   /**< adds primal solution to solution st
    return SCIP_OKAY;
 }
 
+/** uses binary search to find position in solution storage */
 static
-int primalSearchSolPos(                 /**< uses binary search to find position in solution storage */
+int primalSearchSolPos(
    PRIMAL*          primal,             /**< primal data */
    Real             obj                 /**< objective value of solution to search position for */
    )
@@ -223,7 +229,8 @@ int primalSearchSolPos(                 /**< uses binary search to find position
    return right;
 }
 
-RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution storage by moving it */
+/** adds primal solution to solution storage by moving it */
+RETCODE SCIPprimalAddSolMove(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -261,7 +268,8 @@ RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution st
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution storage by copying it */
+/** adds primal solution to solution storage by copying it */
+RETCODE SCIPprimalAddSolCopy(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -294,7 +302,8 @@ RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution st
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprimalTrySolMove(           /**< checks primal solution; if feasible, adds it to storage by moving it */
+/** checks primal solution; if feasible, adds it to storage by moving it */
+RETCODE SCIPprimalTrySolMove(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -347,7 +356,8 @@ RETCODE SCIPprimalTrySolMove(           /**< checks primal solution; if feasible
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprimalTrySolCopy(           /**< checks primal solution; if feasible, adds it to storage by copying it */
+/** checks primal solution; if feasible, adds it to storage by copying it */
+RETCODE SCIPprimalTrySolCopy(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */

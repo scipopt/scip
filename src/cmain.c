@@ -110,8 +110,12 @@ static const Real  row_lhs [] = {           1.0,      0.0,      0.0 };
 static const Real  row_rhs [] = {      100000.0, 100000.0,     30.0 };
 #endif
 
-int
-main(int argc, char **argv)
+
+static
+RETCODE runSCIP(
+   int              argc,
+   char**           argv
+   )
 {
    SCIP* scip = NULL;
    VAR** vars;
@@ -140,21 +144,21 @@ main(int argc, char **argv)
    printf("\nsetup SCIP\n");
 
    /* initialize SCIP */
-   CHECK_SCIP( SCIPcreate(&scip) );
+   CHECK_OKAY( SCIPcreate(&scip) );
 
    /* change settings */
-   CHECK_SCIP( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
+   CHECK_OKAY( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
 
    /* include user defined callbacks */
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
-   CHECK_SCIP( SCIPincludeConsHdlrIntegral(scip) );
-   CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_SCIP( SCIPincludeNodeselBfs(scip) );
-   CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
-   CHECK_SCIP( SCIPincludeBranchruleMostinf(scip) );
-   CHECK_SCIP( SCIPincludeBranchruleLeastinf(scip) );
-   CHECK_SCIP( SCIPincludeHeurRounding(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
+   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
+   CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
+   CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
+   CHECK_OKAY( SCIPincludeHeurRounding(scip) );
 
 
 
@@ -166,14 +170,14 @@ main(int argc, char **argv)
    printf("\ncreate problem\n");
 
    /* create problem */
-   CHECK_SCIP( SCIPcreateProb(scip, "test.lp") );
-   CHECK_SCIP( SCIPsetObjsense(scip, objsen) );
+   CHECK_OKAY( SCIPcreateProb(scip, "test.lp") );
+   CHECK_OKAY( SCIPsetObjsense(scip, objsen) );
 
    /* create necessary variables */
    for( v = 0; v < nvars; ++v )
    {
-      CHECK_SCIP( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], SCIP_VARTYPE_INTEGER) );
-      CHECK_SCIP( SCIPaddVar(scip, vars[v]) );
+      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], var_name[v], var_lb[v], var_ub[v], var_obj[v], SCIP_VARTYPE_INTEGER) );
+      CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
    }
 
    /* create constraints and add them to the problem */
@@ -188,16 +192,16 @@ main(int argc, char **argv)
          rowvals[i] = row_val[pos];
          pos++;
       }
-      CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals,
+      CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, row_name[r], row_len[r], rowvars, rowvals,
                      row_lhs[r], row_rhs[r], TRUE, FALSE) );
-      CHECK_SCIP( SCIPaddCons(scip, cons) ); /* add as a global constraint */
-      CHECK_SCIP( SCIPreleaseCons(scip, &cons) );
+      CHECK_OKAY( SCIPaddCons(scip, cons) ); /* add as a global constraint */
+      CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
    }
 
    /* release variables, because we don't need them any longer */
    for( v = 0; v < nvars; ++v )
    {
-      CHECK_SCIP( SCIPreleaseVar(scip, &vars[v]) );
+      CHECK_OKAY( SCIPreleaseVar(scip, &vars[v]) );
    }
 
 #else
@@ -218,22 +222,22 @@ main(int argc, char **argv)
 
    /* solve problem */
    printf("\nsolve problem\n");
-   CHECK_SCIP( SCIPsolve(scip) );
+   CHECK_OKAY( SCIPsolve(scip) );
 
 #if 0
    /* free solution process */
    printf("\nfree problem solution\n");
-   CHECK_SCIP( SCIPfreeSolve(scip) );
+   CHECK_OKAY( SCIPfreeSolve(scip) );
 
    /* solve problem again */
    printf("\nsolve problem again\n");
-   CHECK_SCIP( SCIPsolve(scip) );
+   CHECK_OKAY( SCIPsolve(scip) );
 #endif
 
    printf("\n");
    printf("primal solution:\n");
    printf("----------------\n");
-   CHECK_SCIP( SCIPprintBestSol(scip, NULL) );
+   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
 
 #ifndef NDEBUG
    /*SCIPdebugMemory(scip);*/
@@ -247,7 +251,7 @@ main(int argc, char **argv)
    printf("\nfree SCIP\n");
 
    /* free SCIP */
-   CHECK_SCIP( SCIPfree(&scip) );
+   CHECK_OKAY( SCIPfree(&scip) );
 
 
    /*****************************
@@ -262,6 +266,20 @@ main(int argc, char **argv)
    memoryCheckEmpty();
 #endif
 
-   return 0;
+   return SCIP_OKAY;
 }
 
+int
+main(
+   int              argc,
+   char**           argv
+   )
+{
+   RETCODE retcode;
+
+   retcode = runSCIP(argc, argv);
+   if( retcode != SCIP_OKAY )
+      SCIPerror(stderr, retcode);
+
+   return 0;
+}

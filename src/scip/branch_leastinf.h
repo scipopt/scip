@@ -29,8 +29,9 @@
 #include "scip.h"
 
 
+/** creates the least infeasible LP braching rule and includes it in SCIP */
 extern
-RETCODE SCIPincludeBranchruleLeastinf(  /**< creates the least infeasible LP braching rule and includes it in SCIP */
+RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*            scip                /**< SCIP data structure */
    );
 

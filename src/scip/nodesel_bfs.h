@@ -29,8 +29,9 @@
 #include "scip.h"
 
 
+/** creates the node selector for best first search and includes it in SCIP */
 extern
-RETCODE SCIPincludeNodeselBfs(          /**< creates the node selector for best first search and includes it in SCIP */
+RETCODE SCIPincludeNodeselBfs(
    SCIP*            scip                /**< SCIP data structure */
    );
 

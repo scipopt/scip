@@ -79,8 +79,10 @@ struct Cons
  * dynamic memory arrays
  */
 
+
+/** resizes conss array to be able to store at least num constraints */
 static
-RETCODE conshdlrEnsureConssMem(         /**< resizes conss array to be able to store at least num constraints */
+RETCODE conshdlrEnsureConssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in array */
@@ -102,8 +104,9 @@ RETCODE conshdlrEnsureConssMem(         /**< resizes conss array to be able to s
    return SCIP_OKAY;
 }
 
+/** resizes probconss array to be able to store at least num constraints */
 static
-RETCODE conshdlrEnsureProbconssMem(     /**< resizes probconss array to be able to store at least num constraints */
+RETCODE conshdlrEnsureProbconssMem(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in array */
@@ -130,8 +133,9 @@ RETCODE conshdlrEnsureProbconssMem(     /**< resizes probconss array to be able 
  * Constraint handler methods
  */
 
+/** activates and adds constraint to constraint handler's constraint array */
 static
-RETCODE conshdlrAddCons(                /**< activates and adds constraint to constraint handler's constraint array */
+RETCODE conshdlrAddCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
@@ -173,8 +177,9 @@ RETCODE conshdlrAddCons(                /**< activates and adds constraint to co
    return SCIP_OKAY;
 }
 
+/** deactivates and removes constraint from constraint handler's conss array */
 static
-RETCODE conshdlrDelCons(                /**< deactivates and removes constraint from constraint handler's conss array */
+RETCODE conshdlrDelCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    CONS*            cons                /**< constraint to remove */
    )
@@ -236,7 +241,8 @@ DECL_SORTPTRCOMP(SCIPconshdlrCompChck)  /**< compares two constraint handlers w.
    return ((CONSHDLR*)elem2)->chckpriority - ((CONSHDLR*)elem1)->chckpriority;
 }
 
-RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
+/** creates a constraint handler */
+RETCODE SCIPconshdlrCreate(
    CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
@@ -294,7 +300,8 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrFree(               /**< calls destructor and frees memory of constraint handler */
+/** calls destructor and frees memory of constraint handler */
+RETCODE SCIPconshdlrFree(
    CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -319,7 +326,8 @@ RETCODE SCIPconshdlrFree(               /**< calls destructor and frees memory o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrInit(               /**< initializes constraint handler */
+/** initializes constraint handler */
+RETCODE SCIPconshdlrInit(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -344,7 +352,8 @@ RETCODE SCIPconshdlrInit(               /**< initializes constraint handler */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrExit(               /**< calls exit method of constraint handler */
+/** calls exit method of constraint handler */
+RETCODE SCIPconshdlrExit(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -369,7 +378,8 @@ RETCODE SCIPconshdlrExit(               /**< calls exit method of constraint han
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constraint handler */
+/** calls separator method of constraint handler */
+RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -401,7 +411,8 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrEnforceLPSol(       /**< calls enforcing method of constraint handler for LP solutions */
+/** calls enforcing method of constraint handler for LP solutions */
+RETCODE SCIPconshdlrEnforceLPSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -436,7 +447,8 @@ RETCODE SCIPconshdlrEnforceLPSol(       /**< calls enforcing method of constrain
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrEnforcePseudoSol(   /**< calls enforcing method of constraint handler for pseudo solutions */
+/** calls enforcing method of constraint handler for pseudo solutions */
+RETCODE SCIPconshdlrEnforcePseudoSol(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    RESULT*          result              /**< pointer to store the result of the callback method */
@@ -471,7 +483,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(   /**< calls enforcing method of constrain
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of constraint handler */
+/** calls feasibility check method of constraint handler */
+RETCODE SCIPconshdlrCheck(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    SOL*             sol,                /**< primal CIP solution */
@@ -506,7 +519,8 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constraint handler */
+/** calls propagation method of constraint handler */
+RETCODE SCIPconshdlrPropagate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
@@ -542,7 +556,8 @@ RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constra
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconshdlrAddProbCons(        /**< adds constraint to constraint handler's problem constraint array */
+/** adds constraint to constraint handler's problem constraint array */
+RETCODE SCIPconshdlrAddProbCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< model constraint of initial problem to add */
@@ -563,7 +578,8 @@ RETCODE SCIPconshdlrAddProbCons(        /**< adds constraint to constraint handl
    return SCIP_OKAY;
 }
 
-const char* SCIPconshdlrGetName(        /**< gets name of constraint handler */
+/** gets name of constraint handler */
+const char* SCIPconshdlrGetName(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -572,7 +588,8 @@ const char* SCIPconshdlrGetName(        /**< gets name of constraint handler */
    return conshdlr->name;
 }
 
-CONSHDLRDATA* SCIPconshdlrGetData(      /**< gets user data of constraint handler */
+/** gets user data of constraint handler */
+CONSHDLRDATA* SCIPconshdlrGetData(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -581,7 +598,8 @@ CONSHDLRDATA* SCIPconshdlrGetData(      /**< gets user data of constraint handle
    return conshdlr->conshdlrdata;
 }
 
-void SCIPconshdlrSetData(               /**< sets user data of constraint handler; user has to free old data in advance! */
+/** sets user data of constraint handler; user has to free old data in advance! */
+void SCIPconshdlrSetData(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    )
@@ -591,7 +609,8 @@ void SCIPconshdlrSetData(               /**< sets user data of constraint handle
    conshdlr->conshdlrdata = conshdlrdata;
 }
 
-CONS** SCIPconshdlrGetConss(            /**< gets constraints array of constraint handler */
+/** gets constraints array of constraint handler */
+CONS** SCIPconshdlrGetConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -600,7 +619,8 @@ CONS** SCIPconshdlrGetConss(            /**< gets constraints array of constrain
    return conshdlr->conss;
 }
 
-int SCIPconshdlrGetNConss(              /**< gets number of constraints in constraints array of constraint handler */
+/** gets number of constraints in constraints array of constraint handler */
+int SCIPconshdlrGetNConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -609,7 +629,8 @@ int SCIPconshdlrGetNConss(              /**< gets number of constraints in const
    return conshdlr->nconss;
 }
 
-int SCIPconshdlrGetChckPriority(        /**< gets checking priority of constraint handler */
+/** gets checking priority of constraint handler */
+int SCIPconshdlrGetChckPriority(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -618,7 +639,8 @@ int SCIPconshdlrGetChckPriority(        /**< gets checking priority of constrain
    return conshdlr->chckpriority;
 }
 
-int SCIPconshdlrGetPropFreq(            /**< gets propagation frequency of constraint handler */
+/** gets propagation frequency of constraint handler */
+int SCIPconshdlrGetPropFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -627,7 +649,8 @@ int SCIPconshdlrGetPropFreq(            /**< gets propagation frequency of const
    return conshdlr->propfreq;
 }
 
-Bool SCIPconshdlrIsInitialized(         /**< is constraint handler initialized? */
+/** is constraint handler initialized? */
+Bool SCIPconshdlrIsInitialized(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -643,7 +666,8 @@ Bool SCIPconshdlrIsInitialized(         /**< is constraint handler initialized? 
  * Constraint methods
  */
 
-RETCODE SCIPconsCreate(                 /**< creates and captures a constraint */
+/** creates and captures a constraint */
+RETCODE SCIPconsCreate(
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
    const char*      name,               /**< name of constraint */
@@ -674,7 +698,8 @@ RETCODE SCIPconsCreate(                 /**< creates and captures a constraint *
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconsFree(                   /**< frees a constraint */
+/** frees a constraint */
+RETCODE SCIPconsFree(
    CONS**           cons,               /**< constraint to free */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set                 /**< global SCIP settings */
@@ -698,7 +723,8 @@ RETCODE SCIPconsFree(                   /**< frees a constraint */
    return SCIP_OKAY;
 }
 
-void SCIPconsCapture(                   /**< increases usage counter of constraint */
+/** increases usage counter of constraint */
+void SCIPconsCapture(
    CONS*            cons                /**< constraint */
    )
 {
@@ -709,7 +735,8 @@ void SCIPconsCapture(                   /**< increases usage counter of constrai
    cons->nuses++;
 }
 
-RETCODE SCIPconsRelease(                /**< decreases usage counter of constraint, and frees memory if necessary */
+/** decreases usage counter of constraint, and frees memory if necessary */
+RETCODE SCIPconsRelease(
    CONS**           cons,               /**< pointer to constraint */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
@@ -731,7 +758,8 @@ RETCODE SCIPconsRelease(                /**< decreases usage counter of constrai
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconsActivate(               /**< activates constraint */
+/** activates constraint */
+RETCODE SCIPconsActivate(
    CONS*            cons,               /**< constraint */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -746,7 +774,8 @@ RETCODE SCIPconsActivate(               /**< activates constraint */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconsDeactivate(             /**< deactivates constraint */
+/** deactivates constraint */
+RETCODE SCIPconsDeactivate(
    CONS*            cons                /**< constraint */
    )
 {
@@ -759,7 +788,8 @@ RETCODE SCIPconsDeactivate(             /**< deactivates constraint */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconsTransform(              /**< copies original constraint into transformed constraint, that is captured */
+/** copies original constraint into transformed constraint, that is captured */
+RETCODE SCIPconsTransform(
    CONS**           transcons,          /**< pointer to store the transformed constraint */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -785,7 +815,8 @@ RETCODE SCIPconsTransform(              /**< copies original constraint into tra
    return SCIP_OKAY;
 }
 
-const char* SCIPconsGetName(            /**< returns the name of the constraint */
+/** returns the name of the constraint */
+const char* SCIPconsGetName(
    CONS*            cons                /**< constraint */
    )
 {
@@ -794,7 +825,8 @@ const char* SCIPconsGetName(            /**< returns the name of the constraint 
    return cons->name;
 }
 
-CONSHDLR* SCIPconsGetConsHdlr(          /**< returns the constraint handler of the constraint */
+/** returns the constraint handler of the constraint */
+CONSHDLR* SCIPconsGetConsHdlr(
    CONS*            cons                /**< constraint */
    )
 {
@@ -803,7 +835,8 @@ CONSHDLR* SCIPconsGetConsHdlr(          /**< returns the constraint handler of t
    return cons->conshdlr;
 }
 
-CONSDATA* SCIPconsGetConsData(          /**< returns the constraint data field of the constraint */
+/** returns the constraint data field of the constraint */
+CONSDATA* SCIPconsGetConsData(
    CONS*            cons                /**< constraint */
    )
 {
@@ -812,7 +845,8 @@ CONSDATA* SCIPconsGetConsData(          /**< returns the constraint data field o
    return cons->consdata;
 }
 
-Bool SCIPconsIsOriginal(                /**< returns TRUE iff constraint is belonging to original problem */
+/** returns TRUE iff constraint is belonging to original problem */
+Bool SCIPconsIsOriginal(
    CONS*            cons                /**< constraint */
    )
 {
@@ -821,7 +855,8 @@ Bool SCIPconsIsOriginal(                /**< returns TRUE iff constraint is belo
    return cons->original;
 }
 
-Bool SCIPconsIsModel(                   /**< returns TRUE iff constraint is necessary for feasibility */
+/** returns TRUE iff constraint is necessary for feasibility */
+Bool SCIPconsIsModel(
    CONS*            cons                /**< constraint */
    )
 {
@@ -835,7 +870,8 @@ Bool SCIPconsIsModel(                   /**< returns TRUE iff constraint is nece
  * Hash functions
  */
 
-DECL_HASHGETKEY(SCIPhashGetKeyCons)     /**< gets the key (i.e. the name) of the given constraint */
+/** gets the key (i.e. the name) of the given constraint */
+DECL_HASHGETKEY(SCIPhashGetKeyCons)
 {
    CONS* cons = (CONS*)elem;
 
@@ -849,7 +885,8 @@ DECL_HASHGETKEY(SCIPhashGetKeyCons)     /**< gets the key (i.e. the name) of the
  * Constraint list methods
  */
 
-RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constraints and captures it */
+/** adds constraint to a list of constraints and captures it */
+RETCODE SCIPconslistAdd(
    CONSLIST**       conslist,           /**< constraint list to extend */
    MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
@@ -871,7 +908,8 @@ RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constr
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconslistFreePart(           /**< partially unlinks and releases the constraints in the list */
+/** partially unlinks and releases the constraints in the list */
+RETCODE SCIPconslistFreePart(
    CONSLIST**       conslist,           /**< constraint list to delete from */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -895,7 +933,8 @@ RETCODE SCIPconslistFreePart(           /**< partially unlinks and releases the 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPconslistFree(               /**< unlinks and releases all the constraints in the list */
+/** unlinks and releases all the constraints in the list */
+RETCODE SCIPconslistFree(
    CONSLIST**       conslist,           /**< constraint list to delete from */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set                 /**< global SCIP settings */

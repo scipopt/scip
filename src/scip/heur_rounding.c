@@ -82,8 +82,9 @@ DECL_HEUREXIT(SCIPheurExitRounding)
    return SCIP_OKAY;
 }
 
+/** update row activities after a variable's solution value changed */
 static
-RETCODE updateActivities(               /**< update row activities after a variable's solution value changed */
+RETCODE updateActivities(
    SCIP*            scip,               /**< SCIP data structure */
    Real*            activities,         /**< LP row activities */
    ROW**            violrows,           /**< array with currently violated rows */
@@ -177,8 +178,9 @@ RETCODE updateActivities(               /**< update row activities after a varia
    return SCIP_OKAY;
 }
 
+/** returns a variable, that pushes activity of the row in the given direction */
 static
-RETCODE selectRounding(                 /**< returns a variable, that pushes activity of the row in the given direction */
+RETCODE selectRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
    ROW*             row,                /**< LP row */
@@ -250,8 +252,9 @@ RETCODE selectRounding(                 /**< returns a variable, that pushes act
    return SCIP_OKAY;
 }
 
+/** returns a variable, that increases the activity of the row */
 static
-RETCODE selectIncreaseRounding(         /**< returns a variable, that increases the activity of the row */
+RETCODE selectIncreaseRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
    ROW*             row,                /**< LP row */
@@ -263,8 +266,9 @@ RETCODE selectIncreaseRounding(         /**< returns a variable, that increases 
    return selectRounding(scip, sol, row, +1, roundvar, oldsolval, newsolval);
 }
 
+/** returns a variable, that decreases the activity of the row */
 static
-RETCODE selectDecreaseRounding(         /**< returns a variable, that decreases the activity of the row */
+RETCODE selectDecreaseRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
    ROW*             row,                /**< LP row */
@@ -276,8 +280,9 @@ RETCODE selectDecreaseRounding(         /**< returns a variable, that decreases 
    return selectRounding(scip, sol, row, -1, roundvar, oldsolval, newsolval);
 }
 
+/** returns a variable, that has most impact on rows in opposite direction */
 static
-RETCODE selectEssentialRounding(        /**< returns a variable, that has most impact on rows in opposite direction */
+RETCODE selectEssentialRounding(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
    VAR**            lpcands,            /**< fractional variables in LP */
@@ -561,7 +566,8 @@ DECL_HEUREXEC(SCIPheurExecRounding)
  * heuristic specific interface methods
  */
 
-RETCODE SCIPincludeHeurRounding(        /**< creates the simple rounding heuristic and includes it in SCIP */
+/** creates the simple rounding heuristic and includes it in SCIP */
+RETCODE SCIPincludeHeurRounding(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

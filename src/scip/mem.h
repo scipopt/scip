@@ -44,13 +44,15 @@ struct Mem
 
 
 
+/** creates block memory structures */
 extern
-RETCODE SCIPmemCreate(                  /**< creates block memory structures */
+RETCODE SCIPmemCreate(
    MEM**            mem                 /**< pointer to block memory structure */
    );
 
+/** frees block memory structures */
 extern
-RETCODE SCIPmemFree(                    /**< frees block memory structures */
+RETCODE SCIPmemFree(
    MEM**            mem                 /**< pointer to block memory structure */
    );
 

@@ -40,8 +40,9 @@
 #include "primal.h"
 
 
+/** main solving loop */
 extern
-RETCODE SCIPsolveCIP(                   /**< main solving loop */
+RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */

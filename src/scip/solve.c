@@ -30,8 +30,9 @@
 #include "solve.h"
 
 
+/** constructs the LP of the root node */
 static
-RETCODE initRootLP(                     /**< constructs the LP of the root node */
+RETCODE initRootLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -72,8 +73,9 @@ RETCODE initRootLP(                     /**< constructs the LP of the root node 
    return SCIP_OKAY;
 }
 
+/** solves the LP with simplex algorithm */
 static
-RETCODE solveLP(                        /**< solves the LP with simplex algorithm */
+RETCODE solveLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< LP data */
@@ -135,8 +137,9 @@ RETCODE solveLP(                        /**< solves the LP with simplex algorith
    return SCIP_OKAY;
 }
 
+/** solve a single node with price and cut */
 static
-RETCODE solveNodeLP(                    /**< solve a single node with price and cut */
+RETCODE solveNodeLP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -283,8 +286,9 @@ RETCODE solveNodeLP(                    /**< solve a single node with price and 
    return SCIP_OKAY;
 }
 
+/** branches on infeasible pseudo solution */
 static
-RETCODE pseudoBranch(                   /**< branches on infeasible pseudo solution */
+RETCODE pseudoBranch(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -334,8 +338,9 @@ RETCODE pseudoBranch(                   /**< branches on infeasible pseudo solut
    return SCIP_OKAY;
 }
 
+/** enforces constraints by branching, separation, or domain reduction */
 static
-RETCODE enforceConstraints(             /**< enforces constraints by branching, separation, or domain reduction */
+RETCODE enforceConstraints(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -497,7 +502,8 @@ RETCODE enforceConstraints(             /**< enforces constraints by branching, 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsolveCIP(                   /**< main solving loop */
+/** main solving loop */
+RETCODE SCIPsolveCIP(
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */

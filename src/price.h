@@ -33,18 +33,21 @@ typedef struct Price PRICE;             /**< storage for priced variables */
 #include "retcode.h"
 
 
+/** creates pricing storage */
 extern
-RETCODE SCIPpriceCreate(                /**< creates pricing storage */
+RETCODE SCIPpriceCreate(
    PRICE**          price               /**< pointer to store pricing storage */
    );
 
+/** frees pricing storage */
 extern
-RETCODE SCIPpriceFree(                  /**< frees pricing storage */
+RETCODE SCIPpriceFree(
    PRICE**          price               /**< pointer to store pricing storage */
    );
 
+/** adds variable to pricing storage and capture it */
 extern
-RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage and capture it */
+RETCODE SCIPpriceAddVar(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -54,8 +57,9 @@ RETCODE SCIPpriceAddVar(                /**< adds variable to pricing storage an
    Bool             root                /**< are we at the root node? */
    );
 
+/** adds variable where zero violates the bounds to pricing storage, capture it */
 extern
-RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates the bounds to pricing storage, capture it */
+RETCODE SCIPpriceAddBdviolvar(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -67,9 +71,9 @@ RETCODE SCIPpriceAddBdviolvar(          /**< adds variable where zero violates t
    VAR*             var                 /**< variable, where zero violates the bounds */
    );
 
+/** calls all external pricers, prices problem variables, and adds some columns with negative reduced costs to the LP */
 extern
-RETCODE SCIPpriceVars(                  /**< calls all external pricers, prices problem variables, and adds some columns
-                                           with negative reduced costs to the LP */
+RETCODE SCIPpriceVars(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -81,8 +85,9 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricers, prices 
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+/** reset variables' bounds violated by zero to its original value */
 extern
-RETCODE SCIPpriceResetBounds(           /**< reset variables' bounds violated by zero to its original value */
+RETCODE SCIPpriceResetBounds(
    PRICE*           price,              /**< pricing storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */

@@ -77,7 +77,8 @@ struct EventQueue
  * Event handler methods
  */
 
-RETCODE SCIPeventhdlrCreate(            /**< creates an event handler */
+/** creates an event handler */
+RETCODE SCIPeventhdlrCreate(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
@@ -108,7 +109,8 @@ RETCODE SCIPeventhdlrCreate(            /**< creates an event handler */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventhdlrFree(              /**< calls destructor and frees memory of event handler */
+/** calls destructor and frees memory of event handler */
+RETCODE SCIPeventhdlrFree(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -131,7 +133,8 @@ RETCODE SCIPeventhdlrFree(              /**< calls destructor and frees memory o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventhdlrInit(              /**< initializes event handler */
+/** initializes event handler */
+RETCODE SCIPeventhdlrInit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -156,7 +159,8 @@ RETCODE SCIPeventhdlrInit(              /**< initializes event handler */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventhdlrExit(              /**< calls exit method of event handler */
+/** calls exit method of event handler */
+RETCODE SCIPeventhdlrExit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -181,7 +185,8 @@ RETCODE SCIPeventhdlrExit(              /**< calls exit method of event handler 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventhdlrExec(              /**< calls execution method of event handler */
+/** calls execution method of event handler */
+RETCODE SCIPeventhdlrExec(
    EVENTHDLR*       eventhdlr,          /**< event handler */
    const SET*       set,                /**< global SCIP settings */
    EVENT*           event,              /**< event to call event handler with */
@@ -201,7 +206,8 @@ RETCODE SCIPeventhdlrExec(              /**< calls execution method of event han
    return SCIP_OKAY;
 }
 
-const char* SCIPeventhdlrGetName(       /**< gets name of event handler */
+/** gets name of event handler */
+const char* SCIPeventhdlrGetName(
    EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
@@ -210,7 +216,8 @@ const char* SCIPeventhdlrGetName(       /**< gets name of event handler */
    return eventhdlr->name;
 }
 
-EVENTHDLRDATA* SCIPeventhdlrGetData(    /**< gets user data of event handler */
+/** gets user data of event handler */
+EVENTHDLRDATA* SCIPeventhdlrGetData(
    EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
@@ -219,7 +226,8 @@ EVENTHDLRDATA* SCIPeventhdlrGetData(    /**< gets user data of event handler */
    return eventhdlr->eventhdlrdata;
 }
 
-void SCIPeventhdlrSetData(              /**< sets user data of event handler; user has to free old data in advance! */
+/** sets user data of event handler; user has to free old data in advance! */
+void SCIPeventhdlrSetData(
    EVENTHDLR*       eventhdlr,          /**< event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< new event handler user data */
    )
@@ -229,7 +237,8 @@ void SCIPeventhdlrSetData(              /**< sets user data of event handler; us
    eventhdlr->eventhdlrdata = eventhdlrdata;
 }
 
-Bool SCIPeventhdlrIsInitialized(        /**< is event handler initialized? */
+/** is event handler initialized? */
+Bool SCIPeventhdlrIsInitialized(
    EVENTHDLR*       eventhdlr           /**< event handler */
    )
 {
@@ -245,7 +254,8 @@ Bool SCIPeventhdlrIsInitialized(        /**< is event handler initialized? */
  * Event methods
  */
 
-RETCODE SCIPeventCreateLbChanged(       /**< creates an event for a change in the lower bound of a variable */
+/** creates an event for a change in the lower bound of a variable */
+RETCODE SCIPeventCreateLbChanged(
    EVENT**          event,              /**< pointer to store the event */
    MEMHDR*          memhdr,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
@@ -269,7 +279,8 @@ RETCODE SCIPeventCreateLbChanged(       /**< creates an event for a change in th
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventCreateUbChanged(       /**< creates an event for a change in the upper bound of a variable */
+/** creates an event for a change in the upper bound of a variable */
+RETCODE SCIPeventCreateUbChanged(
    EVENT**          event,              /**< pointer to store the event */
    MEMHDR*          memhdr,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
@@ -293,7 +304,8 @@ RETCODE SCIPeventCreateUbChanged(       /**< creates an event for a change in th
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventFree(                  /**< frees an event */
+/** frees an event */
+RETCODE SCIPeventFree(
    EVENT**          event,              /**< event to free */
    MEMHDR*          memhdr              /**< block memory buffer */
    )
@@ -306,8 +318,9 @@ RETCODE SCIPeventFree(                  /**< frees an event */
    return SCIP_OKAY;
 }
 
+/** disables an event */
 static
-void eventDisable(                      /**< disables an event */
+void eventDisable(
    EVENT*           event               /**< event to disable */
    )
 {
@@ -316,7 +329,8 @@ void eventDisable(                      /**< disables an event */
    event->eventtype = SCIP_EVENTTYPE_DISABLED;
 }
 
-RETCODE SCIPeventGetType(               /**< gets type of event */
+/** gets type of event */
+RETCODE SCIPeventGetType(
    EVENT*           event,              /**< event */
    EVENTTYPE*       eventtype           /**< pointer to store the event type */
    )
@@ -329,7 +343,8 @@ RETCODE SCIPeventGetType(               /**< gets type of event */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventGetVar(                /**< gets variable for a domain change event */
+/** gets variable for a domain change event */
+RETCODE SCIPeventGetVar(
    EVENT*           event,              /**< event */
    VAR**            var                 /**< pointer to store the variable */
    )
@@ -370,7 +385,8 @@ RETCODE SCIPeventGetVar(                /**< gets variable for a domain change e
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventGetOldbound(           /**< gets old bound for a bound change event */
+/** gets old bound for a bound change event */
+RETCODE SCIPeventGetOldbound(
    EVENT*           event,              /**< event */
    Real*            bound               /**< pointer to store the bound */
    )
@@ -395,7 +411,8 @@ RETCODE SCIPeventGetOldbound(           /**< gets old bound for a bound change e
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventGetNewbound(           /**< gets new bound for a bound change event */
+/** gets new bound for a bound change event */
+RETCODE SCIPeventGetNewbound(
    EVENT*           event,              /**< event */
    Real*            bound               /**< pointer to store the bound */
    )
@@ -420,7 +437,8 @@ RETCODE SCIPeventGetNewbound(           /**< gets new bound for a bound change e
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventProcess(               /**< processes event by calling the appropriate event handlers */
+/** processes event by calling the appropriate event handlers */
+RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -517,8 +535,9 @@ RETCODE SCIPeventProcess(               /**< processes event by calling the appr
  * Event filter methods
  */
 
+/** resizes eventfilter arrays to be able to store at least num entries */
 static
-RETCODE eventfilterEnsureMem(           /**< resizes eventfilter arrays to be able to store at least num entries */
+RETCODE eventfilterEnsureMem(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -544,7 +563,8 @@ RETCODE eventfilterEnsureMem(           /**< resizes eventfilter arrays to be ab
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventfilterCreate(          /**< creates an event filter */
+/** creates an event filter */
+RETCODE SCIPeventfilterCreate(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    MEMHDR*          memhdr              /**< block memory buffer */
    )
@@ -562,7 +582,8 @@ RETCODE SCIPeventfilterCreate(          /**< creates an event filter */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventfilterFree(            /**< frees an event filter and the associated event data entries */
+/** frees an event filter and the associated event data entries */
+RETCODE SCIPeventfilterFree(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set                 /**< global SCIP settings */
@@ -596,7 +617,8 @@ RETCODE SCIPeventfilterFree(            /**< frees an event filter and the assoc
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventfilterAdd(             /**< adds element to event filter */
+/** adds element to event filter */
+RETCODE SCIPeventfilterAdd(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -657,8 +679,9 @@ RETCODE SCIPeventfilterAdd(             /**< adds element to event filter */
    return SCIP_OKAY;
 }
 
+/** binary search for the given event catch in event filter */
 static
-int eventfilterSearch(                  /**< binary search for the given event catch in event filter */
+int eventfilterSearch(
    EVENTFILTER*     eventfilter,        /**< event filter */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
@@ -698,7 +721,8 @@ int eventfilterSearch(                  /**< binary search for the given event c
    return -1;
 }
 
-RETCODE SCIPeventfilterDel(             /**< deletes element from event filter */
+/** deletes element from event filter */
+RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -742,7 +766,8 @@ RETCODE SCIPeventfilterDel(             /**< deletes element from event filter *
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventfilterProcess(         /**< processes the event with all event handlers with matching filter setting */
+/** processes the event with all event handlers with matching filter setting */
+RETCODE SCIPeventfilterProcess(
    EVENTFILTER*     eventfilter,        /**< event filter */
    const SET*       set,                /**< global SCIP settings */
    EVENT*           event               /**< event to process */
@@ -775,8 +800,9 @@ RETCODE SCIPeventfilterProcess(         /**< processes the event with all event 
  * Event queue methods
  */
 
+/** resizes events array to be able to store at least num entries */
 static
-RETCODE eventqueueEnsureEventsMem(      /**< resizes events array to be able to store at least num entries */
+RETCODE eventqueueEnsureEventsMem(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of node slots in array */
@@ -798,7 +824,8 @@ RETCODE eventqueueEnsureEventsMem(      /**< resizes events array to be able to 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventqueueCreate(           /**< creates an event queue */
+/** creates an event queue */
+RETCODE SCIPeventqueueCreate(
    EVENTQUEUE**     eventqueue          /**< pointer to store the event queue */
    )
 {
@@ -813,7 +840,8 @@ RETCODE SCIPeventqueueCreate(           /**< creates an event queue */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventqueueFree(             /**< frees event queue; there must not be any unprocessed eventy in the queue! */
+/** frees event queue; there must not be any unprocessed eventy in the queue! */
+RETCODE SCIPeventqueueFree(
    EVENTQUEUE**     eventqueue          /**< pointer to the event queue */
    )
 {
@@ -827,8 +855,9 @@ RETCODE SCIPeventqueueFree(             /**< frees event queue; there must not b
    return SCIP_OKAY;
 }
 
+/** appends event to the event queue; sets event to NULL afterwards */
 static
-RETCODE eventqueueAppend(               /**< appends event to the event queue; sets event to NULL afterwards */
+RETCODE eventqueueAppend(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    const SET*       set,                /**< global SCIP settings */
    EVENT**          event               /**< pointer to event to append to the queue */
@@ -853,7 +882,8 @@ RETCODE eventqueueAppend(               /**< appends event to the event queue; s
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventqueueAdd(              /**< processes event or adds event to the event queue */
+/** processes event or adds event to the event queue */
+RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -1007,7 +1037,8 @@ RETCODE SCIPeventqueueAdd(              /**< processes event or adds event to th
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventqueueDelay(            /**< marks queue to delay incoming events until a call to SCIPeventqueueProcess() */
+/** marks queue to delay incoming events until a call to SCIPeventqueueProcess() */
+RETCODE SCIPeventqueueDelay(
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -1019,7 +1050,8 @@ RETCODE SCIPeventqueueDelay(            /**< marks queue to delay incoming event
    return SCIP_OKAY;
 }
 
-RETCODE SCIPeventqueueProcess(          /**< processes all delayed events, marks queue to process events immediately */
+/** processes all delayed events, marks queue to process events immediately */
+RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */

@@ -169,7 +169,8 @@ DECL_NODESELCOMP(SCIPnodeselCompBfs)
  * bfs specific interface methods
  */
 
-RETCODE SCIPincludeNodeselBfs(          /**< creates the node selector for best first search and includes it in SCIP */
+/** creates the node selector for best first search and includes it in SCIP */
+RETCODE SCIPincludeNodeselBfs(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

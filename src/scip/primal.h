@@ -48,8 +48,9 @@ struct Primal
 };
 
 
+/** creates primal data */
 extern
-RETCODE SCIPprimalCreate(               /**< creates primal data */
+RETCODE SCIPprimalCreate(
    PRIMAL**         primal,             /**< pointer to primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -57,14 +58,16 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
    LP*              lp                  /**< actual LP data */
    );
 
+/** frees primal data */
 extern
-RETCODE SCIPprimalFree(                 /**< frees primal data */
+RETCODE SCIPprimalFree(
    PRIMAL**         primal,             /**< pointer to primal data */
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** adds primal solution to solution storage by moving it */
 extern
-RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution storage by moving it */
+RETCODE SCIPprimalAddSolMove(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -75,8 +78,9 @@ RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution st
    SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
    );
 
+/** adds primal solution to solution storage by copying it */
 extern
-RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution storage by copying it */
+RETCODE SCIPprimalAddSolCopy(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -87,8 +91,9 @@ RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution st
    SOL*             sol                 /**< primal CIP solution */
    );
 
+/** checks primal solution; if feasible, adds it to storage by moving it */
 extern
-RETCODE SCIPprimalTrySolMove(           /**< checks primal solution; if feasible, adds it to storage by moving it */
+RETCODE SCIPprimalTrySolMove(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -102,8 +107,9 @@ RETCODE SCIPprimalTrySolMove(           /**< checks primal solution; if feasible
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
+/** checks primal solution; if feasible, adds it to storage by copying it */
 extern
-RETCODE SCIPprimalTrySolCopy(           /**< checks primal solution; if feasible, adds it to storage by copying it */
+RETCODE SCIPprimalTrySolCopy(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */

@@ -28,7 +28,8 @@
 #include "message.h"
 
 
-void errorMessage_call(                 /**< prints an error message */
+/** prints an error message */
+void errorMessage_call(
    const char*      msg,                /**< message to print */
    const char*      filename,           /**< name of the file, where the error occured */
    int              line                /**< line of the file, where the error occured */
@@ -37,7 +38,8 @@ void errorMessage_call(                 /**< prints an error message */
    fprintf(stderr, "[%s:%d] ERROR: %s\n", filename, line, msg);
 }
 
-void todoMessage_call(                  /**< prints a todo message */
+/** prints a todo message */
+void todoMessage_call(
    const char*      msg,                /**< message to print */
    const char*      filename,           /**< name of the file, where the error occured */
    int              line                /**< line of the file, where the error occured */
@@ -46,7 +48,8 @@ void todoMessage_call(                  /**< prints a todo message */
    fprintf(stderr, "[%s:%d] TODO: %s\n", filename, line, msg);
 }
 
-void infoMessage(                       /**< prints a message depending on the verbosity level */
+/** prints a message depending on the verbosity level */
+void infoMessage(
    VERBLEVEL        verblevel,          /**< actual verbosity level */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
    const char*      msg                 /**< message to print */

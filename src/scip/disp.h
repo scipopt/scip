@@ -57,8 +57,9 @@ typedef struct DispData DISPDATA;       /**< display column specific data */
 #include "lp.h"
 
 
+/** creates a display column */
 extern
-RETCODE SCIPdispCreate(                 /**< creates a display column */
+RETCODE SCIPdispCreate(
    DISP**           disp,               /**< pointer to store display column */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
@@ -74,70 +75,82 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
    Bool             stripline           /**< should the column be separated with a line from its right neighbour? */
    );
 
+/** frees memory of display column */
 extern
-RETCODE SCIPdispFree(                   /**< frees memory of display column */
+RETCODE SCIPdispFree(
    DISP**           disp,               /**< pointer to display column data structure */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** initializes display column */
 extern
-RETCODE SCIPdispInit(                   /**< initializes display column */
+RETCODE SCIPdispInit(
    DISP*            disp,               /**< display column */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** deinitializes display column */
 extern
-RETCODE SCIPdispExit(                   /**< deinitializes display column */
+RETCODE SCIPdispExit(
    DISP*            disp,               /**< display column */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** output display column to screen */
 extern
-RETCODE SCIPdispOutput(                 /**< output display column to screen */
+RETCODE SCIPdispOutput(
    DISP*            disp,               /**< display column */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** gets name of display column */
 extern
-const char* SCIPdispGetName(            /**< gets name of display column */
+const char* SCIPdispGetName(
    DISP*            disp                /**< display column */
    );
 
+/** gets user data of display column */
 extern
-DISPDATA* SCIPdispGetData(              /**< gets user data of display column */
+DISPDATA* SCIPdispGetData(
    DISP*            disp                /**< display column */
    );
 
+/** sets user data of display column; user has to free old data in advance! */
 extern
-void SCIPdispSetData(                   /**< sets user data of display column; user has to free old data in advance! */
+void SCIPdispSetData(
    DISP*            disp,               /**< display column */
    DISPDATA*        dispdata            /**< new display column user data */
    );
 
+/** gets position of display column */
 extern
-int SCIPdispGetPosition(                /**< gets position of display column */
+int SCIPdispGetPosition(
    DISP*            disp                /**< display column */
    );
 
+/** is display column initialized? */
 extern
-Bool SCIPdispIsInitialized(             /**< is display column initialized? */
+Bool SCIPdispIsInitialized(
    DISP*            disp                /**< display column */
    );
 
+/** prints one line of output with the active display columns */
 extern
-RETCODE SCIPdispPrintLine(              /**< prints one line of output with the active display columns */
+RETCODE SCIPdispPrintLine(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
    );
 
+/** activates all display lines fitting in the display w.r. to priority */
 extern
-RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting in the display w.r. to priority */
+RETCODE SCIPdispAutoActivate(
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** displays an integer in decimal form fitting in a given width */
 extern
-void SCIPdispDecimal(                   /**< displays an integer in decimal form fitting in a given width */
+void SCIPdispDecimal(
    FILE*            file,               /**< output stream */
    Longint          val,                /**< value to display */
    int              width               /**< width to fit into */

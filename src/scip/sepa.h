@@ -37,18 +37,21 @@ typedef struct Sepa SEPA;               /**< storage for separated variables */
 #include "tree.h"
 
 
+/** creates separation storage */
 extern
-RETCODE SCIPsepaCreate(                 /**< creates separation storage */
+RETCODE SCIPsepaCreate(
    SEPA**           sepa                /**< pointer to store separation storage */
    );
 
+/** frees separation storage */
 extern
-RETCODE SCIPsepaFree(                   /**< frees separation storage */
+RETCODE SCIPsepaFree(
    SEPA**           sepa                /**< pointer to store separation storage */
    );
 
+/** adds cut to separation storage and captures it */
 extern
-RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and captures it */
+RETCODE SCIPsepaAddCut(
    SEPA*            sepa,               /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -58,8 +61,9 @@ RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and 
    Bool             root                /**< are we at the root node? */
    );
 
+/** adds cuts to the LP and clears separation storage */
 extern
-RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears separation storage */
+RETCODE SCIPsepaApplyCuts(
    SEPA*            sepa,               /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -67,8 +71,9 @@ RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears sepa
    LP*              lp                  /**< LP data */
    );
 
+/** get number of cuts in the separation storage */
 extern
-int SCIPsepaGetNCuts(                   /**< get number of cuts in the separation storage */
+int SCIPsepaGetNCuts(
    SEPA*            sepa                /**< separation storage */
    );
 

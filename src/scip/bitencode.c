@@ -29,7 +29,8 @@
 #include "bitencode.h"
 
 
-void SCIPencodeSingleBit(               /**< encode a single bit vector into packed format */
+/** encode a single bit vector into packed format */
+void SCIPencodeSingleBit(
    const int*       inp,                /**< unpacked input vector */
    SINGLEPACKET*    out,                /**< buffer to store the packed vector */
    int              count               /**< number of elements */
@@ -107,7 +108,8 @@ void SCIPencodeSingleBit(               /**< encode a single bit vector into pac
    }
 }
 
-void SCIPdecodeSingleBit(               /**< decode a packed single bit vector into unpacked format */
+/** decode a packed single bit vector into unpacked format */
+void SCIPdecodeSingleBit(
    const SINGLEPACKET* inp,             /**< packed input vector */
    int*             out,                /**< buffer to store unpacked vector */
    int              count               /**< number of elements */
@@ -204,7 +206,8 @@ void SCIPdecodeSingleBit(               /**< decode a packed single bit vector i
    }
 }
 
-void SCIPencodeDualBit(                 /**< encode a dual bit vector into packed format */
+/** encode a dual bit vector into packed format */
+void SCIPencodeDualBit(
    const int*       inp,                /**< unpacked input vector */
    DUALPACKET*      out,                /**< buffer to store the packed vector */
    int              count               /**< number of elements */
@@ -262,7 +265,8 @@ void SCIPencodeDualBit(                 /**< encode a dual bit vector into packe
    }
 }
 
-void SCIPdecodeDualBit(                 /**< decode a packed dual bit vector into unpacked format */
+/** decode a packed dual bit vector into unpacked format */
+void SCIPdecodeDualBit(
    const DUALPACKET* inp,               /**< packed input vector */
    int*             out,                /**< buffer to store unpacked vector */
    int              count               /**< number of elements */

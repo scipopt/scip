@@ -32,29 +32,33 @@ typedef unsigned int DUALPACKET;                  /**< storing bit pairs in pack
 #define DUALPACKETSIZE   (sizeof(DUALPACKET)*4)   /**< each entry needs two bits of information */
 
 
+/** encode a single bit vector into packed format */
 extern
-void SCIPencodeSingleBit(               /**< encode a single bit vector into packed format */
+void SCIPencodeSingleBit(
    const int*       inp,                /**< unpacked input vector */
    SINGLEPACKET*    out,                /**< buffer to store the packed vector */
    int              count               /**< number of elements */
    );
 
+/** decode a packed single bit vector into unpacked format */
 extern
-void SCIPdecodeSingleBit(               /**< decode a packed single bit vector into unpacked format */
+void SCIPdecodeSingleBit(
    const SINGLEPACKET* inp,             /**< packed input vector */
    int*             out,                /**< buffer to store unpacked vector */
    int              count               /**< number of elements */
    );
 
+/** encode a dual bit vector into packed format */
 extern
-void SCIPencodeDualBit(                 /**< encode a dual bit vector into packed format */
+void SCIPencodeDualBit(
    const int*       inp,                /**< unpacked input vector */
    DUALPACKET*      out,                /**< buffer to store the packed vector */
    int              count               /**< number of elements */
    );
 
+/** decode a packed dual bit vector into unpacked format */
 extern
-void SCIPdecodeDualBit(                 /**< decode a packed dual bit vector into unpacked format */
+void SCIPdecodeDualBit(
    const DUALPACKET* inp,               /**< packed input vector */
    int*             out,                /**< buffer to store unpacked vector */
    int              count               /**< number of elements */

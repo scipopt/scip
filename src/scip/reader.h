@@ -64,8 +64,9 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
 #include "result.h"
 
 
+/** creates a reader */
 extern
-RETCODE SCIPreaderCreate(               /**< creates a reader */
+RETCODE SCIPreaderCreate(
    READER**         reader,             /**< pointer to store reader */
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
@@ -75,32 +76,37 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    READERDATA*      readerdata          /**< reader data */
    );
 
+/** frees memory of reader */
 extern
-RETCODE SCIPreaderFree(                 /**< frees memory of reader */
+RETCODE SCIPreaderFree(
    READER**         reader,             /**< pointer to reader data structure */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
 extern
-RETCODE SCIPreaderRead(                 /**< reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
+RETCODE SCIPreaderRead(
    READER*          reader,             /**< reader */
    SCIP*            scip,               /**< SCIP data structure */   
    const char*      filename,           /**< name of the input file */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets name of reader */
 extern
-const char* SCIPreaderGetName(          /**< gets name of reader */
+const char* SCIPreaderGetName(
    READER*          reader              /**< reader */
    );
 
+/** gets user data of reader */
 extern
-READERDATA* SCIPreaderGetData(          /**< gets user data of reader */
+READERDATA* SCIPreaderGetData(
    READER*          reader              /**< reader */
    );
 
+/** sets user data of reader; user has to free old data in advance! */
 extern
-void SCIPreaderSetData(                 /**< sets user data of reader; user has to free old data in advance! */
+void SCIPreaderSetData(
    READER*          reader,             /**< reader */
    READERDATA*      readerdata          /**< new reader user data */
    );

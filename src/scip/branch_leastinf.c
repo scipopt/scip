@@ -95,7 +95,8 @@ DECL_BRANCHEXLP(branchExlpLeastinf)
  * branching specific interface methods
  */
 
-RETCODE SCIPincludeBranchruleLeastinf(  /**< creates the least infeasible LP braching rule and includes it in SCIP */
+/** creates the least infeasible LP braching rule and includes it in SCIP */
+RETCODE SCIPincludeBranchruleLeastinf(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

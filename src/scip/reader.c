@@ -44,7 +44,8 @@ struct Reader
 
 /* reader methods */
 
-RETCODE SCIPreaderCreate(               /**< creates a reader */
+/** creates a reader */
+RETCODE SCIPreaderCreate(
    READER**         reader,             /**< pointer to store reader */
    const char*      name,               /**< name of reader */
    const char*      desc,               /**< description of reader */
@@ -71,7 +72,8 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPreaderFree(                 /**< frees memory of reader */
+/** frees memory of reader */
+RETCODE SCIPreaderFree(
    READER**         reader,             /**< pointer to reader data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -93,8 +95,9 @@ RETCODE SCIPreaderFree(                 /**< frees memory of reader */
    return SCIP_OKAY;
 }
 
+/** splits filename into path, name, and extension */
 static
-void splitFilename(                     /**< splits filename into path, name, and extension */
+void splitFilename(
    char*            filename,           /**< filename to split; is destroyed (but not freed) during process */
    char**           path,               /**< pointer to store path */
    char**           name,               /**< pointer to store name */
@@ -132,8 +135,9 @@ void splitFilename(                     /**< splits filename into path, name, an
    }
 }
 
+/** returns TRUE, if reader is responsible for files with the given extension */
 static
-Bool readerIsApplicable(                /**< returns TRUE, if reader is responsible for files with the given extension */
+Bool readerIsApplicable(
    READER*          reader,             /**< reader */
    const char*      extension           /**< extension of the input file name */
    )
@@ -145,7 +149,8 @@ Bool readerIsApplicable(                /**< returns TRUE, if reader is responsi
    return (strcasecmp(reader->extension, extension) == 0);
 }
 
-RETCODE SCIPreaderRead(                 /**< reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
+/** reads problem data from file with given reader or returns SCIP_DIDNOTRUN */
+RETCODE SCIPreaderRead(
    READER*          reader,             /**< reader */
    SCIP*            scip,               /**< SCIP data structure */   
    const char*      filename,           /**< name of the input file */
@@ -185,7 +190,8 @@ RETCODE SCIPreaderRead(                 /**< reads problem data from file with g
    return SCIP_OKAY;
 }
 
-const char* SCIPreaderGetName(          /**< gets name of reader */
+/** gets name of reader */
+const char* SCIPreaderGetName(
    READER*          reader              /**< reader */
    )
 {
@@ -194,7 +200,8 @@ const char* SCIPreaderGetName(          /**< gets name of reader */
    return reader->name;
 }
 
-READERDATA* SCIPreaderGetData(          /**< gets user data of reader */
+/** gets user data of reader */
+READERDATA* SCIPreaderGetData(
    READER*          reader              /**< reader */
    )
 {
@@ -203,7 +210,8 @@ READERDATA* SCIPreaderGetData(          /**< gets user data of reader */
    return reader->readerdata;
 }
 
-void SCIPreaderSetData(                 /**< sets user data of reader; user has to free old data in advance! */
+/** sets user data of reader; user has to free old data in advance! */
+void SCIPreaderSetData(
    READER*          reader,             /**< reader */
    READERDATA*      readerdata          /**< new reader user data */
    )

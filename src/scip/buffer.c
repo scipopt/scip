@@ -29,7 +29,8 @@
 
 
 
-RETCODE SCIPbufferCreate(               /**< creates memory buffer storage */
+/** creates memory buffer storage */
+RETCODE SCIPbufferCreate(
    BUFFER**         buffer              /**< pointer to memory buffer storage */
    )
 {
@@ -45,7 +46,8 @@ RETCODE SCIPbufferCreate(               /**< creates memory buffer storage */
    return SCIP_OKAY;
 }
 
-void SCIPbufferFree(                    /**< frees memory buffer */
+/** frees memory buffer */
+void SCIPbufferFree(
    BUFFER**         buffer              /**< pointer to memory buffer storage */
    )
 {
@@ -64,7 +66,8 @@ void SCIPbufferFree(                    /**< frees memory buffer */
    freeMemory(buffer);
 }
 
-RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
+/** allocates the next unused buffer */
+RETCODE SCIPbufferCapture(
    BUFFER*          buffer,             /**< memory buffer storage */
    const SET*       set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
@@ -124,7 +127,8 @@ RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
    return SCIP_OKAY;
 }
 
-void SCIPbufferRelease(                 /**< releases a buffer */
+/** releases a buffer */
+void SCIPbufferRelease(
    BUFFER*          buffer,             /**< memory buffer storage */
    void**           ptr,                /**< pointer to the allocated memory buffer */
    int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */

@@ -99,7 +99,8 @@ DECL_CONSCHCK(consChckIntegral)
  * constraint specific interface methods
  */
 
-RETCODE SCIPincludeConsHdlrIntegral(    /**< creates the handler for integrality constraint and includes it in SCIP */
+/** creates the handler for integrality constraint and includes it in SCIP */
+RETCODE SCIPincludeConsHdlrIntegral(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

@@ -27,7 +27,8 @@
 #include "retcode.h"
 
 
-void SCIPretcodePrint(                  /**< prints error message for return code */
+/** prints error message for return code */
+void SCIPretcodePrint(
    FILE*            errout,             /**< file stream to write error message */
    RETCODE          retcode             /**< SCIP return code causing the error */
    )
@@ -65,6 +66,9 @@ void SCIPretcodePrint(                  /**< prints error message for return cod
       break;
    case SCIP_INVALIDRESULT:
       fprintf(errout, "method returned an invalid result code");
+      break;
+   case SCIP_PLUGINNOTFOUND:
+      fprintf(errout, "a required plugin was not found");
       break;
    default:
       fprintf(errout, "unknown error code");

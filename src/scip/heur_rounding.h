@@ -29,8 +29,9 @@
 #include "scip.h"
 
 
+/** creates the simple rounding heuristic and includes it in SCIP */
 extern
-RETCODE SCIPincludeHeurRounding(        /**< creates the simple rounding heuristic and includes it in SCIP */
+RETCODE SCIPincludeHeurRounding(
    SCIP*            scip                /**< SCIP data structure */
    );
 

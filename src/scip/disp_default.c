@@ -388,7 +388,8 @@ DECL_DISPOUTP(SCIPdispOutpGap)
  * default display columns specific interface methods
  */
 
-RETCODE SCIPincludeDispDefault(         /**< includes the default display columns in SCIP */
+/** includes the default display columns in SCIP */
+RETCODE SCIPincludeDispDefault(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

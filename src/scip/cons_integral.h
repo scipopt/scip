@@ -29,8 +29,9 @@
 #include "scip.h"
 
 
+/** creates the handler for the integrality constraint and includes it in SCIP */
 extern
-RETCODE SCIPincludeConsHdlrIntegral(    /**< creates the handler for the integrality constraint and includes it in SCIP */
+RETCODE SCIPincludeConsHdlrIntegral(
    SCIP*            scip                /**< SCIP data structure */
    );
 

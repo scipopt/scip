@@ -37,38 +37,43 @@ typedef struct Cutpool CUTPOOL;         /**< storage for pooled cuts */
 #include "sepa.h"
 
 
+/** creates cut pool */
 extern
-RETCODE SCIPcutpoolCreate(              /**< creates cut pool */
+RETCODE SCIPcutpoolCreate(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
    );
 
+/** frees cut pool */
 extern
-RETCODE SCIPcutpoolFree(                /**< frees cut pool */
+RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
 
+/** if not already existing, adds row to cut pool and captures it */
 extern
-RETCODE SCIPcutpoolAddRow(              /**< if not already existing, adds row to cut pool and captures it */
+RETCODE SCIPcutpoolAddRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row                 /**< cutting plane to add */
    );
 
+/** adds row to cut pool and captures it; doesn't check for multiple cuts */
 extern
-RETCODE SCIPcutpoolAddNewRow(           /**< adds row to cut pool and captures it; doesn't check for multiple cuts */
+RETCODE SCIPcutpoolAddNewRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row                 /**< cutting plane to add */
    );
 
+/** removes the LP row from the cut pool */
 extern
-RETCODE SCIPcutpoolDelRow(              /**< removes the LP row from the cut pool */
+RETCODE SCIPcutpoolDelRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -77,8 +82,9 @@ RETCODE SCIPcutpoolDelRow(              /**< removes the LP row from the cut poo
    ROW*             row                 /**< row to remove */
    );
 
+/** separates cuts of the cut pool */
 extern
-RETCODE SCIPcutpoolSeparate(            /**< separates cuts of the cut pool */
+RETCODE SCIPcutpoolSeparate(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -88,8 +94,9 @@ RETCODE SCIPcutpoolSeparate(            /**< separates cuts of the cut pool */
    Bool             root                /**< are we at the root node? */
    );
 
+/** get number of cuts in the cut pool */
 extern
-int SCIPcutpoolGetNCuts(                /**< get number of cuts in the cut pool */
+int SCIPcutpoolGetNCuts(
    CUTPOOL*         cutpool             /**< cut pool */
    );
 

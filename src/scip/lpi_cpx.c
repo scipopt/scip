@@ -104,8 +104,9 @@ static int          numlp = 0;          /**< number of open LP objects */
  * dynamic memory arrays
  */
 
+/** resizes larray and uarray to have at least num entries */
 static
-RETCODE ensureBoundchgarrayMem(         /**< resizes larray and uarray to have at least num entries */
+RETCODE ensureBoundchgarrayMem(
    LPI*             lpi,                /**< LP interface structure */
    int              num                 /**< minimal number of entries in array */
    )
@@ -132,8 +133,9 @@ RETCODE ensureBoundchgarrayMem(         /**< resizes larray and uarray to have a
    return SCIP_OKAY;
 }
 
+/** resizes senarray, rngarray, and rngindarray to have at least num entries */
 static
-RETCODE ensureSidechgarrayMem(          /**< resizes senarray, rngarray, and rngindarray to have at least num entries */
+RETCODE ensureSidechgarrayMem(
    LPI*             lpi,                /**< LP interface structure */
    int              num                 /**< minimal number of entries in array */
    )
@@ -163,24 +165,27 @@ RETCODE ensureSidechgarrayMem(          /**< resizes senarray, rngarray, and rng
  * LPi state methods
  */
 
+/** returns the number of packets needed to store column packet information */
 static 
-int colpacketNum(                       /**< returns the number of packets needed to store column packet information */
+int colpacketNum(
    int              ncol                /**< number of columns to store */
    )
 {
    return (ncol+COLS_PER_PACKET-1)/COLS_PER_PACKET;
 }
 
+/** returns the number of packets needed to store row packet information */
 static 
-int rowpacketNum(                       /**< returns the number of packets needed to store row packet information */
+int rowpacketNum(
    int              nrow                /**< number of rows to store */
    )
 {
    return (nrow+ROWS_PER_PACKET-1)/ROWS_PER_PACKET;
 }
 
+/** store row and column basis status in a packed LPi state object */
 static
-void lpistatePack(                      /**< store row and column basis status in a packed LPi state object */
+void lpistatePack(
    LPISTATE*       lpistate,            /**< pointer to LPi state data */
    const int*      cstat,               /**< basis status of columns in unpacked format */
    const int*      rstat                /**< basis status of rows in unpacked format */
@@ -194,8 +199,9 @@ void lpistatePack(                      /**< store row and column basis status i
    SCIPencodeDualBit(rstat, lpistate->packrstat, lpistate->nrow);
 }
 
+/** unpacks row and column basis status from a packed LPi state object */
 static
-void lpistateUnpack(                    /**< unpacks row and column basis status from a packed LPi state object */
+void lpistateUnpack(
    const LPISTATE* lpistate,            /**< pointer to LPi state data */
    int*            cstat,               /**< buffer for storing basis status of columns in unpacked format */
    int*            rstat                /**< buffer for storing basis status of rows in unpacked format */
@@ -209,8 +215,9 @@ void lpistateUnpack(                    /**< unpacks row and column basis status
    SCIPdecodeDualBit(lpistate->packrstat, rstat, lpistate->nrow);
 }
 
+/** creates LPi state information object */
 static
-RETCODE lpistateCreate(                 /**< creates LPi state information object */
+RETCODE lpistateCreate(
    LPISTATE**       lpistate,           /**< pointer to LPi state */
    MEMHDR*          memhdr,             /**< block memory */
    int              ncol,               /**< number of columns to store */
@@ -230,8 +237,9 @@ RETCODE lpistateCreate(                 /**< creates LPi state information objec
    return SCIP_OKAY;
 }
 
+/** frees LPi state information */
 static
-void lpistateFree(                      /**< frees LPi state information */
+void lpistateFree(
    LPISTATE**       lpistate,           /**< pointer to LPi state information (like basis information) */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -421,7 +429,8 @@ int cpxObjsen(OBJSEN objsen)
 
 static char cpxname[255];
 
-const char* SCIPlpiGetSolverName(       /**< gets name and version of LP solver */
+/** gets name and version of LP solver */
+const char* SCIPlpiGetSolverName(
    void
    )
 {
@@ -429,7 +438,8 @@ const char* SCIPlpiGetSolverName(       /**< gets name and version of LP solver 
    return cpxname;
 }
 
-RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
+/** creates an LP problem object */
+RETCODE SCIPlpiCreate(
    LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*      name                /**< problem name */
    )
@@ -472,7 +482,8 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
+/** deletes an LP problem object */
+RETCODE SCIPlpiFree(
    LPI**            lpi                 /**< pointer to an LP interface structure */
    )
 {
@@ -502,7 +513,8 @@ RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
+/** adds columns to the LP */
+RETCODE SCIPlpiAddCols(
    LPI*             lpi,                /**< LP interface structure */
    int              ncol,               /**< number of columns to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
@@ -527,7 +539,8 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiDelColset(               /**< deletes columns from LP */
+/** deletes columns from LP */
+RETCODE SCIPlpiDelColset(
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of columns
                                          *   input:  1 if column should be deleted, 0 if not
@@ -545,7 +558,8 @@ RETCODE SCIPlpiDelColset(               /**< deletes columns from LP */
    return SCIP_OKAY;   
 }
 
-RETCODE SCIPlpiDelCols(                 /**< deletes all columns in the given range from LP */
+/** deletes all columns in the given range from LP */
+RETCODE SCIPlpiDelCols(
    LPI*             lpi,                /**< LP interface structure */
    int              firstcol,           /**< first column to be deleted */
    int              lastcol             /**< last column to be deleted */
@@ -562,8 +576,9 @@ RETCODE SCIPlpiDelCols(                 /**< deletes all columns in the given ra
    return SCIP_OKAY;   
 }
 
+/** converts SCIP's lhs/rhs pairs into CPLEX's sen/rhs/rng */
 static
-void convertSides(                      /**< converts SCIP's lhs/rhs pairs into CPLEX's sen/rhs/rng */
+void convertSides(
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows */
    const Real*      lhs,                /**< left hand side vector */
@@ -625,7 +640,8 @@ void convertSides(                      /**< converts SCIP's lhs/rhs pairs into 
    }
 }
 
-RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
+/** adds rows to the LP */
+RETCODE SCIPlpiAddRows(
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
@@ -659,7 +675,8 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiDelRowset(               /**< deletes rows from LP */
+/** deletes rows from LP */
+RETCODE SCIPlpiDelRowset(
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
                                          *   input:  1 if row should be deleted, 0 if not
@@ -677,7 +694,8 @@ RETCODE SCIPlpiDelRowset(               /**< deletes rows from LP */
    return SCIP_OKAY;   
 }
 
-RETCODE SCIPlpiDelRows(                 /**< deletes all rows in the given range from LP */
+/** deletes all rows in the given range from LP */
+RETCODE SCIPlpiDelRows(
    LPI*             lpi,                /**< LP interface structure */
    int              firstrow,           /**< first row to be deleted */
    int              lastrow             /**< last row to be deleted */
@@ -694,7 +712,8 @@ RETCODE SCIPlpiDelRows(                 /**< deletes all rows in the given range
    return SCIP_OKAY;   
 }
 
-RETCODE SCIPlpiGetBinvRow(              /**< get dense row of inverse basis matrix (A_B)^-1 */
+/** get dense row of inverse basis matrix (A_B)^-1 */
+RETCODE SCIPlpiGetBinvRow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    Real*            val                 /**< vector to return coefficients */
@@ -709,7 +728,8 @@ RETCODE SCIPlpiGetBinvRow(              /**< get dense row of inverse basis matr
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+/** get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+RETCODE SCIPlpiGetBinvARow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
@@ -725,7 +745,8 @@ RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matr
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of columns */
+/** changes lower and upper bounds of columns */
+RETCODE SCIPlpiChgBounds(
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
@@ -748,7 +769,8 @@ RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of c
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides of rows */
+/** changes left and right hand sides of rows */
+RETCODE SCIPlpiChgSides(
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
@@ -779,7 +801,8 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiChgObjsen(               /**< changes the objective sense */
+/** changes the objective sense */
+RETCODE SCIPlpiChgObjsen(
    LPI*             lpi,                /**< LP interface structure */
    OBJSEN           objsen              /**< new objective sense */
    )
@@ -795,7 +818,8 @@ RETCODE SCIPlpiChgObjsen(               /**< changes the objective sense */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetBind(                 /**< returns the indices of the basic columns and rows */
+/** returns the indices of the basic columns and rows */
+RETCODE SCIPlpiGetBind(
    LPI*             lpi,                /**< LP interface structure */
    int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
    )
@@ -809,7 +833,8 @@ RETCODE SCIPlpiGetBind(                 /**< returns the indices of the basic co
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetIntpar(               /**< gets integer parameter of LP */
+/** gets integer parameter of LP */
+RETCODE SCIPlpiGetIntpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    int*             ival                /**< buffer to store the parameter value */
@@ -841,7 +866,8 @@ RETCODE SCIPlpiGetIntpar(               /**< gets integer parameter of LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSetIntpar(               /**< sets integer parameter of LP */
+/** sets integer parameter of LP */
+RETCODE SCIPlpiSetIntpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    int              ival                /**< parameter value */
@@ -900,7 +926,8 @@ RETCODE SCIPlpiSetIntpar(               /**< sets integer parameter of LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetRealpar(              /**< gets floating point parameter of LP */
+/** gets floating point parameter of LP */
+RETCODE SCIPlpiGetRealpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    Real*            dval                /**< buffer to store the parameter value */
@@ -924,7 +951,8 @@ RETCODE SCIPlpiGetRealpar(              /**< gets floating point parameter of LP
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP */
+/** sets floating point parameter of LP */
+RETCODE SCIPlpiSetRealpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    Real             dval                /**< parameter value */
@@ -955,7 +983,8 @@ RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetObjval(               /**< gets objective value of solution */
+/** gets objective value of solution */
+RETCODE SCIPlpiGetObjval(
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval              /**< stores the objective value */
    )
@@ -969,7 +998,8 @@ RETCODE SCIPlpiGetObjval(               /**< gets objective value of solution */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
+/** gets primal and dual solution vectors */
+RETCODE SCIPlpiGetSol(
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval,             /**< stores the objective value */
    Real*            primsol,            /**< primal solution vector */
@@ -996,7 +1026,8 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetPrimalRay(            /**< gets primal ray for unbounded LPs */
+/** gets primal ray for unbounded LPs */
+RETCODE SCIPlpiGetPrimalRay(
    LPI*             lpi,                /**< LP interface structure */
    Real*            ray                 /**< primal ray */
    )
@@ -1014,7 +1045,8 @@ RETCODE SCIPlpiGetPrimalRay(            /**< gets primal ray for unbounded LPs *
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasibility */
+/** gets dual farkas proof for infeasibility */
+RETCODE SCIPlpiGetDualfarkas(
    LPI*             lpi,                /**< LP interface structure */
    Real*            dualfarkas          /**< dual farkas row multipliers */
    )
@@ -1033,7 +1065,8 @@ RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasib
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iterations on all candidates */
+/** performs strong branching iterations on all candidates */
+RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
    const int*       cand,               /**< candidate list */
    int              ncand,              /**< size of candidate list */
@@ -1051,7 +1084,8 @@ RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iteration
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the LP */
+/** calls primal simplex to solve the LP */
+RETCODE SCIPlpiSolvePrimal(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1113,7 +1147,8 @@ RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the L
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP */
+/** calls dual simplex to solve the LP */
+RETCODE SCIPlpiSolveDual(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1175,7 +1210,8 @@ RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiGetBasisFeasibility(     /**< gets information about primal and dual feasibility of the LP basis */
+/** gets information about primal and dual feasibility of the LP basis */
+RETCODE SCIPlpiGetBasisFeasibility(
    LPI*             lpi,                /**< LP interface structure */
    Bool*            primalfeasible,     /**< stores primal feasibility status */
    Bool*            dualfeasible        /**< stores dual feasibility status */
@@ -1189,7 +1225,8 @@ RETCODE SCIPlpiGetBasisFeasibility(     /**< gets information about primal and d
    return SCIP_OKAY;
 }
 
-Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbounded */
+/** returns TRUE iff LP is primal unbounded */
+Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1201,7 +1238,8 @@ Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbou
    return (lpi->solstat == CPX_STAT_UNBOUNDED);
 }
 
-Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infeasible */
+/** returns TRUE iff LP is primal infeasible */
+Bool SCIPlpiIsPrimalInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1213,7 +1251,8 @@ Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infea
    return (lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD);
 }
 
-Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to optimality */
+/** returns TRUE iff LP was solved to optimality */
+Bool SCIPlpiIsOptimal(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1225,7 +1264,8 @@ Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to o
    return (lpi->solstat == CPX_STAT_OPTIMAL);
 }
 
-Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is stable */
+/** returns TRUE iff actual LP basis is stable */
+Bool SCIPlpiIsStable(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1237,7 +1277,8 @@ Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is
    return (lpi->solstat != CPX_STAT_NUM_BEST && lpi->solstat != CPX_STAT_OPTIMAL_INFEAS);
 }
 
-Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limit was reached */
+/** returns TRUE iff the objective limit was reached */
+Bool SCIPlpiIsObjlimExc(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1249,7 +1290,8 @@ Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limi
    return (lpi->solstat == CPX_STAT_ABORT_OBJ_LIM);
 }
 
-Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limit was reached */
+/** returns TRUE iff the iteration limit was reached */
+Bool SCIPlpiIsIterlimExc(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1261,7 +1303,8 @@ Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limi
    return (lpi->solstat == CPX_STAT_ABORT_IT_LIM);
 }
 
-Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was reached */
+/** returns TRUE iff the time limit was reached */
+Bool SCIPlpiIsTimelimExc(
    LPI*             lpi                 /**< LP interface structure */
    )
 {
@@ -1274,7 +1317,8 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
 }
 
 
-RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis information) into lpistate object */
+/** stores LPi state (like basis information) into lpistate object */
+RETCODE SCIPlpiGetState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1327,7 +1371,8 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis information) into solver */
+/** loads LPi state (like basis information) into solver */
+RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1366,7 +1411,8 @@ RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis informa
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiFreeState(               /**< frees LPi state information */
+/** frees LPi state information */
+RETCODE SCIPlpiFreeState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
@@ -1380,7 +1426,8 @@ RETCODE SCIPlpiFreeState(               /**< frees LPi state information */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiWriteState(              /**< writes LPi state (like basis information) to a file */
+/** writes LPi state (like basis information) to a file */
+RETCODE SCIPlpiWriteState(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    )
@@ -1394,7 +1441,8 @@ RETCODE SCIPlpiWriteState(              /**< writes LPi state (like basis inform
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiWriteLP(                 /**< writes LP to a file */
+/** writes LP to a file */
+RETCODE SCIPlpiWriteLP(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    )

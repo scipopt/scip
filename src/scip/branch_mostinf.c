@@ -95,7 +95,8 @@ DECL_BRANCHEXLP(branchExlpMostinf)
  * branching specific interface methods
  */
 
-RETCODE SCIPincludeBranchruleMostinf(   /**< creates the most infeasible LP braching rule and includes it in SCIP */
+/** creates the most infeasible LP braching rule and includes it in SCIP */
+RETCODE SCIPincludeBranchruleMostinf(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

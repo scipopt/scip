@@ -26,7 +26,7 @@
 #define __PROB_H__
 
 
-/**< objective sense: minimization or maximization */
+/** objective sense: minimization or maximization */
 enum Objsense
 {
    SCIP_OBJSENSE_MAXIMIZE = -1,         /**< maximization of objective function */
@@ -75,22 +75,25 @@ struct Prob
  * problem creation
  */
 
+/** creates problem data structure */
 extern
-RETCODE SCIPprobCreate(                 /**< creates problem data structure */
+RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
    const char*      name                /**< problem name */
    );
 
+/** frees problem data structure */
 extern
-RETCODE SCIPprobFree(                   /**< frees problem data structure */
+RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data (or NULL, if it's the original problem) */
    );
 
+/** transform problem data into normalized form */
 extern
-RETCODE SCIPprobTransform(              /**< transform problem data into normalized form */
+RETCODE SCIPprobTransform(
    PROB*            source,             /**< problem to transform */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -98,14 +101,16 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    PROB**           target              /**< pointer to target problem data structure */
    );
 
+/** activates constraints in the problem */
 extern
-RETCODE SCIPprobActivate(               /**< activates constraints in the problem */
+RETCODE SCIPprobActivate(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** deactivates constraints in the problem */
 extern
-RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the problem */
+RETCODE SCIPprobDeactivate(
    PROB*            prob                /**< problem data */
    );
 
@@ -114,44 +119,49 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
  * problem modification
  */
 
+/** adds variable to the problem and captures it */
 extern
-RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
+RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< variable to add */
    );
 
+/** changes the type of a variable in the problem */
 extern
-RETCODE SCIPprobChgVarType(             /**< changes the type of a variable in the problem */
+RETCODE SCIPprobChgVarType(
    PROB*            prob,               /**< problem data */
    VAR*             var,                /**< variable to add */
    VARTYPE          vartype             /**< new type of variable */
    );
 
+/** adds constraint to the problem and captures it */
 extern
-RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
+RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );
 
+/** sets objective sense: minimization or maximization */
 extern
-void SCIPprobSetObjsense(               /**< sets objective sense: minimization or maximization */
+void SCIPprobSetObjsense(
    PROB*            prob,               /**< problem data */
    OBJSENSE         objsense            /**< new objective sense */
    );
 
+/** sets limit on objective function, such that only solutions better than this limit are accepted */
 extern
-void SCIPprobSetObjlim(                 /**< sets limit on objective function, such that only solutions better than this
-                                           limit are accepted */
+void SCIPprobSetObjlim(
    PROB*            prob,               /**< problem data */
    Real             objlim              /**< objective limit */
    );
 
+/** returns the external value of the given internal objective value */
 extern
-Real SCIPprobExternObjval(              /**< returns the external value of the given internal objective value */
+Real SCIPprobExternObjval(
    PROB*            prob,               /**< problem data */
    Real             objval              /**< internal objective value */
    );
@@ -161,25 +171,29 @@ Real SCIPprobExternObjval(              /**< returns the external value of the g
  * problem information
  */
 
+/** gets problem name */
 extern
-const char* SCIPprobGetName(            /**< gets problem name */
+const char* SCIPprobGetName(
    PROB*            prob                /**< problem data */
    );
 
+/** returns variable of the problem with given name */
 extern
-VAR* SCIPprobFindVar(                   /**< returns variable of the problem with given name */
+VAR* SCIPprobFindVar(
    PROB*            prob,               /**< problem data */
    const char*      name                /**< name of variable to find */
    );
 
+/** returns constraint of the problem with given name */
 extern
-CONS* SCIPprobFindCons(                 /**< returns constraint of the problem with given name */
+CONS* SCIPprobFindCons(
    PROB*            prob,               /**< problem data */
    const char*      name                /**< name of variable to find */
    );
 
+/** displays actual pseudo solution */
 extern
-void SCIPprobPrintPseudoSol(            /**< displays actual pseudo solution */
+void SCIPprobPrintPseudoSol(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
    );

@@ -46,8 +46,9 @@ struct Sepa
  * dynamic memory arrays
  */
 
+/** resizes cuts and score arrays to be able to store at least num entries */
 static
-RETCODE sepaEnsureCutsMem(              /**< resizes cuts and score arrays to be able to store at least num entries */
+RETCODE sepaEnsureCutsMem(
    SEPA*            sepa,               /**< separation storage */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -73,7 +74,8 @@ RETCODE sepaEnsureCutsMem(              /**< resizes cuts and score arrays to be
 
 
 
-RETCODE SCIPsepaCreate(                 /**< creates separation storage */
+/** creates separation storage */
+RETCODE SCIPsepaCreate(
    SEPA**           sepa                /**< pointer to store separation storage */
    )
 {
@@ -89,7 +91,8 @@ RETCODE SCIPsepaCreate(                 /**< creates separation storage */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsepaFree(                   /**< frees separation storage */
+/** frees separation storage */
+RETCODE SCIPsepaFree(
    SEPA**           sepa                /**< pointer to store separation storage */
    )
 {
@@ -102,7 +105,8 @@ RETCODE SCIPsepaFree(                   /**< frees separation storage */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and captures it */
+/** adds cut to separation storage and captures it */
+RETCODE SCIPsepaAddCut(
    SEPA*            sepa,               /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -164,7 +168,8 @@ RETCODE SCIPsepaAddCut(                 /**< adds cut to separation storage and 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears separation storage */
+/** adds cuts to the LP and clears separation storage */
+RETCODE SCIPsepaApplyCuts(
    SEPA*            sepa,               /**< separation storage */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -196,7 +201,8 @@ RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears sepa
    return SCIP_OKAY;
 }
 
-int SCIPsepaGetNCuts(                   /**< get number of cuts in the separation storage */
+/** get number of cuts in the separation storage */
+int SCIPsepaGetNCuts(
    SEPA*            sepa                /**< separation storage */
    )
 {

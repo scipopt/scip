@@ -15,7 +15,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   disp_default.c
+/**@file   disp_default.h
  * @brief  default display columns
  * @author Tobias Achterberg
  */
@@ -29,8 +29,9 @@
 #include "scip.h"
 
 
+/** includes the default display columns in SCIP */
 extern
-RETCODE SCIPincludeDispDefault(         /**< includes the default display columns in SCIP */
+RETCODE SCIPincludeDispDefault(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -136,8 +136,9 @@ struct EventFilter
  * Event handler methods
  */
 
+/** creates an event handler */
 extern
-RETCODE SCIPeventhdlrCreate(            /**< creates an event handler */
+RETCODE SCIPeventhdlrCreate(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*      name,               /**< name of event handler */
    const char*      desc,               /**< description of event handler */
@@ -149,50 +150,58 @@ RETCODE SCIPeventhdlrCreate(            /**< creates an event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    );
 
+/** calls destructor and frees memory of event handler */
 extern
-RETCODE SCIPeventhdlrFree(              /**< calls destructor and frees memory of event handler */
+RETCODE SCIPeventhdlrFree(
    EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** initializes event handler */
 extern
-RETCODE SCIPeventhdlrInit(              /**< initializes event handler */
+RETCODE SCIPeventhdlrInit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** calls exit method of event handler */
 extern
-RETCODE SCIPeventhdlrExit(              /**< calls exit method of event handler */
+RETCODE SCIPeventhdlrExit(
    EVENTHDLR*       eventhdlr,          /**< event handler for this event */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** calls execution method of event handler */
 extern
-RETCODE SCIPeventhdlrExec(              /**< calls execution method of event handler */
+RETCODE SCIPeventhdlrExec(
    EVENTHDLR*       eventhdlr,          /**< event handler */
    const SET*       set,                /**< global SCIP settings */
    EVENT*           event,              /**< event to call event handler with */
    EVENTDATA*       eventdata           /**< user data for the issued event */
    );
 
+/** gets name of event handler */
 extern
-const char* SCIPeventhdlrGetName(       /**< gets name of event handler */
+const char* SCIPeventhdlrGetName(
    EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/** gets user data of event handler */
 extern
-EVENTHDLRDATA* SCIPeventhdlrGetData(    /**< gets user data of event handler */
+EVENTHDLRDATA* SCIPeventhdlrGetData(
    EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/** sets user data of event handler; user has to free old data in advance! */
 extern
-void SCIPeventhdlrSetData(              /**< sets user data of event handler; user has to free old data in advance! */
+void SCIPeventhdlrSetData(
    EVENTHDLR*       eventhdlr,          /**< event handler */
    EVENTHDLRDATA*   eventhdlrdata       /**< new event handler user data */
    );
 
+/** is event handler initialized? */
 extern
-Bool SCIPeventhdlrIsInitialized(        /**< is event handler initialized? */
+Bool SCIPeventhdlrIsInitialized(
    EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
@@ -202,8 +211,9 @@ Bool SCIPeventhdlrIsInitialized(        /**< is event handler initialized? */
  * Event methods
  */
 
+/** creates an event for a change in the lower bound of a variable */
 extern
-RETCODE SCIPeventCreateLbChanged(       /**< creates an event for a change in the lower bound of a variable */
+RETCODE SCIPeventCreateLbChanged(
    EVENT**          event,              /**< pointer to store the event */
    MEMHDR*          memhdr,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
@@ -211,8 +221,9 @@ RETCODE SCIPeventCreateLbChanged(       /**< creates an event for a change in th
    Real             newbound            /**< new bound after bound changed */
    );
 
+/** creates an event for a change in the upper bound of a variable */
 extern
-RETCODE SCIPeventCreateUbChanged(       /**< creates an event for a change in the upper bound of a variable */
+RETCODE SCIPeventCreateUbChanged(
    EVENT**          event,              /**< pointer to store the event */
    MEMHDR*          memhdr,             /**< block memory */
    VAR*             var,                /**< variable whose bound changed */
@@ -220,38 +231,44 @@ RETCODE SCIPeventCreateUbChanged(       /**< creates an event for a change in th
    Real             newbound            /**< new bound after bound changed */
    );
 
+/** frees an event */
 extern
-RETCODE SCIPeventFree(                  /**< frees an event */
+RETCODE SCIPeventFree(
    EVENT**          event,              /**< event to free */
    MEMHDR*          memhdr              /**< block memory buffer */
    );
 
+/** gets type of event */
 extern
-RETCODE SCIPeventGetType(               /**< gets type of event */
+RETCODE SCIPeventGetType(
    EVENT*           event,              /**< event */
    EVENTTYPE*       eventtype           /**< pointer to store the event type */
    );
 
+/** gets variable for a domain change event */
 extern
-RETCODE SCIPeventGetVar(                /**< gets variable for a domain change event */
+RETCODE SCIPeventGetVar(
    EVENT*           event,              /**< event */
    VAR**            var                 /**< pointer to store the variable */
    );
 
+/** gets old bound for a bound change event */
 extern
-RETCODE SCIPeventGetOldbound(           /**< gets old bound for a bound change event */
+RETCODE SCIPeventGetOldbound(
    EVENT*           event,              /**< event */
    Real*            bound               /**< pointer to store the bound */
    );
 
+/** gets new bound for a bound change event */
 extern
-RETCODE SCIPeventGetNewbound(           /**< gets new bound for a bound change event */
+RETCODE SCIPeventGetNewbound(
    EVENT*           event,              /**< event */
    Real*            bound               /**< pointer to store the bound */
    );
 
+/** processes event by calling the appropriate event handlers */
 extern
-RETCODE SCIPeventProcess(               /**< processes event by calling the appropriate event handlers */
+RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -266,21 +283,24 @@ RETCODE SCIPeventProcess(               /**< processes event by calling the appr
  * Event filter methods
  */
 
+/** creates an event filter */
 extern
-RETCODE SCIPeventfilterCreate(          /**< creates an event filter */
+RETCODE SCIPeventfilterCreate(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    MEMHDR*          memhdr              /**< block memory buffer */
    );
 
+/** frees an event filter and the associated event data entries */
 extern
-RETCODE SCIPeventfilterFree(            /**< frees an event filter and the associated event data entries */
+RETCODE SCIPeventfilterFree(
    EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** adds element to event filter */
 extern
-RETCODE SCIPeventfilterAdd(             /**< adds element to event filter */
+RETCODE SCIPeventfilterAdd(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -289,8 +309,9 @@ RETCODE SCIPeventfilterAdd(             /**< adds element to event filter */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
 
+/** deletes element from event filter */
 extern
-RETCODE SCIPeventfilterDel(             /**< deletes element from event filter */
+RETCODE SCIPeventfilterDel(
    EVENTFILTER*     eventfilter,        /**< event filter */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -298,8 +319,9 @@ RETCODE SCIPeventfilterDel(             /**< deletes element from event filter *
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
 
+/** processes the event with all event handlers with matching filter setting */
 extern
-RETCODE SCIPeventfilterProcess(         /**< processes the event with all event handlers with matching filter setting */
+RETCODE SCIPeventfilterProcess(
    EVENTFILTER*     eventfilter,        /**< event filter */
    const SET*       set,                /**< global SCIP settings */
    EVENT*           event               /**< event to process */
@@ -311,18 +333,21 @@ RETCODE SCIPeventfilterProcess(         /**< processes the event with all event 
  * Event queue methods
  */
 
+/** creates an event queue */
 extern
-RETCODE SCIPeventqueueCreate(           /**< creates an event queue */
+RETCODE SCIPeventqueueCreate(
    EVENTQUEUE**     eventqueue          /**< pointer to store the event queue */
    );
 
+/** frees event queue; there must not be any unprocessed eventy in the queue! */
 extern
-RETCODE SCIPeventqueueFree(             /**< frees event queue; there must not be any unprocessed eventy in the queue! */
+RETCODE SCIPeventqueueFree(
    EVENTQUEUE**     eventqueue          /**< pointer to the event queue */
    );
 
+/** processes event or adds event to the event queue */
 extern
-RETCODE SCIPeventqueueAdd(              /**< processes event or adds event to the event queue */
+RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -332,13 +357,15 @@ RETCODE SCIPeventqueueAdd(              /**< processes event or adds event to th
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    );
 
+/** marks queue to delay incoming events until a call to SCIPeventqueueProcess() */
 extern
-RETCODE SCIPeventqueueDelay(            /**< marks queue to delay incoming events until a call to SCIPeventqueueProcess() */
+RETCODE SCIPeventqueueDelay(
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+/** processes all events in the queue */
 extern
-RETCODE SCIPeventqueueProcess(          /**< processes all events in the queue */
+RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */

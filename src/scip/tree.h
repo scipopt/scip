@@ -163,19 +163,22 @@ struct Tree
  * Node methods
  */
 
+/** node comparator for best lower bound */
 extern
-DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);/**< node comparator for best lower bound */
+DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);
 
+/** creates a child node of the active node */
 extern
-RETCODE SCIPnodeCreate(                 /**< creates a child node of the active node */
+RETCODE SCIPnodeCreate(
    NODE**           node,               /**< pointer to node data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree                /**< branch-and-bound tree */
    );
 
+/** frees node */
 extern
-RETCODE SCIPnodeFree(                   /**< frees node */
+RETCODE SCIPnodeFree(
    NODE**           node,               /**< node data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -183,21 +186,24 @@ RETCODE SCIPnodeFree(                   /**< frees node */
    LP*              lp                  /**< actual LP data */
    );
 
+/** increases the reference counter of the LP state in the fork or subroot node */
 extern
-void SCIPnodeCaptureLPIState(           /**< increases the reference counter of the LP state in the fork or subroot node */
+void SCIPnodeCaptureLPIState(
    NODE*            node,               /**< fork/subroot node */
    int              nuses               /**< number to add to the usage counter */
    );
 
+/** decreases the reference counter of the LP state in the fork or subroot node */
 extern
-RETCODE SCIPnodeReleaseLPIState(        /**< decreases the reference counter of the LP state in the fork or subroot node */
+RETCODE SCIPnodeReleaseLPIState(
    NODE*            node,               /**< fork/subroot node */
    MEMHDR*          memhdr,             /**< block memory buffers */
    LP*              lp                  /**< actual LP data */
    );
 
+/** activates a leaf node */
 extern
-RETCODE SCIPnodeActivate(               /**< activates a leaf node */
+RETCODE SCIPnodeActivate(
    NODE*            node,               /**< leaf node to activate (or NULL to deactivate all nodes) */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -208,16 +214,18 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+/** adds local constraint to the node and captures it */
 extern
-RETCODE SCIPnodeAddCons(                /**< adds local constraint to the node and captures it */
+RETCODE SCIPnodeAddCons(
    NODE*            node,               /**< node to add constraint to */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );
 
+/** adds bound change to actual node, child or sibling of actual node */
 extern
-RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to actual node, child or sibling of actual node */
+RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -237,18 +245,21 @@ RETCODE SCIPnodeAddBoundchg(            /**< adds bound change to actual node, c
  * type validity.
  */
 
+/** gets the type of the node */
 extern
-NODETYPE SCIPnodeGetType(               /**< gets the type of the node */
+NODETYPE SCIPnodeGetType(
    NODE*            node                /**< node */
    );
 
+/** gets the depth of the node */
 extern
-int SCIPnodeGetDepth(                   /**< gets the depth of the node */
+int SCIPnodeGetDepth(
    NODE*            node                /**< node */
    );
 
+/** gets the lower bound of the node */
 extern
-Real SCIPnodeGetLowerBound(             /**< gets the lower bound of the node */
+Real SCIPnodeGetLowerBound(
    NODE*            node                /**< node */
    );
 
@@ -271,8 +282,9 @@ Real SCIPnodeGetLowerBound(             /**< gets the lower bound of the node */
  * Tree methods
  */
 
+/** creates an initialized tree data structure */
 extern
-RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data structure */
+RETCODE SCIPtreeCreate(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -281,16 +293,18 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    PROB*            prob                /**< problem data */
    );
 
+/** frees tree data structure */
 extern
-RETCODE SCIPtreeFree(                   /**< frees tree data structure */
+RETCODE SCIPtreeFree(
    TREE**           tree,               /**< pointer to tree data structure */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
 
+/** cuts off nodes with lower bound not better than given upper bound */
 extern
-RETCODE SCIPtreeCutoff(                 /**< cuts off nodes with lower bound not better than given upper bound */
+RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -298,34 +312,39 @@ RETCODE SCIPtreeCutoff(                 /**< cuts off nodes with lower bound not
    Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    );
 
+/** constructs the LP and loads LP state for fork/subroot of the active node */
 extern
-RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP state for fork/subroot of the active node */
+RETCODE SCIPtreeLoadLP(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
 
+/** adds local constraint to the active node and captures it */
 extern
-RETCODE SCIPtreeAddLocalCons(           /**< adds local constraint to the active node and captures it */
+RETCODE SCIPtreeAddLocalCons(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );
 
+/** adds global constraint to the problem and captures it */
 extern
-RETCODE SCIPtreeAddGlobalCons(          /**< adds global constraint to the problem and captures it */
+RETCODE SCIPtreeAddGlobalCons(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );
 
+/** branches on a variable; if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
+ *  (x <= x'-1, x == x', x >= x'+1)
+ */
 extern
-RETCODE SCIPtreeBranchVar(              /**< branches on a variable; if solution value x' is fractional, two child nodes
-                                         *   are created (x <= floor(x'), x >= ceil(x')), if solution value is integral,
-                                         *   three child nodes are created (x <= x'-1, x == x', x >= x'+1) */
+RETCODE SCIPtreeBranchVar(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -336,8 +355,9 @@ RETCODE SCIPtreeBranchVar(              /**< branches on a variable; if solution
    VAR*             var                 /**< variable to branch on */
    );
 
+/** notifies tree, that a bound of a variable changed */
 extern
-RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a variable changed */
+RETCODE SCIPtreeBoundChanged(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -347,52 +367,61 @@ RETCODE SCIPtreeBoundChanged(           /**< notifies tree, that a bound of a va
    Real             newbound            /**< new bound value */
    );
 
+/** gets number of leaves */
 extern
-int SCIPtreeGetNLeaves(                 /**< gets number of leaves */
+int SCIPtreeGetNLeaves(
    TREE*            tree                /**< branch-and-bound tree */
    );
 
+/** gets number of nodes (children + siblings + leaves) */
 extern   
-int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + siblings + leaves) */
+int SCIPtreeGetNNodes(
    TREE*            tree                /**< branch-and-bound tree */
    );
 
+/** gets the best child of the active node */
 extern
-NODE* SCIPtreeGetBestChild(             /**< gets the best child of the active node */
+NODE* SCIPtreeGetBestChild(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** gets the best sibling of the active node */
 extern
-NODE* SCIPtreeGetBestSibling(           /**< gets the best sibling of the active node */
+NODE* SCIPtreeGetBestSibling(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** gets the best leaf from the node queue */
 extern
-NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node queue */
+NODE* SCIPtreeGetBestLeaf(
    TREE*            tree                /**< branch-and-bound tree */
    );
 
+/** gets the best node from the tree (child, sibling, or leaf) */
 extern
-NODE* SCIPtreeGetBestNode(              /**< gets the best node from the tree (child, sibling, or leaf) */
+NODE* SCIPtreeGetBestNode(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** gets the minimal lower bound of all nodes in the tree */
 extern
-Real SCIPtreeGetLowerbound(             /**< gets the minimal lower bound of all nodes in the tree */
+Real SCIPtreeGetLowerbound(
    TREE*            tree,               /**< branch-and-bound tree */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** gets the lower bound of the active node */
 extern
-Real SCIPtreeGetActLowerbound(          /**< gets the lower bound of the active node */
+Real SCIPtreeGetActLowerbound(
    TREE*            tree                /**< branch-and-bound tree */
    );
 
+/** gets the average lower bound of all nodes in the tree */
 extern
-Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all nodes in the tree */
+Real SCIPtreeGetAvgLowerbound(
    TREE*            tree,               /**< branch-and-bound tree */
    Real             upperbound          /**< global upper bound */
    );

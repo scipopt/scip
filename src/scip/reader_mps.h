@@ -15,7 +15,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   reader_mps.c
+/**@file   reader_mps.h
  * @brief  MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -30,8 +30,9 @@
 #include "scip.h"
 
 
+/** includes the MPS file reader into SCIP */
 extern
-RETCODE SCIPincludeReaderMPS(           /**< includes the MPS file reader into SCIP */
+RETCODE SCIPincludeReaderMPS(
    SCIP*            scip                /**< SCIP data structure */
    );
 

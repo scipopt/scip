@@ -141,14 +141,16 @@ struct Var
  * domain change methods
  */
 
+/** frees fixed size domain change data */
 extern
-void SCIPdomchgFree(                    /**< frees fixed size domain change data */
+void SCIPdomchgFree(
    DOMCHG**         domchg,             /**< pointer to domain change */
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** applies domain change */
 extern
-RETCODE SCIPdomchgApply(                /**< applies domain change */
+RETCODE SCIPdomchgApply(
    const DOMCHG*    domchg,             /**< domain change to apply */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -159,8 +161,9 @@ RETCODE SCIPdomchgApply(                /**< applies domain change */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
+/** undoes domain change */
 extern
-RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
+RETCODE SCIPdomchgUndo(
    const DOMCHG*    domchg,             /**< domain change to remove */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -176,38 +179,44 @@ RETCODE SCIPdomchgUndo(                 /**< undoes domain change */
  * dynamic size attachment methods
  */
 
+/** creates a dynamic size attachment for a domain change data structure */
 extern
-RETCODE SCIPdomchgdynCreate(            /**< creates a dynamic size attachment for a domain change data structure */
+RETCODE SCIPdomchgdynCreate(
    DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** frees a dynamic size attachment for a domain change data structure */
 extern
-void SCIPdomchgdynFree(                 /**< frees a dynamic size attachment for a domain change data structure */
+void SCIPdomchgdynFree(
    DOMCHGDYN**      domchgdyn,          /**< pointer to dynamic size attachment */
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** attaches dynamic size information to domain change data */
 extern
-void SCIPdomchgdynAttach(               /**< attaches dynamic size information to domain change data */
+void SCIPdomchgdynAttach(
    DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
    DOMCHG**         domchg              /**< pointer to static domain change */
    );
 
+/** detaches dynamic size information and shrinks domain change data */
 extern
-RETCODE SCIPdomchgdynDetach(            /**< detaches dynamic size information and shrinks domain change data */
+RETCODE SCIPdomchgdynDetach(
    DOMCHGDYN*       domchgdyn,          /**< dynamic size information */
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** frees attached domain change data and detaches dynamic size attachment */
 extern
-void SCIPdomchgdynDiscard(              /**< frees attached domain change data and detaches dynamic size attachment */
+void SCIPdomchgdynDiscard(
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
    MEMHDR*          memhdr              /**< block memory */
    );
 
+/** adds bound change to domain changes */
 extern
-RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
+RETCODE SCIPdomchgdynAddBoundchg(
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -217,8 +226,9 @@ RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
+/** adds hole change to domain changes */
 extern
-RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes */
+RETCODE SCIPdomchgdynAddHolechg(
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -227,8 +237,9 @@ RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes 
    HOLELIST*        oldlist             /**< old value of list pointer */
    );
 
+/** gets pointer to domain change data the dynamic size information references */
 extern
-DOMCHG** SCIPdomchgdynGetDomchgPtr(     /**< gets pointer to domain change data the dynamic size information references */
+DOMCHG** SCIPdomchgdynGetDomchgPtr(
    DOMCHGDYN*       domchgdyn           /**< dynamically sized domain change data structure */
    );
 
@@ -238,8 +249,9 @@ DOMCHG** SCIPdomchgdynGetDomchgPtr(     /**< gets pointer to domain change data 
  * methods for variables 
  */
 
+/** creates and captures an original problem variable */
 extern
-RETCODE SCIPvarCreate(                  /**< creates and captures an original problem variable */
+RETCODE SCIPvarCreate(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -251,8 +263,9 @@ RETCODE SCIPvarCreate(                  /**< creates and captures an original pr
    VARTYPE          vartype             /**< type of variable */
    );
 
+/** creates and captures a loose variable belonging to the transformed problem */
 extern
-RETCODE SCIPvarCreateTransformed(       /**< creates and captures a loose variable belonging to the transformed problem */
+RETCODE SCIPvarCreateTransformed(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -264,21 +277,24 @@ RETCODE SCIPvarCreateTransformed(       /**< creates and captures a loose variab
    VARTYPE          vartype             /**< type of variable */
    );
 
+/** increases usage counter of variable */
 extern
-void SCIPvarCapture(                    /**< increases usage counter of variable */
+void SCIPvarCapture(
    VAR*             var                 /**< variable */
    );
 
+/** decreases usage counter of variable, and frees memory if necessary */
 extern
-RETCODE SCIPvarRelease(                 /**< decreases usage counter of variable, and frees memory if necessary */
+RETCODE SCIPvarRelease(
    VAR**            var,                /**< pointer to variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data (may be NULL, if it's not a column variable) */
    );
 
+/** adds a hole to the variables domain */
 extern
-RETCODE SCIPvarAddHole(                 /**< adds a hole to the variables domain */
+RETCODE SCIPvarAddHole(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -286,8 +302,9 @@ RETCODE SCIPvarAddHole(                 /**< adds a hole to the variables domain
    Real             right               /**< right bound of open interval in new hole */
    );
 
+/** copies original variable into loose transformed variable, that is captured */
 extern
-RETCODE SCIPvarTransform(               /**< copies original variable into loose transformed variable, that is captured */
+RETCODE SCIPvarTransform(
    VAR**            transvar,           /**< pointer to store the transformed variable */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
@@ -296,8 +313,9 @@ RETCODE SCIPvarTransform(               /**< copies original variable into loose
    VAR*             origvar             /**< original problem variable */
    );
 
+/** converts transformed variable into column variable and creates LP column */
 extern
-RETCODE SCIPvarColumn(                  /**< converts transformed variable into column variable and creates LP column */
+RETCODE SCIPvarColumn(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -305,8 +323,9 @@ RETCODE SCIPvarColumn(                  /**< converts transformed variable into 
    STAT*            stat                /**< problem statistics */
    );
 
+/** converts variable into fixed variable, updates LP respectively */
 extern
-RETCODE SCIPvarFix(                     /**< converts variable into fixed variable, updates LP respectively */
+RETCODE SCIPvarFix(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -315,8 +334,9 @@ RETCODE SCIPvarFix(                     /**< converts variable into fixed variab
    Real             fixedval            /**< value to fix variable at */
    );
 
+/** converts variable into aggregated variable, updates LP respectively */
 extern
-RETCODE SCIPvarAggregate(               /**< converts variable into aggregated variable, updates LP respectively */
+RETCODE SCIPvarAggregate(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -327,67 +347,80 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
    Real             constant            /**< constant shift $c$ in aggregation $x = a*y + c$ */
    );
 
+/** changes type of variable; cannot be called, if var belongs to a problem */
 extern
-RETCODE SCIPvarChgType(                 /**< changes type of variable; cannot be called, if var belongs to a problem */
+RETCODE SCIPvarChgType(
    VAR*             var,                /**< problem variable to change */
    VARTYPE          vartype             /**< new type of variable */
    );
 
+/**< increases lock number for rounding down; tells variable, that rounding its value down will make the solution
+ *   infeasible
+ */
 extern
-void SCIPvarForbidRoundDown(            /**< increases lock number for rounding down; tells variable, that rounding its
-                                         *   value down will make the solution infeasible */
+void SCIPvarForbidRoundDown(
    VAR*             var                 /**< problem variable */
    );
 
+/**< increases lock number for rounding up; tells variable, that rounding its value up will make the solution infeasible */
 extern
-void SCIPvarForbidRoundUp(              /**< increases lock number for rounding up; tells variable, that rounding its
-                                         *   value up will make the solution infeasible */
+void SCIPvarForbidRoundUp(
    VAR*             var                 /**< problem variable */
    );
 
+/**< increases lock number for rounding down and up; tells variable, that rounding value in either direction will make
+ *   the solution infeasible
+ */
 extern
-void SCIPvarForbidRound(                /**< increases lock number for rounding down and up; tells variable, that rounding
-                                         *   value in either direction will make the solution infeasible */
+void SCIPvarForbidRound(
    VAR*             var                 /**< problem variable */
    );
 
+/** decreases lock number for rounding down; cancels a prior forbidRoundDown() */
 extern
-void SCIPvarAllowRoundDown(             /**< decreases lock number for rounding down; cancels a prior forbidRoundDown() */
+void SCIPvarAllowRoundDown(
    VAR*             var                 /**< problem variable */
    );
 
+/** decreases lock number for rounding up; cancels a prior forbidRoundUp() */
 extern
-void SCIPvarAllowRoundUp(               /**< decreases lock number for rounding up; cancels a prior forbidRoundUp() */
+void SCIPvarAllowRoundUp(
    VAR*             var                 /**< problem variable */
    );
 
+/** decreases lock number for rounding down & up; cancels a prior forbidRound() */
 extern
-void SCIPvarAllowRound(                 /**< decreases lock number for rounding down & up; cancels a prior forbidRound() */
+void SCIPvarAllowRound(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets number of locks for rounding down */
 extern
-int SCIPvarGetNLocksDown(               /**< gets number of locks for rounding down */
+int SCIPvarGetNLocksDown(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets number of locks for rounding up */
 extern
-int SCIPvarGetNLocksUp(                 /**< gets number of locks for rounding up */
+int SCIPvarGetNLocksUp(
    VAR*             var                 /**< problem variable */
    );
 
+/** is it possible, to round variable down and stay feasible? */
 extern
-Bool SCIPvarMayRoundDown(               /**< is it possible, to round variable down and stay feasible? */
+Bool SCIPvarMayRoundDown(
    VAR*             var                 /**< problem variable */
    );
 
+/** is it possible, to round variable up and stay feasible? */
 extern
-Bool SCIPvarMayRoundUp(                 /**< is it possible, to round variable up and stay feasible? */
+Bool SCIPvarMayRoundUp(
    VAR*             var                 /**< problem variable */
    );
 
+/** changes lower bound of variable */
 extern
-RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
+RETCODE SCIPvarChgLb(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -399,8 +432,9 @@ RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    Real             newbound            /**< new bound for variable */
    );
 
+/** changes upper bound of variable */
 extern
-RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
+RETCODE SCIPvarChgUb(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -412,8 +446,9 @@ RETCODE SCIPvarChgUb(                   /**< changes upper bound of variable */
    Real             newbound            /**< new bound for variable */
    );
 
+/** changes bound of variable */
 extern
-RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
+RETCODE SCIPvarChgBd(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -426,95 +461,113 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
+/** adjust lower bound to integral value, if variable is integral */
 extern
-void SCIPvarAdjustLb(                   /**< adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLb(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    Real*            lb                  /**< pointer to lower bound to adjust */
    );
 
+/** adjust upper bound to integral value, if variable is integral */
 extern
-void SCIPvarAdjustUb(                   /**< adjust upper bound to integral value, if variable is integral */
+void SCIPvarAdjustUb(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
    Real*            ub                  /**< pointer to upper bound to adjust */
    );
 
+/** changes objective value of variable */
 extern
-RETCODE SCIPvarChgObj(                  /**< changes objective value of variable */
+RETCODE SCIPvarChgObj(
    VAR*             var,                /**< variable to change, must not be member of the problem */
    Real             newobj              /**< new objective value for variable */
    );
 
+/** get name of variable */
 extern
-const char* SCIPvarGetName(             /**< get name of variable */
+const char* SCIPvarGetName(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets status of variable */
 extern
-VARSTATUS SCIPvarGetStatus(             /**< gets status of variable */
+VARSTATUS SCIPvarGetStatus(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets type of variable */
 extern
-VARTYPE SCIPvarGetType(                 /**< gets type of variable */
+VARTYPE SCIPvarGetType(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets unique index of variable */
 extern
-int SCIPvarGetIndex(                    /**< gets unique index of variable */
+int SCIPvarGetIndex(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets position of variable in problem, or -1 if variable is not active */
 extern
-int SCIPvarGetProbIndex(                /**< gets position of variable in problem, or -1 if variable is not active */
+int SCIPvarGetProbIndex(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets corresponding transformed variable of an original variable */
 extern
-VAR* SCIPvarGetTransformed(             /**< gets corresponding transformed variable of an original variable */
+VAR* SCIPvarGetTransformed(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets column of COLUMN variable */
 extern
-COL* SCIPvarGetCol(                     /**< gets column of COLUMN variable */
+COL* SCIPvarGetCol(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets objective function value of variable */
 extern
-Real SCIPvarGetObj(                     /**< gets objective function value of variable */
+Real SCIPvarGetObj(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets lower bound of variable */
 extern
-Real SCIPvarGetLb(                      /**< gets lower bound of variable */
+Real SCIPvarGetLb(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets upper bound of variable */
 extern
-Real SCIPvarGetUb(                      /**< gets upper bound of variable */
+Real SCIPvarGetUb(
    VAR*             var                 /**< problem variable */
    );
 
+/** get primal LP solution value of variable */
 extern
-Real SCIPvarGetLPSol(                   /**< get primal LP solution value of variable */
+Real SCIPvarGetLPSol(
    VAR*             var                 /**< problem variable */
    );
 
+/** get pseudo solution value of variable at actual node */
 extern
-Real SCIPvarGetPseudoSol(               /**< get pseudo solution value of variable at actual node */
+Real SCIPvarGetPseudoSol(
    VAR*             var                 /**< problem variable */
    );
 
+/**< get solution value of variable at actual node: if LP was solved at the node, the method returns the LP primal
+ *   solution value, otherwise the pseudo solution
+ */
 extern
-Real SCIPvarGetSol(                     /**< get solution value of variable at actual node: if LP was solved at the node,
-                                           the method returns the LP primal solution value, otherwise the pseudo solution */
+Real SCIPvarGetSol(
    VAR*             var,                /**< problem variable */
    TREE*            tree                /**< branch-and-bound tree */
    );
 
+/** resolves variable to columns and adds them with the coefficient to the row */
 extern
-RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and adds them with the coefficient to the row */
+RETCODE SCIPvarAddToRow(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -524,8 +577,9 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
    Real             val                 /**< value of coefficient */
    );
 
+/** includes event handler in variable's event filter */
 extern
-RETCODE SCIPvarCatchEvent(              /**< includes event handler in variable's event filter */
+RETCODE SCIPvarCatchEvent(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -539,8 +593,9 @@ RETCODE SCIPvarCatchEvent(              /**< includes event handler in variable'
  * Hash functions
  */
 
+/** gets the key (i.e. the name) of the given variable */
 extern
-DECL_HASHGETKEY(SCIPhashGetKeyVar);     /**< gets the key (i.e. the name) of the given variable */
+DECL_HASHGETKEY(SCIPhashGetKeyVar);
 
 
 

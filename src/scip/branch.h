@@ -97,20 +97,24 @@ typedef struct BranchRuleData BRANCHRULEDATA; /**< branching method specific dat
 
 /* branching candidate storage methods */
 
+
+/** creates a branching candidate storage */
 extern
-RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate storage */
+RETCODE SCIPbranchcandCreate(
    BRANCHCAND**     branchcand,         /**< pointer to store branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob                /**< problem data */
    );
 
+/** frees branching candidate storage */
 extern
-RETCODE SCIPbranchcandFree(             /**< frees branching candidate storage */
+RETCODE SCIPbranchcandFree(
    BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
    );
 
+/** gets branching candidates for LP solution branching (fractional variables) */
 extern
-RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP solution branching (fractional variables) */
+RETCODE SCIPbranchcandGetLPCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -121,8 +125,9 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
    int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
    );
 
+/** gets branching candidates for pseudo solution branching (nonfixed variables) */
 extern
-RETCODE SCIPbranchcandGetPseudoCands(   /**< gets branching candidates for pseudo solution branching (nonfixed variables) */
+RETCODE SCIPbranchcandGetPseudoCands(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
@@ -130,8 +135,9 @@ RETCODE SCIPbranchcandGetPseudoCands(   /**< gets branching candidates for pseud
    int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
    );
 
+/** updates branching candidate list for a given variable */
 extern
-RETCODE SCIPbranchcandUpdateVar(        /**< updates branching candidate list for a given variable */
+RETCODE SCIPbranchcandUpdateVar(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< variable that changed its bounds */
@@ -142,8 +148,9 @@ RETCODE SCIPbranchcandUpdateVar(        /**< updates branching candidate list fo
 
 /* branching rules */
 
+/** creates a branching rule */
 extern
-RETCODE SCIPbranchruleCreate(           /**< creates a branching rule */
+RETCODE SCIPbranchruleCreate(
    BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
    const char*      name,               /**< name of branching rule */
    const char*      desc,               /**< description of branching rule */
@@ -156,61 +163,71 @@ RETCODE SCIPbranchruleCreate(           /**< creates a branching rule */
    BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
 
+/** frees memory of branching rule */
 extern
-RETCODE SCIPbranchruleFree(             /**< frees memory of branching rule */
+RETCODE SCIPbranchruleFree(
    BRANCHRULE**     branchrule,         /**< pointer to branching rule data structure */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** initializes branching rule */
 extern
-RETCODE SCIPbranchruleInit(             /**< initializes branching rule */
+RETCODE SCIPbranchruleInit(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** deinitializes branching rule */
 extern
-RETCODE SCIPbranchruleExit(             /**< deinitializes branching rule */
+RETCODE SCIPbranchruleExit(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** executes branching rule for fractional LP solution */
 extern
-RETCODE SCIPbranchruleExecLPSol(        /**< executes branching rule for fractional LP solution */
+RETCODE SCIPbranchruleExecLPSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** executes branching rule for not completely fixed pseudo solution */
 extern
-RETCODE SCIPbranchruleExecPseudoSol(    /**< executes branching rule for not completely fixed pseudo solution */
+RETCODE SCIPbranchruleExecPseudoSol(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP*            scip,               /**< SCIP data structure */   
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets name of branching rule */
 extern
-const char* SCIPbranchruleGetName(      /**< gets name of branching rule */
+const char* SCIPbranchruleGetName(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** gets priority of branching rule */
 extern
-int SCIPbranchruleGetPriority(          /**< gets priority of branching rule */
+int SCIPbranchruleGetPriority(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** gets user data of branching rule */
 extern
-BRANCHRULEDATA* SCIPbranchruleGetData(  /**< gets user data of branching rule */
+BRANCHRULEDATA* SCIPbranchruleGetData(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** sets user data of branching rule; user has to free old data in advance! */
 extern
-void SCIPbranchruleSetData(             /**< sets user data of branching rule; user has to free old data in advance! */
+void SCIPbranchruleSetData(
    BRANCHRULE*      branchrule,         /**< branching rule */
    BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    );
 
+/** is branching rule initialized? */
 extern
-Bool SCIPbranchruleIsInitialized(       /**< is branching rule initialized? */
+Bool SCIPbranchruleIsInitialized(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 

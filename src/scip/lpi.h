@@ -76,24 +76,28 @@ typedef enum Pricing PRICING;
  * LP interface methods
  */
 
+/** gets name and version of LP solver */
 extern
-const char* SCIPlpiGetSolverName(       /**< gets name and version of LP solver */
+const char* SCIPlpiGetSolverName(
    void
    );
 
+/** creates an LP problem object */
 extern 
-RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
+RETCODE SCIPlpiCreate(
    LPI**            lpi,                /**< pointer to an LP interface structure */
    const char*      name                /**< problem name */
    );
 
+/** deletes an LP problem object */
 extern
-RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
+RETCODE SCIPlpiFree(
    LPI**            lpi                 /**< pointer to an LP interface structure */
    );
 
+/** copies data into LP problem object */
 extern 
-RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object */
+RETCODE SCIPlpiCopyData(
    LPI*             lpi,                /**< LP interface structure */
    int              ncol,               /**< number of columns */
    int              nrow,               /**< number of rows */
@@ -111,8 +115,9 @@ RETCODE SCIPlpiCopyData(                /**< copies data into LP problem object 
    const char**     rname               /**< row names */
    );
 
+/** adds columns to the LP */
 extern 
-RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
+RETCODE SCIPlpiAddCols(
    LPI*             lpi,                /**< LP interface structure */
    int              ncol,               /**< number of columns to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
@@ -126,23 +131,26 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    Real             infinity            /**< value used as infinity */
    );
 
+/** deletes columns from LP */
 extern 
-RETCODE SCIPlpiDelColset(               /**< deletes columns from LP */
+RETCODE SCIPlpiDelColset(
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of columns
                                          *   input:  1 if column should be deleted, 0 if not
                                          *   output: new position of column, -1 if column was deleted */
    );
 
+/** deletes all columns in the given range from LP */
 extern
-RETCODE SCIPlpiDelCols(                 /**< deletes all columns in the given range from LP */
+RETCODE SCIPlpiDelCols(
    LPI*             lpi,                /**< LP interface structure */
    int              firstcol,           /**< first column to be deleted */
    int              lastcol             /**< last column to be deleted */
    );
 
+/** adds rows to the LP */
 extern 
-RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
+RETCODE SCIPlpiAddRows(
    LPI*             lpi,                /**< LP interface structure */
    int              nrow,               /**< number of rows to be added */
    int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
@@ -155,38 +163,43 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    Real             infinity            /**< value used as infinity */
    );
 
+/** deletes rows from LP */
 extern 
-RETCODE SCIPlpiDelRowset(               /**< deletes rows from LP */
+RETCODE SCIPlpiDelRowset(
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
                                          *   input:  1 if row should be deleted, 0 if not
                                          *   output: new position of row, -1 if row was deleted */
    );
 
+/** deletes all rows in the given range from LP */
 extern
-RETCODE SCIPlpiDelRows(                 /**< deletes all rows in the given range from LP */
+RETCODE SCIPlpiDelRows(
    LPI*             lpi,                /**< LP interface structure */
    int              firstrow,           /**< first row to be deleted */
    int              lastrow             /**< last row to be deleted */
    );
 
+/** get dense row of inverse basis matrix (A_B)^-1 */
 extern 
-RETCODE SCIPlpiGetBinvRow(              /**< get dense row of inverse basis matrix (A_B)^-1 */
+RETCODE SCIPlpiGetBinvRow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    Real*            val                 /**< vector to return coefficients */
    );
 
+/** get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
 extern 
-RETCODE SCIPlpiGetBinvARow(             /**< get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+RETCODE SCIPlpiGetBinvARow(
    LPI*             lpi,                /**< LP interface structure */
    int              i,                  /**< row number */
    const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
    Real*            val                 /**< vector to return coefficients */
    );
 
+/** changes lower and upper bounds of columns */
 extern 
-RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of columns */
+RETCODE SCIPlpiChgBounds(
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
@@ -195,8 +208,9 @@ RETCODE SCIPlpiChgBounds(               /**< changes lower and upper bounds of c
    Real             infinity            /**< value used as infinity */
    );
 
+/** changes left and right hand sides of rows */
 extern 
-RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides of rows */
+RETCODE SCIPlpiChgSides(
    LPI*             lpi,                /**< LP interface structure */
    int              n,                  /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
@@ -205,54 +219,62 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
    Real             infinity            /**< value used as infinity */
    );
 
+/** changes the objective sense */
 extern 
-RETCODE SCIPlpiChgObjsen(               /**< changes the objective sense */
+RETCODE SCIPlpiChgObjsen(
    LPI*             lpi,                /**< LP interface structure */
    OBJSEN           objsen              /**< new objective sense */
    );
 
+/** returns the indices of the basic columns and rows */
 extern 
-RETCODE SCIPlpiGetBind(                 /**< returns the indices of the basic columns and rows */
+RETCODE SCIPlpiGetBind(
    LPI*             lpi,                /**< LP interface structure */
    int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
    );
 
+/** gets integer parameter of LP */
 extern 
-RETCODE SCIPlpiGetIntpar(               /**< gets integer parameter of LP */
+RETCODE SCIPlpiGetIntpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    int*             ival                /**< buffer to store the parameter value */
    );
 
+/** sets integer parameter of LP */
 extern 
-RETCODE SCIPlpiSetIntpar(               /**< sets integer parameter of LP */
+RETCODE SCIPlpiSetIntpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    int              ival                /**< parameter value */
    );
 
+/** gets floating point parameter of LP */
 extern 
-RETCODE SCIPlpiGetRealpar(              /**< gets floating point parameter of LP */
+RETCODE SCIPlpiGetRealpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    Real*            dval                /**< buffer to store the parameter value */
    );
 
+/** sets floating point parameter of LP */
 extern 
-RETCODE SCIPlpiSetRealpar(              /**< sets floating point parameter of LP */
+RETCODE SCIPlpiSetRealpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    Real             dval                /**< parameter value */
    );
 
+/** gets objective value of solution */
 extern
-RETCODE SCIPlpiGetObjval(               /**< gets objective value of solution */
+RETCODE SCIPlpiGetObjval(
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval              /**< stores the objective value */
    );
 
+/** gets primal and dual solution vectors */
 extern 
-RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vectors */
+RETCODE SCIPlpiGetSol(
    LPI*             lpi,                /**< LP interface structure */
    Real*            objval,             /**< stores the objective value */
    Real*            primsol,            /**< primal solution vector */
@@ -261,20 +283,23 @@ RETCODE SCIPlpiGetSol(                  /**< gets primal and dual solution vecto
    Real*            redcost             /**< reduced cost vector */
    );
 
+/** gets primal ray for unbounded LPs */
 extern 
-RETCODE SCIPlpiGetPrimalRay(            /**< gets primal ray for unbounded LPs */
+RETCODE SCIPlpiGetPrimalRay(
    LPI*             lpi,                /**< LP interface structure */
    Real*            ray                 /**< primal ray */
    );
 
+/** gets dual farkas proof for infeasibility */
 extern
-RETCODE SCIPlpiGetDualfarkas(           /**< gets dual farkas proof for infeasibility */
+RETCODE SCIPlpiGetDualfarkas(
    LPI*             lpi,                /**< LP interface structure */
    Real*            dualfarkas          /**< dual farkas row multipliers */
    );
 
+/** performs strong branching iterations on all candidates */
 extern 
-RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iterations on all candidates */
+RETCODE SCIPlpiStrongbranch(
    LPI*             lpi,                /**< LP interface structure */
    const int*       cand,               /**< candidate list */
    int              ncand,              /**< size of candidate list */
@@ -283,89 +308,104 @@ RETCODE SCIPlpiStrongbranch(            /**< performs strong branching iteration
    Real*            up                  /**< stores dual bound after branching candidate up */
    );
 
+/** calls primal simplex to solve the LP */
 extern 
-RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the LP */
+RETCODE SCIPlpiSolvePrimal(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** calls dual simplex to solve the LP */
 extern 
-RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP */
+RETCODE SCIPlpiSolveDual(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** gets information about primal and dual feasibility of the LP basis */
 extern 
-RETCODE SCIPlpiGetBasisFeasibility(     /**< gets information about primal and dual feasibility of the LP basis */
+RETCODE SCIPlpiGetBasisFeasibility(
    LPI*             lpi,                /**< LP interface structure */
    Bool*            primalfeasible,     /**< stores primal feasibility status */
    Bool*            dualfeasible        /**< stores dual feasibility status */
    );
 
+/** returns TRUE iff LP is primal unbounded */
 extern 
-Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbounded */
+Bool SCIPlpiIsPrimalUnbounded(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** returns TRUE iff LP is primal infeasible */
 extern 
-Bool SCIPlpiIsPrimalInfeasible(         /**< returns TRUE iff LP is primal infeasible */
+Bool SCIPlpiIsPrimalInfeasible(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** returns TRUE iff LP was solved to optimality */
 extern 
-Bool SCIPlpiIsOptimal(                  /**< returns TRUE iff LP was solved to optimality */
+Bool SCIPlpiIsOptimal(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** returns TRUE iff actual LP basis is stable */
 extern 
-Bool SCIPlpiIsStable(                   /**< returns TRUE iff actual LP basis is stable */
+Bool SCIPlpiIsStable(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** returns TRUE iff the objective limit was reached */
 extern 
-Bool SCIPlpiIsObjlimExc(                /**< returns TRUE iff the objective limit was reached */
+Bool SCIPlpiIsObjlimExc(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** returns TRUE iff the iteration limit was reached */
 extern 
-Bool SCIPlpiIsIterlimExc(               /**< returns TRUE iff the iteration limit was reached */
+Bool SCIPlpiIsIterlimExc(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** returns TRUE iff the time limit was reached */
 extern 
-Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was reached */
+Bool SCIPlpiIsTimelimExc(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** stores LP state (like basis information) into lpistate object */
 extern
-RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpistate object */
+RETCODE SCIPlpiGetState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** loads LP state (like basis information) into solver */
 extern
-RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
+RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
+/** frees LP state information */
 extern
-RETCODE SCIPlpiFreeState(               /**< frees LP state information */
+RETCODE SCIPlpiFreeState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** writes LP state (like basis information) to a file */
 extern 
-RETCODE SCIPlpiWriteState(              /**< writes LP state (like basis information) to a file */
+RETCODE SCIPlpiWriteState(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );
 
+/** writes LP to a file */
 extern 
-RETCODE SCIPlpiWriteLP(                 /**< writes LP to a file */
+RETCODE SCIPlpiWriteLP(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );

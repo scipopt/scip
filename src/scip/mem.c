@@ -28,7 +28,8 @@
 
 
 
-RETCODE SCIPmemCreate(                  /**< creates block memory structures */
+/** creates block memory structures */
+RETCODE SCIPmemCreate(
    MEM**            mem                 /**< pointer to block memory structure */
    )
 {
@@ -45,7 +46,8 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPmemFree(                    /**< frees block memory structures */
+/** frees block memory structures */
+RETCODE SCIPmemFree(
    MEM**            mem                 /**< pointer to block memory structure */
    )
 {

@@ -28,7 +28,8 @@
 #include "stat.h"
 
 
-RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
+/** creates problem statistics data */
+RETCODE SCIPstatCreate(
    STAT**           stat                /**< pointer to problem statistics data */
    )
 {
@@ -43,7 +44,8 @@ RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPstatFree(                   /**< frees problem statistics data */
+/** frees problem statistics data */
+RETCODE SCIPstatFree(
    STAT**           stat                /**< pointer to problem statistics data */
    )
 {
@@ -55,7 +57,8 @@ RETCODE SCIPstatFree(                   /**< frees problem statistics data */
    return SCIP_OKAY;
 }
 
-void SCIPstatMark(                      /**< marks statistics to be able to reset them when solving process is freed */
+/** marks statistics to be able to reset them when solving process is freed */
+void SCIPstatMark(
    STAT*            stat                /**< problem statistics data */
    )
 {
@@ -72,7 +75,8 @@ void SCIPstatMark(                      /**< marks statistics to be able to rese
    stat->marked_nrowidx = stat->nrowidx;
 }
 
-void SCIPstatReset(                     /**< reset statistics to the data before solving started */
+/** reset statistics to the data before solving started */
+void SCIPstatReset(
    STAT*            stat                /**< problem statistics data */
    )
 {

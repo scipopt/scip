@@ -206,8 +206,9 @@ struct Lp
  * Column methods
  */
 
+/** creates an LP column */
 extern
-RETCODE SCIPcolCreate(                  /**< creates an LP column */
+RETCODE SCIPcolCreate(
    COL**            col,                /**< pointer to column data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -219,21 +220,24 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    Real*            val                 /**< array with coefficients of column entries */
    );
 
+/** frees an LP column */
 extern
-RETCODE SCIPcolFree(                    /**< frees an LP column */
+RETCODE SCIPcolFree(
    COL**            col,                /**< pointer to LP column */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
 
+/** sorts column entries by row index */
 extern
-void SCIPcolSort(                       /**< sorts column entries by row index */
+void SCIPcolSort(
    COL*             col                 /**< column to be sorted */
    );
 
+/** adds a previously non existing coefficient to an LP column */
 extern
-RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
+RETCODE SCIPcolAddCoeff(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -242,16 +246,18 @@ RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coef
    Real             val                 /**< value of coefficient */
    );
 
+/** deletes coefficient from column */
 extern
-RETCODE SCIPcolDelCoeff(                /**< deletes coefficient from column */
+RETCODE SCIPcolDelCoeff(
    COL*             col,                /**< column to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    ROW*             row                 /**< coefficient to be deleted */
    );
 
+/** changes or adds a coefficient to an LP column */
 extern
-RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
+RETCODE SCIPcolChgCoeff(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -260,8 +266,9 @@ RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an
    Real             val                 /**< value of coefficient */
    );
 
+/** increases value of an existing or nonexisting coefficient in an LP column */
 extern
-RETCODE SCIPcolIncCoeff(                /**< increases value of an existing or nonexisting coefficient in an LP column */
+RETCODE SCIPcolIncCoeff(
    COL*             col,                /**< LP column */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -270,8 +277,9 @@ RETCODE SCIPcolIncCoeff(                /**< increases value of an existing or n
    Real             incval              /**< value to add to the coefficient */
    );
 
+/** notifies LP, that the bounds of a column were changed */
 extern
-RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a column were changed */
+RETCODE SCIPcolBoundChanged(
    COL*             col,                /**< LP column that changed */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -281,46 +289,54 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
    Real             newbound            /**< new bound value */
    );
 
+/** gets variable this column represents */
 extern
-VAR* SCIPcolGetVar(                     /**< gets variable this column represents */
+VAR* SCIPcolGetVar(
    COL*             col                 /**< LP column */
    );
 
+/** gets position of column in actual LP, or -1 if it is not in LP */
 extern
-int SCIPcolGetLPPos(                    /**< gets position of column in actual LP, or -1 if it is not in LP */
+int SCIPcolGetLPPos(
    COL*             col                 /**< LP column */
    );
 
+/** returns TRUE iff column is member of actual LP */
 extern
-Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member of actual LP */
+Bool SCIPcolIsInLP(
    COL*             col                 /**< LP column */
    );
 
+/** gets the primal LP solution of a column */
 extern
-Real SCIPcolGetPrimsol(                 /**< gets the primal LP solution of a column */
+Real SCIPcolGetPrimsol(
    COL*             col                 /**< LP column */
    );
 
+/** gets the reduced costs of a column in last LP or after recalculation */
 extern
-Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column in last LP or after recalculation */
+Real SCIPcolGetRedcost(
    COL*             col,                /**< LP column */
    STAT*            stat                /**< problem statistics */
    );
 
+/** gets the feasibility of a column in last LP or after recalculation */
 extern
-Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in last LP or after recalculation */
+Real SCIPcolGetFeasibility(
    COL*             col,                /**< LP column */
    STAT*            stat                /**< problem statistics */
    );
 
+/** gets the farkas value of a column in last LP (which must be infeasible) */
 extern
-Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column in last LP (which must be infeasible) */
+Real SCIPcolGetFarkas(
    COL*             col,                /**< LP column */
    STAT*            stat                /**< problem statistics */
    );
 
+/** gets strong branching information on a column variable */
 extern
-RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information on a column variable */
+RETCODE SCIPcolGetStrongbranch(
    COL*             col,                /**< LP column */
    STAT*            stat,               /**< problem statistics */
    LP*              lp,                 /**< actual LP data */
@@ -330,23 +346,27 @@ RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information o
    Real*            up                  /**< stores dual bound after branching column up */
    );
 
+/** get number of nonzero entries in column vector */
 extern
-int SCIPcolGetNNonz(                    /**< get number of nonzero entries in column vector */
+int SCIPcolGetNNonz(
    COL*             col                 /**< LP column */
    );
 
+/** gets array with rows of nonzero entries */
 extern
-ROW** SCIPcolGetRows(                   /**< gets array with rows of nonzero entries */
+ROW** SCIPcolGetRows(
    COL*             col                 /**< LP column */
    );
 
+/** gets array with coefficients of nonzero entries */
 extern
-Real* SCIPcolGetVals(                   /**< gets array with coefficients of nonzero entries */
+Real* SCIPcolGetVals(
    COL*             col                 /**< LP column */
    );
 
+/** output column to file stream */
 extern
-void SCIPcolPrint(                      /**< output column to file stream */
+void SCIPcolPrint(
    COL*             col,                /**< LP column */
    const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
@@ -357,8 +377,9 @@ void SCIPcolPrint(                      /**< output column to file stream */
  * Row methods
  */
 
+/** creates and captures an LP row */
 extern
-RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
+RETCODE SCIProwCreate(
    ROW**            row,                /**< pointer to LP row data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -374,56 +395,65 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    Bool             modifiable          /**< is row modifiable during node processing (subject to column generation)? */
    );
 
+/** frees an LP row */
 extern
-RETCODE SCIProwFree(                    /**< frees an LP row */
+RETCODE SCIProwFree(
    ROW**            row,                /**< pointer to LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
 
+/** increases usage counter of LP row */
 extern
-void SCIProwCapture(                    /**< increases usage counter of LP row */
+void SCIProwCapture(
    ROW*             row                 /**< LP row */
    );
 
+/** decreases usage counter of LP row, and frees memory if necessary */
 extern
-RETCODE SCIProwRelease(                 /**< decreases usage counter of LP row, and frees memory if necessary */
+RETCODE SCIProwRelease(
    ROW**            row,                /**< pointer to LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
 
+/** locks an unmodifiable row, which forbids further changes */
 extern
-RETCODE SCIProwLock(                    /**< locks an unmodifiable row, which forbids further changes */
+RETCODE SCIProwLock(
    ROW*             row                 /**< LP row */
    );
 
+/** unlocks a lock of a row; a row with no sealed lock may be modified */
 extern
-RETCODE SCIProwUnlock(                  /**< unlocks a lock of a row; a row with no sealed lock may be modified */
+RETCODE SCIProwUnlock(
    ROW*             row                 /**< LP row */
    );
 
+/** sorts row entries by column index */
 extern
-void SCIProwSort(                       /**< sorts row entries by column index */
+void SCIProwSort(
    ROW*             row                 /**< row to be sorted */
    );
 
+/** forbids roundings of variables in row that may violate row */
 extern
-void SCIProwForbidRounding(             /**< forbids roundings of variables in row that may violate row */
+void SCIProwForbidRounding(
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** allows roundings of variables in row that may violate row */
 extern
-void SCIProwAllowRounding(              /**< allows roundings of variables in row that may violate row */
+void SCIProwAllowRounding(
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** adds a previously non existing coefficient to an LP row */
 extern
-RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
+RETCODE SCIProwAddCoeff(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -432,16 +462,18 @@ RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coef
    Real             val                 /**< value of coefficient */
    );
 
+/** deletes coefficient from row */
 extern
-RETCODE SCIProwDelCoeff(                /**< deletes coefficient from row */
+RETCODE SCIProwDelCoeff(
    ROW*             row,                /**< row to be changed */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    COL*             col                 /**< coefficient to be deleted */
    );
 
+/** changes or adds a coefficient to an LP row */
 extern
-RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an LP row */
+RETCODE SCIProwChgCoeff(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -450,8 +482,9 @@ RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an
    Real             val                 /**< value of coefficient */
    );
 
+/** increases value of an existing or nonexisting coefficient in an LP column */
 extern
-RETCODE SCIProwIncCoeff(                /**< increases value of an existing or nonexisting coefficient in an LP column */
+RETCODE SCIProwIncCoeff(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -460,84 +493,98 @@ RETCODE SCIProwIncCoeff(                /**< increases value of an existing or n
    Real             incval              /**< value to add to the coefficient */
    );
 
+/** add constant value to a row, i.e. subtract value from lhs and rhs */
 extern
-RETCODE SCIProwAddConst(                /**< add constant value to a row, i.e. subtract value from lhs and rhs */
+RETCODE SCIProwAddConst(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real             constant            /**< constant value to add to the row */
    );
 
+/** changes left hand side of LP row */
 extern
-RETCODE SCIProwChgLhs(                  /**< changes left hand side of LP row */
+RETCODE SCIProwChgLhs(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real             lhs                 /**< new left hand side */
    );
 
+/** changes right hand side of LP row */
 extern
-RETCODE SCIProwChgRhs(                  /**< changes right hand side of LP row */
+RETCODE SCIProwChgRhs(
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real             rhs                 /**< new right hand side */
    );
 
+/** returns the left hand side of the row */
 extern
-Real SCIProwGetLhs(                     /**< returns the left hand side of the row */
+Real SCIProwGetLhs(
    ROW*             row                 /**< LP row */
    );
 
+/** returns the right hand side of the row */
 extern
-Real SCIProwGetRhs(                     /**< returns the right hand side of the row */
+Real SCIProwGetRhs(
    ROW*             row                 /**< LP row */
    );
 
+/** returns the name of the row */
 extern
-const char* SCIProwGetName(             /**< returns the name of the row */
+const char* SCIProwGetName(
    ROW*             row                 /**< LP row */
    );
 
+/** gets constraint this row belongs to, or NULL if it's a cut */
 extern
-CONS* SCIProwGetCons(                   /**< gets constraint this row belongs to, or NULL if it's a cut */
+CONS* SCIProwGetCons(
    ROW*             row                 /**< LP row */
    );
 
+/** gets unique index of row */
 extern
-int SCIProwGetIndex(                    /**< gets unique index of row */
+int SCIProwGetIndex(
    ROW*             row                 /**< LP row */
    );
 
+/** returns TRUE iff row belongs to a model constraint */
 extern
-Bool SCIProwIsModel(                    /**< returns TRUE iff row belongs to a model constraint */
+Bool SCIProwIsModel(
    ROW*             row                 /**< LP row */
    );
 
+/** gets position of row in actual LP, or -1 if it is not in LP */
 extern
-int SCIProwGetLPPos(                    /**< gets position of row in actual LP, or -1 if it is not in LP */
+int SCIProwGetLPPos(
    ROW*             row                 /**< LP row */
    );
 
+/** returns TRUE iff row is member of actual LP */
 extern
-Bool SCIProwIsInLP(                     /**< returns TRUE iff row is member of actual LP */
+Bool SCIProwIsInLP(
    ROW*             row                 /**< LP row */
    );
 
+/** returns the activity of a row in the last LP or after recalculation */
 extern
-Real SCIProwGetActivity(                /**< returns the activity of a row in the last LP or after recalculation */
+Real SCIProwGetActivity(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
 
+/** returns the feasibility of a row in the last solution or after recalc */
 extern
-Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in the last solution or after recalc */
+Real SCIProwGetFeasibility(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
 
+/** returns the pseudo activity of a row */
 extern
-RETCODE SCIProwGetPseudoActivity(       /**< returns the pseudo activity of a row */
+RETCODE SCIProwGetPseudoActivity(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -545,8 +592,9 @@ RETCODE SCIProwGetPseudoActivity(       /**< returns the pseudo activity of a ro
    Real*            pseudoactivity      /**< pointer to store the pseudo activity */
    );
 
+/** returns the feasibility of a row in the actual pseudo solution */
 extern
-RETCODE SCIProwGetPseudoFeasibility(    /**< returns the feasibility of a row in the actual pseudo solution */
+RETCODE SCIProwGetPseudoFeasibility(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -554,8 +602,9 @@ RETCODE SCIProwGetPseudoFeasibility(    /**< returns the feasibility of a row in
    Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
    );
 
+/** returns the activity of a row for a given solution */
 extern
-RETCODE SCIProwGetSolActivity(          /**< returns the activity of a row for a given solution */
+RETCODE SCIProwGetSolActivity(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -564,8 +613,9 @@ RETCODE SCIProwGetSolActivity(          /**< returns the activity of a row for a
    Real*            solactivity         /**< pointer to store the row's activity for the solution */
    );
 
+/** returns the feasibility of a row for the given solution */
 extern
-RETCODE SCIProwGetSolFeasibility(       /**< returns the feasibility of a row for the given solution */
+RETCODE SCIProwGetSolFeasibility(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -574,8 +624,9 @@ RETCODE SCIProwGetSolFeasibility(       /**< returns the feasibility of a row fo
    Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
    );
 
+/** returns the minimal and maximal activity of a row w.r.t. the column's bounds */
 extern
-RETCODE SCIProwGetActivityBounds(       /**< returns the minimal and maximal activity of a row w.r.t. the column's bounds */
+RETCODE SCIProwGetActivityBounds(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -584,8 +635,9 @@ RETCODE SCIProwGetActivityBounds(       /**< returns the minimal and maximal act
    Real*            maxactivity         /**< pointer to store the maximal activity, or NULL */
    );
 
+/** gets activity bounds for row after setting variable to zero */
 extern
-RETCODE SCIProwGetActivityResiduals(    /**< gets activity bounds for row after setting variable to zero */
+RETCODE SCIProwGetActivityResiduals(
    ROW*             row,                /**< LP row */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -596,44 +648,52 @@ RETCODE SCIProwGetActivityResiduals(    /**< gets activity bounds for row after 
    Real*            maxresactivity      /**< pointer to store the maximal residual activity */
    );
 
+/** invalidates activity bounds, such that they are recalculated in next get */
 extern
-RETCODE SCIProwInvalidActivityBounds(   /**< invalidates activity bounds, such that they are recalculated in next get */
+RETCODE SCIProwInvalidActivityBounds(
    ROW*             row                 /**< LP row */
    );
 
+/** get number of nonzero entries in row vector */
 extern
-int SCIProwGetNNonz(                    /**< get number of nonzero entries in row vector */
+int SCIProwGetNNonz(
    ROW*             row                 /**< LP row */
    );
 
+/** gets array with columns of nonzero entries */
 extern
-COL** SCIProwGetCols(                   /**< gets array with columns of nonzero entries */
+COL** SCIProwGetCols(
    ROW*             row                 /**< LP row */
    );
 
+/** gets array with coefficients of nonzero entries */
 extern
-Real* SCIProwGetVals(                   /**< gets array with coefficients of nonzero entries */
+Real* SCIProwGetVals(
    ROW*             row                 /**< LP row */
    );
 
+/** gets constant shift of row */
 extern
-Real SCIProwGetConstant(                /**< gets constant shift of row */
+Real SCIProwGetConstant(
    ROW*             row                 /**< LP row */
    );
 
+/** get euclidean norm of row vector */
 extern
-Real SCIProwGetNorm(                    /**< get euclidean norm of row vector */
+Real SCIProwGetNorm(
    ROW*             row                 /**< LP row */
    );
 
+/** gets maximal absolute value of row vector coefficients */
 extern
-Real SCIProwGetMaxval(                  /**< gets maximal absolute value of row vector coefficients */
+Real SCIProwGetMaxval(
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** output row to file stream */
 extern
-void SCIProwPrint(                      /**< output row to file stream */
+void SCIProwPrint(
    ROW*             row,                /**< LP row */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
@@ -643,160 +703,184 @@ void SCIProwPrint(                      /**< output row to file stream */
  * LP methods
  */
 
+/** creates empty LP data object */
 extern
-RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
+RETCODE SCIPlpCreate(
    LP**             lp,                 /**< pointer to LP data object */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< problem name */
    );
 
+/** frees LP data object */
 extern
-RETCODE SCIPlpFree(                     /**< frees LP data object */
+RETCODE SCIPlpFree(
    LP**             lp,                 /**< pointer to LP data object */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** adds a column to the LP and captures the variable */
 extern
-RETCODE SCIPlpAddCol(                   /**< adds a column to the LP and captures the variable */
+RETCODE SCIPlpAddCol(
    LP*              lp,                 /**< LP data */
    const SET*       set,                /**< global SCIP settings */
    COL*             col                 /**< LP column */
    );
 
+/** adds a row to the LP and captures it */
 extern
-RETCODE SCIPlpAddRow(                   /**< adds a row to the LP and captures it */
+RETCODE SCIPlpAddRow(
    LP*              lp,                 /**< LP data */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row                 /**< LP row */
    );
 
+/** removes all columns after the given number of columns from the LP */
 extern
-RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given number of columns from the LP */
+RETCODE SCIPlpShrinkCols(
    LP*              lp,                 /**< LP data */
    int              newncols            /**< new number of columns in the LP */
    );
 
+/** removes and releases all rows after the given number of rows from the LP */
 extern
-RETCODE SCIPlpShrinkRows(               /**< removes and releases all rows after the given number of rows from the LP */
+RETCODE SCIPlpShrinkRows(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    int              newnrows            /**< new number of rows in the LP */
    );
 
+/** removes all columns and rows from LP, releases all rows */
 extern
-RETCODE SCIPlpClear(                    /**< removes all columns and rows from LP, releases all rows */
+RETCODE SCIPlpClear(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** remembers number of columns and rows to track the newly added ones */
 extern
-void SCIPlpMarkSize(                    /**< remembers number of columns and rows to track the newly added ones */
+void SCIPlpMarkSize(
    LP*              lp                  /**< actual LP data */
    );
 
+/** get array with newly added columns after the last mark */
 extern
-COL** SCIPlpGetNewcols(                 /**< get array with newly added columns after the last mark */
+COL** SCIPlpGetNewcols(
    const LP*        lp                  /**< actual LP data */
    );
 
+/** get number of newly added columns after the last mark */
 extern
-int SCIPlpGetNumNewcols(                /**< get number of newly added columns after the last mark */
+int SCIPlpGetNumNewcols(
    const LP*        lp                  /**< actual LP data */
    );
 
+/** get array with newly added rows after the last mark */
 extern
-ROW** SCIPlpGetNewrows(                 /**< get array with newly added rows after the last mark */
+ROW** SCIPlpGetNewrows(
    const LP*        lp                  /**< actual LP data */
    );
 
+/** get number of newly added rows after the last mark */
 extern
-int SCIPlpGetNumNewrows(                /**< get number of newly added rows after the last mark */
+int SCIPlpGetNumNewrows(
    const LP*        lp                  /**< actual LP data */
    );
 
+/** stores LP state (like basis information) into LP state object */
 extern
-RETCODE SCIPlpGetState(                 /**< stores LP state (like basis information) into LP state object */
+RETCODE SCIPlpGetState(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
+/** loads LP state (like basis information) into solver */
 extern
-RETCODE SCIPlpSetState(                 /**< loads LP state (like basis information) into solver */
+RETCODE SCIPlpSetState(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
+/** sets the feasibility tolerance of the LP solver */
 extern
-RETCODE SCIPlpSetFeastol(               /**< sets the feasibility tolerance of the LP solver */
+RETCODE SCIPlpSetFeastol(
    LP*              lp,                 /**< actual LP data */
    Real             feastol             /**< new feasibility tolerance */
    );
 
+/** sets the upper objective limit of the LP solver */
 extern
-RETCODE SCIPlpSetUpperbound(            /**< sets the upper objective limit of the LP solver */
+RETCODE SCIPlpSetUpperbound(
    LP*              lp,                 /**< actual LP data */
    Real             upperbound          /**< new upper objective limit */
    );
 
+/** solves the LP with the primal simplex algorithm */
 extern
-RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simplex algorithm */
+RETCODE SCIPlpSolvePrimal(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
+/** solves the LP with the dual simplex algorithm */
 extern
-RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex algorithm */
+RETCODE SCIPlpSolveDual(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
+/** gets solution status of last solve call */
 extern
-LPSOLSTAT SCIPlpGetSolstat(             /**< gets solution status of last solve call */
+LPSOLSTAT SCIPlpGetSolstat(
    LP*              lp                  /**< actual LP data */
    );
 
+/** gets objective value of last solution */
 extern
-Real SCIPlpGetObjval(                   /**< gets objective value of last solution */
+Real SCIPlpGetObjval(
    LP*              lp                  /**< actual LP data */
    );
 
+/** stores the LP solution in the columns and rows */
 extern
-RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
+RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
+/** stores LP solution with infinite objective value in the columns and rows */
 extern
-RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite objective value in the columns and rows */
+RETCODE SCIPlpGetUnboundedSol(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 
+/** stores the dual farkas multipliers for infeasibility proof in rows */
 extern
-RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers for infeasibility proof in rows */
+RETCODE SCIPlpGetDualfarkas(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** get number of iterations used in last LP solve */
 extern
-RETCODE SCIPlpGetIterations(            /**< get number of iterations used in last LP solve */
+RETCODE SCIPlpGetIterations(
    LP*              lp,                 /**< actual LP data */
    int*             iterations          /**< pointer to store the iteration count */
    );

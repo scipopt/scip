@@ -39,9 +39,6 @@ enum Result
    SCIP_BRANCHED    =   8,            /**< the method created a branching */
    SCIP_FOUNDSOL    =   9,            /**< the method found a feasible primal solution */
    SCIP_SUCCESS     =  10             /**< the method was successfully executed */  
-#if 0
-   SCIP_FAILURE     =  11             /**< the method's execution failed */
-#endif
 };
 typedef enum Result RESULT;           /**< result codes for SCIP callback methods */
 

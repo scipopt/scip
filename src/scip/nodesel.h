@@ -91,19 +91,22 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
 #include "lp.h"
 
 
+/** creates node priority queue */
 extern
-RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
+RETCODE SCIPnodepqCreate(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** frees node priority queue, but not the data nodes themselves */
 extern
-void SCIPnodepqDestroy(                 /**< frees node priority queue, but not the data nodes themselves */
+void SCIPnodepqDestroy(
    NODEPQ**         nodepq              /**< pointer to a node priority queue */
    );
 
+/** frees node priority queue and all nodes in the queue */
 extern
-RETCODE SCIPnodepqFree(                 /**< frees node priority queue and all nodes in the queue */
+RETCODE SCIPnodepqFree(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
@@ -111,47 +114,55 @@ RETCODE SCIPnodepqFree(                 /**< frees node priority queue and all n
    LP*              lp                  /**< actual LP data */
    );
 
+/** inserts node into node priority queue */
 extern
-RETCODE SCIPnodepqInsert(               /**< inserts node into node priority queue */
+RETCODE SCIPnodepqInsert(
    NODEPQ*          nodepq,             /**< pointer to a node priority queue */
    const SET*       set,                /**< global SCIP settings */
    NODE*            node                /**< node to be inserted */
    );
 
+/** removes and returns best node from the node priority queue */
 extern
-NODE* SCIPnodepqRemove(                 /**< removes and returns best node from the node priority queue */
+NODE* SCIPnodepqRemove(
    NODEPQ*          nodepq,             /**< pointer to a node priority queue */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** returns the best node of the queue without removing it */
 extern
-NODE* SCIPnodepqFirst(                  /**< returns the best node of the queue without removing it */
+NODE* SCIPnodepqFirst(
    const NODEPQ*    nodepq              /**< pointer to a node priority queue */
    );
 
+/** returns the nodes array of the queue */
 extern
-NODE** SCIPnodepqNodes(                 /**< returns the nodes array of the queue */
+NODE** SCIPnodepqNodes(
    const NODEPQ*    nodepq              /**< pointer to a node priority queue */
    );
 
+/** returns the number of nodes stored in the node priority queue */
 extern
-int SCIPnodepqLen(                      /**< returns the number of nodes stored in the node priority queue */
+int SCIPnodepqLen(
    const NODEPQ*    nodepq              /**< pointer to a node priority queue */
    );
 
+/** gets the minimal lower bound of all nodes in the queue */
 extern
-Real SCIPnodepqGetLowerbound(           /**< gets the minimal lower bound of all nodes in the queue */
+Real SCIPnodepqGetLowerbound(
    NODEPQ*          nodepq,             /**< pointer to a node priority queue */
    const SET*       set                 /**< global SCIP settings */
    );
 
+/** gets the sum of lower bounds of all nodes in the queue */
 extern
-Real SCIPnodepqGetLowerboundSum(        /**< gets the sum of lower bounds of all nodes in the queue */
+Real SCIPnodepqGetLowerboundSum(
    NODEPQ*          nodepq              /**< pointer to a node priority queue */
    );
 
+/** free all nodes from the queue that are cut off by the given upper bound */
 extern
-RETCODE SCIPnodepqBound(                /**< free all nodes from the queue that are cut off by the given upper bound */
+RETCODE SCIPnodepqBound(
    NODEPQ*          nodepq,             /**< pointer to a node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -160,8 +171,9 @@ RETCODE SCIPnodepqBound(                /**< free all nodes from the queue that 
    Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
    );
 
+/** creates a node selector */
 extern
-RETCODE SCIPnodeselCreate(              /**< creates a node selector */
+RETCODE SCIPnodeselCreate(
    NODESEL**        nodesel,            /**< pointer to store node selector */
    const char*      name,               /**< name of node selector */
    const char*      desc,               /**< description of node selector */
@@ -174,57 +186,66 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    Bool             lowestboundfirst    /**< does node comparison sorts w.r.t. lower bound as primal criterion? */
    );
 
+/** frees memory of node selector */
 extern
-RETCODE SCIPnodeselFree(                /**< frees memory of node selector */
+RETCODE SCIPnodeselFree(
    NODESEL**        nodesel,            /**< pointer to node selector data structure */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** initializes node selector */
 extern
-RETCODE SCIPnodeselInit(                /**< initializes node selector */
+RETCODE SCIPnodeselInit(
    NODESEL*         nodesel,            /**< node selector */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** deinitializes node selector */
 extern
-RETCODE SCIPnodeselExit(                /**< deinitializes node selector */
+RETCODE SCIPnodeselExit(
    NODESEL*         nodesel,            /**< node selector */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** select next node to be processed */
 extern
-RETCODE SCIPnodeselSelect(              /**< select next node to be processed */
+RETCODE SCIPnodeselSelect(
    NODESEL*         nodesel,            /**< node selector */
    SCIP*            scip,               /**< SCIP data structure */   
    NODE**           selnode             /**< pointer to store node to be processed next */
    );
 
+/** compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
 extern
-int SCIPnodeselCompare(                 /**< compares two nodes; returns -1/0/+1 if node1 better/equal/worse than node2 */
+int SCIPnodeselCompare(
    NODESEL*         nodesel,            /**< node selector */
    SCIP*            scip,               /**< SCIP data structure */   
    NODE*            node1,              /**< first node to compare */
    NODE*            node2               /**< second node to compare */
    );
 
+/** gets name of node selector */
 extern
-const char* SCIPnodeselGetName(         /**< gets name of node selector */
+const char* SCIPnodeselGetName(
    NODESEL*         nodesel             /**< node selector */
    );
 
+/** gets user data of node selector */
 extern
-NODESELDATA* SCIPnodeselGetData(        /**< gets user data of node selector */
+NODESELDATA* SCIPnodeselGetData(
    NODESEL*         nodesel             /**< node selector */
    );
 
+/** sets user data of node selector; user has to free old data in advance! */
 extern
-void SCIPnodeselSetData(                /**< sets user data of node selector; user has to free old data in advance! */
+void SCIPnodeselSetData(
    NODESEL*         nodesel,            /**< node selector */
    NODESELDATA*     nodeseldata         /**< new node selector user data */
    );
 
+/** is node selector initialized? */
 extern
-Bool SCIPnodeselIsInitialized(          /**< is node selector initialized? */
+Bool SCIPnodeselIsInitialized(
    NODESEL*         nodesel             /**< node selector */
    );
 

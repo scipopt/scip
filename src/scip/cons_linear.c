@@ -123,8 +123,9 @@ struct EventData
  * memory growing methods for dynamically allocated arrays
  */
 
+/** ensures, that vars and vals arrays can store at least num entries */
 static
-RETCODE ensureVarsSize(                 /**< ensures, that vars and vals arrays can store at least num entries */
+RETCODE ensureVarsSize(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    int              num                 /**< minimum number of entries to store */
@@ -137,11 +138,11 @@ RETCODE ensureVarsSize(                 /**< ensures, that vars and vals arrays 
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vars, lincons->varssize, newsize) );
-      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vals, lincons->varssize, newsize) );
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vars, lincons->varssize, newsize) );
+      CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vals, lincons->varssize, newsize) );
       if( lincons->transformed )
       {
-         ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->eventdatas, lincons->varssize, newsize) );
+         CHECK_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->eventdatas, lincons->varssize, newsize) );
       }
       else
          assert(lincons->eventdatas == NULL);
@@ -156,8 +157,9 @@ RETCODE ensureVarsSize(                 /**< ensures, that vars and vals arrays 
  * local methods
  */
 
+/** creates event data for variable at given position, and catches events */
 static
-RETCODE linconsCatchEvent(              /**< creates event data for variable at given position, and catches events */
+RETCODE linconsCatchEvent(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -172,7 +174,7 @@ RETCODE linconsCatchEvent(              /**< creates event data for variable at 
    assert(lincons->eventdatas != NULL);
    assert(lincons->eventdatas[pos] == NULL);
 
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, &lincons->eventdatas[pos]) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, &lincons->eventdatas[pos]) );
    lincons->eventdatas[pos]->lincons = lincons;
    lincons->eventdatas[pos]->varpos = pos;
 
@@ -182,8 +184,9 @@ RETCODE linconsCatchEvent(              /**< creates event data for variable at 
    return SCIP_OKAY;
 }
 
+/** deletes event data for variable at given position, and drops events */
 static
-RETCODE linconsDropEvent(               /**< deletes event data for variable at given position, and drops events */
+RETCODE linconsDropEvent(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -205,8 +208,9 @@ RETCODE linconsDropEvent(               /**< deletes event data for variable at 
    return SCIP_OKAY;
 }
 
+/** creates a linear constraint data object of the original problem */
 static
-RETCODE linconsCreate(                  /**< creates a linear constraint data object of the original problem */
+RETCODE linconsCreate(
    LINCONS**        lincons,            /**< pointer to linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    int              nvars,              /**< number of nonzeros in the constraint */
@@ -231,12 +235,12 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
       return SCIP_INVALIDDATA;
    }
 
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, lincons) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, lincons) );
 
    if( nvars > 0 )
    {
-      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vars, vars, nvars) );
-      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vals, vals, nvars) );
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vars, vars, nvars) );
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vals, vals, nvars) );
    }
    else
    {
@@ -260,8 +264,9 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
    return SCIP_OKAY;
 }
 
+/** creates a linear constraint data object of the transformed problem */
 static
-RETCODE linconsCreateTransformed(       /**< creates a linear constraint data object of the transformed problem */
+RETCODE linconsCreateTransformed(
    LINCONS**        lincons,            /**< pointer to linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -281,7 +286,7 @@ RETCODE linconsCreateTransformed(       /**< creates a linear constraint data ob
 
    /* allocate the additional needed eventdatas array */
    assert((*lincons)->eventdatas == NULL);
-   ALLOC_OKAY( SCIPallocBlockMemoryArray(scip, &(*lincons)->eventdatas, (*lincons)->varssize) );
+   CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*lincons)->eventdatas, (*lincons)->varssize) );
    (*lincons)->transformed = TRUE;
 
    /* transform the variables, catch events */
@@ -300,8 +305,9 @@ RETCODE linconsCreateTransformed(       /**< creates a linear constraint data ob
    return SCIP_OKAY;
 }
 
+/** frees a linear constraint data object */
 static
-RETCODE linconsFree(                    /**< frees a linear constraint data object */
+RETCODE linconsFree(
    LINCONS**        lincons,            /**< pointer to linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
@@ -331,8 +337,9 @@ RETCODE linconsFree(                    /**< frees a linear constraint data obje
    return SCIP_OKAY;
 }
 
+/** adds coefficient in linear constraint */
 static
-RETCODE linconsAddCoef(                 /**< adds coefficient in linear constraint */
+RETCODE linconsAddCoef(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -386,8 +393,9 @@ RETCODE linconsAddCoef(                 /**< adds coefficient in linear constrai
    return SCIP_OKAY;
 }
 
+/** calculates the activity of the linear constraint for given solution */
 static
-RETCODE linconsGetActivity(             /**< calculates the activity of the linear constraint for given solution */
+RETCODE linconsGetActivity(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< solution to get activity for, NULL to actual solution */
@@ -422,8 +430,9 @@ RETCODE linconsGetActivity(             /**< calculates the activity of the line
    return SCIP_OKAY;
 }
 
+/** calculates the feasibility of the linear constraint for given solution */
 static
-RETCODE linconsGetFeasibility(          /**< calculates the feasibility of the linear constraint for given solution */
+RETCODE linconsGetFeasibility(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< solution to get feasibility for, NULL to actual solution */
@@ -442,8 +451,9 @@ RETCODE linconsGetFeasibility(          /**< calculates the feasibility of the l
    return SCIP_OKAY;
 }
 
+/** creates an LP row from a linear constraint data object */
 static
-RETCODE linconsToRow(                   /**< creates an LP row from a linear constraint data object */
+RETCODE linconsToRow(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint, this lincons object belongs to */
@@ -472,8 +482,9 @@ RETCODE linconsToRow(                   /**< creates an LP row from a linear con
    return SCIP_OKAY;
 }
 
+/** updates minimum and maximum activity for a change in lower bound */
 static
-void linconsUpdateChgLb(                /**< updates minimum and maximum activity for a change in lower bound */
+void linconsUpdateChgLb(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    Real             oldlb,              /**< old lower bound of variable */
@@ -526,8 +537,9 @@ void linconsUpdateChgLb(                /**< updates minimum and maximum activit
    }
 }
 
+/** updates minimum and maximum activity for a change in upper bound */
 static
-void linconsUpdateChgUb(                /**< updates minimum and maximum activity for a change in upper bound */
+void linconsUpdateChgUb(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    Real             oldub,              /**< old upper bound of variable */
@@ -578,8 +590,9 @@ void linconsUpdateChgUb(                /**< updates minimum and maximum activit
    }
 }
 
+/** updates minimum and maximum activity for variable addition */
 static
-void linconsUpdateAddVar(               /**< updates minimum and maximum activity for variable addition */
+void linconsUpdateAddVar(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable of constraint entry */
@@ -599,8 +612,9 @@ void linconsUpdateAddVar(               /**< updates minimum and maximum activit
    }
 }
 
+/** calculates minimum and maximum activity for constraint */
 static
-void linconsCalcActivityBounds(         /**< calculates minimum and maximum activity for constraint */
+void linconsCalcActivityBounds(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -623,8 +637,9 @@ void linconsCalcActivityBounds(         /**< calculates minimum and maximum acti
       linconsUpdateAddVar(lincons, scip, lincons->vars[i], lincons->vals[i]);
 }
 
+/** forbids roundings of variables in constraint that may violate constraint */
 static
-void linconsForbidRounding(             /**< forbids roundings of variables in constraint that may violate constraint */
+void linconsForbidRounding(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -667,8 +682,9 @@ void linconsForbidRounding(             /**< forbids roundings of variables in c
    }
 }
 
+/** allows roundings of variables in constraint that may violate constraint */
 static
-void linconsAllowRounding(              /**< allows roundings of variables in constraint that may violate constraint */
+void linconsAllowRounding(
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -711,8 +727,9 @@ void linconsAllowRounding(              /**< allows roundings of variables in co
    }
 }
 
+/** prints linear constraint to file stream */
 static
-void linconsPrint(                      /**< prints linear constraint to file stream */
+void linconsPrint(
    LINCONS*         lincons,            /**< linear constraint data object */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
@@ -741,8 +758,9 @@ void linconsPrint(                      /**< prints linear constraint to file st
    fprintf(file, "<= %+f\n", lincons->rhs);
 }
 
+/** gets activity bounds for constraint */
 static
-RETCODE consdataGetActivityBounds(      /**< gets activity bounds for constraint */
+RETCODE consdataGetActivityBounds(
    CONSDATA*        consdata,           /**< constraint data */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            minactivity,        /**< pointer to store the minimal activity */
@@ -782,8 +800,9 @@ RETCODE consdataGetActivityBounds(      /**< gets activity bounds for constraint
    return SCIP_OKAY;
 }
 
+/** invalidates activity bounds, such that they are recalculated in next get */
 static
-RETCODE consdataInvalidActivityBounds(  /**< invalidates activity bounds, such that they are recalculated in next get */
+RETCODE consdataInvalidActivityBounds(
    CONSDATA*        consdata            /**< constraint data */
    )
 {
@@ -809,8 +828,9 @@ RETCODE consdataInvalidActivityBounds(  /**< invalidates activity bounds, such t
    return SCIP_OKAY;
 }
 
+/** gets activity bounds for constraint after setting variable to zero */
 static
-RETCODE consdataGetActivityResiduals(   /**< gets activity bounds for constraint after setting variable to zero */
+RETCODE consdataGetActivityResiduals(
    CONSDATA*        consdata,           /**< constraint data */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to calculate activity residual for */
@@ -920,8 +940,9 @@ RETCODE consdataGetActivityResiduals(   /**< gets activity bounds for constraint
    return SCIP_OKAY;
 }
 
+/** gets left hand side of linear constraint */
 static
-RETCODE consdataGetLhs(                 /**< gets left hand side of linear constraint */
+RETCODE consdataGetLhs(
    CONSDATA*        consdata,           /**< constraint data */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            lhs                 /**< pointer to store left hand side */
@@ -945,8 +966,9 @@ RETCODE consdataGetLhs(                 /**< gets left hand side of linear const
    return SCIP_OKAY;
 }
 
+/** gets right hand side of linear constraint */
 static
-RETCODE consdataGetRhs(                 /**< gets right hand side of linear constraint */
+RETCODE consdataGetRhs(
    CONSDATA*        consdata,           /**< constraint data */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            rhs                 /**< pointer to store right hand side */
@@ -970,8 +992,9 @@ RETCODE consdataGetRhs(                 /**< gets right hand side of linear cons
    return SCIP_OKAY;
 }
 
+/** prints linear constraint to file stream */
 static
-void consdataPrint(                     /**< prints linear constraint to file stream */
+void consdataPrint(
    CONSDATA*        consdata,           /**< constraint data */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
@@ -990,8 +1013,9 @@ void consdataPrint(                     /**< prints linear constraint to file st
    }
 }
 
+/** tightens bounds of a single variable due to activity bounds */
 static
-RETCODE tightenVarBounds(               /**< tightens bounds of a single variable due to activity bounds */
+RETCODE tightenVarBounds(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< constraint data */
    VAR*             var,                /**< variable to tighten bounds for */
@@ -1123,8 +1147,9 @@ RETCODE tightenVarBounds(               /**< tightens bounds of a single variabl
    return SCIP_OKAY;
 }
 
+/** tightens variable's bounds due to activity bounds */
 static
-RETCODE consdataTightenBounds(          /**< tightens variable's bounds due to activity bounds */
+RETCODE consdataTightenBounds(
    CONSDATA*        consdata,           /**< constraint data */
    SCIP*            scip,               /**< SCIP data structure */
    RESULT*          result              /**< pointer to store SCIP_CUTOFF, if node is infeasible */
@@ -1213,8 +1238,9 @@ RETCODE consdataTightenBounds(          /**< tightens variable's bounds due to a
    return SCIP_OKAY;
 }
 
+/** separates violated inequalities; called from Sepa and Enfo methods */
 static
-RETCODE separateConstraints(            /**< separates violated inequalities; called from Sepa and Enfo methods */
+RETCODE separateConstraints(
    CONSHDLR*        conshdlr,           /**< linear constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< array of constraints to process */
@@ -1308,8 +1334,9 @@ RETCODE separateConstraints(            /**< separates violated inequalities; ca
    return SCIP_OKAY;
 }
 
+/** checks pseudo solution for violated inequalities */
 static
-RETCODE checkConstraints(               /**< checks pseudo solution for violated inequalities */
+RETCODE checkConstraints(
    CONSHDLR*        conshdlr,           /**< linear constraint handler */
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< array of constraints to process */
@@ -1445,7 +1472,7 @@ DECL_CONSTRAN(consTranLinear)
    assert(sourcedata->data.lincons != NULL);
    assert(targetdata != NULL);
 
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, targetdata) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, targetdata) );
    (*targetdata)->islprow = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -1693,7 +1720,8 @@ DECL_EVENTEXEC(eventExecLinear)
  * constraint specific interface methods
  */
 
-RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear constraints and includes it in SCIP */
+/** creates the handler for linear constraints and includes it in SCIP */
+RETCODE SCIPincludeConsHdlrLinear(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -1720,7 +1748,8 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear constraint */
+/** creates and captures a linear constraint */
+RETCODE SCIPcreateConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
@@ -1747,7 +1776,7 @@ RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear const
    }
 
    /* create the constraint specific data */
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, &consdata) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
    consdata->islprow = FALSE;
    if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
    {
@@ -1778,7 +1807,8 @@ RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear const
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcreateConsLinearLPRow(      /**< creates and captures a linear constraint from an LP row, captures the row */
+/** creates and captures a linear constraint from an LP row, captures the row */
+RETCODE SCIPcreateConsLinearLPRow(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    ROW*             row,                /**< LP row */
@@ -1799,7 +1829,7 @@ RETCODE SCIPcreateConsLinearLPRow(      /**< creates and captures a linear const
    }
 
    /* create the constraint specific data */
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, &consdata) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, &consdata) );
    consdata->islprow = TRUE;
    consdata->data.row = row;
 
@@ -1818,7 +1848,8 @@ RETCODE SCIPcreateConsLinearLPRow(      /**< creates and captures a linear const
    return SCIP_OKAY;
 }
 
-RETCODE SCIPaddCoefConsLinear(          /**< adds coefficient in linear constraint */
+/** adds coefficient in linear constraint */
+RETCODE SCIPaddCoefConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    VAR*             var,                /**< variable of constraint entry */
@@ -1867,7 +1898,8 @@ RETCODE SCIPaddCoefConsLinear(          /**< adds coefficient in linear constrai
    return SCIP_OKAY;
 }
 
-RETCODE SCIPgetLhsConsLinear(           /**< gets left hand side of linear constraint */
+/** gets left hand side of linear constraint */
+RETCODE SCIPgetLhsConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real*            lhs                 /**< pointer to store left hand side */
@@ -1890,7 +1922,8 @@ RETCODE SCIPgetLhsConsLinear(           /**< gets left hand side of linear const
    return SCIP_OKAY;
 }
 
-RETCODE SCIPgetRhsConsLinear(           /**< gets right hand side of linear constraint */
+/** gets right hand side of linear constraint */
+RETCODE SCIPgetRhsConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real*            rhs                 /**< pointer to store right hand side */
@@ -1913,7 +1946,8 @@ RETCODE SCIPgetRhsConsLinear(           /**< gets right hand side of linear cons
    return SCIP_OKAY;
 }
 
-RETCODE SCIPchgLhsConsLinear(           /**< changes left hand side of linear constraint */
+/** changes left hand side of linear constraint */
+RETCODE SCIPchgLhsConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real             lhs                 /**< new left hand side */
@@ -1956,7 +1990,8 @@ RETCODE SCIPchgLhsConsLinear(           /**< changes left hand side of linear co
    return SCIP_OKAY;
 }
 
-RETCODE SCIPchgRhsConsLinear(           /**< changes right hand side of linear constraint */
+/** changes right hand side of linear constraint */
+RETCODE SCIPchgRhsConsLinear(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint data */
    Real             rhs                 /**< new right hand side */

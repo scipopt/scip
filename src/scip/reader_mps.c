@@ -692,23 +692,23 @@ RETCODE readRows(
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
-            CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
+            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
                            0.0, SCIPinfinity(scip), TRUE, FALSE) );
             break;
          case 'E' :
-            CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
+            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 
                            0.0, 0.0, TRUE, FALSE) );
             break;
          case 'L' :
-            CHECK_SCIP( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
+            CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL,
                            -SCIPinfinity(scip), 0.0, TRUE, FALSE) );
             break;
          default :
             mpsinputSyntaxerror(mpsi);
             return SCIP_OKAY;
          }
-         CHECK_SCIP( SCIPaddCons(scip, cons) );
-         CHECK_SCIP( SCIPreleaseCons(scip, &cons) );
+         CHECK_OKAY( SCIPaddCons(scip, cons) );
+         CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
       }
    }
    mpsinputSyntaxerror(mpsi);
@@ -740,8 +740,8 @@ RETCODE readCols(
          /* add the last variable to the problem */
          if( var != NULL )
          {
-            CHECK_SCIP( SCIPaddVar(scip, var) );
-            CHECK_SCIP( SCIPreleaseVar(scip, &var) );
+            CHECK_OKAY( SCIPaddVar(scip, var) );
+            CHECK_OKAY( SCIPreleaseVar(scip, &var) );
          }
          assert(var == NULL);
 
@@ -757,8 +757,8 @@ RETCODE readCols(
          /* add the last variable to the problem */
          if( var != NULL )
          {
-            CHECK_SCIP( SCIPaddVar(scip, var) );
-            CHECK_SCIP( SCIPreleaseVar(scip, &var) );
+            CHECK_OKAY( SCIPaddVar(scip, var) );
+            CHECK_OKAY( SCIPreleaseVar(scip, &var) );
          }
          assert(var == NULL);
 
@@ -767,12 +767,12 @@ RETCODE readCols(
          if( mpsinputIsInteger(mpsi) )
          {
             /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            CHECK_SCIP( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
          }
          else
          {
             /* for continous variables, default bounds are 0 <= x, and default cost is 0 */
-            CHECK_SCIP( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS) );
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS) );
          }
       }
       assert(var != NULL);
@@ -1297,7 +1297,8 @@ DECL_READERREAD(SCIPreaderReadMPS)
  * MPS file reader specific interface methods
  */
 
-RETCODE SCIPincludeReaderMPS(           /**< includes the MPS file reader in SCIP */
+/** includes the MPS file reader in SCIP */
+RETCODE SCIPincludeReaderMPS(
    SCIP*            scip                /**< SCIP data structure */
    )
 {

@@ -58,23 +58,27 @@ struct Stat
 };
 
 
+/** creates problem statistics data */
 extern
-RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
+RETCODE SCIPstatCreate(
    STAT**           stat                /**< pointer to problem statistics data */
    );
 
+/** frees problem statistics data */
 extern
-RETCODE SCIPstatFree(                   /**< frees problem statistics data */
+RETCODE SCIPstatFree(
    STAT**           stat                /**< pointer to problem statistics data */
    );
 
+/** marks statistics to be able to reset them when solving process is freed */
 extern
-void SCIPstatMark(                      /**< marks statistics to be able to reset them when solving process is freed */
+void SCIPstatMark(
    STAT*            stat                /**< problem statistics data */
    );
 
+/** reset statistics to the data before solving started */
 extern
-void SCIPstatReset(                     /**< reset statistics to the data before solving started */
+void SCIPstatReset(
    STAT*            stat                /**< problem statistics data */
    );
 

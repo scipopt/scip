@@ -80,8 +80,9 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
 
 
 
+/** creates a primal heuristic */
 extern
-RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
+RETCODE SCIPheurCreate(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
@@ -95,60 +96,70 @@ RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
    HEURDATA*        heurdata            /**< primal heuristic data */
    );
 
+/** calls destructor and frees memory of primal heuristic */
 extern
-RETCODE SCIPheurFree(                   /**< calls destructor and frees memory of primal heuristic */
+RETCODE SCIPheurFree(
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** initializes primal heuristic */
 extern
-RETCODE SCIPheurInit(                   /**< initializes primal heuristic */
+RETCODE SCIPheurInit(
    HEUR*            heur,               /**< primal heuristic */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** calls exit method of primal heuristic */
 extern
-RETCODE SCIPheurExit(                   /**< calls exit method of primal heuristic */
+RETCODE SCIPheurExit(
    HEUR*            heur,               /**< primal heuristic */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
+/** calls execution method of primal heuristic */
 extern
-RETCODE SCIPheurExec(                   /**< calls execution method of primal heuristic */
+RETCODE SCIPheurExec(
    HEUR*            heur,               /**< primal heuristic */
    const SET*       set,                /**< global SCIP settings */
    int              actdepth,           /**< depth of active node */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** gets name of primal heuristic */
 extern
-const char* SCIPheurGetName(            /**< gets name of primal heuristic */
+const char* SCIPheurGetName(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** gets display character of primal heuristic */
 extern
-char SCIPheurGetDispchar(               /**< gets display character of primal heuristic */
+char SCIPheurGetDispchar(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** gets user data of primal heuristic */
 extern
-HEURDATA* SCIPheurGetData(              /**< gets user data of primal heuristic */
+HEURDATA* SCIPheurGetData(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** sets user data of primal heuristic; user has to free old data in advance! */
 extern
-void SCIPheurSetData(                   /**< sets user data of primal heuristic; user has to free old data in advance! */
+void SCIPheurSetData(
    HEUR*            heur,               /**< primal heuristic */
    HEURDATA*        heurdata            /**< new primal heuristic user data */
    );
 
+/** gets frequency of primal heuristic */
 extern
-int SCIPheurGetFreq(                    /**< gets frequency of primal heuristic */
+int SCIPheurGetFreq(
    HEUR*            heur                /**< primal heuristic */
    );
 
+/** is primal heuristic initialized? */
 extern
-Bool SCIPheurIsInitialized(             /**< is primal heuristic initialized? */
+Bool SCIPheurIsInitialized(
    HEUR*            heur                /**< primal heuristic */
    );
 

@@ -52,7 +52,8 @@ struct Disp
 
 /* display column methods */
 
-RETCODE SCIPdispCreate(                 /**< creates a display column */
+/** creates a display column */
+RETCODE SCIPdispCreate(
    DISP**           disp,               /**< pointer to store display column */
    const char*      name,               /**< name of display column */
    const char*      desc,               /**< description of display column */
@@ -94,7 +95,8 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
    return SCIP_OKAY;
 }
    
-RETCODE SCIPdispFree(                   /**< frees memory of display column */
+/** frees memory of display column */
+RETCODE SCIPdispFree(
    DISP**           disp,               /**< pointer to display column data structure */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -117,7 +119,8 @@ RETCODE SCIPdispFree(                   /**< frees memory of display column */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPdispInit(                   /**< initializes display column */
+/** initializes display column */
+RETCODE SCIPdispInit(
    DISP*            disp,               /**< display column */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -142,7 +145,8 @@ RETCODE SCIPdispInit(                   /**< initializes display column */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPdispExit(                   /**< deinitializes display column */
+/** deinitializes display column */
+RETCODE SCIPdispExit(
    DISP*            disp,               /**< display column */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -167,7 +171,8 @@ RETCODE SCIPdispExit(                   /**< deinitializes display column */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPdispOutput(                 /**< output display column to screen */
+/** output display column to screen */
+RETCODE SCIPdispOutput(
    DISP*            disp,               /**< display column */
    SCIP*            scip                /**< SCIP data structure */   
    )
@@ -181,7 +186,8 @@ RETCODE SCIPdispOutput(                 /**< output display column to screen */
    return SCIP_OKAY;
 }
 
-const char* SCIPdispGetName(            /**< gets name of display column */
+/** gets name of display column */
+const char* SCIPdispGetName(
    DISP*            disp                /**< display column */
    )
 {
@@ -190,7 +196,8 @@ const char* SCIPdispGetName(            /**< gets name of display column */
    return disp->name;
 }
 
-DISPDATA* SCIPdispGetData(              /**< gets user data of display column */
+/** gets user data of display column */
+DISPDATA* SCIPdispGetData(
    DISP*            disp                /**< display column */
    )
 {
@@ -199,7 +206,8 @@ DISPDATA* SCIPdispGetData(              /**< gets user data of display column */
    return disp->dispdata;
 }
 
-void SCIPdispSetData(                   /**< sets user data of display column; user has to free old data in advance! */
+/** sets user data of display column; user has to free old data in advance! */
+void SCIPdispSetData(
    DISP*            disp,               /**< display column */
    DISPDATA*        dispdata            /**< new display column user data */
    )
@@ -209,7 +217,8 @@ void SCIPdispSetData(                   /**< sets user data of display column; u
    disp->dispdata = dispdata;
 }
 
-int SCIPdispGetPosition(                /**< gets position of display column */
+/** gets position of display column */
+int SCIPdispGetPosition(
    DISP*            disp                /**< display column */
    )
 {
@@ -218,7 +227,8 @@ int SCIPdispGetPosition(                /**< gets position of display column */
    return disp->position;
 }
 
-Bool SCIPdispIsInitialized(             /**< is display column initialized? */
+/** is display column initialized? */
+Bool SCIPdispIsInitialized(
    DISP*            disp                /**< display column */
    )
 {
@@ -227,7 +237,8 @@ Bool SCIPdispIsInitialized(             /**< is display column initialized? */
    return disp->initialized;
 }
 
-RETCODE SCIPdispPrintLine(              /**< prints one line of output with the active display columns */
+/** prints one line of output with the active display columns */
+RETCODE SCIPdispPrintLine(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
@@ -297,7 +308,8 @@ DECL_SORTPTRCOMP(dispCmp)
    return ((DISP*)elem2)->priority - ((DISP*)elem1)->priority;
 }
 
-RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting in the display w.r. to priority */
+/** activates all display lines fitting in the display w.r. to priority */
+RETCODE SCIPdispAutoActivate(
    const SET*       set                 /**< global SCIP settings */
    )
 {
@@ -338,7 +350,8 @@ static
 const char powerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
 #define MAXPOWER 6
 
-void SCIPdispDecimal(                   /**< displays an integer in decimal form fitting in a given width */
+/** displays an integer in decimal form fitting in a given width */
+void SCIPdispDecimal(
    FILE*            file,               /**< output stream */
    Longint          val,                /**< value to display */
    int              width               /**< width to fit into */

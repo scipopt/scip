@@ -59,8 +59,9 @@ struct PQueue
 };
 
 
+/** resizes element memory to hold at least the given number of elements */
 static
-RETCODE pqueueResize(                   /**< resizes element memory to hold at least the given number of elements */
+RETCODE pqueueResize(
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    int              minsize             /**< minimal number of storeable elements */
    )
@@ -76,7 +77,8 @@ RETCODE pqueueResize(                   /**< resizes element memory to hold at l
    return SCIP_OKAY;
 }
 
-RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
+/** initializes priority queue */
+RETCODE SCIPpqueueInit(
    PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int              initsize,           /**< initial number of available element slots */
    Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
@@ -100,7 +102,8 @@ RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    return SCIP_OKAY;
 }
 
-void SCIPpqueueFree(                    /**< frees priority queue, but not the data elements themselves */
+/** frees priority queue, but not the data elements themselves */
+void SCIPpqueueFree(
    PQUEUE**         pqueue              /**< pointer to a priority queue */
    )
 {
@@ -110,7 +113,8 @@ void SCIPpqueueFree(                    /**< frees priority queue, but not the d
    freeMemory(pqueue);
 }
 
-RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue */
+/** inserts element into priority queue */
+RETCODE SCIPpqueueInsert(
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    void*            elem                /**< element to be inserted */
    )
@@ -136,7 +140,8 @@ RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue
    return SCIP_OKAY;
 }
 
-void* SCIPpqueueRemove(                 /**< removes and returns best element from the priority queue */
+/** removes and returns best element from the priority queue */
+void* SCIPpqueueRemove(
    PQUEUE*          pqueue              /**< pointer to a priority queue */
    )
 {
@@ -175,7 +180,8 @@ void* SCIPpqueueRemove(                 /**< removes and returns best element fr
    return root;
 }
 
-void* SCIPpqueueFirst(                  /**< returns the best element of the queue without removing it */
+/** returns the best element of the queue without removing it */
+void* SCIPpqueueFirst(
    const PQUEUE*    pqueue              /**< pointer to a priority queue */
    )
 {
@@ -217,8 +223,9 @@ struct HashTable
 };
 
 
+/** appends element to the hash list */
 static
-RETCODE hashlistAppend(                 /**< appends element to the hash list */
+RETCODE hashlistAppend(
    HASHLIST**       hashlist,           /**< pointer to hash list to free */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to append to the list */
@@ -238,8 +245,9 @@ RETCODE hashlistAppend(                 /**< appends element to the hash list */
    return SCIP_OKAY;
 }
 
+/** frees a hash list entry and all its successors */
 static
-void hashlistFree(                      /**< frees a hash list entry and all its successors */
+void hashlistFree(
    HASHLIST**       hashlist,           /**< pointer to hash list to free */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -261,8 +269,9 @@ void hashlistFree(                      /**< frees a hash list entry and all its
    *hashlist = NULL;
 }
 
+/** retrieves element with given key from the hash list, or NULL */
 static
-void* hashlistRetrieve(                 /**< retrieves element with given key from the hash list, or NULL */
+void* hashlistRetrieve(
    HASHLIST*        hashlist,           /**< hash list */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -289,8 +298,9 @@ void* hashlistRetrieve(                 /**< retrieves element with given key fr
    return NULL;
 }
 
+/** removes element from the hash list */
 static
-RETCODE hashlistRemove(                 /**< removes element from the hash list */
+RETCODE hashlistRemove(
    HASHLIST**       hashlist,           /**< pointer to hash list to free */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to remove from the list */
@@ -322,7 +332,8 @@ RETCODE hashlistRemove(                 /**< removes element from the hash list 
 }
 
    
-RETCODE SCIPhashtableCreate(            /**< creates a hash table */
+/** creates a hash table */
+RETCODE SCIPhashtableCreate(
    HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
    int              tablesize,          /**< size of the hash table */
    DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
@@ -352,7 +363,8 @@ RETCODE SCIPhashtableCreate(            /**< creates a hash table */
    return SCIP_OKAY;
 }
 
-void SCIPhashtableFree(                 /**< frees the hash table */
+/** frees the hash table */
+void SCIPhashtableFree(
    HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -371,7 +383,8 @@ void SCIPhashtableFree(                 /**< frees the hash table */
    freeMemory(hashtable);
 }
 
-RETCODE SCIPhashtableInsert(            /**< inserts element in hash table (multiple inserts of same element possible) */
+/** inserts element in hash table (multiple inserts of same element possible) */
+RETCODE SCIPhashtableInsert(
    HASHTABLE*       hashtable,          /**< hash table */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to insert into the table */
@@ -401,7 +414,8 @@ RETCODE SCIPhashtableInsert(            /**< inserts element in hash table (mult
    return SCIP_OKAY;
 }
 
-void* SCIPhashtableRetrieve(            /**< retrieve element with key from hash table, returns NULL if not existing */
+/** retrieve element with key from hash table, returns NULL if not existing */
+void* SCIPhashtableRetrieve(
    HASHTABLE*       hashtable,          /**< hash table */
    void*            key                 /**< key to retrieve */
    )
@@ -425,7 +439,8 @@ void* SCIPhashtableRetrieve(            /**< retrieve element with key from hash
       keyval, key);
 }
 
-RETCODE SCIPhashtableRemove(            /**< removes existing element from the hash table */
+/** removes existing element from the hash table */
+RETCODE SCIPhashtableRemove(
    HASHTABLE*       hashtable,          /**< hash table */
    MEMHDR*          memhdr,             /**< block memory */
    void*            element             /**< element to remove from the table */
@@ -455,7 +470,8 @@ RETCODE SCIPhashtableRemove(            /**< removes existing element from the h
    return SCIP_OKAY;
 }
 
-void SCIPhashtablePrintStatistics(      /**< prints statistics about hash table usage */
+/** prints statistics about hash table usage */
+void SCIPhashtablePrintStatistics(
    HASHTABLE*       hashtable           /**< hash table */
    )
 {
@@ -553,7 +569,8 @@ struct RealArray
    int              maxusedidx;         /**< index of last non zero element in vals array */
 };
 
-RETCODE SCIPrealarrayCreate(            /**< creates a dynamic array of real values */
+/** creates a dynamic array of real values */
+RETCODE SCIPrealarrayCreate(
    REALARRAY**      realarray,          /**< pointer to store the real array */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -570,7 +587,8 @@ RETCODE SCIPrealarrayCreate(            /**< creates a dynamic array of real val
    return SCIP_OKAY;
 }
 
-RETCODE SCIPrealarrayCopy(              /**< creates a copy of a dynamic array of real values */
+/** creates a copy of a dynamic array of real values */
+RETCODE SCIPrealarrayCopy(
    REALARRAY**      realarray,          /**< pointer to store the copied real array */
    MEMHDR*          memhdr,             /**< block memory */
    REALARRAY*       sourcerealarray     /**< dynamic real array to copy */
@@ -589,7 +607,8 @@ RETCODE SCIPrealarrayCopy(              /**< creates a copy of a dynamic array o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPrealarrayFree(              /**< frees a dynamic array of real values */
+/** frees a dynamic array of real values */
+RETCODE SCIPrealarrayFree(
    REALARRAY**      realarray,          /**< pointer to the real array */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -603,7 +622,8 @@ RETCODE SCIPrealarrayFree(              /**< frees a dynamic array of real value
    return SCIP_OKAY;
 }
 
-RETCODE SCIPrealarrayExtend(            /**< extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+RETCODE SCIPrealarrayExtend(
    REALARRAY*       realarray,          /**< dynamic real array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -750,7 +770,8 @@ RETCODE SCIPrealarrayExtend(            /**< extends dynamic array to be able to
    return SCIP_OKAY;
 }
 
-void SCIPrealarrayClear(                /**< clears a dynamic real array */
+/** clears a dynamic real array */
+void SCIPrealarrayClear(
    REALARRAY*       realarray           /**< dynamic real array */
    )
 {
@@ -780,7 +801,8 @@ void SCIPrealarrayClear(                /**< clears a dynamic real array */
    assert(realarray->maxusedidx == INT_MIN);
 }
 
-Real SCIPrealarrayGet(                  /**< gets value of entry in dynamic array */
+/** gets value of entry in dynamic array */
+Real SCIPrealarrayGet(
    REALARRAY*       realarray,          /**< dynamic real array */
    int              idx                 /**< array index to get value for */
    )
@@ -800,7 +822,8 @@ Real SCIPrealarrayGet(                  /**< gets value of entry in dynamic arra
    }
 }
 
-RETCODE SCIPrealarraySet(               /**< sets value of entry in dynamic array */
+/** sets value of entry in dynamic array */
+RETCODE SCIPrealarraySet(
    REALARRAY*       realarray,          /**< dynamic real array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -867,7 +890,8 @@ RETCODE SCIPrealarraySet(               /**< sets value of entry in dynamic arra
    return SCIP_OKAY;
 }
 
-RETCODE SCIPrealarrayInc(               /**< increases value of entry in dynamic array */
+/** increases value of entry in dynamic array */
+RETCODE SCIPrealarrayInc(
    REALARRAY*       realarray,          /**< dynamic real array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -889,7 +913,8 @@ struct IntArray
    int              maxusedidx;         /**< index of last non zero element in vals array */
 };
 
-RETCODE SCIPintarrayCreate(             /**< creates a dynamic array of int values */
+/** creates a dynamic array of int values */
+RETCODE SCIPintarrayCreate(
    INTARRAY**       intarray,           /**< pointer to store the int array */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -906,7 +931,8 @@ RETCODE SCIPintarrayCreate(             /**< creates a dynamic array of int valu
    return SCIP_OKAY;
 }
 
-RETCODE SCIPintarrayCopy(               /**< creates a copy of a dynamic array of real values */
+/** creates a copy of a dynamic array of real values */
+RETCODE SCIPintarrayCopy(
    INTARRAY**       intarray,           /**< pointer to store the copied real array */
    MEMHDR*          memhdr,             /**< block memory */
    INTARRAY*        sourceintarray      /**< dynamic real array to copy */
@@ -925,7 +951,8 @@ RETCODE SCIPintarrayCopy(               /**< creates a copy of a dynamic array o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPintarrayFree(               /**< frees a dynamic array of int values */
+/** frees a dynamic array of int values */
+RETCODE SCIPintarrayFree(
    INTARRAY**       intarray,           /**< pointer to the int array */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -939,7 +966,8 @@ RETCODE SCIPintarrayFree(               /**< frees a dynamic array of int values
    return SCIP_OKAY;
 }
 
-RETCODE SCIPintarrayExtend(             /**< extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+RETCODE SCIPintarrayExtend(
    INTARRAY*        intarray,           /**< dynamic int array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1086,7 +1114,8 @@ RETCODE SCIPintarrayExtend(             /**< extends dynamic array to be able to
    return SCIP_OKAY;
 }
 
-void SCIPintarrayClear(                 /**< clears a dynamic int array */
+/** clears a dynamic int array */
+void SCIPintarrayClear(
    INTARRAY*        intarray            /**< dynamic int array */
    )
 {
@@ -1116,7 +1145,8 @@ void SCIPintarrayClear(                 /**< clears a dynamic int array */
    assert(intarray->maxusedidx == INT_MIN);
 }
 
-int SCIPintarrayGet(                    /**< gets value of entry in dynamic array */
+/** gets value of entry in dynamic array */
+int SCIPintarrayGet(
    INTARRAY*        intarray,           /**< dynamic int array */
    int              idx                 /**< array index to get value for */
    )
@@ -1136,7 +1166,8 @@ int SCIPintarrayGet(                    /**< gets value of entry in dynamic arra
    }
 }
 
-RETCODE SCIPintarraySet(                /**< sets value of entry in dynamic array */
+/** sets value of entry in dynamic array */
+RETCODE SCIPintarraySet(
    INTARRAY*        intarray,           /**< dynamic int array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1203,7 +1234,8 @@ RETCODE SCIPintarraySet(                /**< sets value of entry in dynamic arra
    return SCIP_OKAY;
 }
 
-RETCODE SCIPintarrayInc(                /**< increases value of entry in dynamic array */
+/** increases value of entry in dynamic array */
+RETCODE SCIPintarrayInc(
    INTARRAY*        intarray,           /**< dynamic int array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1225,7 +1257,8 @@ struct BoolArray
    int              maxusedidx;         /**< index of last non zero element in vals array */
 };
 
-RETCODE SCIPboolarrayCreate(            /**< creates a dynamic array of bool values */
+/** creates a dynamic array of bool values */
+RETCODE SCIPboolarrayCreate(
    BOOLARRAY**      boolarray,          /**< pointer to store the bool array */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -1242,7 +1275,8 @@ RETCODE SCIPboolarrayCreate(            /**< creates a dynamic array of bool val
    return SCIP_OKAY;
 }
 
-RETCODE SCIPboolarrayCopy(              /**< creates a copy of a dynamic array of real values */
+/** creates a copy of a dynamic array of real values */
+RETCODE SCIPboolarrayCopy(
    BOOLARRAY**      boolarray,          /**< pointer to store the copied real array */
    MEMHDR*          memhdr,             /**< block memory */
    BOOLARRAY*       sourceboolarray     /**< dynamic real array to copy */
@@ -1261,7 +1295,8 @@ RETCODE SCIPboolarrayCopy(              /**< creates a copy of a dynamic array o
    return SCIP_OKAY;
 }
 
-RETCODE SCIPboolarrayFree(              /**< frees a dynamic array of bool values */
+/** frees a dynamic array of bool values */
+RETCODE SCIPboolarrayFree(
    BOOLARRAY**      boolarray,          /**< pointer to the bool array */
    MEMHDR*          memhdr              /**< block memory */
    )
@@ -1275,7 +1310,8 @@ RETCODE SCIPboolarrayFree(              /**< frees a dynamic array of bool value
    return SCIP_OKAY;
 }
 
-RETCODE SCIPboolarrayExtend(            /**< extends dynamic array to be able to store indices from minidx to maxidx */
+/** extends dynamic array to be able to store indices from minidx to maxidx */
+RETCODE SCIPboolarrayExtend(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1422,7 +1458,8 @@ RETCODE SCIPboolarrayExtend(            /**< extends dynamic array to be able to
    return SCIP_OKAY;
 }
 
-void SCIPboolarrayClear(                /**< clears a dynamic bool array */
+/** clears a dynamic bool array */
+void SCIPboolarrayClear(
    BOOLARRAY*       boolarray           /**< dynamic bool array */
    )
 {
@@ -1452,7 +1489,8 @@ void SCIPboolarrayClear(                /**< clears a dynamic bool array */
    assert(boolarray->maxusedidx == INT_MIN);
 }
 
-Bool SCIPboolarrayGet(                  /**< gets value of entry in dynamic array */
+/** gets value of entry in dynamic array */
+Bool SCIPboolarrayGet(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    int              idx                 /**< array index to get value for */
    )
@@ -1472,7 +1510,8 @@ Bool SCIPboolarrayGet(                  /**< gets value of entry in dynamic arra
    }
 }
 
-RETCODE SCIPboolarraySet(               /**< sets value of entry in dynamic array */
+/** sets value of entry in dynamic array */
+RETCODE SCIPboolarraySet(
    BOOLARRAY*       boolarray,          /**< dynamic bool array */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -1547,7 +1586,8 @@ RETCODE SCIPboolarraySet(               /**< sets value of entry in dynamic arra
  * Sorting algorithms
  */
 
-void SCIPbsortPtr(                      /**< bubble sort of an array of pointers */
+/** bubble sort of an array of pointers */
+void SCIPbsortPtr(
    void**           ptrarray,           /**< pointer array to be sorted */
    int              len,                /**< length of both arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
@@ -1613,7 +1653,8 @@ void SCIPbsortPtr(                      /**< bubble sort of an array of pointers
    }
 }
 
-void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of pointers/Reals, sorted by first array */
+/** bubble sort of two joint arrays of pointers/Reals, sorted by first array */
+void SCIPbsortPtrDbl(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int              len,                /**< length of both arrays */
@@ -1688,7 +1729,8 @@ void SCIPbsortPtrDbl(                   /**< bubble sort of two joint arrays of 
    }
 }
 
-void SCIPbsortPtrDblInt(                /**< bubble sort of three joint arrays of pointers/Reals/Ints, sorted by first */
+/** bubble sort of three joint arrays of pointers/Reals/Ints, sorted by first */
+void SCIPbsortPtrDblInt(
    void**           ptrarray,           /**< pointer array to be sorted */
    Real*            dblarray,           /**< Real array to be permuted in the same way */
    int*             intarray,           /**< int array to be permuted in the same way */

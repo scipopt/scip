@@ -46,26 +46,30 @@ struct Buffer
 
 
 
+/** creates memory buffer storage */
 extern
-RETCODE SCIPbufferCreate(               /**< creates memory buffer storage */
+RETCODE SCIPbufferCreate(
    BUFFER**         buffer              /**< pointer to memory buffer */
    );
 
+/** frees memory buffer storage */
 extern
-void SCIPbufferFree(                    /**< frees memory buffer storage */
+void SCIPbufferFree(
    BUFFER**         buffer              /**< pointer to memory buffer */
    );
 
+/** allocates the next unused buffer */
 extern
-RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
+RETCODE SCIPbufferCapture(
    BUFFER*          buffer,             /**< memory buffer storage */
    const SET*       set,                /**< global SCIP settings */
    void**           ptr,                /**< pointer to store the allocated memory buffer */
    int              size                /**< minimal required size of the buffer */
    );
 
+/** releases a buffer */
 extern
-void SCIPbufferRelease(                 /**< releases a buffer */
+void SCIPbufferRelease(
    BUFFER*          buffer,             /**< memory buffer storage */
    void**           ptr,                /**< pointer to the allocated memory buffer */
    int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */

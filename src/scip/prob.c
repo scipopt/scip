@@ -34,8 +34,9 @@
  * dymanic memory arrays
  */
 
+/** resizes vars array to be able to store at least num entries */
 static
-RETCODE probEnsureVarsMem(              /**< resizes vars array to be able to store at least num entries */
+RETCODE probEnsureVarsMem(
    PROB*            prob,               /**< problem data */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -57,8 +58,9 @@ RETCODE probEnsureVarsMem(              /**< resizes vars array to be able to st
    return SCIP_OKAY;
 }
 
+/** resizes conss array to be able to store at least num entries */
 static
-RETCODE probEnsureConssMem(             /**< resizes conss array to be able to store at least num entries */
+RETCODE probEnsureConssMem(
    PROB*            prob,               /**< problem data */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -86,7 +88,8 @@ RETCODE probEnsureConssMem(             /**< resizes conss array to be able to s
  * problem creation
  */
 
-RETCODE SCIPprobCreate(                 /**< creates problem data structure */
+/** creates problem data structure */
+RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
    const char*      name                /**< problem name */
    )
@@ -121,7 +124,8 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprobFree(                   /**< frees problem data structure */
+/** frees problem data structure */
+RETCODE SCIPprobFree(
    PROB**           prob,               /**< pointer to problem data structure */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -161,7 +165,8 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprobTransform(              /**< transform problem data into normalized form */
+/** transform problem data into normalized form */
+RETCODE SCIPprobTransform(
    PROB*            source,             /**< problem to transform */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -212,7 +217,8 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprobActivate(               /**< activates constraints in the problem */
+/** activates constraints in the problem */
+RETCODE SCIPprobActivate(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -231,7 +237,8 @@ RETCODE SCIPprobActivate(               /**< activates constraints in the proble
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the problem */
+/** deactivates constraints in the problem */
+RETCODE SCIPprobDeactivate(
    PROB*            prob                /**< problem data */
    )
 {
@@ -254,8 +261,9 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
  * problem modification
  */
 
+/** insert var at the correct position in vars array, depending on its type */
 static
-void probInsertVar(                     /**< insert var at the correct position in vars array, depending on its type */
+void probInsertVar(
    PROB*            prob,               /**< problem data */
    VAR*             var                 /**< variable to insert */
    )
@@ -330,8 +338,9 @@ void probInsertVar(                     /**< insert var at the correct position 
    var->probindex = insertpos;
 }
 
+/** removes variable from vars array */
 static
-void probRemoveVar(                     /**< removes variable from vars array */
+void probRemoveVar(
    PROB*            prob,               /**< problem data */
    VAR*             var                 /**< variable to remove */
    )
@@ -412,7 +421,8 @@ void probRemoveVar(                     /**< removes variable from vars array */
    assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
 }
 
-RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
+/** adds variable to the problem and captures it */
+RETCODE SCIPprobAddVar(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -442,7 +452,8 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprobChgVarType(             /**< changes the type of a variable in the problem */
+/** changes the type of a variable in the problem */
+RETCODE SCIPprobChgVarType(
    PROB*            prob,               /**< problem data */
    VAR*             var,                /**< variable to add */
    VARTYPE          vartype             /**< new type of variable */
@@ -467,8 +478,9 @@ RETCODE SCIPprobChgVarType(             /**< changes the type of a variable in t
    return SCIP_OKAY;
 }
 
+/** inserts constraint into the problems constraint array */
 static
-void probInsertCons(                    /**< inserts constraint into the problems constraint array */
+void probInsertCons(
    PROB*            prob,               /**< problem data */
    CONS*            cons                /**< constraint to add */
    )
@@ -492,7 +504,8 @@ void probInsertCons(                    /**< inserts constraint into the problem
    }
 }
 
-RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
+/** adds constraint to the problem and captures it */
+RETCODE SCIPprobAddCons(
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -516,7 +529,8 @@ RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and 
    return SCIP_OKAY;
 }
 
-void SCIPprobSetObjsense(               /**< sets objective sense: minimization or maximization */
+/** sets objective sense: minimization or maximization */
+void SCIPprobSetObjsense(
    PROB*            prob,               /**< problem data */
    OBJSENSE         objsense            /**< new objective sense */
    )
@@ -530,8 +544,8 @@ void SCIPprobSetObjsense(               /**< sets objective sense: minimization 
    prob->objsense = objsense;
 }
 
-void SCIPprobSetObjlim(                 /**< sets limit on objective function, such that only solutions better than this
-                                           limit are accepted */
+/** sets limit on objective function, such that only solutions better than this limit are accepted */
+void SCIPprobSetObjlim(
    PROB*            prob,               /**< problem data */
    Real             objlim              /**< objective limit */
    )
@@ -541,7 +555,8 @@ void SCIPprobSetObjlim(                 /**< sets limit on objective function, s
    prob->objlim = objlim;
 }
 
-Real SCIPprobExternObjval(              /**< returns the external value of the given internal objective value */
+/** returns the external value of the given internal objective value */
+Real SCIPprobExternObjval(
    PROB*            prob,               /**< problem data */
    Real             objval              /**< internal objective value */
    )
@@ -556,7 +571,8 @@ Real SCIPprobExternObjval(              /**< returns the external value of the g
  * problem information
  */
 
-const char* SCIPprobGetName(            /**< gets problem name */
+/** gets problem name */
+const char* SCIPprobGetName(
    PROB*            prob                /**< problem data */
    )
 {
@@ -564,7 +580,8 @@ const char* SCIPprobGetName(            /**< gets problem name */
    return prob->name;
 }
 
-VAR* SCIPprobFindVar(                   /**< returns variable of the problem with given name */
+/** returns variable of the problem with given name */
+VAR* SCIPprobFindVar(
    PROB*            prob,               /**< problem data */
    const char*      name                /**< name of variable to find */
    )
@@ -575,7 +592,8 @@ VAR* SCIPprobFindVar(                   /**< returns variable of the problem wit
    return (VAR*)(SCIPhashtableRetrieve(prob->varnames, (void*)name));
 }
 
-CONS* SCIPprobFindCons(                 /**< returns constraint of the problem with given name */
+/** returns constraint of the problem with given name */
+CONS* SCIPprobFindCons(
    PROB*            prob,               /**< problem data */
    const char*      name                /**< name of variable to find */
    )
@@ -586,7 +604,8 @@ CONS* SCIPprobFindCons(                 /**< returns constraint of the problem w
    return (CONS*)(SCIPhashtableRetrieve(prob->consnames, (void*)name));
 }
 
-void SCIPprobPrintPseudoSol(            /**< displays actual pseudo solution */
+/** displays actual pseudo solution */
+void SCIPprobPrintPseudoSol(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
    )

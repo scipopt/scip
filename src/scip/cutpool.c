@@ -55,8 +55,9 @@ struct Cutpool
  * Hash functions
  */
 
+/** gets the hash key of a cut */
 static
-DECL_HASHGETKEY(hashGetKeyCut)          /**< gets the hash key of a cut */
+DECL_HASHGETKEY(hashGetKeyCut)
 {
    CUT* cut;
 
@@ -68,8 +69,9 @@ DECL_HASHGETKEY(hashGetKeyCut)          /**< gets the hash key of a cut */
    return cut->row;
 }
 
+/** returns TRUE iff both cuts are identical */
 static
-DECL_HASHKEYEQ(hashKeyEqCut)            /**< returns TRUE iff both cuts are identical */
+DECL_HASHKEYEQ(hashKeyEqCut)
 {
    /* Warning: The comparison of real values is made against default epsilon.
     *          This is ugly, but we have no settings at hand.
@@ -146,8 +148,9 @@ DECL_HASHKEYVAL(hashKeyValCut)
  * dynamic memory arrays
  */
 
+/** resizes cuts array to be able to store at least num entries */
 static
-RETCODE cutpoolEnsureCutsMem(           /**< resizes cuts array to be able to store at least num entries */
+RETCODE cutpoolEnsureCutsMem(
    CUTPOOL*         cutpool,            /**< cut pool */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -175,8 +178,9 @@ RETCODE cutpoolEnsureCutsMem(           /**< resizes cuts array to be able to st
  * Cut methods
  */
 
+/** creates a cut and captures the row */
 static
-RETCODE cutCreate(                      /**< creates a cut and captures the row */
+RETCODE cutCreate(
    CUT**            cut,                /**< pointer to store the cut */
    MEMHDR*          memhdr,             /**< block memory */
    ROW*             row                 /**< row this cut represents */
@@ -199,8 +203,9 @@ RETCODE cutCreate(                      /**< creates a cut and captures the row 
    return SCIP_OKAY;
 }
 
+/** frees a cut and releases the row */
 static
-RETCODE cutFree(                        /**< frees a cut and releases the row */
+RETCODE cutFree(
    CUT**            cut,                /**< pointer to store the cut */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -227,7 +232,8 @@ RETCODE cutFree(                        /**< frees a cut and releases the row */
  * Cutpool methods
  */
 
-RETCODE SCIPcutpoolCreate(              /**< creates cut pool */
+/** creates cut pool */
+RETCODE SCIPcutpoolCreate(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    int              agelimit            /**< maximum age a cut can reach before it is deleted from the pool */
    )
@@ -250,7 +256,8 @@ RETCODE SCIPcutpoolCreate(              /**< creates cut pool */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcutpoolFree(                /**< frees cut pool */
+/** frees cut pool */
+RETCODE SCIPcutpoolFree(
    CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -277,7 +284,8 @@ RETCODE SCIPcutpoolFree(                /**< frees cut pool */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcutpoolAddRow(              /**< if not already existing, adds row to cut pool and captures it */
+/** if not already existing, adds row to cut pool and captures it */
+RETCODE SCIPcutpoolAddRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -296,7 +304,8 @@ RETCODE SCIPcutpoolAddRow(              /**< if not already existing, adds row t
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcutpoolAddNewRow(           /**< adds row to cut pool and captures it; doesn't check for multiple cuts */
+/** adds row to cut pool and captures it; doesn't check for multiple cuts */
+RETCODE SCIPcutpoolAddNewRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -333,8 +342,9 @@ RETCODE SCIPcutpoolAddNewRow(           /**< adds row to cut pool and captures i
    return SCIP_OKAY;
 }
 
+/** removes the cut from the cut pool */
 static
-RETCODE cutpoolDelCut(                  /**< removes the cut from the cut pool */
+RETCODE cutpoolDelCut(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -383,7 +393,8 @@ RETCODE cutpoolDelCut(                  /**< removes the cut from the cut pool *
    return SCIP_OKAY;
 }
 
-RETCODE SCIPcutpoolDelRow(              /**< removes the LP row from the cut pool */
+/** removes the LP row from the cut pool */
+RETCODE SCIPcutpoolDelRow(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -413,7 +424,8 @@ RETCODE SCIPcutpoolDelRow(              /**< removes the LP row from the cut poo
 }
 
 
-RETCODE SCIPcutpoolSeparate(            /**< separates cuts of the cut pool */
+/** separates cuts of the cut pool */
+RETCODE SCIPcutpoolSeparate(
    CUTPOOL*         cutpool,            /**< cut pool */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -491,7 +503,8 @@ RETCODE SCIPcutpoolSeparate(            /**< separates cuts of the cut pool */
       return SCIP_DIDNOTFIND;
 }
 
-int SCIPcutpoolGetNCuts(                /**< get number of cuts in the cut pool */
+/** get number of cuts in the cut pool */
+int SCIPcutpoolGetNCuts(
    CUTPOOL*         cutpool             /**< cut pool */
    )
 {
