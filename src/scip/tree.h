@@ -28,15 +28,16 @@
 
 enum Nodetype
 {
-   SCIP_NODETYPE_LEAF    = 0,           /**< unsolved leaf of the tree */
-   SCIP_NODETYPE_ACTNODE = 1,           /**< the active node, whose data is stored in the dynamic data object */
-   SCIP_NODETYPE_FORK    = 2,           /**< solved fork, where rows were only added to the father */
-   SCIP_NODETYPE_SUBROOT = 3            /**< solved fork, where rows were added, deleted, or rearranged */
+   SCIP_NODETYPE_LEAF     = 0,          /**< unsolved leaf of the tree */
+   SCIP_NODETYPE_ACTNODE  = 1,          /**< the active node, whose data is stored in the dynamic data object */
+   SCIP_NODETYPE_JUNCTION = 2,          /**< fork without LP solution */
+   SCIP_NODETYPE_FORK     = 3,          /**< fork with solved LP and added rows and columns */
+   SCIP_NODETYPE_SUBROOT  = 4           /**< fork with solved LP and arbitrarily changed rows and columns */
 };
 
 typedef enum Nodetype NODETYPE;         /**< type of node */
 typedef struct Actnode ACTNODE;         /**< data for the actual node */
-typedef struct Leaf LEAF;               /**< data for leaf nodes */
+typedef struct Junction JUNCTION;       /**< data for junction nodes */
 typedef struct Fork FORK;               /**< data for fork nodes */
 typedef struct Subroot SUBROOT;         /**< data for subroot nodes */
 typedef struct Node NODE;               /**< node data structure */
@@ -56,18 +57,18 @@ extern
 DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound);/**< node comparator for best lower bound */
 
 extern
-NODE* SCIPnodeCreate(                   /**< creates a leaf node */
+NODE* SCIPnodeCreate(                   /**< creates a child node of the active node */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   NODE*            parent,             /**< parent node in the tree */
-   LPSTATE*         lpstate             /**< pointer to LP state information */
+   TREE*            tree                /**< branch-and-bound tree */
    );
 
 extern
-void SCIPnodeFree(                      /**< frees node */
+RETCODE SCIPnodeFree(                   /**< frees node */
    NODE**           node,               /**< node data */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    );
 
 extern
@@ -76,27 +77,32 @@ RETCODE SCIPnodeActivate(               /**< activates a leaf node */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   TREE*            tree,               /**< branch-and-bound tree */
-   NODE*            oldnode             /**< old active node */
+   TREE*            tree                /**< branch-and-bound tree */
    );
 
 extern
-RETCODE SCIPactnodeToFork(              /**< converts the active node into a fork node */
+RETCODE SCIPnodeToJunction(             /**< converts the active node into a junction node */
    NODE*            node,               /**< node to convert */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+RETCODE SCIPnodeToFork(                 /**< converts the active node into a fork node */
+   NODE*            node,               /**< node to convert */
+   MEM*             mem,                /**< block memory buffers */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    );
 
 extern
-RETCODE SCIPactnodeToSubroot(           /**< converts the active node into a subroot node */
+RETCODE SCIPnodeToSubroot(              /**< converts the active node into a subroot node */
    NODE*            node,               /**< node to convert */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    );
+
 
 
 /*
@@ -110,17 +116,12 @@ TREE* SCIPtreeCreate(                   /**< creates an initialized tree data st
    );
 
 extern
-RETCODE SCIPtreeExtendPath(             /**< appends node to the path of active nodes and marks node active */
+RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP state for fork/subroot of the active node */
    TREE*            tree,               /**< branch-and-bound tree */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   NODE*            node                /**< node to append */
+   LP*              lp                  /**< actual LP data */
    );
 
-extern
-void SCIPtreeShrinkPath(                /**< cuts off path of active nodes after given node and marks them inactive */
-   TREE*            tree,               /**< branch-and-bound tree */
-   NODE*            node                /**< last node in the path */
-   );
 
 #endif

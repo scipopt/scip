@@ -73,22 +73,6 @@ typedef enum Pricing PRICING;
 
 
 /*
- * LP state methods
- */
-
-extern
-void SCIPlpstateCapture(                /**< increases usage counter of LP state */
-   LPSTATE*         lpstate             /**< LP state information (like basis information) */
-   );
-   
-extern
-void SCIPlpstateRelease(                /**< decreases usage counter of LP state, and frees memory if necessary */
-   LPSTATE**        lpstate,            /**< LP state information (like basis information) */
-   MEM*             mem                 /**< block memory buffers */
-   );
-
-
-/*
  * LP interface methods
  */
 
@@ -137,7 +121,7 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    );
 
 extern 
-RETCODE SCIPlpiDelCols(                 /**< deletes columns from LP */
+RETCODE SCIPlpiDelColset(               /**< deletes columns from LP */
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of columns
                                          *   input:  1 if column should be deleted, 0 if not
@@ -145,9 +129,10 @@ RETCODE SCIPlpiDelCols(                 /**< deletes columns from LP */
    );
 
 extern
-RETCODE SCIPlpiShrinkCols(              /**< deletes all columns after lastcol from LP */
+RETCODE SCIPlpiDelCols(                 /**< deletes all columns in the given range from LP */
    LPI*             lpi,                /**< LP interface structure */
-   int              lastcol             /**< last remaining column */
+   int              firstcol,           /**< first column to be deleted */
+   int              lastcol             /**< last column to be deleted */
    );
 
 extern 
@@ -164,7 +149,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    );
 
 extern 
-RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
+RETCODE SCIPlpiDelRowset(               /**< deletes rows from LP */
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
                                          *   input:  1 if row should be deleted, 0 if not
@@ -172,9 +157,10 @@ RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
    );
 
 extern
-RETCODE SCIPlpiShrinkRows(              /**< deletes all rows after lastrow from LP */
+RETCODE SCIPlpiDelRows(                 /**< deletes all rows in the given range from LP */
    LPI*             lpi,                /**< LP interface structure */
-   int              lastrow             /**< last remaining row */
+   int              firstrow,           /**< first row to be deleted */
+   int              lastrow             /**< last row to be deleted */
    );
 
 extern 
@@ -353,6 +339,13 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    LPI*             lpi,                /**< LP interface structure */
    MEM*             mem,                /**< block memory buffers */
    LPSTATE*         lpstate             /**< LP state information (like basis information) */
+   );
+
+extern
+RETCODE SCIPlpiFreeState(               /**< frees LP state information */
+   LPI*             lpi,                /**< LP interface structure */
+   MEM*             mem,                /**< block memory buffers */
+   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    );
 
 extern 

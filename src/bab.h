@@ -27,9 +27,7 @@
 #define __BAB_H__
 
 
-
 #include "def.h"
-
 
 
 

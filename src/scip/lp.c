@@ -168,50 +168,97 @@ RETCODE ensureChgbdsSize(               /**< ensures, that chgbds array can stor
 }
 
 static
-RETCODE ensureAddColsSize(              /**< ensures, that addcols array can store at least num entries */
+RETCODE ensureLpicolsSize(              /**< ensures, that lpicols array can store at least num entries */
    LP*              lp,                 /**< actual LP data */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
 {
-   assert(lp->naddcols <= lp->addcolssize);
+   assert(lp->nlpicols <= lp->lpicolssize);
    
-   if( num > lp->addcolssize )
+   if( num > lp->lpicolssize )
    {
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, lp->addcols, lp->addcolssize, newsize) );
-      lp->addcolssize = newsize;
+      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, lp->lpicols, lp->lpicolssize, newsize) );
+      lp->lpicolssize = newsize;
    }
-   assert(num <= lp->addcolssize);
+   assert(num <= lp->lpicolssize);
 
    return SCIP_OKAY;
 }
 
 static
-RETCODE ensureAddRowsSize(              /**< ensures, that addrows array can store at least num entries */
+RETCODE ensureLpirowsSize(              /**< ensures, that lpirows array can store at least num entries */
    LP*              lp,                 /**< actual LP data */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              num                 /**< minimum number of entries to store */
    )
 {
-   assert(lp->naddrows <= lp->addrowssize);
+   assert(lp->nlpirows <= lp->lpirowssize);
    
-   if( num > lp->addrowssize )
+   if( num > lp->lpirowssize )
    {
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, lp->addrows, lp->addrowssize, newsize) );
-      lp->addrowssize = newsize;
+      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, lp->lpirows, lp->lpirowssize, newsize) );
+      lp->lpirowssize = newsize;
    }
-   assert(num <= lp->addrowssize);
+   assert(num <= lp->lpirowssize);
 
    return SCIP_OKAY;
 }
+
+static
+RETCODE ensureColsSize(                 /**< ensures, that cols array can store at least num entries */
+   LP*              lp,                 /**< actual LP data */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->ncols <= lp->colssize);
+   
+   if( num > lp->colssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, lp->cols, lp->colssize, newsize) );
+      lp->colssize = newsize;
+   }
+   assert(num <= lp->colssize);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE ensureRowsSize(                 /**< ensures, that rows array can store at least num entries */
+   LP*              lp,                 /**< actual LP data */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->nrows <= lp->rowssize);
+   
+   if( num > lp->rowssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, lp->rows, lp->rowssize, newsize) );
+      lp->rowssize = newsize;
+   }
+   assert(num <= lp->rowssize);
+
+   return SCIP_OKAY;
+}
+
 
 
 /*
@@ -249,6 +296,24 @@ void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain ch
    freeBlockMemoryArrayNull(mem->dommem, (*domchgdyn)->domchg.boundchg, (*domchgdyn)->boundchgsize);
    freeBlockMemoryArrayNull(mem->dommem, (*domchgdyn)->domchg.holechg, (*domchgdyn)->holechgsize);
    freeBlockMemory(mem->dommem, *domchgdyn);
+}
+
+RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain change into dynamically sized one */
+   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   DOMCHG*          domchg              /**< static domain change */
+   )
+{
+   CHECK_OKAY( ensureBoundchgSize(domchgdyn, mem, set, domchg->nboundchg) );
+   CHECK_OKAY( ensureHolechgSize(domchgdyn, mem, set, domchg->nholechg) );
+
+   copyMemoryArray(domchgdyn->domchg.boundchg, domchg->boundchg, domchg->nboundchg);
+   copyMemoryArray(domchgdyn->domchg.holechg, domchg->holechg, domchg->nholechg);
+   domchgdyn->domchg.nboundchg = domchg->nboundchg;
+   domchgdyn->domchg.nholechg = domchg->nholechg;
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
@@ -440,9 +505,301 @@ RETCODE SCIPlpUndoDomchg(               /**< undoes domain change */
 
    return SCIP_OKAY;
 }
+
+
+
+/*
+ * LP solver data update
+ */
+
+static
+void coefChanged(                       /**< announces, that the given coefficient in the constraint matrix changed */
+   ROW*             row,                /**< LP row */
+   COL*             col,                /**< LP col */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(row != NULL);
+   assert(col != NULL);
+   assert(lp != NULL);
+
+   if( row->lpipos >= 0 && col->lpipos >= 0 )
+   {
+      assert(row->lpipos < lp->nlpirows);
+      assert(col->lpipos < lp->nlpicols);
+
+      /* we have to remember the change only in the row or in the column, 
+       * because the readdition of one vector would change the other automatically.
+       */
+      if( row->lpipos >= lp->lpifirstchgrow )
+         row->coefchanged = TRUE;
+      else if( col->lpipos >= lp->lpifirstchgcol )
+         col->coefchanged = TRUE;
+      else if( lp->lpifirstchgrow - row->lpipos <= lp->lpifirstchgcol - col->lpipos )
+      {
+         row->coefchanged = TRUE;
+         lp->lpifirstchgrow = row->lpipos;
+      }
+      else
+      {
+         col->coefchanged = TRUE;
+         lp->lpifirstchgcol = col->lpipos;
+      }
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
+   }
+}
    
 static
-RETCODE lpFlushDomchg(                  /**< applies all cached domain changes to the LP */
+RETCODE lpFlushDelCols(                 /**< applies all cached column removals to the LP solver */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->lpifirstchgcol <= lp->nlpicols);
+      
+   /* find the first column to change */
+   while( lp->lpifirstchgcol < lp->nlpicols
+      && lp->lpifirstchgcol < lp->ncols
+      && lp->cols[lp->lpifirstchgcol]->lpipos == lp->lpifirstchgcol
+      && !lp->cols[lp->lpifirstchgcol]->coefchanged )
+   {
+      assert(lp->cols[lp->lpifirstchgcol] == lp->lpicols[lp->lpifirstchgcol]);
+      lp->lpifirstchgcol++;
+   }
+   
+   /* shrink LP to the part which didn't change */
+   if( lp->lpifirstchgcol < lp->nlpicols )
+   {
+      int i;
+
+      CHECK_OKAY( SCIPlpiDelCols(lp->lpi, lp->lpifirstchgcol, lp->nlpicols-1) );
+      for( i = lp->lpifirstchgcol; i < lp->nlpicols; ++i )
+         lp->lpicols[i]->lpipos = -1;
+      lp->nlpicols = lp->lpifirstchgcol;
+   }
+   assert(lp->nlpicols == lp->lpifirstchgcol);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE lpFlushAddCols(                 /**< applies all cached column additions to the LP solver */
+   LP*              lp,                 /**< actual LP data */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   Real* realbuf;
+   int* intbuf;
+   Real* obj;
+   Real* lb;
+   Real* ub;
+   int* beg;
+   int* ind;
+   Real* val;
+   char** name;
+   COL* col;
+   int c;
+   int nnonz;
+   int naddcols;
+   int naddcoefs;
+   int i;
+   int lpipos;
+
+   assert(lp != NULL);
+   assert(lp->lpifirstchgcol == lp->nlpicols);
+   assert(mem != NULL);
+   assert(set != NULL);
+
+   /* if there are no columns to add, we are ready */
+   if( lp->ncols == lp->nlpicols )
+      return SCIP_OKAY;
+
+   /* add the additional columns */
+   assert(lp->ncols > lp->nlpicols);
+   CHECK_OKAY( ensureLpicolsSize(lp, mem, set, lp->ncols) );
+
+   /* count the (maximal) number of added coefficients, calculate the number of added columns */
+   naddcols = lp->ncols - lp->nlpicols;
+   naddcoefs = 0;
+   for( c = lp->nlpicols; c < lp->ncols; ++c )
+      naddcoefs += lp->cols[c]->len;
+   assert(naddcols > 0);
+
+   /* get temporary memory for bound changes */
+   ALLOC_OKAY( realbuf = SCIPmemGetRealbuf(mem, set, 3*naddcols + naddcoefs) );
+   obj = &(realbuf[0*naddcols]);
+   lb = &(realbuf[1*naddcols]);
+   ub = &(realbuf[2*naddcols]);
+   val = &(realbuf[3*naddcols]);
+   ALLOC_OKAY( intbuf = SCIPmemGetIntbuf(mem, set, naddcols + naddcoefs) );
+   beg = &(intbuf[0*naddcols]);
+   ind = &(intbuf[1*naddcols]);
+   ALLOC_OKAY( name = (char**)(SCIPmemGetPtrbuf(mem, set, naddcols)) );
+   
+   /* fill temporary memory with column data */
+   nnonz = 0;
+   for( c = lp->nlpicols; c < lp->ncols; ++c )
+   {
+      assert(nnonz < naddcoefs);
+
+      col = lp->cols[c];
+      lp->lpicols[c] = col;
+      col->lpipos = c;
+      col->lbchanged = FALSE;
+      col->ubchanged = FALSE;
+      col->coefchanged = FALSE;
+      obj[c] = col->obj;
+      lb[c] = col->dom.lb;
+      ub[c] = col->dom.ub;
+      beg[c] = nnonz;
+      name[c] = col->name;
+
+      for( i = 0; i < col->len; ++i )
+      {
+         lpipos = col->row[i]->lpipos;
+         if( lpipos >= 0 )
+         {
+            assert(lpipos < lp->nrows);
+            ind[nnonz] = lpipos;
+            val[nnonz] = col->val[i];
+            nnonz++;
+         }
+      }
+   }
+
+   /* call LP interface */
+   CHECK_OKAY( SCIPlpiAddCols(lp->lpi, naddcols, nnonz, obj, lb, ub, beg, ind, val, name) );
+   lp->nlpicols = lp->ncols;
+   lp->lpifirstchgcol = lp->nlpicols;
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE lpFlushDelRows(                 /**< applies all cached row removals to the LP solver */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->lpifirstchgrow <= lp->nlpirows);
+      
+   /* find the first row to change */
+   while( lp->lpifirstchgrow < lp->nlpirows
+      && lp->lpifirstchgrow < lp->nrows
+      && lp->rows[lp->lpifirstchgrow]->lpipos == lp->lpifirstchgrow
+      && !lp->rows[lp->lpifirstchgrow]->coefchanged )
+   {
+      assert(lp->rows[lp->lpifirstchgrow] == lp->lpirows[lp->lpifirstchgrow]);
+      lp->lpifirstchgrow++;
+   }
+   
+   /* shrink LP to the part which didn't change */
+   if( lp->lpifirstchgrow < lp->nlpirows )
+   {
+      int i;
+
+      CHECK_OKAY( SCIPlpiDelRows(lp->lpi, lp->lpifirstchgrow, lp->nlpirows-1) );
+      for( i = lp->lpifirstchgrow; i < lp->nlpirows; ++i )
+         lp->lpirows[i]->lpipos = -1;
+      lp->nlpirows = lp->lpifirstchgrow;
+   }
+   assert(lp->nlpirows == lp->lpifirstchgrow);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE lpFlushAddRows(                 /**< applies all cached row additions and removals to the LP solver */
+   LP*              lp,                 /**< actual LP data */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   Real* realbuf;
+   int* intbuf;
+   Real* rhs;
+   char* sen;
+   int* beg;
+   int* ind;
+   Real* val;
+   char** name;
+   ROW* row;
+   int r;
+   int nnonz;
+   int naddrows;
+   int naddcoefs;
+   int i;
+   int lpipos;
+
+   assert(lp != NULL);
+   assert(lp->lpifirstchgrow == lp->nlpirows);
+   assert(mem != NULL);
+      
+   /* if there are no rows to add, we are ready */
+   if( lp->nrows == lp->nlpirows )
+      return SCIP_OKAY;
+
+   /* add the additional rows */
+   assert(lp->nrows > lp->nlpirows);
+   CHECK_OKAY( ensureLpirowsSize(lp, mem, set, lp->nrows) );
+
+   /* count the (maximal) number of added coefficients, calculate the number of added rows */
+   naddrows = lp->nrows - lp->nlpirows;
+   naddcoefs = 0;
+   for( r = lp->nlpirows; r < lp->nrows; ++r )
+      naddcoefs += lp->rows[r]->len;
+   assert(naddrows > 0);
+
+   /* get temporary memory for bound changes */
+   ALLOC_OKAY( realbuf = SCIPmemGetRealbuf(mem, set, naddrows + naddcoefs) );
+   rhs = &(realbuf[0*naddrows]);
+   val = &(realbuf[1*naddrows]);
+   ALLOC_OKAY( intbuf = SCIPmemGetIntbuf(mem, set, naddrows + naddcoefs) );
+   beg = &(intbuf[0*naddrows]);
+   ind = &(intbuf[1*naddrows]);
+   ALLOC_OKAY( sen = SCIPmemGetCharbuf(mem, set, naddrows) );
+   ALLOC_OKAY( name = (char**)(SCIPmemGetPtrbuf(mem, set, naddrows)) );
+   
+   /* fill temporary memory with row data */
+   nnonz = 0;
+   for( r = lp->nlpirows; r < lp->nrows; ++r )
+   {
+      assert(nnonz < naddcoefs);
+
+      row = lp->rows[r];
+      lp->lpirows[r] = row;
+      row->lpipos = r;
+      row->coefchanged = FALSE;
+      rhs[r] = row->rhs;
+      sen[r] = row->equality ? 'E' : 'L';
+      beg[r] = nnonz;
+      name[r] = row->name;
+
+      for( i = 0; i < row->len; ++i )
+      {
+         lpipos = row->col[i]->lpipos;
+         if( lpipos >= 0 )
+         {
+            assert(lpipos < lp->ncols);
+            ind[nnonz] = lpipos;
+            val[nnonz] = row->val[i];
+            nnonz++;
+         }
+      }
+   }
+
+   /* call LP interface */
+   CHECK_OKAY( SCIPlpiAddRows(lp->lpi, naddrows, nnonz, rhs, sen, beg, ind, val, name) );
+   lp->nlpirows = lp->nrows;
+   lp->lpifirstchgrow = lp->nlpirows;
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE lpFlushChgbds(                  /**< applies all cached bound changes to the LP */
    LP*              lp,                 /**< actual LP data */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set                 /**< global SCIP settings */
@@ -473,12 +830,12 @@ RETCODE lpFlushDomchg(                  /**< applies all cached domain changes t
       col = lp->chgbds[i];
       assert(col != NULL);
 
-      if( col->lppos >= 0 )
+      if( col->lpipos >= 0 )
       {
          if( col->lbchanged )
          {
             assert(nchg < 2*lp->ncols);
-            ind[nchg] = col->lppos;
+            ind[nchg] = col->lpipos;
             lu[nchg] = 'L';
             bd[nchg] = col->dom.lb;
             nchg++;
@@ -486,7 +843,7 @@ RETCODE lpFlushDomchg(                  /**< applies all cached domain changes t
          if( col->ubchanged )
          {
             assert(nchg < 2*lp->ncols);
-            ind[nchg] = col->lppos;
+            ind[nchg] = col->lpipos;
             lu[nchg] = 'U';
             bd[nchg] = col->dom.ub;
             nchg++;
@@ -505,148 +862,7 @@ RETCODE lpFlushDomchg(                  /**< applies all cached domain changes t
    return SCIP_OKAY;
 }
 
-static
-RETCODE lpFlushAddcols(                 /**< applies all cached column additions to the LP */
-   LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   Real* realbuf;
-   int* intbuf;
-   Real* obj;
-   Real* lb;
-   Real* ub;
-   int* beg;
-   int* ind;
-   Real* val;
-   char** name;
-   COL* col;
-   int c;
-   int nnonz;
-   int i;
-   int lppos;
-
-   assert(lp != NULL);
-   assert(mem != NULL);
-
-   if( lp->naddcols == 0 )
-      return SCIP_OKAY;
-
-   /* get temporary memory for bound changes */
-   ALLOC_OKAY( realbuf = SCIPmemGetRealbuf(mem, set, 3*lp->naddcols + lp->addcolscoefs) );
-   obj = &(realbuf[0*lp->naddcols]);
-   lb = &(realbuf[1*lp->naddcols]);
-   ub = &(realbuf[2*lp->naddcols]);
-   val = &(realbuf[3*lp->naddcols]);
-   ALLOC_OKAY( intbuf = SCIPmemGetIntbuf(mem, set, lp->naddcols + lp->addcolscoefs) );
-   beg = &(intbuf[0*lp->naddcols]);
-   ind = &(intbuf[1*lp->naddcols]);
-   ALLOC_OKAY( name = (char**)(SCIPmemGetPtrbuf(mem, set, lp->naddcols)) );
-   
-   /* fill temporary memory with column data */
-   nnonz = 0;
-   for( c = 0; c < lp->naddcols; ++c )
-   {
-      col = lp->addcols[c];
-      obj[c] = col->obj;
-      lb[c] = col->dom.lb;
-      ub[c] = col->dom.ub;
-      col->lbchanged = FALSE;
-      col->ubchanged = FALSE;
-      beg[c] = nnonz;
-      name[c] = col->name;
-
-      for( i = 0; i < col->len; ++i )
-      {
-         lppos = col->row[i]->lppos;
-         if( lppos >= 0 )
-         {
-            assert(lppos < lp->nrows);
-            ind[nnonz] = lppos;
-            val[nnonz] = col->val[i];
-            nnonz++;
-         }
-      }
-   }
-
-   /* call LP interface */
-   CHECK_OKAY( SCIPlpiAddCols(lp->lpi, lp->naddcols, nnonz, obj, lb, ub, beg, ind, val, name) );
-
-   lp->naddcols = 0;
-
-   return SCIP_OKAY;
-}
-
-static
-RETCODE lpFlushAddrows(                 /**< applies all cached row additions to the LP */
-   LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
-   )
-{
-   Real* realbuf;
-   int* intbuf;
-   Real* rhs;
-   char* sen;
-   int* beg;
-   int* ind;
-   Real* val;
-   char** name;
-   ROW* row;
-   int r;
-   int nnonz;
-   int i;
-   int lppos;
-
-   assert(lp != NULL);
-   assert(mem != NULL);
-
-   if( lp->naddrows == 0 )
-      return SCIP_OKAY;
-
-   /* get temporary memory for bound changes */
-   ALLOC_OKAY( realbuf = SCIPmemGetRealbuf(mem, set, lp->naddrows + lp->addrowscoefs) );
-   rhs = &(realbuf[0*lp->naddrows]);
-   val = &(realbuf[1*lp->naddrows]);
-   ALLOC_OKAY( intbuf = SCIPmemGetIntbuf(mem, set, lp->naddrows + lp->addrowscoefs) );
-   beg = &(intbuf[0*lp->naddrows]);
-   ind = &(intbuf[1*lp->naddrows]);
-   ALLOC_OKAY( sen = SCIPmemGetCharbuf(mem, set, lp->naddrows) );
-   ALLOC_OKAY( name = (char**)(SCIPmemGetPtrbuf(mem, set, lp->naddrows)) );
-   
-   /* fill temporary memory with row data */
-   nnonz = 0;
-   for( r = 0; r < lp->naddrows; ++r )
-   {
-      row = lp->addrows[r];
-      rhs[r] = row->rhs;
-      sen[r] = row->equality ? 'E' : 'L';
-      beg[r] = nnonz;
-      name[r] = row->name;
-
-      for( i = 0; i < row->len; ++i )
-      {
-         lppos = row->col[i]->lppos;
-         if( lppos >= 0 )
-         {
-            assert(lppos < lp->ncols);
-            ind[nnonz] = lppos;
-            val[nnonz] = row->val[i];
-            nnonz++;
-         }
-      }
-   }
-
-   /* call LP interface */
-   CHECK_OKAY( SCIPlpiAddRows(lp->lpi, lp->naddrows, nnonz, rhs, sen, beg, ind, val, name) );
-
-   lp->naddrows = 0;
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPlpFlush(                    /**< applies all cached changes to the LP */
+RETCODE SCIPlpFlush(                    /**< applies all cached changes to the LP solver */
    LP*              lp,                 /**< actual LP data */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set                 /**< global SCIP settings */
@@ -656,11 +872,21 @@ RETCODE SCIPlpFlush(                    /**< applies all cached changes to the L
    assert(mem != NULL);
    
    if( lp->flushed )
-      return SCIP_OKAY;
+   {
+      assert(lp->nlpicols == lp->ncols);
+      assert(lp->lpifirstchgcol == lp->nlpicols);
+      assert(lp->nlpirows == lp->nrows);
+      assert(lp->lpifirstchgrow == lp->nlpirows);
+      assert(lp->nchgbds == 0);
 
-   CHECK_OKAY( lpFlushDomchg(lp, mem, set) );
-   CHECK_OKAY( lpFlushAddcols(lp, mem, set) );
-   CHECK_OKAY( lpFlushAddrows(lp, mem, set) );
+      return SCIP_OKAY;
+   }
+
+   CHECK_OKAY( lpFlushDelCols(lp) );
+   CHECK_OKAY( lpFlushDelRows(lp) );
+   CHECK_OKAY( lpFlushChgbds(lp, mem, set) );
+   CHECK_OKAY( lpFlushAddCols(lp, mem, set) );
+   CHECK_OKAY( lpFlushAddRows(lp, mem, set) );
 
    lp->flushed = TRUE;
 
@@ -668,8 +894,12 @@ RETCODE SCIPlpFlush(                    /**< applies all cached changes to the L
 }
 
 
+
+
+
+
 static
-void addColSign(                        /**< update column sign after addition of new coefficient */
+void colAddSign(                        /**< update column sign after addition of new coefficient */
    COL*             col,                /**< LP column */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value of new coefficient */
@@ -689,7 +919,7 @@ void addColSign(                        /**< update column sign after addition o
 }
 
 static
-void delColSign(                        /**< update column sign after deletion of coefficient */
+void colDelSign(                        /**< update column sign after deletion of coefficient */
    COL*             col,                /**< LP column */
    const SET*       set,                /**< global SCIP settings */
    Real             val                 /**< value of deleted coefficient */
@@ -710,7 +940,7 @@ void delColSign(                        /**< update column sign after deletion o
 }
 
 static
-void addRowNorms(                       /**< update row norms after addition of new coefficient */
+void rowAddNorms(                       /**< update row norms after addition of new coefficient */
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    int              colidx,             /**< column index of new coefficient */
@@ -747,7 +977,7 @@ void addRowNorms(                       /**< update row norms after addition of 
 }
 
 static
-void calcRowNorms(                      /**< calculates row norms and min/maxidx from scratch, and checks for sortation */
+void rowCalcNorms(                      /**< calculates row norms and min/maxidx from scratch, and checks for sortation */
    ROW*             row,                /**< LP row */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -773,13 +1003,13 @@ void calcRowNorms(                      /**< calculates row norms and min/maxidx
    {
       assert(!SCIPisZero(set, row->val[i]));
       idx = row->col[i]->index;
-      addRowNorms(row, set, idx, row->val[i]);
+      rowAddNorms(row, set, idx, row->val[i]);
       row->sorted &= (i == 0 || row->col[i-1]->index < idx);
    }
 }
 
 static
-void delRowNorms(                       /**< update row norms after deletion of coefficient */
+void rowDelNorms(                       /**< update row norms after deletion of coefficient */
    ROW*             row,                /**< LP row */
    const SET*       set,                /**< global SCIP settings */
    int              colidx,             /**< column index of deleted coefficient */
@@ -809,7 +1039,7 @@ void delRowNorms(                       /**< update row norms after deletion of 
    {
       row->nummaxval--;
       if( row->nummaxval == 0 )
-         calcRowNorms(row, set);
+         rowCalcNorms(row, set);
    }
 }
 
@@ -848,7 +1078,7 @@ void SCIProwSort(                       /**< sorts row entries by column index *
 }
 
 static
-int searchColCoeff(                     /**< searches existing coefficient in column, returns position in col vector */
+int colSearchCoeff(                     /**< searches coefficient in column, returns position in col vector or -1 */
    COL* col,                            /**< column to be searched in */
    const ROW* row                       /**< coefficient to be searched for */
    )
@@ -863,7 +1093,8 @@ int searchColCoeff(                     /**< searches existing coefficient in co
    assert(row != NULL);
 
    /* row has to be sorted, such that binary search works */
-   SCIPcolSort(col);
+   if( !col->sorted )
+      SCIPcolSort(col);
    assert(col->sorted);
 
    /* binary search */
@@ -871,26 +1102,24 @@ int searchColCoeff(                     /**< searches existing coefficient in co
    minpos = 0;
    maxpos = col->len-1;
    actpos = 0;
-   while(minpos < maxpos)
+   while(minpos <= maxpos)
    {
+      assert(0 <= actpos && actpos < col->len);
       actpos = (minpos + maxpos)/2;
       actidx = col->row[actpos]->index;
       if( searchidx == actidx )
-         break;
+         return actpos;
       else if( searchidx < actidx )
          maxpos = actpos-1;
       else
          minpos = actpos+1;
-      assert(minpos <= maxpos);
    }
-   assert(minpos <= actpos && actpos <= maxpos);
-   assert(col->row[actpos]->index == searchidx);
 
-   return actpos;
+   return -1;
 }
 
 static
-int searchRowCoeff(                     /**< searches existing coefficient in row, returns position in row vector */
+int rowSearchCoeff(                     /**< searches coefficient in row, returns position in row vector or -1 */
    ROW* row,                            /**< row to be searched in */
    const COL* col                       /**< coefficient to be searched for */
    )
@@ -905,7 +1134,8 @@ int searchRowCoeff(                     /**< searches existing coefficient in ro
    assert(col != NULL);
 
    /* row has to be sorted, such that binary search works */
-   SCIProwSort(row);
+   if( !row->sorted )
+      SCIProwSort(row);
    assert(row->sorted);
 
    /* binary search */
@@ -913,23 +1143,20 @@ int searchRowCoeff(                     /**< searches existing coefficient in ro
    minpos = 0;
    maxpos = row->len-1;
    actpos = 0;
-   while(minpos < maxpos)
+   while(minpos <= maxpos)
    {
+      assert(0 <= actpos && actpos < row->len);
       actpos = (minpos + maxpos)/2;
       actidx = row->col[actpos]->index;
       if( searchidx == actidx )
-         break;
+         return actpos;
       else if( searchidx < actidx )
          maxpos = actpos-1;
       else
          minpos = actpos+1;
-      assert(minpos <= maxpos);
    }
-   assert(minpos <= actpos && actpos <= maxpos);
-   assert(0 <= actpos && actpos < row->len);
-   assert(row->col[actpos]->index == searchidx);
 
-   return actpos;
+   return -1;
 }
 
 static
@@ -978,11 +1205,11 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
    return SCIP_OKAY;
 }
 
-static
-RETCODE addColCoeff(                    /**< adds a coefficient to an LP column */
+RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
+   COL*             col,                /**< LP column */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   COL*             col,                /**< LP column */
+   LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
    )
@@ -991,22 +1218,26 @@ RETCODE addColCoeff(                    /**< adds a coefficient to an LP column 
    assert(col != NULL);
    assert(row != NULL);
    assert(!SCIPisZero(set, val));
+   assert(colSearchCoeff(col, row) == -1);
+
+   col->sorted &= (col->row[col->len-1]->index < row->index);
 
    CHECK_OKAY( ensureColSize(mem, set, col, col->len+1) );
    col->row[col->len] = row;
    col->val[col->len] = val;
    col->len++;
 
-   addColSign(col, set, val);
+   colAddSign(col, set, val);
+   coefChanged(row, col, lp);
 
    return SCIP_OKAY;
 }
 
-static
-RETCODE addRowCoeff(                    /**< adds a coefficient to an LP row */
+RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
+   ROW*             row,                /**< LP row */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   ROW*             row,                /**< LP row */
+   LP*              lp,                 /**< actual LP data */
    COL*             col,                /**< LP column */
    Real             val                 /**< value of coefficient */
    )
@@ -1015,35 +1246,38 @@ RETCODE addRowCoeff(                    /**< adds a coefficient to an LP row */
    assert(row != NULL);
    assert(col != NULL);
    assert(!SCIPisZero(set, val));
+   assert(rowSearchCoeff(row, col) == -1);
+
+   row->sorted &= (row->col[row->len-1]->index < col->index);
 
    CHECK_OKAY( ensureRowSize(mem, set, row, row->len+1) );
    row->col[row->len] = col;
    row->val[row->len] = val;
    row->len++;
 
-   addRowNorms(row, set, col->index, val);
-
-   row->sorted &= (row->len == 0 || row->col[row->len-1]->index < col->index);
+   rowAddNorms(row, set, col->index, val);
+   coefChanged(row, col, lp);
 
    return SCIP_OKAY;
 }
 
 static
-void deleteColCoeff(                    /**< deletes coefficient from column */
+void colDelCoeffPos(                    /**< deletes coefficient at given position from column */
    COL*             col,                /**< column to be changed */
    const SET*       set,                /**< global SCIP settings */
-   ROW*             row                 /**< coefficient to be deleted */
+   LP*              lp,                 /**< actual LP data */
+   int              pos                 /**< position in column vector to delete */
    )
 {
-   int pos;
+   ROW* row;
    Real val;
 
    assert(col != NULL);
-   assert(col->len > 0);
-   assert(row != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+   assert(0 <= pos && pos < col->len);
 
-   pos = searchColCoeff(col, row);
-   assert(col->row[pos] == row);
+   row = col->row[pos];
    val = col->val[pos];
 
    if( pos < col->len-1 )
@@ -1055,25 +1289,47 @@ void deleteColCoeff(                    /**< deletes coefficient from column */
    }
    col->len--;
 
-   delColSign(col, set, val);
+   colDelSign(col, set, val);
+   coefChanged(row, col, lp);
 }
 
-static
-void deleteRowCoeff(                    /**< deletes coefficient from row */
-   ROW*             row,                /**< row to be changed */
+void SCIPcolDelCoeff(                   /**< deletes existing coefficient from column */
+   COL*             col,                /**< column to be changed */
    const SET*       set,                /**< global SCIP settings */
-   COL*             col                 /**< coefficient to be deleted */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row                 /**< coefficient to be deleted */
    )
 {
    int pos;
+
+   assert(col != NULL);
+   assert(col->len > 0);
+   assert(row != NULL);
+
+   pos = colSearchCoeff(col, row);
+   assert(pos >= 0);
+   assert(col->row[pos] == row);
+
+   colDelCoeffPos(col, set, lp, pos);
+}
+
+static
+void rowDelCoeffPos(                    /**< deletes coefficient at given position from row */
+   ROW*             row,                /**< row to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   int              pos                 /**< position in row vector to delete */
+   )
+{
+   COL* col;
    Real val;
 
    assert(row != NULL);
-   assert(row->len > 0);
-   assert(col != NULL);
+   assert(set != NULL);
+   assert(lp != NULL);
+   assert(0 <= pos && pos < row->len);
 
-   pos = searchRowCoeff(row, col);
-   assert(row->col[pos] == col);
+   col = row->col[pos];
    val = row->val[pos];
 
    if( pos < row->len-1 )
@@ -1085,12 +1341,118 @@ void deleteRowCoeff(                    /**< deletes coefficient from row */
    }
    row->len--;
    
-   delRowNorms(row, set, col->index, val);
+   rowDelNorms(row, set, col->index, val);
+   coefChanged(row, col, lp);
+}
+
+void SCIProwDelCoeff(                   /**< deletes coefficient from row */
+   ROW*             row,                /**< row to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col                 /**< coefficient to be deleted */
+   )
+{
+   int pos;
+
+   assert(row != NULL);
+   assert(row->len > 0);
+   assert(col != NULL);
+
+   pos = rowSearchCoeff(row, col);
+   assert(pos >= 0);
+   assert(row->col[pos] == col);
+
+   rowDelCoeffPos(row, set, lp, pos);
+}
+
+RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val                 /**< value of coefficient */
+   )
+{
+   int pos;
+   Bool isZero;
+
+   assert(mem != NULL);
+   assert(col != NULL);
+   assert(row != NULL);
+
+   pos = colSearchCoeff(col, row);
+   isZero = SCIPisZero(set, val);
+
+   if( pos >= 0 )
+   {
+      if( isZero )
+      {
+         /* delete existing coefficient */
+         colDelCoeffPos(col, set, lp, pos);
+      }
+      else if( !SCIPisEQ(set, col->val[pos], val) )
+      {
+         /* change existing coefficient */
+         col->val[pos] = val;
+         coefChanged(row, col, lp);
+      }
+   }
+   else if( !isZero )
+   {
+      /* add non existing coefficient */
+      CHECK_OKAY( SCIPcolAddCoeff(col, mem, set, lp, row, val) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val                 /**< value of coefficient */
+   )
+{
+   int pos;
+   Bool isZero;
+
+   assert(mem != NULL);
+   assert(row != NULL);
+   assert(col != NULL);
+
+   pos = rowSearchCoeff(row, col);
+   isZero = SCIPisZero(set, val);
+
+   if( pos >= 0 )
+   {
+      if( isZero )
+      {
+         /* delete existing coefficient */
+         rowDelCoeffPos(row, set, lp, pos);
+      }
+      else if( !SCIPisEQ(set, row->val[pos], val) )
+      {
+         /* change existing coefficient */
+         row->val[pos] = val;
+         coefChanged(row, col, lp);
+      }
+   }
+   else if( !isZero )
+   {
+      /* add non existing coefficient */
+      CHECK_OKAY( SCIProwAddCoeff(row, mem, set, lp, col, val) );
+   }
+
+   return SCIP_OKAY;
 }
 
 COL* SCIPcolCreate(                     /**< creates an LP column */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
    char*            name,               /**< name of column */
    int              len,                /**< number of nonzeros in the column */
@@ -1135,13 +1497,14 @@ COL* SCIPcolCreate(                     /**< creates an LP column */
    col->size = len;
    col->len = len;
    col->numuses = 0;
-   col->lppos = -1;
+   col->lpipos = -1;
    col->numpos = 0;
    col->numneg = 0;
    col->vartype = vartype;
    col->sorted = TRUE;
    col->lbchanged = FALSE;
    col->ubchanged = FALSE;
+   col->coefchanged = FALSE;
 
    /* check, if column is sorted
     * update number of positive/negative entries
@@ -1151,8 +1514,8 @@ COL* SCIPcolCreate(                     /**< creates an LP column */
    {
       assert(!SCIPisZero(set, col->val[i]));
       col->sorted &= (i == 0 || col->row[i-1]->index < col->row[i]->index);
-      addColSign(col, set, col->val[i]);
-      addRowCoeff(mem, set, col->row[i], col, col->val[i]);
+      colAddSign(col, set, col->val[i]);
+      CHECK_NULL( SCIProwAddCoeff(col->row[i], mem, set, lp, col, col->val[i]) );
    }
 
    return col;
@@ -1161,7 +1524,8 @@ COL* SCIPcolCreate(                     /**< creates an LP column */
 void SCIPcolFree(                       /**< frees an LP column */
    COL**            col,                /**< pointer to LP column */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    int i;
@@ -1173,7 +1537,7 @@ void SCIPcolFree(                       /**< frees an LP column */
    
    /* delete coefficients in corresponding rows */
    for( i = 0; i < (*col)->len; ++i )
-      deleteRowCoeff((*col)->row[i], set, *col);
+      SCIProwDelCoeff((*col)->row[i], set, lp, *col);
 
    freeBlockMemoryArray(mem->lpmem, (*col)->row, (*col)->size);
    freeBlockMemoryArray(mem->lpmem, (*col)->val, (*col)->size);
@@ -1193,7 +1557,8 @@ void SCIPcolCapture(                    /**< increases usage counter of LP colum
 void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
    COL**            col,                /**< pointer to LP column */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(mem != NULL);
@@ -1203,12 +1568,13 @@ void SCIPcolRelease(                    /**< decreases usage counter of LP colum
 
    (*col)->numuses--;
    if( (*col)->numuses == 0 )
-      SCIPcolFree(col, mem, set);
+      SCIPcolFree(col, mem, set, lp);
 }
 
 ROW* SCIProwCreate(                     /**< creates an LP row */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
    char*            name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
@@ -1249,15 +1615,16 @@ ROW* SCIProwCreate(                     /**< creates an LP row */
    row->size = len;
    row->len = len;
    row->numuses = 0;
-   row->lppos = -1;
+   row->lpipos = -1;
    row->equality = equality;
+   row->coefchanged = FALSE;
 
    /* calculate row norms and min/maxidx, and check if row is sorted */
-   calcRowNorms(row, set);
+   rowCalcNorms(row, set);
 
    /* add coefficients to columns */
    for( i = 0; i < len; ++i )
-      addColCoeff(mem, set, row->col[i], row, row->val[i]);
+      SCIPcolAddCoeff(row->col[i], mem, set, lp, row, row->val[i]);
    
    return row;
 }
@@ -1265,7 +1632,8 @@ ROW* SCIProwCreate(                     /**< creates an LP row */
 void SCIProwFree(                       /**< frees an LP row */
    ROW**            row,                /**< pointer to LP row */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    int i;
@@ -1277,7 +1645,7 @@ void SCIProwFree(                       /**< frees an LP row */
    
    /* delete coefficients in corresponding columns */
    for( i = 0; i < (*row)->len; ++i )
-      deleteColCoeff((*row)->col[i], set, *row);
+      SCIPcolDelCoeff((*row)->col[i], set, lp, *row);
 
    freeBlockMemoryArray(mem->lpmem, (*row)->col, (*row)->size);
    freeBlockMemoryArray(mem->lpmem, (*row)->val, (*row)->size);
@@ -1297,7 +1665,8 @@ void SCIProwCapture(                    /**< increases usage counter of LP row *
 void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
    ROW**            row,                /**< pointer to LP row */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(mem != NULL);
@@ -1307,10 +1676,19 @@ void SCIProwRelease(                    /**< decreases usage counter of LP row, 
 
    (*row)->numuses--;
    if( (*row)->numuses == 0 )
-      SCIProwFree(row, mem, set);
+      SCIProwFree(row, mem, set, lp);
 }
 
-COL** SCIPlpGetNewcols(                 /**< get array with newly added columns */
+void SCIPlpMarkSize(                    /**< remembers number of columns and rows to track the newly added ones */
+   LP*              lp                  /**< actual LP data */
+   )
+{
+   assert(lp != NULL);
+   lp->firstnewcol = lp->ncols;
+   lp->firstnewrow = lp->nrows;
+}
+
+COL** SCIPlpGetNewcols(                 /**< get array with newly added columns after the last mark */
    const LP*        lp                  /**< actual LP data */
    )
 {
@@ -1320,7 +1698,7 @@ COL** SCIPlpGetNewcols(                 /**< get array with newly added columns 
    return &(lp->cols[lp->firstnewcol]);
 }
 
-int SCIPlpGetNumNewcols(                /**< get number of newly added columns */
+int SCIPlpGetNumNewcols(                /**< get number of newly added columns after the last mark */
    const LP*        lp                  /**< actual LP data */
    )
 {
@@ -1330,7 +1708,7 @@ int SCIPlpGetNumNewcols(                /**< get number of newly added columns *
    return lp->ncols - lp->firstnewcol;
 }
 
-ROW** SCIPlpGetNewrows(                 /**< get array with newly added rows */
+ROW** SCIPlpGetNewrows(                 /**< get array with newly added rows after the last mark */
    const LP*        lp                  /**< actual LP data */
    )
 {
@@ -1340,7 +1718,7 @@ ROW** SCIPlpGetNewrows(                 /**< get array with newly added rows */
    return &(lp->rows[lp->firstnewrow]);
 }
 
-int SCIPlpGetNumNewrows(                /**< get number of newly added rows */
+int SCIPlpGetNumNewrows(                /**< get number of newly added rows after the last mark */
    const LP*        lp                  /**< actual LP data */
    )
 {
@@ -1385,13 +1763,12 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
 {
    assert(lp != NULL);
    assert(col != NULL);
-   assert(col->lppos == -1);
    
-   CHECK_OKAY( ensureAddColsSize(lp, mem, set, lp->naddcols+1) );
-   lp->addcols[lp->naddcols] = col;
-   lp->naddcols++;
-   lp->addcolscoefs += col->len;
+   CHECK_OKAY( ensureColsSize(lp, mem, set, lp->ncols+1) );
+   lp->cols[lp->ncols] = col;
+   lp->ncols++;
    lp->flushed = FALSE;
+   lp->solved = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1405,45 +1782,60 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP */
 {
    assert(lp != NULL);
    assert(row != NULL);
-   assert(row->lppos == -1);
    
-   CHECK_OKAY( ensureAddRowsSize(lp, mem, set, lp->naddrows+1) );
-   lp->addrows[lp->naddrows] = row;
-   lp->naddrows++;
-   lp->addrowscoefs += row->len;
+   CHECK_OKAY( ensureRowsSize(lp, mem, set, lp->nrows+1) );
+   lp->rows[lp->nrows] = row;
+   lp->nrows++;
    lp->flushed = FALSE;
+   lp->solved = FALSE;
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpShrinkCols(               /**< removes all columns after given column number from LP */
+RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given number of columns from the LP */
    LP*              lp,                 /**< LP data */
-   int              lastcol             /**< last column number to remain in the LP */
+   int              newncols            /**< new number of columns in the LP */
    )
 {
    assert(lp != NULL);
-   assert(lastcol < lp->ncols);
+   assert(0 <= newncols && newncols <= lp->ncols);
 
-   if( lastcol < lp->ncols-1 )
+   if( newncols < lp->ncols )
    {
-      CHECK_OKAY( SCIPlpiShrinkCols(lp->lpi, lastcol) );
+      lp->ncols = newncols;
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
    }
 
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpShrinkRows(               /**< removes all rows after given rowumn number from LP */
+RETCODE SCIPlpShrinkRows(               /**< removes all rows after the given number of rows from the LP */
    LP*              lp,                 /**< LP data */
-   int              lastrow             /**< last row number to remain in the LP */
+   int              newnrows            /**< new number of rows in the LP */
    )
 {
    assert(lp != NULL);
-   assert(lastrow < lp->nrows);
+   assert(0 <= newnrows && newnrows <= lp->nrows);
 
-   if( lastrow < lp->nrows-1 )
+   if( newnrows < lp->nrows )
    {
-      CHECK_OKAY( SCIPlpiShrinkRows(lp->lpi, lastrow) );
+      lp->nrows = newnrows;
+      lp->flushed = FALSE;
+      lp->solved = FALSE;
    }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpClear(                    /** removes all columns and rows from LP */
+   LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   CHECK_OKAY( SCIPlpShrinkCols(lp, 0) );
+   CHECK_OKAY( SCIPlpShrinkRows(lp, 0) );
 
    return SCIP_OKAY;
 }

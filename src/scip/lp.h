@@ -21,6 +21,12 @@
  * @author Tobias Achterberg
  */
 
+/**
+ * In LP management, we have to differ between the actual LP and the LP stored in the LP solver.
+ * All LP methods affect the actual LP only. Before solving the actual LP with the LP solver,
+ * the LP solvers data has to be updated to the actual LP with a call to SCIPlpFlush().
+ */
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __LP_H__
@@ -65,7 +71,6 @@ typedef struct Lp LP;                   /**< actual LP data */
 #include "set.h"
 #include "stat.h"
 #include "lpi.h"
-#include "tree.h"
 
 
 
@@ -91,13 +96,14 @@ struct Col
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
    int              numuses;            /**< number of times, this column is referenced */
-   int              lppos;              /**< column position number in LP, or -1 if not in LP */
+   int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              numpos;             /**< number of positive coefficients */
    int              numneg;             /**< number of negative coefficients */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
-   unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed in node switch, and LP has to be updated */
-   unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed in node switch, and LP has to be updated */
+   unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
+   unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
+   unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
 };
 
 /** row of the LP */
@@ -114,45 +120,41 @@ struct Row
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
    int              numuses;            /**< number of times, this row is referenced */
-   int              lppos;              /**< row position number in LP, or -1 if not in LP */
+   int              lpipos;             /**< row position number in LP solver, or -1 if not in LP solver */
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefficients with absolute value equal to maxval */
    unsigned int     equality:1;         /**< TRUE iff row is an equality, FALSE iff row is a less or equal inequality */
    unsigned int     sorted:1;           /**< TRUE iff column indices are sorted in increasing order */
    unsigned int     validminmaxidx:1;   /**< TRUE iff minimal and maximal column index is valid */
+   unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
 };
 
 /** actual LP data */
 struct Lp
 {
    LPI*             lpi;                /**< LP solver interface */
+   COL**            lpicols;            /**< array with columns actually stored in the LP solver */
+   ROW**            lpirows;            /**< array with rows actually stored in the LP solver */
+   COL**            chgbds;             /**< array of columns with changed bounds not yet applied to the LP solver */
    COL**            cols;               /**< array with actual LP columns in correct order */
    ROW**            rows;               /**< array with actual LP rows in correct order */
-   NODE**           children;           /**< array with children of the actual node */
-   NODE**           siblings;           /**< array with siblings of the actual node */
-   COL**            chgbds;             /**< array of columns with changed bounds not yet applied to the LP */
-   COL**            addcols;            /**< array of columns to be added to the LP */
-   ROW**            addrows;            /**< array of rows to be added to the LP */
+   int              lpicolssize;        /**< available slots in lpicols vector */
+   int              nlpicols;           /**< number of columns in the LP solver */
+   int              lpirowssize;        /**< available slots in lpirows vector */
+   int              nlpirows;           /**< number of rows in the LP solver */
+   int              lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
+   int              lpifirstchgrow;     /**< first row of the LP which differs from the row in the LP solver */
    int              colssize;           /**< available slots in cols vector */
    int              ncols;              /**< actual number of LP columns (number of used slots in cols vector) */
    int              rowssize;           /**< available slots in rows vector */
    int              nrows;              /**< actual number of LP rows (number of used slots in rows vector) */
-   int              childrensize;       /**< available slots in children vector */
-   int              nchildren;          /**< actual number of children (number of used slots in children vector) */
-   int              siblingssize;       /**< available slots in siblings vector */
-   int              nsiblings;          /**< actual number of siblings (number of used slots in siblings vector) */
    int              chgbdssize;         /**< available slots in chgbds vector */
    int              nchgbds;            /**< actual number of chgbds (number of used slots in chgbds vector) */
-   int              addcolssize;        /**< available slots in addcols vector */
-   int              addcolscoefs;       /**< upper bound on number of coefficients in added cols */
-   int              naddcols;           /**< actual number of addcols (number of used slots in addcols vector) */
-   int              addrowssize;        /**< available slots in addrows vector */
-   int              addrowscoefs;       /**< upper bound on number of coefficients in added rows */
-   int              naddrows;           /**< actual number of addrows (number of used slots in addrows vector) */
    int              firstnewcol;        /**< first column added at the actual node */
    int              firstnewrow;        /**< first row added at the actual node */
-   unsigned int     flushed:1;          /**< TRUE iff all cached changes are applied to the LP */
+   unsigned int     flushed:1;          /**< TRUE iff all cached changes are applied to the LP solver */
+   unsigned int     solved:1;           /**< TRUE iff current LP is solved */
 };
 
 
@@ -166,6 +168,14 @@ extern
 void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain change data structure */
    DOMCHGDYN**      domchgdyn,          /**< pointer to dynamically sized domain change data structure */
    MEM*             mem                 /**< block memory buffers */   
+   );
+
+extern
+RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain change into dynamically sized one */
+   DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   DOMCHG*          domchg              /**< static domain change */
    );
 
 extern
@@ -228,6 +238,7 @@ extern
 COL* SCIPcolCreate(                     /**< creates an LP column */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
    char*            name,               /**< name of column */
    int              len,                /**< number of nonzeros in the column */
@@ -240,33 +251,10 @@ COL* SCIPcolCreate(                     /**< creates an LP column */
    );
 
 extern
-void SCIPcolFree(                       /**< frees an LP column */
-   COL**            col,                /**< pointer to LP column */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-extern
-void SCIPcolCapture(                    /**< increases usage counter of LP column */
-   COL*             col                 /**< LP column */
-   );
-
-extern
-void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
-   COL**            col,                /**< pointer to LP column */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
-   );
-
-extern
-void SCIPcolSort(                       /**< sorts column entries by row index */
-   COL* col                             /**< column to be sorted */
-   );
-
-extern
 ROW* SCIProwCreate(                     /**< creates an LP row */
    MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
    char*            name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
@@ -278,10 +266,24 @@ ROW* SCIProwCreate(                     /**< creates an LP row */
    );
 
 extern
+void SCIPcolFree(                       /**< frees an LP column */
+   COL**            col,                /**< pointer to LP column */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
 void SCIProwFree(                       /**< frees an LP row */
    ROW**            row,                /**< pointer to LP row */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+void SCIPcolCapture(                    /**< increases usage counter of LP column */
+   COL*             col                 /**< LP column */
    );
 
 extern
@@ -290,10 +292,24 @@ void SCIProwCapture(                    /**< increases usage counter of LP row *
    );
 
 extern
+void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
+   COL**            col,                /**< pointer to LP column */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
 void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
    ROW**            row,                /**< pointer to LP row */
    MEM*             mem,                /**< block memory buffers */
-   const SET*       set                 /**< global SCIP settings */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+void SCIPcolSort(                       /**< sorts column entries by row index */
+   COL* col                             /**< column to be sorted */
    );
 
 extern
@@ -302,22 +318,83 @@ void SCIProwSort(                       /**< sorts row entries by column index *
    );
 
 extern
-COL** SCIPlpGetNewcols(                 /**< get array with newly added columns */
+RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+void SCIPcolDelCoeff(                   /**< deletes coefficient from column */
+   COL*             col,                /**< column to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row                 /**< coefficient to be deleted */
+   );
+
+extern
+void SCIProwDelCoeff(                   /**< deletes coefficient from row */
+   ROW*             row,                /**< row to be changed */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col                 /**< coefficient to be deleted */
+   );
+
+extern
+RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
+   COL*             col,                /**< LP column */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   ROW*             row,                /**< LP row */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an LP row */
+   ROW*             row,                /**< LP row */
+   MEM*             mem,                /**< block memory buffers */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   COL*             col,                /**< LP column */
+   Real             val                 /**< value of coefficient */
+   );
+
+extern
+void SCIPlpMarkSize(                    /**< remembers number of columns and rows to track the newly added ones */
+   LP*              lp                  /**< actual LP data */
+   );
+
+extern
+COL** SCIPlpGetNewcols(                 /**< get array with newly added columns after the last mark */
    const LP*        lp                  /**< actual LP data */
    );
 
 extern
-int SCIPlpGetNumNewcols(                /**< get number of newly added columns */
+int SCIPlpGetNumNewcols(                /**< get number of newly added columns after the last mark */
    const LP*        lp                  /**< actual LP data */
    );
 
 extern
-ROW** SCIPlpGetNewrows(                 /**< get array with newly added rows */
+ROW** SCIPlpGetNewrows(                 /**< get array with newly added rows after the last mark */
    const LP*        lp                  /**< actual LP data */
    );
 
 extern
-int SCIPlpGetNumNewrows(                /**< get number of newly added rows */
+int SCIPlpGetNumNewrows(                /**< get number of newly added rows after the last mark */
    const LP*        lp                  /**< actual LP data */
    );
 
@@ -352,15 +429,20 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP */
    );
 
 extern
-RETCODE SCIPlpShrinkCols(               /**< removes all columns after given column number from LP */
+RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given number of columns from the LP */
    LP*              lp,                 /**< LP data */
-   int              lastcol             /**< last column number to remain in the LP */
+   int              newncols            /**< new number of columns in the LP */
    );
 
 extern
-RETCODE SCIPlpShrinkRows(               /**< removes all rows after given rowumn number from LP */
+RETCODE SCIPlpShrinkRows(               /**< removes all rows after the given number of rows from the LP */
    LP*              lp,                 /**< LP data */
-   int              lastrow             /**< last row number to remain in the LP */
+   int              newnrows            /**< new number of rows in the LP */
+   );
+
+extern
+RETCODE SCIPlpClear(                    /** removes all columns and rows from LP */
+   LP*              lp                  /**< LP data */
    );
 
 #endif

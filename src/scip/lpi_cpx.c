@@ -86,7 +86,6 @@ struct LPi
 /** LP state stores basis information */
 struct LPState
 {
-   int              numuses:24;         /**< number of times, this LP state is referenced */
    unsigned int     ncol:20;            /**< number of LP columns */
    unsigned int     nrow:20;            /**< number of LP rows */
    COLPACKET*       packcstat;          /**< column basis status in compressed form */
@@ -138,7 +137,7 @@ void lpstatePack(                       /**< store row and column basis status i
 }
 
 static
-void lpstateUnpack(                     /**< unpack row and column basis status from a packed LP state object */
+void lpstateUnpack(                     /**< unpacks row and column basis status from a packed LP state object */
    const LPSTATE*  lpstate,             /**< pointer to LP state data */
    int*            cstat,               /**< buffer for storing basis status of columns in unpacked format */
    int*            rstat                /**< buffer for storing basis status of rows in unpacked format */
@@ -153,7 +152,7 @@ void lpstateUnpack(                     /**< unpack row and column basis status 
 }
 
 static
-LPSTATE* lpstateCreate(
+LPSTATE* lpstateCreate(                 /**< creates LP state information object */
    MEM*             mem,                /**< block memory buffers */
    int              ncol,               /**< number of columns to store */
    int              nrow                /**< number of rows to store */
@@ -174,7 +173,7 @@ LPSTATE* lpstateCreate(
 }
 
 static
-void lpstateFree(
+void lpstateFree(                       /**< frees LP state information */
    LPSTATE**        lpstate,            /**< pointer to LP state information (like basis information) */
    MEM*             mem                 /**< block memory buffers */
    )
@@ -182,7 +181,6 @@ void lpstateFree(
    assert(mem != NULL);
    assert(lpstate != NULL);
    assert(*lpstate != NULL);
-   assert((*lpstate)->numuses == 0);
 
    freeBlockMemoryArray(mem->statemem, (*lpstate)->packcstat, colpacketNum((*lpstate)->ncol));
    freeBlockMemoryArray(mem->statemem, (*lpstate)->packrstat, rowpacketNum((*lpstate)->nrow));
@@ -190,30 +188,6 @@ void lpstateFree(
    freeBlockMemory(mem->statemem, *lpstate);
 }
 
-void SCIPlpstateCapture(                /**< increases usage counter of LP state */
-   LPSTATE*         lpstate             /**< LP state information (like basis information) */
-   )
-{
-   assert(lpstate != NULL);
-   assert(lpstate->numuses >= 0);
-
-   lpstate->numuses++;
-}
-
-void SCIPlpstateRelease(                /**< decreases usage counter of LP state, and frees memory if necessary */
-   LPSTATE**        lpstate,            /**< LP state information (like basis information) */
-   MEM*             mem                 /**< block memory buffers */
-   )
-{
-   assert(mem != NULL);
-   assert(lpstate != NULL);
-   assert(*lpstate != NULL);
-   assert((*lpstate)->numuses >= 1);
-
-   (*lpstate)->numuses--;
-   if( (*lpstate)->numuses == 0 )
-      lpstateFree(lpstate, mem);
-}
 
 
 /*
@@ -533,7 +507,7 @@ RETCODE SCIPlpiAddCols(                 /**< adds columns to the LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiDelCols(                 /**< deletes columns from LP */
+RETCODE SCIPlpiDelColset(               /**< deletes columns from LP */
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of columns
                                          *   input:  1 if column should be deleted, 0 if not
@@ -551,25 +525,19 @@ RETCODE SCIPlpiDelCols(                 /**< deletes columns from LP */
    return SCIP_OKAY;   
 }
 
-RETCODE SCIPlpiShrinkCols(              /**< deletes all columns after lastcol from LP */
+RETCODE SCIPlpiDelCols(                 /**< deletes all columns in the given range from LP */
    LPI*             lpi,                /**< LP interface structure */
-   int              lastcol             /**< last remaining column */
+   int              firstcol,           /**< first column to be deleted */
+   int              lastcol             /**< last column to be deleted */
    )
 {
-   int ncols;
-
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol && lastcol < CPXgetnumcols(cpxenv, lpi->cpxlp));
 
-   ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
-   assert(-1 <= lastcol && lastcol <= ncols);
-
-   if( lastcol < ncols )
-   {
-      invalidateSolution(lpi);
-      CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, lastcol+1, ncols) );
-   }
+   invalidateSolution(lpi);
+   CHECK_ZERO( CPXdelcols(cpxenv, lpi->cpxlp, firstcol, lastcol) );
 
    return SCIP_OKAY;   
 }
@@ -597,7 +565,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    return SCIP_OKAY;
 }
 
-RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
+RETCODE SCIPlpiDelRowset(               /**< deletes rows from LP */
    LPI*             lpi,                /**< LP interface structure */
    int*             dstat               /**< deletion status of rows
                                          *   input:  1 if row should be deleted, 0 if not
@@ -615,25 +583,19 @@ RETCODE SCIPlpiDelRows(                 /**< deletes rows from LP */
    return SCIP_OKAY;   
 }
 
-RETCODE SCIPlpiShrinkRows(              /**< deletes all rows after lastrow from LP */
+RETCODE SCIPlpiDelRows(                 /**< deletes all rows in the given range from LP */
    LPI*             lpi,                /**< LP interface structure */
-   int              lastrow             /**< last remaining row */
+   int              firstrow,           /**< first row to be deleted */
+   int              lastrow             /**< last row to be deleted */
    )
 {
-   int nrows;
-
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow && lastrow < CPXgetnumrows(cpxenv, lpi->cpxlp));
 
-   nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
-   assert(-1 <= lastrow && lastrow <= nrows);
-
-   if( lastrow < nrows )
-   {
-      invalidateSolution(lpi);
-      CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, lastrow+1, nrows) );
-   }
+   invalidateSolution(lpi);
+   CHECK_ZERO( CPXdelrows(cpxenv, lpi->cpxlp, firstrow, lastrow) );
 
    return SCIP_OKAY;   
 }
@@ -1237,6 +1199,19 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    /* free temporary memory */
    freeBlockMemoryArray(mem->tempmem, cstat, lpstate->ncol);
    freeBlockMemoryArray(mem->tempmem, rstat, lpstate->nrow);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpiFreeState(               /**< frees LP state information */
+   LPI*             lpi,                /**< LP interface structure */
+   MEM*             mem,                /**< block memory buffers */
+   LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(lpi != NULL);
+
+   lpstateFree(lpstate, mem);
 
    return SCIP_OKAY;
 }
