@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.23 2004/08/24 11:58:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.24 2004/08/25 14:56:43 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -703,35 +703,35 @@ Real SCIPvarGetRootSol(
    VAR*             var                 /**< problem variable */
    );
 
-/** returns the bound change information for the last lower bound change on given variable before or after the bound change
- *  with the given index was applied;
+/** returns the bound change information for the last lower bound change on given active problem variable before or
+ *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower bound was applied up to this point of time
  */
 extern
 BDCHGINFO* SCIPvarGetLbchgInfo(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
    );
 
-/** returns the bound change information for the last upper bound change on given variable before or after the bound change
- *  with the given index was applied;
+/** returns the bound change information for the last upper bound change on given active problem variable before or
+ *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the upper bound was applied up to this point of time
  */
 extern
 BDCHGINFO* SCIPvarGetUbchgInfo(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
    );
 
-/** returns the bound change information for the last lower or upper bound change on given variable before or after the
- *  bound change with the given index was applied;
+/** returns the bound change information for the last lower or upper bound change on given active problem variable
+ *  before or after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower/upper bound was applied up to this point of time
  */
 extern
 BDCHGINFO* SCIPvarGetBdchgInfo(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
@@ -768,6 +768,22 @@ Real SCIPvarGetBdAtIndex(
    Bool             after               /**< should the bound change with given index be included? */
    );
 
+/** returns whether the first binary variable was fixed earlier than the second one;
+ *  returns FALSE, if the first variable is not fixed, and returns TRUE, if the first variable is fixed, but the
+ *  second one is not fixed
+ */
+extern
+Bool SCIPvarWasFixedEarlier(
+   VAR*             var1,               /**< first binary variable */
+   VAR*             var2                /**< second binary variable */
+   );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
  *  if a bound change index is NULL, the bound change belongs to preprocessing or problem modification and
  *  is always earlier than any bound change applied during the solving process
@@ -778,11 +794,12 @@ Bool SCIPbdchgidxIsEarlier(
    BDCHGIDX*        bdchgidx2           /**< second bound change index, or NULL */
    );
 
-#ifndef NDEBUG
-
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
+/** returns whether first bound change index belongs to an earlier applied bound change than second one */
+extern
+Bool SCIPbdchgidxIsEarlierNonNull(
+   BDCHGIDX*        bdchgidx1,          /**< first bound change index */
+   BDCHGIDX*        bdchgidx2           /**< second bound change index */
+   );
 
 /** returns old bound that was overwritten for given bound change information */
 extern
@@ -862,6 +879,10 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
  * speed up the algorithms.
  */
 
+#define SCIPbdchgidxIsEarlierNonNull(idx1,idx2)                         \
+   ((idx1)->depth < (idx2)->depth || ((idx1)->depth == (idx2)->depth && (idx1)->pos < (idx2)->pos))
+#define SCIPbdchgidxIsEarlier(idx1,idx2)                                \
+   ((idx1) != NULL && ((idx2) == NULL || SCIPbdchgidxIsEarlierNonNull(idx1, idx2)))
 #define SCIPbdchginfoGetOldbound(bdchginfo)       (bdchginfo)->oldbound
 #define SCIPbdchginfoGetNewbound(bdchginfo)       (bdchginfo)->newbound
 #define SCIPbdchginfoGetVar(bdchginfo)            (bdchginfo)->var

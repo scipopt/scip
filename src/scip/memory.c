@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.29 2004/04/05 15:48:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.30 2004/08/25 14:56:43 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -30,6 +30,8 @@
 
 #include "memory.h"
 
+
+/*#define CHECKMEM*/
 
 #ifdef DEBUG
 #define debugMessage                    printf("[%s:%d] debug: ", __FILE__, __LINE__); printf
@@ -70,7 +72,25 @@ struct MemList
 };
 
 static MEMLIST *memlist = NULL;
-static long memused = 0;
+static long long memused = 0;
+
+#ifdef CHECKMEM
+static void
+memListCheck(void)
+{
+   MEMLIST* list = memlist;
+   long long used = 0;
+
+   while( list != NULL )
+   {
+      used += list->size;
+      list = list->next;
+   }
+   assert(used == memused);
+}
+#else
+#define memListCheck() /**/
+#endif
 
 static void
 memListAdd(void *ptr, size_t size, const char *filename, int line)
@@ -86,7 +106,8 @@ memListAdd(void *ptr, size_t size, const char *filename, int line)
    list->line = line;
    list->next = memlist;
    memlist = list;
-   memused += (long)size;
+   memused += (long long)size;
+   memListCheck();
 }
 
 static void
@@ -104,12 +125,13 @@ memListRemove(void *ptr, const char *filename, int line)
    if( list != NULL && ptr == list->ptr )
    {
       *listptr = list->next;
-      memused -= (long)list->size;
+      memused -= (long long)list->size;
       free(list->filename);
       free(list);
    }
    else
       fprintf(stderr, "[%s:%d] ERROR: Tried to free unknown pointer <%p>\n", filename, line, ptr);
+   memListCheck();
 }
 
 size_t
@@ -128,21 +150,21 @@ memorySize(void *ptr)
 void
 memoryDiagnostic(void)
 {
-   MEMLIST *list = memlist;
-   long    used = 0;
+   MEMLIST   *list = memlist;
+   long long used = 0;
 
    printf("Allocated memory:\n");
    while( list != NULL )
    {
-      printf("%12p %8ld %s:%d\n", list->ptr, (long) (list->size),
-	 list->filename, list->line);
-      used += (long)list->size;
+      printf("%12p %8lld %s:%d\n", list->ptr, (long long)(list->size), list->filename, list->line);
+      used += (long long)list->size;
       list = list->next;
    }
-   printf("Total:    %8ld\n", memused);
+   printf("Total:    %8lld\n", memused);
    if( used != memused )
-      fprintf(stderr, "[%s:%d] ERROR: Used memory in list sums up to %ld instead of %ld\n",
+      fprintf(stderr, "[%s:%d] ERROR: Used memory in list sums up to %lld instead of %lld\n",
 	 __FILE__, __LINE__, used, memused);
+   memListCheck();
 }
 
 void
@@ -161,12 +183,13 @@ allocMemory_call(size_t size, const char *filename, int line)
 {
    void   *ptr = NULL;
 
-   debugMessage("malloc %ld bytes [%s:%d]\n", (long)size, filename, line);
+   debugMessage("malloc %lld bytes [%s:%d]\n", (long long)size, filename, line);
    size = MAX(size, 1);
    ptr = malloc(size);
 
    if( ptr == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for allocation of %ld bytes\n", filename, line, (long) size);
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for allocation of %lld bytes\n", 
+         filename, line, (long long) size);
 #ifndef NDEBUG
    else
       memListAdd(ptr, size, filename, line);
@@ -188,7 +211,8 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
    newptr = realloc(ptr, size);
 
    if( newptr == NULL )
-      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for reallocation of %ld bytes\n", filename, line, (long) size);
+      fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for reallocation of %lld bytes\n", 
+         filename, line, (long long) size);
 #ifndef NDEBUG
    else
       memListAdd(newptr, size, filename, line);
@@ -737,8 +761,8 @@ createChunk(BLKHDR * blk)
    newchunk->arraypos = -1;
    newchunk->block = blk;
 
-   debugMessage("allocated new chunk %p: %d elements with size %ld\n", 
-      newchunk, newchunk->storeSize, (long)(newchunk->elemSize));
+   debugMessage("allocated new chunk %p: %d elements with size %lld\n", 
+      newchunk, newchunk->storeSize, (long long)(newchunk->elemSize));
 
    /* add new memory to the lazy free list */
    for( i = 0; i < newchunk->storeSize - 1; ++i )
@@ -1017,16 +1041,16 @@ freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
    {
       BLKHDR *correctblk;
 
-      fprintf(stderr, "[%s:%d] ERROR: pointer %p does not belong to block %p (size: %ld)\n", 
-         filename, line, ptr, blk, (long) (blk->elemSize));
+      fprintf(stderr, "[%s:%d] ERROR: pointer %p does not belong to block %p (size: %lld)\n", 
+         filename, line, ptr, blk, (long long)(blk->elemSize));
 
       correctblk = findBlock(blk->mem, ptr);
       if( correctblk == NULL )
 	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p does not belong to memory structure %p\n", 
             filename, line, ptr, blk->mem);
       else
-	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p belongs to block %p instead (size: %ld)\n", 
-            filename, line, ptr, correctblk, (long) (correctblk->elemSize));
+	 fprintf(stderr, "[%s:%d] ERROR: -> pointer %p belongs to block %p instead (size: %lld)\n", 
+            filename, line, ptr, correctblk, (long long)(correctblk->elemSize));
    }
 #endif
 
@@ -1185,7 +1209,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    ptr = allocBlockElement(*blkptr);
    if( ptr == NULL )
       fprintf(stderr, "[%s:%d] ERROR: Insufficient memory for new chunk\n", filename, line);
-   debugMessage("alloced %8ld bytes in %p [%s:%4d]\n", (long)size, ptr, filename, line);
+   debugMessage("alloced %8lld bytes in %p [%s:%4d]\n", (long long)size, ptr, filename, line);
 
    mem->memused += size;
 
@@ -1313,15 +1337,15 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
       alignSize(&size);
       hashNumber = getHashNumber((int)size);
 
-      debugMessage("free    %8ld bytes in %p [%s:%4d]\n", (long)size, *ptr, filename, line);
+      debugMessage("free    %8lld bytes in %p [%s:%4d]\n", (long long)size, *ptr, filename, line);
       /* find correspoding block header */
       blk = mem->blockhash[hashNumber];
       while( blk != NULL && blk->elemSize != (int)size )
 	 blk = blk->next;
       if( blk == NULL )
       {
-	 fprintf(stderr, "[%s:%d] ERROR: Tried to free pointer <%p> in block memory <%p> of unknown size %ld\n",
-            filename, line, *ptr, mem, (long) size);
+	 fprintf(stderr, "[%s:%d] ERROR: Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
+            filename, line, *ptr, mem, (long long) size);
 	 return;
       }
 
@@ -1381,15 +1405,15 @@ blockMemorySize(MEMHDR *mem, void *ptr)
 void
 blockMemoryDiagnostic(MEMHDR *mem)
 {
-   BLKHDR *blk;
-   int     numBlocks = 0;
-   int     numUnusedBlocks = 0;
-   int     numGarbageCalls = 0;
-   int     numGarbageFrees = 0;
-   long    allocedMem = 0;
-   long    freeMem = 0;
-   int     i;
-   int     c;
+   BLKHDR*   blk;
+   int       numBlocks = 0;
+   int       numUnusedBlocks = 0;
+   int       numGarbageCalls = 0;
+   int       numGarbageFrees = 0;
+   long long allocedMem = 0;
+   long long freeMem = 0;
+   int       i;
+   int       c;
 
    printf(" ElSize #Chk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  First Allocator\n");
 
@@ -1431,8 +1455,8 @@ blockMemoryDiagnostic(MEMHDR *mem)
 	    allocedMem += blk->elemSize * numElems;
 	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
 
-	    printf("%7ld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
-	       (long) (blk->elemSize), numChunks, numEagerChunks, numElems,
+	    printf("%7lld %4d %4d %7d %7d %7d %5d %4d %5.1f%% %s:%d\n",
+	       (long long)(blk->elemSize), numChunks, numEagerChunks, numElems,
 	       numEagerElems, blk->lazyFreeSize, blk->numGarbageCalls,
 	       blk->numGarbageFrees,
 	       100.0 * (double) (numEagerElems +
@@ -1441,8 +1465,8 @@ blockMemoryDiagnostic(MEMHDR *mem)
 	 }
 	 else
 	 {
-	    printf("%7ld <unused>                          %5d %4d        %s:%d\n",
-	       (long) (blk->elemSize), blk->numGarbageCalls,
+	    printf("%7lld <unused>                          %5d %4d        %s:%d\n",
+	       (long long)(blk->elemSize), blk->numGarbageCalls,
 	       blk->numGarbageFrees, blk->filename, blk->line);
 	    numUnusedBlocks++;
 	 }
@@ -1454,7 +1478,7 @@ blockMemoryDiagnostic(MEMHDR *mem)
 
    printf("Garbage collector called %d times (freed %d chunks).\n",
       numGarbageCalls, numGarbageFrees);
-   printf("%d blocks (%d unused), %ld bytes allocated, %ld bytes free",
+   printf("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
       numBlocks + numUnusedBlocks, numUnusedBlocks, allocedMem, freeMem);
    if( allocedMem > 0 )
       printf(" (%.1f%%)", 100.0 * (double) freeMem / (double) allocedMem);
@@ -1464,11 +1488,11 @@ blockMemoryDiagnostic(MEMHDR *mem)
 void
 blockMemoryCheckEmpty(MEMHDR *mem)
 {
-   BLKHDR *blk;
-   long    allocedMem = 0;
-   long    freeMem = 0;
-   int     i;
-   int     c;
+   BLKHDR*   blk;
+   long long allocedMem = 0;
+   long long freeMem = 0;
+   int       i;
+   int       c;
 
    assert(mem != NULL);
 
@@ -1504,9 +1528,9 @@ blockMemoryCheckEmpty(MEMHDR *mem)
 	    freeMem += blk->elemSize * (numEagerElems + blk->lazyFreeSize);
 
             if( numElems != numEagerElems + blk->lazyFreeSize )
-               printf("%ld bytes (%d elements of size %ld) not freed. First Allocator: %s:%d\n",
-                  ((numElems - numEagerElems) - blk->lazyFreeSize) * (long) (blk->elemSize),
-                  (numElems - numEagerElems) - blk->lazyFreeSize, (long) (blk->elemSize),
+               printf("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
+                  ((numElems - numEagerElems) - blk->lazyFreeSize) * (long long)(blk->elemSize),
+                  (numElems - numEagerElems) - blk->lazyFreeSize, (long long)(blk->elemSize),
                   blk->filename, blk->line);
 	 }
 	 blk = blk->next;
@@ -1514,7 +1538,7 @@ blockMemoryCheckEmpty(MEMHDR *mem)
    }
 
    if( allocedMem != freeMem )
-      printf("%ld bytes not freed in total.\n", allocedMem - freeMem);
+      printf("%lld bytes not freed in total.\n", allocedMem - freeMem);
 }
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.9 2004/08/24 11:57:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.10 2004/08/25 14:56:42 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -60,6 +60,23 @@ struct ConsData
    ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int     propagated:1;       /**< is the varbound constraint already propagated? */
 };
+
+
+
+
+/*
+ * Propagation rules
+ */
+
+enum Proprule
+{
+   PROPRULE_1,                          /**< left hand side and bounds on y -> lower bound on x */
+   PROPRULE_2,                          /**< left hand side and upper bound on x -> bound on y */
+   PROPRULE_3,                          /**< right hand side and bounds on y -> upper bound on x */
+   PROPRULE_4,                          /**< right hand side and lower bound on x -> bound on y */
+   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+};
+typedef enum Proprule PROPRULE;
 
 
 
@@ -356,7 +373,9 @@ RETCODE propagateCons(
       /* propagate left hand side inequality: lhs <= x + c*y */
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         /* propagate bounds on x */
+         /* propagate bounds on x:
+          *  (1) left hand side and bounds on y -> lower bound on x
+          */
          if( consdata->vbdcoef > 0.0 )
             newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
          else
@@ -364,21 +383,23 @@ RETCODE propagateCons(
          if( newlb > xlb + 0.1 )
          {
             debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-            CHECK_OKAY( SCIPtightenVarLb(scip, consdata->var, newlb, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLb(scip, consdata->var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
             *cutoff = *cutoff || infeasible;
             tightenedround = tightenedround || tightened;
             xlb = newlb;
             (*nchgbds)++;
          }
 
-         /* propagate bounds on y */
+         /* propagate bounds on y:
+          *  (2) left hand side and upper bound on x -> bound on y
+          */
          if( consdata->vbdcoef > 0.0 )
          {
             newlb = SCIPadjustedVarLb(scip, consdata->vbdvar, (consdata->lhs - xub)/consdata->vbdcoef);
             if( newlb > ylb + 0.5 )
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-               CHECK_OKAY( SCIPtightenVarLb(scip, consdata->vbdvar, newlb, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarLb(scip, consdata->vbdvar, newlb, cons, PROPRULE_2, &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                ylb = newlb;
@@ -391,7 +412,7 @@ RETCODE propagateCons(
             if( newub < yub - 0.5 )
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-               CHECK_OKAY( SCIPtightenVarUb(scip, consdata->vbdvar, newub, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarUb(scip, consdata->vbdvar, newub, cons, PROPRULE_2, &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                yub = newub;
@@ -403,7 +424,9 @@ RETCODE propagateCons(
       /* propagate right hand side inequality: x + c*y <= rhs */
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
-         /* propagate bounds on x */
+         /* propagate bounds on x:
+          *  (3) right hand side and bounds on y -> upper bound on x
+          */
          if( consdata->vbdcoef > 0.0 )
             newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
          else
@@ -411,21 +434,23 @@ RETCODE propagateCons(
          if( newub < xub - 0.1 )
          {
             debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-            CHECK_OKAY( SCIPtightenVarUb(scip, consdata->var, newub, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUb(scip, consdata->var, newub, cons, PROPRULE_3, &infeasible, &tightened) );
             *cutoff = *cutoff || infeasible;
             tightenedround = tightenedround || tightened;
             xub = newub;
             (*nchgbds)++;
          }
 
-         /* propagate bounds on y */
+         /* propagate bounds on y:
+          *  (4) right hand side and lower bound on x -> bound on y
+          */
          if( consdata->vbdcoef > 0.0 )
          {
             newub = SCIPadjustedVarUb(scip, consdata->vbdvar, (consdata->rhs - xlb)/consdata->vbdcoef);
             if( newub < yub - 0.5 )
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-               CHECK_OKAY( SCIPtightenVarUb(scip, consdata->vbdvar, newub, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarUb(scip, consdata->vbdvar, newub, cons, PROPRULE_4, &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                yub = newub;
@@ -438,7 +463,7 @@ RETCODE propagateCons(
             if( newlb > ylb + 0.5 )
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-               CHECK_OKAY( SCIPtightenVarLb(scip, consdata->vbdvar, newlb, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarLb(scip, consdata->vbdvar, newlb, cons, PROPRULE_4, &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                ylb = newlb;
@@ -462,6 +487,90 @@ RETCODE propagateCons(
 
    /* mark the constraint propagated */
    consdata->propagated = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
+ *  propagation rule (see propagateCons()):
+ *   (1) left hand side and bounds on y -> lower bound on x
+ *   (2) left hand side and upper bound on x -> bound on y
+ *   (3) right hand side and bounds on y -> upper bound on x
+ *   (4) right hand side and lower bound on x -> bound on y
+ */
+static
+RETCODE resolveConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint to be processed */
+   VAR*             infervar,           /**< variable that was deduced */
+   PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
+   BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(result != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!SCIPisZero(scip, consdata->vbdcoef));
+
+   switch( proprule )
+   {
+   case PROPRULE_1:
+      /* lhs <= x + c*y: left hand side and bounds on y -> lower bound on x */
+      assert(infervar == consdata->var);
+      assert(boundtype == SCIP_BOUNDTYPE_LOWER);
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      if( consdata->vbdcoef > 0.0 )
+      {
+         CHECK_OKAY( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      *result = SCIP_SUCCESS;
+      break;
+
+   case PROPRULE_2:
+      /* lhs <= x + c*y: left hand side and upper bound on x -> bound on y */
+      assert(infervar == consdata->vbdvar);
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      CHECK_OKAY( SCIPaddConflictUb(scip, consdata->var, bdchgidx) );
+      *result = SCIP_SUCCESS;
+      break;
+
+   case PROPRULE_3:
+      /* x + c*y <= rhs: right hand side and bounds on y -> upper bound on x */
+      assert(infervar == consdata->var);
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+      if( consdata->vbdcoef > 0.0 )
+      {
+         CHECK_OKAY( SCIPaddConflictLb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPaddConflictUb(scip, consdata->vbdvar, bdchgidx) );
+      }
+      *result = SCIP_SUCCESS;
+      break;
+
+   case PROPRULE_4:
+      /* x + c*y <= rhs: right hand side and lower bound on x -> bound on y */
+      assert(infervar == consdata->vbdvar);
+      assert(!SCIPisInfinity(scip, consdata->rhs));
+      CHECK_OKAY( SCIPaddConflictLb(scip, consdata->var, bdchgidx) );
+      *result = SCIP_SUCCESS;
+      break;
+
+   default:
+      errorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      return SCIP_INVALIDDATA;
+   }
 
    return SCIP_OKAY;
 }
@@ -754,7 +863,13 @@ DECL_CONSPRESOL(consPresolVarbound)
 
 
 /** propagation conflict resolving method of constraint handler */
-#define consRespropVarbound NULL
+static
+DECL_CONSRESPROP(consRespropVarbound)
+{  /*lint --e{715}*/
+   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
+
+   return SCIP_OKAY;
+}
 
 
 /** variable rounding lock method of constraint handler */

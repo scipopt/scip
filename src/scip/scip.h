@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.156 2004/08/24 12:50:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.157 2004/08/25 14:56:44 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1624,9 +1624,10 @@ RETCODE SCIPchgVarUbNode(
    Real             newbound            /**< new value for bound */
    );
 
-/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter than the
- *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
- *  bound change, such that in conflict analysis, this change is treated like a branching decision
+/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
+ *  is treated like a branching decision
  */
 extern
 RETCODE SCIPtightenVarLb(
@@ -1637,9 +1638,10 @@ RETCODE SCIPtightenVarLb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter than the
- *  current bound; if possible, adjusts bound to integral value; doesn't store any inference information in the
- *  bound change, such that in conflict analysis, this change is treated like a branching decision
+/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
+ *  is treated like a branching decision
  */
 extern
 RETCODE SCIPtightenVarUb(
@@ -1650,9 +1652,10 @@ RETCODE SCIPtightenVarUb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** depending on SCIP's stage, changes lower bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjusts bound to integral value; the given inference constraint is stored, such that the conflict
- *  analysis is able to find out the reason for the deduction of the bound change
+/** changes lower bound of variable in preprocessing or in the active node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
  */
 extern
 RETCODE SCIPinferVarLb(
@@ -1665,9 +1668,10 @@ RETCODE SCIPinferVarLb(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** depending on SCIP's stage, changes upper bound of variable in the problem, in preprocessing, or in active node;
- *  if possible, adjusts bound to integral value; the given inference constraint is stored, such that the conflict
- *  analysis is able to find out the reason for the deduction of the bound change
+/** changes upper bound of variable in preprocessing or in the active node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
  */
 extern
 RETCODE SCIPinferVarUb(

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.72 2004/08/24 11:58:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.73 2004/08/25 14:56:48 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -134,7 +134,7 @@ RETCODE SCIPdomchgAddBoundchg(
    BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    );

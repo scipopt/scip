@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.51 2004/08/24 11:57:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.52 2004/08/25 14:56:41 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -463,11 +463,18 @@ DECL_SORTPTRCOMP(conflictBdchginfoComp)
    var1 = SCIPbdchginfoGetVar(bdchginfo1);
    var2 = SCIPbdchginfoGetVar(bdchginfo2);
 
-   if( SCIPvarGetType(var1) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY )
+   {
+      if( SCIPvarGetType(var2) != SCIP_VARTYPE_BINARY )
+         return +1;
+      else if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
+         return -1;
+      else
+         return +1;
+   }
+   else if( SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY )
       return -1;
-   else if( SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY && SCIPvarGetType(var2) != SCIP_VARTYPE_BINARY )
-      return +1;
-   else if( !SCIPbdchgidxIsEarlier(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
+   else if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
       return +1;
@@ -606,15 +613,13 @@ RETCODE SCIPconflictAddBound(
 
    /* if bound of variable was not changed, we can ignore the conflicting bound */
    if( bdchginfo == NULL )
-   {
-      assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)));
-      assert(SCIPsetIsEQ(set, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)));
-
       return SCIP_OKAY;
-   }
 
-   debugMessage(" -> adding variable <%s>[%g,%g] [status:%d, depth:%d, pos:%d, cons:<%s>, info:%d] to conflict candidates\n",
-      SCIPvarGetName(var), SCIPvarGetLbAtIndex(var, bdchgidx, FALSE), SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
+   debugMessage(" -> adding bound <%s> %s %g [status:%d, depth:%d, pos:%d, cons:<%s>, info:%d] to conflict candidates\n",
+      SCIPvarGetName(var),
+      boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+      boundtype == SCIP_BOUNDTYPE_LOWER ?
+      SCIPvarGetLbAtIndex(var, bdchgidx, FALSE) : SCIPvarGetUbAtIndex(var, bdchgidx, FALSE),
       SCIPvarGetStatus(var), 
       SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo), 
       SCIPbdchginfoGetChgtype(bdchginfo) != SCIP_BOUNDCHGTYPE_INFERENCE || SCIPbdchginfoGetInferCons(bdchginfo) == NULL
@@ -707,7 +712,10 @@ RETCODE conflictAnalyze(
 #ifdef DEBUG
          int v;
          
-         debugMessage("processing next conflicting bound (depth: %d, valid depth: %d)\n", bdchgdepth, validdepth);
+         debugMessage("processing next conflicting bound (depth: %d, valid depth: %d): [<%s> %s %g]\n",
+            bdchgdepth, validdepth, SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo));
          debugMessage(" - conflict set   :");
          for( v = 0; v < conflict->nconflictvars; ++v )
             printf(" <%s>", SCIPvarGetName(conflict->conflictvars[v]));
@@ -836,6 +844,19 @@ RETCODE conflictAnalyze(
       int d;
       int b;
       int h;
+
+      /* if no conflict variables exist, the node and its sub tree in the valid depth can be cut off completely */
+      if( conflict->nconflictvars == 0 )
+      {
+         assert(0 <= validdepth && validdepth < tree->pathlen);
+         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", 
+            tree->actnode->depth, validdepth);
+
+         SCIPnodeCutoff(tree->path[validdepth]);
+         *success = TRUE;
+
+         return SCIP_OKAY;
+      }
 
       assert(conflict->conflictvars != NULL);
       assert(conflict->nconflictvars > 0);
@@ -1442,27 +1463,176 @@ Bool bdchginfoIsUseable(
          && SCIPbdchginfoGetInferCons(bdchginfo) != NULL));
 }
 
+/** ensures, that side change arrays can store at least num entries */
+static
+RETCODE ensureSidechgsSize(
+   SET*             set,                /**< global SCIP settings */
+   int**            sidechginds,        /**< pointer to side change index array */
+   Real**           sidechgoldlhss,     /**< pointer to side change old left hand sides array */
+   Real**           sidechgoldrhss,     /**< pointer to side change old right hand sides array */
+   Real**           sidechgnewlhss,     /**< pointer to side change new left hand sides array */
+   Real**           sidechgnewrhss,     /**< pointer to side change new right hand sides array */
+   int*             sidechgssize,       /**< pointer to size of side change arrays */
+   int              num                 /**< minimal number of entries to be able to store in side change arrays */
+   )
+{
+   assert(sidechginds != NULL);
+   assert(sidechgoldlhss != NULL);
+   assert(sidechgoldrhss != NULL);
+   assert(sidechgnewlhss != NULL);
+   assert(sidechgnewrhss != NULL);
+   assert(sidechgssize != NULL);
+
+   if( num > *sidechgssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechginds, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgoldlhss, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgoldrhss, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgnewlhss, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgnewrhss, newsize) );
+      *sidechgssize = newsize;
+   }
+   assert(num <= *sidechgssize);
+
+   return SCIP_OKAY;
+}
+
+/** adds removal of row's side to side change arrays; finite sides are only replaced by near infinite sides, such
+ *  that the row's sense in the LP solver is not changed
+ */
+static
+RETCODE addSideRemoval(
+   SET*             set,                /**< global SCIP settings */
+   ROW*             row,                /**< LP row to change the sides for */
+   Real             lpiinfinity,        /**< value treated as infinity in LP solver */
+   int**            sidechginds,        /**< pointer to side change index array */
+   Real**           sidechgoldlhss,     /**< pointer to side change old left hand sides array */
+   Real**           sidechgoldrhss,     /**< pointer to side change old right hand sides array */
+   Real**           sidechgnewlhss,     /**< pointer to side change new left hand sides array */
+   Real**           sidechgnewrhss,     /**< pointer to side change new right hand sides array */
+   int*             sidechgssize,       /**< pointer to size of side change arrays */
+   int*             nsidechgs           /**< pointer to number of used slots in side change arrays */
+   )
+{
+   Real lhs;
+   Real rhs;
+   Real constant;
+
+   assert(sidechginds != NULL);
+   assert(sidechgoldlhss != NULL);
+   assert(sidechgoldrhss != NULL);
+   assert(sidechgnewlhss != NULL);
+   assert(sidechgnewrhss != NULL);
+   assert(sidechgssize != NULL);
+   assert(nsidechgs != NULL);
+
+   lhs = SCIProwGetLhs(row);
+   rhs = SCIProwGetRhs(row);
+   constant = SCIProwGetConstant(row);
+   assert(!SCIPsetIsInfinity(set, -lhs) || !SCIPsetIsInfinity(set, rhs));
+
+   /* get memory to store additional side change */
+   CHECK_OKAY( ensureSidechgsSize(set, sidechginds, sidechgoldlhss, sidechgoldrhss, sidechgnewlhss, sidechgnewrhss,
+         sidechgssize, (*nsidechgs)+1) );
+   assert(*nsidechgs < *sidechgssize);
+   assert(*sidechginds != NULL);
+   assert(*sidechgoldlhss != NULL);
+   assert(*sidechgoldrhss != NULL);
+   assert(*sidechgnewlhss != NULL);
+   assert(*sidechgnewrhss != NULL);
+   
+   /* store side change */
+   (*sidechginds)[*nsidechgs] = SCIProwGetLPPos(row);
+   if( SCIPsetIsInfinity(set, -lhs) )
+   {
+      (*sidechgoldlhss)[*nsidechgs] = -lpiinfinity;
+      (*sidechgnewlhss)[*nsidechgs] = -lpiinfinity;
+   }
+   else
+   {
+      (*sidechgoldlhss)[*nsidechgs] = lhs - constant;
+      (*sidechgnewlhss)[*nsidechgs] = -lpiinfinity/2;
+   }
+   if( SCIPsetIsInfinity(set, rhs) )
+   {
+      (*sidechgoldrhss)[*nsidechgs] = lpiinfinity;
+      (*sidechgnewrhss)[*nsidechgs] = lpiinfinity;
+   }
+   else
+   {
+      (*sidechgoldrhss)[*nsidechgs] = rhs - constant;
+      (*sidechgnewrhss)[*nsidechgs] = lpiinfinity/2;
+   }
+   (*nsidechgs)++;
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that bound change arrays can store at least num entries */
+static
+RETCODE ensureBdchgsSize(
+   SET*             set,                /**< global SCIP settings */
+   int**            sidechginds,        /**< pointer to side change index array */
+   Real**           sidechgoldlhss,     /**< pointer to side change old left hand sides array */
+   Real**           sidechgoldrhss,     /**< pointer to side change old right hand sides array */
+   Real**           sidechgnewlhss,     /**< pointer to side change new left hand sides array */
+   Real**           sidechgnewrhss,     /**< pointer to side change new right hand sides array */
+   int*             sidechgssize,       /**< pointer to size of side change arrays */
+   int              num                 /**< minimal number of entries to be able to store in side change arrays */
+   )
+{
+   assert(sidechginds != NULL);
+   assert(sidechgoldlhss != NULL);
+   assert(sidechgoldrhss != NULL);
+   assert(sidechgnewlhss != NULL);
+   assert(sidechgnewrhss != NULL);
+   assert(sidechgssize != NULL);
+
+   if( num > *sidechgssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechginds, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgoldlhss, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgoldrhss, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgnewlhss, newsize) );
+      CHECK_OKAY( SCIPsetReallocBufferArray(set, sidechgnewrhss, newsize) );
+      *sidechgssize = newsize;
+   }
+   assert(num <= *sidechgssize);
+
+   return SCIP_OKAY;
+}
+
 /** inserts variable's new bounds into bound change arrays */
 static
-void addBdchg(
+RETCODE addBdchg(
+   SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to change the LP bounds for */
    Real             newlb,              /**< new lower bound */
    Real             newub,              /**< new upper bound */
-   int*             nbdchgs,            /**< pointer to count total number of LP column bound changes */
-   int*             bdchginds,          /**< array to store indices of bound changed columns */
-   Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns */
-   Real*            bdchgoldubs,        /**< array to store old upper bounds of bound changed columns */
-   Real*            bdchgnewlbs,        /**< array to store new lower bounds of bound changed columns */
-   Real*            bdchgnewubs         /**< array to store new upper bounds of bound changed columns */
+   int**            bdchginds,          /**< pointer to bound change index array */
+   Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array */
+   Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array */
+   Real**           bdchgnewlbs,        /**< pointer to bound change new lower bounds array */
+   Real**           bdchgnewubs,        /**< pointer to bound change new upper bounds array */
+   int*             bdchgssize,         /**< pointer to size of bound change arrays */
+   int*             nbdchgs             /**< pointer to number of used slots in bound change arrays */
    )
 {
    assert(newlb <= newub);
-   assert(nbdchgs != NULL);
    assert(bdchginds != NULL);
    assert(bdchgoldlbs != NULL);
    assert(bdchgoldubs != NULL);
    assert(bdchgnewlbs != NULL);
    assert(bdchgnewubs != NULL);
+   assert(bdchgssize != NULL);
+   assert(nbdchgs != NULL);
+   assert(*nbdchgs <= *bdchgssize);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
    {
@@ -1473,14 +1643,24 @@ void addBdchg(
       c = SCIPcolGetLPPos(col);
       if( c >= 0 )
       {
-         bdchginds[*nbdchgs] = c;
-         bdchgoldlbs[*nbdchgs] = SCIPvarGetLbLP(var);
-         bdchgoldubs[*nbdchgs] = SCIPvarGetUbLP(var);
-         bdchgnewlbs[*nbdchgs] = newlb;
-         bdchgnewubs[*nbdchgs] = newub;
+         CHECK_OKAY( ensureBdchgsSize(set, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, 
+               bdchgssize, (*nbdchgs)+1) );
+         assert(*bdchginds != NULL);
+         assert(*bdchgoldlbs != NULL);
+         assert(*bdchgoldubs != NULL);
+         assert(*bdchgnewlbs != NULL);
+         assert(*bdchgnewubs != NULL);
+
+         (*bdchginds)[*nbdchgs] = c;
+         (*bdchgoldlbs)[*nbdchgs] = SCIPvarGetLbLP(var);
+         (*bdchgoldubs)[*nbdchgs] = SCIPvarGetUbLP(var);
+         (*bdchgnewlbs)[*nbdchgs] = newlb;
+         (*bdchgnewubs)[*nbdchgs] = newub;
          (*nbdchgs)++;
       }
    }
+
+   return SCIP_OKAY;
 }
 
 /** ensures, that candidate array can store at least num entries */
@@ -1522,7 +1702,7 @@ RETCODE ensureCandsSize(
  *  - prefer variables with small farkas coefficient to get rid of as many bound changes as possible
  */
 static
-int addCand(
+RETCODE addCand(
    SET*             set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to add to candidate array */
    int              lbchginfopos,       /**< positions of currently active lower bound change infos in variable's array */
@@ -1530,12 +1710,14 @@ int addCand(
    Real             proofcoef,          /**< coefficient of variable in infeasibility/bound proof */
    Real             prooflhs,           /**< left hand side of infeasibility/bound proof */
    Real             proofact,           /**< activity of infeasibility/bound proof row */
+   VAR***           cands,              /**< pointer to candidate array for undoing bound changes */
+   Real**           candscores,         /**< pointer to candidate score array for undoing bound changes */
+   Real**           newbounds,          /**< pointer to candidate new bounds array for undoing bound changes */
+   Real**           proofactdeltas,     /**< pointer to proof activity increase array for undoing bound changes */
+   int*             candssize,          /**< pointer to size of cands arrays */
    int*             ncands,             /**< pointer to count number of candidates in bound change list */
-   VAR**            cands,              /**< pointer to candidate array for undoing bound changes */
-   Real*            candscores,         /**< candidate score array for undoing bound changes */
-   Real*            newbounds,          /**< array to store potentially new bounds of variables */
-   Real*            proofactdeltas,     /**< array to store increases in proof's activity for undoing the bound changes */
-   int              firstcand           /**< position of first unprocessed bound change candidate */
+   int              firstcand,          /**< position of first unprocessed bound change candidate */
+   int*             insertpos           /**< pointer to store insertion position, or -1 if not inserted */
    )
 {
    Real oldbound;
@@ -1551,19 +1733,24 @@ int addCand(
    assert(-1 <= lbchginfopos && lbchginfopos <= var->nlbchginfos);
    assert(-1 <= ubchginfopos && ubchginfopos <= var->nubchginfos);
    assert(SCIPsetIsGT(set, prooflhs, proofact));
-   assert(ncands != NULL);
    assert(cands != NULL);
    assert(candscores != NULL);
    assert(newbounds != NULL);
    assert(proofactdeltas != NULL);
+   assert(candssize != NULL);
+   assert(ncands != NULL);
+   assert(*ncands <= *candssize);
    assert(0 <= firstcand && firstcand <= *ncands);
+   assert(insertpos != NULL);
+
+   *insertpos = -1;
 
    /* in the infeasibility or dual bound proof, the variable's bound is chosen to maximize the proof's activity */
    if( SCIPsetIsPositive(set, proofcoef) )
    {
       /* if bound is global, nothing has to be done */
       if( ubchginfopos == -1 )
-         return -1;
+         return SCIP_OKAY;
 
       /* calculate the difference of current bound to the previous bound the variable was set to */
       if( ubchginfopos == var->nubchginfos )
@@ -1593,7 +1780,7 @@ int addCand(
    {
       /* if bound is global, nothing has to be done */
       if( lbchginfopos == -1 )
-         return -1;
+         return SCIP_OKAY;
 
       /* calculate the difference of current bound to the previous bound the variable was set to */
       if( lbchginfopos == var->nlbchginfos )
@@ -1620,7 +1807,7 @@ int addCand(
       }
    }
    else
-      return -1;
+      return SCIP_OKAY;
 
    /* if the bound change is not useable in conflict analysis, we have to undo it */
    if( !useable )
@@ -1636,21 +1823,30 @@ int addCand(
    proofactdelta = (newbound - oldbound)*proofcoef;
    assert(SCIPsetIsPositive(set, proofactdelta));
 
+   /* get enough memory to store new candidate */
+   CHECK_OKAY( ensureCandsSize(set, cands, candscores, newbounds, proofactdeltas, candssize, (*ncands)+1) );
+   assert(*cands != NULL);
+   assert(*candscores != NULL);
+   assert(*newbounds != NULL);
+   assert(*proofactdeltas != NULL);
+
    /* insert variable in candidate list without touching the already processed candidates */
-   for( i = *ncands; i > firstcand && score > candscores[i-1]; --i )
+   for( i = *ncands; i > firstcand && score > (*candscores)[i-1]; --i )
    {
-      cands[i] = cands[i-1];
-      candscores[i] = candscores[i-1];
-      newbounds[i] = newbounds[i-1];
-      proofactdeltas[i] = proofactdeltas[i-1];
+      (*cands)[i] = (*cands)[i-1];
+      (*candscores)[i] = (*candscores)[i-1];
+      (*newbounds)[i] = (*newbounds)[i-1];
+      (*proofactdeltas)[i] = (*proofactdeltas)[i-1];
    }
-   cands[i] = var;
-   candscores[i] = score;
-   newbounds[i] = newbound;
-   proofactdeltas[i] = proofactdelta;
+   (*cands)[i] = var;
+   (*candscores)[i] = score;
+   (*newbounds)[i] = newbound;
+   (*proofactdeltas)[i] = proofactdelta;
    (*ncands)++;
 
-   return i;
+   *insertpos = i;
+
+   return SCIP_OKAY;
 }
 
 /** undos bound changes on variables, still leaving the given infeasibility proof valid */
@@ -1665,12 +1861,13 @@ RETCODE undoBdchgsProof(
    Real*            curvarubs,          /**< current upper bounds of active problem variables */
    int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
    int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
-   int*             nbdchgs,            /**< pointer to count total number of LP column bound changes, or NULL */
-   int*             bdchginds,          /**< array to store indices of bound changed columns, or NULL */
-   Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns, or NULL */
-   Real*            bdchgoldubs,        /**< array to store old upper bounds of bound changed columns, or NULL */
-   Real*            bdchgnewlbs,        /**< array to store new lower bounds of bound changed columns, or NULL */
-   Real*            bdchgnewubs,        /**< array to store new upper bounds of bound changed columns, or NULL */
+   int**            bdchginds,          /**< pointer to bound change index array, or NULL */
+   Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
+   Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
+   Real**           bdchgnewlbs,        /**< pointer to bound change new lower bounds array, or NULL */
+   Real**           bdchgnewubs,        /**< pointer to bound change new upper bounds array, or NULL */
+   int*             bdchgssize,         /**< pointer to size of bound change arrays, or NULL */
+   int*             nbdchgs,            /**< pointer to number of used slots in bound change arrays, or NULL */
    Bool*            resolve             /**< pointer to store whether the changed LP should be resolved again, or NULL */
    )
 {
@@ -1716,12 +1913,9 @@ RETCODE undoBdchgsProof(
       if( lbchginfoposs[v] == -1 && ubchginfoposs[v] == -1 )
          continue;
 
-      /* get enough memory for insertion of candidate */
-      CHECK_OKAY( ensureCandsSize(set, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, ncands+1) );
-
       /* add variable to candidate list */
-      pos = addCand(set, vars[v], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v], prooflhs, proofact,
-         &ncands, cands, candscores, newbounds, proofactdeltas, 0);
+      CHECK_OKAY( addCand(set, vars[v], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v], prooflhs, proofact,
+            &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, 0, &pos) );
       assert(-1 <= pos && pos < ncands);
       if( pos == -1 )
       {
@@ -1738,8 +1932,10 @@ RETCODE undoBdchgsProof(
          lbchginfoposs[v] = -1;
          ubchginfoposs[v] = -1;
          if( nbdchgs != NULL )
-            addBdchg(vars[v], curvarlbs[v], curvarubs[v], 
-               nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs);
+         {
+            CHECK_OKAY( addBdchg(set, vars[v], curvarlbs[v], curvarubs[v], 
+                  bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs) );
+         }
       }
    }
 
@@ -1784,18 +1980,17 @@ RETCODE undoBdchgsProof(
             lbchginfoposs[v]--;
          }
          if( nbdchgs != NULL )
-            addBdchg(cands[i], curvarlbs[v], curvarubs[v], 
-               nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs);
+         {
+            CHECK_OKAY( addBdchg(set, cands[i], curvarlbs[v], curvarubs[v], 
+                  bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs) );
+         }
          proofact += proofactdeltas[i];
          if( resolve != NULL )
             *resolve = TRUE;
 
-         /* get enough memory for insertion of candidate */
-         CHECK_OKAY( ensureCandsSize(set, &cands, &candscores, &newbounds, &proofactdeltas, &candssize, ncands+1) );
-
          /* insert the new local bound of the variable into the candidate list */
-         pos = addCand(set, cands[i], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v], prooflhs, proofact,
-            &ncands, cands, candscores, newbounds, proofactdeltas, i+1);
+         CHECK_OKAY( addCand(set, cands[i], lbchginfoposs[v], ubchginfoposs[v], proofcoefs[v], prooflhs, proofact,
+               &cands, &candscores, &newbounds, &proofactdeltas, &candssize, &ncands, i+1, &pos) );
          assert(pos == -1 || (i < pos && pos < ncands));
       }
    }
@@ -1820,12 +2015,13 @@ RETCODE undoBdchgsDualfarkas(
    Real*            curvarubs,          /**< current upper bounds of active problem variables */
    int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
    int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
-   int*             nbdchgs,            /**< pointer to count total number of LP column bound changes */
-   int*             bdchginds,          /**< array to store indices of bound changed columns */
-   Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns */
-   Real*            bdchgoldubs,        /**< array to store old upper bounds of bound changed columns */
-   Real*            bdchgnewlbs,        /**< array to store new lower bounds of bound changed columns */
-   Real*            bdchgnewubs,        /**< array to store new upper bounds of bound changed columns */
+   int**            bdchginds,          /**< pointer to bound change index array, or NULL */
+   Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
+   Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
+   Real**           bdchgnewlbs,        /**< pointer to bound change new lower bounds array, or NULL */
+   Real**           bdchgnewubs,        /**< pointer to bound change new upper bounds array, or NULL */
+   int*             bdchgssize,         /**< pointer to size of bound change arrays, or NULL */
+   int*             nbdchgs,            /**< pointer to number of used slots in bound change arrays, or NULL */
    Bool*            valid,              /**< pointer to store whether the unfixings are valid */
    Bool*            resolve             /**< pointer to store whether the changed LP should be resolved again */
    )
@@ -1974,7 +2170,7 @@ RETCODE undoBdchgsDualfarkas(
       /* undo bound changes while keeping the infeasibility proof valid */
       CHECK_OKAY( undoBdchgsProof(set, prob, farkascoefs, farkaslhs, farkasact, 
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-            nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, resolve) );
+            bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs, resolve) );
 
       *valid = TRUE;
    }
@@ -2001,12 +2197,13 @@ RETCODE undoBdchgsDualsol(
    Real*            curvarubs,          /**< current upper bounds of active problem variables */
    int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
    int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
-   int*             nbdchgs,            /**< pointer to count total number of LP column bound changes */
-   int*             bdchginds,          /**< array to store indices of bound changed columns */
-   Real*            bdchgoldlbs,        /**< array to store old lower bounds of bound changed columns */
-   Real*            bdchgoldubs,        /**< array to store old upper bounds of bound changed columns */
-   Real*            bdchgnewlbs,        /**< array to store new lower bounds of bound changed columns */
-   Real*            bdchgnewubs,        /**< array to store new upper bounds of bound changed columns */
+   int**            bdchginds,          /**< pointer to bound change index array, or NULL */
+   Real**           bdchgoldlbs,        /**< pointer to bound change old lower bounds array, or NULL */
+   Real**           bdchgoldubs,        /**< pointer to bound change old upper bounds array, or NULL */
+   Real**           bdchgnewlbs,        /**< pointer to bound change new lower bounds array, or NULL */
+   Real**           bdchgnewubs,        /**< pointer to bound change new upper bounds array, or NULL */
+   int*             bdchgssize,         /**< pointer to size of bound change arrays, or NULL */
+   int*             nbdchgs,            /**< pointer to number of used slots in bound change arrays, or NULL */
    Bool*            valid,              /**< pointer to store whether the unfixings are valid */
    Bool*            resolve             /**< pointer to store whether the changed LP should be resolved again */
    )
@@ -2227,7 +2424,7 @@ RETCODE undoBdchgsDualsol(
       /* undo bound changes while keeping the infeasibility proof valid */
       CHECK_OKAY( undoBdchgsProof(set, prob, dualcoefs, duallhs, dualact, 
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-            nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, resolve) );
+            bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, bdchgssize, nbdchgs, resolve) );
 
       *valid = TRUE;
    }
@@ -2304,7 +2501,7 @@ RETCODE conflictAnalyzeRemainingBdchgs(
          assert((ubchginfoposs[v] == var->nubchginfos) == (SCIPvarGetUbLP(var) < 0.5));
 
          /* put variable into the conflict set */
-         debugMessage("   fixed: <%s> == %g\n", SCIPvarGetName(var), SCIPvarGetLbLP(var));
+         debugMessage("   fixed: <%s> == %g [dive/strong]\n", SCIPvarGetName(var), SCIPvarGetLbLP(var));
          CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var) );
       }
       else
@@ -2312,14 +2509,20 @@ RETCODE conflictAnalyzeRemainingBdchgs(
          /* put remaining bound changes into conflict candidate queue */
          if( lbchginfoposs[v] >= 0 )
          {
-            debugMessage("   queue: <%s> >= %g\n", 
-               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->lbchginfos[lbchginfoposs[v]]));
+            debugMessage("   queue: <%s> >= %g [depth: %d, pos:%d, chgtype: %d]\n", 
+               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->lbchginfos[lbchginfoposs[v]]),
+               SCIPbdchginfoGetDepth(&var->lbchginfos[lbchginfoposs[v]]),
+               SCIPbdchginfoGetPos(&var->lbchginfos[lbchginfoposs[v]]),
+               SCIPbdchginfoGetChgtype(&var->lbchginfos[lbchginfoposs[v]]));
             CHECK_OKAY( conflictAddBdchginfo(conflict, &var->lbchginfos[lbchginfoposs[v]]) );
          }
          if( ubchginfoposs[v] >= 0 )
          {
-            debugMessage("   queue: <%s> <= %g\n", 
-               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->ubchginfos[ubchginfoposs[v]]));
+            debugMessage("   queue: <%s> <= %g [depth: %d, pos:%d, chgtype: %d]\n", 
+               SCIPvarGetName(var), SCIPbdchginfoGetNewbound(&var->ubchginfos[ubchginfoposs[v]]),
+               SCIPbdchginfoGetDepth(&var->ubchginfos[ubchginfoposs[v]]),
+               SCIPbdchginfoGetPos(&var->ubchginfos[ubchginfoposs[v]]),
+               SCIPbdchginfoGetChgtype(&var->ubchginfos[ubchginfoposs[v]]));
             CHECK_OKAY( conflictAddBdchginfo(conflict, &var->ubchginfos[ubchginfoposs[v]]) );
          }
       }
@@ -2465,7 +2668,9 @@ RETCODE conflictAnalyzeLP(
       Real* bdchgnewubs;
       Real lpiinfinity;
       Bool resolve;
+      int sidechgssize;
       int nsidechgs;
+      int bdchgssize;
       int nbdchgs;
       int lastnbdchgs;
       int nrows;
@@ -2522,6 +2727,8 @@ RETCODE conflictAnalyzeLP(
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgoldubs, ncols) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgnewlbs, ncols) );
       CHECK_OKAY( SCIPsetAllocBufferArray(set, &bdchgnewubs, ncols) );
+      sidechgssize = nrows;
+      bdchgssize = ncols;
 
       /* remove all local rows by setting their sides to infinity;
        * finite sides are only changed to near infinity, such that the row's sense in the LP solver
@@ -2534,39 +2741,10 @@ RETCODE conflictAnalyzeLP(
 
          if( SCIProwIsLocal(rows[r]) )
          {
-            Real lhs;
-            Real rhs;
-            Real constant;
-
-            lhs = SCIProwGetLhs(rows[r]);
-            rhs = SCIProwGetRhs(rows[r]);
-            constant = SCIProwGetConstant(rows[r]);
-            assert(!SCIPsetIsInfinity(set, -lhs) || !SCIPsetIsInfinity(set, rhs));
-
-            sidechginds[nsidechgs] = r;
-            if( SCIPsetIsInfinity(set, -lhs) )
-            {
-               sidechgoldlhss[nsidechgs] = -lpiinfinity;
-               sidechgnewlhss[nsidechgs] = -lpiinfinity;
-            }
-            else
-            {
-               sidechgoldlhss[nsidechgs] = lhs - constant;
-               sidechgnewlhss[nsidechgs] = -lpiinfinity/2;
-            }
-            if( SCIPsetIsInfinity(set, rhs) )
-            {
-               sidechgoldrhss[nsidechgs] = lpiinfinity;
-               sidechgnewrhss[nsidechgs] = lpiinfinity;
-            }
-            else
-            {
-               sidechgoldrhss[nsidechgs] = rhs - constant;
-               sidechgnewrhss[nsidechgs] = lpiinfinity/2;
-            }
-            nsidechgs++;
-
-            debugMessage(" -> removing local row <%s> [%g,%g]\n", SCIProwGetName(rows[r]), lhs, rhs);
+            debugMessage(" -> removing local row <%s> [%g,%g]\n", 
+               SCIProwGetName(rows[r]), SCIProwGetLhs(rows[r]), SCIProwGetRhs(rows[r]));
+            CHECK_OKAY( addSideRemoval(set, rows[r], lpiinfinity, &sidechginds, &sidechgoldlhss, &sidechgoldrhss,
+                  &sidechgnewlhss, &sidechgnewrhss, &sidechgssize, &nsidechgs) );
          }
       }
 
@@ -2639,8 +2817,8 @@ RETCODE conflictAnalyzeLP(
             /* insert bound change in LPI bound change arrays */
             if( changed )
             {
-               addBdchg(var, curvarlbs[v], curvarubs[v], 
-                  &nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs);
+               CHECK_OKAY( addBdchg(set, var, curvarlbs[v], curvarubs[v], 
+                     &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs) );
                debugMessage(" -> undoing bound change on non-binary variable <%s> without inference info: [%g,%g], bdchg=(%d,%d)\n", 
                   SCIPvarGetName(var), curvarlbs[v], curvarubs[v], lbchginfoposs[v], ubchginfoposs[v]);
             }
@@ -2686,13 +2864,15 @@ RETCODE conflictAnalyzeLP(
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
                CHECK_OKAY( undoBdchgsDualfarkas(set, stat, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-                     &nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, &valid, &resolve) );
+                     &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
+                     &valid, &resolve) );
             }
             else
             {
                assert(SCIPlpiIsOptimal(lpi));
                CHECK_OKAY( undoBdchgsDualsol(set, stat, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
-                     &nbdchgs, bdchginds, bdchgoldlbs, bdchgoldubs, bdchgnewlbs, bdchgnewubs, &valid, &resolve) );
+                     &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
+                     &valid, &resolve) );
             }
          }
          assert(!resolve || valid);
@@ -3174,7 +3354,7 @@ RETCODE SCIPconflictAnalyzePseudo(
    {
       /* undo bound changes without destroying the infeasibility proof */
       CHECK_OKAY( undoBdchgsProof(set, prob, pseudocoefs, pseudolhs, pseudoact, 
-            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+            curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* analyze conflict on remaining bound changes */
       CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree, maxsize,

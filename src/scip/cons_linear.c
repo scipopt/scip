@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.113 2004/08/24 11:57:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.114 2004/08/25 14:56:42 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -136,6 +136,20 @@ struct LinConsUpgrade
    DECL_LINCONSUPGD((*linconsupgd));    /**< method to call for upgrading linear constraint */
    int              priority;           /**< priority of upgrading method */
 };
+
+
+
+
+/*
+ * Propagation rules
+ */
+
+enum Proprule
+{
+   PROPRULE_1,                          /**< activity residuals of all other variables tighten bounds of single variable */
+   PROPRULE_INVALID                     /**< propagation was applied without a specific propagation rule */
+};
+typedef enum Proprule PROPRULE;
 
 
 
@@ -1235,155 +1249,6 @@ Real consdataGetFeasibility(
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
 
-#define BOUNDSCALETOL 1e-5
-/** tightens bounds of a single variable due to activity bounds */
-static
-RETCODE consdataTightenVarBounds(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSDATA*        consdata,           /**< constraint data */
-   VAR*             var,                /**< variable to tighten bounds for */
-   Real             val,                /**< coefficient value of variable in linear constraint */
-   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
-   int*             nchgbds             /**< pointer to count the total number of tightened bounds */
-   )
-{
-   Real lb;
-   Real ub;
-   Real newlb;
-   Real newub;
-   Real minresactivity;
-   Real maxresactivity;
-   Real lhs;
-   Real rhs;
-
-   assert(consdata != NULL);
-   assert(var != NULL);
-   assert(!SCIPisZero(scip, val));
-   assert(cutoff != NULL);
-   assert(nchgbds != NULL);
-
-   *cutoff = FALSE;
-
-   lhs = consdata->lhs;
-   rhs = consdata->rhs;
-   consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
-   assert(!SCIPisInfinity(scip, lhs));
-   assert(!SCIPisInfinity(scip, -rhs));
-   assert(!SCIPisInfinity(scip, minresactivity));
-   assert(!SCIPisInfinity(scip, -maxresactivity));
-
-   lb = SCIPvarGetLbLocal(var);
-   ub = SCIPvarGetUbLocal(var);
-   assert(SCIPisLE(scip, lb, ub));
-
-   if( val > 0.0 )
-   {
-      /* check, if we can tighten the variable's bounds */
-      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
-      {
-         newub = (rhs - minresactivity)/val;
-         newub = SCIPceil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisUbBetter(scip, newub, ub) )
-         {
-            /* tighten upper bound */
-            debugMessage("linear constraint: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisFeasLT(scip, newub, lb) )
-            {
-               debugMessage("linear constraint: cutoff  <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), lb, newub);
-               *cutoff = TRUE;
-               return SCIP_OKAY;
-            }
-            else if( newub <= lb )
-               newub = lb;  /* avoid infeasibilities in consequence of numerical inaccuracies */
-            CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
-            ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisFeasLE(scip, ub, newub));
-            (*nchgbds)++;
-            debugMessage("linear constraint: tighten <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), lb, ub);
-         }
-      }
-      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
-      {
-         newlb = (lhs - maxresactivity)/val;
-         newlb = SCIPfloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisLbBetter(scip, newlb, lb) )
-         {
-            /* tighten lower bound */
-            debugMessage("linear constraint: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisFeasGT(scip, newlb, ub) )
-            {
-               debugMessage("linear constraint: cutoff  <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), newlb, ub);
-               *cutoff = TRUE;
-               return SCIP_OKAY;
-            }
-            else if( newlb >= ub )
-               newlb = ub; /* avoid infeasibilities in consequence of numerical inaccuracies */
-            CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
-            lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisFeasGE(scip, lb, newlb));
-            (*nchgbds)++;
-            debugMessage("linear constraint: tighten <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), lb, ub);
-         }
-      }
-   }
-   else
-   {
-      /* check, if we can tighten the variable's bounds */
-      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
-      {
-         newlb = (rhs - minresactivity)/val;
-         newlb = SCIPfloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisLbBetter(scip, newlb, lb) )
-         {
-            /* tighten lower bound */
-            debugMessage("linear constraint: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisFeasGT(scip, newlb, ub) )
-            {
-               debugMessage("linear constraint: cutoff  <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), newlb, ub);
-               *cutoff = TRUE;
-               return SCIP_OKAY;
-            }
-            else if( newlb >= ub )
-               newlb = ub; /* avoid infeasibilities in consequence of numerical inaccuracies */
-            CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
-            lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisFeasGE(scip, lb, newlb));
-            (*nchgbds)++;
-            debugMessage("linear constraint: tighten <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), lb, ub);
-         }
-      }
-      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
-      {
-         newub = (lhs - maxresactivity)/val;
-         newub = SCIPceil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
-         if( SCIPisUbBetter(scip, newub, ub) )
-         {
-            /* tighten upper bound */
-            debugMessage("linear constraint: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
-               SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
-            if( SCIPisFeasLT(scip, newub, lb) )
-            {
-               debugMessage("linear constraint: cutoff  <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), lb, newub);
-               *cutoff = TRUE;
-               return SCIP_OKAY;
-            }
-            else if( newub <= lb )
-               newub = lb; /* avoid infeasibilities in consequence of numerical inaccuracies */
-            CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
-            ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
-            assert(SCIPisFeasLE(scip, ub, newub));
-            (*nchgbds)++;
-            debugMessage("linear constraint: tighten <%s>, new bds=[%.9f,%.9f]\n", SCIPvarGetName(var), lb, ub);
-         }
-      }
-   }
-   
-   return SCIP_OKAY;
-}
-
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
 DECL_SORTINDCOMP(consdataCompVar)
@@ -2256,6 +2121,170 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
+#define BOUNDSCALETOL 1e-5
+/** tightens bounds of a single variable due to activity bounds */
+static
+RETCODE tightenVarBounds(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< linear constraint */
+   VAR*             var,                /**< variable to tighten bounds for */
+   Real             val,                /**< coefficient value of variable in linear constraint */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*             nchgbds             /**< pointer to count the total number of tightened bounds */
+   )
+{
+   CONSDATA* consdata;
+   Real lb;
+   Real ub;
+   Real minresactivity;
+   Real maxresactivity;
+   Real lhs;
+   Real rhs;
+   Bool infeasible;
+   Bool tightened;
+
+   assert(var != NULL);
+   assert(!SCIPisZero(scip, val));
+   assert(cutoff != NULL);
+   assert(nchgbds != NULL);
+
+   /* we cannot tighten variables' bounds, if the constraint may be not complete */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *cutoff = FALSE;
+
+   lhs = consdata->lhs;
+   rhs = consdata->rhs;
+   consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
+   assert(!SCIPisInfinity(scip, lhs));
+   assert(!SCIPisInfinity(scip, -rhs));
+   assert(!SCIPisInfinity(scip, minresactivity));
+   assert(!SCIPisInfinity(scip, -maxresactivity));
+
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   assert(SCIPisLE(scip, lb, ub));
+
+   if( val > 0.0 )
+   {
+      /* check, if we can tighten the variable's bounds */
+      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
+      {
+         Real newub;
+
+         newub = (rhs - minresactivity)/val;
+         newub = SCIPceil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+         if( SCIPisUbBetter(scip, newub, ub) )
+         {
+            /* tighten upper bound */
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            CHECK_OKAY( SCIPinferVarUb(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
+            if( infeasible )
+            {
+               debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+            ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+            assert(SCIPisFeasLE(scip, ub, newub));
+            (*nchgbds)++;
+            debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
+         }
+      }
+      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
+      {
+         Real newlb;
+   
+         newlb = (lhs - maxresactivity)/val;
+         newlb = SCIPfloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
+         if( SCIPisLbBetter(scip, newlb, lb) )
+         {
+            /* tighten lower bound */
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            CHECK_OKAY( SCIPinferVarLb(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            if( infeasible )
+            {
+               debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n", 
+                  SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+            lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+            assert(SCIPisFeasGE(scip, lb, newlb));
+            (*nchgbds)++;
+            debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
+         }
+      }
+   }
+   else
+   {
+      /* check, if we can tighten the variable's bounds */
+      if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
+      {
+         Real newlb;
+
+         newlb = (rhs - minresactivity)/val;
+         newlb = SCIPfloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
+         if( SCIPisLbBetter(scip, newlb, lb) )
+         {
+            /* tighten lower bound */
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            CHECK_OKAY( SCIPinferVarLb(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            if( infeasible )
+            {
+               debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+            lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+            assert(SCIPisFeasGE(scip, lb, newlb));
+            (*nchgbds)++;
+            debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
+         }
+      }
+      if( !SCIPisInfinity(scip, maxresactivity) && !SCIPisInfinity(scip, -lhs) )
+      {
+         Real newub;
+
+         newub = (lhs - maxresactivity)/val;
+         newub = SCIPceil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+         if( SCIPisUbBetter(scip, newub, ub) )
+         {
+            /* tighten upper bound */
+            debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs);
+            CHECK_OKAY( SCIPinferVarUb(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
+            if( infeasible )
+            {
+               debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
+            ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
+            assert(SCIPisFeasLE(scip, ub, newub));
+            (*nchgbds)++;
+            debugMessage("linear constraint <%s>: tighten <%s>, new bds=[%.9f,%.9f]\n",
+               SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
+         }
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** tightens bounds of variables in constraint due to activity bounds */
 static
 RETCODE tightenBounds(
@@ -2299,7 +2328,7 @@ RETCODE tightenBounds(
       {
          assert(0 <= v && v < nvars);
          lastnchgbds = *nchgbds;
-         CHECK_OKAY( consdataTightenVarBounds(scip, consdata, vars[v], vals[v], cutoff, nchgbds) );
+         CHECK_OKAY( tightenVarBounds(scip, cons, vars[v], vals[v], cutoff, nchgbds) );
          if( *nchgbds > lastnchgbds )
             lastsuccess = v;
          v++;
@@ -2774,6 +2803,104 @@ RETCODE propagateCons(
 
    /* mark constraint to be propagated */
    consdata->propagated = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** resolves a conflict on the given variable by supplying the variables needed for applying the corresponding
+ *  propagation rule (see propagateCons()):
+ *   (1) activity residuals of all other variables tighten bounds of single variable
+ */
+static
+RETCODE resolveConflict(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< xor constraint to be processed */
+   VAR*             infervar,           /**< variable that was deduced */
+   PROPRULE         proprule,           /**< propagation rule that deduced the bound change */
+   BOUNDTYPE        boundtype,          /**< the type of the changed bound (lower or upper bound) */
+   BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
+   RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
+   )
+{
+   CONSDATA* consdata;
+   VAR** vars;
+   Real* vals;
+   int nvars;
+   int inferpos;
+   int i;
+   Bool reasonisrhs;
+
+   assert(result != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   vars = consdata->vars;
+   vals = consdata->vals;
+   nvars = consdata->nvars;
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   switch( proprule )
+   {
+   case PROPRULE_1:
+      /* the bound of the variable was tightened, because the minimal or maximal residual activity of the linear
+       * constraint (only taking the other variables into account) didn't leave enough space for a larger
+       * domain
+       */
+
+      /* find inference variable in constraint */
+      /**@todo use a binary search here; the variables can be sorted by variable index */
+      for( inferpos = 0; inferpos < nvars && vars[inferpos] != infervar; ++inferpos )
+      {}
+      assert(inferpos < nvars);
+      assert(vars[inferpos] == infervar);
+      assert(!SCIPisZero(scip, vals[inferpos]));
+
+      /* if the total maximal activity would get larger, if the bound change would be undone, the reason for the
+       * bound change must be the right hand side; otherwise, the reason must be the left hand side;
+       * this means, the right hand side is responsible for the bound change, if the variable's coefficient is
+       * positive and the upper bound was changed, or if the variable's coefficient is negative and the lower
+       * bound was changed
+       */
+      reasonisrhs = ((vals[inferpos] > 0.0) == (boundtype == SCIP_BOUNDTYPE_UPPER));
+
+      /**@todo add only necessary conflict reason bounds in linear constraint handler resolving method:
+       *       - sort the constraint's variables by priority (binaries preceed non-binaries, larger differences
+       *         in residual activity for global and local bound preceed smaller ones)
+       *       - calculate residual activity for global bounds
+       *       - update residual activity for using local bounds one by one, until the residual activity
+       *         is small/large enough to infer the bound change
+       */
+
+      /* for each variable, add the bound to the conflict queue, that is responsible for the minimal or maximal
+       * residual value, depending on whether the left or right hand side is responsible for the bound change:
+       *  - if the right hand side is the reason, the minimal residual activity is responsible
+       *  - if the left hand side is the reason, the maximal residual activity is responsible
+       */
+      for( i = 0; i < nvars; ++i )
+      {
+         /* zero coefficients and the infered variable can be ignored */
+         if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
+            continue;
+
+         if( reasonisrhs == SCIPisPositive(scip, vals[i]) )
+         {
+            /* rhs is reason and coeff is positive, or lhs is reason and coeff is negative -> lower bound is responsible */
+            CHECK_OKAY( SCIPaddConflictLb(scip, vars[i], bdchgidx) );
+         }
+         else
+         {
+            /* lhs is reason and coeff is positive, or rhs is reason and coeff is negative -> upper bound is responsible */
+            CHECK_OKAY( SCIPaddConflictUb(scip, vars[i], bdchgidx) );
+         }
+      }
+      *result = SCIP_SUCCESS;
+      break;
+
+   default:
+      errorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      return SCIP_INVALIDDATA;
+   }
 
    return SCIP_OKAY;
 }
@@ -4747,7 +4874,13 @@ DECL_CONSPRESOL(consPresolLinear)
 
 
 /** propagation conflict resolving method of constraint handler */
-#define consRespropLinear NULL
+static
+DECL_CONSRESPROP(consRespropLinear)
+{  /*lint --e{715}*/
+   CHECK_OKAY( resolveConflict(scip, cons, infervar, (PROPRULE)inferinfo, boundtype, bdchgidx, result) );
+
+   return SCIP_OKAY;
+}
 
 
 /** variable rounding lock method of constraint handler */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.128 2004/08/24 12:50:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.129 2004/08/25 14:56:45 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1606,6 +1606,7 @@ RETCODE SCIPsolveCIP(
    NODE* nextnode;
    EVENT event;
    int nnodes;
+   int depth;
    Bool cutoff;
    Bool infeasible;
    Bool foundsol;
@@ -1662,16 +1663,9 @@ RETCODE SCIPsolveCIP(
       nextnode = NULL;
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
+      /* update plunging and backtracking statistics */
       if( actnode != NULL )
       {
-         int depth;
-
-         /* update statistics */
-         depth = SCIPnodeGetDepth(actnode);
-         stat->maxdepth = MAX(stat->maxdepth, depth);
-         stat->maxtotaldepth = MAX(stat->maxtotaldepth, depth);
-         stat->nnodes++;
-         stat->ntotalnodes++;
          if( SCIPnodeGetType(actnode) == SCIP_NODETYPE_LEAF )
          {
             stat->plungedepth = 0;
@@ -1689,7 +1683,7 @@ RETCODE SCIPsolveCIP(
             debugMessage("selected sibling node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
          }
       }
-      
+
       /* start node activation timer */
       SCIPclockStart(stat->nodeactivationtime, set);
 
@@ -1703,11 +1697,6 @@ RETCODE SCIPsolveCIP(
       /* process the delayed events */
       CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
 
-      /* issue NODEACTIVATED event */
-      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
-      CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
-
       /* stop node activation timer */
       SCIPclockStop(stat->nodeactivationtime, set);
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
@@ -1715,6 +1704,22 @@ RETCODE SCIPsolveCIP(
       /* if no more node was selected, we finished optimization */
       if( actnode == NULL )
          break;
+
+      /* if node was cut off due to SCIPnodeCutoff() call, continue with the next node */
+      if( actnode->cutoff )
+         continue;
+
+      /* update maxdepth and node count statistics */
+      depth = SCIPnodeGetDepth(actnode);
+      stat->maxdepth = MAX(stat->maxdepth, depth);
+      stat->maxtotaldepth = MAX(stat->maxtotaldepth, depth);
+      stat->nnodes++;
+      stat->ntotalnodes++;
+      
+      /* issue NODEACTIVATED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEACTIVATED) );
+      CHECK_OKAY( SCIPeventChgNode(&event, actnode) );
+      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
 
       /* solve current node */
       CHECK_OKAY( solveNode(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,

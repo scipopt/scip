@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.10 2004/06/01 16:40:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.11 2004/08/25 14:56:46 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -104,6 +104,7 @@ struct Node
    unsigned int     depth:16;           /**< depth in the tree */
    unsigned int     nodetype:3;         /**< type of node */
    unsigned int     active:1;           /**< is node in the path to the current active node? */
+   unsigned int     cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
 };
 
 /** branch and bound tree */

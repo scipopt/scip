@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.107 2004/08/24 11:58:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.108 2004/08/25 14:56:47 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -896,7 +896,7 @@ RETCODE SCIPdomchgAddBoundchg(
    BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
    VAR*             infervar,           /**< variable that was changed (parent of var, or var itself), or NULL */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    int              inferinfo,          /**< user information for inference to help resolving the conflict */
    BOUNDTYPE        inferboundtype      /**< type of bound for inference var: lower or upper bound */
    )
@@ -915,7 +915,6 @@ RETCODE SCIPdomchgAddBoundchg(
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || boundchgtype == SCIP_BOUNDCHGTYPE_INFERENCE);
    assert((int)SCIP_BOUNDCHGTYPE_BRANCHING == 0 && (int)SCIP_BOUNDCHGTYPE_INFERENCE == 1); /* must be one bit */
    assert(boundchgtype != SCIP_BOUNDCHGTYPE_INFERENCE || infervar != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || infercons == NULL);
 
    debugMessage("adding %s bound change <%s: %g> of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
@@ -7468,12 +7467,12 @@ Real SCIPvarGetAvgCutoffsCurrentRun(
  * information methods for bound changes
  */
 
-/** returns the bound change information for the last lower bound change on given variable before or after the bound change
- *  with the given index was applied;
+/** returns the bound change information for the last lower bound change on given active problem variable before or
+ *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower bound was applied up to this point of time
  */
 BDCHGINFO* SCIPvarGetLbchgInfo(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
    )
@@ -7481,6 +7480,7 @@ BDCHGINFO* SCIPvarGetLbchgInfo(
    int i;
 
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
    /* search the correct bound change information for the given bound change index */
    if( after )
@@ -7509,12 +7509,12 @@ BDCHGINFO* SCIPvarGetLbchgInfo(
    return NULL;
 }
 
-/** returns the bound change information for the last upper bound change on given variable before or after the bound change
- *  with the given index was applied;
+/** returns the bound change information for the last upper bound change on given active problem variable before or
+ *  after the bound change with the given index was applied;
  *  returns NULL, if no change to the upper bound was applied up to this point of time
  */
 BDCHGINFO* SCIPvarGetUbchgInfo(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
    )
@@ -7522,6 +7522,7 @@ BDCHGINFO* SCIPvarGetUbchgInfo(
    int i;
 
    assert(var != NULL);
+   assert(SCIPvarIsActive(var));
 
    /* search the correct bound change information for the given bound change index */
    if( after )
@@ -7550,12 +7551,12 @@ BDCHGINFO* SCIPvarGetUbchgInfo(
    return NULL;
 }
 
-/** returns the bound change information for the last lower or upper bound change on given variable before or after the
- *  bound change with the given index was applied;
+/** returns the bound change information for the last lower or upper bound change on given active problem variable
+ *  before or after the bound change with the given index was applied;
  *  returns NULL, if no change to the lower/upper bound was applied up to this point of time
  */
 BDCHGINFO* SCIPvarGetBdchgInfo(
-   VAR*             var,                /**< problem variable */
+   VAR*             var,                /**< active problem variable */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
    BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
    Bool             after               /**< should the bound change with given index be included? */
@@ -7735,6 +7736,62 @@ Real SCIPvarGetBdAtIndex(
    }
 }
 
+/** returns whether the first binary variable was fixed earlier than the second one;
+ *  returns FALSE, if the first variable is not fixed, and returns TRUE, if the first variable is fixed, but the
+ *  second one is not fixed
+ */
+Bool SCIPvarWasFixedEarlier(
+   VAR*             var1,               /**< first binary variable */
+   VAR*             var2                /**< second binary variable */
+   )
+{
+   BDCHGIDX* bdchgidx1;
+   BDCHGIDX* bdchgidx2;
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+
+   var1 = SCIPvarGetProbvar(var1);
+   var2 = SCIPvarGetProbvar(var2);
+
+   /* check, if variables are fixed */
+   if( var1 == NULL )
+      return (var2 != NULL);
+   if( var2 == NULL )
+      return FALSE;
+
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+   assert(var1->nlbchginfos + var1->nubchginfos <= 1);
+   assert(var2->nlbchginfos + var2->nubchginfos <= 1);
+
+   if( var1->nlbchginfos == 1 )
+      bdchgidx1 = &var1->lbchginfos[0].bdchgidx;
+   else if( var1->nubchginfos == 1 )
+      bdchgidx1 = &var1->ubchginfos[0].bdchgidx;
+   else
+      bdchgidx1 = NULL;
+
+   if( var2->nlbchginfos == 1 )
+      bdchgidx2 = &var2->lbchginfos[0].bdchgidx;
+   else if( var2->nubchginfos == 1 )
+      bdchgidx2 = &var2->ubchginfos[0].bdchgidx;
+   else
+      bdchgidx2 = NULL;
+
+   return SCIPbdchgidxIsEarlier(bdchgidx1, bdchgidx2);
+}
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
  *  if a bound change index is NULL, the bound change index represents the current time, i.e. the last bound change
  *  applied to the current node
@@ -7754,15 +7811,25 @@ Bool SCIPbdchgidxIsEarlier(
    else if( bdchgidx2 == NULL )
       return TRUE;
    else
-      return (bdchgidx1->depth < bdchgidx2->depth)
-         || (bdchgidx1->depth == bdchgidx2->depth && (bdchgidx1->pos < bdchgidx2->pos));
+      return SCIPbdchgidxIsEarlierNonNull(bdchgidx1, bdchgidx2);
 }
 
-#ifndef NDEBUG
+/** returns whether first bound change index belongs to an earlier applied bound change than second one */
+Bool SCIPbdchgidxIsEarlierNonNull(
+   BDCHGIDX*        bdchgidx1,          /**< first bound change index */
+   BDCHGIDX*        bdchgidx2           /**< second bound change index */
+   )
+{
+   assert(bdchgidx1 != NULL);
+   assert(bdchgidx1->depth >= 0);
+   assert(bdchgidx1->pos >= 0);
+   assert(bdchgidx2 != NULL);
+   assert(bdchgidx2->depth >= 0);
+   assert(bdchgidx2->pos >= 0);
 
-/* In debug mode, the following methods are implemented as function calls to ensure
- * type validity.
- */
+   return (bdchgidx1->depth < bdchgidx2->depth)
+      || (bdchgidx1->depth == bdchgidx2->depth && (bdchgidx1->pos < bdchgidx2->pos));
+}
 
 /** returns old bound that was overwritten for given bound change information */
 Real SCIPbdchginfoGetOldbound(

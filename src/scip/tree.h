@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.60 2004/07/01 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.61 2004/08/25 14:56:47 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -98,6 +98,12 @@ RETCODE SCIPnodeActivate(
    Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
+/** cuts off node and whole sub tree from branch and bound tree */
+extern
+void SCIPnodeCutoff(
+   NODE*            node                /**< node that should be cut off */
+   );
+
 /** adds constraint locally to the node and captures it; activates constraint, if node is active;
  *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
  */
@@ -140,7 +146,7 @@ RETCODE SCIPnodeAddBoundinfer(
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    int              inferinfo           /**< user information for inference to help resolving the conflict */
    );
 

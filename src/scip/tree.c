@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.103 2004/08/24 11:58:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.104 2004/08/25 14:56:46 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -582,7 +582,8 @@ RETCODE SCIPnodeCreate(
    (*node)->nodetype = SCIP_NODETYPE_CHILD; /*lint !e641*/
    (*node)->data.child.arraypos = -1;
    (*node)->active = FALSE;
-   
+   (*node)->cutoff = FALSE;
+
    if( tree->pathlen > 0 )
    {
       assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_ACTNODE);
@@ -730,6 +731,18 @@ RETCODE SCIPnodeFree(
    freeBlockMemory(memhdr, node);
 
    return SCIP_OKAY;
+}
+
+/** cuts off node and whole sub tree from branch and bound tree */
+void SCIPnodeCutoff(
+   NODE*            node                /**< node that should be cut off */
+   )
+{
+   assert(node != NULL);
+
+   debugMessage("cutting off node %p in depth %d\n", node, node->depth);
+
+   node->cutoff = TRUE;
 }
 
 /** informs node, that it is no longer on the active path */
@@ -880,7 +893,7 @@ RETCODE SCIPnodeAddBoundinfer(
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
-   CONS*            infercons,          /**< constraint that deduced the bound change (binary variables only), or NULL */
+   CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
    int              inferinfo           /**< user information for inference to help resolving the conflict */
    )
 {
@@ -891,7 +904,6 @@ RETCODE SCIPnodeAddBoundinfer(
    assert(node != NULL);
    assert(tree != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || infercons == NULL);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_ACTNODE || infercons == NULL);
 
    debugMessage("adding boundchange at node in depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
@@ -1256,6 +1268,7 @@ RETCODE treeSwitchPath(
    int lpforkdepth;     /* depth of the common subroot/fork node, or -1 if no common lp fork exists */
    int subrootdepth;    /* depth of the common subroot node, or -1 if no common subroot exists */
    int i;
+   Bool cutoff;
 
    assert(tree != NULL);
    assert(memhdr != NULL);
@@ -1402,13 +1415,20 @@ RETCODE treeSwitchPath(
    tree->actlpfork = lpfork;
    tree->actsubroot = subroot;
    
-   /* apply domain and constraint set changes of the new path */
+   /* apply domain and constraint set changes of the new path, update cutoff status of nodes on path */
+   cutoff = (commonfork == NULL ? FALSE : commonfork->cutoff);
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
       debugMessage("switch path: apply constraint set changed in depth %d\n", i);
       CHECK_OKAY( SCIPconssetchgApply(tree->path[i]->conssetchg, memhdr, set, stat, i) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, branchcand, eventqueue, i) );
+      cutoff = cutoff || tree->path[i]->cutoff;
+      tree->path[i]->cutoff = cutoff;
+#ifndef NDEBUG
+      if( cutoff )
+         printf/*??????????????????????debugMessage*/("switch path: cutoff node in depth %d\n", i);
+#endif
    }
 
    return SCIP_OKAY;
