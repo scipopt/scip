@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.138 2004/03/31 14:52:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.139 2004/03/31 15:44:14 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4016,6 +4016,20 @@ RETCODE SCIPchgVarBranchFactor(
    return SCIP_OKAY;
 }
 
+/** scales the branch factor of the variable with the given value */
+RETCODE SCIPscaleVarBranchFactor(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             scale               /**< factor to scale variable's branching factor with */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPscaleVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPvarChgBranchFactor(var, scip->set, scale * SCIPvarGetBranchFactor(var));
+
+   return SCIP_OKAY;
+}
+
 /** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
  *  with lower priority in selection of branching variable
  */
@@ -4028,6 +4042,20 @@ RETCODE SCIPchgVarBranchPriority(
    CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    SCIPvarChgBranchPriority(var, scip->set, branchpriority);
+
+   return SCIP_OKAY;
+}
+
+/** adds the given value to the branch priority of the variable */
+RETCODE SCIPaddVarBranchPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              addpriority         /**< value to add to the branching priority of the variable */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPvarChgBranchPriority(var, scip->set, addpriority + SCIPvarGetBranchPriority(var));
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.17 2004/03/31 13:41:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.18 2004/03/31 15:44:14 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -67,6 +67,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    Real bestscore;
    Bool allcolsinlp;
    int nlpcands;
+   int npriolpcands;
    int bestlpcand;
 
    assert(branchrule != NULL);
@@ -86,8 +87,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    allcolsinlp = SCIPallColsInLP(scip);
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, &npriolpcands) );
    assert(nlpcands > 0);
+   assert(npriolpcands > 0);
 
    /* if only one candidate exists, choose this one without applying strong branching */
    bestlpcand = 0;
@@ -163,14 +165,17 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             }
          }
 
-         /* check for a better score */
-         score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
-         if( score > bestscore )
+         /* check for a better score, if we are within the maximum priority candidates */
+         if( c < npriolpcands )
          {
-            bestlpcand = c;
-            bestdown = down;
-            bestup = up;
-            bestscore = score;
+            score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
+            if( score > bestscore )
+            {
+               bestlpcand = c;
+               bestdown = down;
+               bestup = up;
+               bestscore = score;
+            }
          }
 
          /* update history values */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.115 2004/03/31 13:41:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.116 2004/03/31 15:44:14 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1597,6 +1597,14 @@ RETCODE SCIPchgVarBranchFactor(
    Real             branchfactor        /**< factor to weigh variable's branching score with */
    );
 
+/** scales the branch factor of the variable with the given value */
+extern
+RETCODE SCIPscaleVarBranchFactor(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             scale               /**< factor to scale variable's branching factor with */
+   );
+
 /** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
  *  with lower priority in selection of branching variable
  */
@@ -1605,6 +1613,14 @@ RETCODE SCIPchgVarBranchPriority(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    int              branchpriority      /**< branching priority of the variable */
+   );
+
+/** adds the given value to the branch priority of the variable */
+extern
+RETCODE SCIPaddVarBranchPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              addpriority         /**< value to add to the branching priority of the variable */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
