@@ -269,6 +269,7 @@ RETCODE checkAllConss(
 static
 DECL_CONSDELETE(consDeleteAnd)
 {
+   /*lint --e{715}*/
    CHECK_OKAY( consdataFree(scip, consdata) );
    
    return SCIP_OKAY;
@@ -327,6 +328,7 @@ DECL_CONSTRANS(consTransAnd)
 static
 DECL_CONSENFOLP(consEnfolpAnd)
 {
+   /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* add all constraints to the current node */
@@ -340,6 +342,7 @@ DECL_CONSENFOLP(consEnfolpAnd)
 static
 DECL_CONSENFOPS(consEnfopsAnd)
 {
+   /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* add all constraints to the current node */
@@ -353,6 +356,7 @@ DECL_CONSENFOPS(consEnfopsAnd)
 static
 DECL_CONSCHECK(consCheckAnd)
 {
+   /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the concatenation */
@@ -370,6 +374,7 @@ DECL_CONSCHECK(consCheckAnd)
 static
 DECL_CONSPRESOL(consPresolAnd)
 {
+   /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
    int i;
@@ -428,6 +433,7 @@ DECL_CONSPRESOL(consPresolAnd)
 static
 DECL_CONSLOCK(consLockAnd)
 {
+   /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -448,6 +454,7 @@ DECL_CONSLOCK(consLockAnd)
 static
 DECL_CONSUNLOCK(consUnlockAnd)
 {
+   /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 

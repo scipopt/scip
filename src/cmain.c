@@ -27,34 +27,7 @@
 #include <assert.h>
 
 #include "scip.h"
-#include "reader_cnf.h"
-#include "reader_mps.h"
-#include "reader_rtp.h"
-#include "disp_default.h"
-#include "cons_and.h"
-#include "cons_binpack.h"
-#include "cons_bitarith.h"
-#include "cons_bitvar.h"
-#include "cons_eqknapsack.h"
-#include "cons_integral.h"
-#include "cons_invarknapsack.h"
-#include "cons_knapsack.h"
-#include "cons_linear.h"
-#include "cons_logicor.h"
-#include "cons_setppc.h"
-#include "cons_varlb.h"
-#include "cons_varub.h"
-#include "presol_dualfix.h"
-#include "presol_trivial.h"
-#include "nodesel_bfs.h"
-#include "nodesel_dfs.h"
-#include "nodesel_restartdfs.h"
-#include "branch_fullstrong.h"
-#include "branch_mostinf.h"
-#include "branch_leastinf.h"
-#include "heur_diving.h"
-#include "heur_rounding.h"
-#include "sepa_gomory.h"
+#include "scipdefcomp.h"
 
 
 
@@ -78,41 +51,9 @@ RETCODE runSCIP(
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
 
-   /* include user defined callbacks */
-   CHECK_OKAY( SCIPincludeConsHdlrAnd(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrBitarith(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrBitvar(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrLogicor(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrSetppc(scip) );
+   /* include default SCIP components */
+   CHECK_OKAY( SCIPincludeDefaultComponents(scip) );
 
-#if 0
-   CHECK_OKAY( SCIPincludeConsHdlrKnapsack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrEqknapsack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrInvarknapsack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrBinpack(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrVarlb(scip) );
-   CHECK_OKAY( SCIPincludeConsHdlrVarub(scip) );
-#endif
-
-   CHECK_OKAY( SCIPincludeReaderCnf(scip) );
-   CHECK_OKAY( SCIPincludeReaderMps(scip) );
-   CHECK_OKAY( SCIPincludeReaderRtp(scip) );
-   CHECK_OKAY( SCIPincludeDispDefault(scip) );
-   CHECK_OKAY( SCIPincludePresolDualfix(scip) );
-   CHECK_OKAY( SCIPincludePresolTrivial(scip) );
-   CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
-   CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
-   CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleMostinf(scip) );
-   CHECK_OKAY( SCIPincludeBranchruleLeastinf(scip) );
-   CHECK_OKAY( SCIPincludeHeurDiving(scip) );
-   CHECK_OKAY( SCIPincludeHeurRounding(scip) );
-   CHECK_OKAY( SCIPincludeSepaGomory(scip) );
-   
-   /*CHECK_OKAY( includeTestEventHdlr(scip) );*/
 
 
    /**************

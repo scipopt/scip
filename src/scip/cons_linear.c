@@ -2309,7 +2309,7 @@ RETCODE checkCons(
    
    debugMessage("  consdata feasibility=%g (lhs=%g, rhs=%g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hasactnodelp=%d)\n",
       feasibility, consdata->lhs, consdata->rhs, consdata->row, checklprows,
-      consdata->row == NULL ? -1 : SCIProwIsInLP(consdata->row), sol, SCIPhasActnodeLP(scip));
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol, SCIPhasActnodeLP(scip));
 
    if( SCIPisFeasible(scip, feasibility) )
    {
@@ -3626,6 +3626,10 @@ RETCODE preprocessConstraintPairs(
       if( !consdata0->changed && !consdata1->changed )
          continue;
 
+      /* if both constraints are already upgraded, skip the pair */
+      if( consdata0->upgraded && consdata1->upgraded )
+         continue;
+
       assert(consdata1->nvars >= 1);
 
       /* sort the constraint */
@@ -3878,14 +3882,14 @@ RETCODE preprocessConstraintPairs(
          assert(consdata1->nvars == nvarscommon + nvars1minus0);
 
          aggregated = FALSE;
-         if( cons1isequality && commonidxweight > diffidx1minus0weight )
+         if( cons1isequality && !consdata0->upgraded && commonidxweight > diffidx1minus0weight )
          {
             /* W_c > W_1: try to aggregate  consdata0 := a * consdata0 + b * consdata1 */
             CHECK_OKAY( aggregateConstraints(scip, cons0, cons1, commonidx0, commonidx1, diffidx0minus1, diffidx1minus0, 
                            nvarscommon, commonidxweight, diffidx0minus1weight, diffidx1minus0weight, maxaggrnormscale,
                            nupgdconss, nchgcoefs, result, &aggregated) );
          }
-         if( !aggregated && cons0isequality && commonidxweight > diffidx0minus1weight )
+         if( !aggregated && cons0isequality && !consdata1->upgraded && commonidxweight > diffidx0minus1weight )
          {
             /* W_c > W_0: try to aggregate  consdata1 := a * consdata1 + b * consdata0 */
             CHECK_OKAY( aggregateConstraints(scip, cons1, cons0, commonidx1, commonidx0, diffidx1minus0, diffidx0minus1,
@@ -3947,6 +3951,16 @@ DECL_CONSPRESOL(consPresolLinear)
       /* check, if constraint is already propagated/preprocessed */
       if( consdata->propagated )
          continue;
+
+      /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving round
+       * to help detecting redundancy of other linear constraints, but we want to keep equalities until the end of
+       * presolving, because they may be used for aggregating other constraints
+       */
+      if( consdata->upgraded && SCIPisLT(scip, consdata->lhs, consdata->rhs) )
+      {
+         CHECK_OKAY( SCIPdelCons(scip, cons) );
+         continue;
+      }
 
       /* remember the first changed constraint to begin the next aggregation round with */
       if( firstchange == -1 && consdata->changed )
@@ -4376,7 +4390,8 @@ RETCODE SCIPaddCoefLinear(
 {
    assert(var != NULL);
 
-   /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", val, var->name, SCIPconsGetName(cons));*/
+   /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", 
+     val, SCIPvarGetName(var), SCIPconsGetName(cons));*/
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

@@ -327,7 +327,6 @@ RETCODE SCIPtreeFree(
 extern
 RETCODE SCIPtreeResortLeaves(
    TREE*            tree,               /**< branch-and-bound tree */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 

@@ -85,9 +85,7 @@ enum SideType
 typedef enum SideType SIDETYPE;
 
 typedef struct Col COL;                 /**< column of an LP */
-typedef struct ColList COLLIST;         /**< list of LP columns */
 typedef struct Row ROW;                 /**< row of an LP */
-typedef struct RowList ROWLIST;         /**< list of LP rows */
 typedef struct Lp LP;                   /**< actual LP data */
 
 
@@ -428,7 +426,6 @@ Real* SCIPcolGetVals(
 extern
 void SCIPcolPrint(
    COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
@@ -805,7 +802,6 @@ Bool SCIProwIsInLP(
 extern
 RETCODE SCIPlpCreate(
    LP**             lp,                 /**< pointer to LP data object */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< problem name */
    );
@@ -1037,7 +1033,8 @@ RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool*            infeasible          /**< pointer to store whether the solution is primal infeasible, or NULL */
    );
 
 /** stores LP solution with infinite objective value in the columns and rows */

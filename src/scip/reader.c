@@ -117,7 +117,6 @@ RETCODE SCIPreaderRead(
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
-   RETCODE retcode;
    char* tmpfilename;
    char* path;
    char* name;

@@ -25,58 +25,63 @@
 #ifndef __EVENT_H__
 #define __EVENT_H__
 
-enum Eventtype
-{
-   SCIP_EVENTTYPE_DISABLED       = 0x00000000, /**< the event was disabled and has no effect any longer */
 
-   /* variable events */
-   SCIP_EVENTTYPE_VARCREATED     = 0x00000001, /**< ??? TODO: a variable has been created */
-   SCIP_EVENTTYPE_VARFIXED       = 0x00000002, /**< ??? TODO: a variable has been fixed, aggregated, or multiaggregated */
-   SCIP_EVENTTYPE_OBJCHANGED     = 0x00000004, /**< the objective value of a variable has been changed */
-   SCIP_EVENTTYPE_LBTIGHTENED    = 0x00000008, /**< the lower bound of a variable has been increased */
-   SCIP_EVENTTYPE_LBRELAXED      = 0x00000010, /**< the lower bound of a variable has been decreased */
-   SCIP_EVENTTYPE_UBTIGHTENED    = 0x00000020, /**< the upper bound of a variable has been decreased */
-   SCIP_EVENTTYPE_UBRELAXED      = 0x00000040, /**< the upper bound of a variable has been increased */
-   SCIP_EVENTTYPE_HOLEADDED      = 0x00000080, /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
-   SCIP_EVENTTYPE_HOLEREMOVED    = 0x00000100, /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
+/*
+ * event types
+ */
 
-   /* node events */
-   SCIP_EVENTTYPE_NODEACTIVATED  = 0x00000200, /**< a node has been activated and is now the current active node */
-   SCIP_EVENTTYPE_NODEFEASIBLE   = 0x00000400, /**< the LP/pseudo solution of the node was feasible */
-   SCIP_EVENTTYPE_NODEINFEASIBLE = 0x00000800, /**< the active node has been proven to be infeasible or was bounded */
-   SCIP_EVENTTYPE_NODEBRANCHED   = 0x00001000, /**< the active node has been solved by branching */
+#define SCIP_EVENTTYPE_DISABLED       0x00000000 /**< the event was disabled and has no effect any longer */
 
-   /* LP events */
-   SCIP_EVENTTYPE_FIRSTLPSOLVED  = 0x00002000, /**< the node's initial LP was solved */
-   SCIP_EVENTTYPE_LPSOLVED       = 0x00004000, /**< the node's LP was completely solved with cut & price */
+/* variable events */
+#define SCIP_EVENTTYPE_VARCREATED     0x00000001 /**< ??? TODO: a variable has been created */
+#define SCIP_EVENTTYPE_VARFIXED       0x00000002 /**< ??? TODO: a variable has been fixed, aggregated, or multiaggregated */
+#define SCIP_EVENTTYPE_OBJCHANGED     0x00000004 /**< the objective value of a variable has been changed */
+#define SCIP_EVENTTYPE_LBTIGHTENED    0x00000008 /**< the lower bound of a variable has been increased */
+#define SCIP_EVENTTYPE_LBRELAXED      0x00000010 /**< the lower bound of a variable has been decreased */
+#define SCIP_EVENTTYPE_UBTIGHTENED    0x00000020 /**< the upper bound of a variable has been decreased */
+#define SCIP_EVENTTYPE_UBRELAXED      0x00000040 /**< the upper bound of a variable has been increased */
+#define SCIP_EVENTTYPE_HOLEADDED      0x00000080 /**< ??? TODO: a hole has been added to the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_HOLEREMOVED    0x00000100 /**< ??? TODO: a hole has been removed from the hole list of a variable's domain */
 
-   /* primal solution events */
-   SCIP_EVENTTYPE_POORSOLFOUND   = 0x00008000, /**< a good enough primal feasible (but not new best) solution was found */
-   SCIP_EVENTTYPE_BESTSOLFOUND   = 0x00010000, /**< a new best primal feasible solution was found */
+/* node events */
+#define SCIP_EVENTTYPE_NODEACTIVATED  0x00000200 /**< a node has been activated and is now the current active node */
+#define SCIP_EVENTTYPE_NODEFEASIBLE   0x00000400 /**< the LP/pseudo solution of the node was feasible */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00000800 /**< the active node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED   0x00001000 /**< the active node has been solved by branching */
 
-   /* event masks for variable events */
-   SCIP_EVENTTYPE_LBCHANGED      = SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED,
-   SCIP_EVENTTYPE_UBCHANGED      = SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED,
-   SCIP_EVENTTYPE_BOUNDTIGHTENED = SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBTIGHTENED,
-   SCIP_EVENTTYPE_BOUNDRELAXED   = SCIP_EVENTTYPE_LBRELAXED | SCIP_EVENTTYPE_UBRELAXED,
-   SCIP_EVENTTYPE_BOUNDCHANGED   = SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED,
-   SCIP_EVENTTYPE_HOLECHANGED    = SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED,
-   SCIP_EVENTTYPE_DOMCHANGED     = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED,
-   SCIP_EVENTTYPE_VARCHANGED     = SCIP_EVENTTYPE_OBJCHANGED | SCIP_EVENTTYPE_DOMCHANGED,
-   SCIP_EVENTTYPE_VAREVENT       = SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARCHANGED,
+/* LP events */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00002000 /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED       0x00004000 /**< the node's LP was completely solved with cut & price */
+
+/* primal solution events */
+#define SCIP_EVENTTYPE_POORSOLFOUND   0x00008000 /**< a good enough primal feasible (but not new best) solution was found */
+#define SCIP_EVENTTYPE_BESTSOLFOUND   0x00010000 /**< a new best primal feasible solution was found */
+
+/* event masks for variable events */
+#define SCIP_EVENTTYPE_LBCHANGED      (SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED)
+#define SCIP_EVENTTYPE_UBCHANGED      (SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_UBRELAXED)
+#define SCIP_EVENTTYPE_BOUNDTIGHTENED (SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_UBTIGHTENED)
+#define SCIP_EVENTTYPE_BOUNDRELAXED   (SCIP_EVENTTYPE_LBRELAXED | SCIP_EVENTTYPE_UBRELAXED)
+#define SCIP_EVENTTYPE_BOUNDCHANGED   (SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED)
+#define SCIP_EVENTTYPE_HOLECHANGED    (SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED)
+#define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
+#define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_OBJCHANGED | SCIP_EVENTTYPE_DOMCHANGED)
+#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARCHANGED)
    
-   /* event masks for node events */
-   SCIP_EVENTTYPE_NODESOLVED     = SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE |SCIP_EVENTTYPE_NODEBRANCHED,
-   SCIP_EVENTTYPE_NODEEVENT      = SCIP_EVENTTYPE_NODEACTIVATED | SCIP_EVENTTYPE_NODESOLVED,
+/* event masks for node events */
+#define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \
+                                       | SCIP_EVENTTYPE_NODEBRANCHED)
+#define SCIP_EVENTTYPE_NODEEVENT      (SCIP_EVENTTYPE_NODEACTIVATED | SCIP_EVENTTYPE_NODESOLVED)
 
-   /* event masks for LP events */
-   SCIP_EVENTTYPE_LPEVENT        = SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED,
+/* event masks for LP events */
+#define SCIP_EVENTTYPE_LPEVENT        (SCIP_EVENTTYPE_FIRSTLPSOLVED | SCIP_EVENTTYPE_LPSOLVED)
 
-   /* event masks for primal solution events */
-   SCIP_EVENTTYPE_SOLFOUND       = SCIP_EVENTTYPE_POORSOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND,
-   SCIP_EVENTTYPE_SOLEVENT       = SCIP_EVENTTYPE_SOLFOUND
-};
-typedef enum Eventtype EVENTTYPE;       /**< type of event (bit field) */
+/* event masks for primal solution events */
+#define SCIP_EVENTTYPE_SOLFOUND       (SCIP_EVENTTYPE_POORSOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND)
+#define SCIP_EVENTTYPE_SOLEVENT       (SCIP_EVENTTYPE_SOLFOUND)
+
+
+typedef unsigned int EVENTTYPE;         /**< type of event (bit field) */
 
 typedef struct EventHdlr EVENTHDLR;     /**< event handler for a specific events */
 typedef struct EventHdlrData EVENTHDLRDATA; /**< event handler data */

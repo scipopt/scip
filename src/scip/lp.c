@@ -37,19 +37,6 @@
 #include "lp.h"
 
 
-/** list of columns */
-struct ColList
-{
-   COL*             col;                /**< pointer to this column */
-   COLLIST*         next;               /**< pointer to next collist entry */
-};
-
-/** list of rows */
-struct RowList
-{
-   ROW*             row;                /**< pointer to this row */
-   ROWLIST*         next;               /**< pointer to next rowlist entry */
-};
 
 
 /*
@@ -246,23 +233,6 @@ RETCODE SCIProwEnsureSize(
    assert(num <= row->size);
 
    return SCIP_OKAY;
-}
-
-
-/*
- * compare methods for sorting
- */
-
-static
-DECL_SORTPTRCOMP(cmpRow)
-{
-   return ((ROW*)elem1)->index - ((ROW*)elem2)->index;
-}
-
-static
-DECL_SORTPTRCOMP(cmpCol)
-{
-   return ((COL*)elem1)->index - ((COL*)elem2)->index;
 }
 
 
@@ -637,10 +607,10 @@ RETCODE colAddCoeff(
    /*assert(colSearchCoeff(col, row) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    /*debugMessage("adding coefficient %g * <%s> at position %d to column <%s>\n", val, row->name, col->len, 
-     col->var->name);*/
+     SCIPvarGetName(col->var));*/
 
    if( col->len > 0 )
-      col->sorted &= (col->rows[col->len-1]->index < row->index);
+      col->sorted = col->sorted && (col->rows[col->len-1]->index < row->index);
 
    CHECK_OKAY( colEnsureSize(col, memhdr, set, col->len+1) );
    assert(col->rows != NULL);
@@ -671,7 +641,6 @@ RETCODE colDelCoeffPos(
    )
 {
    ROW* row;
-   Real val;
 
    assert(col != NULL);
    assert(col->var != NULL);
@@ -681,10 +650,9 @@ RETCODE colDelCoeffPos(
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
 
    row = col->rows[pos];
-   val = col->vals[pos];
 
-   /*debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", val, row->name, pos, 
-     col->var->name);*/
+   /*debugMessage("deleting coefficient %g * <%s> at position %d from column <%s>\n", 
+     col->vals[pos], row->name, pos, SCIPvarGetName(col->var));*/
 
    if( col->linkpos[pos] == -1 )
       col->nunlinked--;
@@ -728,7 +696,7 @@ RETCODE colChgCoeffPos(
    assert(col->linkpos[pos] == -1 || col->rows[pos]->cols[col->linkpos[pos]] == col);
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of column <%s> to %g\n", 
-     col->vals[pos], col->rows[pos]->name, pos, col->var->name, val);*/
+     col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
 
    if( SCIPsetIsZero(set, val) )
    {
@@ -911,11 +879,11 @@ RETCODE rowAddCoeff(
    assert(memhdr != NULL);
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(col->var_probindex == col->var->probindex);
+   assert(col->var_probindex == SCIPvarGetProbIndex(col->var));
    assert(!SCIPsetIsZero(set, val));
    /*assert(rowSearchCoeff(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
-   /*debugMessage("adding coefficient %g * <%s> at position %d to row <%s>\n", val, col->var->name, row->len, row->name);*/
+   /*debugMessage("adding coefficient %g * <%s> at position %d to row <%s>\n", val, SCIPvarGetName(col->var), row->len, row->name);*/
 
    if( row->nlocks > 0 )
    {
@@ -926,7 +894,7 @@ RETCODE rowAddCoeff(
    }
 
    if( row->len > 0 )
-      row->sorted &= (row->cols[row->len-1]->index < col->index);
+      row->sorted = row->sorted && (row->cols[row->len-1]->index < col->index);
 
    CHECK_OKAY( SCIProwEnsureSize(row, memhdr, set, row->len+1) );
    assert(row->cols != NULL);
@@ -970,7 +938,7 @@ RETCODE rowDelCoeffPos(
    col = row->cols[pos];
    val = row->vals[pos];
    
-   /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n", val, col->var->name, pos, row->name);*/
+   /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n", val, SCIPvarGetName(col->var), pos, row->name);*/
 
    if( row->nlocks > 0 )
    {
@@ -1026,7 +994,7 @@ RETCODE rowChgCoeffPos(
    assert(row->linkpos[pos] == -1 || row->cols[pos]->rows[row->linkpos[pos]] == row);
 
    /*debugMessage("changing coefficient %g * <%s> at position %d of row <%s> to %g\n", 
-     row->vals[pos], row->cols[pos]->var->name, pos, row->name, val);*/
+     row->vals[pos], SCIPvarGetName(row->cols[pos]->var), pos, row->name, val);*/
 
    if( row->nlocks > 0 )
    {
@@ -1127,7 +1095,7 @@ RETCODE colLink(
 
    if( col->nunlinked > 0 )
    {
-      debugMessage("linking column <%s>\n", col->var->name);
+      debugMessage("linking column <%s>\n", SCIPvarGetName(col->var));
       for( i = 0; i < col->len; ++i )
       {
          assert(!SCIPsetIsZero(set, col->vals[i]));
@@ -1164,7 +1132,7 @@ RETCODE colUnlink(
 
    if( col->nunlinked < col->len )
    {
-      debugMessage("unlinking column <%s>\n", col->var->name);
+      debugMessage("unlinking column <%s>\n", SCIPvarGetName(col->var));
       for( i = 0; i < col->len; ++i )
       {
          if( col->linkpos[i] != -1 )
@@ -1285,8 +1253,6 @@ RETCODE SCIPcolCreate(
 
    if( len > 0 )
    {
-      int i;
-
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*col)->rows, row, len) );
       ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*col)->vals, val, len) );
       ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*col)->linkpos, len) );
@@ -1301,9 +1267,9 @@ RETCODE SCIPcolCreate(
    }
 
    (*col)->var = var;
-   (*col)->obj = var->obj;
-   (*col)->lb = var->actdom.lb;
-   (*col)->ub = var->actdom.ub;
+   (*col)->obj = SCIPvarGetObj(var);
+   (*col)->lb = SCIPvarGetLbLocal(var);
+   (*col)->ub = SCIPvarGetUbLocal(var);
    (*col)->index = stat->ncolidx++;
    (*col)->size = len;
    (*col)->len = len;
@@ -1321,7 +1287,7 @@ RETCODE SCIPcolCreate(
    (*col)->strongitlim = -1;
    (*col)->age = 0;
    (*col)->obsoletenode = -1;
-   (*col)->var_probindex = var->probindex;
+   (*col)->var_probindex = SCIPvarGetProbIndex(var);
    (*col)->sorted = TRUE;
    (*col)->objchanged = FALSE;
    (*col)->lbchanged = FALSE;
@@ -1334,7 +1300,7 @@ RETCODE SCIPcolCreate(
    for( i = 0; i < len; ++i )
    {
       assert(!SCIPsetIsZero(set, (*col)->vals[i]));
-      (*col)->sorted &= (i == 0 || (*col)->rows[i-1]->index < (*col)->rows[i]->index);
+      (*col)->sorted = (*col)->sorted && (i == 0 || (*col)->rows[i-1]->index < (*col)->rows[i]->index);
    }
 
    return SCIP_OKAY;
@@ -1352,7 +1318,7 @@ RETCODE SCIPcolFree(
    assert(col != NULL);
    assert(*col != NULL);
    assert((*col)->var != NULL);
-   assert((*col)->var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetStatus((*col)->var) == SCIP_VARSTATUS_COLUMN);
    assert(&(*col)->var->data.col == col); /* SCIPcolFree() has to be called from SCIPvarFree() */
    assert((*col)->lppos == -1);
 
@@ -1377,9 +1343,6 @@ void SCIPcolSort(
       int i;
 
       /* sort coefficients */
-#if 0
-      SCIPbsortPtrDblInt((void**)(col->rows), col->vals, col->linkpos, col->len, &cmpRow);
-#endif
       colBSort(col);
 
       /* update links */
@@ -1438,7 +1401,7 @@ RETCODE SCIPcolDelCoeff(
    if( pos == -1 )
    {
       char s[MAXSTRLEN];
-      sprintf(s, "coefficient for row <%s> doesn't exist in column <%s>", row->name, col->var->name);
+      sprintf(s, "coefficient for row <%s> doesn't exist in column <%s>", row->name, SCIPvarGetName(col->var));
       errorMessage(s);
       return SCIP_INVALIDDATA;
    }
@@ -1575,11 +1538,11 @@ RETCODE SCIPcolChgObj(
 {
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
    
-   debugMessage("changing objective value of <%s> from %f to %f\n", col->var->name, col->obj, newobj);
+   debugMessage("changing objective value of <%s> from %f to %f\n", SCIPvarGetName(col->var), col->obj, newobj);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->obj, newobj) )
    {
@@ -1619,11 +1582,11 @@ RETCODE SCIPcolChgLb(
 {
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
    
-   debugMessage("changing lower bound of <%s> from %f to %f\n", col->var->name, col->lb, newlb);
+   debugMessage("changing lower bound of <%s> from %f to %f\n", SCIPvarGetName(col->var), col->lb, newlb);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
    {
@@ -1663,11 +1626,11 @@ RETCODE SCIPcolChgUb(
 {
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
    assert(lp != NULL);
    
-   debugMessage("changing upper bound of <%s> from %f to %f\n", col->var->name, col->ub, newub);
+   debugMessage("changing upper bound of <%s> from %f to %f\n", SCIPvarGetName(col->var), col->ub, newub);
 
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
    {
@@ -1753,8 +1716,8 @@ void colCalcRedcost(
    int r;
 
    assert(col != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
 
    col->redcost = col->obj;
    for( r = 0; r < col->len; ++r )
@@ -1810,8 +1773,8 @@ void colCalcFarkas(
    int r;
 
    assert(col != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
 
    col->farkas = 0.0;
    for( r = 0; r < col->len; ++r )
@@ -1857,8 +1820,8 @@ RETCODE SCIPcolGetStrongbranch(
 {
    assert(col != NULL);
    assert(col->var != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
    assert(col->primsol < SCIP_INVALID);
    assert(col->lpipos >= 0);
    assert(col->lppos >= 0);
@@ -1874,7 +1837,7 @@ RETCODE SCIPcolGetStrongbranch(
 
    if( col->validstronglp != stat->lpcount || itlim > col->strongitlim )
    {
-      debugMessage("calling strong branching for variable <%s> with %d iterations\n", col->var->name, itlim);
+      debugMessage("calling strong branching for variable <%s> with %d iterations\n", SCIPvarGetName(col->var), itlim);
 
       /* start timing */
       SCIPclockStart(stat->strongbranchtime, set);
@@ -1962,7 +1925,6 @@ Real* SCIPcolGetVals(
 /** output column to file stream */
 void SCIPcolPrint(
    COL*             col,                /**< LP column */
-   const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
@@ -2027,7 +1989,7 @@ void rowCalcNorms(
       assert(!SCIPsetIsZero(set, row->vals[i]));
       idx = row->cols[i]->index;
       rowAddNorms(row, set, idx, row->vals[i]);
-      row->sorted &= (i == 0 || row->cols[i-1]->index < idx);
+      row->sorted = row->sorted && (i == 0 || row->cols[i-1]->index < idx);
    }
 }
 
@@ -2138,7 +2100,7 @@ RETCODE SCIProwCreate(
       for( i = 0; i < len; ++i )
       {
          assert(col[i]->var != NULL);
-         assert(col[i]->var_probindex == col[i]->var->probindex);
+         assert(col[i]->var_probindex == SCIPvarGetProbIndex(col[i]->var));
          (*row)->cols_probindex[i] = col[i]->var_probindex;
          (*row)->linkpos[i] = -1;
       }
@@ -2363,7 +2325,7 @@ RETCODE SCIProwDelCoeff(
    if( pos == -1 )
    {
       char s[MAXSTRLEN];
-      sprintf(s, "coefficient for column <%s> doesn't exist in row <%s>", col->var->name, row->name);
+      sprintf(s, "coefficient for column <%s> doesn't exist in row <%s>", SCIPvarGetName(col->var), row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
    }
@@ -2658,13 +2620,13 @@ RETCODE SCIProwMakeRational(
       col = row->cols[c];
       assert(col != NULL);
       assert(col->var != NULL);
-      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-      assert(col->var->data.col == col);
+      assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetCol(col->var) == col);
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
       
-      contvars |= (col->var->vartype == SCIP_VARTYPE_CONTINUOUS);
-      fractional |= !SCIPsetIsIntegral(set, val);
+      contvars = contvars && (SCIPvarGetType(col->var) == SCIP_VARTYPE_CONTINUOUS);
+      fractional = fractional || !SCIPsetIsIntegral(set, val);
    }
 
    /* if fractional coefficients exist, try to find a rational representation */
@@ -2683,10 +2645,10 @@ RETCODE SCIProwMakeRational(
       for( c = 0; c < row->len && (divisible || twomult); ++c )
       {
          val = row->vals[c];
-         divisible &= EPSISINT(val * onedivminval, DIVTOL);
+         divisible = divisible && EPSISINT(val * onedivminval, DIVTOL);
          while( twomultval <= maxdnom && !EPSISINT(val * twomultval, TWOMULTTOL) )
             twomultval <<= 1;
-         twomult &= (twomultval <= maxdnom);
+         twomult = twomult && (twomultval <= maxdnom);
       }
 
       if( divisible )
@@ -2698,7 +2660,7 @@ RETCODE SCIProwMakeRational(
       else if( twomult )
       {
          /* make row coefficients integral by multiplying them with a multiple of 2 */
-         CHECK_OKAY( rowScale(row, set, stat, lp, twomultval, TWOMULTTOL) );
+         CHECK_OKAY( rowScale(row, set, stat, lp, (double)twomultval, TWOMULTTOL) );
          *success = TRUE;
       }
       else
@@ -2719,7 +2681,7 @@ RETCODE SCIProwMakeRational(
             rational = SCIPrealToRational(val, set->epsilon, maxdnom, &nominator, &denominator);
             if( rational )
                scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
+            rational = rational && (scm <= maxdnom);
          }
 
          /* convert row sides and constant into rational numbers,
@@ -2730,21 +2692,21 @@ RETCODE SCIProwMakeRational(
             rational = SCIPrealToRational(row->constant, set->epsilon, maxdnom, &nominator, &denominator);
             if( rational )
                scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
+            rational = rational && (scm <= maxdnom);
          }
          if( rational && !SCIPsetIsInfinity(set, -row->lhs) )
          {
             rational = SCIPrealToRational(row->lhs, set->epsilon, maxdnom, &nominator, &denominator);
             if( rational )
                scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
+            rational = rational && (scm <= maxdnom);
          }
          if( rational && !SCIPsetIsInfinity(set, row->rhs) )
          {
             rational = SCIPrealToRational(row->rhs, set->epsilon, maxdnom, &nominator, &denominator);
             if( rational )
                scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
-            rational &= (scm <= maxdnom);
+            rational = rational && (scm <= maxdnom);
          }
 
          if( rational )
@@ -2803,9 +2765,6 @@ void SCIProwSort(
       int i;
 
       /* sort coefficients */
-#if 0
-      SCIPbsortPtrDblIntInt((void**)(row->cols), row->vals, row->cols_probindex, row->linkpos, row->len, &cmpCol);
-#endif
       rowBSort(row);
 
       /* update links */
@@ -2981,7 +2940,7 @@ void rowCalcPseudoActivity(
    {
       assert(row->cols[i] != NULL);
       assert(row->cols[i]->var != NULL);
-      assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
 
       row->pseudoactivity += SCIPcolGetBestBound(row->cols[i]) * row->vals[i];
    }
@@ -3334,7 +3293,7 @@ void SCIProwPrint(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   int c;
+   int i;
 
    assert(row != NULL);
 
@@ -3347,13 +3306,13 @@ void SCIProwPrint(
    /* print coefficients */
    if( row->len == 0 )
       fprintf(file, "0 ");
-   for( c = 0; c < row->len; ++c )
+   for( i = 0; i < row->len; ++i )
    {
-      assert(row->cols[c] != NULL);
-      assert(row->cols[c]->var != NULL);
-      assert(row->cols[c]->var->name != NULL);
-      assert(row->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-      fprintf(file, "%+g%s ", row->vals[c], row->cols[c]->var->name);
+      assert(row->cols[i] != NULL);
+      assert(row->cols[i]->var != NULL);
+      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+      fprintf(file, "%+g%s ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
    }
 
    /* print constant */
@@ -3494,13 +3453,13 @@ RETCODE lpFlushAddCols(
       col = lp->cols[c];
       assert(col != NULL);
       assert(col->var != NULL);
-      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-      assert(col->var->data.col == col);
+      assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetCol(col->var) == col);
       assert(col->lppos == c);
       assert(nnonz + col->len <= naddcoefs);
 
-      debugMessage("flushing added column <%s>:", col->var->name);
-      debug( SCIPcolPrint(col, set, NULL) );
+      debugMessage("flushing added column <%s>:", SCIPvarGetName(col->var));
+      debug( SCIPcolPrint(col, NULL) );
 
       /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
@@ -3532,7 +3491,7 @@ RETCODE lpFlushAddCols(
       else
          ub[pos] = col->ub;
       beg[pos] = nnonz;
-      name[pos] = col->var->name;
+      name[pos] = (char*)SCIPvarGetName(col->var);
 
       for( i = 0; i < col->len; ++i )
       {
@@ -3719,7 +3678,7 @@ RETCODE lpFlushAddRows(
          if( lpipos >= 0 )
          {
             assert(lpipos < lp->ncols);
-            debug( printf(" %+gx%d(<%s>)", row->vals[i], lpipos+1, row->cols[i]->var->name) );
+            debug( printf(" %+gx%d(<%s>)", row->vals[i], lpipos+1, SCIPvarGetName(row->cols[i]->var)) );
             ind[nnonz] = lpipos;
             val[nnonz] = row->vals[i];
             nnonz++;
@@ -3788,8 +3747,8 @@ RETCODE lpFlushChgCols(
       col = lp->chgcols[i];
       assert(col != NULL);
       assert(col->var != NULL);
-      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-      assert(col->var->data.col == col);
+      assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetCol(col->var) == col);
 
       if( col->lpipos >= 0 )
       {
@@ -3973,7 +3932,6 @@ RETCODE lpFlush(
 /** creates empty LP data object */
 RETCODE SCIPlpCreate(
    LP**             lp,                 /**< pointer to LP data object */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    const char*      name                /**< problem name */
    )
@@ -4023,8 +3981,8 @@ RETCODE SCIPlpCreate(
 
    /* set default parameters in LP solver */
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, FALSE) );  /* FASTMIP gives numerical problems! */
-   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
+   CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
    CHECK_OKAY( SCIPlpiSetIntpar((*lp)->lpi, SCIP_LPPAR_LPINFO, FALSE) );
    CHECK_OKAY( SCIPlpSetFeastol(*lp, set->feastol) );
 
@@ -4070,10 +4028,10 @@ RETCODE SCIPlpAddCol(
    assert(col != NULL);
    assert(col->lppos == -1);
    assert(col->var != NULL);
-   assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-   assert(col->var->data.col == col);
+   assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetCol(col->var) == col);
    
-   debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", col->var->name, lp->nrows, lp->ncols);
+   debugMessage("adding column <%s> to LP (%d rows, %d cols)\n", SCIPvarGetName(col->var), lp->nrows, lp->ncols);
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
    col->lppos = lp->ncols;
@@ -4144,8 +4102,8 @@ RETCODE SCIPlpShrinkCols(
          col = lp->cols[c];
          assert(col != NULL);
          assert(col->var != NULL);
-         assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(col->var->data.col == lp->cols[c]);
+         assert(SCIPvarGetStatus(col->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(col->var) == lp->cols[c]);
          assert(col->lppos == c);
          
          col->lppos = -1;
@@ -4372,7 +4330,7 @@ RETCODE SCIPlpSumRows(
 
    todoMessage("test, if a column based summation is faster");
 
-   SCIPrealarrayClear(sumcoef);
+   CHECK_OKAY( SCIPrealarrayClear(sumcoef) );
    CHECK_OKAY( SCIPrealarrayExtend(sumcoef, set, 0, nvars-1) );
    *sumlhs = 0.0;
    *sumrhs = 0.0;
@@ -4393,13 +4351,13 @@ RETCODE SCIPlpSumRows(
          {
             assert(row->cols[i] != NULL);
             assert(row->cols[i]->var != NULL);
-            assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-            assert(row->cols[i]->var->data.col == row->cols[i]);
-            assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
-            assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+            assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+            assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
+            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
+            assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
             idx = row->cols_probindex[i];
             assert(0 <= idx && idx < nvars);
-            SCIPrealarrayIncVal(sumcoef, set, idx, weights[r] * row->vals[i]);
+            CHECK_OKAY( SCIPrealarrayIncVal(sumcoef, set, idx, weights[r] * row->vals[i]) );
          }
          
          /* add the row sides to the sum, depending on the sign of the weight */
@@ -4504,10 +4462,10 @@ void sumMIRRow(
             {
                assert(row->cols[i] != NULL);
                assert(row->cols[i]->var != NULL);
-               assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-               assert(row->cols[i]->var->data.col == row->cols[i]);
-               assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
-               assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+               assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+               assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
+               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
+               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
                idx = row->cols_probindex[i];
                assert(0 <= idx && idx < nvars);
                mircoef[idx] += weights[r] * row->vals[i];
@@ -4553,21 +4511,21 @@ void transformMIRRow(
    {
       var = vars[v];
       assert(var != NULL);
-      idx = var->probindex;
+      idx = SCIPvarGetProbIndex(var);
       assert(0 <= idx && idx < nvars);
 
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN
-         && !SCIPsetIsInfinity(set, var->actdom.ub)
-         && var->data.col->primsol > (var->actdom.lb + var->actdom.ub)/2 )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+         && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))
+         && SCIPvarGetCol(var)->primsol > (SCIPvarGetLbLocal(var) + SCIPvarGetUbLocal(var))/2 )
       {
          varsign[idx] = -1;
-         (*mirrhs) -= mircoef[idx] * var->actdom.ub;
+         (*mirrhs) -= mircoef[idx] * SCIPvarGetUbLocal(var);
       }
       else
       {
          varsign[idx] = +1;
-         if( !SCIPsetIsInfinity(set, -var->actdom.lb) )
-            (*mirrhs) -= mircoef[idx] * var->actdom.lb;
+         if( !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
+            (*mirrhs) -= mircoef[idx] * SCIPvarGetLbLocal(var);
          else if( !SCIPsetIsZero(set, mircoef[idx]) )
          {
             /* we found a free variable in the row with non-zero coefficient
@@ -4629,12 +4587,12 @@ void roundMIRRow(
    {
       var = vars[v];
       assert(var != NULL);
-      idx = var->probindex;
+      idx = SCIPvarGetProbIndex(var);
       assert(0 <= idx && idx < nvars);
 
       /* calculate the coefficient in the retransformed cut */
       aj = varsign[idx] * mircoef[idx];
-      if( var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       {
          /* integer variable */
          downaj = SCIPsetFloor(set, aj);
@@ -4662,13 +4620,13 @@ void roundMIRRow(
          /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
          if( varsign[idx] == +1 )
          {
-            assert(!SCIPsetIsInfinity(set, -var->actdom.lb));
-            (*mirrhs) += cutaj * var->actdom.lb;
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+            (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
          }
          else
          {
-            assert(!SCIPsetIsInfinity(set, var->actdom.ub));
-            (*mirrhs) += cutaj * var->actdom.ub;
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+            (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
          }
       }
    }
@@ -4728,10 +4686,10 @@ void substituteMIRRow(
             {
                assert(row->cols[i] != NULL);
                assert(row->cols[i]->var != NULL);
-               assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-               assert(row->cols[i]->var->data.col == row->cols[i]);
-               assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
-               assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+               assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+               assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
+               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols[i]->var_probindex);
+               assert(SCIPvarGetProbIndex(row->cols[i]->var) == row->cols_probindex[i]);
                idx = row->cols_probindex[i];
                mircoef[idx] -= mul * row->vals[i];
             }
@@ -4878,7 +4836,7 @@ RETCODE SCIPlpSetState(
    assert(memhdr != NULL);
    assert(lpistate != NULL);
 
-   lpFlush(lp, memhdr, set);
+   CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
    CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, lpistate) );
    lp->primalfeasible = TRUE;
@@ -4947,22 +4905,12 @@ RETCODE SCIPlpSolvePrimal(
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
-#if 0
-   { /*????????????????????*/
-      char fname[MAXSTRLEN];
-      sprintf(fname, "primlp%d.lp", stat->nlps);
-      CHECK_OKAY( SCIPlpWrite(lp, fname) );
-   }
-#endif
 
    /* start timing */
    SCIPclockStart(stat->primallptime, set);
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
-
-   /* stop timing */
-   SCIPclockStop(stat->primallptime, set);
 
    /* check for primal and dual feasibility */
    CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
@@ -5052,9 +5000,9 @@ RETCODE SCIPlpSolvePrimal(
    }
 
    lp->solved = TRUE;
-
    stat->lpcount++;
 
+   /* count number of iterations */
    CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
@@ -5065,6 +5013,9 @@ RETCODE SCIPlpSolvePrimal(
       if( lp->diving )
          stat->ndivinglpiterations += iterations;
    }
+
+   /* stop timing */
+   SCIPclockStop(stat->primallptime, set);
 
    debugMessage("solving primal LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
 
@@ -5093,22 +5044,12 @@ RETCODE SCIPlpSolveDual(
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
-#if 0
-   { /*????????????????????*/
-      char fname[MAXSTRLEN];
-      sprintf(fname, "duallp%d.lp", stat->nlps);
-      CHECK_OKAY( SCIPlpWrite(lp, fname) );
-   }
-#endif
 
    /* start timing */
    SCIPclockStart(stat->duallptime, set);
 
-   /* call primal simplex */
+   /* call dual simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
-
-   /* stop timing */
-   SCIPclockStop(stat->duallptime, set);
 
    /* check for primal and dual feasibility */
    CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
@@ -5121,6 +5062,7 @@ RETCODE SCIPlpSolveDual(
       /* reduce the feasibility tolerance of the LP solver */
       CHECK_OKAY( SCIPlpSetFeastol(lp, 0.001*set->feastol) );
       CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
 
       /* solve again */
       CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
@@ -5133,6 +5075,7 @@ RETCODE SCIPlpSolveDual(
       /* reset the feasibility tolerance of the LP solver to its original value */
       CHECK_OKAY( SCIPlpSetFeastol(lp, set->feastol) );
       CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
 
       /* check again for stability */
       if( !SCIPlpiIsStable(lp->lpi) )
@@ -5197,9 +5140,9 @@ RETCODE SCIPlpSolveDual(
    }
 
    lp->solved = TRUE;
-
    stat->lpcount++;
 
+   /* count number of iterations */
    CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
@@ -5210,6 +5153,9 @@ RETCODE SCIPlpSolveDual(
       if( lp->diving )
          stat->ndivinglpiterations += iterations;
    }
+
+   /* stop timing */
+   SCIPclockStop(stat->duallptime, set);
 
    debugMessage("solving dual LP returned solstat=%d, %d iterations\n", lp->lpsolstat, iterations);
 
@@ -5255,14 +5201,27 @@ RETCODE SCIPlpSolveAndEval(
 
    debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
       lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
+
    if( !lp->solved )
    {
+      Bool infeasible;
+      Bool resetfastmip;
+
+      resetfastmip = FALSE;
+
+   SOLVEAGAIN:
       CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
+
+      /* reset FASTMIP setting, if it was turned off due to numerical problems */
+      if( resetfastmip )
+      {
+         CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, TRUE) );
+      }
 
       switch( SCIPlpGetSolstat(lp) )
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
-         CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+         CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &infeasible) );
 
          if( !lp->diving )
          {
@@ -5279,8 +5238,15 @@ RETCODE SCIPlpSolveAndEval(
                CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
                assert(lp->solved);
                assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
-               CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+               CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &infeasible) );
             }
+         }
+         if( infeasible && !resetfastmip )
+         {
+            /* solution is infeasible (this can happen, if FASTMIP was on): solve again without FASTMIP */
+            CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FASTMIP, FALSE) );
+            resetfastmip = TRUE;
+            goto SOLVEAGAIN;
          }
 
          debugMessage(" -> LP objective value: %g\n", lp->objval);
@@ -5302,7 +5268,7 @@ RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_OBJLIMIT:
          if( set->npricers > 0 || prob->nvars > lp->ncols )
          {
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
+            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL) );
          }
          debugMessage(" -> LP objective limit reached\n");
          break;
@@ -5316,6 +5282,7 @@ RETCODE SCIPlpSolveAndEval(
          return SCIP_ERROR;
 
       case SCIP_LPSOLSTAT_ERROR:
+      case SCIP_LPSOLSTAT_NOTSOLVED:
          errorMessage("Error in LP solver");
          return SCIP_LPERROR;
 
@@ -5356,7 +5323,8 @@ RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< actual LP data */
    MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat                /**< problem statistics */
+   STAT*            stat,               /**< problem statistics */
+   Bool*            infeasible          /**< pointer to store whether the solution is primal infeasible, or NULL */
    )
 {
    COL** lpicols;
@@ -5374,6 +5342,9 @@ RETCODE SCIPlpGetSol(
    assert(set != NULL);
    assert(memhdr != NULL);
 
+   if( infeasible != NULL )
+      *infeasible = FALSE;
+
    /* get temporary memory */
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &primsol, lp->nlpicols) );
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &dualsol, lp->nlpirows) );
@@ -5390,8 +5361,12 @@ RETCODE SCIPlpGetSol(
       lpicols[c]->primsol = primsol[c];
       lpicols[c]->redcost = redcost[c];
       lpicols[c]->validredcostlp = stat->lpcount;
+      if( infeasible != NULL )
+         *infeasible = *infeasible
+            || SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->lb)
+            || SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->ub);
       debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
-         lpicols[c]->var->name, lpicols[c]->primsol, lpicols[c]->redcost);
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->redcost);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -5399,6 +5374,10 @@ RETCODE SCIPlpGetSol(
       lpirows[r]->dualsol = dualsol[r];
       lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
       lpirows[r]->validactivitylp = stat->lpcount;
+      if( infeasible != NULL )
+         *infeasible = *infeasible
+            || SCIPsetIsFeasLT(set, lpirows[r]->activity, lpirows[r]->lhs)
+            || SCIPsetIsFeasGT(set, lpirows[r]->activity, lpirows[r]->rhs);
       debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
          lpirows[r]->name, lpirows[r]->dualsol, lpirows[r]->activity);
    }
@@ -5469,7 +5448,7 @@ RETCODE SCIPlpGetUnboundedSol(
       lp->lpicols[c]->redcost = SCIP_INVALID;
       lp->lpicols[c]->validredcostlp = -1;
       /*debugMessage(" col <%s>: basesol=%f, ray=%f, unbdsol=%f\n", 
-        lp->lpicols[c]->var->name, primsol[c], ray[c], lp->lpicols[c]->primsol);*/
+        SCIPvarGetName(lp->lpicols[c]->var), primsol[c], ray[c], lp->lpicols[c]->primsol);*/
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -5497,7 +5476,6 @@ RETCODE SCIPlpGetDualfarkas(
    )
 {
    Real* dualfarkas;
-   int c;
    int r;
 
    assert(lp != NULL);
@@ -5572,7 +5550,8 @@ RETCODE SCIPlpUpdateAges(
          lpicols[c]->age++;
       else
          lpicols[c]->age = 0;
-      debugMessage(" -> col <%s>: primsol=%f, age=%d\n", lpicols[c]->var->name, lpicols[c]->primsol, lpicols[c]->age);
+      debugMessage(" -> col <%s>: primsol=%f, age=%d\n", 
+         SCIPvarGetName(lpicols[c]->var), lpicols[c]->primsol, lpicols[c]->age);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -5728,7 +5707,6 @@ RETCODE lpDelRowset(
 static
 RETCODE lpRemoveObsoleteCols(
    LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    int              firstcol            /**< first column to check for clean up */
@@ -5776,7 +5754,7 @@ RETCODE lpRemoveObsoleteCols(
          ndelcols++;
          cols[c]->obsoletenode = stat->nnodes;
          debugMessage("removing obsolete col <%s>: primsol=%f, bounds=[%g,%g]\n", 
-            cols[c]->var->name, cols[c]->primsol, cols[c]->lb, cols[c]->ub);
+            SCIPvarGetName(cols[c]->var), cols[c]->primsol, cols[c]->lb, cols[c]->ub);
       }
    }
 
@@ -5882,7 +5860,7 @@ RETCODE SCIPlpRemoveNewObsoletes(
 
    if( lp->firstnewcol < lp->ncols )
    {
-      CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, stat, lp->firstnewcol) );
+      CHECK_OKAY( lpRemoveObsoleteCols(lp, set, stat, lp->firstnewcol) );
    }
    if( lp->firstnewrow < lp->nrows )
    {
@@ -5908,7 +5886,7 @@ RETCODE SCIPlpRemoveAllObsoletes(
 
    if( 0 < lp->ncols )
    {
-      CHECK_OKAY( lpRemoveObsoleteCols(lp, memhdr, set, stat, 0) );
+      CHECK_OKAY( lpRemoveObsoleteCols(lp, set, stat, 0) );
    }
    if( 0 < lp->nrows )
    {
@@ -5922,7 +5900,6 @@ RETCODE SCIPlpRemoveAllObsoletes(
 static
 RETCODE lpCleanupCols(
    LP*              lp,                 /**< actual LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    int              firstcol            /**< first column to check for clean up */
    )
@@ -6065,7 +6042,7 @@ RETCODE SCIPlpCleanupNew(
 
    if( set->cleanupcols && lp->firstnewcol < lp->ncols )
    {
-      CHECK_OKAY( lpCleanupCols(lp, memhdr, set, lp->firstnewcol) );
+      CHECK_OKAY( lpCleanupCols(lp, set, lp->firstnewcol) );
    }
    if( set->cleanuprows && lp->firstnewrow < lp->nrows )
    {
@@ -6091,7 +6068,7 @@ RETCODE SCIPlpCleanupAll(
 
    if( /*set->cleanupcols &&*/ 0 < lp->ncols )
    {
-      CHECK_OKAY( lpCleanupCols(lp, memhdr, set, 0) );
+      CHECK_OKAY( lpCleanupCols(lp, set, 0) );
    }
    if( /*set->cleanuprows &&*/ 0 < lp->nrows )
    {
@@ -6119,11 +6096,11 @@ RETCODE SCIPlpStartDive(
       {
          assert(lp->cols[c] != NULL);
          assert(lp->cols[c]->var != NULL);
-         assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(SCIPsetIsFeasEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
-         assert(SCIPsetIsFeasEQ(set, lp->cols[c]->var->actdom.lb, lp->cols[c]->lb));
-         assert(SCIPsetIsFeasEQ(set, lp->cols[c]->var->actdom.ub, lp->cols[c]->ub));
+         assert(SCIPvarGetStatus(lp->cols[c]->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(lp->cols[c]->var) == lp->cols[c]);
+         assert(SCIPsetIsFeasEQ(set, SCIPvarGetObj(lp->cols[c]->var), lp->cols[c]->obj));
+         assert(SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(lp->cols[c]->var), lp->cols[c]->lb));
+         assert(SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(lp->cols[c]->var), lp->cols[c]->ub));
       }
    }
 #endif
@@ -6161,11 +6138,11 @@ RETCODE SCIPlpEndDive(
    {
       var = vars[v];
       assert(var != NULL);
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
       {
-         CHECK_OKAY( SCIPcolChgObj(var->data.col, set, lp, var->obj) );
-         CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, var->actdom.lb) );
-         CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, var->actdom.ub) );
+         CHECK_OKAY( SCIPcolChgObj(SCIPvarGetCol(var), set, lp, SCIPvarGetObj(var)) );
+         CHECK_OKAY( SCIPcolChgLb(SCIPvarGetCol(var), set, lp, SCIPvarGetLbLocal(var)) );
+         CHECK_OKAY( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, SCIPvarGetUbLocal(var)) );
       }
    }
 
@@ -6187,11 +6164,11 @@ RETCODE SCIPlpEndDive(
       {
          assert(lp->cols[c] != NULL);
          assert(lp->cols[c]->var != NULL);
-         assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->obj, lp->cols[c]->obj));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.lb, lp->cols[c]->lb));
-         assert(SCIPsetIsEQ(set, lp->cols[c]->var->actdom.ub, lp->cols[c]->ub));
+         assert(SCIPvarGetStatus(lp->cols[c]->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(lp->cols[c]->var) == lp->cols[c]);
+         assert(SCIPsetIsEQ(set, SCIPvarGetObj(lp->cols[c]->var), lp->cols[c]->obj));
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(lp->cols[c]->var), lp->cols[c]->lb));
+         assert(SCIPsetIsEQ(set, SCIPvarGetUbLocal(lp->cols[c]->var), lp->cols[c]->ub));
       }
    }
 #endif

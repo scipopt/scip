@@ -43,7 +43,7 @@ struct Disp
    int              width;              /**< width of display column (no. of chars used) */
    int              priority;           /**< priority of display column */
    int              position;           /**< relative position of display column */
-   int              dispstatus;         /**< display activation status of display column */
+   DISPSTATUS       dispstatus;         /**< display activation status of display column */
    Bool             stripline;          /**< should the column be separated with a line from its right neighbour? */
    Bool             initialized;        /**< is display column initialized? */
    Bool             active;             /**< should column be displayed to the screen? */
@@ -104,7 +104,7 @@ RETCODE SCIPdispCreate(
    sprintf(paramname, "display/%s/active", name);
    sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
-                  &(*disp)->dispstatus, dispstatus, 0, 2, NULL, NULL) );
+                  (int*)(&(*disp)->dispstatus), (int)dispstatus, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -263,7 +263,7 @@ RETCODE SCIPdispPrintLine(
    assert(set->dispheaderfreq >= -1);
    assert(stat != NULL);
 
-   if( set->verblevel < SCIP_VERBLEVEL_NORMAL || set->dispfreq == -1 )
+   if( (VERBLEVEL)set->verblevel < SCIP_VERBLEVEL_NORMAL || set->dispfreq == -1 )
       return SCIP_OKAY;
 
    if( forcedisplay
@@ -289,7 +289,7 @@ RETCODE SCIPdispPrintLine(
             {
                if( stripline )
                   printf("|");
-               fillspace = set->disps[i]->width - strlen(set->disps[i]->header);
+               fillspace = set->disps[i]->width - (int)strlen(set->disps[i]->header);
                for( j = 0; j < (fillspace)/2; ++j )
                   printf(" ");
                printf(set->disps[i]->header);
@@ -484,7 +484,7 @@ void SCIPdispTime(
          timepower++;
          val /= timepowerval[timepower];
       }
-      if( ABS(val) + 0.05 < maxval/100 )
+      if( ABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
          sprintf(format, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
          sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);

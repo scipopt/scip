@@ -165,7 +165,6 @@ RETCODE SCIPprobFree(
    LP*              lp                  /**< actual LP data (or NULL, if it's the original problem) */
    )
 {
-   int c;
    int v;
 
    assert(prob != NULL);
@@ -312,9 +311,9 @@ void probInsertVar(
    assert(prob->nvars < prob->varssize);
    assert(var != NULL);
    assert(var->probindex == -1);
-   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL
-      || var->varstatus == SCIP_VARSTATUS_LOOSE
-      || var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* insert variable in array */
    insertpos = prob->nvars;
@@ -322,7 +321,7 @@ void probInsertVar(
    implstart = intstart + prob->nint;
    contstart = implstart + prob->nimpl;
 
-   if( var->vartype == SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       prob->ncont++;
    else
    {
@@ -334,7 +333,7 @@ void probInsertVar(
       }
       assert(insertpos == contstart);
 
-      if( var->vartype == SCIP_VARTYPE_IMPLINT )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
          prob->nimpl++;
       else
       {
@@ -346,11 +345,11 @@ void probInsertVar(
          }
          assert(insertpos == implstart);
 
-         if( var->vartype == SCIP_VARTYPE_INTEGER )
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
             prob->nint++;
          else
          {
-            assert(var->vartype == SCIP_VARTYPE_BINARY);
+            assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
             if( insertpos > intstart )
             {
                prob->vars[insertpos] = prob->vars[intstart];
@@ -366,10 +365,11 @@ void probInsertVar(
    prob->nvars++;
 
    assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
-   assert((var->vartype == SCIP_VARTYPE_BINARY && insertpos == prob->nbin - 1)
-      || (var->vartype == SCIP_VARTYPE_INTEGER && insertpos == prob->nbin + prob->nint - 1)
-      || (var->vartype == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbin + prob->nint + prob->nimpl - 1)
-      || (var->vartype == SCIP_VARTYPE_CONTINUOUS && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && insertpos == prob->nbin - 1)
+      || (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && insertpos == prob->nbin + prob->nint - 1)
+      || (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbin + prob->nint + prob->nimpl - 1)
+      || (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+         && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
 
    prob->vars[insertpos] = var;
    var->probindex = insertpos;
@@ -397,7 +397,7 @@ void probRemoveVar(
    implstart = intstart + prob->nint;
    contstart = implstart + prob->nimpl;
 
-   switch( var->vartype )
+   switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
       assert(0 <= var->probindex && var->probindex < intstart);
@@ -472,9 +472,9 @@ RETCODE SCIPprobAddVar(
    assert(set != NULL);
    assert(var != NULL);
    assert(var->probindex == -1);
-   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL
-      || var->varstatus == SCIP_VARSTATUS_LOOSE
-      || var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* allocate additional memory */
    CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
@@ -489,14 +489,15 @@ RETCODE SCIPprobAddVar(
    CHECK_OKAY( SCIPhashtableInsert(prob->varnames, memhdr, (void*)var) );
 
    /* update branching candidates and pseudo objective value in the tree */
-   if( var->varstatus != SCIP_VARSTATUS_ORIGINAL )
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
    {
       CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
-      CHECK_OKAY( SCIPtreeUpdateVar(tree, set, var, 0.0, 0.0, 0.0, var->obj, var->actdom.lb, var->actdom.ub) );
+      CHECK_OKAY( SCIPtreeUpdateVar(tree, set, var, 0.0, 0.0, 0.0, 
+                     SCIPvarGetObj(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
    }
 
    debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      var->name, prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
+      SCIPvarGetName(var), prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
 
    return SCIP_OKAY;
 }
@@ -513,11 +514,11 @@ RETCODE SCIPprobChgVarType(
    assert(prob != NULL);
    assert(var != NULL);
    assert(var->probindex >= 0);
-   assert(var->varstatus == SCIP_VARSTATUS_ORIGINAL
-      || var->varstatus == SCIP_VARSTATUS_LOOSE
-      || var->varstatus == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-   if( (VARTYPE)(var->vartype) == vartype )
+   if( SCIPvarGetType(var) == vartype )
       return SCIP_OKAY;
 
    /* temporarily remove variable from problem */
@@ -530,7 +531,7 @@ RETCODE SCIPprobChgVarType(
    probInsertVar(prob, var);
 
    /* update branching candidates */
-   assert(branchcand != NULL || var->varstatus == SCIP_VARSTATUS_ORIGINAL);
+   assert(branchcand != NULL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
    if( branchcand != NULL )
    {
       CHECK_OKAY( SCIPbranchcandUpdateVar(branchcand, set, var) );
@@ -549,10 +550,10 @@ RETCODE SCIPprobVarFixed(
 {
    assert(prob != NULL);
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_FIXED
-      || var->varstatus == SCIP_VARSTATUS_AGGREGATED
-      || var->varstatus == SCIP_VARSTATUS_MULTAGGR
-      || var->varstatus == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
 
    if( var->probindex == -1 )
       return SCIP_OKAY;
@@ -710,7 +711,6 @@ void SCIPprobSetObjsense(
 /** increases objective offset */
 void SCIPprobIncObjoffset(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
    Real             incval              /**< value to add to objective offset */
    )
 {
@@ -778,11 +778,11 @@ Real SCIPprobExternObjval(
    assert(prob != NULL);
 
    if( SCIPsetIsInfinity(set, objval) )
-      return prob->objsense * set->infinity;
+      return (Real)prob->objsense * set->infinity;
    else if( SCIPsetIsInfinity(set, -objval) )
-      return -prob->objsense * set->infinity;
+      return -(Real)prob->objsense * set->infinity;
    else
-      return prob->objsense * (objval + prob->objoffset);
+      return (Real)prob->objsense * (objval + prob->objoffset);
 }
 
 /** returns the internal value of the given external objective value */
@@ -795,11 +795,11 @@ Real SCIPprobInternObjval(
    assert(prob != NULL);
 
    if( SCIPsetIsInfinity(set, objval) )
-      return prob->objsense * set->infinity;
+      return (Real)prob->objsense * set->infinity;
    else if( SCIPsetIsInfinity(set, -objval) )
-      return -prob->objsense * set->infinity;
+      return -(Real)prob->objsense * set->infinity;
    else
-      return prob->objsense * objval - prob->objoffset;
+      return (Real)prob->objsense * objval - prob->objoffset;
 }
 
 /** gets limit on objective function in external space */

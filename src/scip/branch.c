@@ -208,17 +208,17 @@ RETCODE SCIPbranchcandGetLPCands(
 
          var = col->var;
          assert(var != NULL);
-         assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(var->data.col == col);
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(var) == col);
          
          /* LP branching candidates are fractional binary and integer variables */
-         if( var->vartype == SCIP_VARTYPE_BINARY || var->vartype == SCIP_VARTYPE_INTEGER )
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
          {
             frac = SCIPsetFrac(set, col->primsol);
             if( !SCIPsetIsFracIntegral(set, frac) )
             {
                debugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g\n", 
-                  branchcand->nlpcands, var->name, col->primsol, frac);
+                  branchcand->nlpcands, SCIPvarGetName(var), col->primsol, frac);
 
                assert(branchcand->nlpcands < branchcand->lpcandssize);
                branchcand->lpcands[branchcand->nlpcands] = var;
@@ -262,37 +262,37 @@ RETCODE SCIPbranchcandGetPseudoCands(
    /* check, if the actual pseudo branching candidate array is correct */
    {
       VAR* var;
-      int npseudocands;
+      int npcs;
       int v;
       
       assert(prob != NULL);
       
       /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
-      npseudocands = 0;
+      npcs = 0;
       for( v = 0; v < prob->nbin + prob->nint + prob->nimpl; ++v )
       {
          var = prob->vars[v];
          assert(var != NULL);
-         assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
-         assert(var->vartype == SCIP_VARTYPE_BINARY
-            || var->vartype == SCIP_VARTYPE_INTEGER
-            || var->vartype == SCIP_VARTYPE_IMPLINT);
-         assert(SCIPsetIsIntegral(set, var->actdom.lb));
-         assert(SCIPsetIsIntegral(set, var->actdom.ub));
-         assert(SCIPsetIsLE(set, var->actdom.lb, var->actdom.ub));
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
+            || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
+            || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+         assert(SCIPsetIsIntegral(set, SCIPvarGetLbLocal(var)));
+         assert(SCIPsetIsIntegral(set, SCIPvarGetUbLocal(var)));
+         assert(SCIPsetIsLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-         if( SCIPsetIsLT(set, var->actdom.lb, var->actdom.ub) )
+         if( SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          {
             assert(0 <= var->pseudocandindex && var->pseudocandindex < branchcand->npseudocands);
             assert(branchcand->pseudocands[var->pseudocandindex] == var);
-            npseudocands++;
+            npcs++;
          }
          else
          {
             assert(var->pseudocandindex == -1);
          }
       }
-      assert(branchcand->npseudocands == npseudocands);
+      assert(branchcand->npseudocands == npcs);
    }
 #endif
 
@@ -314,15 +314,15 @@ RETCODE SCIPbranchcandUpdateVar(
 {
    assert(branchcand != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsLE(set, var->actdom.lb, var->actdom.ub));
-
-   if( var->varstatus == SCIP_VARSTATUS_ORIGINAL
-      || var->varstatus == SCIP_VARSTATUS_FIXED
-      || var->varstatus == SCIP_VARSTATUS_AGGREGATED
-      || var->varstatus == SCIP_VARSTATUS_MULTAGGR
-      || var->varstatus == SCIP_VARSTATUS_NEGATED
-      || var->vartype == SCIP_VARTYPE_CONTINUOUS
-      || SCIPsetIsEQ(set, var->actdom.lb, var->actdom.ub) )
+   assert(SCIPsetIsFeasLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+   
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
+      || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+      || SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
       /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
       if( var->pseudocandindex >= 0 )
@@ -335,32 +335,21 @@ RETCODE SCIPbranchcandUpdateVar(
          assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
 
          debugMessage("deleting pseudo candidate <%s> of type %d at %d from candidate set (%d/%d/%d)\n",
-            var->name, var->vartype, var->pseudocandindex, 
+            SCIPvarGetName(var), SCIPvarGetType(var), var->pseudocandindex, 
             branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
 
          /* delete the variable from pseudocands, retaining the ordering binaries, integers, implicit integers */
          intstart = branchcand->npseudobins;
          implstart = intstart + branchcand->npseudoints;
          freepos = var->pseudocandindex;
+         assert(0 <= freepos && freepos < branchcand->npseudocands);
 
-         switch( var->vartype )
-         {
-         case SCIP_VARTYPE_BINARY:
-            assert(0 <= var->pseudocandindex && var->pseudocandindex < intstart);
+         if( freepos < intstart )
             branchcand->npseudobins--;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            assert(intstart <= var->pseudocandindex && var->pseudocandindex < implstart);
+         else if( freepos < implstart )
             branchcand->npseudoints--;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-            assert(implstart <= var->pseudocandindex && var->pseudocandindex < branchcand->npseudocands);
+         else
             branchcand->npseudoimpls--;
-            break;
-         default:
-            errorMessage("unknown variable type");
-            abort();
-         }
 
          if( freepos < intstart-1 )
          {
@@ -393,7 +382,7 @@ RETCODE SCIPbranchcandUpdateVar(
    }
    else
    {
-      assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
       /* variable is not fixed: make sure it is member of the pseudo branching candidate list */
       if( var->pseudocandindex == -1 )
@@ -403,7 +392,8 @@ RETCODE SCIPbranchcandUpdateVar(
          int implstart;
 
          debugMessage("adding pseudo candidate <%s> of type %d to candidate set (%d/%d/%d)\n",
-            var->name, var->vartype, branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
+            SCIPvarGetName(var), SCIPvarGetType(var),
+            branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
 
          CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
 
@@ -411,7 +401,7 @@ RETCODE SCIPbranchcandUpdateVar(
          intstart = branchcand->npseudobins;
          implstart = intstart + branchcand->npseudoints;
          insertpos = branchcand->npseudocands;
-         if( var->vartype == SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
             branchcand->npseudoimpls++;
          else
          {
@@ -423,11 +413,11 @@ RETCODE SCIPbranchcandUpdateVar(
             }
             assert(insertpos == implstart);
 
-            if( var->vartype == SCIP_VARTYPE_INTEGER )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
                branchcand->npseudoints++;
             else
             {
-               assert(var->vartype == SCIP_VARTYPE_BINARY);
+               assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
                if( insertpos > intstart )
                {
                   branchcand->pseudocands[insertpos] = branchcand->pseudocands[intstart];
@@ -442,9 +432,10 @@ RETCODE SCIPbranchcandUpdateVar(
          branchcand->npseudocands++;
 
          assert(branchcand->npseudocands == branchcand->npseudobins + branchcand->npseudoints + branchcand->npseudoimpls);
-         assert((var->vartype == SCIP_VARTYPE_BINARY && insertpos == branchcand->npseudobins - 1)
-            || (var->vartype == SCIP_VARTYPE_INTEGER && insertpos == branchcand->npseudobins + branchcand->npseudoints - 1)
-            || (var->vartype == SCIP_VARTYPE_IMPLINT && insertpos == branchcand->npseudocands - 1));
+         assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && insertpos == branchcand->npseudobins - 1)
+            || (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
+               && insertpos == branchcand->npseudobins + branchcand->npseudoints - 1)
+            || (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && insertpos == branchcand->npseudocands - 1));
          
          branchcand->pseudocands[insertpos] = var;
          var->pseudocandindex = insertpos;
@@ -476,7 +467,7 @@ DECL_PARAMCHGD(paramChgdBranchrulePriority)
    assert(paramdata != NULL);
 
    /* use SCIPsetBranchrulePriority() to mark the branchrules unsorted */
-   CHECK_OKAY( SCIPsetBranchrulePriority(scip, (BRANCHRULE*)paramdata, SCIPparamGetInt(param)) );
+   CHECK_OKAY( SCIPsetBranchrulePriority(scip, (BRANCHRULE*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -521,7 +512,7 @@ RETCODE SCIPbranchruleCreate(
    sprintf(paramdesc, "priority of branching rule <%s>", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
-                  paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) );
+                  paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }

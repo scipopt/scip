@@ -228,10 +228,11 @@ RETCODE SCIPpriceAddBdviolvar(
    assert(price != NULL);
    assert(set != NULL);
    assert(var != NULL);
-   assert(SCIPsetIsPositive(set, var->actdom.lb) || SCIPsetIsNegative(set, var->actdom.ub));
+   assert(SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) || SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)));
    assert(price->naddedbdviolvars <= price->nbdviolvars);
 
-   debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", var->name, var->actdom.lb, var->actdom.ub);
+   debugMessage("zero violates bounds of <%s> (lb=%g, ub=%g)\n", 
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 
    price->nfoundvars++;
 
@@ -244,8 +245,8 @@ RETCODE SCIPpriceAddBdviolvar(
 
    /* insert variable in bdviolvars arrays */
    price->bdviolvars[price->nbdviolvars] = var;
-   price->bdviolvarslb[price->nbdviolvars] = var->actdom.lb;
-   price->bdviolvarsub[price->nbdviolvars] = var->actdom.ub;
+   price->bdviolvarslb[price->nbdviolvars] = SCIPvarGetLbLocal(var);
+   price->bdviolvarsub[price->nbdviolvars] = SCIPvarGetUbLocal(var);
    price->nbdviolvars++;
 
    /* Temporarily set bounds, such that zero is feasible, because we don't want to destroy
@@ -254,7 +255,7 @@ RETCODE SCIPpriceAddBdviolvar(
     * The correct bounds must be reset with a call to SCIPpriceResetBounds().
     * The inference information is unimportant for this temporary bound change.
     */
-   if( SCIPsetIsPositive(set, var->actdom.lb) )
+   if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) )
    {
       CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, tree, lp, branchcand, eventqueue, 0.0,
                      NULL, NULL, 0, 0) );
@@ -301,7 +302,7 @@ RETCODE priceProbVars(
    assert(tree->actnodehaslp);
    assert(prob->nvars > lp->ncols);
 
-   root = (tree->actnode->depth == 0);
+   root = (SCIPnodeGetDepth(tree->actnode) == 0);
    maxpricevars = root ? set->maxpricevarsroot : set->maxpricevars;
    assert(maxpricevars >= 1);
    abortpricevars = (int)(set->abortpricevarsfac * maxpricevars);
@@ -318,7 +319,7 @@ RETCODE priceProbVars(
    for( v = 0; v < prob->nvars && price->nfoundvars < abortpricevars; ++v )
    {
       var = prob->vars[v];
-      switch( var->varstatus )
+      switch( SCIPvarGetStatus(var) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
          errorMessage("Found original variable in transformed problem");
@@ -327,45 +328,48 @@ RETCODE priceProbVars(
          /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
           * In addition, we have to add all variables, where zero violates the bounds.
           */
-         /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->actdom.lb, var->actdom.ub);*/
-         if( SCIPsetIsNegative(set, var->actdom.lb) )
+         /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n",
+           SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));*/
+         if( SCIPsetIsNegative(set, SCIPvarGetLbLocal(var)) )
          {
-            if( SCIPsetIsNegative(set, var->actdom.ub) )
+            if( SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
                stat->nlppricingvars++;
             }
-            else if( SCIPsetIsPositive(set, var->obj) )
+            else if( SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->actdom.lb, root) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var,
+                              -SCIPvarGetObj(var) * SCIPvarGetLbLocal(var), root) );
                stat->nlppricingvars++;
             }
          }
-         else if( SCIPsetIsPositive(set, var->actdom.ub) )
+         else if( SCIPsetIsPositive(set, SCIPvarGetUbLocal(var)) )
          {
-            if( SCIPsetIsPositive(set, var->actdom.lb) )
+            if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
                stat->nlppricingvars++;
             }
-            else if( SCIPsetIsNegative(set, var->obj) )
+            else if( SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
             {
-               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, -var->obj * var->actdom.ub, root) );
+               CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var,
+                              -SCIPvarGetObj(var) * SCIPvarGetUbLocal(var), root) );
                stat->nlppricingvars++;
             }
          }
          break;
       case SCIP_VARSTATUS_COLUMN:
-         col = var->data.col;
+         col = SCIPvarGetCol(var);
          assert(col != NULL);
          assert(col->var == var);
          assert(col->lppos >= -1);
          assert(col->lpipos >= -1);
-         assert((col->lppos >= 0) ^ (col->lpipos == -1));
+         assert((col->lppos == -1) == (col->lpipos == -1));
          assert(col->len >= 0);
             
          /*debugMessage("price column variable <%s> in bounds [%g,%g], col->lppos=%d\n", 
-           var->name, var->actdom.lb, var->actdom.ub, col->lppos);*/
+           SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), col->lppos);*/
          if( col->lppos == -1 )
          {
             Real feasibility;
@@ -374,7 +378,7 @@ RETCODE priceProbVars(
             added = FALSE;
 
             /* add variable, if zero is not feasible within the bounds */
-            if( SCIPsetIsPositive(set, var->actdom.lb) || SCIPsetIsNegative(set, var->actdom.ub) )
+            if( SCIPsetIsPositive(set, SCIPvarGetLbLocal(var)) || SCIPsetIsNegative(set, SCIPvarGetUbLocal(var)) )
             {
                CHECK_OKAY( SCIPpriceAddBdviolvar(price, memhdr, set, stat, tree, lp, branchcand, eventqueue, var) );
                stat->nlppricingvars++;
@@ -388,7 +392,8 @@ RETCODE priceProbVars(
                bestbound = SCIPvarGetBestBound(var);
                if( !SCIPsetIsZero(set, bestbound) )
                {
-                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, var->obj * var->actdom.lb, root) );
+                  CHECK_OKAY( SCIPpriceAddVar(price, memhdr, set, lp, var, 
+                                 SCIPvarGetObj(var) * SCIPvarGetLbLocal(var), root) );
                   stat->nlppricingvars++;
                   added = TRUE;
                }
@@ -397,8 +402,8 @@ RETCODE priceProbVars(
             if( !added )
             {
                /* a column not in LP that doesn't have zero in its bounds was added by bound checking above */
-               assert(!SCIPsetIsPositive(set, col->var->actdom.lb));
-               assert(!SCIPsetIsNegative(set, col->var->actdom.ub));
+               assert(!SCIPsetIsPositive(set, SCIPvarGetLbLocal(col->var)));
+               assert(!SCIPsetIsNegative(set, SCIPvarGetUbLocal(col->var)));
                
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {
@@ -411,7 +416,7 @@ RETCODE priceProbVars(
                    * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
                    */
                   feasibility = -SCIPcolGetFarkas(col, stat);
-                  debugMessage("  <%s> farkas feasibility: %e\n", col->var->name, feasibility);
+                  debugMessage("  <%s> farkas feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                else
                {
@@ -420,7 +425,7 @@ RETCODE priceProbVars(
                    * variables, and non-zero reduced costs for variables that can be negative.
                    */
                   feasibility = SCIPcolGetFeasibility(col, stat);
-                  debugMessage("  <%s> reduced cost feasibility: %e\n", col->var->name, feasibility);
+                  debugMessage("  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
                
                /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns
@@ -441,6 +446,9 @@ RETCODE priceProbVars(
       case SCIP_VARSTATUS_NEGATED:
          /* we don't have to price fixed or aggregated variables */
          break;
+      default:
+         errorMessage("invalid variable status");
+         return SCIP_INVALIDDATA;
       }
    }
 
@@ -504,28 +512,28 @@ RETCODE SCIPpriceVars(
    for( v = price->naddedbdviolvars; v < price->nbdviolvars; ++v )
    {
       var = price->bdviolvars[v];
-      assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
       /* add variable to problem, if needed */
-      if( var->probindex == -1 )
+      if( SCIPvarGetProbIndex(var) == -1 )
       {
          CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, tree, branchcand, var) );
       }
-      assert(var->probindex >= 0);
+      assert(SCIPvarGetProbIndex(var) >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
-      if( var->varstatus == SCIP_VARSTATUS_LOOSE )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          /* transform loose variable into column variable */
          CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat) );
       }
-      assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-      col = var->data.col;
+      col = SCIPvarGetCol(var);
       assert(col != NULL);
       assert(col->lppos == -1);
       assert(col->lpipos == -1);
-      debugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", var->name, 
+      debugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", SCIPvarGetName(var), 
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
       CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
    }
@@ -535,28 +543,28 @@ RETCODE SCIPpriceVars(
    for( v = 0; v < price->nvars; ++v )
    {
       var = price->vars[v];
-      assert(var->varstatus == SCIP_VARSTATUS_LOOSE || var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
       /* add variable to problem, if needed */
-      if( var->probindex == -1 )
+      if( SCIPvarGetProbIndex(var) == -1 )
       {
          CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, tree, branchcand, var) );
       }
-      assert(var->probindex >= 0);
+      assert(SCIPvarGetProbIndex(var) >= 0);
       assert(var->nuses >= 2); /* at least used in pricing storage and in problem */
 
       /* transform variable into column variable, if needed */
-      if( var->varstatus == SCIP_VARSTATUS_LOOSE )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          CHECK_OKAY( SCIPvarColumn(var, memhdr, set, stat) );
       }
-      assert(var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-      col = var->data.col;
+      col = SCIPvarGetCol(var);
       assert(col != NULL);
       assert(col->lppos == -1);
       assert(col->lpipos == -1);
-      debugMessage("adding priced variable <%s> (score=%g)\n", var->name, price->score[v]);
+      debugMessage("adding priced variable <%s> (score=%g)\n", SCIPvarGetName(var), price->score[v]);
       CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
 
       /* release the variable */

@@ -217,7 +217,6 @@ void SCIPprobSetObjsense(
 extern
 void SCIPprobIncObjoffset(
    PROB*            prob,               /**< problem data */
-   const SET*       set,                /**< global SCIP settings */
    Real             incval              /**< value to add to objective offset */
    );
 

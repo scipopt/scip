@@ -775,6 +775,12 @@ void SCIPconshdlrSetData(
    CONSHDLRDATA*    conshdlrdata        /**< new constraint handler user data */
    );
 
+/** gets array with active constraints of constraint handler */
+extern
+CONS** SCIPconshdlrGetConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets number of active constraints of constraint handler */
 extern
 int SCIPconshdlrGetNConss(

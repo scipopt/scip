@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.43 2003/09/03 17:13:53 bzfpfend Exp $
+# $Id: Makefile,v 1.44 2003/10/15 11:14:39 bzfpfend Exp $
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -24,9 +24,9 @@
 # Several symlinks are nesseccary:
 #
 # lib/cpxinc                         -> directory with cplex.h
-# lib/spxinc                         -> directory with SoPlex *.h
+# lib/spxinc                         -> directory with SoPlex's *.h
 # lib/libcplex.$(OSTYPE).$(ARCH).a   -> libcplex.a
-# lib/libsoplex.$(BASE).a            -> itself
+# lib/libsoplex.$(BASE).a            -> libsoplex.a
 #
 #
 .PHONY:		depend clean lint doc test testcplex
@@ -39,6 +39,11 @@ ARCH            :=      $(shell uname -m | \
 			-e s/9000..../hppa/ \
 			-e s/00........../pwr4/)
 OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
+
+
+#-----------------------------------------------------------------------------
+# default settings
+#-----------------------------------------------------------------------------
 
 OPT		=	dbg
 LPS		=	cpx
@@ -82,38 +87,65 @@ GXXWARN		=	-Wall -W -Wpointer-arith -Wbad-function-cast \
 
 BASE		=	$(PAR).$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
-NAME		=	scip
+
 
 #-----------------------------------------------------------------------------
+include make/make.$(BASE)
+#-----------------------------------------------------------------------------
 
-LIBOBJ		=	branch.o \
-			branch_fullstrong.o \
-			branch_mostinf.o \
-			branch_leastinf.o \
+
+#-----------------------------------------------------------------------------
+# Program Components
+#-----------------------------------------------------------------------------
+
+NAME		=	scip
+OBJECTS		=
+
+OBJXXX		=	$(addprefix $(OBJDIR)/,$(OBJECTS))
+OBJSRC		=	$(addprefix $(SRCDIR)/,$(OBJECTS:.o=.c))
+OBJDEP		=	src/depend.obj
+
+
+#-----------------------------------------------------------------------------
+# LP Solver Interface
+#-----------------------------------------------------------------------------
+
+ifeq ($(LPS),cpx)
+CPPFLAGS	+=	-I$(LIBDIR)/cpxinc
+MAINOBJ		=	cmain.o
+LPSLIB		=	cplex.$(OSTYPE).$(ARCH)
+LPIOBJ		=	lpi_cpx.o bitencode.o
+endif
+
+ifeq ($(LPS),spx)
+CPPFLAGS	+=	-I$(LIBDIR)/spxinc 
+MAINOBJ		=	cppmain.o
+LPSLIB		=	soplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+LPIOBJ		=	lpi_spx.o bitencode.o
+endif
+
+LPILIB		=	$(LPS)lp.$(BASE)
+LPILIBFILE	=	$(LIBDIR)/lib$(LPILIB).a
+LPIXXX		=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
+LPISRC  	=	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
+LPIDEP		=	src/depend.$(LPS)
+MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
+MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
+
+
+#-----------------------------------------------------------------------------
+# SCIP Library
+#-----------------------------------------------------------------------------
+
+SCIPOBJ		=	branch.o \
 			buffer.o \
 			clock.o \
 			conflict.o \
 			cons.o \
-			cons_and.o \
-			cons_binpack.o \
-			cons_bitarith.o \
-			cons_bitvar.o \
-			cons_eqknapsack.o \
-			cons_integral.o \
-			cons_linear.o \
-			cons_logicor.o \
-			cons_invarknapsack.o \
-			cons_knapsack.o \
-			cons_setppc.o \
-			cons_varlb.o \
-			cons_varub.o \
 			cutpool.o \
 			disp.o \
-			disp_default.o \
 			event.o \
 			heur.o \
-			heur_diving.o \
-			heur_rounding.o \
 			interrupt.o \
 			lp.o \
 			mem.o \
@@ -121,111 +153,79 @@ LIBOBJ		=	branch.o \
 			message.o \
 			misc.o \
 			nodesel.o \
-			nodesel_bfs.o \
-			nodesel_dfs.o \
-			nodesel_restartdfs.o \
 			paramset.o \
 			presol.o \
-			presol_dualfix.o \
-			presol_trivial.o \
 			price.o \
 			primal.o \
 			prob.o \
 			reader.o \
-			reader_cnf.o \
-			reader_mps.o \
-			reader_rtp.o \
 			retcode.o \
 			scip.o \
+			scipdefcomp.o \
 			sepa.o \
-			sepa_gomory.o \
 			sepastore.o \
 			set.o \
 			sol.o \
 			solve.o \
 			stat.o \
 			tree.o \
-			var.o
+			var.o \
+			branch_fullstrong.o \
+			branch_mostinf.o \
+			branch_leastinf.o \
+			cons_and.o \
+			cons_binpack.o \
+			cons_eqknapsack.o \
+			cons_invarknapsack.o \
+			cons_integral.o \
+			cons_knapsack.o \
+			cons_linear.o \
+			cons_logicor.o \
+			cons_setppc.o \
+			cons_varlb.o \
+			cons_varub.o \
+			disp_default.o \
+			heur_diving.o \
+			heur_rounding.o \
+			nodesel_bfs.o \
+			nodesel_dfs.o \
+			nodesel_restartdfs.o \
+			presol_dualfix.o \
+			presol_trivial.o \
+			reader_cnf.o \
+			reader_mps.o \
+			sepa_gomory.o
+
+SCIPLIB		=	$(NAME).$(BASE)
+SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).a
+SCIPDEP		=	src/depend.scip
+SCIPXXX		=	$(addprefix $(OBJDIR)/,$(SCIPOBJ))
+SCIPSRC		=	$(addprefix $(SRCDIR)/,$(SCIPOBJ:.o=.c))
 
 
 #-----------------------------------------------------------------------------
-include make/make.$(BASE)
+# Target
 #-----------------------------------------------------------------------------
 
-LIBRARY	=	$(LIBDIR)/lib$(NAME).$(BASE).a
-DEPLIB	=	src/depend.scip
+TARGET		=	$(NAME).$(BASE).$(LPS)
+BINARY		=	$(BINDIR)/$(TARGET)
 
-LIBXXX	=	$(addprefix $(OBJDIR)/,$(LIBOBJ))
-LIBSRC	=	$(addprefix $(SRCDIR)/,$(LIBOBJ:.o=.c))
 
 #-----------------------------------------------------------------------------
-# LP Solver CPLEX
-#-----------------------------------------------------------------------------
-ifeq ($(LPS),cpx)
-	CPPFLAGS+=	-I$(LIBDIR)/cpxinc
-	OBJECT	=	cmain.o
-	LPSLIB	=	cplex.$(OSTYPE).$(ARCH)
-	LPIOBJ	=	lpi_cpx.o bitencode.o
-	LPILIB	=	$(LIBDIR)/libcpxlp.$(BASE).a
-	LPIXXX	=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
-	LPISRC  =	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.c))
-	TARGET	=	$(NAME).$(BASE).cpx
-	BINARY	=	$(BINDIR)/$(TARGET)
-	DEPLPS	=	src/depend.cpx
-	OBJXXX	=	$(addprefix $(OBJDIR)/,$(OBJECT))
-	OBJSRC	=	$(addprefix $(SRCDIR)/,$(OBJECT:.o=.c))
-
-$(BINARY):	$(OBJDIR) $(BINDIR) $(OBJXXX) $(LIBRARY) $(LPILIB) 
-		$(CXX) $(CXXFLAGS) $(OBJXXX) \
-		-L$(LIBDIR) -l$(NAME).$(BASE) -lcpxlp.$(BASE) \
-		-l$(LPSLIB) $(LDFLAGS) -o $@
-
-endif
-#-----------------------------------------------------------------------------
-# LP Solver SoPlex
-#-----------------------------------------------------------------------------
-ifeq ($(LPS),spx)
-	CPPFLAGS+=	-I$(LIBDIR)/spxinc 
-	OBJECT	=	cppmain.o
-	LPSLIB	=	soplex.$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-	LPIOBJ	=	lpi_spx.o bitencode.o
-	LPILIB	=	$(LIBDIR)/libspxlp.$(BASE).a
-	LPIXXX	=	$(addprefix $(OBJDIR)/,$(LPIOBJ))
-	LPISRC  =	$(addprefix $(SRCDIR)/,$(LPIOBJ:.o=.cpp))
-	TARGET	=	$(NAME).$(BASE).spx
-	BINARY	=	$(BINDIR)/$(TARGET)
-	DEPLPS	=	src/depend.spx
-	OBJXXX	=	$(addprefix $(OBJDIR)/,$(OBJECT))
-	OBJSRC	=	$(addprefix $(SRCDIR)/,$(OBJECT:.o=.cpp))
-
-$(BINARY):	$(OBJDIR) $(BINDIR) $(OBJXXX) $(LIBRARY) $(LPILIB)
-		$(CXX) $(CXXFLAGS) $(OBJXXX) \
-		-L$(LIBDIR) -l$(NAME).$(BASE) -lspxlp.$(BASE) \
-		-l$(LPSLIB) $(LDFLAGS) -o $@
-
-endif
-
-#-----------------------------------------------------------------------------
-# SCIP Library
-#-----------------------------------------------------------------------------
-$(LIBRARY):	$(OBJDIR) $(LIBDIR) $(LIBXXX) 
-		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(LIBXXX) 
-		$(RANLIB) $@
-
-$(LPILIB):	$(OBJDIR) $(LIBDIR) $(LPIXXX)
-		-rm -f $@
-		$(AR) $(ARFLAGS) $@ $(LPIXXX)
-		$(RANLIB) $@
-
+# Rules
 #-----------------------------------------------------------------------------
 
-lint:		$(LIBSRC) $(OBJSRC)
-		$(LINT) lint/scip.lnt -os\(lint.out\) \
+$(BINARY):	$(OBJDIR) $(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(OBJXXX) $(MAINXXX)
+		$(CXX) $(CXXFLAGS) $(OBJXXX) $(MAINXXX) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) -l$(LPSLIB) \
+		$(LDFLAGS) -o $@
+
+lint:		$(SCIPSRC) $(OBJSRC) $(MAINSRC)
+		$(LINT) lint/$(NAME).lnt -os\(lint.out\) \
 		$(CPPFLAGS) -UNDEBUG $^
 
 doc:		
-		cd doc; $(DOXY) scip.dxy
+		cd doc; $(DOXY) $(NAME).dxy
 
 tmpcheck:
 		cd check; \
@@ -249,25 +249,39 @@ $(BINDIR):
 		-mkdir -p $(BINDIR)
 
 clean:
-		-rm -rf $(OBJDIR)/* $(LIBRARY) $(TARGET)
+		-rm -rf $(OBJDIR)/* $(SCIPLIBFILE) $(LPILIBFILE) $(TARGET)
 
 depend:
-		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(LIBSRC) \
+		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(SCIPSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(DEPLIB)'
+		>$(SCIPDEP)'
 ifeq ($(LPS),cpx)
-		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) $(LPISRC) \
+		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(MAINSRC) $(LPISRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(DEPLPS)'
+		>$(LPIDEP)'
 endif
 ifeq ($(LPS),spx)
-		$(SHELL) -ec '$(DCXX) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) $(LPISRC) \
+		$(SHELL) -ec '$(DCXX) $(DFLAGS) $(CPPFLAGS) $(MAINSRC) $(LPISRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(DEPLPS)'
+		>$(LPIDEP)'
 endif
+		$(SHELL) -ec '$(DCC) $(DFLAGS) $(CPPFLAGS) $(OBJSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
+		>$(OBJDEP)'
 
--include	$(DEPLIB)
--include 	$(DEPLPS)
+-include	$(SCIPDEP)
+-include 	$(LPIDEP)
+-include	$(OBJDEP)
+
+$(SCIPLIBFILE):	$(OBJDIR) $(LIBDIR) $(SCIPXXX) 
+		-rm -f $@
+		$(AR) $(ARFLAGS) $@ $(SCIPXXX) 
+		$(RANLIB) $@
+
+$(LPILIBFILE):	$(OBJDIR) $(LIBDIR) $(LPIXXX)
+		-rm -f $@
+		$(AR) $(ARFLAGS) $@ $(LPIXXX)
+		$(RANLIB) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@

@@ -33,7 +33,7 @@
 
 
 
-#define SCIP_VERSION                 40 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                 50 /**< SCIP version number (multiplied by 100 to get integer number) */
 
 
 
@@ -98,10 +98,10 @@
  * Boolean values
  */
 
-typedef int Bool;                       /**< type used for boolean values */
+typedef unsigned int Bool;              /**< type used for boolean values */
 #ifndef TRUE
-#define TRUE (0==0)                     /**< boolean value TRUE */
-#define FALSE (0==1)                    /**< boolean value FALSE */
+#define TRUE  1                         /**< boolean value TRUE */
+#define FALSE 0                         /**< boolean value FALSE */
 #endif
 
 
@@ -125,8 +125,8 @@ typedef long long Longint;              /**< type used for long integer values *
  */
 
 typedef double Real;                    /**< type used for floating point values */
-#define REAL_MAX               DBL_MAX
-#define REAL_MIN              -DBL_MAX
+#define REAL_MAX         (Real)DBL_MAX
+#define REAL_MIN        -(Real)DBL_MAX
 #define REAL_FORMAT              "%lf"
 
 #define SCIP_DEFAULT_INFINITY    1e+20  /**< default value considered to be infinity */

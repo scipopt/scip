@@ -88,7 +88,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <math.h>
 
 #include "misc.h"
 #include "message.h"
@@ -152,9 +151,9 @@ DECL_SORTPTRCOMP(conflictVarCmp)
    var1 = (VAR*)elem1;
    var2 = (VAR*)elem2;
    assert(var1 != NULL);
-   assert(var1->vartype == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
    assert(var2 != NULL);
-   assert(var2->vartype == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
 
    if( SCIPvarGetInferDepth(var1) > SCIPvarGetInferDepth(var2) )
       return -1;
@@ -233,7 +232,7 @@ RETCODE SCIPconflictAddVar(
 {
    assert(conflict != NULL);
    assert(var != NULL);
-   assert(var->vartype == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    debugMessage("adding variable <%s>[%g,%g] [status:%d, depth:%d, num:%d, cons:%p] to conflict candidates\n",
@@ -246,14 +245,14 @@ RETCODE SCIPconflictAddVar(
    /* we can ignore fixed variables */
    if( var != NULL )
    {
-      assert(var->vartype == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
       assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
       
       /* choose between variable or its negation, such that the literal is fixed to FALSE */
       if( SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), 1.0) )
       {
          /* variable is fixed to TRUE -> use the negation */
-         CHECK_OKAY( SCIPvarGetNegated(var, memhdr, set, stat, &var) );
+         CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
       }
       debugMessage(" -> active conflict candidate is <%s>[%g,%g] [status:%d]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetStatus(var));

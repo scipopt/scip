@@ -67,10 +67,10 @@ struct Clock
       CPUCLOCK      cpuclock;           /**< CPU clock counter */
       WALLCLOCK     wallclock;          /**< wall clock counter */
    } data;
-   unsigned int     clocktype:2;        /**< current type of clock used */
-   unsigned int     usedefault:1;       /**< should the clock's type be overruled by the default clock type? */
-   unsigned int     enabled:1;          /**< should the clock be used? */
-   unsigned int     nruns:28;           /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
+   CLOCKTYPE        clocktype;          /**< current type of clock used */
+   Bool             usedefault;         /**< should the clock's type be overruled by the default clock type? */
+   Bool             enabled;            /**< should the clock be used? */
+   int              nruns;              /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
 };
 
 

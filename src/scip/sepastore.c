@@ -30,7 +30,6 @@
 #include "var.h"
 #include "lp.h"
 #include "scip.h"
-#include "cons_linear.h"
 
 
 /** storage for separated cuts
@@ -223,7 +222,6 @@ RETCODE sepastoreAddCut(
 static
 RETCODE sepastoreAddBdchg(
    SEPASTORE*       sepastore,          /**< separation storage */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound,           /**< new bound value */
@@ -292,7 +290,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = lhs/vals[0];
             if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, var, bound, SCIP_BOUNDTYPE_LOWER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_LOWER) );
             }
          }
          else
@@ -301,7 +299,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = lhs/vals[0];
             if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, var, bound, SCIP_BOUNDTYPE_UPPER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_UPPER) );
             }
          }
       }
@@ -317,7 +315,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = rhs/vals[0];
             if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, var, bound, SCIP_BOUNDTYPE_UPPER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_UPPER) );
             }
          }
          else
@@ -326,7 +324,7 @@ RETCODE SCIPsepastoreAddCut(
             bound = rhs/vals[0];
             if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
             {
-               CHECK_OKAY( sepastoreAddBdchg(sepastore, memhdr, set, var, bound, SCIP_BOUNDTYPE_LOWER) );
+               CHECK_OKAY( sepastoreAddBdchg(sepastore, set, var, bound, SCIP_BOUNDTYPE_LOWER) );
             }
          }
       }

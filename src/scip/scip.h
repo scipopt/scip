@@ -2930,7 +2930,8 @@ Real SCIPfrac(
 #define SCIPisFeasPositive(scip, val)    SCIPsetIsFeasPositive((scip)->set, val)    
 #define SCIPisFeasNegative(scip, val)    SCIPsetIsFeasNegative((scip)->set, val)    
                                                                            
-#define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, ((scip)->tree->actnode->depth == 0),act,rhs) 
+#define SCIPisCutViolated(scip, act,rhs) SCIPsetIsCutViolated((scip)->set, \
+                                         (SCIPnodeGetDepth((scip)->tree->actnode) == 0), act, rhs)
                                                                            
 #define SCIPisRelEQ(scip, val1, val2)    SCIPsetIsRelEQ((scip)->set, val1, val2)    
 #define SCIPisRelLT(scip, val1, val2)    SCIPsetIsRelLT((scip)->set, val1, val2)    
@@ -2990,12 +2991,12 @@ void SCIPprintReal(
 #define SCIPduplicateMemoryArray(scip, ptr, source, num) \
                                                 ( (duplicateMemoryArray((ptr), (source), (num)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPfreeMemory(scip,ptr)                freeMemory((ptr))
-#define SCIPfreeMemoryNull(scip,ptr)            freeMemoryNull((ptr))
-#define SCIPfreeMemoryArray(scip,ptr)           freeMemoryArray((ptr))
-#define SCIPfreeMemoryArrayNull(scip,ptr)       freeMemoryArrayNull((ptr))
-#define SCIPfreeMemorySize(scip,ptr)            freeMemorySize((ptr))
-#define SCIPfreeMemorySizeNull(scip,ptr)        freeMemorySizeNull((ptr))
+#define SCIPfreeMemory(scip,ptr)                freeMemory(ptr)
+#define SCIPfreeMemoryNull(scip,ptr)            freeMemoryNull(ptr)
+#define SCIPfreeMemoryArray(scip,ptr)           freeMemoryArray(ptr)
+#define SCIPfreeMemoryArrayNull(scip,ptr)       freeMemoryArrayNull(ptr)
+#define SCIPfreeMemorySize(scip,ptr)            freeMemorySize(ptr)
+#define SCIPfreeMemorySizeNull(scip,ptr)        freeMemorySizeNull(ptr)
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (allocBlockMemory(SCIPmemhdr(scip), (ptr)) == NULL) \
                                                   ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -3027,10 +3028,10 @@ void SCIPprintReal(
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
                                                 freeBlockMemorySizeNull(SCIPmemhdr(scip), (ptr), (size))
 
-#define SCIPcaptureBufferArray(scip,ptr,num)    SCIPcaptureBuffer(scip, (void**)(ptr), (num)*sizeof(**(ptr)))
-#define SCIPreleaseBufferArray(scip,ptr)        SCIPreleaseBuffer(scip, (void**)(ptr), 0*sizeof(**(ptr)))
+#define SCIPcaptureBufferArray(scip,ptr,num)    SCIPcaptureBuffer(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
+#define SCIPreleaseBufferArray(scip,ptr)        SCIPreleaseBuffer(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
 #define SCIPcaptureBufferSize(scip,ptr,size)    SCIPcaptureBuffer(scip, (void**)(ptr), size)
-#define SCIPreleaseBufferSize(scip,ptr)         SCIPreleaseBuffer(scip, (void**)(ptr), 0*sizeof(**(ptr)))
+#define SCIPreleaseBufferSize(scip,ptr)         SCIPreleaseBuffer(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
 
 /** returns block memory to use at the current time */
 extern

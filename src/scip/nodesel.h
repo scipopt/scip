@@ -188,7 +188,6 @@ RETCODE SCIPnodepqBound(
 extern
 RETCODE SCIPnodepqResort(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 

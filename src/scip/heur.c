@@ -218,9 +218,8 @@ RETCODE SCIPheurExec(
       /* heuristic may only be executed on LP nodes: check, if the node is an LP node and a node matching the
        * execution frequency lies between the current node and the last LP node of the path
        */
-      execute = actnodehaslp;
-      execute &= (actdepth == 0 && heur->freq >= 0)
-         || (heur->freq > 0 && (actdepth / heur->freq != lpforkdepth / heur->freq));
+      execute = actnodehaslp
+         && ((actdepth == 0 && heur->freq >= 0) || (heur->freq > 0 && (actdepth / heur->freq != lpforkdepth / heur->freq)));
    }
 
    if( execute )

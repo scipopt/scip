@@ -246,7 +246,7 @@ RETCODE SCIPeventCreateObjChanged(
 {
    assert(event != NULL);
    assert(memhdr != NULL);
-   assert(oldobj != newobj);
+   assert(oldobj != newobj); /*lint !e777*/
 
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
@@ -269,7 +269,7 @@ RETCODE SCIPeventCreateLbChanged(
 {
    assert(event != NULL);
    assert(memhdr != NULL);
-   assert(oldbound != newbound);
+   assert(oldbound != newbound); /*lint !e777*/
 
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
@@ -295,7 +295,7 @@ RETCODE SCIPeventCreateUbChanged(
 {
    assert(event != NULL);
    assert(memhdr != NULL);
-   assert(oldbound != newbound);
+   assert(oldbound != newbound); /*lint !e777*/
 
    /* create event data */
    ALLOC_OKAY( allocBlockMemory(memhdr, event) );
@@ -365,7 +365,7 @@ VAR* SCIPeventGetVar(
 {
    assert(event != NULL);
 
-   switch( event->eventtype )
+   switch( event->eventtype ) /*lint --e{788}*/
    {
    case SCIP_EVENTTYPE_VARCREATED:
       errorMessage("VARCREATED event not implemented yet");
@@ -395,7 +395,7 @@ VAR* SCIPeventGetVar(
 
    default:
       errorMessage("event does not belong to a variable");
-      return NULL;
+      abort();
    }
 }
 
@@ -438,7 +438,7 @@ Real SCIPeventGetOldbound(
 {
    assert(event != NULL);
 
-   switch( event->eventtype )
+   switch( event->eventtype ) /*lint --e{788}*/
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
@@ -448,7 +448,7 @@ Real SCIPeventGetOldbound(
 
    default:
       errorMessage("event is not a bound change event");
-      return SCIP_INVALID;
+      abort();
    }
 }
 
@@ -459,7 +459,7 @@ Real SCIPeventGetNewbound(
 {
    assert(event != NULL);
 
-   switch( event->eventtype )
+   switch( event->eventtype ) /*lint --e{788}*/
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
@@ -469,7 +469,7 @@ Real SCIPeventGetNewbound(
 
    default:
       errorMessage("event is not a bound change event");
-      return SCIP_INVALID;
+      abort();
    }
 }
 
@@ -582,7 +582,7 @@ RETCODE SCIPeventProcess(
       assert(var->eventqueueindexobj == -1);
 
       /* inform tree about the objective change to update the pseudo solution objective value */
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
          CHECK_OKAY( SCIPtreeUpdateVarObj(tree, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
       }
@@ -598,12 +598,12 @@ RETCODE SCIPeventProcess(
       assert(var->eventqueueindexlb == -1);
 
       /* inform LP and tree about bound change */
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         assert(var->probindex >= 0);
-         if( var->varstatus == SCIP_VARSTATUS_COLUMN )
+         assert(SCIPvarGetProbIndex(var) >= 0);
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            CHECK_OKAY( SCIPcolChgLb(var->data.col, set, lp, event->data.eventbdchg.newbound) );
+            CHECK_OKAY( SCIPcolChgLb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
          CHECK_OKAY( SCIPtreeUpdateVarLb(tree, set, var, event->data.eventbdchg.oldbound,
                         event->data.eventbdchg.newbound) );
@@ -621,12 +621,12 @@ RETCODE SCIPeventProcess(
       assert(var->eventqueueindexub == -1);
 
       /* inform LP and tree about bound change */
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       {
-         assert(var->probindex >= 0);
-         if( var->varstatus == SCIP_VARSTATUS_COLUMN )
+         assert(SCIPvarGetProbIndex(var) >= 0);
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
-            CHECK_OKAY( SCIPcolChgUb(var->data.col, set, lp, event->data.eventbdchg.newbound) );
+            CHECK_OKAY( SCIPcolChgUb(SCIPvarGetCol(var), set, lp, event->data.eventbdchg.newbound) );
          }
          CHECK_OKAY( SCIPtreeUpdateVarUb(tree, set, var, event->data.eventbdchg.oldbound, 
                         event->data.eventbdchg.newbound) );
@@ -1049,8 +1049,6 @@ RETCODE eventqueueAppend(
    EVENT**          event               /**< pointer to event to append to the queue */
    )
 {
-   int insertpos;
-
    assert(eventqueue != NULL);
    assert(eventqueue->delayevents);
    assert(event != NULL);
@@ -1134,9 +1132,9 @@ RETCODE SCIPeventqueueAdd(
             assert(SCIPsetIsEQ(set, (*event)->data.eventobjchg.oldobj, qevent->data.eventobjchg.newobj));
 
             debugMessage(" -> merging OBJ event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
-               (*event)->data.eventobjchg.var->name, (*event)->data.eventobjchg.oldobj,
+               SCIPvarGetName((*event)->data.eventobjchg.var), (*event)->data.eventobjchg.oldobj,
                (*event)->data.eventobjchg.newobj,
-               pos, qevent->data.eventobjchg.var->name, qevent->data.eventobjchg.oldobj, 
+               pos, SCIPvarGetName(qevent->data.eventobjchg.var), qevent->data.eventobjchg.oldobj, 
                qevent->data.eventobjchg.newobj);
 
             qevent->data.eventobjchg.newobj = (*event)->data.eventobjchg.newobj;
@@ -1176,9 +1174,9 @@ RETCODE SCIPeventqueueAdd(
             assert(SCIPsetIsEQ(set, (*event)->data.eventbdchg.oldbound, qevent->data.eventbdchg.newbound));
 
             debugMessage(" -> merging LB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
-               (*event)->data.eventbdchg.var->name, (*event)->data.eventbdchg.oldbound,
+               SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
-               pos, qevent->data.eventbdchg.var->name, qevent->data.eventbdchg.oldbound, 
+               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound, 
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
@@ -1223,9 +1221,9 @@ RETCODE SCIPeventqueueAdd(
             assert(SCIPsetIsEQ(set, (*event)->data.eventbdchg.oldbound, qevent->data.eventbdchg.newbound));
 
             debugMessage(" -> merging UB event (<%s>,%g -> %g) with event at position %d (<%s>,%g -> %g)\n",
-               (*event)->data.eventbdchg.var->name, (*event)->data.eventbdchg.oldbound,
+               SCIPvarGetName((*event)->data.eventbdchg.var), (*event)->data.eventbdchg.oldbound,
                (*event)->data.eventbdchg.newbound,
-               pos, qevent->data.eventbdchg.var->name, qevent->data.eventbdchg.oldbound,
+               pos, SCIPvarGetName(qevent->data.eventbdchg.var), qevent->data.eventbdchg.oldbound,
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;

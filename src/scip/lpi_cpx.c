@@ -677,7 +677,8 @@ RETCODE SCIPlpiCreate(
 {
    int     restat;
 
-   assert(sizeof(Real) == sizeof(double));   /* CPLEX only works with doubles as floating points */
+   assert(sizeof(Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */
+   assert(sizeof(Bool) == sizeof(int));    /* CPLEX only works with ints as bools */
    assert(lpi != NULL);
    assert(numlp >= 0);
 

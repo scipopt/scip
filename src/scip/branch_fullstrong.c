@@ -75,6 +75,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    /* search the full strong candidate */
    bestscore = -SCIPinfinity(scip);
    bestcand = -1;
+   bestdown = 0.0;
+   bestup = 0.0;
    for( i = 0; i < nlpcands && *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM; ++i )
    {
       assert(lpcands[i] != NULL);
@@ -145,7 +147,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
       }
-      debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
+      debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", lpcands[bestcand]->name, SCIPceil(scip, lpcandssol[bestcand]));
@@ -155,7 +157,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
       }
-      debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
+      debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
 
 #if 0
       /* perform the branching */

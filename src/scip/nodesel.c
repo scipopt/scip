@@ -108,14 +108,14 @@ void nodepqUpdateLowerbound(
 
    assert(nodepq->nlowerbounds > 0 || nodepq->lowerboundnode == NULL);
    debugMessage("update queue's lower bound after adding node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
-      node, node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds,
-      nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? nodepq->lowerboundnode->lowerbound : 0.0);
+      node, SCIPnodeGetLowerbound(node), nodepq->lowerbound, nodepq->nlowerbounds,
+      nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? SCIPnodeGetLowerbound(nodepq->lowerboundnode) : 0.0);
    if( nodepq->validlowerbound )
    {
       assert(nodepq->lowerbound < SCIP_INVALID);
-      if( SCIPsetIsLE(set, node->lowerbound, nodepq->lowerbound) )
+      if( SCIPsetIsLE(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
       {
-         if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
+         if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
          {
             assert(nodepq->nlowerbounds >= 1);
             nodepq->nlowerbounds++;
@@ -123,7 +123,7 @@ void nodepqUpdateLowerbound(
          else
          {
             nodepq->lowerboundnode = node;
-            nodepq->lowerbound = node->lowerbound;
+            nodepq->lowerbound = SCIPnodeGetLowerbound(node);
             nodepq->nlowerbounds = 1;
          }
       }
@@ -143,7 +143,6 @@ void nodepqCalcLowerbound(
    const SET*       set                 /**< global SCIP settings */
    )
 {
-   NODE* node;
    int i;
 
    assert(nodepq != NULL);
@@ -211,7 +210,7 @@ RETCODE SCIPnodepqFree(
    for( i = 0; i < (*nodepq)->len; ++i )
    {
       assert((*nodepq)->slots[i] != NULL);
-      assert((*nodepq)->slots[i]->nodetype == SCIP_NODETYPE_LEAF);
+      assert(SCIPnodeGetType((*nodepq)->slots[i]) == SCIP_NODETYPE_LEAF);
       CHECK_OKAY( SCIPnodeFree(&(*nodepq)->slots[i], memhdr, set, tree, lp) );
    }
    
@@ -247,7 +246,7 @@ RETCODE SCIPnodepqInsert(
    /* insert node as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = nodepq->len;
    nodepq->len++;
-   nodepq->lowerboundsum += node->lowerbound;
+   nodepq->lowerboundsum += SCIPnodeGetLowerbound(node);
    while( pos > 0 && nodesel->nodeselcomp(scip, nodesel, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
    {
       nodepq->slots[pos] = nodepq->slots[PQ_PARENT(pos)];
@@ -303,12 +302,12 @@ Bool nodepqDelPos(
          NODE* node;
          
          node = nodepq->slots[rempos];
-         assert(SCIPsetIsGE(set, node->lowerbound, nodepq->lowerbound));
+         assert(SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound));
          
          debugMessage("update queue's lower bound after removal of node %p: nodebound=%g, queuebound=%g, nlowerbounds=%d, lowerboundnode=%p (bound=%g)\n",
-            node, node->lowerbound, nodepq->lowerbound, nodepq->nlowerbounds, 
-            nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? nodepq->lowerboundnode->lowerbound : 0.0);
-         if( SCIPsetIsEQ(set, node->lowerbound, nodepq->lowerbound) )
+            node, SCIPnodeGetLowerbound(node), nodepq->lowerbound, nodepq->nlowerbounds, 
+            nodepq->lowerboundnode, nodepq->lowerboundnode != NULL ? SCIPnodeGetLowerbound(nodepq->lowerboundnode) : 0.0);
+         if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(node), nodepq->lowerbound) )
          {
             nodepq->nlowerbounds--;
             if( nodepq->nlowerbounds == 0 )
@@ -333,7 +332,7 @@ Bool nodepqDelPos(
     * if the last node of the queue is not better than the parent of the free slot:
     *  - move the better child to the free slot until the last node can be placed in the free slot
     */
-   nodepq->lowerboundsum -= nodepq->slots[rempos]->lowerbound;
+   nodepq->lowerboundsum -= SCIPnodeGetLowerbound(nodepq->slots[rempos]);
    freepos = rempos;
    lastnode = nodepq->slots[nodepq->len-1];
    nodepq->len--;
@@ -420,7 +419,7 @@ RETCODE SCIPnodepqRemove(
       return SCIP_INVALIDDATA;
    }
 
-   nodepqDelPos(nodepq, set, pos);
+   (void)nodepqDelPos(nodepq, set, pos);
 
    return SCIP_OKAY;
 }
@@ -478,7 +477,7 @@ Real SCIPnodepqGetLowerbound(
       if( nodepq->len > 0 )
       {
          assert(nodepq->slots[0] != NULL);
-         return nodepq->slots[0]->lowerbound;
+         return SCIPnodeGetLowerbound(nodepq->slots[0]);
       }
       else
          return set->infinity;
@@ -529,7 +528,7 @@ NODE* SCIPnodepqGetLowerboundNode(
       
       assert(nodepq->validlowerbound);
       assert(nodepq->lowerbound < SCIP_INVALID);
-      assert(nodepq->lowerbound == set->infinity || nodepq->lowerboundnode != NULL);
+      assert(nodepq->lowerbound == set->infinity || nodepq->lowerboundnode != NULL); /*lint !e777*/
 
       return nodepq->lowerboundnode;
    }
@@ -568,18 +567,18 @@ RETCODE SCIPnodepqBound(
       assert(pos < nodepq->len);
       node = nodepq->slots[pos];
       assert(node != NULL);
-      assert(node->nodetype == SCIP_NODETYPE_LEAF);
-      if( SCIPsetIsGE(set, node->lowerbound, upperbound) )
+      assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
+      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), upperbound) )
       {
          debugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
-            pos, nodepq->len, node->depth, node->lowerbound);
+            pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
          /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
           * lower bound than the cut off value
           */
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, nodepq->slots[PQ_LEFTCHILD(pos)]->lowerbound, upperbound));
+            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), upperbound));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, nodepq->slots[PQ_RIGHTCHILD(pos)]->lowerbound, upperbound));
+            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), upperbound));
 
          /* free the slot in the node PQ */
          parentfelldown = nodepqDelPos(nodepq, set, pos);
@@ -606,7 +605,6 @@ RETCODE SCIPnodepqBound(
 /** resorts the priority queue (necessary for changes in node selector) */
 RETCODE SCIPnodepqResort(
    NODEPQ**         nodepq,             /**< pointer to a node priority queue */
-   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {

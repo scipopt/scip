@@ -29,18 +29,8 @@
 #include "message.h"
 
 
-/** gets clock type to use for the given clock */
-static
-CLOCKTYPE clockGetType(
-   CLOCK*           clock,              /**< clock timer */
-   CLOCKTYPE        defaultclocktype    /**< default type of clock to use */
-   )
-{
-   assert(clock != NULL);
-   assert(defaultclocktype != SCIP_CLOCKTYPE_DEFAULT);
-
-   return clock->usedefault ? defaultclocktype : clock->clocktype;
-}
+/*lint -esym(*,timeval)*/
+/*lint -esym(*,gettimeofday)*/
 
 /** sets the clock's type and converts the clock timer accordingly */
 static
@@ -207,7 +197,7 @@ void SCIPclockStart(
 
       if( clock->nruns == 0 )
       {
-         struct timeval tp;
+         struct timeval tp; /*lint !e86*/
          struct tms now;
          
          debugMessage("starting clock %p (type %d, usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
@@ -215,24 +205,25 @@ void SCIPclockStart(
          switch( clock->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
-            times(&now);
+            (void)times(&now);
             clock->data.cpuclock.user -= now.tms_utime;
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
             gettimeofday(&tp, NULL);
-            if( tp.tv_usec > clock->data.wallclock.usec )
+            if( tp.tv_usec > clock->data.wallclock.usec ) /*lint !e115 !e40*/
             {
-               clock->data.wallclock.sec -= (tp.tv_sec + 1);
-               clock->data.wallclock.usec += (1000000 - tp.tv_usec);
+               clock->data.wallclock.sec -= (tp.tv_sec + 1); /*lint !e115 !e40*/
+               clock->data.wallclock.usec += (1000000 - tp.tv_usec); /*lint !e115 !e40*/
             }
             else
             {
-               clock->data.wallclock.sec -= tp.tv_sec;
-               clock->data.wallclock.usec -= tp.tv_usec;
+               clock->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
+               clock->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
             }
             break;
 
+         case SCIP_CLOCKTYPE_DEFAULT:            
          default:
             errorMessage("invalid clock type");
             abort();
@@ -258,7 +249,7 @@ void SCIPclockStop(
       clock->nruns--;
       if( clock->nruns == 0 )
       {
-         struct timeval tp;
+         struct timeval tp; /*lint !e86*/
          struct tms now;
          
          debugMessage("stopping clock %p (type %d, usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
@@ -266,24 +257,25 @@ void SCIPclockStop(
          switch( clock->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
-            times(&now);
+            (void)times(&now);
             clock->data.cpuclock.user += now.tms_utime;
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
             gettimeofday(&tp, NULL);
-            if( tp.tv_usec + clock->data.wallclock.usec > 1000000 )
+            if( tp.tv_usec + clock->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
             {
-               clock->data.wallclock.sec += (tp.tv_sec + 1);
-               clock->data.wallclock.usec -= (1000000 - tp.tv_usec);
+               clock->data.wallclock.sec += (tp.tv_sec + 1); /*lint !e115 !e40*/
+               clock->data.wallclock.usec -= (1000000 - tp.tv_usec); /*lint !e115 !e40*/
             }
             else
             {
-               clock->data.wallclock.sec += tp.tv_sec;
-               clock->data.wallclock.usec += tp.tv_usec;
+               clock->data.wallclock.sec += tp.tv_sec; /*lint !e115 !e40*/
+               clock->data.wallclock.usec += tp.tv_usec; /*lint !e115 !e40*/
             }
             break;
 
+         case SCIP_CLOCKTYPE_DEFAULT:
          default:
             errorMessage("invalid clock type");
             abort();
@@ -335,7 +327,7 @@ void sec2cputime(
 #else
    clocks_per_second = CLK_TCK;
 #endif
-   *cputime = sec * clocks_per_second;
+   *cputime = (clock_t)(sec * clocks_per_second);
 }
 
 /** converts wall clock time into seconds */
@@ -384,25 +376,26 @@ Real SCIPclockGetTime(
    }
    else
    {
-      struct timeval tp;
+      struct timeval tp; /*lint !e86*/
       struct tms now;
          
       /* the clock is currently running: we have to add the actual time to the clocks timer */
       switch( clock->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
-         times(&now);
+         (void)times(&now);
          return cputime2sec(clock->data.cpuclock.user + now.tms_utime);
 
       case SCIP_CLOCKTYPE_WALL:            
          gettimeofday(&tp, NULL);
-         if( tp.tv_usec + clock->data.wallclock.usec > 1000000 )
-            return walltime2sec(clock->data.wallclock.sec + tp.tv_sec + 1, 
-               clock->data.wallclock.usec - 1000000 + tp.tv_usec);
+         if( tp.tv_usec + clock->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
+            return walltime2sec(clock->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
+               (clock->data.wallclock.usec - 1000000) + tp.tv_usec); /*lint !e115 !e40*/
          else
-            return walltime2sec(clock->data.wallclock.sec + tp.tv_sec, 
-               clock->data.wallclock.usec + tp.tv_usec);
+            return walltime2sec(clock->data.wallclock.sec + tp.tv_sec, /*lint !e115 !e40*/
+               clock->data.wallclock.usec + tp.tv_usec); /*lint !e115 !e40*/
 
+      case SCIP_CLOCKTYPE_DEFAULT:
       default:
          errorMessage("invalid clock type");
          abort();
@@ -435,6 +428,7 @@ void SCIPclockSetTime(
       sec2walltime(sec, &clock->data.wallclock.sec, &clock->data.wallclock.usec);
       break;
       
+   case SCIP_CLOCKTYPE_DEFAULT:
    default:
       errorMessage("invalid clock type");
       abort();
@@ -442,31 +436,32 @@ void SCIPclockSetTime(
    
    if( clock->nruns >= 1 )
    {
-      struct timeval tp;
+      struct timeval tp; /*lint !e86*/
       struct tms now;
          
       /* the clock is currently running: we have to subtract the actual time from the new timer value */
       switch( clock->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
-         times(&now);
+         (void)times(&now);
          clock->data.cpuclock.user -= now.tms_utime;
          break;
 
       case SCIP_CLOCKTYPE_WALL:            
          gettimeofday(&tp, NULL);
-         if( tp.tv_usec > clock->data.wallclock.usec )
+         if( tp.tv_usec > clock->data.wallclock.usec ) /*lint !e115 !e40*/
          {
-            clock->data.wallclock.sec -= (tp.tv_sec + 1);
-            clock->data.wallclock.usec += (1000000 - tp.tv_usec);
+            clock->data.wallclock.sec -= (tp.tv_sec + 1); /*lint !e115 !e40*/
+            clock->data.wallclock.usec += (1000000 - tp.tv_usec); /*lint !e115 !e40*/
          }
          else
          {
-            clock->data.wallclock.sec -= tp.tv_sec;
-            clock->data.wallclock.usec -= tp.tv_usec;
+            clock->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
+            clock->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
          }
          break;
 
+      case SCIP_CLOCKTYPE_DEFAULT:
       default:
          errorMessage("invalid clock type");
          abort();

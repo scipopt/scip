@@ -102,7 +102,7 @@ struct Set
    int              ndisps;             /**< number of display columns */
    int              dispssize;          /**< size of disps array */
 
-   int              verblevel;          /**< verbosity level of output */
+   VERBLEVEL        verblevel;          /**< verbosity level of output */
    Bool             catchctrlc;         /**< should the CTRL-C interrupt be catched by SCIP? */
    Real             infinity;           /**< values larger than this are considered infinity */
    Real             epsilon;            /**< absolute values smaller than this are considered zero */
@@ -142,7 +142,7 @@ struct Set
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
-   int              clocktype;          /**< default clock type to use */
+   CLOCKTYPE        clocktype;          /**< default clock type to use */
    Bool             clocksenabled;      /**< is timing enabled? */
 };
 
@@ -958,7 +958,7 @@ Real SCIPsetFrac(
 
 
 #define SCIPsetCaptureBufferArray(set,ptr,num)   ( SCIPbufferCapture((set)->buffer, set, (void**)(ptr), \
-                                                   (num)*sizeof(**(ptr))) )
+                                                   (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReleaseBufferArray(set,ptr)       ( SCIPbufferRelease((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
 #define SCIPsetCaptureBufferSize(set,ptr,size)   ( SCIPbufferCapture((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetReleaseBufferSize(set,ptr)        ( SCIPbufferRelease((set)->buffer, (void**)(ptr), 0) )

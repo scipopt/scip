@@ -30,7 +30,9 @@
 #include "message.h"
 #include "memory.h"
 
+#ifndef MAXSTRLEN
 #define MAXSTRLEN 1024
+#endif
 
 
 
@@ -77,7 +79,7 @@ memListAdd(void *ptr, size_t size, const char *filename, int line)
    list->line = line;
    list->next = memlist;
    memlist = list;
-   memused += size;
+   memused += (long)size;
 }
 
 static void
@@ -95,7 +97,7 @@ memListRemove(void *ptr, const char *filename, int line)
    if( list != NULL && ptr == list->ptr )
    {
       *listptr = list->next;
-      memused -= list->size;
+      memused -= (long)list->size;
       free(list->filename);
       free(list);
    }
@@ -132,7 +134,7 @@ memoryDiagnostic(void)
    {
       printf("%12p %8ld %s:%d\n", list->ptr, (long) (list->size),
 	 list->filename, list->line);
-      used += list->size;
+      used += (long)list->size;
       list = list->next;
    }
    printf("Total:    %8ld\n", memused);
@@ -757,11 +759,11 @@ createChunk(BLKHDR * blk)
    /* add new memory to the lazy free list */
    for( i = 0; i < newchunk->storeSize - 1; ++i )
    {
-      freeList = (FREELIST *) ((char *) (newchunk->store) + i * blk->elemSize);
-      freeList->next = (FREELIST *) ((char *) (newchunk->store) + (i + 1) * blk->elemSize);
+      freeList = (FREELIST *) ((char *) (newchunk->store) + i * blk->elemSize); /*lint !e826*/
+      freeList->next = (FREELIST *) ((char *) (newchunk->store) + (i + 1) * blk->elemSize); /*lint !e826*/
    }
 
-   freeList = (FREELIST *) ((char *) (newchunk->store) + (newchunk->storeSize - 1) * blk->elemSize);
+   freeList = (FREELIST *) ((char *) (newchunk->store) + (newchunk->storeSize - 1) * blk->elemSize); /*lint !e826*/
    freeList->next = blk->lazyFree;
    blk->lazyFree = (FREELIST *) (newchunk->store);
    blk->lazyFreeSize += newchunk->storeSize;
@@ -959,8 +961,6 @@ clearBlock(BLKHDR * blk)
 static void
 destroyBlock(BLKHDR * blk)
 {
-   int i;
-
    assert(blk != NULL);
 
    clearBlock(blk);
@@ -1073,8 +1073,8 @@ freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
 static int
 getHashNumber(int size)
 {
-   assert(size % ALIGNMENT == 0);
-   return ((size / ALIGNMENT) % BLOCKHASH_SIZE);
+   assert(size % (int)ALIGNMENT == 0);
+   return ((size / (int)ALIGNMENT) % BLOCKHASH_SIZE);
 }
 
 /*-----------------------------------------------------------------------------
@@ -1183,7 +1183,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
 
    /* calculate hash number of given size */
    alignSize(&size);
-   hashNumber = getHashNumber(size);
+   hashNumber = getHashNumber((int)size);
 
    /* find correspoding block header */
    blkptr = &(mem->blockhash[hashNumber]);
@@ -1193,7 +1193,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
    /* create new block header if necessary */
    if( *blkptr == NULL )
    {
-      *blkptr = createBlock(mem, size);
+      *blkptr = createBlock(mem, (int)size);
       if( *blkptr == NULL )
       {
 	 errorMessage_call("Error! Insufficient memory for block header.", filename, line);
@@ -1338,7 +1338,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
    {
       /* calculate hash number of given size */
       alignSize(&size);
-      hashNumber = getHashNumber(size);
+      hashNumber = getHashNumber((int)size);
 
       debugMessage("[%s:%4d] free    %8ld bytes in %p\n", filename, line, (long)size, *ptr );
       /* find correspoding block header */
@@ -1509,7 +1509,6 @@ blockMemoryCheckEmpty(MEMHDR *mem)
 	 CHKHDR *chk;
 	 int     numChunks = 0;
 	 int     numElems = 0;
-	 int     numEagerChunks = 0;
 	 int     numEagerElems = 0;
 
          for( c = 0; c < blk->numChunks; ++c )
@@ -1521,10 +1520,7 @@ blockMemoryCheckEmpty(MEMHDR *mem)
 	    numChunks++;
 	    numElems += chk->storeSize;
 	    if( chk->eagerFree != NULL )
-	    {
-	       numEagerChunks++;
 	       numEagerElems += chk->eagerFreeSize;
-	    }
 	 }
 
 	 assert(numChunks == blk->numChunks);
@@ -1538,8 +1534,8 @@ blockMemoryCheckEmpty(MEMHDR *mem)
 
             if( numElems != numEagerElems + blk->lazyFreeSize )
                printf("%ld bytes (%d elements of size %ld) not freed. First Allocator: %s:%d\n",
-                  (numElems - numEagerElems - blk->lazyFreeSize) * (long) (blk->elemSize),
-                  numElems - numEagerElems - blk->lazyFreeSize, (long) (blk->elemSize),
+                  ((numElems - numEagerElems) - blk->lazyFreeSize) * (long) (blk->elemSize),
+                  (numElems - numEagerElems) - blk->lazyFreeSize, (long) (blk->elemSize),
                   blk->filename, blk->line);
 	 }
 	 blk = blk->next;

@@ -23,7 +23,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
-#include <limits.h>
 
 #include "sol.h"
 
@@ -46,8 +45,8 @@ struct Sol
    Real             obj;                /**< objective value of solution */
    Real             time;               /**< clock time, when the solution was discovered */
    Longint          nodenum;            /**< last node number, where this solution was modified */
-   unsigned int     solorigin:2;        /**< origin of solution: where to retrieve uncached elements */
-   unsigned int     depth:16;           /**< depth at which the solution was found */
+   SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
+   int              depth;              /**< depth at which the solution was found */
 };
 
 
@@ -75,7 +74,7 @@ RETCODE SCIPsolCreate(
    (*sol)->time = SCIPclockGetTime(stat->solvingtime);
    (*sol)->nodenum = stat->nnodes;
    (*sol)->solorigin = SCIP_SOLORIGIN_ZERO;
-   (*sol)->depth = (tree->actnode != NULL ? tree->actnode->depth : -1);
+   (*sol)->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    debugMessage("created empty solution %p\n", *sol);
 
@@ -91,7 +90,7 @@ RETCODE SCIPsolCopy(
 {
    assert(sol != NULL);
    assert(sourcesol != NULL);
-   assert((sourcesol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sourcesol->valid != NULL));
+   assert((sourcesol->solorigin == SCIP_SOLORIGIN_ZERO) == (sourcesol->valid == NULL));
 
    debugMessage("copying solution %p\n", sourcesol);
 
@@ -191,7 +190,7 @@ RETCODE SCIPsolFree(
 {
    assert(sol != NULL);
    assert(*sol != NULL);
-   assert(((*sol)->solorigin == SCIP_SOLORIGIN_ZERO) ^ ((*sol)->valid != NULL));
+   assert(((*sol)->solorigin == SCIP_SOLORIGIN_ZERO) == ((*sol)->valid == NULL));
 
    CHECK_OKAY( SCIPrealarrayFree(&(*sol)->vals) );
    if( (*sol)->solorigin != SCIP_SOLORIGIN_ZERO )
@@ -222,7 +221,7 @@ RETCODE SCIPsolLinkLPSol(
    debugMessage("linking solution to LP\n");
 
    /* clear the old solution */
-   SCIPrealarrayClear(sol->vals);
+   CHECK_OKAY( SCIPrealarrayClear(sol->vals) );
    if( sol->solorigin == SCIP_SOLORIGIN_ZERO )
    {
       assert(sol->valid == NULL);
@@ -231,7 +230,7 @@ RETCODE SCIPsolLinkLPSol(
    else
    {
       assert(sol->valid != NULL);
-      SCIPboolarrayClear(sol->valid);
+      CHECK_OKAY( SCIPboolarrayClear(sol->valid) );
    }
 
    /* link solution to LP solution */
@@ -239,7 +238,7 @@ RETCODE SCIPsolLinkLPSol(
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
-   sol->depth = (tree->actnode != NULL ? tree->actnode->depth : -1);
+   sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    debugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -262,7 +261,7 @@ RETCODE SCIPsolLinkPseudoSol(
    debugMessage("linking solution to pseudo solution\n");
 
    /* clear the old solution */
-   SCIPrealarrayClear(sol->vals);
+   CHECK_OKAY( SCIPrealarrayClear(sol->vals) );
    if( sol->solorigin == SCIP_SOLORIGIN_ZERO )
    {
       assert(sol->valid == NULL);
@@ -271,7 +270,7 @@ RETCODE SCIPsolLinkPseudoSol(
    else
    {
       assert(sol->valid != NULL);
-      SCIPboolarrayClear(sol->valid);
+      CHECK_OKAY( SCIPboolarrayClear(sol->valid) );
    }
 
    /* link solution to pseudo solution */
@@ -279,7 +278,7 @@ RETCODE SCIPsolLinkPseudoSol(
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
-   sol->depth = (tree->actnode != NULL ? tree->actnode->depth : -1);
+   sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    debugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -320,11 +319,11 @@ RETCODE SCIPsolClear(
    )
 {
    assert(sol != NULL);
-   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sol->valid != NULL));
+   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
    assert(stat != NULL);
    assert(tree != NULL);
 
-   SCIPrealarrayClear(sol->vals);
+   CHECK_OKAY( SCIPrealarrayClear(sol->vals) );
    sol->obj = 0.0;
    if( sol->solorigin != SCIP_SOLORIGIN_ZERO )
    {
@@ -333,7 +332,7 @@ RETCODE SCIPsolClear(
    }
    sol->time = SCIPclockGetTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
-   sol->depth = (tree->actnode != NULL ? tree->actnode->depth : -1);
+   sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
 
    return SCIP_OKAY;
 }
@@ -347,9 +346,9 @@ RETCODE solUnlinkVar(
    )
 {
    assert(sol != NULL);
-   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sol->valid != NULL));
+   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
    assert(var != NULL);
-   assert(var->varstatus == SCIP_VARSTATUS_COLUMN || var->varstatus == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
    switch( sol->solorigin )
    {
@@ -357,22 +356,22 @@ RETCODE solUnlinkVar(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
-      /*debugMessage("completing variable <%s> in LP solution %p\n", var->name, sol);*/
-      if( !SCIPboolarrayGetVal(sol->valid, var->index) )
+      /*debugMessage("completing variable <%s> in LP solution %p\n", SCIPvarGetName(var), sol);*/
+      if( !SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
       {
-         assert(SCIPrealarrayGetVal(sol->vals, var->index) == 0.0);
-         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, SCIPvarGetLPSol(var)) );
-         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, var->index, TRUE) );
+         assert(SCIPrealarrayGetVal(sol->vals, SCIPvarGetIndex(var)) == 0.0);
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, SCIPvarGetIndex(var), SCIPvarGetLPSol(var)) );
+         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, SCIPvarGetIndex(var), TRUE) );
       }
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
-      /*debugMessage("completing variable <%s> in pseudo solution %p\n", var->name, sol);*/
-      if( !SCIPboolarrayGetVal(sol->valid, var->index) )
+      /*debugMessage("completing variable <%s> in pseudo solution %p\n", SCIPvarGetName(var), sol);*/
+      if( !SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
       {
-         assert(SCIPrealarrayGetVal(sol->vals, var->index) == 0.0);
-         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, SCIPvarGetPseudoSol(var)) );
-         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, var->index, TRUE) );
+         assert(SCIPrealarrayGetVal(sol->vals, SCIPvarGetIndex(var)) == 0.0);
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, SCIPvarGetIndex(var), SCIPvarGetPseudoSol(var)) );
+         CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, SCIPvarGetIndex(var), TRUE) );
       }
       return SCIP_OKAY;
 
@@ -392,7 +391,7 @@ RETCODE SCIPsolUnlink(
    int v;
 
    assert(sol != NULL);
-   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sol->valid != NULL));
+   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
 
    if( sol->solorigin != SCIP_SOLORIGIN_ZERO )
    {
@@ -424,30 +423,30 @@ RETCODE SCIPsolSetVal(
    Real oldval;
 
    assert(sol != NULL);
-   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sol->valid != NULL));
+   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
    assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || sol->nodenum == stat->nnodes);
    assert(stat != NULL);
    assert(tree != NULL);
    assert(var != NULL);
 
-   debugMessage("setting value of <%s> in solution %p to %g\n", var->name, sol, val);
+   debugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), sol, val);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      return SCIPsolSetVal(sol, set, stat, tree, var->data.transvar, val);
+      return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var, &oldval) );
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, var->index, val) );
-         sol->obj += var->obj * (val - oldval);
+         CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, SCIPvarGetIndex(var), val) );
+         sol->obj += SCIPvarGetObj(var) * (val - oldval);
          sol->time = SCIPclockGetTime(stat->solvingtime);
          sol->nodenum = stat->nnodes;
-         sol->depth = (tree->actnode != NULL ? tree->actnode->depth : -1);
+         sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
       }
       return SCIP_OKAY;
 
@@ -456,16 +455,16 @@ RETCODE SCIPsolSetVal(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      return SCIPsolSetVal(sol, set, stat, tree, var->data.aggregate.var,
-         (val - var->data.aggregate.constant)/var->data.aggregate.scalar);
+      assert(!SCIPsetIsZero(set, SCIPvarGetAggrScalar(var)));
+      return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetAggrVar(var),
+         (val - SCIPvarGetAggrConstant(var))/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("cannot set solution value for multiple aggregated variable");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPsolSetVal(sol, set, stat, tree, var->negatedvar, var->data.negate.constant - val);
+      return SCIPsolSetVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), SCIPvarGetNegationConstant(var) - val);
       
    default:
       errorMessage("unknown variable status");
@@ -484,31 +483,31 @@ RETCODE SCIPsolIncVal(
    )
 {
    assert(sol != NULL);
-   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sol->valid != NULL));
+   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
    assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || sol->nodenum == stat->nnodes);
    assert(stat != NULL);
    assert(tree != NULL);
    assert(var != NULL);
 
-   debugMessage("increasing value of <%s> in solution %p by %g\n", var->name, sol, incval);
+   debugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), sol, incval);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      return SCIPsolIncVal(sol, set, stat, tree, var->data.transvar, incval);
+      return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetTransVar(var), incval);
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       CHECK_OKAY( solUnlinkVar(sol, set, var) );
-      CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, var->index, incval) );
-      sol->obj += var->obj * incval;
+      CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, SCIPvarGetIndex(var), incval) );
+      sol->obj += SCIPvarGetObj(var) * incval;
       sol->time = SCIPclockGetTime(stat->solvingtime);
       sol->nodenum = stat->nnodes;
-      sol->depth = (tree->actnode != NULL ? tree->actnode->depth : -1);
+      sol->depth = (tree->actnode != NULL ? SCIPnodeGetDepth(tree->actnode) : -1);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -516,15 +515,15 @@ RETCODE SCIPsolIncVal(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      return SCIPsolIncVal(sol, set, stat, tree, var->data.aggregate.var, incval/var->data.aggregate.scalar);
+      assert(!SCIPsetIsZero(set, SCIPvarGetAggrScalar(var)));
+      return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetAggrVar(var), incval/SCIPvarGetAggrScalar(var));
 
    case SCIP_VARSTATUS_MULTAGGR:
       errorMessage("cannot set solution value for multiple aggregated variable");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPsolIncVal(sol, set, stat, tree, var->negatedvar, -incval);
+      return SCIPsolIncVal(sol, set, stat, tree, SCIPvarGetNegationVar(var), -incval);
 
    default:
       errorMessage("unknown variable status");
@@ -541,55 +540,61 @@ RETCODE SCIPsolGetVal(
    Real*            solval              /**< pointer to store the solution value */
    )
 {
+   VAR** vars;
+   Real* scalars;
    Real val;
+   int nvars;
    int i;
 
    assert(sol != NULL);
-   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) ^ (sol->valid != NULL));
+   assert((sol->solorigin == SCIP_SOLORIGIN_ZERO) == (sol->valid == NULL));
    assert(sol->solorigin == SCIP_SOLORIGIN_ZERO || sol->nodenum == stat->nnodes);
    assert(var != NULL);
    assert(solval != NULL);
 
-   /*debugMessage("getting value of <%s> in solution %p\n", var->name, sol);*/
+   /*debugMessage("getting value of <%s> in solution %p\n", SCIPvarGetName(var), sol);*/
 
    /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
-   switch( var->varstatus )
+   switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.transvar, solval) );
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, SCIPvarGetTransVar(var), solval) );
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       CHECK_OKAY( solUnlinkVar(sol, set, var) );
-      *solval = SCIPrealarrayGetVal(sol->vals, var->index);
+      *solval = SCIPrealarrayGetVal(sol->vals, SCIPvarGetIndex(var));
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->glbdom.lb == var->glbdom.ub);
-      assert(var->actdom.lb == var->actdom.ub);
-      assert(var->glbdom.lb == var->actdom.lb);
-      *solval = var->glbdom.lb;
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
+      *solval = SCIPvarGetLbGlobal(var);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.aggregate.var, solval) );
-      (*solval) *= var->data.aggregate.scalar;
-      (*solval) += var->data.aggregate.constant;
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var), solval) );
+      (*solval) *= SCIPvarGetAggrScalar(var);
+      (*solval) += SCIPvarGetAggrConstant(var);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      *solval = var->data.multaggr.constant;
-      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      nvars = SCIPvarGetMultaggrNVars(var);
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalars(var);
+      *solval = SCIPvarGetMultaggrConstant(var);
+      for( i = 0; i < nvars; ++i )
       {
-         CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->data.multaggr.vars[i], &val) );
-         (*solval) += var->data.multaggr.scalars[i] * val;
+         CHECK_OKAY( SCIPsolGetVal(sol, set, stat, vars[i], &val) );
+         (*solval) += scalars[i] * val;
       }
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_NEGATED:
-      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, var->negatedvar, solval) );
-      (*solval) = var->data.negate.constant - (*solval);
+      CHECK_OKAY( SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var), solval) );
+      (*solval) = SCIPvarGetNegationConstant(var) - (*solval);
       return SCIP_OKAY;
 
    default:
@@ -622,7 +627,7 @@ RETCODE SCIPsolCheck(
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
       CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], memhdr, set, prob, sol, chckintegrality, chcklprows, &result) );
-      *feasible &= (result == SCIP_FEASIBLE);
+      *feasible = *feasible && (result == SCIP_FEASIBLE);
    }
 
    return SCIP_OKAY;

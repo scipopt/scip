@@ -47,7 +47,7 @@
 
 /* Dynamic Memory */
 
-#define SCIP_DEFAULT_MEMLIMIT           -1 /**< maximal memory usage (-1: no limit) */
+#define SCIP_DEFAULT_MEMLIMIT         -1LL /**< maximal memory usage (-1: no limit) */
 #define SCIP_DEFAULT_MEMSAVEFAC        0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
 #define SCIP_DEFAULT_MEMGROWFAC        1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEMGROWINIT         4 /**< initial size of dynamically allocated arrays */
@@ -104,7 +104,7 @@
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT          -1 /**< maximal number of nodes to process (-1: no limit) */
+#define SCIP_DEFAULT_NODELIMIT        -1LL /**< maximal number of nodes to process (-1: no limit) */
 
 
 /* Display */
@@ -277,10 +277,11 @@ RETCODE SCIPsetCreate(
    (*set)->dispssize = 0;
 
    /* SCIP parameters */
+   assert(sizeof(int) == sizeof(VERBLEVEL));
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global/display/verblevel",
                   "verbosity level of output",
-                  &(*set)->verblevel, SCIP_DEFAULT_VERBLEVEL, SCIP_VERBLEVEL_NONE, SCIP_VERBLEVEL_FULL,
+                  (int*)&(*set)->verblevel, (int)SCIP_DEFAULT_VERBLEVEL, (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
                   "global/display/dispwidth",
@@ -430,7 +431,7 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
                   "global/limits/nodelimit",
                   "maximal number of nodes to process (-1: no limit)",
-                  &(*set)->nodelimit, SCIP_DEFAULT_NODELIMIT, -1, LONGINT_MAX,
+                  &(*set)->nodelimit, SCIP_DEFAULT_NODELIMIT, -1LL, LONGINT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "global/limits/timelimit",
@@ -440,7 +441,7 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddLongintParam(*set, memhdr,
                   "global/limits/memlimit",
                   "maximal memory usage (-1: no limit); reported memory usage is lower than real memory usage!",
-                  &(*set)->memlimit, SCIP_DEFAULT_MEMLIMIT, -1, LONGINT_MAX,
+                  &(*set)->memlimit, SCIP_DEFAULT_MEMLIMIT, -1LL, LONGINT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddRealParam(*set, memhdr,
                   "global/limits/gaplimit",
@@ -482,10 +483,11 @@ RETCODE SCIPsetCreate(
                   "maximum age a row can reach before it is deleted from the LP",
                   &(*set)->rowagelimit, SCIP_DEFAULT_ROWAGELIMIT, 1, INT_MAX,
                   NULL, NULL) );
+   assert(sizeof(int) == sizeof(CLOCKTYPE));
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "global/timing/clocktype",
                   "default clock type (1: CPU user seconds, 2: wall clock time)",
-                  &(*set)->clocktype, SCIP_DEFAULT_CLOCKTYPE, 1, 2,
+                  (int*)&(*set)->clocktype, (int)SCIP_DEFAULT_CLOCKTYPE, 1, 2,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "global/timing/clocksenabled",
@@ -1286,8 +1288,6 @@ RETCODE SCIPsetIncludeBranchrule(
    BRANCHRULE*      branchrule          /**< branching rule */
    )
 {
-   int i;
-
    assert(set != NULL);
    assert(branchrule != NULL);
    assert(!SCIPbranchruleIsInitialized(branchrule));

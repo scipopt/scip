@@ -116,9 +116,9 @@ struct ConsHdlr
    int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
-   unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
-   unsigned int     initialized:1;      /**< is constraint handler initialized? */
-   unsigned int     delayupdates:1;     /**< must the updates of the constraint arrays be delayed until processUpdates()? */
+   Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
+   Bool             initialized;        /**< is constraint handler initialized? */
+   Bool             delayupdates;       /**< must the updates of the constraint arrays be delayed until processUpdates()? */
 };
 
 
@@ -588,9 +588,9 @@ RETCODE conshdlrDisableCons(
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
    assert(cons->enabled);
-   assert((cons->separate) ^ (cons->sepaconsspos == -1));
-   assert((cons->enforce) ^ (cons->enfoconsspos == -1));
-   assert((cons->propagate) ^ (cons->propconsspos == -1));
+   assert(cons->separate == (cons->sepaconsspos != -1));
+   assert(cons->enforce == (cons->enfoconsspos != -1));
+   assert(cons->propagate == (cons->propconsspos != -1));
 
    debugMessage("disable constraint <%s> at sepa position %d in constraint handler <%s> (%d/%d)\n", 
       cons->name, cons->sepaconsspos, conshdlr->name, conshdlr->nusefulsepaconss, conshdlr->nsepaconss);
@@ -790,7 +790,7 @@ RETCODE conshdlrDeactivateCons(
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
    assert(cons->consspos != -1);
-   assert((cons->check) ^ (cons->checkconsspos == -1));
+   assert(cons->check == (cons->checkconsspos != -1));
 
    debugMessage("deactivate constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
@@ -1371,7 +1371,7 @@ RETCODE SCIPconshdlrInitLP(
       CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
       
       /* update the number of found cuts */
-      conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+      conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
    }
 
    return SCIP_OKAY;
@@ -1463,7 +1463,7 @@ RETCODE SCIPconshdlrSeparate(
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
 
          /* update the number of found cuts */
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_SEPARATED
@@ -1572,7 +1572,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
 
          /* update the number of found cuts */
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+         conshdlr->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_BRANCHED
@@ -2013,6 +2013,16 @@ void SCIPconshdlrSetData(
    assert(conshdlr != NULL);
 
    conshdlr->conshdlrdata = conshdlrdata;
+}
+
+/** gets array with active constraints of constraint handler */
+CONS** SCIPconshdlrGetConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->conss;
 }
 
 /** gets number of active constraints of constraint handler */
@@ -3232,8 +3242,8 @@ RETCODE SCIPconsResolveConflictVar(
    assert(cons != NULL);
    assert(cons->conshdlr != NULL);
    assert(var != NULL);
-   assert(var->infercons == cons);
-   assert(var->infervar == var);
+   assert(SCIPvarGetInferCons(var) == cons);
+   assert(SCIPvarGetInferVar(var) == var);
 
    if( cons->conshdlr->consrescvar == NULL )
    {

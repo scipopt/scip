@@ -311,11 +311,6 @@ RETCODE SCIPdomchgAddBoundchg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    Real             oldbound,           /**< old value for bound */
@@ -348,7 +343,6 @@ extern
 RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable */
    Real             lb,                 /**< lower bound of variable */
@@ -363,7 +357,6 @@ extern
 RETCODE SCIPvarCreateTransformed(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable */
    Real             lb,                 /**< lower bound of variable */
@@ -611,28 +604,17 @@ RETCODE SCIPvarMultiaggregate(
    Bool*            infeasible          /**< pointer to store whether the aggregation is infeasible */
    );
 
-/** gets negated variable x' = offset - x of problem variable x, where offset is fixed to lb + ub when the negated
- *  variable is created
+/** gets negated variable x' = offset - x of problem variable x; the negated variable is created if not yet existing;
+ *  the negation offset of binary variables is always 1, the offset of other variables is fixed to lb + ub when the
+ *  negated variable is created
  */
 extern
-RETCODE SCIPvarGetNegated(
+RETCODE SCIPvarNegate(
    VAR*             var,                /**< problem variable to negate */
    MEMHDR*          memhdr,             /**< block memory of transformed problem */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR**            negvar              /**< pointer to store the negated variable */
-   );
-
-/** gets the negation variable x of a negated variable x' = offset - x */
-extern
-VAR* SCIPvarGetNegationVar(
-   VAR*             var                 /**< negated problem variable */
-   );
-
-/** gets the negation offset of a negated variable x' = offset - x */
-extern
-Real SCIPvarGetNegationConstant(
-   VAR*             var                 /**< negated problem variable */
    );
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -897,6 +879,12 @@ int SCIPvarGetProbIndex(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets transformed variable of ORIGINAL variable */
+extern
+VAR* SCIPvarGetTransVar(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** gets column of COLUMN variable */
 extern
 COL* SCIPvarGetCol(
@@ -919,6 +907,42 @@ Real SCIPvarGetAggrScalar(
 extern
 Real SCIPvarGetAggrConstant(
    VAR*             var                 /**< problem variable */
+   );
+
+/** gets number $n$ of aggregation variables of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+extern
+int SCIPvarGetMultaggrNVars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets vector of aggregation variables $y$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+extern
+VAR** SCIPvarGetMultaggrVars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets vector of aggregation scalars $a$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+extern
+Real* SCIPvarGetMultaggrScalars(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets aggregation constant $c$ of a multi aggregated variable $x = a0*y0 + ... + a(n-1)*y(n-1) + c$ */
+extern
+Real SCIPvarGetMultaggrConstant(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets the negation variable x of a negated variable x' = offset - x */
+extern
+VAR* SCIPvarGetNegationVar(
+   VAR*             var                 /**< negated problem variable */
+   );
+
+/** gets the negation offset of a negated variable x' = offset - x */
+extern
+Real SCIPvarGetNegationConstant(
+   VAR*             var                 /**< negated problem variable */
    );
 
 /** gets objective function value of variable */
@@ -992,10 +1016,17 @@ int SCIPvarGetInferNum(
 #define SCIPvarIsRemoveable(var)        (var)->removeable
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbIndex(var)        (var)->probindex
+#define SCIPvarGetTransVar(var)         (var)->data.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var
 #define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar
 #define SCIPvarGetAggrConstant(var)     (var)->data.aggregate.constant
+#define SCIPvarGetMultaggrNVars(var)    (var)->data.multaggr.nvars
+#define SCIPvarGetMultaggrVars(var)     (var)->data.multaggr.vars
+#define SCIPvarGetMultaggrScalars(var)  (var)->data.multaggr.scalars
+#define SCIPvarGetMultaggrConstant(var) (var)->data.multaggr.constant
+#define SCIPvarGetNegationVar(var)      (var)->negatedvar
+#define SCIPvarGetNegationConstant(var) (var)->data.negate.constant
 #define SCIPvarGetObj(var)              (var)->obj
 #define SCIPvarGetLbGlobal(var)         (var)->glbdom.lb
 #define SCIPvarGetUbGlobal(var)         (var)->glbdom.ub

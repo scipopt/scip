@@ -49,6 +49,7 @@ void interruptHandler(
    int              signum              /**< interrupt signal number */
    )
 {
+   /*lint --e{715}*/
    ninterrupts++;
    if( ninterrupts >= 5 )
    {
@@ -101,10 +102,10 @@ void SCIPinterruptCapture(
          /* initialize new signal action */
          newaction.sa_handler = interruptHandler;
          newaction.sa_flags = 0;
-         sigemptyset(&newaction.sa_mask);
+         (void)sigemptyset(&newaction.sa_mask);
       
          /* set new signal action, and remember old one */
-         sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
+         (void)sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
          ninterrupts = 0;
       }
       interrupt->nuses++;
@@ -124,7 +125,7 @@ void SCIPinterruptRelease(
    {
       interrupt->nuses--;
       if( interrupt->nuses == 0 )
-         sigaction(SIGINT, &interrupt->oldsigaction, NULL);
+         (void)sigaction(SIGINT, &interrupt->oldsigaction, NULL);
    }
 }
 

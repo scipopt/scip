@@ -440,7 +440,7 @@ RETCODE SCIPhashtableInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(element);
    keyval = hashtable->hashkeyval(key);
-   hashval = keyval % hashtable->nlists;
+   hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
    CHECK_OKAY( hashlistAppend(&hashtable->lists[hashval], memhdr, element) );
@@ -487,7 +487,7 @@ void* SCIPhashtableRetrieve(
 
    /* get the hash value of the key */
    keyval = hashtable->hashkeyval(key);
-   hashval = keyval % hashtable->nlists;
+   hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    return hashlistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, hashtable->hashkeyval,
       keyval, key);
@@ -516,7 +516,7 @@ RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(element);
    keyval = hashtable->hashkeyval(key);
-   hashval = keyval % hashtable->nlists;
+   hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
    CHECK_OKAY( hashlistRemove(&hashtable->lists[hashval], memhdr, element) );
@@ -1244,7 +1244,7 @@ RETCODE SCIPintarraySetVal(
    debugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
       intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
 
-   if( !SCIPsetIsZero(set, val) )
+   if( val != 0 )
    {
       /* extend array to be able to store the index */
       CHECK_OKAY( SCIPintarrayExtend(intarray, set, idx, idx) );
@@ -1273,7 +1273,7 @@ RETCODE SCIPintarraySetVal(
             intarray->minusedidx++;
          }
          while( intarray->minusedidx <= intarray->maxusedidx
-            && SCIPsetIsZero(set, intarray->vals[intarray->minusedidx - intarray->firstidx]) );
+            && intarray->vals[intarray->minusedidx - intarray->firstidx] == 0 );
          if( intarray->minusedidx > intarray->maxusedidx )
          {
             intarray->minusedidx = INT_MAX;
@@ -1290,7 +1290,7 @@ RETCODE SCIPintarraySetVal(
             intarray->maxusedidx--;
             assert(intarray->minusedidx <= intarray->maxusedidx);
          }
-         while( SCIPsetIsZero(set, intarray->vals[intarray->maxusedidx - intarray->firstidx]) );
+         while( intarray->vals[intarray->maxusedidx - intarray->firstidx] == 0 );
       }      
    }
 
@@ -1592,7 +1592,7 @@ RETCODE SCIPboolarraySetVal(
    debugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
       boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
-   if( !SCIPsetIsZero(set, val) )
+   if( val != FALSE )
    {
       /* extend array to be able to store the index */
       CHECK_OKAY( SCIPboolarrayExtend(boolarray, set, idx, idx) );
@@ -1621,7 +1621,7 @@ RETCODE SCIPboolarraySetVal(
             boolarray->minusedidx++;
          }
          while( boolarray->minusedidx <= boolarray->maxusedidx
-            && SCIPsetIsZero(set, boolarray->vals[boolarray->minusedidx - boolarray->firstidx]) );
+            && boolarray->vals[boolarray->minusedidx - boolarray->firstidx] == FALSE );
          if( boolarray->minusedidx > boolarray->maxusedidx )
          {
             boolarray->minusedidx = INT_MAX;
@@ -1638,7 +1638,7 @@ RETCODE SCIPboolarraySetVal(
             boolarray->maxusedidx--;
             assert(boolarray->minusedidx <= boolarray->maxusedidx);
          }
-         while( SCIPsetIsZero(set, boolarray->vals[boolarray->maxusedidx - boolarray->firstidx]) );
+         while( boolarray->vals[boolarray->maxusedidx - boolarray->firstidx] == FALSE );
       }      
    }
 
@@ -2241,6 +2241,10 @@ void SCIPsplitFilename(
    assert(filename != NULL);
 
    lastslash = strrchr(filename, '/');
+   lastdot = strrchr(filename, '.');
+   if( lastslash != NULL && lastdot != NULL && lastdot < lastslash ) /* is the last dot belonging to the path? */
+      lastdot = NULL;
+
    if( lastslash == NULL )
    {
       if( path != NULL )
@@ -2257,7 +2261,6 @@ void SCIPsplitFilename(
       *lastslash = '\0';
    }
 
-   lastdot = strrchr(*name, '.');
    if( lastdot == NULL )
    {
       if( extension != NULL )

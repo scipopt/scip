@@ -24,7 +24,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <math.h>
 
 #include "memory.h"
 #include "misc.h"
@@ -110,7 +109,7 @@ struct Param
    char*            desc;               /**< description of the parameter */
    DECL_PARAMCHGD   ((*paramchgd));     /**< change information method of parameter */
    PARAMDATA*       paramdata;          /**< locally defined parameter specific data */
-   unsigned int     paramtype:3;        /**< type of this parameter */
+   PARAMTYPE        paramtype;          /**< type of this parameter */
 };
 
 /** set of parameters */
@@ -249,10 +248,8 @@ RETCODE paramCheckChar(
 
    if( param->data.charparam.allowedvalues != NULL )
    {
-      Bool found;
       char* c;
 
-      found = FALSE;
       c = param->data.charparam.allowedvalues;
       while( *c != '\0' && *c != value )
          c++;
@@ -822,6 +819,11 @@ void paramFree(
 
    switch( (*param)->paramtype )
    {
+   case SCIP_PARAMTYPE_BOOL:
+   case SCIP_PARAMTYPE_INT:
+   case SCIP_PARAMTYPE_LONGINT:
+   case SCIP_PARAMTYPE_REAL:
+      break;
    case SCIP_PARAMTYPE_CHAR:
       freeMemoryArrayNull(&(*param)->data.charparam.allowedvalues);
       break;
@@ -837,7 +839,8 @@ void paramFree(
       }
       break;
    default:
-      break;
+      errorMessage("invalid parameter type");
+      abort();
    }
 
    freeMemoryArray(&(*param)->name);
@@ -1000,7 +1003,7 @@ RETCODE paramParseString(
    char*            valuestr            /**< value in string format (may be modified during parse) */
    )
 {
-   int len;
+   unsigned int len;
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_STRING);

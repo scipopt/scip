@@ -134,6 +134,7 @@ void SCIPbufferRelease(
    int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */
    )
 {
+   /*lint --e{715}*/
    int i;
 
    assert(buffer != NULL);

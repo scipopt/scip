@@ -137,11 +137,7 @@ DECL_HASHKEYVAL(hashKeyValCut)
    row = (ROW*)key;
    assert(row != NULL);
 
-   keyval =
-      + (row->nummaxval << 29)
-      + (row->len << 22)
-      + (row->minidx << 11)
-      + row->maxidx;
+   keyval = (row->nummaxval << 29) + (row->len << 22) + (row->minidx << 11) + row->maxidx; /*lint !e701*/
 
    return keyval;
 }
@@ -508,7 +504,7 @@ RETCODE SCIPcutpoolSeparate(
             {
                /* insert cut in separation storage */
                CHECK_OKAY( SCIPsepastoreAddCut(sepastore, memhdr, set, lp, row,
-                              -feasibility/SCIProwGetNorm(row)/(SCIProwGetNNonz(row)+1), root ) );
+                              -(feasibility/SCIProwGetNorm(row))/(SCIProwGetNNonz(row)+1), root ) );
                found = TRUE;
             }
             else
@@ -527,7 +523,7 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->firstunprocessed = cutpool->ncuts;
 
    /* update the number of found cuts */
-   cutpool->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
+   cutpool->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound; /*lint !e776*/
 
    /* stop timing */
    SCIPclockStop(cutpool->clock, set);
