@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.8 2004/10/26 18:24:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.9 2004/11/29 12:17:16 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -224,7 +224,7 @@ DECL_SEPAEXEC(sepaExecIntobj)
 
    /* if the current objective value is integral, there is no integral objective value cut */
    objval = SCIPgetLPObjval(scip);
-   if( SCIPisIntegral(scip, objval) )
+   if( SCIPisFeasIntegral(scip, objval) )
       return SCIP_OKAY;
 
    sepadata = SCIPsepaGetData(sepa);

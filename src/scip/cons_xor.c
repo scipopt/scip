@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.13 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.14 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -584,7 +584,7 @@ RETCODE checkCons(
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
-         assert(SCIPisIntegral(scip, solval));
+         assert(SCIPisFeasIntegral(scip, solval));
          odd = odd ^ (solval > 0.5);
       }
       if( odd )

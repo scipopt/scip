@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.231 2004/11/26 14:22:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.232 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5665,7 +5665,7 @@ RETCODE aggregateActiveIntVars(
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
-   c = (Longint)(SCIPfloor(scip, rhs));
+   c = (Longint)(SCIPsetFeasFloor(scip->set, rhs));
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
    if( a == 1 || a == -1 )
@@ -11123,6 +11123,18 @@ Bool SCIPisGE(
    return SCIPsetIsGE(scip->set, val1, val2);
 }
 
+/** checks, if value is (positive) infinite */
+Bool SCIPisInfinity(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against infinity */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsInfinity(scip->set, val);
+}
+
 /** checks, if value is in range epsilon of 0.0 */
 Bool SCIPisZero(
    SCIP*            scip,               /**< SCIP data structure */
@@ -11157,6 +11169,72 @@ Bool SCIPisNegative(
    assert(scip->set != NULL);
 
    return SCIPsetIsNegative(scip->set, val);
+}
+
+/** checks, if value is integral within epsilon */
+Bool SCIPisIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   if( scip->set->misc_exactsolve )
+      return (val == SCIPsetFloor(scip->set, val));
+   else
+      return SCIPsetIsIntegral(scip->set, val);
+}
+
+/** checks, if given fractional part is smaller than epsilon */
+Bool SCIPisFracIntegral(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   if( scip->set->misc_exactsolve )
+      return (val == 0.0);
+   else
+      return SCIPsetIsFracIntegral(scip->set, val);
+}
+
+/** rounds value + epsilon down to the next integer */
+Real SCIPfloor(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetFloor(scip->set, val);
+}
+
+/** rounds value - epsilon up to the next integer */
+Real SCIPceil(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetCeil(scip->set, val);
+}
+
+/** returns fractional part of value, i.e. x - floor(x) in epsilon tolerance */
+Real SCIPfrac(
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to return fractional part for */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetFrac(scip->set, val);
 }
 
 /** checks, if values are in range of sumepsilon */
@@ -11362,8 +11440,7 @@ Bool SCIPisFeasNegative(
 }
 
 /** checks, if value is integral within the LP feasibility bounds */
-/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
-Bool SCIPisIntegral(
+Bool SCIPisFeasIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -11378,8 +11455,7 @@ Bool SCIPisIntegral(
 }
 
 /** checks, if given fractional part is smaller than feastol */
-/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
-Bool SCIPisFracIntegral(
+Bool SCIPisFeasFracIntegral(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -11394,8 +11470,7 @@ Bool SCIPisFracIntegral(
 }
 
 /** rounds value + feasibility tolerance down to the next integer */
-/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
-Real SCIPfloor(
+Real SCIPfeasFloor(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -11407,8 +11482,7 @@ Real SCIPfloor(
 }
 
 /** rounds value - feasibility tolerance up to the next integer */
-/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
-Real SCIPceil(
+Real SCIPfeasCeil(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to be compared against zero */
    )
@@ -11420,8 +11494,7 @@ Real SCIPceil(
 }
 
 /** returns fractional part of value, i.e. x - floor(x) */
-/**@todo ??????????????????????? rename this into SCIPisFeas...() and implement SCIPis...() with eps=1e-9 */
-Real SCIPfrac(
+Real SCIPfeasFrac(
    SCIP*            scip,               /**< SCIP data structure */
    Real             val                 /**< value to return fractional part for */
    )
@@ -11584,18 +11657,6 @@ Bool SCIPisSumRelGE(
    assert(scip->set != NULL);
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
-}
-
-/** checks, if value is (positive) infinite */
-Bool SCIPisInfinity(
-   SCIP*            scip,               /**< SCIP data structure */
-   Real             val                 /**< value to be compared against infinity */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return SCIPsetIsInfinity(scip->set, val);
 }
 
 #endif

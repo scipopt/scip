@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.12 2004/10/19 18:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.13 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_pscostdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
@@ -96,7 +96,7 @@ void calcPscostQuot(
 
    assert(pscostquot != NULL);
    assert(roundup != NULL);
-   assert(SCIPisEQ(scip, frac, primsol - SCIPfloor(scip, primsol)));
+   assert(SCIPisEQ(scip, frac, primsol - SCIPfeasFloor(scip, primsol)));
 
    /* bound fractions to not prefer variables that are nearly integral */
    frac = MAX(frac, 0.1);
@@ -450,8 +450,8 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPceil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
-         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPceil(scip, lpcandssol[bestcand])) );
+            SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
+         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       }
       else
       {
@@ -460,8 +460,8 @@ DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPgetVarLbDive(scip, var), SCIPfloor(scip, lpcandssol[bestcand]));
-         CHECK_OKAY( SCIPchgVarUbDive(scip, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
+            SCIPgetVarLbDive(scip, var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+         CHECK_OKAY( SCIPchgVarUbDive(scip, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       }
 
       /* resolve the diving LP */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.5 2004/10/19 18:36:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.6 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump heuristic by Fischetti, Glover and Lodi 
@@ -304,7 +304,7 @@ DECL_HEUREXEC(heurExecFeaspump) /*lint --e{715}*/
              *   abs(x~_j - x_j) = u - x_j     if x*_j was rounded up to u (doesn't have to be upper bound)
              */
             solval =  SCIPvarGetLPSol(var);
-            frac = SCIPfrac(scip, solval);
+            frac = SCIPfeasFrac(scip, solval);
           
             if ( SCIPisFeasZero(scip, frac) ) 
                 newobj = alpha * orgobj;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.39 2004/11/26 14:22:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.40 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -747,14 +747,14 @@ RETCODE checkCons(
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
-         assert(SCIPisIntegral(scip, solval));
+         assert(SCIPisFeasIntegral(scip, solval));
          if( solval < 0.5 )
             break;
       }
 
       /* if all operator variables are TRUE, the resultant has to be TRUE, otherwise, the resultant has to be FALSE */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-      assert(SCIPisIntegral(scip, solval));
+      assert(SCIPisFeasIntegral(scip, solval));
 
       if( (i == consdata->nvars) != (solval > 0.5) )
       {

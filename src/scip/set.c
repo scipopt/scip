@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.123 2004/11/26 14:22:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.124 2004/11/29 12:17:16 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2247,16 +2247,6 @@ int SCIPsetGetSepaMaxcuts(
  * type validity.
  */
 
-/** returns value treated as infinity */
-Real SCIPsetInfinity(
-   SET*             set                 /**< global SCIP settings */
-   )
-{
-   assert(set != NULL);
-
-   return set->num_infinity;
-}
-
 /** returns value treated as zero */
 Real SCIPsetEpsilon(
    SET*             set                 /**< global SCIP settings */
@@ -2386,6 +2376,16 @@ Bool SCIPsetIsGE(
    assert(set != NULL);
 
    return EPSGE(val1, val2, set->num_epsilon);
+}
+
+/** returns value treated as infinity */
+Real SCIPsetInfinity(
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->num_infinity;
 }
 
 /** checks, if value is in range epsilon of 0.0 */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.5 2004/11/01 13:48:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.6 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -100,7 +100,7 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
       }
    }
    assert(0 <= bestcand && bestcand < nlpcands);
-   assert(!SCIPisIntegral(scip, lpcandssol[bestcand]));
+   assert(!SCIPisFeasIntegral(scip, lpcandssol[bestcand]));
 
    /* perform the branching */
    debugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
@@ -126,15 +126,15 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
 
    /* create child node with x <= floor(x') */
    debugMessage(" -> creating child: <%s> <= %g\n",
-      SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
+      SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
    CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
-   CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
+   CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       
    /* create child node with x >= ceil(x') */
    debugMessage(" -> creating child: <%s> >= %g\n", 
-      SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
+      SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
    CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
-   CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
+   CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
 
    *result = SCIP_BRANCHED;
 

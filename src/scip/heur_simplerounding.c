@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.9 2004/09/07 18:22:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.10 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -164,14 +164,14 @@ DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       {
          /* we can round in both directions: round in objective function direction */
          if( SCIPvarGetObj(var) >= 0.0 )
-            newsolval = SCIPfloor(scip, oldsolval);
+            newsolval = SCIPfeasFloor(scip, oldsolval);
          else
-            newsolval = SCIPceil(scip, oldsolval);
+            newsolval = SCIPfeasCeil(scip, oldsolval);
       }
       else if( mayrounddown )
-         newsolval = SCIPfloor(scip, oldsolval);
+         newsolval = SCIPfeasFloor(scip, oldsolval);
       else if( mayroundup )
-         newsolval = SCIPceil(scip, oldsolval);
+         newsolval = SCIPfeasCeil(scip, oldsolval);
       else
          break;
 

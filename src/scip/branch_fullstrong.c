@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.31 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.32 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -217,7 +217,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             else if( downinf )
             {
                /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-               CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPceil(scip, lpcandssol[c])) );
+               CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c])) );
                *result = SCIP_REDUCEDDOM;
                debugMessage(" -> variable <%s> is infeasible in downward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
@@ -226,7 +226,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             {
                /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
                assert(upinf);
-               CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfloor(scip, lpcandssol[c])) );
+               CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c])) );
                *result = SCIP_REDUCEDDOM;
                debugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
@@ -306,9 +306,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
+         SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
-      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestdown)) );
@@ -317,9 +317,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
+         SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
-      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestup)) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.74 2004/11/26 14:22:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.75 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -715,7 +715,7 @@ RETCODE SCIPseparateKnapsackCardinality(
    {
       assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
 
-      if( !SCIPisIntegral(scip, solvals[i]) )
+      if( !SCIPisFeasIntegral(scip, solvals[i]) )
       {
          /* sort items by non-decreasing relative slack value (1-x_i^*)/w_i */
          relslack = (1.0 - solvals[i])/weights[i];
@@ -2032,12 +2032,12 @@ RETCODE createNormalizedKnapsack(
    if( SCIPisInfinity(scip, rhs) )
    {
       mult = -1;
-      capacity = (Longint)SCIPfloor(scip, -lhs);
+      capacity = (Longint)SCIPfeasFloor(scip, -lhs);
    }
    else
    {
       mult = +1;
-      capacity = (Longint)SCIPfloor(scip, rhs);
+      capacity = (Longint)SCIPfeasFloor(scip, rhs);
    }
 
    /* negate positive or negative variables */

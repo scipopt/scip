@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.6 2004/10/19 18:36:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.7 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -295,7 +295,7 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
              */
             if( softroundings[i] != 0 )
             {
-               solval = SCIPfloor(scip, solval);
+               solval = SCIPfeasFloor(scip, solval);
                CHECK_OKAY( SCIPchgVarLbDive(scip, var, solval) );
                CHECK_OKAY( SCIPchgVarUbDive(scip, var, solval) );
             }
@@ -310,7 +310,7 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
             softroundings[i]--;
             if( softroundings[i] <= -10 )
             {
-               CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfloor(scip, solval)) );
+               CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, solval)) );
             }
             else
                newobj = alpha * oldobj + 1.0;
@@ -323,7 +323,7 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
             softroundings[i]++;
             if( softroundings[i] >= +10 )
             {
-               CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPceil(scip, solval)) );
+               CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, solval)) );
             }
             else
                newobj = alpha * oldobj - 1.0;

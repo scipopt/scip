@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.3 2004/10/19 18:36:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.4 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @brief  linesearchdiving primal heuristic
@@ -301,7 +301,7 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
          if( SCIPisLT(scip, solval, rootsolval) )
          {
             roundup = FALSE;
-            distquot = (solval - SCIPfloor(scip, solval)) / (rootsolval - solval);
+            distquot = (solval - SCIPfeasFloor(scip, solval)) / (rootsolval - solval);
 
             /* avoid roundable candidates */
             if( SCIPvarMayRoundDown(var) )
@@ -310,7 +310,7 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
          else if( SCIPisGT(scip, solval, rootsolval) )
          {
             roundup = TRUE;
-            distquot = (SCIPceil(scip, solval) - solval) / (solval - rootsolval);
+            distquot = (SCIPfeasCeil(scip, solval) - solval) / (solval - rootsolval);
 
             /* avoid roundable candidates */
             if( SCIPvarMayRoundUp(var) )
@@ -364,8 +364,8 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
             SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPceil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
-         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPceil(scip, lpcandssol[bestcand])) );
+            SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
+         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       }
       else
       {
@@ -374,8 +374,8 @@ DECL_HEUREXEC(heurExecLinesearchdiving)
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), lpcandssol[bestcand], SCIPvarGetRootSol(var),
             SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPgetVarLbDive(scip, var), SCIPfloor(scip, lpcandssol[bestcand]));
-         CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfloor(scip, lpcandssol[bestcand])) );
+            SCIPgetVarLbDive(scip, var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+         CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       }
 
       /* resolve the diving LP */

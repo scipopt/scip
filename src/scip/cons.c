@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.101 2004/11/19 17:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.102 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2432,7 +2432,7 @@ RETCODE SCIPconshdlrPresolve(
                      nnewdelconss, nnewupgdconss, nnewchgcoefs, nnewchgsides,
                      nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
                      ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
-      
+
       /* stop timing */
       SCIPclockStop(conshdlr->presoltime, set);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.37 2004/10/28 14:30:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.38 2004/11/29 12:17:16 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -335,7 +335,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
 
-            if( SCIPfrac(scip, primsol) >= MINFRAC )
+            if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
             {
                debugMessage("trying gomory cut for <%s> [%g]\n", SCIPvarGetName(var), primsol);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.18 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.19 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -132,12 +132,12 @@ RETCODE applyBdchgs(
       if( bdchgdowninfs[i] )
       {
          /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-         CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPceil(scip, lpcandssol[c])) );
+         CHECK_OKAY( SCIPchgVarLb(scip, lpcands[c], SCIPfeasCeil(scip, lpcandssol[c])) );
       }
       else
       {
          /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
-         CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfloor(scip, lpcandssol[c])) );
+         CHECK_OKAY( SCIPchgVarUb(scip, lpcands[c], SCIPfeasFloor(scip, lpcandssol[c])) );
       }
       debugMessage(" -> <%s> (sol:%g) -> [%g,%g]\n",
          SCIPvarGetName(lpcands[c]), lpcandssol[c], SCIPvarGetLbLocal(lpcands[c]), SCIPvarGetUbLocal(lpcands[c]));
@@ -318,7 +318,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          Bool usesb;
 
          assert(lpcands[c] != NULL);
-         assert(!SCIPisIntegral(scip, lpcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, lpcandssol[c]));
 
          /* get pseudo cost score of candidate */
          score = SCIPgetVarPseudocostScoreCurrentRun(scip, lpcands[c], lpcandssol[c]);
@@ -444,7 +444,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
          /* get candidate number to initialize */
          c = initcands[i];
-         assert(!SCIPisIntegral(scip, lpcandssol[c]));
+         assert(!SCIPisFeasIntegral(scip, lpcandssol[c]));
 
          debugMessage("init pseudo cost (%g/%g) of <%s> at %g (score:%g) with strong branching (%d iters) -- %lld/%lld iterations\n",
             SCIPgetVarPseudocostCountCurrentRun(scip, lpcands[c], SCIP_BRANCHDIR_DOWNWARDS), 
@@ -618,7 +618,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nlpcands);
-      assert(!SCIPisIntegral(scip, lpcandssol[bestcand]));
+      assert(!SCIPisFeasIntegral(scip, lpcandssol[bestcand]));
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
       /* perform the branching */
@@ -626,9 +626,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          nlpcands, ninitcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand],
          bestsbdown, bestsbdown - lpobjval, bestsbup, bestsbup - lpobjval, bestisstrongbranch,
          SCIPgetVarPseudocostCurrentRun(scip, lpcands[bestcand], 
-            SCIPfloor(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
+            SCIPfeasFloor(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
          SCIPgetVarPseudocostCurrentRun(scip, lpcands[bestcand], 
-            SCIPceil(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
+            SCIPfeasCeil(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),
          SCIPgetVarPseudocostScoreCurrentRun(scip, lpcands[bestcand], lpcandssol[bestcand]));
 
       /* choose preferred branching direction */
@@ -655,9 +655,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
+         SCIPvarGetName(lpcands[bestcand]), SCIPfeasFloor(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
-      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
          assert(SCIPisLT(scip, proveddown, cutoffbound));
@@ -667,9 +667,9 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
+         SCIPvarGetName(lpcands[bestcand]), SCIPfeasCeil(scip, lpcandssol[bestcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
-      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
          assert(SCIPisLT(scip, provedup, cutoffbound));

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.134 2004/11/26 14:22:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.135 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1774,13 +1774,13 @@ RETCODE scaleCons(
    {
       consdata->lhs *= REALABS(scalar);
       if( SCIPisIntegral(scip, consdata->lhs) )
-         consdata->lhs = SCIPfloor(scip, consdata->lhs);
+         consdata->lhs = SCIPfeasFloor(scip, consdata->lhs);
    }
    if( !SCIPisInfinity(scip, consdata->rhs) )
    {
       consdata->rhs *= REALABS(scalar);
       if( SCIPisIntegral(scip, consdata->rhs) )
-         consdata->rhs = SCIPfloor(scip, consdata->rhs);
+         consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
    }
 
    consdataInvalidateActivities(consdata);
@@ -2184,7 +2184,7 @@ RETCODE tightenVarBounds(
          Real newub;
 
          newub = (rhs - minresactivity)/val;
-         newub = SCIPceil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+         newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisUbBetter(scip, newub, ub) )
          {
             /* tighten upper bound */
@@ -2213,7 +2213,7 @@ RETCODE tightenVarBounds(
          Real newlb;
    
          newlb = (lhs - maxresactivity)/val;
-         newlb = SCIPfloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
+         newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisLbBetter(scip, newlb, lb) )
          {
             /* tighten lower bound */
@@ -2246,7 +2246,7 @@ RETCODE tightenVarBounds(
          Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         newlb = SCIPfloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
+         newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisLbBetter(scip, newlb, lb) )
          {
             /* tighten lower bound */
@@ -2275,7 +2275,7 @@ RETCODE tightenVarBounds(
          Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         newub = SCIPceil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
+         newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
          if( SCIPisUbBetter(scip, newub, ub) )
          {
             /* tighten upper bound */
@@ -2705,11 +2705,11 @@ RETCODE separateRelaxedKnapsack(
    debugMessage(" -> linear relaxed to knapsack:");
    for( i = 0; i < nconsvars; ++i )
       printf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
-   printf(" <= %lld\n", (Longint)SCIPfloor(scip, rhs));
+   printf(" <= %lld\n", (Longint)SCIPfeasFloor(scip, rhs));
 #endif
   
    CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, 
-         (Longint)SCIPfloor(scip, rhs), ncuts) );
+         (Longint)SCIPfeasFloor(scip, rhs), ncuts) );
    
  TERMINATE:
    /* free data structures */
@@ -3382,13 +3382,13 @@ RETCODE tightenSides(
             SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
          if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
          {
-            CHECK_OKAY( chgLhs(scip, cons, SCIPceil(scip, consdata->lhs)) );
+            CHECK_OKAY( chgLhs(scip, cons, SCIPfeasCeil(scip, consdata->lhs)) );
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
          if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisIntegral(scip, consdata->rhs) )
          {
-            CHECK_OKAY( chgRhs(scip, cons, SCIPfloor(scip, consdata->rhs)) );
+            CHECK_OKAY( chgRhs(scip, cons, SCIPfeasFloor(scip, consdata->rhs)) );
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
@@ -3751,7 +3751,7 @@ RETCODE convertLongEquality(
    }
 
    /* if all coefficients and variables are integral, the right hand side must also be integral */
-   if( integral && !SCIPisIntegral(scip, consdata->rhs) )
+   if( integral && !SCIPisFeasIntegral(scip, consdata->rhs) )
    {
       debugMessage("linear equality <%s> is integer infeasible\n", SCIPconsGetName(cons));
       debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
@@ -5600,7 +5600,7 @@ RETCODE SCIPupgradeConsLinear(
       {
       case SCIP_VARTYPE_BINARY:
          if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral &= SCIPisIntegral(scip, val);
+            integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
             nposbin++;
          else
@@ -5608,7 +5608,7 @@ RETCODE SCIPupgradeConsLinear(
          break;
       case SCIP_VARTYPE_INTEGER:
          if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral &= SCIPisIntegral(scip, val);
+            integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
             nposint++;
          else
@@ -5616,7 +5616,7 @@ RETCODE SCIPupgradeConsLinear(
          break;
       case SCIP_VARTYPE_IMPLINT:
          if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral &= SCIPisIntegral(scip, val);
+            integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
             nposimpl++;
          else

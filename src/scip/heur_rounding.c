@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.32 2004/09/07 18:22:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.33 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -239,7 +239,7 @@ RETCODE selectRounding(
                nlocks = SCIPvarGetNLocksDown(var);
                if( nlocks <= minnlocks )
                {
-                  roundval = SCIPfloor(scip, solval);
+                  roundval = SCIPfeasFloor(scip, solval);
                   deltaobj = obj * (roundval - solval);
                   if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetUpperbound(scip) )
                   {
@@ -258,7 +258,7 @@ RETCODE selectRounding(
                nlocks = SCIPvarGetNLocksUp(var);
                if( nlocks <= minnlocks )
                {
-                  roundval = SCIPceil(scip, solval);
+                  roundval = SCIPfeasCeil(scip, solval);
                   deltaobj = obj * (roundval - solval);
                   if( (nlocks < minnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetUpperbound(scip) )
                   {
@@ -356,7 +356,7 @@ RETCODE selectEssentialRounding(
          nlocks = SCIPvarGetNLocksUp(var);
          if( nlocks >= maxnlocks )
          {
-            roundval = SCIPfloor(scip, solval);
+            roundval = SCIPfeasFloor(scip, solval);
             deltaobj = obj * (roundval - solval);
             if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj - obj < SCIPgetUpperbound(scip) )
             {
@@ -372,7 +372,7 @@ RETCODE selectEssentialRounding(
          nlocks = SCIPvarGetNLocksDown(var);
          if( nlocks >= maxnlocks )
          {
-            roundval = SCIPceil(scip, solval);
+            roundval = SCIPfeasCeil(scip, solval);
             deltaobj = obj * (roundval - solval);
             if( (nlocks > maxnlocks || deltaobj < bestdeltaobj) && minobj + obj < SCIPgetUpperbound(scip) )
             {
@@ -537,7 +537,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    for( c = 0; c < nlpcands; ++c )
    {
       obj = SCIPvarGetObj(lpcands[c]);
-      bestroundval = obj > 0.0 ? SCIPfloor(scip, lpcandssol[c]) : SCIPceil(scip, lpcandssol[c]);
+      bestroundval = obj > 0.0 ? SCIPfeasFloor(scip, lpcandssol[c]) : SCIPfeasCeil(scip, lpcandssol[c]);
       minobj += obj * (bestroundval - lpcandssol[c]);
    }
 

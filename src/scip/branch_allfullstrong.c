@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.13 2004/11/17 12:46:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.14 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -129,7 +129,7 @@ RETCODE branch(
             continue;
 
          solval = SCIPvarGetLPSol(pseudocands[c]);
-         integral = SCIPisIntegral(scip, solval);
+         integral = SCIPisFeasIntegral(scip, solval);
 
          debugMessage("applying strong branching on %s variable <%s>[%g,%g] with solution %g\n",
             integral ? "integral" : "fractional", SCIPvarGetName(pseudocands[c]), SCIPvarGetLbLocal(pseudocands[c]), 
@@ -208,7 +208,7 @@ RETCODE branch(
                Real newlb;
 
                /* downwards rounding is infeasible -> change lower bound of variable to upward rounding */
-               newlb = SCIPceil(scip, solval);
+               newlb = SCIPfeasCeil(scip, solval);
                if( SCIPvarGetLbLocal(pseudocands[c]) < newlb - 0.5 )
                {
                   CHECK_OKAY( SCIPchgVarLb(scip, pseudocands[c], newlb) );
@@ -223,7 +223,7 @@ RETCODE branch(
 
                /* upwards rounding is infeasible -> change upper bound of variable to downward rounding */
                assert(upinf);
-               newub = SCIPfloor(scip, solval);
+               newub = SCIPfeasFloor(scip, solval);
                if( SCIPvarGetUbLocal(pseudocands[c]) > newub + 0.5 )
                {
                   CHECK_OKAY( SCIPchgVarUb(scip, pseudocands[c], newub) );
@@ -269,11 +269,13 @@ RETCODE branch(
          /* update pseudo cost values */
          if( !downinf )
          {
-            CHECK_OKAY( SCIPupdateVarPseudocost(scip, pseudocands[c], solval-SCIPceil(scip, solval-1.0), downgain, 1.0) );
+            CHECK_OKAY( SCIPupdateVarPseudocost(scip, pseudocands[c],
+                  solval-SCIPfeasCeil(scip, solval-1.0), downgain, 1.0) );
          }
          if( !upinf )
          {
-            CHECK_OKAY( SCIPupdateVarPseudocost(scip, pseudocands[c], solval-SCIPfloor(scip, solval+1.0), upgain, 1.0) );
+            CHECK_OKAY( SCIPupdateVarPseudocost(scip, pseudocands[c], 
+                  solval-SCIPfeasFloor(scip, solval+1.0), upgain, 1.0) );
          }
 
          debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
@@ -328,7 +330,7 @@ RETCODE branch(
          npseudocands, bestpseudocand, SCIPvarGetName(var), lb, ub, solval, bestdown, bestup, bestscore);
 
       /* create child node with x <= ceil(x'-1) */
-      newub = SCIPceil(scip, solval-1.0);
+      newub = SCIPfeasCeil(scip, solval-1.0);
       if( newub >= lb - 0.5 )
       {
          debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), newub);
@@ -342,7 +344,7 @@ RETCODE branch(
       }
 
       /* if the solution was integral, create child x == x' */
-      if( SCIPisIntegral(scip, solval) )
+      if( SCIPisFeasIntegral(scip, solval) )
       {
          assert(solval > lb + 0.5 || solval < ub - 0.5); /* otherwise, the variable is already fixed */
 
@@ -364,7 +366,7 @@ RETCODE branch(
       }
 
       /* create child node with x >= floor(x'+1) */
-      newlb = SCIPfloor(scip, solval+1.0);
+      newlb = SCIPfeasFloor(scip, solval+1.0);
       if( newlb <= ub + 0.5 )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), newlb);

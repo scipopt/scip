@@ -10,6 +10,10 @@ interface:
   call's documentation list
 - new method SCIPaddCoefKnapsack() in knapsack constraint handler
 - removed SCIPisFeasible(); use !SCIPisFeasNegative() instead
+- methods SCIPisIntegral(), SCIPisFracIntegral(), SCIPfloor(), SCIPceil(), and SCIPfrac() don't use the
+  feasibility tolerance anymore (default: 1e-06); instead, they are using epsilon (default: 1e-09);
+  instead, for handling integrality of a variable "in feasibility tolerances", new methods SCIPisFeasIntegral(),
+  SCIPisFeasFracIntegral(), SCIPfeasFloor(), SCIPfeasCeil(), and SCIPfeasFrac() should be used
 
 features:
 - changed SCIProwCalcIntegralScalar() to a slightly different algorithm

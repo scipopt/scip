@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.15 2004/07/01 10:35:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.16 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -97,8 +97,8 @@ DECL_PRESOLEXEC(presolExecTrivial)
          Real newub;
          
          /* round fractional bounds on integer variables */
-         newlb = SCIPceil(scip, lb);
-         newub = SCIPfloor(scip, ub);
+         newlb = SCIPfeasCeil(scip, lb);
+         newub = SCIPfeasFloor(scip, ub);
 
          /* check bounds on variable for infeasibility */
          if( newlb > newub + 0.5 )

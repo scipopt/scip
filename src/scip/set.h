@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.73 2004/11/26 14:22:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.74 2004/11/29 12:17:16 bzfpfend Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -632,13 +632,6 @@ Real SCIPsetPseudocostdelta(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** checks, if value is (positive) infinite */
-extern
-Bool SCIPsetIsInfinity(
-   SET*             set,                /**< global SCIP settings */
-   Real             val                 /**< value to be compared against infinity */
-   );
-
 /** checks, if values are in range of epsilon */
 extern
 Bool SCIPsetIsEQ(
@@ -677,6 +670,13 @@ Bool SCIPsetIsGE(
    SET*             set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if value is (positive) infinite */
+extern
+Bool SCIPsetIsInfinity(
+   SET*             set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against infinity */
    );
 
 /** checks, if value is in range epsilon of 0.0 */
@@ -1009,12 +1009,12 @@ Bool SCIPsetIsSumRelGE(
 #define SCIPsetDualfeastol(set)            ( (set)->num_dualfeastol )
 #define SCIPsetPseudocosteps(set)          ( (set)->num_pseudocosteps )
 #define SCIPsetPseudocostdelta(set)        ( (set)->num_pseudocostdelta )
-#define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->num_infinity )
 #define SCIPsetIsEQ(set, val1, val2)       ( EPSEQ(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLT(set, val1, val2)       ( EPSLT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsLE(set, val1, val2)       ( EPSLE(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsGT(set, val1, val2)       ( EPSGT(val1, val2, (set)->num_epsilon) )
 #define SCIPsetIsGE(set, val1, val2)       ( EPSGE(val1, val2, (set)->num_epsilon) )
+#define SCIPsetIsInfinity(set, val)        ( (val) >= (set)->num_infinity )
 #define SCIPsetIsZero(set, val)            ( EPSZ(val, (set)->num_epsilon) )
 #define SCIPsetIsPositive(set, val)        ( EPSP(val, (set)->num_epsilon) )
 #define SCIPsetIsNegative(set, val)        ( EPSN(val, (set)->num_epsilon) )

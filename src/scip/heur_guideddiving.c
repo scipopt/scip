@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.2 2004/10/19 18:36:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.3 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_guideddiving.c
  * @brief  LP diving heuristic that chooses fixings in direction of average of feasible solutions
@@ -425,8 +425,8 @@ DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetAvgSol(var),
             SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPceil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
-         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPceil(scip, lpcandssol[bestcand])) );
+            SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
+         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       }
       else
       {
@@ -436,8 +436,8 @@ DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPvarGetAvgSol(var),
             SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPgetVarLbDive(scip, var), SCIPfloor(scip, lpcandssol[bestcand]));
-         CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfloor(scip, lpcandssol[bestcand])) );
+            SCIPgetVarLbDive(scip, var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+         CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       }
 
       /* resolve the diving LP */

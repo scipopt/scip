@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.2 2004/11/02 11:27:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.3 2004/11/29 12:17:16 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -333,7 +333,7 @@ DECL_SEPAEXEC(SCIPsepaExecStrongcg)
             primsol = SCIPcolGetPrimsol(cols[c]);
             assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
 
-            if( SCIPfrac(scip, primsol) >= MINFRAC )
+            if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
             {
                debugMessage("trying strong CG cut for <%s> [%g]\n", SCIPvarGetName(var), primsol);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.32 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.33 2004/11/29 12:17:14 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -144,7 +144,7 @@ DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         if( !SCIPisIntegral(scip, solval) )
+         if( !SCIPisFeasIntegral(scip, solval) )
             *result = SCIP_INFEASIBLE;
       }
    }
@@ -154,7 +154,7 @@ DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         assert(SCIPisIntegral(scip, solval));
+         assert(SCIPisFeasIntegral(scip, solval));
       }
    }
 #endif

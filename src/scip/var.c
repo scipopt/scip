@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.124 2004/11/26 14:22:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.125 2004/11/29 12:17:16 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1517,8 +1517,6 @@ RETCODE implicsSearchVar(
    /* set left and right pointer */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
-      int tmp; /* ?????????????? */
-
       /* no implications with binary variable y */
       if( (*implics)->nbinimpls[i] == 0 )
       {

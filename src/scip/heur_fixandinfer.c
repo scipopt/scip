@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.4 2004/11/23 16:09:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.5 2004/11/29 12:17:15 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -89,7 +89,7 @@ RETCODE fixVariable(
    /* fix variable to its current pseudo solution value */
    var = pseudocands[bestcand];
    solval = SCIPgetVarSol(scip, var);
-   assert(SCIPisIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
+   assert(SCIPisFeasIntegral(scip, solval)); /* in probing, we always have the pseudo solution */
    debugMessage(" -> fixed variable <%s>[%g,%g] = %g\n", 
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), solval);
    CHECK_OKAY( SCIPfixVarProbing(scip, var, solval) );
