@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.84 2004/01/24 17:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.85 2004/02/04 13:55:20 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2777,7 +2777,6 @@ DECL_CONSENFOLP(consEnfolpLinear)
    /* step 1: check all useful linear constraints for feasibility */
    for( c = 0; c < nusefulconss; ++c )
    {
-      /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
       CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
    if( *result != SCIP_FEASIBLE )

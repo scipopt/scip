@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.124 2004/01/26 15:10:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.125 2004/02/04 13:55:21 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5061,6 +5061,9 @@ RETCODE SCIPendDive(
       return SCIP_INVALIDCALL;
    }
 
+   /* reset the probably changed LP's cutoff bound */
+   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->primal->cutoffbound) );
+
    /* unmark the diving flag in the LP and reset all variables' objective and bound values */
    CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
                   scip->transprob->vars, scip->transprob->nvars) );
@@ -5092,6 +5095,11 @@ RETCODE SCIPchgVarObjDive(
    }
 
    CHECK_OKAY( SCIPvarChgObjDive(var, scip->set, scip->lp, newobj) );
+
+   /* invalidate the LP's cutoff bound, since this has nothing to do with the current objective value anymore;
+    * the cutoff bound is reset in SCIPendDive()
+    */
+   CHECK_OKAY( SCIPlpSetCutoffbound(scip->lp, scip->set->infinity) );
 
    return SCIP_OKAY;
 }

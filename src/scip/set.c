@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.87 2004/01/24 17:21:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.88 2004/02/04 13:55:21 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -113,7 +113,8 @@
 
 /* Constraint Settings */
 
-#define SCIP_DEFAULT_CONSAGELIMIT     2000 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
+#define SCIP_DEFAULT_CONSAGELIMIT      200 /**< maximum age an unnecessary constr. can reach before it is deleted, or -1 */
+#define SCIP_DEFAULT_CONSOBSOLETEAGE   100 /**< age of a constraint after which it is marked obsolete */
 
 
 /* History Settings */
@@ -429,6 +430,11 @@ RETCODE SCIPsetCreate(
                   "constraints/consagelimit",
                   "maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints",
                   &(*set)->consagelimit, SCIP_DEFAULT_CONSAGELIMIT, -1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
+                  "constraints/consobsoleteage",
+                  "age of a constraint after which it is marked obsolete, or -1 to not mark constraints obsolete",
+                  &(*set)->consobsoleteage, SCIP_DEFAULT_CONSOBSOLETEAGE, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "conflict/usepropconflict",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.1 2003/12/01 14:41:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.2 2004/02/04 13:55:22 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -70,6 +70,7 @@ struct Cons
    unsigned int     updatedeactivate:1; /**< TRUE iff constraint has to be deactivated in update phase */
    unsigned int     updateenable:1;     /**< TRUE iff constraint has to be enabled in update phase */
    unsigned int     updatedisable:1;    /**< TRUE iff constraint has to be disabled in update phase */
+   unsigned int     updatedelete:1;     /**< TRUE iff constraint has to be deleted in update phase */
    unsigned int     updateobsolete:1;   /**< TRUE iff obsolete status of constraint has to be updated in update phase */
 };
 

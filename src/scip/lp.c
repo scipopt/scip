@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.96 2004/01/27 14:38:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.97 2004/02/04 13:55:20 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4178,7 +4178,6 @@ RETCODE SCIPlpCreate(
    /* open LP Solver interface */
    CHECK_OKAY( SCIPlpiCreate(&(*lp)->lpi, name) );
 
-   (*lp)->divelpistate = NULL;
    (*lp)->lpicols = NULL;
    (*lp)->lpirows = NULL;
    (*lp)->chgcols = NULL;
@@ -4223,6 +4222,7 @@ RETCODE SCIPlpCreate(
    (*lp)->dualfeasible = TRUE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
+   (*lp)->divelpistate = NULL;
    (*lp)->lpiuobjlim = set->infinity;
    (*lp)->lpifeastol = set->feastol;
    (*lp)->lpidualfeastol = set->dualfeastol;

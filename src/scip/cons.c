@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.62 2004/01/22 14:42:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.63 2004/02/04 13:55:20 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -200,7 +200,7 @@ RETCODE conshdlrEnsureUpdateconssMem(
 
 /** returns whether the constraint's age exceeds the age limit */
 static
-Bool consIsAged(
+Bool consExceedsAgelimit(
    CONS*            cons,               /**< constraint to check */
    const SET*       set                 /**< global SCIP settings */
    )
@@ -211,9 +211,21 @@ Bool consIsAged(
    return (set->consagelimit >= 0 && cons->age > set->consagelimit);
 }
 
-/** marks constraint to be obsolete; if constraint is not necessary for feasibility, it will be deleted completely;
- *  otherwise, it will be moved to the last part of the constraint arrays, such that it is checked, enforced, separated,
- *  and propagated after the useful constraints
+/** returns whether the constraint's age exceeds the obsolete age limit */
+static
+Bool consExceedsObsoleteage(
+   CONS*            cons,               /**< constraint to check */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(set != NULL);
+
+   return (set->consobsoleteage >= 0 && cons->age > set->consobsoleteage);
+}
+
+/** marks constraint to be obsolete; it will be moved to the last part of the constraint arrays, such that
+ *  it is checked, enforced, separated, and propagated after the useful constraints
  */
 static
 RETCODE conshdlrMarkConsObsolete(
@@ -224,6 +236,8 @@ RETCODE conshdlrMarkConsObsolete(
    CONS*            cons                /**< constraint to be marked obsolete */
    )
 {
+   CONS* tmpcons;
+
    assert(conshdlr != NULL);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
@@ -232,79 +246,72 @@ RETCODE conshdlrMarkConsObsolete(
    assert(cons != NULL);
    assert(!cons->obsolete);
 
-   if( !cons->check )
+   cons->obsolete = TRUE;
+   
+   if( cons->active )
    {
-      CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, prob) );
-   }
-   else
-   {
-      CONS* tmpcons;
-
-      cons->obsolete = TRUE;
-
-      /* constraint is needed for feasibility -> it should be moved to the last positions in the conss arrays */
-      if( cons->active )
+      if( cons->check )
       {
          /* switch the last useful (non-obsolete) check constraint with this constraint */
          assert(0 <= cons->checkconsspos && cons->checkconsspos < conshdlr->nusefulcheckconss);
-
+         
          tmpcons = conshdlr->checkconss[conshdlr->nusefulcheckconss-1];
          assert(tmpcons->checkconsspos == conshdlr->nusefulcheckconss-1);
-
+         
          conshdlr->checkconss[conshdlr->nusefulcheckconss-1] = cons;
          conshdlr->checkconss[cons->checkconsspos] = tmpcons;
          tmpcons->checkconsspos = cons->checkconsspos;
          cons->checkconsspos = conshdlr->nusefulcheckconss-1;
-
+         
          conshdlr->nusefulcheckconss--;
       }
-      if( cons->enabled )
+   }
+   if( cons->enabled )
+   {
+      if( cons->separate )
       {
-         if( cons->separate )
-         {
-            /* switch the last useful (non-obsolete) sepa constraint with this constraint */
-            assert(0 <= cons->sepaconsspos && cons->sepaconsspos < conshdlr->nusefulsepaconss);
-            
-            tmpcons = conshdlr->sepaconss[conshdlr->nusefulsepaconss-1];
-            assert(tmpcons->sepaconsspos == conshdlr->nusefulsepaconss-1);
-            
-            conshdlr->sepaconss[conshdlr->nusefulsepaconss-1] = cons;
-            conshdlr->sepaconss[cons->sepaconsspos] = tmpcons;
-            tmpcons->sepaconsspos = cons->sepaconsspos;
-            cons->sepaconsspos = conshdlr->nusefulsepaconss-1;
-            
-            conshdlr->nusefulsepaconss--;
-         }
-         if( cons->enforce )
-         {
-            /* switch the last useful (non-obsolete) enfo constraint with this constraint */
-            assert(0 <= cons->enfoconsspos && cons->enfoconsspos < conshdlr->nusefulenfoconss);
-            
-            tmpcons = conshdlr->enfoconss[conshdlr->nusefulenfoconss-1];
-            assert(tmpcons->enfoconsspos == conshdlr->nusefulenfoconss-1);
-            
-            conshdlr->enfoconss[conshdlr->nusefulenfoconss-1] = cons;
-            conshdlr->enfoconss[cons->enfoconsspos] = tmpcons;
-            tmpcons->enfoconsspos = cons->enfoconsspos;
-            cons->enfoconsspos = conshdlr->nusefulenfoconss-1;
-            
-            conshdlr->nusefulenfoconss--;
-         }
-         if( cons->propagate )
-         {
-            /* switch the last useful (non-obsolete) prop constraint with this constraint */
-            assert(0 <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
-            
-            tmpcons = conshdlr->propconss[conshdlr->nusefulpropconss-1];
-            assert(tmpcons->propconsspos == conshdlr->nusefulpropconss-1);
-            
-            conshdlr->propconss[conshdlr->nusefulpropconss-1] = cons;
-            conshdlr->propconss[cons->propconsspos] = tmpcons;
-            tmpcons->propconsspos = cons->propconsspos;
-            cons->propconsspos = conshdlr->nusefulpropconss-1;
-            
-            conshdlr->nusefulpropconss--;
-         }
+         /* switch the last useful (non-obsolete) sepa constraint with this constraint */
+         assert(0 <= cons->sepaconsspos && cons->sepaconsspos < conshdlr->nusefulsepaconss);
+         
+         tmpcons = conshdlr->sepaconss[conshdlr->nusefulsepaconss-1];
+         assert(tmpcons->sepaconsspos == conshdlr->nusefulsepaconss-1);
+         
+         conshdlr->sepaconss[conshdlr->nusefulsepaconss-1] = cons;
+         conshdlr->sepaconss[cons->sepaconsspos] = tmpcons;
+         tmpcons->sepaconsspos = cons->sepaconsspos;
+         cons->sepaconsspos = conshdlr->nusefulsepaconss-1;
+         
+         conshdlr->nusefulsepaconss--;
+      }
+      if( cons->enforce )
+      {
+         /* switch the last useful (non-obsolete) enfo constraint with this constraint */
+         assert(0 <= cons->enfoconsspos && cons->enfoconsspos < conshdlr->nusefulenfoconss);
+         
+         tmpcons = conshdlr->enfoconss[conshdlr->nusefulenfoconss-1];
+         assert(tmpcons->enfoconsspos == conshdlr->nusefulenfoconss-1);
+         
+         conshdlr->enfoconss[conshdlr->nusefulenfoconss-1] = cons;
+         conshdlr->enfoconss[cons->enfoconsspos] = tmpcons;
+         tmpcons->enfoconsspos = cons->enfoconsspos;
+         cons->enfoconsspos = conshdlr->nusefulenfoconss-1;
+         
+         conshdlr->nusefulenfoconss--;
+      }
+      if( cons->propagate )
+      {
+         /* switch the last useful (non-obsolete) prop constraint with this constraint */
+         assert(0 <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
+         
+         tmpcons = conshdlr->propconss[conshdlr->nusefulpropconss-1];
+         assert(tmpcons->propconsspos == conshdlr->nusefulpropconss-1);
+         
+         conshdlr->propconss[conshdlr->nusefulpropconss-1] = cons;
+         conshdlr->propconss[cons->propconsspos] = tmpcons;
+         tmpcons->propconsspos = cons->propconsspos;
+         cons->propconsspos = conshdlr->nusefulpropconss-1;
+         
+         conshdlr->nusefulpropconss--;
       }
    }
 
@@ -330,24 +337,26 @@ RETCODE conshdlrMarkConsUseful(
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
    assert(cons != NULL);
    assert(cons->obsolete);
-   assert(cons->check);
 
    cons->obsolete = FALSE;
 
    if( cons->active )
    {
-      /* switch the first obsolete check constraint with this constraint */
-      assert(conshdlr->nusefulcheckconss <= cons->checkconsspos && cons->checkconsspos < conshdlr->ncheckconss);
-      
-      tmpcons = conshdlr->checkconss[conshdlr->nusefulcheckconss];
-      assert(tmpcons->checkconsspos == conshdlr->nusefulcheckconss);
-      
-      conshdlr->checkconss[conshdlr->nusefulcheckconss] = cons;
-      conshdlr->checkconss[cons->checkconsspos] = tmpcons;
-      tmpcons->checkconsspos = cons->checkconsspos;
-      cons->checkconsspos = conshdlr->nusefulcheckconss;
-      
-      conshdlr->nusefulcheckconss++;
+      if( cons->check )
+      {
+         /* switch the first obsolete check constraint with this constraint */
+         assert(conshdlr->nusefulcheckconss <= cons->checkconsspos && cons->checkconsspos < conshdlr->ncheckconss);
+         
+         tmpcons = conshdlr->checkconss[conshdlr->nusefulcheckconss];
+         assert(tmpcons->checkconsspos == conshdlr->nusefulcheckconss);
+         
+         conshdlr->checkconss[conshdlr->nusefulcheckconss] = cons;
+         conshdlr->checkconss[cons->checkconsspos] = tmpcons;
+         tmpcons->checkconsspos = cons->checkconsspos;
+         cons->checkconsspos = conshdlr->nusefulcheckconss;
+         
+         conshdlr->nusefulcheckconss++;
+      }
    }
    if( cons->enabled )
    {
@@ -816,11 +825,11 @@ RETCODE conshdlrProcessUpdates(
       assert(cons->conshdlr == conshdlr);
       assert(cons->update);
       assert(cons->updateactivate || cons->updatedeactivate || cons->updateenable || cons->updatedisable
-         || cons->updateobsolete);
+         || cons->updatedelete || cons->updateobsolete);
 
-      debugMessage(" -> constraint <%s>: activate=%d, deactivate=%d, enable=%d, disable=%d, obsolete=%d (consdata=%p)\n",
+      debugMessage(" -> constraint <%s>: activate=%d, deactivate=%d, enable=%d, disable=%d, delete=%d, obsolete=%d (consdata=%p)\n",
          cons->name, cons->updateactivate, cons->updatedeactivate, cons->updateenable, cons->updatedisable,
-         cons->updateobsolete, cons->consdata);
+         cons->updatedelete, cons->updateobsolete, cons->consdata);
 
       if( cons->updateactivate )
       {
@@ -828,6 +837,7 @@ RETCODE conshdlrProcessUpdates(
          assert(!cons->updatedeactivate);
          assert(!cons->updateenable);
          assert(!cons->updatedisable);
+         assert(!cons->updatedelete);
          assert(!cons->updateobsolete);
 
          CHECK_OKAY( conshdlrActivateCons(conshdlr, set, cons) );
@@ -843,7 +853,7 @@ RETCODE conshdlrProcessUpdates(
          cons->updatedeactivate = FALSE;
          cons->updateenable = FALSE;
          cons->updatedisable = FALSE;
-         cons->obsolete = consIsAged(cons, set);
+         cons->obsolete = consExceedsObsoleteage(cons, set);
          cons->updateobsolete = FALSE;
       }
       else if( cons->updateenable )
@@ -863,14 +873,21 @@ RETCODE conshdlrProcessUpdates(
          assert(!cons->enabled);
          cons->updatedisable = FALSE;
       }
-      if( cons->updateobsolete )
+      if( cons->updatedelete )
       {
-         if( !cons->obsolete && consIsAged(cons, set) )
+         assert(!cons->check);
+         CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, prob) );
+         cons->updatedelete = FALSE;
+         cons->updateobsolete = FALSE;
+      }
+      else if( cons->updateobsolete )
+      {
+         if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
          {
             /* the constraint's status must be switched to obsolete */
             CHECK_OKAY( conshdlrMarkConsObsolete(conshdlr, memhdr, set, prob, cons) );
          }
-         else if( cons->obsolete && !consIsAged(cons, set) )
+         else if( cons->obsolete && !consExceedsObsoleteage(cons, set) )
          {
             /* the constraint's status must be switched to useful */
             CHECK_OKAY( conshdlrMarkConsUseful(conshdlr, cons) );
@@ -878,7 +895,7 @@ RETCODE conshdlrProcessUpdates(
          cons->updateobsolete = FALSE;
       }
       assert(!cons->updateactivate && !cons->updatedeactivate && !cons->updateenable && !cons->updatedisable
-         && !cons->updateobsolete);
+         && !cons->updatedelete && !cons->updateobsolete);
       cons->update = FALSE;
 
       /* release the constraint */
@@ -2769,6 +2786,7 @@ RETCODE SCIPconsCreate(
    (*cons)->updatedeactivate = FALSE;
    (*cons)->updateenable = FALSE;
    (*cons)->updatedisable = FALSE;
+   (*cons)->updatedelete = FALSE;
    (*cons)->updateobsolete = FALSE;
    
    /* capture constraint */
@@ -2984,6 +3002,7 @@ RETCODE SCIPconsActivate(
    assert(!cons->updatedeactivate);
    assert(!cons->updateenable);
    assert(!cons->updatedisable);
+   assert(!cons->updatedelete);
    assert(!cons->updateobsolete);
    assert(cons->conshdlr != NULL);
 
@@ -3110,7 +3129,20 @@ RETCODE SCIPconsIncAge(
 
    cons->age++;
    
-   if( !cons->obsolete && consIsAged(cons, set) )
+   if( !cons->check && consExceedsAgelimit(cons, set) )
+   {
+      if( cons->conshdlr->delayupdates )
+      {
+         cons->updatedelete = TRUE;
+         CHECK_OKAY( conshdlrAddUpdateCons(cons->conshdlr, set, cons) );
+         assert(cons->update);
+      }
+      else
+      {
+         CHECK_OKAY( SCIPconsDelete(cons, memhdr, set, prob) );
+      }
+   }
+   else if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
    {
       if( cons->conshdlr->delayupdates )
       {

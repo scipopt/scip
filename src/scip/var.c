@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.68 2004/01/26 15:10:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.69 2004/02/04 13:55:22 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3533,6 +3533,8 @@ RETCODE SCIPvarChgLbDive(
    )
 {
    assert(var != NULL);
+   assert(lp != NULL);
+   assert(lp->diving);
 
    /* adjust bound for integral variables */
    SCIPvarAdjustLb(var, set, &newbound);
@@ -3613,6 +3615,8 @@ RETCODE SCIPvarChgUbDive(
    )
 {
    assert(var != NULL);
+   assert(lp != NULL);
+   assert(lp->diving);
 
    /* adjust bound for integral variables */
    SCIPvarAdjustUb(var, set, &newbound);

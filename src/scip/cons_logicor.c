@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.27 2004/01/24 17:21:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.28 2004/02/04 13:55:20 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1710,8 +1710,8 @@ DECL_CONSPROP(consPropLogicor)
                      &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
 
-   /* step 2: if no reduction was found, propagate all obsolete logic or constraints */
-   if( !cutoff && !reduceddom )
+   /* step 2: every 10th propagation, propagate all obsolete logic or constraints */
+   if( SCIPgetActDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
    {
       for( c = nusefulconss; c < nconss && !cutoff; ++c )
       {

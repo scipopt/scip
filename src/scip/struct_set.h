@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.9 2004/01/24 17:21:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.10 2004/02/04 13:55:22 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -132,6 +132,7 @@ struct Set
    int              rowagelimit;        /**< maximum age a row can reach before it is deleted from the LP */
    int              cutagelimit;        /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int              consagelimit;       /**< maximum age an unnecessary constraint can reach before it is deleted, or -1 */
+   int              consobsoleteage;    /**< age of a constraint after which it is marked obsolete (not useful anymore) */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
    Longint          nodelimit;          /**< maximal number of nodes to process (-1: no limit) */
    Real             timelimit;          /**< maximal time in seconds to run */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.26 2004/01/27 14:38:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.27 2004/02/04 13:55:19 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1173,6 +1173,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
    Real* farkascoef;
    Real farkaslhs;
    Real farkasact;
+   Real bd;
    int nrows;
    int r;
    int v;
@@ -1182,6 +1183,8 @@ RETCODE lpconflictAnalyzeDualfarkas(
    assert(success != NULL);
   
    *success = FALSE;
+
+   debugMessage("conflict analysis of farkas solution: cutoff=%g, depth=%d\n", lp->cutoffbound, SCIPgetActDepth(set->scip));
 
    /* get LP rows */
    rows = SCIPlpGetRows(lp);
@@ -1248,9 +1251,9 @@ RETCODE lpconflictAnalyzeDualfarkas(
       {
          /* use the current local bounds for binary variables, selecting the bound that leads to largest activity */
          if( farkascoef[v] > 0.0 )
-            farkasact += farkascoef[v] * SCIPvarGetUbLocal(var);
+            bd = SCIPvarGetUbLocal(var);
          else
-            farkasact += farkascoef[v] * SCIPvarGetLbLocal(var);
+            bd = SCIPvarGetLbLocal(var);
       }
       else
       {
@@ -1258,84 +1261,101 @@ RETCODE lpconflictAnalyzeDualfarkas(
           * non-binary variables
           */
          if( farkascoef[v] > 0.0 )
-            farkasact += farkascoef[v] * SCIPvarGetUbGlobal(var);
+         {
+            bd = SCIPvarGetUbGlobal(var);
+
+            /* if the global bound is infinite, we have to abort */
+            if( SCIPsetIsInfinity(set, bd) )
+               break;
+         }
          else
-            farkasact += farkascoef[v] * SCIPvarGetLbGlobal(var);
+         {
+            bd = SCIPvarGetLbGlobal(var);
+
+            /* if the global bound is infinite, we have to abort */
+            if( SCIPsetIsInfinity(set, -bd) )
+               break;
+         }
       }
+      farkasact += farkascoef[v] * bd;
    }
-   debugMessage("farkaslhs=%g, farkasact=%g\n", farkaslhs, farkasact);
+   debugMessage("farkaslhs=%g, farkasact=%g (%s)\n", farkaslhs, farkasact, v == prob->nvars ? "valid" : "invalid");
 
-   /* check, if the farkas row is still violated (using global bounds for non-binary variables and ignoring local rows) */
-   if( SCIPsetIsFeasLT(set, farkasact, farkaslhs) )
+   /* continue only, if no infinite global bound was found in the conflict */
+   if( v == prob->nvars )
    {
-      /* initialize conflict data */
-      CHECK_OKAY( SCIPconflictInit(conflict) );
-
-      /* try to unfix binary variables and still keep the farkas row violated:
-       * binaries fixed to 0.0 can be unfixed
-       *  - if farkas value is positive and farkasact + farkascoef < farkaslhs (and farkasact has to be updated)
-       *  - if farkas value is non-positive (because 0.0 is best farkas bound anyways)
-       * binaries fixed to 1.0 can be unfixed
-       *  - if farkas value is negative and farkasact - farkascoef < farkaslhs (and farkasact has to be updated)
-       *  - if farkas value is non-negative (because 1.0 is best farkas bound anyways)
-       */
-      nremoved = 0;
-      for( v = 0; v < prob->nbinvars; ++v )
+      /* check, if the farkas row is still violated (using global bounds for non-binary variables and ignoring local rows) */
+      if( SCIPsetIsFeasLT(set, farkasact, farkaslhs) )
       {
-         var = prob->vars[v];
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         /* initialize conflict data */
+         CHECK_OKAY( SCIPconflictInit(conflict) );
 
-         debugMessage(" <%s> [%g,%g]: farkascoef=%g, %g <= %g\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), farkascoef[v], farkaslhs, farkasact);
-         if( SCIPvarGetUbLocal(var) < 0.5 )
+         /* try to unfix binary variables and still keep the farkas row violated:
+          * binaries fixed to 0.0 can be unfixed
+          *  - if farkas value is positive and farkasact + farkascoef < farkaslhs (and farkasact has to be updated)
+          *  - if farkas value is non-positive (because 0.0 is best farkas bound anyways)
+          * binaries fixed to 1.0 can be unfixed
+          *  - if farkas value is negative and farkasact - farkascoef < farkaslhs (and farkasact has to be updated)
+          *  - if farkas value is non-negative (because 1.0 is best farkas bound anyways)
+          */
+         nremoved = 0;
+         for( v = 0; v < prob->nbinvars; ++v )
          {
-            /* variable is fixed to 0.0 */
-            if( SCIPsetIsPositive(set, farkascoef[v]) )
+            var = prob->vars[v];
+            assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+            debugMessage(" <%s> [%g,%g]: farkascoef=%g, %g <= %g\n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), farkascoef[v], farkaslhs, farkasact);
+            if( SCIPvarGetUbLocal(var) < 0.5 )
             {
-               if( SCIPsetIsFeasLT(set, farkasact + farkascoef[v], farkaslhs) )
+               /* variable is fixed to 0.0 */
+               if( SCIPsetIsPositive(set, farkascoef[v]) )
                {
-                  /* we can unfix the variable but have to increase the farkas activity */
-                  farkasact += farkascoef[v];
-                  nremoved++;
-                  debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
+                  if( SCIPsetIsFeasLT(set, farkasact + farkascoef[v], farkaslhs) )
+                  {
+                     /* we can unfix the variable but have to increase the farkas activity */
+                     farkasact += farkascoef[v];
+                     nremoved++;
+                     debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
+                  }
+                  else
+                  {
+                     /* we cannot unfix the variable: it has to be put in the conflict set */
+                     CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+                     debugMessage("  -> moved to conflict set\n");
+                  }
                }
                else
-               {
-                  /* we cannot unfix the variable: it has to be put in the conflict set */
-                  CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
-                  debugMessage("  -> moved to conflict set\n");
-               }
-            }
-            else
-               nremoved++;
-         }
-         else if( SCIPvarGetLbLocal(var) > 0.5 )
-         {
-            /* variable is fixed to 1.0 */
-            if( SCIPsetIsNegative(set, farkascoef[v]) )
-            {
-               if( SCIPsetIsFeasLT(set, farkasact - farkascoef[v], farkaslhs) )
-               {
-                  /* we can unfix the variable but have to increase the farkas activity */
-                  farkasact -= farkascoef[v];
                   nremoved++;
-                  debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
+            }
+            else if( SCIPvarGetLbLocal(var) > 0.5 )
+            {
+               /* variable is fixed to 1.0 */
+               if( SCIPsetIsNegative(set, farkascoef[v]) )
+               {
+                  if( SCIPsetIsFeasLT(set, farkasact - farkascoef[v], farkaslhs) )
+                  {
+                     /* we can unfix the variable but have to increase the farkas activity */
+                     farkasact -= farkascoef[v];
+                     nremoved++;
+                     debugMessage("  -> unfixed variable -> %g <= %g\n", farkaslhs, farkasact);
+                  }
+                  else
+                  {
+                     /* we cannot unfix the variable: it has to be put in the conflict set */
+                     CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+                     debugMessage("  -> moved to conflict set\n");
+                  }
                }
                else
-               {
-                  /* we cannot unfix the variable: it has to be put in the conflict set */
-                  CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
-                  debugMessage("  -> moved to conflict set\n");
-               }
+                  nremoved++;
             }
-            else
-               nremoved++;
          }
+         debugMessage("farkas conflict analysis removed %d fixings\n", nremoved);
+
+         /* analyze the conflict set, and create a conflict constraint on success */
+         CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
       }
-      debugMessage("farkas conflict analysis removed %d fixings\n", nremoved);
-
-      /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
    }
 
    /* free memory for storing the dual farkas infeasibility proof row */
@@ -1363,11 +1383,16 @@ RETCODE lpconflictAnalyzeDualsol(
    ROW* row;
    COL* col;
    VAR* var;
+   VAR** binvars;
+   Real* binvarscores;
+   Real score;
    Real* dualcoef;
    Real duallhs;
    Real dualact;
    Real duallhsdelta;
    Real dualactdelta;
+   Real bd;
+   Real redcost;
    Bool dualfeasible;
    Bool havelocal;
    int nrows;
@@ -1394,7 +1419,8 @@ RETCODE lpconflictAnalyzeDualsol(
 
    /* make sure, the dual values are stored in the rows, and the reduced costs in the columns */
    CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, &dualfeasible) );
-   debugMessage("conflict analysis of dual solution: dualfeasible=%d, cutoff=%g\n", dualfeasible, lp->cutoffbound);
+   debugMessage("conflict analysis of dual solution: dualfeasible=%d, cutoff=%g, depth=%d\n",
+      dualfeasible, lp->cutoffbound, SCIPgetActDepth(set->scip));
 
    /* if the solution is not dual feasible, we cannot do anything */
    if( !dualfeasible )
@@ -1468,162 +1494,208 @@ RETCODE lpconflictAnalyzeDualsol(
       assert(col != NULL);
       var = SCIPcolGetVar(col);
 
+      /* ignore reduced costs close to 0.0 */
+      if( SCIPsetIsFeasZero(set, col->redcost) )
+         continue;
+
       /* add column's bound to dual row lhs: redcost > 0 -> lb, redcost < 0 -> ub */
-      if( SCIPsetIsFeasPositive(set, col->redcost) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         /* binary variables: use local bound */
+         if( col->redcost > 0.0 )
+            bd = SCIPvarGetLbLocal(var);
+         else
+            bd = SCIPvarGetUbLocal(var);
+      }
+      else
+      {
+         /* local bounds of non-binary variables cannot be used: use global bound */
+         if( col->redcost > 0.0 )
          {
-            /* binary variables: use local bound */
-            duallhs += col->redcost * SCIPvarGetLbLocal(var);
-            debugMessage(" col <%s>: llb=%g, redcost=%g -> %g\n", 
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), col->redcost, duallhs);
+            bd = SCIPvarGetLbGlobal(var);
+
+            /* if the global bound is infinite, we have to abort */
+            if( SCIPsetIsInfinity(set, -bd) )
+               break;
          }
          else
          {
-            /* local bounds of non-binary variables cannot be used: use global bound */
-            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
-            duallhs += col->redcost * SCIPvarGetLbGlobal(var);
-            debugMessage(" col <%s>: llb=%g, glb=%g, redcost=%g -> %g\n", 
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var), col->redcost, duallhs);
+            bd = SCIPvarGetUbGlobal(var);
+
+            /* if the global bound is infinite, we have to abort */
+            if( SCIPsetIsInfinity(set, bd) )
+               break;
          }
       }
-      else if( SCIPsetIsFeasNegative(set, col->redcost) )
-      {
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-         {
-            /* binary variables: use local bound */
-            duallhs += col->redcost * SCIPvarGetUbLocal(var);
-            debugMessage(" col <%s>: lub=%g, redcost=%g -> %g\n", 
-               SCIPvarGetName(var), SCIPvarGetUbLocal(var), col->redcost, duallhs);
-         }
-         else
-         {
-            /* local bounds of non-binary variables cannot be used: use global bound */
-            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
-            duallhs += col->redcost * SCIPvarGetUbGlobal(var);
-            debugMessage(" col <%s>: lub=%g, gub=%g, redcost=%g -> %g\n", 
-               SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var), col->redcost, duallhs);
-         }
-      }
+
+      duallhs += col->redcost * bd;
+      debugMessage(" col <%s>: loc=[%g,%g], glb=[%g,%g], redcost=%g -> %g\n", 
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), col->redcost, duallhs);
    }
+   debugMessage("duallhs=%g, localrows=%d (%s)\n", duallhs, havelocal, c == ncols ? "valid" : "invalid");
 
-   /* calculate the current dual activity, always using the best bound w.r.t. the dual coefficient;
-    * if no local rows are included, the dual row is empty
-    */
-   dualact = 0.0;
-   if( havelocal )
+   /* continue only, if no infinite bound is involved in the conflict */
+   if( c == ncols )
    {
-      for( v = 0; v < prob->nvars; ++v )
-      {
-         var = prob->vars[v];
-         assert(SCIPvarGetProbindex(var) == v);
-         
-         /* ignore coefs close to 0.0 */
-         if( SCIPsetIsZero(set, dualcoef[v]) )
-         {
-            dualcoef[v] = 0.0;
-            continue;
-         }
-
-         /* distinct binary and non-binary variables */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-         {
-            /* use the current local bounds for binary variables, selecting the bound that leads to largest activity */
-            if( dualcoef[v] > 0.0 )
-               dualact += dualcoef[v] * SCIPvarGetUbLocal(var);
-            else
-               dualact += dualcoef[v] * SCIPvarGetLbLocal(var);
-         }
-         else
-         {
-            /* because we cannot include non-binary variables in the conflict set, we have to use global bounds for
-             * non-binary variables
-             */
-            if( dualcoef[v] > 0.0 )
-               dualact += dualcoef[v] * SCIPvarGetUbGlobal(var);
-            else
-               dualact += dualcoef[v] * SCIPvarGetLbGlobal(var);
-         }
-      }
-   }
-   debugMessage("duallhs=%g, dualact=%g, cutoffbound=%g\n", duallhs, dualact, lp->cutoffbound);
-
-   /* check, if the dual row is still violated (using global bounds for non-binary variables and ignoring local rows) */
-   if( SCIPsetIsFeasLT(set, dualact, duallhs) )
-   {
-      /* initialize conflict data */
-      CHECK_OKAY( SCIPconflictInit(conflict) );
-
-      /* try to unfix binary variables and still keep the dual row  y'^T{lhs,rhs} + r^T{lb,ub} - c* <= -z^T A x  violated:
-       * binary variables i fixed to x_i == 0.0:
-       *  - set duallhsdelta := r_i if r_i < 0.0,             and duallhsdelta := 0.0, if r_i >= 0.0
-       *  - set dualactdelta := dualcoef, if dualcoef > 0.0,  and dualactdelta := 0.0, if dualcoef <= 0.0
-       * binary variables i fixed to x_i == 1.0:
-       *  - set duallhsdelta := -r_i if r_i > 0.0,            and duallhsdelta := 0.0, if r_i <= 0.0
-       *  - set dualactdelta := -dualcoef, if dualcoef < 0.0, and dualactdelta := 0.0, if dualcoef >= 0.0
-       * if duallhs + duallhsdelta > dualact + dualactdelta:
-       *  - variable can be unfixed
-       *  - update duallhs and dualact with duallhsdelta and dualactdelta
-       * if duallhs + duallhsdelta <= dualact + dualactdelta:
-       *  - variable cannot be unfixed and has to be put in the conflict set
+      /* calculate the current dual activity, always using the best bound w.r.t. the dual coefficient;
+       * if no local rows are included, the dual row is empty
        */
-      nremoved = 0;
-      nfixings = 0;
-      for( v = 0; v < prob->nbinvars; ++v )
+      dualact = 0.0;
+      if( havelocal )
       {
-         var = prob->vars[v];
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-
-         /* ignore already unfixed variables */
-         if( SCIPvarGetLbLocal(var) < 0.5 && SCIPvarGetUbLocal(var) > 0.5 )
-            continue;
-
-         nfixings++;
-         debugMessage(" <%s> [%g,%g]: redcost=%g, dualcoef=%g, %g <= %g\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
-            SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN ? SCIPvarGetCol(var)->redcost : SCIPvarGetObj(var),
-            dualcoef[v], duallhs, dualact);
-
-         /* variable fixed to lower bound: sign = +1, upper bound: sign = -1 */
-         sign = SCIPvarGetUbLocal(var) < 0.5 ? +1 : -1;
+         for( v = 0; v < prob->nvars; ++v )
+         {
+            var = prob->vars[v];
+            assert(SCIPvarGetProbindex(var) == v);
          
-         /* calculate duallhsdelta and dualactdelta for unfixing the variable */
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-         {
-            col = SCIPvarGetCol(var);
-            assert(col != NULL);
-            duallhsdelta = MIN(sign * col->redcost, 0.0);
-         }
-         else
-         {
-            /* non-LP variables must have non-negative/non-positive red. costs (== obj. value),
-             * if their best bound is lower/upper bound
-             */
-            assert(!SCIPsetIsNegative(set, sign * SCIPvarGetObj(var)));
-            duallhsdelta = 0.0;
-         }
-         dualactdelta = MAX(sign * dualcoef[v], 0.0);
+            /* ignore coefs close to 0.0 */
+            if( SCIPsetIsZero(set, dualcoef[v]) )
+            {
+               dualcoef[v] = 0.0;
+               continue;
+            }
 
-         /* check, if variable can be unfixed */
-         if( SCIPsetIsFeasGT(set, duallhs + duallhsdelta, dualact + dualactdelta) )
-         {
-            /* we can unfix the variable and have to update the dual row's left hand side and activity */
-            duallhs += duallhsdelta;
-            dualact += dualactdelta;
-            nremoved++;
-            debugMessage("  -> unfixed variable -> %g <= %g\n", duallhs, dualact);
-         }
-         else
-         {
-            /* we cannot unfix the variable: it has to be put in the conflict set */
-            CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
-            debugMessage("  -> moved to conflict set\n");
+            /* distinct binary and non-binary variables */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            {
+               /* use the current local bounds for binary variables, selecting the bound that leads to largest activity */
+               if( dualcoef[v] > 0.0 )
+                  dualact += dualcoef[v] * SCIPvarGetUbLocal(var);
+               else
+                  dualact += dualcoef[v] * SCIPvarGetLbLocal(var);
+            }
+            else
+            {
+               /* because we cannot include non-binary variables in the conflict set, we have to use global bounds for
+                * non-binary variables
+                */
+               if( dualcoef[v] > 0.0 )
+                  dualact += dualcoef[v] * SCIPvarGetUbGlobal(var);
+               else
+                  dualact += dualcoef[v] * SCIPvarGetLbGlobal(var);
+            }
          }
       }
-      debugMessage("dual conflict analysis removed %d of %d fixings\n", nremoved, nfixings);
+      debugMessage("duallhs=%g, dualact=%g, cutoffbound=%g\n", duallhs, dualact, lp->cutoffbound);
 
-      /* analyze the conflict set, and create a conflict constraint on success */
-      CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
+      /* check, if the dual row is still violated (using global bounds for non-binary variables and ignoring local rows) */
+      if( SCIPsetIsFeasLT(set, dualact, duallhs) )
+      {
+         /* calculate the order in which the binary variables are tried to unfix:
+          *  - prefer variables that have been fixed deeper in the tree, to get a more global conflict
+          *  - prefer variables with small reduced costs to get rid of as many variables as possible
+          */
+         CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvars, prob->nbinvars+1) );
+         CHECK_OKAY( SCIPsetAllocBufferArray(set, &binvarscores, prob->nbinvars+1) );
+         nfixings = 0;
+         for( v = 0; v < prob->nbinvars; ++v )
+         {
+            var = prob->vars[v];
+
+            /* ignore already unfixed variables */
+            if( SCIPvarGetLbLocal(var) < 0.5 && SCIPvarGetUbLocal(var) > 0.5 )
+               continue;
+
+            /* calculate score of variable fixing */
+            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+            {
+               col = SCIPvarGetCol(var);
+               assert(col != NULL);
+               redcost = ABS(col->redcost);
+            }
+            else
+               redcost = 0.0;
+            score = (1.0 - redcost/(duallhs - dualact));
+            score = MAX(score, 0.0) + 1e-6;
+            score *= SCIPvarGetInferDepth(var);
+
+            /* insert fixed variable in candidate list */
+            for( i = nfixings; i > 0 && score > binvarscores[i-1]; --i )
+            {
+               binvars[i] = binvars[i-1];
+               binvarscores[i] = binvarscores[i-1];
+            }
+            binvars[i] = var;
+            binvarscores[i] = score;
+            nfixings++;
+         }
+
+         /* initialize conflict data */
+         CHECK_OKAY( SCIPconflictInit(conflict) );
+
+         /* try to unfix binary variables and still keep the dual row  y'^T{lhs,rhs} + r^T{lb,ub} - c* <= -z^T A x  violated:
+          * binary variables i fixed to x_i == 0.0:
+          *  - set duallhsdelta := r_i if r_i < 0.0,             and duallhsdelta := 0.0, if r_i >= 0.0
+          *  - set dualactdelta := dualcoef, if dualcoef > 0.0,  and dualactdelta := 0.0, if dualcoef <= 0.0
+          * binary variables i fixed to x_i == 1.0:
+          *  - set duallhsdelta := -r_i if r_i > 0.0,            and duallhsdelta := 0.0, if r_i <= 0.0
+          *  - set dualactdelta := -dualcoef, if dualcoef < 0.0, and dualactdelta := 0.0, if dualcoef >= 0.0
+          * if duallhs + duallhsdelta > dualact + dualactdelta:
+          *  - variable can be unfixed
+          *  - update duallhs and dualact with duallhsdelta and dualactdelta
+          * if duallhs + duallhsdelta <= dualact + dualactdelta:
+          *  - variable cannot be unfixed and has to be put in the conflict set
+          */
+         nremoved = 0;
+         for( i = 0; i < nfixings; ++i )
+         {
+            var = binvars[i];
+            v = SCIPvarGetProbindex(var);
+            assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+            assert(0 <= v && v < prob->nbinvars);
+
+            debugMessage(" <%s> [%g,%g]: score=%g, infdepth=%d, redcost=%g, dualcoef=%g, %g <= %g\n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
+               binvarscores[i], SCIPvarGetInferDepth(var),
+               SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN ? SCIPvarGetCol(var)->redcost : SCIPvarGetObj(var),
+               dualcoef[v], duallhs, dualact);
+
+            /* variable fixed to lower bound: sign = +1, upper bound: sign = -1 */
+            sign = SCIPvarGetUbLocal(var) < 0.5 ? +1 : -1;
+         
+            /* calculate duallhsdelta and dualactdelta for unfixing the variable */
+            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+            {
+               col = SCIPvarGetCol(var);
+               assert(col != NULL);
+               duallhsdelta = MIN(sign * col->redcost, 0.0);
+            }
+            else
+            {
+               /* non-LP variables must have non-negative/non-positive red. costs (== obj. value),
+                * if their best bound is lower/upper bound
+                */
+               assert(!SCIPsetIsNegative(set, sign * SCIPvarGetObj(var)));
+               duallhsdelta = 0.0;
+            }
+            dualactdelta = MAX(sign * dualcoef[v], 0.0);
+
+            /* check, if variable can be unfixed */
+            if( SCIPsetIsFeasGT(set, duallhs + duallhsdelta, dualact + dualactdelta) )
+            {
+               /* we can unfix the variable and have to update the dual row's left hand side and activity */
+               duallhs += duallhsdelta;
+               dualact += dualactdelta;
+               nremoved++;
+               debugMessage("  -> unfixed variable -> %g <= %g\n", duallhs, dualact);
+            }
+            else
+            {
+               /* we cannot unfix the variable: it has to be put in the conflict set */
+               CHECK_OKAY( SCIPconflictAddVar(conflict, memhdr, set, stat, var) );
+               debugMessage("  -> moved to conflict set\n");
+            }
+         }
+         debugMessage("dual conflict analysis removed %d of %d fixings\n", nremoved, nfixings);
+
+         /* analyze the conflict set, and create a conflict constraint on success */
+         CHECK_OKAY( conflictAnalyze(conflict, set, maxsize, success) );
+
+         /* free the buffer for the sorted binary variables */
+         SCIPsetFreeBufferArray(set, &binvarscores);
+         SCIPsetFreeBufferArray(set, &binvars);
+      }
    }
 
    /* free memory for storing the dual infeasibility proof row */

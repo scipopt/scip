@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.7 2004/01/26 15:10:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.8 2004/02/04 13:55:22 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -149,7 +149,6 @@ struct Row
 struct Lp
 {
    LPI*             lpi;                /**< LP solver interface */
-   LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    COL**            lpicols;            /**< array with columns actually stored in the LP solver */
    int              lpicolssize;        /**< available slots in lpicols vector */
    int              nlpicols;           /**< number of columns in the LP solver */
@@ -196,6 +195,7 @@ struct Lp
    Bool             dualfeasible;       /**< is actual LP basis dual feasible? */
    Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
+   LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    Real             lpiuobjlim;         /**< current upper objective limit in LPI */
    Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */

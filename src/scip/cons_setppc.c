@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.32 2004/01/24 17:21:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.33 2004/02/04 13:55:20 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1813,8 +1813,8 @@ DECL_CONSPROP(consPropSetppc)
       CHECK_OKAY( processFixings(scip, conss[c], &cutoff, &reduceddom, &addcut, &mustcheck) );
    }
 
-   /* step 2: if no reduction was found, propagate all obsolete set partitioning / packing / covering constraints */
-   if( !cutoff && !reduceddom )
+   /* step 2: every 10th propagation, propagate all obsolete logic or constraints */
+   if( SCIPgetActDepth(scip) % (10*SCIPconshdlrGetPropFreq(conshdlr)) == 0 )
    {
       for( c = nusefulconss; c < nconss && !cutoff; ++c )
       {
