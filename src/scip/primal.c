@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.60 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.61 2005/02/04 10:04:07 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -162,11 +162,11 @@ RETCODE primalSetCutoffbound(
 {
    assert(primal != NULL);
    assert(cutoffbound <= SCIPsetInfinity(set));
-   assert(cutoffbound <= primal->upperbound);
+   assert(SCIPsetIsLE(set, cutoffbound, primal->upperbound));
 
    debugMessage("changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
 
-   primal->cutoffbound = cutoffbound;
+   primal->cutoffbound = MIN(cutoffbound, primal->upperbound); /* get rid of numerical issues */
    
    /* set cut off value in LP solver */
    CHECK_OKAY( SCIPlpSetCutoffbound(lp, set, primal->cutoffbound) );
@@ -231,7 +231,7 @@ RETCODE primalSetUpperbound(
    primal->upperbound = upperbound;
    
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
-   if( SCIPprobIsObjIntegral(prob) )
+   if( SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
    {
       Real delta;
 
@@ -363,14 +363,14 @@ RETCODE SCIPprimalUpdateObjoffset(
    if( primal->nsols > 0 )
       upperbound = MIN(upperbound, SCIPsolGetObj(primal->sols[0], set, prob));
 
+   /* invalidate old upper bound */
+   CHECK_OKAY( primalSetUpperbound(primal, blkmem, set, stat, prob, tree, lp, SCIPsetInfinity(set)) );
+
    /* reset the cutoff bound */
    CHECK_OKAY( primalSetCutoffbound(primal, blkmem, set, stat, tree, lp, upperbound) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
-   if( upperbound != primal->upperbound )
-   {
-      CHECK_OKAY( primalSetUpperbound(primal, blkmem, set, stat, prob, tree, lp, upperbound) );
-   }
+   CHECK_OKAY( primalSetUpperbound(primal, blkmem, set, stat, prob, tree, lp, upperbound) );
 
    return SCIP_OKAY;
 }

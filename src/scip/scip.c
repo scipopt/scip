@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.252 2005/02/03 16:57:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.253 2005/02/04 10:04:07 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3455,16 +3455,37 @@ RETCODE initPresolve(
    for( i = 0; i < scip->set->npresols; ++i )
    {
       CHECK_OKAY( SCIPpresolInitpre(scip->set->presols[i], scip, &result) );
-      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-      *infeasible = *infeasible || (result == SCIP_CUTOFF);
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
    }
 
    /* inform constraint handlers that the presolving is abound to begin */
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrInitpre(scip->set->conshdlrs[i], scip, &result) );
-      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-      *infeasible =*infeasible ||  (result == SCIP_CUTOFF);
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+      }
    }
 
    return SCIP_OKAY;
@@ -3494,16 +3515,37 @@ RETCODE exitPresolve(
    for( i = 0; i < scip->set->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrExitpre(scip->set->conshdlrs[i], scip, &result) );
-      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-      *infeasible = *infeasible || (result == SCIP_CUTOFF);
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "constraint handler <%s> detected unboundness (or infeasibility)\n",
+            SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+      }
    }
 
    /* inform presolvers that the presolving is finished, and perform final modifications */
    for( i = 0; i < scip->set->npresols; ++i )
    {
       CHECK_OKAY( SCIPpresolExitpre(scip->set->presols[i], scip, &result) );
-      *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-      *infeasible = *infeasible || (result == SCIP_CUTOFF);
+      if( result == SCIP_CUTOFF )
+      {
+         *infeasible = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
+      else if( result == SCIP_UNBOUNDED )
+      {
+         *unbounded = TRUE;
+         infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+      }
    }
 
    /* replace variables in variable bounds with active problem variables, and 
@@ -3614,8 +3656,18 @@ RETCODE presolve(
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
-         *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-         *infeasible = *infeasible || (result == SCIP_CUTOFF);
+         if( result == SCIP_CUTOFF )
+         {
+            *infeasible = TRUE;
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i]));
+         }
+         else if( result == SCIP_UNBOUNDED )
+         {
+            *unbounded = TRUE;
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
+         }
       }
 
       /* call presolve methods of constraint handlers */
@@ -3626,8 +3678,19 @@ RETCODE presolve(
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, &scip->stat->npresolchgsides, &result) );
-         *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
-         *infeasible = *infeasible || (result == SCIP_CUTOFF);
+         if( result == SCIP_CUTOFF )
+         {
+            *infeasible = TRUE;
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "constraint handler <%s> detected infeasibility\n", SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+         }
+         else if( result == SCIP_UNBOUNDED )
+         {
+            *unbounded = TRUE;
+            infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "constraint handler <%s> detected unboundness (or infeasibility)\n",
+               SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+         }
       }
 
       /* call included presolvers with negative priority */
@@ -3971,21 +4034,35 @@ RETCODE SCIPpresolve(
             /* print solution message */
             if( infeasible )
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility.\n");
+               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected infeasibility\n");
 
-               /* switch status to INFEASIBLE */
-               scip->stat->status = SCIP_STATUS_INFEASIBLE;
+               /* infeasibility in this round means, that the current best solution is optimal (if existing) */
+               if( scip->primal->nsols > 0 )
+               {
+                  /* switch status to OPTIMAL */
+                  scip->stat->status = SCIP_STATUS_OPTIMAL;
+
+                  /* remove the root node from the tree, s.t. the lower bound is set to +infinity */
+                  CHECK_OKAY( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
+               }
+               else
+               {
+                  /* switch status to INFEASIBLE */
+                  scip->stat->status = SCIP_STATUS_INFEASIBLE;
+               }
             }
             else if( scip->primal->nsols >= 1 )
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness.\n");
+               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                  "presolving detected unboundness\n");
 
                /* switch status to UNBOUNDED */
                scip->stat->status = SCIP_STATUS_UNBOUNDED;
             }
             else
             {
-               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL, "presolving detected unboundness (or infeasibility).\n");
+               infoMessage(scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                  "presolving detected unboundness (or infeasibility)\n");
 
                /* switch status to INFORUNBD */
                scip->stat->status = SCIP_STATUS_INFORUNBD;
