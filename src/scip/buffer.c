@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -36,7 +35,7 @@ RETCODE SCIPbufferCreate(               /**< creates memory buffer storage */
 {
    assert(buffer != NULL);
 
-   ALLOC_OKAY( allocMemory(*buffer) );
+   ALLOC_OKAY( allocMemory(buffer) );
    (*buffer)->data = NULL;
    (*buffer)->size = NULL;
    (*buffer)->used = NULL;
@@ -57,12 +56,12 @@ void SCIPbufferFree(                    /**< frees memory buffer */
    for( i = 0; i < (*buffer)->ndata; ++i )
    {
       assert(!(*buffer)->used[i]);
-      freeMemoryArrayNull((*buffer)->data[i]);
+      freeMemoryArrayNull(&(*buffer)->data[i]);
    }
-   freeMemoryArrayNull((*buffer)->data);
-   freeMemoryArrayNull((*buffer)->size);
-   freeMemoryArrayNull((*buffer)->used);
-   freeMemory(*buffer);
+   freeMemoryArrayNull(&(*buffer)->data);
+   freeMemoryArrayNull(&(*buffer)->size);
+   freeMemoryArrayNull(&(*buffer)->used);
+   freeMemory(buffer);
 }
 
 RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
@@ -88,9 +87,9 @@ RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
 
       /* create additional buffers */
       newsize = SCIPsetCalcMemGrowSize(set, buffer->firstfree+1);
-      ALLOC_OKAY( reallocMemoryArray(buffer->data, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(buffer->size, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(buffer->used, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&buffer->data, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&buffer->size, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&buffer->used, newsize) );
       for( i = buffer->ndata; i < newsize; ++i )
       {
          buffer->data[i] = NULL;
@@ -110,7 +109,7 @@ RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
 
       /* enlarge buffer */
       newsize = SCIPsetCalcMemGrowSize(set, size);
-      ALLOC_OKAY( reallocMemorySize(buffer->data[bufnum], newsize) );
+      ALLOC_OKAY( reallocMemorySize(&buffer->data[bufnum], newsize) );
       buffer->size[bufnum] = newsize;
    }
    assert(buffer->size[bufnum] >= size);
@@ -119,15 +118,16 @@ RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("captured buffer %d/%d at %p of size %d (required size: %d)\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size);
+   debugMessage("captured buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
    return SCIP_OKAY;
 }
 
 void SCIPbufferRelease(                 /**< releases a buffer */
    BUFFER*          buffer,             /**< memory buffer storage */
-   void**           ptr                 /**< pointer to the allocated memory buffer */
+   void**           ptr,                /**< pointer to the allocated memory buffer */
+   int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */
    )
 {
    int i;
@@ -152,6 +152,6 @@ void SCIPbufferRelease(                 /**< releases a buffer */
    while( !buffer->used[buffer->firstfree-1] )
       buffer->firstfree--;
 
-   debugMessage("released buffer %d/%d at %p of size %d, first free is %d\n", 
-      i, buffer->ndata, buffer->data[i], buffer->size[i], buffer->firstfree);
+   debugMessage("released buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
+      i, buffer->ndata, buffer->data[i], buffer->size[i], ptr, buffer->firstfree);
 }

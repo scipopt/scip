@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -78,7 +77,7 @@ RETCODE nodepqResize(                   /**< resizes node memory to hold at leas
       return SCIP_OKAY;
 
    nodepq->size = SCIPsetCalcTreeGrowSize(set, minsize);
-   ALLOC_OKAY( reallocMemoryArray(nodepq->slots, nodepq->size) );
+   ALLOC_OKAY( reallocMemoryArray(&nodepq->slots, nodepq->size) );
 
    return SCIP_OKAY;
 }
@@ -119,7 +118,7 @@ RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
 {
    assert(nodepq != NULL);
 
-   ALLOC_OKAY( allocMemory(*nodepq) );
+   ALLOC_OKAY( allocMemory(nodepq) );
    (*nodepq)->len = 0;
    (*nodepq)->size = 0;
    (*nodepq)->slots = NULL;
@@ -138,8 +137,8 @@ void SCIPnodepqDestroy(                 /**< frees node priority queue, but not 
    assert(nodepq != NULL);
    assert(*nodepq != NULL);
 
-   freeMemoryArrayNull((*nodepq)->slots);
-   freeMemory(*nodepq);
+   freeMemoryArrayNull(&(*nodepq)->slots);
+   freeMemory(nodepq);
 }
 
 RETCODE SCIPnodepqFree(                 /**< frees node priority queue and all nodes in the queue */
@@ -492,9 +491,9 @@ RETCODE SCIPnodeselCreate(              /**< creates a node selector */
    assert(nodeselslct != NULL);
    assert(nodeselcomp != NULL);
 
-   ALLOC_OKAY( allocMemory(*nodesel) );
-   ALLOC_OKAY( duplicateMemoryArray((*nodesel)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*nodesel)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( allocMemory(nodesel) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*nodesel)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*nodesel)->desc, desc, strlen(desc)+1) );
    (*nodesel)->nodeselfree = nodeselfree;
    (*nodesel)->nodeselinit = nodeselinit;
    (*nodesel)->nodeselexit = nodeselexit;
@@ -522,9 +521,9 @@ RETCODE SCIPnodeselFree(                /**< frees memory of node selector */
       CHECK_OKAY( (*nodesel)->nodeselfree(*nodesel, scip) );
    }
 
-   freeMemoryArray((*nodesel)->name);
-   freeMemoryArray((*nodesel)->desc);
-   freeMemory(*nodesel);
+   freeMemoryArray(&(*nodesel)->name);
+   freeMemoryArray(&(*nodesel)->desc);
+   freeMemory(nodesel);
 
    return SCIP_OKAY;
 }

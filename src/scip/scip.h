@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -163,8 +162,6 @@ RETCODE SCIPincludeReader(              /**< creates a reader and includes it in
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
    DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERINIT((*readerinit)),      /**< initialise reader */
-   DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
    DECL_READERREAD((*readerread)),      /**< read method */
    READERDATA*      readerdata          /**< reader data */
    );
@@ -204,6 +201,7 @@ RETCODE SCIPincludeHeur(                /**< creates a primal heuristic and incl
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
+   char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
@@ -505,6 +503,12 @@ RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved i
    );
 
 extern
+RETCODE SCIPgetLPSolstat(               /**< gets solution status of actual LP */
+   SCIP*            scip,               /**< SCIP data structure */
+   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   );
+
+extern
 RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
    SCIP*            scip,               /**< SCIP data structure */
    COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
@@ -624,10 +628,33 @@ RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in
    );
 
 extern
+RETCODE SCIPgetRowPseudoActivity(       /**< returns the activity of a row for the actual pseudo solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real*            pseudoactivity      /**< pointer to store the row's pseudo activity */
+   );
+
+extern
 RETCODE SCIPgetRowPseudoFeasibility(    /**< returns the feasibility of a row for the actual pseudo solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    Real*            pseudofeasibility   /**< pointer to store the row's pseudo feasibility */
+   );
+
+extern
+RETCODE SCIPgetRowSolActivity(          /**< returns the activity of a row for the given primal solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solactivity         /**< pointer to store the row's activity for the solution */
+   );
+
+extern
+RETCODE SCIPgetRowSolFeasibility(       /**< returns the feasibility of a row for the given primal solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
    );
 
 extern
@@ -742,6 +769,12 @@ RETCODE SCIPcreateActSol(               /**< creates a primal solution, initiali
    );
 
 extern
+RETCODE SCIPfreeSol(                    /**< frees primal CIP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol                 /**< pointer to the solution */
+   );
+
+extern
 RETCODE SCIPlinkLPSol(                  /**< links a primal solution to the actual LP solution */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
@@ -803,6 +836,13 @@ RETCODE SCIPgetSolObj(                  /**< returns objective value of primal C
    );
 
 extern
+RETCODE SCIPgetSolTransObj(             /**< returns objective value of primal CIP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution */
+   Real*            objval              /**< pointer to store the objective value */
+   );
+
+extern
 RETCODE SCIPgetSolNodenum(              /**< gets node number, where this solution was found */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
@@ -824,7 +864,7 @@ RETCODE SCIPprintSol(                   /**< outputs non-zero original variables
    );
 
 extern
-RETCODE SCIPprintSolTrans(              /**< outputs non-zero transformed variables of solution to file stream */
+RETCODE SCIPprintTransSol(              /**< outputs non-zero transformed variables of solution to file stream */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
    FILE*            file                /**< output file (or NULL for standard output) */
@@ -840,6 +880,36 @@ extern
 RETCODE SCIPprintBestSol(               /**< outputs best feasible primal solution found so far to file stream */
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file (or NULL for standard output) */
+   );
+
+extern
+RETCODE SCIPaddSolMove(                 /**< adds feasible primal solution to solution storage by moving it */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   );
+
+extern
+RETCODE SCIPaddSolCopy(                 /**< adds feasible primal solution to solution storage by copying it */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+extern
+RETCODE SCIPtrySolMove(                 /**< checks solution for feasibility; if possible, adds it to storage by moving */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   );
+
+extern
+RETCODE SCIPtrySolCopy(                 /**< checks solution for feasibility; if possible, adds it to storage by copying */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
 
@@ -961,7 +1031,19 @@ RETCODE SCIPgetActDualBound(            /**< gets dual bound of active node */
    );
 
 extern
+RETCODE SCIPgetActTransDualBound(       /**< gets dual bound of active node in transformed problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            actdualbound        /**< pointer to store the dual bound */
+   );
+
+extern
 RETCODE SCIPgetAvgDualBound(            /**< gets average dual bound of all unprocessed nodes */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            avgdualbound        /**< pointer to store the average dual bound */
+   );
+
+extern
+RETCODE SCIPgetAvgTransDualBound(       /**< gets average dual bound of all unprocessed nodes in transformed problem */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            avgdualbound        /**< pointer to store the average dual bound */
    );
@@ -973,7 +1055,19 @@ RETCODE SCIPgetDualBound(               /**< gets global dual bound */
    );
 
 extern
+RETCODE SCIPgetTransDualBound(          /**< gets global dual bound in transformed problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            dualbound           /**< pointer to store the dual bound */
+   );
+
+extern
 RETCODE SCIPgetPrimalBound(             /**< gets global primal bound */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            primalbound         /**< pointer to store the primal bound */
+   );
+
+extern
+RETCODE SCIPgetTransPrimalBound(        /**< gets global primal bound in transformed problem */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            primalbound         /**< pointer to store the primal bound */
    );
@@ -1107,6 +1201,59 @@ Bool SCIPisSumNeg(                      /**< checks, if value is lower than -sum
    );
 
 extern
+Bool SCIPisFeasEQ(                      /**< checks, if values are in range of feasibility tolerance */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisFeasL(                       /**< checks, if val1 is (more than feasibility tolerance) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisFeasLE(                      /**< checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisFeasG(                       /**< checks, if val1 is (more than feasibility tolerance) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisFeasGE(                      /**< checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPisFeasZero(                    /**< checks, if value is in range feasibility tolerance of 0.0 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisFeasPos(                     /**< checks, if value is greater than feasibility tolerance */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPisFeasNeg(                     /**< checks, if value is lower than -feasibility tolerance */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
 Bool SCIPisRelEQ(                       /**< checks, if relative difference of values is in range of epsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
@@ -1142,35 +1289,35 @@ Bool SCIPisRelGE(                       /**< checks, if relative difference of v
    );
 
 extern
-Bool SCIPisSumRelEQ(                       /**< checks, if rel. difference of values is in range of sumepsilon */
+Bool SCIPisSumRelEQ(                    /**< checks, if rel. difference of values is in range of sumepsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisSumRelL(                        /**< checks, if rel. difference of val1 and val2 is lower than sumepsilon */
+Bool SCIPisSumRelL(                     /**< checks, if rel. difference of val1 and val2 is lower than sumepsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisSumRelLE(                       /**< checks, if rel. difference of val1 and val2 is not greater than sumepsilon */
+Bool SCIPisSumRelLE(                    /**< checks, if rel. difference of val1 and val2 is not greater than sumepsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisSumRelG(                        /**< checks, if rel. difference of val1 and val2 is greater than sumepsilon */
+Bool SCIPisSumRelG(                     /**< checks, if rel. difference of val1 and val2 is greater than sumepsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
    );
 
 extern
-Bool SCIPisSumRelGE(                       /**< checks, if rel. difference of val1 and val2 is not lower than -sumepsilon */
+Bool SCIPisSumRelGE(                    /**< checks, if rel. difference of val1 and val2 is not lower than -sumepsilon */
    SCIP*            scip,               /**< SCIP data structure */
    Real             val1,               /**< first value to be compared */
    Real             val2                /**< second value to be compared */
@@ -1234,10 +1381,10 @@ Bool SCIPisFeasible(                    /**< checks, if value is non-negative wi
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
                                                 freeBlockMemorySizeNull(SCIPmemhdr(scip), (ptr), (size))
 
-#define SCIPcaptureBufferArray(scip,ptr,num)    SCIPcaptureBuffer(scip, (void**)(&(ptr)), (num)*sizeof(*(ptr)))
-#define SCIPreleaseBufferArray(scip,ptr)        SCIPreleaseBuffer(scip, (void**)(&ptr))
-#define SCIPcaptureBufferSize(scip,ptr,size)    SCIPcaptureBuffer(scip, (void**)(&(ptr)), size)
-#define SCIPreleaseBufferSize(scip,ptr)         SCIPreleaseBuffer(scip, (void**)(&ptr))
+#define SCIPcaptureBufferArray(scip,ptr,num)    SCIPcaptureBuffer(scip, (void**)(ptr), (num)*sizeof(**(ptr)))
+#define SCIPreleaseBufferArray(scip,ptr)        SCIPreleaseBuffer(scip, (void**)(ptr), 0*sizeof(**(ptr)))
+#define SCIPcaptureBufferSize(scip,ptr,size)    SCIPcaptureBuffer(scip, (void**)(ptr), size)
+#define SCIPreleaseBufferSize(scip,ptr)         SCIPreleaseBuffer(scip, (void**)(ptr), 0*sizeof(**(ptr)))
 
 extern
 MEMHDR* SCIPmemhdr(                     /**< returns block memory to use at the current time */
@@ -1260,7 +1407,8 @@ RETCODE SCIPcaptureBuffer(              /**< gets a memory buffer with at least 
 extern
 RETCODE SCIPreleaseBuffer(              /**< releases a memory buffer */
    SCIP*            scip,               /**< SCIP data structure */
-   void**           ptr                 /**< pointer to store the buffer */
+   void**           ptr,                /**< pointer to store the buffer */
+   int              dummysize           /**< used to get a safer define for SCIPreleaseBufferSize/Array */
    );
 
 

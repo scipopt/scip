@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -353,6 +352,59 @@ Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sum
    );
 
 extern
+Bool SCIPsetIsFeasEQ(                   /**< checks, if values are in range of feasibility tolerance */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsFeasL(                    /**< checks, if val1 is (more than feasibility tolerance) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsFeasLE(                   /**< checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsFeasG(                    /**< checks, if val1 is (more than feasibility tolerance) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsFeasGE(                   /**< checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   );
+
+extern
+Bool SCIPsetIsFeasZero(                 /**< checks, if value is in range feasibility tolerance of 0.0 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsFeasPos(                  /**< checks, if value is greater than feasibility tolerance */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
+Bool SCIPsetIsFeasNeg(                  /**< checks, if value is lower than -feasibility tolerance */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   );
+
+extern
 Bool SCIPsetIsRelEQ(                    /**< checks, if relative difference of values is in range of epsilon */
    const SET*       set,                /**< global SCIP settings */
    Real             val1,               /**< first value to be compared */
@@ -519,11 +571,11 @@ Bool SCIPsetIsFixed(                    /**< checks, if the given integer bounds
 #endif
 
 
-#define SCIPsetCaptureBufferArray(set,ptr,num)   ( SCIPbufferCapture((set)->buffer, set, (void**)(&(ptr)), \
-                                                   (num)*sizeof(*(ptr))) )
-#define SCIPsetReleaseBufferArray(set,ptr)       ( SCIPbufferRelease((set)->buffer, (void**)(&ptr)) )
-#define SCIPsetCaptureBufferSize(set,ptr,size)   ( SCIPbufferCapture((set)->buffer, set, (void**)(&(ptr)), size) )
-#define SCIPsetReleaseBufferSize(set,ptr)        ( SCIPbufferRelease((set)->buffer, (void**)(&ptr)) )
+#define SCIPsetCaptureBufferArray(set,ptr,num)   ( SCIPbufferCapture((set)->buffer, set, (void**)(ptr), \
+                                                   (num)*sizeof(**(ptr))) )
+#define SCIPsetReleaseBufferArray(set,ptr)       ( SCIPbufferRelease((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
+#define SCIPsetCaptureBufferSize(set,ptr,size)   ( SCIPbufferCapture((set)->buffer, set, (void**)(ptr), size) )
+#define SCIPsetReleaseBufferSize(set,ptr)        ( SCIPbufferRelease((set)->buffer, (void**)(ptr), 0) )
 
 
 #endif

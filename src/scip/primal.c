@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -48,7 +47,7 @@ RETCODE ensureSolsSize(                 /**< ensures, that sols array can store 
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(primal->sols, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&primal->sols, newsize) );
       primal->solssize = newsize;
    }
    assert(num <= primal->solssize);
@@ -102,7 +101,7 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
 {
    assert(primal != NULL);
 
-   ALLOC_OKAY( allocMemory(*primal) );
+   ALLOC_OKAY( allocMemory(primal) );
    (*primal)->sols = NULL;
    (*primal)->solssize = 0;
    (*primal)->nsols = 0;
@@ -128,8 +127,8 @@ RETCODE SCIPprimalFree(                 /**< frees primal data */
    {
       CHECK_OKAY( SCIPsolFree(&(*primal)->sols[s], memhdr) );
    }
-   freeMemoryArrayNull((*primal)->sols);
-   freeMemory(*primal);
+   freeMemoryArrayNull(&(*primal)->sols);
+   freeMemory(primal);
 
    return SCIP_OKAY;
 }
@@ -181,16 +180,47 @@ RETCODE primalAddSol(                   /**< adds primal solution to solution st
       insertpos, primal->nsols, primal->nsolsfound);
    
    /* check, if the global upper bound has to be updated */
-   if( sol->obj < primal->upperbound )
+   if( SCIPsolGetObj(sol) < primal->upperbound )
    {
       /* update the upper bound */
-      CHECK_OKAY( primalSetUpperbound(primal, memhdr, set, tree, lp, sol->obj) );
+      CHECK_OKAY( primalSetUpperbound(primal, memhdr, set, tree, lp, SCIPsolGetObj(sol)) );
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
    }
 
    return SCIP_OKAY;
+}
+
+static
+int primalSearchSolPos(                 /**< uses binary search to find position in solution storage */
+   PRIMAL*          primal,             /**< primal data */
+   Real             obj                 /**< objective value of solution to search position for */
+   )
+{
+   Real middleobj;
+   int left;
+   int right;
+   int middle;
+
+   assert(primal != NULL);
+
+   left = -1;
+   right = primal->nsols;
+   while( left < right-1 )
+   {
+      middle = (left+right)/2;
+      assert(left < middle && middle < right);
+      assert(0 <= middle && middle < primal->nsols);
+      middleobj = SCIPsolGetObj(primal->sols[middle]);
+      if( obj < middleobj )
+         right = middle;
+      else
+         left = middle;
+   }
+   assert(left == right-1);
+
+   return right;
 }
 
 RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution storage by moving it */
@@ -211,9 +241,7 @@ RETCODE SCIPprimalAddSolMove(           /**< adds primal solution to solution st
    assert(*sol != NULL);
 
    /* search the position to insert solution in storage */
-   for( insertpos = 0; insertpos < primal->nsols && (*sol)->obj >= primal->sols[insertpos]->obj; ++insertpos )
-   {
-   }
+   insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));
 
    if( insertpos < set->maxsol )
    {
@@ -250,9 +278,7 @@ RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution st
    assert(sol != NULL);
 
    /* search the position to insert solution in storage */
-   for( insertpos = 0; insertpos < primal->nsols && sol->obj >= primal->sols[insertpos]->obj; ++insertpos )
-   {
-   }
+   insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
 
    if( insertpos < set->maxsol )
    {
@@ -268,3 +294,105 @@ RETCODE SCIPprimalAddSolCopy(           /**< adds primal solution to solution st
    return SCIP_OKAY;
 }
 
+RETCODE SCIPprimalTrySolMove(           /**< checks primal solution; if feasible, adds it to storage by moving it */
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   )
+{
+   Bool feasible;
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+   assert(*sol != NULL);
+   assert(stored != NULL);
+
+   /* search the position to insert solution in storage */
+   insertpos = primalSearchSolPos(primal, SCIPsolGetObj(*sol));
+
+   if( insertpos < set->maxsol )
+   {
+      /* check solution for feasibility */
+      CHECK_OKAY( SCIPsolCheck(*sol, set, chckintegrality, chcklprows, &feasible) );
+   }
+   else
+      feasible = FALSE;
+
+   if( feasible )
+   {
+      /* insert solution into solution storage */
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, *sol, insertpos) );
+
+      /* clear the pointer, such that the user cannot access the solution anymore */
+      *sol = NULL;
+      *stored = TRUE;
+   }
+   else
+   {
+      /* the solution is too bad or infeasible -> free it immediately */
+      CHECK_OKAY( SCIPsolFree(sol, memhdr) );
+      *stored = FALSE;
+   }
+   assert(*sol == NULL);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPprimalTrySolCopy(           /**< checks primal solution; if feasible, adds it to storage by copying it */
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   )
+{
+   Bool feasible;
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+   assert(stored != NULL);
+
+   /* search the position to insert solution in storage */
+   insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
+
+   if( insertpos < set->maxsol )
+   {
+      /* check solution for feasibility */
+      CHECK_OKAY( SCIPsolCheck(sol, set, chckintegrality, chcklprows, &feasible) );
+   }
+   else
+      feasible = FALSE;
+
+   if( feasible )
+   {
+      SOL* solcopy;
+
+      /* create a copy of the solution */
+      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
+      
+      /* insert copied solution into solution storage */
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, solcopy, insertpos) );
+
+      *stored = TRUE;
+   }
+   else
+      *stored = FALSE;
+
+   return SCIP_OKAY;
+}

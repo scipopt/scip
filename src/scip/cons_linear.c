@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -67,7 +66,7 @@ typedef struct LinCons LINCONS;         /**< externally stored linear constraint
 #define CONSHDLR_PROPFREQ             4
 #define CONSHDLR_NEEDSCONS         TRUE /**< the constraint handler should only be called, if linear constraints exist */
 
-#define TIGHTENBOUNDSFREQ             1 /**< multiplier on propagation frequency, how often the bounds are tightened */
+#define TIGHTENBOUNDSFREQ             8 /**< multiplier on propagation frequency, how often the bounds are tightened */
 
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
@@ -138,11 +137,11 @@ RETCODE ensureVarsSize(                 /**< ensures, that vars and vals arrays 
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, lincons->vars, lincons->varssize, newsize) );
-      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, lincons->vals, lincons->varssize, newsize) );
+      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vars, lincons->varssize, newsize) );
+      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->vals, lincons->varssize, newsize) );
       if( lincons->transformed )
       {
-         ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, lincons->eventdatas, lincons->varssize, newsize) );
+         ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, &lincons->eventdatas, lincons->varssize, newsize) );
       }
       else
          assert(lincons->eventdatas == NULL);
@@ -173,7 +172,7 @@ RETCODE linconsCatchEvent(              /**< creates event data for variable at 
    assert(lincons->eventdatas != NULL);
    assert(lincons->eventdatas[pos] == NULL);
 
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, lincons->eventdatas[pos]) );
+   ALLOC_OKAY( SCIPallocBlockMemory(scip, &lincons->eventdatas[pos]) );
    lincons->eventdatas[pos]->lincons = lincons;
    lincons->eventdatas[pos]->varpos = pos;
 
@@ -201,7 +200,7 @@ RETCODE linconsDropEvent(               /**< deletes event data for variable at 
    
    CHECK_OKAY( SCIPdropVarEvent(scip, lincons->vars[pos], eventhdlr, lincons->eventdatas[pos]) );
 
-   SCIPfreeBlockMemory(scip, lincons->eventdatas[pos]);
+   SCIPfreeBlockMemory(scip, &lincons->eventdatas[pos]);
 
    return SCIP_OKAY;
 }
@@ -232,12 +231,12 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
       return SCIP_INVALIDDATA;
    }
 
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, *lincons) );
+   ALLOC_OKAY( SCIPallocBlockMemory(scip, lincons) );
 
    if( nvars > 0 )
    {
-      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, (*lincons)->vars, vars, nvars) );
-      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, (*lincons)->vals, vals, nvars) );
+      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vars, vars, nvars) );
+      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*lincons)->vals, vals, nvars) );
    }
    else
    {
@@ -282,7 +281,7 @@ RETCODE linconsCreateTransformed(       /**< creates a linear constraint data ob
 
    /* allocate the additional needed eventdatas array */
    assert((*lincons)->eventdatas == NULL);
-   ALLOC_OKAY( SCIPallocBlockMemoryArray(scip, (*lincons)->eventdatas, (*lincons)->varssize) );
+   ALLOC_OKAY( SCIPallocBlockMemoryArray(scip, &(*lincons)->eventdatas, (*lincons)->varssize) );
    (*lincons)->transformed = TRUE;
 
    /* transform the variables, catch events */
@@ -321,13 +320,13 @@ RETCODE linconsFree(                    /**< frees a linear constraint data obje
       {
          CHECK_OKAY( linconsDropEvent(*lincons, scip, eventhdlr, i) );
       }
-      SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->eventdatas, (*lincons)->varssize);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->eventdatas, (*lincons)->varssize);
    }
    assert((*lincons)->eventdatas == NULL);
 
-   SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->vars, (*lincons)->varssize);
-   SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->vals, (*lincons)->varssize);
-   SCIPfreeBlockMemory(scip, *lincons);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vars, (*lincons)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*lincons)->vals, (*lincons)->varssize);
+   SCIPfreeBlockMemory(scip, lincons);
 
    return SCIP_OKAY;
 }
@@ -388,9 +387,10 @@ RETCODE linconsAddCoef(                 /**< adds coefficient in linear constrai
 }
 
 static
-RETCODE linconsGetActivity(             /**< calculates the activity of the linear constraint for LP solution */
+RETCODE linconsGetActivity(             /**< calculates the activity of the linear constraint for given solution */
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< solution to get activity for, NULL to actual solution */
    Real*            activity            /**< pointer to store the activity */
    )
 {
@@ -402,19 +402,31 @@ RETCODE linconsGetActivity(             /**< calculates the activity of the line
    assert(activity != NULL);
 
    *activity = 0.0;
-   for( v = 0; v < lincons->nvars; ++v )
+   if( sol != NULL )
    {
-      CHECK_OKAY( SCIPgetVarSol(scip, lincons->vars[v], &solval) );
-      *activity += lincons->vals[v] * solval;
+      for( v = 0; v < lincons->nvars; ++v )
+      {
+         CHECK_OKAY( SCIPgetSolVal(scip, sol, lincons->vars[v], &solval) );
+         *activity += lincons->vals[v] * solval;
+      }
+   }
+   else
+   {
+      for( v = 0; v < lincons->nvars; ++v )
+      {
+         CHECK_OKAY( SCIPgetVarSol(scip, lincons->vars[v], &solval) );
+         *activity += lincons->vals[v] * solval;
+      }
    }
 
    return SCIP_OKAY;
 }
 
 static
-RETCODE linconsGetFeasibility(          /**< calculates the feasibility of the linear constraint for LP solution */
+RETCODE linconsGetFeasibility(          /**< calculates the feasibility of the linear constraint for given solution */
    LINCONS*         lincons,            /**< linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< solution to get feasibility for, NULL to actual solution */
    Real*            feasibility         /**< pointer to store the feasibility */
    )
 {
@@ -424,7 +436,7 @@ RETCODE linconsGetFeasibility(          /**< calculates the feasibility of the l
    assert(lincons->transformed);
    assert(feasibility != NULL);
 
-   CHECK_OKAY( linconsGetActivity(lincons, scip, &activity) );
+   CHECK_OKAY( linconsGetActivity(lincons, scip, sol, &activity) );
    *feasibility = MIN(lincons->rhs - activity, activity - lincons->lhs);
 
    return SCIP_OKAY;
@@ -1257,7 +1269,7 @@ RETCODE separateConstraints(            /**< separates violated inequalities; ca
          Real feasibility;
          
          /* check feasibility of linear constraint */
-         CHECK_OKAY( linconsGetFeasibility(lincons, scip, &feasibility) );
+         CHECK_OKAY( linconsGetFeasibility(lincons, scip, NULL, &feasibility) );
          /*debugMessage("  lincons feasibility = %g\n", feasibility);*/
          if( !SCIPisFeasible(scip, feasibility) )
          {
@@ -1302,6 +1314,8 @@ RETCODE checkConstraints(               /**< checks pseudo solution for violated
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           conss,              /**< array of constraints to process */
    int              nconss,             /**< number of constraints to process */
+   SOL*             sol,                /**< solution to be checked, NULL to check pseudo solution */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            found               /**< pointer to store information, if a violated constraint has been found */
    )
 {
@@ -1318,7 +1332,7 @@ RETCODE checkConstraints(               /**< checks pseudo solution for violated
 
    *found = FALSE;
 
-   /*debugMessage("checking pseudo solution for %d linear constraints at %p\n", nconss, conss);*/
+   /*debugMessage("checking solution %p for %d linear constraints at %p\n", sol, nconss, conss);*/
    for( c = 0; c < nconss && !(*found); ++c )
    {
       cons = conss[c];
@@ -1333,7 +1347,14 @@ RETCODE checkConstraints(               /**< checks pseudo solution for violated
          ROW* row = consdata->data.row;
          Real feasibility;
 
-         CHECK_OKAY( SCIPgetRowPseudoFeasibility(scip, row, &feasibility) );
+         if( sol != NULL )
+         {
+            CHECK_OKAY( SCIPgetRowSolFeasibility(scip, row, sol, &feasibility) );
+         }
+         else
+         {
+            CHECK_OKAY( SCIPgetRowPseudoFeasibility(scip, row, &feasibility) );
+         }
          /*debugMessage("  row feasibility = %g\n", feasibility);*/
          *found |= !SCIPisFeasible(scip, feasibility);
       }
@@ -1343,7 +1364,7 @@ RETCODE checkConstraints(               /**< checks pseudo solution for violated
          Real feasibility;
          
          /* check feasibility of linear constraint */
-         CHECK_OKAY( linconsGetFeasibility(lincons, scip, &feasibility) );
+         CHECK_OKAY( linconsGetFeasibility(lincons, scip, sol, &feasibility) );
          /*debugMessage("  lincons feasibility = %g\n", feasibility);*/
          *found |= !SCIPisFeasible(scip, feasibility);
       }
@@ -1374,7 +1395,7 @@ DECL_CONSFREE(consFreeLinear)
    CHECK_OKAY( SCIPeventhdlrFree(&conshdlrdata->eventhdlr, scip) );
 
    /* free constraint handler data */
-   freeMemory(conshdlrdata);
+   freeMemory(&conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
@@ -1402,7 +1423,7 @@ DECL_CONSDELE(consDeleLinear)
 
       CHECK_OKAY( linconsFree(&(*consdata)->data.lincons, scip, conshdlrdata->eventhdlr) );
    }
-   SCIPfreeBlockMemory(scip, *consdata);
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }
@@ -1424,7 +1445,7 @@ DECL_CONSTRAN(consTranLinear)
    assert(sourcedata->data.lincons != NULL);
    assert(targetdata != NULL);
 
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, *targetdata) );
+   ALLOC_OKAY( SCIPallocBlockMemory(scip, targetdata) );
    (*targetdata)->islprow = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -1501,7 +1522,7 @@ DECL_CONSENPS(consEnpsLinear)
    /* check for violated constraints */
 
    /* LP is not processed at current node -> we just have to check pseudo solution for feasibility */
-   CHECK_OKAY( checkConstraints(conshdlr, scip, conss, nconss, &found) );
+   CHECK_OKAY( checkConstraints(conshdlr, scip, conss, nconss, NULL, TRUE, &found) );
    
    if( found )
       *result = SCIP_INFEASIBLE;
@@ -1514,12 +1535,19 @@ DECL_CONSENPS(consEnpsLinear)
 static
 DECL_CONSCHCK(consChckLinear)
 {
+   Bool found;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   todoMessage("Chck method of linear constraints");
+   CHECK_OKAY( checkConstraints(conshdlr, scip, conss, nconss, sol, chcklprows, &found) );
+
+   if( found )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -1547,7 +1575,7 @@ DECL_CONSPROP(consPropLinear)
    /*debugMessage("Prop method of linear constraints\n");*/
 
    /* check, if we want to tighten variable's bounds */
-   propfreq = SCIPconshdlrGetPropfreq(conshdlr);
+   propfreq = SCIPconshdlrGetPropFreq(conshdlr);
    CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
    tightenbounds = (actdepth % (propfreq * TIGHTENBOUNDSFREQ) == 0);
 
@@ -1672,7 +1700,7 @@ RETCODE SCIPincludeConsHdlrLinear(      /**< creates the handler for linear cons
    CONSHDLRDATA* conshdlrdata;
 
    /* create constraint handler data */
-   ALLOC_OKAY( allocMemory(conshdlrdata) );
+   ALLOC_OKAY( allocMemory(&conshdlrdata) );
 
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPeventhdlrCreate(&conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, 
@@ -1719,7 +1747,7 @@ RETCODE SCIPcreateConsLinear(           /**< creates and captures a linear const
    }
 
    /* create the constraint specific data */
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, consdata) );
+   ALLOC_OKAY( SCIPallocBlockMemory(scip, &consdata) );
    consdata->islprow = FALSE;
    if( SCIPstage(scip) == SCIP_STAGE_PROBLEM )
    {
@@ -1771,7 +1799,7 @@ RETCODE SCIPcreateConsLinearLPRow(      /**< creates and captures a linear const
    }
 
    /* create the constraint specific data */
-   ALLOC_OKAY( SCIPallocBlockMemory(scip, consdata) );
+   ALLOC_OKAY( SCIPallocBlockMemory(scip, &consdata) );
    consdata->islprow = TRUE;
    consdata->data.row = row;
 

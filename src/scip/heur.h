@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -40,7 +39,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  */
 #define DECL_HEURFREE(x) RETCODE x (HEUR* heur, SCIP* scip)
 
-/** initialization method of primal heuristic (called at problem creation)
+/** initialization method of primal heuristic (called when problem solving starts)
  *
  *  input:
  *    heur            : the primal heuristic itself
@@ -48,7 +47,7 @@ typedef struct HeurData HEURDATA;       /**< locally defined primal heuristic da
  */
 #define DECL_HEURINIT(x) RETCODE x (HEUR* heur, SCIP* scip)
 
-/** deinitialization method of primal heuristic (called at problem destruction)
+/** deinitialization method of primal heuristic (called when problem solving exits)
  *
  *  input:
  *    heur            : the primal heuristic itself
@@ -86,6 +85,7 @@ RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
+   char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */

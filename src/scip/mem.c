@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -35,7 +34,7 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
 {
    assert(mem != NULL);
 
-   ALLOC_OKAY( allocMemory(*mem) );
+   ALLOC_OKAY( allocMemory(mem) );
 
    ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10 ) );
    ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
@@ -52,10 +51,10 @@ RETCODE SCIPmemFree(                    /**< frees block memory structures */
 {
    assert(mem != NULL);
 
-   destroyBlockMemory((*mem)->probmem);
-   destroyBlockMemory((*mem)->solvemem);
+   destroyBlockMemory(&(*mem)->probmem);
+   destroyBlockMemory(&(*mem)->solvemem);
 
-   freeMemory(*mem);
+   freeMemory(mem);
 
    return SCIP_OKAY;
 }

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -42,7 +41,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  */
 #define DECL_CONSFREE(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
-/** initialization method of constraint handler (called at problem creation)
+/** initialization method of constraint handler (called when problem solving starts)
  *
  *  input:
  *    conshdlr        : the constraint handler itself
@@ -50,7 +49,7 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  */
 #define DECL_CONSINIT(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip)
 
-/** deinitialization method of constraint handler (called at problem destruction)
+/** deinitialization method of constraint handler (called when problem solving exits)
  *
  *  input:
  *    conshdlr        : the constraint handler itself
@@ -174,19 +173,26 @@ typedef struct ConsData CONSDATA;       /**< locally defined constraint type spe
  *  check priority greater than zero (e.g. if the check is much faster than testing all variables for
  *  integrality).
  *
+ *  In some cases, integrality conditions or rows in actual LP don't have to be checked, because their
+ *  feasibility is already checked or implicitly given. In these cases, 'chckintegrality' or
+ *  'chcklprows' is FALSE.
+ *
  *  input:
  *    conshdlr        : the constraint handler itself
  *    scip            : SCIP main data structure
  *    conss           : array of constraints to process
  *    nconss          : number of constraints to process
  *    sol             : the solution to check feasibility for
+ *    chckintegrality : has integrality to be checked?
+ *    chcklprows      : have current LP rows to be checked?
  *    result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
  *    SCIP_INFEASIBLE : at least one constraint of the handler is infeasible
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
-#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, SOL* sol, RESULT* result)
+#define DECL_CONSCHCK(x) RETCODE x (CONSHDLR* conshdlr, SCIP* scip, CONS** conss, int nconss, SOL* sol, \
+                                    Bool chckintegrality, Bool chcklprows, RESULT* result)
 
 /** domain propagation method of constraint handler
  *  input:
@@ -299,6 +305,8 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -308,6 +316,13 @@ RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constra
    const SET*       set,                /**< global SCIP settings */
    int              actdepth,           /**< depth of active node; -1 if preprocessing domain propagation */
    RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+extern
+RETCODE SCIPconshdlrAddProbCons(        /**< adds constraint to constraint handler's problem constraint array */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< model constraint of initial problem to add */
    );
 
 extern
@@ -337,7 +352,12 @@ int SCIPconshdlrGetNConss(              /**< gets number of constraints in const
    );
 
 extern
-int SCIPconshdlrGetPropfreq(            /**< gets propagation frequency of constraint handler */
+int SCIPconshdlrGetChckPriority(        /**< gets checking priority of constraint handler */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+extern
+int SCIPconshdlrGetPropFreq(            /**< gets propagation frequency of constraint handler */
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

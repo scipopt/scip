@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -40,7 +39,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  */
 #define DECL_NODESELFREE(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
-/** initialization method of node selector (called at problem creation)
+/** initialization method of node selector (called when problem solving starts)
  *
  *  input:
  *    nodesel         : the node selector itself
@@ -48,7 +47,7 @@ typedef struct NodeselData NODESELDATA; /**< node selector specific data */
  */
 #define DECL_NODESELINIT(x) RETCODE x (NODESEL* nodesel, SCIP* scip)
 
-/** deinitialization method of node selector (called at problem destruction)
+/** deinitialization method of node selector (called when problem solving exits)
  *
  *  input:
  *    nodesel         : the node selector itself

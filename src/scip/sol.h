@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -49,26 +48,6 @@ typedef struct Sol SOL;                 /**< primal CIP solution */
 #include "prob.h"
 #include "tree.h"
 
-
-
-/** primal CIP solution
- *  For reasons of efficiency, a working solution only stores values that have been accessed at least once,
- *  or that have been changed from the value in the solution's source.
- *  The user has to call SCIPsolUnlink() in order to retrieve all non-cached elements from the solution's source
- *  and to store the values in the solution's own array. This changes the solution's origin to SCIP_SOLORIGIN_ZERO.
- *  A linked solution with origin SCIP_SOLORIGIN_LPSOL or SCIP_SOLORIGIN_PSEUDOSOL becomes invalid after the
- *  next node is activated (i.e. the LP and pseudo solutions changed) and cannot be accessed anymore.
- */
-struct Sol
-{
-   REALARRAY*       vals;               /**< solution values for variables */
-   BOOLARRAY*       valid;              /**< for solutions originating from LPSOL or PSEUDOSOL: TRUE iff variable's val
-                                         *   is valid; otherwise the value has to be retrieved from the origin */
-   HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
-   Real             obj;                /**< objective value of solution */
-   Longint          nodenum;            /**< node number, where this solution was found */
-   unsigned int     solorigin:2;        /**< origin of solution: where to retrieve uncached elements */
-};
 
 
 extern
@@ -148,7 +127,8 @@ RETCODE SCIPsolLinkActSol(              /**< copies actual solution (LP or pseud
 extern
 RETCODE SCIPsolClear(                   /**< clears primal CIP solution */
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   STAT*            stat                /**< problem statistics data */
    );
 
 extern
@@ -187,6 +167,15 @@ RETCODE SCIPsolGetVal(                  /**< returns value of variable in primal
    STAT*            stat,               /**< problem statistics data */
    VAR*             var,                /**< variable to get value for */
    Real*            solval              /**< pointer to store the solution value */
+   );
+
+extern
+RETCODE SCIPsolCheck(                   /**< checks primal CIP solution for feasibility */
+   SOL*             sol,                /**< primal CIP solution */
+   const SET*       set,                /**< global SCIP settings */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            feasible            /**< stores whether solution is feasible */
    );
 
 extern

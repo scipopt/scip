@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -162,7 +161,7 @@ RETCODE cutpoolEnsureCutsMem(           /**< resizes cuts array to be able to st
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(cutpool->cuts, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&cutpool->cuts, newsize) );
       cutpool->cutssize = newsize;
    }
    assert(num <= cutpool->cutssize);
@@ -188,7 +187,7 @@ RETCODE cutCreate(                      /**< creates a cut and captures the row 
    assert(row != NULL);
 
    /* allocate cut memory */
-   ALLOC_OKAY( allocBlockMemory(memhdr, *cut) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, cut) );
    (*cut)->row = row;
    (*cut)->age = 0;
    (*cut)->processedlp = -1;
@@ -217,7 +216,7 @@ RETCODE cutFree(                        /**< frees a cut and releases the row */
    CHECK_OKAY( SCIProwRelease(&(*cut)->row, memhdr, set, lp) );
 
    /* free cut memory */
-   freeBlockMemory(memhdr, *cut);
+   freeBlockMemory(memhdr, cut);
 
    return SCIP_OKAY;
 }
@@ -236,7 +235,7 @@ RETCODE SCIPcutpoolCreate(              /**< creates cut pool */
    assert(cutpool != NULL);
    assert(agelimit >= 0);
 
-   ALLOC_OKAY( allocMemory(*cutpool) );
+   ALLOC_OKAY( allocMemory(cutpool) );
 
    CHECK_OKAY( SCIPhashtableCreate(&(*cutpool)->hashtable, SCIP_HASHSIZE_CUTPOOLS,
                   hashGetKeyCut, hashKeyEqCut, hashKeyValCut) );
@@ -271,9 +270,9 @@ RETCODE SCIPcutpoolFree(                /**< frees cut pool */
    {
       CHECK_OKAY( cutFree(&(*cutpool)->cuts[i], memhdr, set, lp) );
    }
-   freeMemoryArrayNull((*cutpool)->cuts);
+   freeMemoryArrayNull(&(*cutpool)->cuts);
    
-   freeMemory(*cutpool);
+   freeMemory(cutpool);
 
    return SCIP_OKAY;
 }

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -35,7 +34,7 @@ RETCODE SCIPstatCreate(                 /**< creates problem statistics data */
 {
    assert(stat != NULL);
 
-   ALLOC_OKAY( allocMemory(*stat) );
+   ALLOC_OKAY( allocMemory(stat) );
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
@@ -51,7 +50,7 @@ RETCODE SCIPstatFree(                   /**< frees problem statistics data */
    assert(stat != NULL);
    assert(*stat != NULL);
 
-   freeMemory(*stat);
+   freeMemory(stat);
 
    return SCIP_OKAY;
 }

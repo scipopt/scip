@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -62,8 +61,8 @@ RETCODE sepaEnsureCutsMem(              /**< resizes cuts and score arrays to be
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(sepa->cuts, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(sepa->score, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&sepa->cuts, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&sepa->score, newsize) );
       sepa->cutssize = newsize;
    }
    assert(num <= sepa->cutssize);
@@ -80,7 +79,7 @@ RETCODE SCIPsepaCreate(                 /**< creates separation storage */
 {
    assert(sepa != NULL);
    
-   ALLOC_OKAY( allocMemory(*sepa) );
+   ALLOC_OKAY( allocMemory(sepa) );
    
    (*sepa)->cuts = NULL;
    (*sepa)->score = NULL;
@@ -96,9 +95,9 @@ RETCODE SCIPsepaFree(                   /**< frees separation storage */
 {
    assert(sepa != NULL);
 
-   freeMemoryArrayNull((*sepa)->cuts);
-   freeMemoryArrayNull((*sepa)->score);
-   freeMemory(*sepa);
+   freeMemoryArrayNull(&(*sepa)->cuts);
+   freeMemoryArrayNull(&(*sepa)->score);
+   freeMemory(sepa);
 
    return SCIP_OKAY;
 }

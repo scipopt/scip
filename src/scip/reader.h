@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -42,22 +41,6 @@ typedef struct ReaderData READERDATA;       /**< reader specific data */
  */
 #define DECL_READERFREE(x) RETCODE x (READER* reader, SCIP* scip)
 
-/** initialization method of reader (called at problem creation)
- *
- *  input:
- *    reader          : the reader itself
- *    scip            : SCIP main data structure
- */
-#define DECL_READERINIT(x) RETCODE x (READER* reader, SCIP* scip)
-
-/** deinitialization method of reader (called at problem destruction)
- *
- *  input:
- *    reader          : the reader itself
- *    scip            : SCIP main data structure
- */
-#define DECL_READEREXIT(x) RETCODE x (READER* reader, SCIP* scip)
-
 /** problem reading method of reader
  *
  *  input:
@@ -88,8 +71,6 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
    DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERINIT((*readerinit)),      /**< initialise reader */
-   DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
    DECL_READERREAD((*readerread)),      /**< read method */
    READERDATA*      readerdata          /**< reader data */
    );
@@ -97,18 +78,6 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
 extern
 RETCODE SCIPreaderFree(                 /**< frees memory of reader */
    READER**         reader,             /**< pointer to reader data structure */
-   SCIP*            scip                /**< SCIP data structure */   
-   );
-
-extern
-RETCODE SCIPreaderInit(                 /**< initializes reader */
-   READER*          reader,             /**< reader */
-   SCIP*            scip                /**< SCIP data structure */   
-   );
-
-extern
-RETCODE SCIPreaderExit(                 /**< deinitializes reader */
-   READER*          reader,             /**< reader */
    SCIP*            scip                /**< SCIP data structure */   
    );
 
@@ -134,11 +103,6 @@ extern
 void SCIPreaderSetData(                 /**< sets user data of reader; user has to free old data in advance! */
    READER*          reader,             /**< reader */
    READERDATA*      readerdata          /**< new reader user data */
-   );
-
-extern
-Bool SCIPreaderIsInitialized(           /**< is reader initialized? */
-   READER*          reader              /**< reader */
    );
 
 

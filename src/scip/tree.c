@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -50,8 +49,8 @@ RETCODE treeEnsureChildrenMem(          /**< resizes children arrays to be able 
       int i;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(tree->children, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(tree->childrendomchg, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->children, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->childrendomchg, newsize) );
       for( i = tree->childrensize; i < newsize; ++i )
       {
          CHECK_OKAY( SCIPdomchgdynCreate(&tree->childrendomchg[i], memhdr) );
@@ -80,8 +79,8 @@ RETCODE treeEnsureSiblingsMem(          /**< resizes siblings array to be able t
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(tree->siblings, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(tree->siblingsdomchg, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->siblings, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->siblingsdomchg, newsize) );
       for( i = tree->siblingssize; i < newsize; ++i )
       {
          CHECK_OKAY( SCIPdomchgdynCreate(&tree->siblingsdomchg[i], memhdr) );
@@ -109,9 +108,9 @@ RETCODE treeEnsurePathMem(              /**< resizes path array to be able to st
       int newsize;
 
       newsize = SCIPsetCalcPathGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(tree->path, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(tree->pathnlpcols, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(tree->pathnlprows, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->path, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->pathnlpcols, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&tree->pathnlprows, newsize) );
       tree->pathsize = newsize;
    }
    assert(num <= tree->pathsize);
@@ -186,7 +185,7 @@ void subrootCaptureLPIState(            /**< increases the reference counter of 
    assert(subroot->lpistate != NULL);
    assert(nuses > 0);
 
-   subroot->nlpistateref++;
+   subroot->nlpistateref += nuses;
    debugMessage("captured subroot's LPI state %d times -> new nlpistateref=%d\n", nuses, subroot->nlpistateref);
 }
 
@@ -273,46 +272,6 @@ RETCODE junctionInit(                   /**< initializes junction data */
    return SCIP_OKAY;
 }
 
-#if 0
-static
-RETCODE junctionCreate(                 /**< creates junction data */
-   JUNCTION**       junction,           /**< pointer to junction data */
-   MEMHDR*          memhdr,             /**< block memory */
-   TREE*            tree                /**< branch-and-bound tree */
-   )
-{
-   assert(junction != NULL);
-   assert(memhdr != NULL);
-   assert(tree != NULL);
-   assert(tree->nchildren > 0);
-
-   ALLOC_OKAY( allocBlockMemory(memhdr, *junction) );
-   
-   (*junction)->nchildren = tree->nchildren;
-
-   /* increase the LPI state usage counter of the actual LP fork */
-   if( tree->actlpfork != NULL )
-      SCIPnodeCaptureLPIState(tree->actlpfork, tree->nchildren);
-
-   return SCIP_OKAY;
-}
-
-static
-RETCODE junctionFree(                   /**< frees junction data */
-   JUNCTION**       junction,           /**< junction data */
-   MEMHDR*          memhdr              /**< block memory */
-   )
-{
-   assert(junction != NULL);
-   assert(*junction != NULL);
-   assert((*junction)->nchildren == 0);
-
-   freeBlockMemory(memhdr, *junction);
-
-   return SCIP_OKAY;
-}
-#endif
-
 static
 RETCODE forkCreate(                     /**< creates fork data */
    FORK**           fork,               /**< pointer to fork data */
@@ -330,7 +289,7 @@ RETCODE forkCreate(                     /**< creates fork data */
    assert(tree != NULL);
    assert(tree->nchildren > 0);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *fork) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, fork) );
 
    CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, &((*fork)->lpistate)) );
    (*fork)->nlpistateref = 0;
@@ -346,14 +305,14 @@ RETCODE forkCreate(                     /**< creates fork data */
    if( (*fork)->naddedcols > 0 )
    {
       /* copy the newly created columns to the fork's col array */
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*fork)->addedcols, SCIPlpGetNewcols(lp), (*fork)->naddedcols) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*fork)->addedcols, SCIPlpGetNewcols(lp), (*fork)->naddedcols) );
    }
    if( (*fork)->naddedrows > 0 )
    {
       int i;
       
       /* copy the newly created rows to the fork's row array */
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*fork)->addedrows, SCIPlpGetNewrows(lp), (*fork)->naddedrows) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*fork)->addedrows, SCIPlpGetNewrows(lp), (*fork)->naddedrows) );
 
       /* capture the added rows */
       for( i = 0; i < (*fork)->naddedrows; ++i )
@@ -391,9 +350,9 @@ RETCODE forkFree(                       /**< frees fork data */
       CHECK_OKAY( SCIProwRelease(&(*fork)->addedrows[i], memhdr, set, lp) );
    }
 
-   freeBlockMemoryArrayNull(memhdr, (*fork)->addedcols, (*fork)->naddedcols);
-   freeBlockMemoryArrayNull(memhdr, (*fork)->addedrows, (*fork)->naddedrows);
-   freeBlockMemory(memhdr, *fork);
+   freeBlockMemoryArrayNull(memhdr, &(*fork)->addedcols, (*fork)->naddedcols);
+   freeBlockMemoryArrayNull(memhdr, &(*fork)->addedrows, (*fork)->naddedrows);
+   freeBlockMemory(memhdr, fork);
 
    return SCIP_OKAY;
 }
@@ -417,15 +376,15 @@ RETCODE subrootCreate(                  /**< creates subroot data */
    assert(tree != NULL);
    assert(tree->nchildren > 0);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *subroot) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, subroot) );
 
    CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, &((*subroot)->lpistate)) );
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = lp->ncols;
    (*subroot)->nrows = lp->nrows;
    (*subroot)->nchildren = tree->nchildren;
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*subroot)->cols, lp->cols, (*subroot)->ncols) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*subroot)->rows, lp->rows, (*subroot)->nrows) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->cols, lp->cols, (*subroot)->ncols) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->rows, lp->rows, (*subroot)->nrows) );
 
    /* capture the rows of the subroot */
    for( i = 0; i < (*subroot)->nrows; ++i )
@@ -451,11 +410,10 @@ RETCODE subrootFree(                    /**< frees subroot */
    assert(*subroot != NULL);
    assert((*subroot)->nchildren == 0);
    assert((*subroot)->nlpistateref == 0);
+   assert((*subroot)->lpistate == NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(lp != NULL);
-
-   CHECK_OKAY( SCIPlpiFreeState(lp->lpi, memhdr, &((*subroot)->lpistate)) );
 
    /* release the rows of the subroot */
    for( i = 0; i < (*subroot)->nrows; ++i )
@@ -463,9 +421,9 @@ RETCODE subrootFree(                    /**< frees subroot */
       CHECK_OKAY( SCIProwRelease(&(*subroot)->rows[i], memhdr, set, lp) );
    }
 
-   freeBlockMemoryArrayNull(memhdr, (*subroot)->cols, (*subroot)->ncols);
-   freeBlockMemoryArrayNull(memhdr, (*subroot)->rows, (*subroot)->nrows);
-   freeBlockMemory(memhdr, *subroot);
+   freeBlockMemoryArrayNull(memhdr, &(*subroot)->cols, (*subroot)->ncols);
+   freeBlockMemoryArrayNull(memhdr, &(*subroot)->rows, (*subroot)->nrows);
+   freeBlockMemory(memhdr, subroot);
 
    return SCIP_OKAY;
 }
@@ -511,7 +469,7 @@ RETCODE nodeAssignParent(               /**< makes node a child of the given par
 }
 
 static
-void nodeReleaseParent(                 /**< decreases number of children of the parent, frees it if no children left */
+RETCODE nodeReleaseParent(              /**< decreases number of children of the parent, frees it if no children left */
    NODE*            node,               /**< child node */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
@@ -533,8 +491,10 @@ void nodeReleaseParent(                 /**< decreases number of children of the
       switch( parent->nodetype )
       {
       case SCIP_NODETYPE_ACTNODE:
-         errorMessage("Cannot release the parent-child relationship, if parent is the active node");
-         abort();
+         assert(parent->active);
+         /* nothing to do here, because tree->nchildren is updated in treeRemoveChild() */
+         hasChildren = TRUE; /* don't kill the active node at this point */
+         break;
       case SCIP_NODETYPE_SIBLING:
          errorMessage("Sibling cannot be a parent node");
          abort();
@@ -571,8 +531,12 @@ void nodeReleaseParent(                 /**< decreases number of children of the
 
       /* free parent, if it has no more children left and is not on the actual active path */
       if( !hasChildren && !parent->active )
-         SCIPnodeFree(&node->parent, memhdr, set, tree, lp);
+      {
+         CHECK_OKAY( SCIPnodeFree(&node->parent, memhdr, set, tree, lp) );
+      }
    }
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPnodeCreate(                 /**< creates a child node of the active node */
@@ -588,7 +552,7 @@ RETCODE SCIPnodeCreate(                 /**< creates a child node of the active 
    assert(tree != NULL);
    assert(tree->pathlen == 0 || tree->path != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *node) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, node) );
    (*node)->parent = NULL;
    (*node)->conslist = NULL;
    (*node)->domchg = NULL;
@@ -741,15 +705,15 @@ RETCODE SCIPnodeFree(                   /**< frees node */
       break;
    default:
       errorMessage("Unknown node type");
-      break;
+      abort();
    }
 
    /* free common data */
    SCIPconslistFree(&((*node)->conslist), memhdr, set);
    SCIPdomchgFree(&((*node)->domchg), memhdr);
-   nodeReleaseParent(*node, memhdr, set, tree, lp);
+   CHECK_OKAY( nodeReleaseParent(*node, memhdr, set, tree, lp) );
 
-   freeBlockMemory(memhdr, *node);
+   freeBlockMemory(memhdr, node);
 
    return SCIP_OKAY;
 }
@@ -1182,6 +1146,7 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
       else
          subroot = tree->actsubroot;
    }
+   assert(subroot == NULL || subroot->nodetype == SCIP_NODETYPE_SUBROOT);
    subrootdepth = (subroot == NULL ? -1 : subroot->depth);
    debugMessage("switch path: subrootdepth=%d\n", subrootdepth);
    assert(subrootdepth <= lpforkdepth);
@@ -1197,7 +1162,8 @@ RETCODE treeSwitchPath(                 /**< switches the active path to end at 
    else
    {
       /* we are in a different subtree: the LP is completely incorrect */
-      assert(subroot == NULL || !subroot->active);
+      assert(tree->actsubroot != NULL);
+      assert(subroot == NULL || !subroot->active || tree->actsubroot->depth > subrootdepth);
       tree->correctlpdepth = -1;
    }
    debugMessage("switch path: new correctlpdepth=%d\n", tree->correctlpdepth);
@@ -1513,13 +1479,16 @@ static
 RETCODE nodeToLeaf(                     /**< converts node into LEAF and puts it in the array on the node queue */
    NODE*            node,               /**< child or sibling node to convert */
    const SET*       set,                /**< global SCIP settings */
-   TREE*            tree                /**< branch-and-bound tree */
+   TREE*            tree,               /**< branch-and-bound tree */
+   NODE*            lpfork              /**< LP fork of the node */
    )
 {
-   NODE* lpfork;
-
    assert(node->nodetype == SCIP_NODETYPE_SIBLING || node->nodetype == SCIP_NODETYPE_CHILD);
-   
+   assert(lpfork == NULL || lpfork->depth < node->depth);
+   assert(lpfork == NULL || lpfork->active);
+   assert(lpfork == NULL || lpfork->nodetype == SCIP_NODETYPE_FORK || lpfork->nodetype == SCIP_NODETYPE_SUBROOT);
+
+#if 0
    /* find the lpfork for the node */
    lpfork = tree->actlpfork;
    if( node->parent != NULL )
@@ -1527,12 +1496,14 @@ RETCODE nodeToLeaf(                     /**< converts node into LEAF and puts it
       if( node->parent->nodetype == SCIP_NODETYPE_FORK || node->parent->nodetype == SCIP_NODETYPE_SUBROOT )
          lpfork = node->parent;
    }
+#endif
    
    /* convert node into leaf */
-   debugMessage("convert node %p at depth %d to leaf with lpfork %p\n", node, node->depth, lpfork);
+   debugMessage("convert node %p at depth %d to leaf with lpfork %p at depth %d\n",
+      node, node->depth, lpfork, lpfork == NULL ? -1 : lpfork->depth);
    node->nodetype = SCIP_NODETYPE_LEAF;
    node->data.leaf.lpfork = lpfork;
-   
+
    /* insert leaf in node queue */
    CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, node) );
 
@@ -1622,7 +1593,7 @@ RETCODE actnodeToFork(                  /**< converts the active node into a for
    assert(lp->flushed);
    assert(lp->solved);
 
-   debugMessage("actnode to fork at depth %d\n", tree->actnode->depth);
+   debugMessage("actnode %p to fork at depth %d\n", tree->actnode, tree->actnode->depth);
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
@@ -1643,6 +1614,9 @@ RETCODE actnodeToFork(                  /**< converts the active node into a for
    {
       CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
    }
+
+   /* set new actual LP fork */
+   tree->actlpfork = tree->actnode;
 
    return SCIP_OKAY;
 }
@@ -1667,7 +1641,7 @@ RETCODE actnodeToSubroot(               /**< converts the active node into a sub
    assert(lp->flushed);
    assert(lp->solved);
 
-   debugMessage("actnode to subroot at depth %d\n", tree->actnode->depth);
+   debugMessage("actnode %p to subroot at depth %d\n", tree->actnode, tree->actnode->depth);
 
    /* remember that this node is solved correctly */
    tree->correctlpdepth = tree->actnode->depth;
@@ -1689,6 +1663,10 @@ RETCODE actnodeToSubroot(               /**< converts the active node into a sub
       CHECK_OKAY( SCIPnodeReleaseLPIState(tree->actlpfork, memhdr, lp) );
    }
 
+   /* set new actual LP fork and actual subroot */
+   tree->actlpfork = tree->actnode;
+   tree->actsubroot = tree->actnode;
+
    return SCIP_OKAY;
 }
 
@@ -1699,7 +1677,8 @@ RETCODE treeNodesToQueue(               /**< puts all nodes in the array on the 
    const SET*       set,                /**< global SCIP settings */
    NODE**           nodes,              /**< array of nodes to put on the queue */
    DOMCHGDYN**      domchgdyn,          /**< array of dynamic domain changes */
-   int*             nnodes              /**< pointer to number of nodes in the array */
+   int*             nnodes,             /**< pointer to number of nodes in the array */
+   NODE*            lpfork              /**< LP fork of the nodes */
    )
 {
    NODE* node;
@@ -1719,7 +1698,7 @@ RETCODE treeNodesToQueue(               /**< puts all nodes in the array on the 
       CHECK_OKAY( SCIPdomchgdynDetach(domchgdyn[i], memhdr) );
 
       /* convert node to LEAF and put it into leaves queue */
-      nodeToLeaf(node, set, tree);
+      nodeToLeaf(node, set, tree, lpfork);
    }
    *nnodes = 0;
 
@@ -1774,6 +1753,9 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   NODE* oldlpfork;
+   NODE* newlpfork;
+
    assert(node == NULL
       || node->nodetype == SCIP_NODETYPE_SIBLING
       || node->nodetype == SCIP_NODETYPE_CHILD
@@ -1782,6 +1764,9 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
    assert(memhdr != NULL);
    assert(tree != NULL);
    assert(lp != NULL);
+
+   /* remember the actual LP fork, which is also the LP fork for the siblings of the old active node */
+   oldlpfork = tree->actlpfork;
 
    /* deactivate old active node */
    if( tree->actnode != NULL )
@@ -1809,14 +1794,19 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
       }
    }
 
+   /* now the old active node was converted to a subroot, fork, or junction; the first two cases made the old active
+    * node the new LP fork, which is the correct LP fork for the child nodes of the old active node
+    */
+   newlpfork = tree->actlpfork;
+
    /* set up the new lists of siblings and children */
    if( node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsdomchg, &tree->nsiblings) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsdomchg, &tree->nsiblings, oldlpfork) );
 
       /* move children to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrendomchg, &tree->nchildren) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrendomchg, &tree->nchildren, newlpfork) );
    }
    else
    {
@@ -1826,7 +1816,8 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
       {
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrendomchg, &tree->nchildren) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrendomchg, &tree->nchildren,
+                        newlpfork) );
 
          /* switch domain change data of sibling and active node */
          domchgdyn = tree->actnodedomchg;
@@ -1835,12 +1826,16 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
 
          /* remove selected sibling from the siblings array */
          treeRemoveSibling(tree, node);
+
+         /* reinstall the old LP fork, because this is the correct LP fork of the sibling */
+         tree->actlpfork = oldlpfork;
          
          break;
          
       case SCIP_NODETYPE_CHILD:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsdomchg, &tree->nsiblings) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsdomchg, &tree->nsiblings,
+                        oldlpfork) );
 
          /* switch domain change data of child and active node */
          domchgdyn = tree->actnodedomchg;
@@ -1857,10 +1852,12 @@ RETCODE SCIPnodeActivate(               /**< activates a child, a sibling, or a 
          
       case SCIP_NODETYPE_LEAF:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsdomchg, &tree->nsiblings) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->siblings, tree->siblingsdomchg, &tree->nsiblings,
+                        oldlpfork) );
          
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrendomchg, &tree->nchildren) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, tree->childrendomchg, &tree->nchildren,
+                        newlpfork) );
 
          /* attach dynamic size data to domain changes of the active node */
          SCIPdomchgdynAttach(tree->actnodedomchg, &node->domchg);
@@ -1932,7 +1929,7 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    assert(lp != NULL);
    assert(prob != NULL);
 
-   ALLOC_OKAY( allocMemory(*tree) );
+   ALLOC_OKAY( allocMemory(tree) );
 
    (*tree)->root = NULL;
 
@@ -1972,7 +1969,8 @@ RETCODE SCIPtreeCreate(                 /**< creates an initialized tree data st
    CHECK_OKAY( SCIPnodeCreate(&(*tree)->root, memhdr, set, *tree) );
    assert((*tree)->nchildren == 1);
    /* move root to the queue, convert it to LEAF */
-   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, (*tree)->children, (*tree)->childrendomchg, &(*tree)->nchildren) );
+   CHECK_OKAY( treeNodesToQueue(*tree, memhdr, set, (*tree)->children, (*tree)->childrendomchg, &(*tree)->nchildren,
+                  NULL) );
 
    return SCIP_OKAY;
 }
@@ -2013,15 +2011,15 @@ RETCODE SCIPtreeFree(                   /**< frees tree data structure */
    /* #endif */
 
    /* free pointer arrays */
-   freeMemoryArrayNull((*tree)->path);
-   freeMemoryArrayNull((*tree)->children);
-   freeMemoryArrayNull((*tree)->siblings);   
-   freeMemoryArrayNull((*tree)->childrendomchg);
-   freeMemoryArrayNull((*tree)->siblingsdomchg);   
-   freeMemoryArrayNull((*tree)->pathnlpcols);
-   freeMemoryArrayNull((*tree)->pathnlprows);
+   freeMemoryArrayNull(&(*tree)->path);
+   freeMemoryArrayNull(&(*tree)->children);
+   freeMemoryArrayNull(&(*tree)->siblings);   
+   freeMemoryArrayNull(&(*tree)->childrendomchg);
+   freeMemoryArrayNull(&(*tree)->siblingsdomchg);   
+   freeMemoryArrayNull(&(*tree)->pathnlpcols);
+   freeMemoryArrayNull(&(*tree)->pathnlprows);
 
-   freeMemory(*tree);
+   freeMemory(tree);
 
    return SCIP_OKAY;
 }

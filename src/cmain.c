@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -36,6 +35,7 @@
 #include "nodesel_dfs.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
+#include "heur_rounding.h"
 
 
 #if 0
@@ -128,9 +128,9 @@ main(int argc, char **argv)
     * Local Memory Allocation *
     ***************************/
 
-   allocMemoryArray(vars, nvars);
-   allocMemoryArray(rowvars, nvars);
-   allocMemoryArray(rowvals, nvars);
+   ALLOC_OKAY( allocMemoryArray(&vars, nvars) );
+   ALLOC_OKAY( allocMemoryArray(&rowvars, nvars) );
+   ALLOC_OKAY( allocMemoryArray(&rowvals, nvars) );
 
 
    /*********
@@ -154,6 +154,8 @@ main(int argc, char **argv)
    CHECK_SCIP( SCIPincludeNodeselDfs(scip) );
    CHECK_SCIP( SCIPincludeBranchruleMostinf(scip) );
    CHECK_SCIP( SCIPincludeBranchruleLeastinf(scip) );
+   CHECK_SCIP( SCIPincludeHeurRounding(scip) );
+
 
 
    /********************
@@ -252,9 +254,9 @@ main(int argc, char **argv)
     * Local Memory Deallocation *
     *****************************/
 
-   freeMemoryArray(rowvals);
-   freeMemoryArray(rowvars);
-   freeMemoryArray(vars);
+   freeMemoryArray(&rowvals);
+   freeMemoryArray(&rowvars);
+   freeMemoryArray(&vars);
 
 #ifndef NDEBUG
    memoryCheckEmpty();

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -119,8 +118,8 @@ RETCODE ensureBoundchgarrayMem(         /**< resizes larray and uarray to have a
       int i;
 
       newsize = MAX(2*lpi->boundchgarraysize, num);
-      ALLOC_OKAY( reallocMemoryArray(lpi->larray, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(lpi->uarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->larray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->uarray, newsize) );
       for( i = lpi->boundchgarraysize; i < newsize; ++i )
       {
          lpi->larray[i] = 'L';
@@ -146,10 +145,10 @@ RETCODE ensureSidechgarrayMem(          /**< resizes senarray, rngarray, and rng
       int newsize;
 
       newsize = MAX(2*lpi->sidechgarraysize, num);
-      ALLOC_OKAY( reallocMemoryArray(lpi->senarray, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(lpi->rhsarray, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(lpi->rngarray, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(lpi->rngindarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->senarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->rhsarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->rngarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lpi->rngindarray, newsize) );
       lpi->sidechgarraysize = newsize;
    }
    assert(num <= lpi->sidechgarraysize);
@@ -223,9 +222,9 @@ RETCODE lpistateCreate(                 /**< creates LPi state information objec
    assert(ncol >= 0);
    assert(nrow >= 0);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *lpistate) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpistate)->packcstat, colpacketNum(ncol)) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpistate)->packrstat, rowpacketNum(nrow)) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, lpistate) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->packcstat, colpacketNum(ncol)) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->packrstat, rowpacketNum(nrow)) );
    (*lpistate)->dnorm = NULL;
 
    return SCIP_OKAY;
@@ -241,10 +240,10 @@ void lpistateFree(                      /**< frees LPi state information */
    assert(lpistate != NULL);
    assert(*lpistate != NULL);
 
-   freeBlockMemoryArray(memhdr, (*lpistate)->packcstat, colpacketNum((*lpistate)->ncol));
-   freeBlockMemoryArray(memhdr, (*lpistate)->packrstat, rowpacketNum((*lpistate)->nrow));
-   freeBlockMemoryArrayNull(memhdr, (*lpistate)->dnorm, (*lpistate)->ncol);
-   freeBlockMemory(memhdr, *lpistate);
+   freeBlockMemoryArray(memhdr, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncol));
+   freeBlockMemoryArray(memhdr, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrow));
+   freeBlockMemoryArrayNull(memhdr, &(*lpistate)->dnorm, (*lpistate)->ncol);
+   freeBlockMemory(memhdr, lpistate);
 }
 
 
@@ -455,7 +454,7 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    assert(cpxenv != NULL);
 
    /* create LP */
-   allocMemory(*lpi);
+   allocMemory(lpi);
    (*lpi)->larray = NULL;
    (*lpi)->uarray = NULL;
    (*lpi)->senarray = NULL;
@@ -485,13 +484,13 @@ RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    CHECK_ZERO( CPXfreeprob(cpxenv, &((*lpi)->cpxlp)) );
 
    /* free memory */
-   freeMemoryArrayNull((*lpi)->larray);
-   freeMemoryArrayNull((*lpi)->uarray);
-   freeMemoryArrayNull((*lpi)->senarray);
-   freeMemoryArrayNull((*lpi)->rhsarray);
-   freeMemoryArrayNull((*lpi)->rngarray);
-   freeMemoryArrayNull((*lpi)->rngindarray);
-   freeMemory(*lpi);
+   freeMemoryArrayNull(&(*lpi)->larray);
+   freeMemoryArrayNull(&(*lpi)->uarray);
+   freeMemoryArrayNull(&(*lpi)->senarray);
+   freeMemoryArrayNull(&(*lpi)->rhsarray);
+   freeMemoryArrayNull(&(*lpi)->rngarray);
+   freeMemoryArrayNull(&(*lpi)->rngindarray);
+   freeMemory(lpi);
 
    /* free environment */
    numlp--;
@@ -1302,12 +1301,12 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    CHECK_OKAY( lpistateCreate(lpistate, memhdr, ncol, nrow) );
 
    /* allocate temporary buffer for storing uncompressed basis information */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, cstat, ncol) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, rstat, nrow) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &cstat, ncol) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rstat, nrow) );
 
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpistate)->dnorm, ncol) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*lpistate)->dnorm, ncol) );
       CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, cstat, rstat, (*lpistate)->dnorm) );
    }
    else
@@ -1322,8 +1321,8 @@ RETCODE SCIPlpiGetState(                /**< stores LPi state (like basis inform
    lpistatePack(*lpistate, cstat, rstat);
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, rstat);
-   SCIPsetReleaseBufferArray(set, cstat);
+   SCIPsetReleaseBufferArray(set, &rstat);
+   SCIPsetReleaseBufferArray(set, &cstat);
 
    return SCIP_OKAY;
 }
@@ -1347,13 +1346,8 @@ RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis informa
    assert(lpistate->nrow == CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    /* allocate temporary buffer for storing uncompressed basis information */
-#if 0 /* ??? */
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, lpistate->ncol) );
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, lpistate->nrow) );
-#else
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, cstat, lpistate->ncol) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, rstat, lpistate->nrow) );
-#endif
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &cstat, lpistate->ncol) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rstat, lpistate->nrow) );
 
    lpistateUnpack(lpistate, cstat, rstat);
    if( lpistate->dnorm != NULL && getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
@@ -1366,13 +1360,8 @@ RETCODE SCIPlpiSetState(                /**< loads LPi state (like basis informa
    }
 
    /* free temporary memory */
-#if 0 /* ??? */
-   freeBlockMemoryArray(memhdr, cstat, lpistate->ncol);
-   freeBlockMemoryArray(memhdr, rstat, lpistate->nrow);
-#else
-   SCIPsetReleaseBufferArray(set, rstat);
-   SCIPsetReleaseBufferArray(set, cstat);
-#endif
+   SCIPsetReleaseBufferArray(set, &rstat);
+   SCIPsetReleaseBufferArray(set, &cstat);
 
    return SCIP_OKAY;
 }

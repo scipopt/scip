@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -51,9 +50,9 @@ struct Prob
 {
    char*            name;               /**< problem name */
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */
-   VAR**            vars;               /**< array with mutable variables ordered binary, integer, implicit, continous */
+   VAR**            vars;               /**< array with active variables ordered binary, integer, implicit, continous */
    HASHTABLE*       varnames;           /**< hash table storing variable's names */
-   CONSLIST*        conslist;           /**< list of constraints of the problem */
+   CONS**           conss;              /**< array with constraints of the problem ordered model, non-model */
    HASHTABLE*       consnames;          /**< hash table storing constraints' names */
    OBJSENSE         objsense;           /**< objective sense */
    Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
@@ -66,7 +65,9 @@ struct Prob
    int              nint;               /**< number of general integer variables */
    int              nimpl;              /**< number of implicit integer variables */
    int              ncont;              /**< number of continous variables */
-   int              ncons;              /**< number of constraints in the problem (number of used slots in cons array) */
+   int              consssize;          /**< available slots in conss array */
+   int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
+   int              nmodelconss;        /**< number of model constraints in the problem (stored in first slots of conss) */
 };
 
 
@@ -132,6 +133,7 @@ extern
 RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    );
 

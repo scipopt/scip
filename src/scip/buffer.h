@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -68,7 +67,8 @@ RETCODE SCIPbufferCapture(              /**< allocates the next unused buffer */
 extern
 void SCIPbufferRelease(                 /**< releases a buffer */
    BUFFER*          buffer,             /**< memory buffer storage */
-   void**           ptr                 /**< pointer to the allocated memory buffer */
+   void**           ptr,                /**< pointer to the allocated memory buffer */
+   int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */
    );
 
 #endif

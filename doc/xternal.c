@@ -18,21 +18,22 @@
 
 /**@file   xternal.c
  * @brief  documentation outside the SCIP source files
+ * @authod Tobias Achterberg
  * @author Thorsten Koch
  */
 
-/* $Id: xternal.c,v 1.4 2002/11/11 16:33:28 bzfpfend Exp $
+/* $Id: xternal.c,v 1.5 2003/03/18 12:29:59 bzfpfend Exp $
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
    @version  0.1
    @author   Tobias Achterberg
    @author   Thorsten Koch
-   @author   Alexander Martin
 
    SCIP is a program and library to solve constraint mixed integer programs (CMIPs).
 
    - \ref CODE  "Coding style guidlines"
+   - \ref CONS  "How to add constraint handlers"
    - \ref SEPAR "How to add separators"
    - \ref HEUR  "How to add heuristics"
 */
@@ -56,6 +57,12 @@
  * - Document functions, parameters and variables doxygen conform.
  *
  * As an example have a look at tree.c .
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CONS How to add constraint handlers
+ *
+ * Here we explain how to add separation routines to SCIP.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

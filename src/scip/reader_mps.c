@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -18,6 +17,7 @@
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
+ * @author Thorsten Koch
  * @author Tobias Achterberg
  */
 
@@ -82,7 +82,7 @@ RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   ALLOC_OKAY( allocMemory(*mpsi) );
+   ALLOC_OKAY( allocMemory(mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -108,7 +108,7 @@ void mpsinputFree(
    MPSINPUT**       mpsi
    )
 {
-   freeMemory(*mpsi);
+   freeMemory(mpsi);
 }
 
 static
@@ -1302,7 +1302,7 @@ RETCODE SCIPincludeReaderMPS(           /**< includes the MPS file reader in SCI
    )
 {
    CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-                  NULL, NULL, NULL, SCIPreaderReadMPS, NULL) );
+                  NULL, SCIPreaderReadMPS, NULL) );
 
    return SCIP_OKAY;
 }

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -65,11 +64,29 @@ DECL_CONSENLP(consEnlpIntegral)
 static
 DECL_CONSCHCK(consChckIntegral)
 {
+   VAR** vars;
+   Real solval;
+   int nbin;
+   int nint;
+   int v;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   todoMessage("Chck method of integrality constraint");
+   CHECK_OKAY( SCIPgetVars(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
+
+   *result = SCIP_FEASIBLE;
+
+   if( chckintegrality )
+   {
+      for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
+      {
+         CHECK_OKAY( SCIPgetSolVal(scip, sol, vars[v], &solval) );
+         if( !SCIPisIntegral(scip, solval) )
+            *result = SCIP_INFEASIBLE;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -82,7 +99,7 @@ DECL_CONSCHCK(consChckIntegral)
  * constraint specific interface methods
  */
 
-RETCODE SCIPincludeConsHdlrIntegral(      /**< creates the handler for integrality constraint and includes it in SCIP */
+RETCODE SCIPincludeConsHdlrIntegral(    /**< creates the handler for integrality constraint and includes it in SCIP */
    SCIP*            scip                /**< SCIP data structure */
    )
 {

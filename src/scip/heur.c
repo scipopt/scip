@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -51,6 +50,7 @@ RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
    HEUR**           heur,               /**< pointer to primal heuristic data structure */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
+   char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
@@ -66,9 +66,10 @@ RETCODE SCIPheurCreate(                 /**< creates a primal heuristic */
    assert(freq > 0);
    assert(heurexec != NULL);
 
-   ALLOC_OKAY( allocMemory(*heur) );
-   ALLOC_OKAY( duplicateMemoryArray((*heur)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*heur)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( allocMemory(heur) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*heur)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*heur)->desc, desc, strlen(desc)+1) );
+   (*heur)->dispchar = dispchar;
    (*heur)->priority = priority;
    (*heur)->freq = freq;
    (*heur)->heurfree = heurfree;
@@ -97,9 +98,9 @@ RETCODE SCIPheurFree(                   /**< calls destructor and frees memory o
       CHECK_OKAY( (*heur)->heurfree(*heur, scip) );
    }
 
-   freeMemoryArray((*heur)->name);
-   freeMemoryArray((*heur)->desc);
-   freeMemory(*heur);
+   freeMemoryArray(&(*heur)->name);
+   freeMemoryArray(&(*heur)->desc);
+   freeMemory(heur);
 
    return SCIP_OKAY;
 }

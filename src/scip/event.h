@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -69,7 +68,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  */
 #define DECL_EVENTFREE(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip)
 
-/** initialization method of event handler (called at problem creation)
+/** initialization method of event handler (called when problem solving starts)
  *
  *  input:
  *    eventhdlr       : the event handler itself
@@ -77,7 +76,7 @@ typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and pro
  */
 #define DECL_EVENTINIT(x) RETCODE x (EVENTHDLR* eventhdlr, SCIP* scip)
 
-/** deinitialization method of event handler (called at problem destruction)
+/** deinitialization method of event handler (called when problem solving exits)
  *
  *  input:
  *    eventhdlr       : the event handler itself

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -53,6 +52,9 @@ struct ConsHdlr
    int              consssize;          /**< size of constraints array (available slots in conss array) */
    int              nconss;             /**< number of active constraints (used slots in conss array) */
    int              nmodelconss;        /**< number of model constraints (stored in the first positions in conss array) */
+   CONS**           probconss;          /**< array with model constraints of the initial (transformed) problem */
+   int              probconsssize;      /**< available slots in probconss array */
+   int              nprobconss;         /**< number of initial model constraints */
    unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
    unsigned int     initialized:1;      /**< is constraint handler initialized? */
 };
@@ -92,10 +94,33 @@ RETCODE conshdlrEnsureConssMem(         /**< resizes conss array to be able to s
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(conshdlr->conss, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&conshdlr->conss, newsize) );
       conshdlr->consssize = newsize;
    }
    assert(num <= conshdlr->consssize);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE conshdlrEnsureProbconssMem(     /**< resizes probconss array to be able to store at least num constraints */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimal number of node slots in array */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+
+   if( num > conshdlr->probconsssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&conshdlr->probconss, newsize) );
+      conshdlr->probconsssize = newsize;
+   }
+   assert(num <= conshdlr->probconsssize);
 
    return SCIP_OKAY;
 }
@@ -238,9 +263,9 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    assert(desc != NULL);
    assert((propfreq >= 0) ^ (consprop == NULL));
 
-   ALLOC_OKAY( allocMemory(*conshdlr) );
-   ALLOC_OKAY( duplicateMemoryArray((*conshdlr)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*conshdlr)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( allocMemory(conshdlr) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*conshdlr)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*conshdlr)->desc, desc, strlen(desc)+1) );
    (*conshdlr)->sepapriority = sepapriority;
    (*conshdlr)->enfopriority = enfopriority;
    (*conshdlr)->chckpriority = chckpriority;
@@ -261,6 +286,9 @@ RETCODE SCIPconshdlrCreate(             /**< creates a constraint handler */
    (*conshdlr)->consssize = 0;
    (*conshdlr)->nconss = 0;
    (*conshdlr)->nmodelconss = 0;
+   (*conshdlr)->probconss = NULL;
+   (*conshdlr)->probconsssize = 0;
+   (*conshdlr)->nprobconss = 0;
    (*conshdlr)->initialized = FALSE;
 
    return SCIP_OKAY;
@@ -282,10 +310,11 @@ RETCODE SCIPconshdlrFree(               /**< calls destructor and frees memory o
       CHECK_OKAY( (*conshdlr)->consfree(*conshdlr, scip) );
    }
 
-   freeMemoryArray((*conshdlr)->name);
-   freeMemoryArray((*conshdlr)->desc);
-   freeMemoryArrayNull((*conshdlr)->conss);
-   freeMemory(*conshdlr);
+   freeMemoryArray(&(*conshdlr)->name);
+   freeMemoryArray(&(*conshdlr)->desc);
+   freeMemoryArrayNull(&(*conshdlr)->conss);
+   freeMemoryArrayNull(&(*conshdlr)->probconss);
+   freeMemory(conshdlr);
 
    return SCIP_OKAY;
 }
@@ -306,7 +335,6 @@ RETCODE SCIPconshdlrInit(               /**< initializes constraint handler */
       return SCIP_INVALIDCALL;
    }
 
-   assert(conshdlr->nconss == 0);
    if( conshdlr->consinit != NULL )
    {
       CHECK_OKAY( conshdlr->consinit(conshdlr, scip) );
@@ -354,7 +382,7 @@ RETCODE SCIPconshdlrSeparate(           /**< calls separator method of constrain
 
    if( conshdlr->conssepa != NULL && (!conshdlr->needscons || conshdlr->nconss > 0) )
    {
-      debugMessage("separate constraints of handler <%s>\n", conshdlr->name);
+      debugMessage("separate %d constraints of handler <%s>\n", conshdlr->nconss, conshdlr->name);
       CHECK_OKAY( conshdlr->conssepa(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss, result) );
       if( *result != SCIP_SEPARATED
          && *result != SCIP_DIDNOTFIND
@@ -386,7 +414,7 @@ RETCODE SCIPconshdlrEnforceLPSol(       /**< calls enforcing method of constrain
 
    if( conshdlr->consenlp != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
-      debugMessage("enforcing constraints of handler <%s> for LP solutions\n", conshdlr->name);
+      debugMessage("enforcing %d constraints of handler <%s> for LP solutions\n", conshdlr->nmodelconss, conshdlr->name);
       CHECK_OKAY( conshdlr->consenlp(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
@@ -421,7 +449,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(   /**< calls enforcing method of constrain
 
    if( conshdlr->consenps != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
    {
-      debugMessage("enforcing constraints of handler <%s> for pseudo solutions\n", conshdlr->name);
+      debugMessage("enforcing %d constraints of handler <%s> for pseudo solutions\n", 
+         conshdlr->nmodelconss, conshdlr->name);
       CHECK_OKAY( conshdlr->consenps(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_BRANCHED
@@ -446,6 +475,8 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -454,10 +485,11 @@ RETCODE SCIPconshdlrCheck(              /**< calls feasibility check method of c
    assert(set->scip != NULL);
    assert(result != NULL);
 
-   if( conshdlr->conschck != NULL && (!conshdlr->needscons || conshdlr->nmodelconss > 0) )
+   if( conshdlr->conschck != NULL && (!conshdlr->needscons || conshdlr->nprobconss > 0) )
    {
-      debugMessage("checking constraints of handler <%s>\n", conshdlr->name);
-      CHECK_OKAY( conshdlr->conschck(conshdlr, set->scip, conshdlr->conss, conshdlr->nmodelconss, sol, result) );
+      debugMessage("checking %d constraints of handler <%s>\n", conshdlr->nprobconss, conshdlr->name);
+      CHECK_OKAY( conshdlr->conschck(conshdlr, set->scip, conshdlr->probconss, conshdlr->nprobconss, 
+                     sol, chckintegrality, chcklprows, result) );
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
       {
@@ -490,7 +522,7 @@ RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constra
       && (!conshdlr->needscons || conshdlr->nconss > 0)
       && (actdepth == -1 || (conshdlr->propfreq > 0 && actdepth % conshdlr->propfreq == 0)) )
    {
-      debugMessage("propagating constraints of handler <%s>\n", conshdlr->name);
+      debugMessage("propagating %d constraints of handler <%s>\n", conshdlr->nconss, conshdlr->name);
       CHECK_OKAY( conshdlr->consprop(conshdlr, set->scip, conshdlr->conss, conshdlr->nconss, result) );
       if( *result != SCIP_CUTOFF
          && *result != SCIP_REDUCEDDOM
@@ -506,6 +538,27 @@ RETCODE SCIPconshdlrPropagate(          /**< calls propagation method of constra
    }
    else
       *result = SCIP_DIDNOTRUN;
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconshdlrAddProbCons(        /**< adds constraint to constraint handler's problem constraint array */
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< model constraint of initial problem to add */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(cons->model);
+
+   debugMessage("add problem constraint <%s> to constraint handler <%s>\n", cons->name, conshdlr->name);
+   CHECK_OKAY( conshdlrEnsureProbconssMem(conshdlr, set, conshdlr->nprobconss+1) );
+
+   conshdlr->probconss[conshdlr->nprobconss] = cons;
+   conshdlr->nprobconss++;
 
    return SCIP_OKAY;
 }
@@ -556,7 +609,16 @@ int SCIPconshdlrGetNConss(              /**< gets number of constraints in const
    return conshdlr->nconss;
 }
 
-int SCIPconshdlrGetPropfreq(            /**< gets propagation frequency of constraint handler */
+int SCIPconshdlrGetChckPriority(        /**< gets checking priority of constraint handler */
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->chckpriority;
+}
+
+int SCIPconshdlrGetPropFreq(            /**< gets propagation frequency of constraint handler */
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
@@ -594,11 +656,10 @@ RETCODE SCIPconsCreate(                 /**< creates and captures a constraint *
    assert(cons != NULL);
    assert(memhdr != NULL);
    assert(conshdlr != NULL);
-   assert(conshdlr->initialized);
 
    /* create constraint data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, *cons) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*cons)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, cons) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*cons)->name, name, strlen(name)+1) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
    (*cons)->nuses = 0;
@@ -623,7 +684,6 @@ RETCODE SCIPconsFree(                   /**< frees a constraint */
    assert(*cons != NULL);
    assert((*cons)->nuses == 0);
    assert((*cons)->conshdlr != NULL);
-   assert((*cons)->conshdlr->initialized);
    assert(memhdr != NULL);
    assert(set != NULL);
 
@@ -632,8 +692,8 @@ RETCODE SCIPconsFree(                   /**< frees a constraint */
    {
       CHECK_OKAY( (*cons)->conshdlr->consdele((*cons)->conshdlr, set->scip, &(*cons)->consdata) );
    }
-   freeBlockMemoryArray(memhdr, (*cons)->name, strlen((*cons)->name)+1);
-   freeBlockMemory(memhdr, *cons);
+   freeBlockMemoryArray(memhdr, &(*cons)->name, strlen((*cons)->name)+1);
+   freeBlockMemory(memhdr, cons);
 
    return SCIP_OKAY;
 }
@@ -801,7 +861,7 @@ RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constr
    assert(memhdr != NULL);
    assert(cons != NULL);
    
-   ALLOC_OKAY( allocBlockMemory(memhdr, newlist) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
    newlist->cons = cons;
    newlist->next = *conslist;
    *conslist = newlist;
@@ -827,7 +887,7 @@ RETCODE SCIPconslistFreePart(           /**< partially unlinks and releases the 
    {
       CHECK_OKAY( SCIPconsRelease(&(*conslist)->cons, memhdr, set) );
       next = (*conslist)->next;
-      freeBlockMemory(memhdr, *conslist);
+      freeBlockMemory(memhdr, conslist);
       *conslist = next;
    }
    assert(*conslist == firstkeep); /* firstkeep should be part of conslist */

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -279,7 +278,7 @@ RETCODE SCIPcreate(                     /**< creates and initializes SCIP data s
 {
    assert(scip != NULL);
 
-   ALLOC_OKAY( allocMemory(*scip) );
+   ALLOC_OKAY( allocMemory(scip) );
 
    (*scip)->stage = SCIP_STAGE_INIT;
 
@@ -314,7 +313,7 @@ RETCODE SCIPfree(                       /**< frees SCIP data structures */
    CHECK_OKAY( SCIPmemFree(&(*scip)->mem) );
    CHECK_OKAY( SCIPsetFree(&(*scip)->set) );
 
-   freeMemory(*scip);
+   freeMemory(scip);
 
    return SCIP_OKAY;
 }
@@ -361,8 +360,6 @@ RETCODE SCIPincludeReader(              /**< creates a reader and includes it in
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
    DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERINIT((*readerinit)),      /**< initialise reader */
-   DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
    DECL_READERREAD((*readerread)),      /**< read method */
    READERDATA*      readerdata          /**< reader data */
    )
@@ -371,8 +368,7 @@ RETCODE SCIPincludeReader(              /**< creates a reader and includes it in
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeReader", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPreaderCreate(&reader, name, desc, extension, 
-                  readerfree, readerinit, readerexit, readerread, readerdata) );
+   CHECK_OKAY( SCIPreaderCreate(&reader, name, desc, extension, readerfree, readerread, readerdata) );
    CHECK_OKAY( SCIPsetIncludeReader(scip->set, reader) );
    
    return SCIP_OKAY;
@@ -432,6 +428,7 @@ RETCODE SCIPincludeHeur(                /**< creates a primal heuristic and incl
    SCIP*            scip,               /**< SCIP data structure */
    const char*      name,               /**< name of primal heuristic */
    const char*      desc,               /**< description of primal heuristic */
+   char             dispchar,           /**< display character of primal heuristic */
    int              priority,           /**< priority of the primal heuristic */
    int              freq,               /**< frequency for calling primal heuristic */
    DECL_HEURFREE((*heurfree)),          /**< destructor of primal heuristic */
@@ -445,7 +442,7 @@ RETCODE SCIPincludeHeur(                /**< creates a primal heuristic and incl
 
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPheurCreate(&heur, name, desc, priority, freq,
+   CHECK_OKAY( SCIPheurCreate(&heur, name, desc, dispchar, priority, freq,
                   heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
@@ -599,9 +596,8 @@ RETCODE SCIPcreateProb(                 /**< creates empty problem and initializ
 
    scip->stage = SCIP_STAGE_PROBLEM;
    
-   CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
-   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name) );
    CHECK_OKAY( SCIPstatCreate(&scip->stat) );
+   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name) );
    
    return SCIP_OKAY;
 }
@@ -635,9 +631,9 @@ RETCODE SCIPreadProb(                   /**< reads problem from file and initial
    case SCIP_SUCCESS:
       assert(scip->origprob != NULL);
       
-      sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints",
+      sprintf(s, "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d (%d model) constraints",
          scip->origprob->nvars, scip->origprob->nbin, scip->origprob->nint, scip->origprob->nimpl, scip->origprob->ncont,
-         scip->origprob->ncons);
+         scip->origprob->nconss, scip->origprob->nmodelconss);
       infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
 
       printf(" var names :  ");
@@ -673,7 +669,6 @@ RETCODE SCIPfreeProb(                   /**< frees problem and solution process 
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->lp) );
       CHECK_OKAY( SCIPstatFree(&scip->stat) );
-      CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
 
       scip->stage = SCIP_STAGE_INIT;
 
@@ -837,11 +832,11 @@ RETCODE SCIPaddCons(                    /**< adds global constraint to the probl
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->mem->probmem, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->origprob, scip->mem->probmem, scip->set, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, cons) );
+      CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->mem->solvemem, scip->set, cons) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:
@@ -929,6 +924,9 @@ RETCODE SCIPsolve(                      /**< solves problem */
 
       /* mark statistics before solving */
       SCIPstatMark(scip->stat);
+
+      /* init callback methods */
+      CHECK_OKAY( SCIPsetInitCallbacks(scip->set) );
 
       /* init solve data structures */
       CHECK_OKAY( SCIPlpCreate(&scip->lp, scip->mem->solvemem, scip->set, SCIPprobGetName(scip->origprob)) );
@@ -1021,6 +1019,9 @@ RETCODE SCIPfreeSolve(                  /**< frees all solution process data, on
       CHECK_OKAY( SCIPsepaFree(&scip->sepa) );
       CHECK_OKAY( SCIPpriceFree(&scip->price) );
       CHECK_OKAY( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
+
+      /* exit callback methods */
+      CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
 
       clearBlockMemoryNull(scip->mem->solvemem);
 
@@ -1431,6 +1432,20 @@ RETCODE SCIPhasActnodeLP(               /**< checks, whether the LP was solved i
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetLPSolstat(               /**< gets solution status of actual LP */
+   SCIP*            scip,               /**< SCIP data structure */
+   LPSOLSTAT*       lpsolstat           /**< pointer to store the LP solution status */
+   )
+{
+   assert(lpsolstat != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetLPSolstat", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *lpsolstat = SCIPlpGetSolstat(scip->lp);
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
    SCIP*            scip,               /**< SCIP data structure */
    COL***           cols,               /**< pointer to store the array of LP columns, or NULL */
@@ -1439,20 +1454,10 @@ RETCODE SCIPgetLPCols(                  /**< gets actual LP columns */
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPCols", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
 
-   if( scip->tree->actnodehaslp )
-   {
-      if( cols != NULL )
-         *cols = scip->lp->cols;
-      if( ncols != NULL )
-         *ncols = scip->lp->ncols;
-   }
-   else
-   {
-      if( cols != NULL )
-         *cols = NULL;
-      if( ncols != NULL )
-         *ncols = 0;
-   }
+   if( cols != NULL )
+      *cols = scip->lp->cols;
+   if( ncols != NULL )
+      *ncols = scip->lp->ncols;
 
    return SCIP_OKAY;
 }
@@ -1464,21 +1469,11 @@ RETCODE SCIPgetLPRows(                  /**< gets actual LP rows */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPRows", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );   
-
-   if( scip->tree->actnodehaslp )
-   {
-      if( rows != NULL )
-         *rows = scip->lp->rows;
-      if( nrows != NULL )
-         *nrows = scip->lp->nrows;
-   }
-   else
-   {
-      if( rows != NULL )
-         *rows = NULL;
-      if( nrows != NULL )
-         *nrows = 0;
-   }
+   
+   if( rows != NULL )
+      *rows = scip->lp->rows;
+   if( nrows != NULL )
+      *nrows = scip->lp->nrows;
 
    return SCIP_OKAY;
 }
@@ -1701,6 +1696,22 @@ RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetRowPseudoActivity(       /**< returns the activity of a row for the actual pseudo solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real*            pseudoactivity      /**< pointer to store the row's pseudo activity */
+   )
+{
+   assert(row != NULL);
+   assert(pseudoactivity != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwGetPseudoActivity(row, scip->mem->solvemem, scip->set, scip->lp, pseudoactivity) );
+   
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPgetRowPseudoFeasibility(    /**< returns the feasibility of a row for the actual pseudo solution */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
@@ -1713,6 +1724,40 @@ RETCODE SCIPgetRowPseudoFeasibility(    /**< returns the feasibility of a row fo
    CHECK_OKAY( checkStage(scip, "SCIPgetRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwGetPseudoFeasibility(row, scip->mem->solvemem, scip->set, scip->lp, pseudofeasibility) );
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetRowSolActivity(          /**< returns the activity of a row for the given primal solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solactivity         /**< pointer to store the row's activity for the solution */
+   )
+{
+   assert(row != NULL);
+   assert(solactivity != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwGetSolActivity(row, scip->mem->solvemem, scip->set, scip->stat, sol, solactivity) );
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetRowSolFeasibility(       /**< returns the feasibility of a row for the given primal solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
+   )
+{
+   assert(row != NULL);
+   assert(solfeasibility != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetRowSolFeasibility", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIProwGetSolFeasibility(row, scip->mem->solvemem, scip->set, scip->stat, sol, solfeasibility) );
    
    return SCIP_OKAY;
 }
@@ -1972,6 +2017,18 @@ RETCODE SCIPcreateActSol(               /**< creates a primal solution, initiali
    return SCIP_OKAY;
 }
 
+RETCODE SCIPfreeSol(                    /**< frees primal CIP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol                 /**< pointer to the solution */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPfreeSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   CHECK_OKAY( SCIPsolFree(sol, scip->mem->solvemem) );
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPlinkLPSol(                  /**< links a primal solution to the actual LP solution */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal solution */
@@ -2021,7 +2078,7 @@ RETCODE SCIPclearSol(                   /**< clears a primal solution */
 {
    CHECK_OKAY( checkStage(scip, "SCIPclearSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolClear(sol, scip->mem->solvemem) );
+   CHECK_OKAY( SCIPsolClear(sol, scip->mem->solvemem, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -2090,6 +2147,21 @@ RETCODE SCIPgetSolObj(                  /**< returns objective value of primal C
 
    CHECK_OKAY( checkStage(scip, "SCIPgetSolObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
+   *objval = SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, SCIPsolGetObj(sol)));
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetSolTransObj(             /**< returns objective value of primal CIP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution */
+   Real*            objval              /**< pointer to store the objective value */
+   )
+{
+   assert(objval != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetSolObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
    *objval = SCIPsolGetObj(sol);
 
    return SCIP_OKAY;
@@ -2144,7 +2216,7 @@ RETCODE SCIPprintSol(                   /**< outputs non-zero original variables
    return SCIP_OKAY;
 }
 
-RETCODE SCIPprintSolTrans(              /**< outputs non-zero transformed variables of solution to file stream */
+RETCODE SCIPprintTransSol(              /**< outputs non-zero transformed variables of solution to file stream */
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution */
    FILE*            file                /**< output file (or NULL for standard output) */
@@ -2155,8 +2227,7 @@ RETCODE SCIPprintSolTrans(              /**< outputs non-zero transformed variab
    if( file == NULL )
       file = stdout;
 
-   fprintf(file, "transformed objective value:     %f\n",
-      SCIPprobExternObjval(scip->transprob, SCIPsolGetObj(sol)));
+   fprintf(file, "transformed objective value:     %f\n", SCIPsolGetObj(sol));
    
    CHECK_OKAY( SCIPsolPrint(sol, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, file) );
    
@@ -2203,6 +2274,66 @@ RETCODE SCIPprintBestSol(               /**< outputs best feasible primal soluti
    else
       SCIPprintSol(scip, sol, file);
    
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPaddSolMove(                 /**< adds feasible primal solution to solution storage by moving it */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddSolMove", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalAddSolMove(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, sol) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPaddSolCopy(                 /**< adds feasible primal solution to solution storage by copying it */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddSolCopy", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalAddSolCopy(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, sol) );
+
+   return SCIP_OKAY;
+}
+
+extern
+RETCODE SCIPtrySolMove(                 /**< checks solution for feasibility; if possible, adds it to storage by moving */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPtrySolMove", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalTrySolMove(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, sol, chckintegrality, chcklprows, stored) );
+
+   return SCIP_OKAY;
+}
+
+extern
+RETCODE SCIPtrySolCopy(                 /**< checks solution for feasibility; if possible, adds it to storage by copying */
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPtrySolCopy", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalTrySolCopy(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, sol, chckintegrality, chcklprows, stored) );
+
    return SCIP_OKAY;
 }
 
@@ -2452,6 +2583,20 @@ RETCODE SCIPgetActDualBound(            /**< gets dual bound of active node */
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetActTransDualBound(       /**< gets dual bound of active node in transformed problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            actdualbound        /**< pointer to store the dual bound */
+   )
+{
+   assert(actdualbound != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetActTransDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   *actdualbound = SCIPtreeGetActLowerbound(scip->tree);
+   
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPgetAvgDualBound(            /**< gets average dual bound of all unprocessed nodes */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            avgdualbound        /**< pointer to store the average dual bound */
@@ -2463,6 +2608,20 @@ RETCODE SCIPgetAvgDualBound(            /**< gets average dual bound of all unpr
 
    *avgdualbound = SCIPprobExternObjval(scip->origprob, 
       SCIPprobExternObjval(scip->transprob, SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound)));
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetAvgTransDualBound(       /**< gets average dual bound of all unprocessed nodes in transformed problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            avgdualbound        /**< pointer to store the average dual bound */
+   )
+{
+   assert(avgdualbound != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetAvgTransDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   *avgdualbound = SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound);
    
    return SCIP_OKAY;
 }
@@ -2482,6 +2641,20 @@ RETCODE SCIPgetDualBound(               /**< gets global dual bound */
    return SCIP_OKAY;
 }
 
+RETCODE SCIPgetTransDualBound(          /**< gets global dual bound in transformed problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            dualbound           /**< pointer to store the dual bound */
+   )
+{
+   assert(dualbound != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransDualBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   *dualbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+   
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPgetPrimalBound(             /**< gets global primal bound */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            primalbound         /**< pointer to store the primal bound */
@@ -2492,6 +2665,20 @@ RETCODE SCIPgetPrimalBound(             /**< gets global primal bound */
    CHECK_OKAY( checkStage(scip, "SCIPgetPrimalBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    *primalbound = SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, scip->primal->upperbound));
+   
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPgetTransPrimalBound(        /**< gets global primal bound in transformed problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            primalbound         /**< pointer to store the primal bound */
+   )
+{
+   assert(primalbound != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetTransPrimalBound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+   *primalbound = scip->primal->upperbound;
    
    return SCIP_OKAY;
 }
@@ -2717,6 +2904,99 @@ Bool SCIPisSumNeg(                      /**< checks, if value is lower than -sum
    assert(scip->set != NULL);
 
    return SCIPsetIsSumNeg(scip->set, val);
+}
+
+Bool SCIPisFeasEQ(                      /**< checks, if values are in range of feasibility tolerance */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasEQ(scip->set, val1, val2);
+}
+
+Bool SCIPisFeasL(                       /**< checks, if val1 is (more than feasibility tolerance) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasL(scip->set, val1, val2);
+}
+
+Bool SCIPisFeasLE(                      /**< checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasLE(scip->set, val1, val2);
+}
+
+Bool SCIPisFeasG(                       /**< checks, if val1 is (more than feasibility tolerance) greater than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasG(scip->set, val1, val2);
+}
+
+Bool SCIPisFeasGE(                      /**< checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasGE(scip->set, val1, val2);
+}
+
+Bool SCIPisFeasZero(                    /**< checks, if value is in range feasibility tolerance of 0.0 */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasZero(scip->set, val);
+}
+
+Bool SCIPisFeasPos(                     /**< checks, if value is greater than feasibility tolerance */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasPos(scip->set, val);
+}
+
+Bool SCIPisFeasNeg(                     /**< checks, if value is lower than -feasibility tolerance */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return SCIPsetIsFeasNeg(scip->set, val);
 }
 
 Bool SCIPisRelEQ(                       /**< checks, if relative difference of values is in range of epsilon */
@@ -2955,7 +3235,8 @@ RETCODE SCIPcaptureBuffer(              /**< gets a memory buffer with at least 
 
 RETCODE SCIPreleaseBuffer(              /**< releases a memory buffer */
    SCIP*            scip,               /**< SCIP data structure */
-   void**           ptr                 /**< pointer to store the buffer */
+   void**           ptr,                /**< pointer to store the buffer */
+   int              dummysize           /**< used to get a safer define for SCIPreleaseBufferSize/Array */
    )
 {
    assert(ptr != NULL);

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -71,8 +70,8 @@ RETCODE priceEnsureVarsMem(             /**< resizes vars and score arrays to be
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(price->vars, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(price->score, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&price->vars, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&price->score, newsize) );
       price->varssize = newsize;
    }
    assert(num <= price->varssize);
@@ -95,9 +94,9 @@ RETCODE priceEnsureBdviolvarsMem(       /**< resizes bdviolvars arrays to be abl
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(price->bdviolvars, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(price->bdviolvarslb, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(price->bdviolvarsub, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&price->bdviolvars, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&price->bdviolvarslb, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&price->bdviolvarsub, newsize) );
       price->bdviolvarssize = newsize;
    }
    assert(num <= price->bdviolvarssize);
@@ -112,7 +111,7 @@ RETCODE SCIPpriceCreate(                /**< creates pricing storage */
 {
    assert(price != NULL);
    
-   ALLOC_OKAY( allocMemory(*price) );
+   ALLOC_OKAY( allocMemory(price) );
    
    (*price)->vars = NULL;
    (*price)->score = NULL;
@@ -135,12 +134,12 @@ RETCODE SCIPpriceFree(                  /**< frees pricing storage */
 {
    assert(price != NULL);
 
-   freeMemoryArrayNull((*price)->vars);
-   freeMemoryArrayNull((*price)->score);
-   freeMemoryArrayNull((*price)->bdviolvars);
-   freeMemoryArrayNull((*price)->bdviolvarslb);
-   freeMemoryArrayNull((*price)->bdviolvarsub);
-   freeMemory(*price);
+   freeMemoryArrayNull(&(*price)->vars);
+   freeMemoryArrayNull(&(*price)->score);
+   freeMemoryArrayNull(&(*price)->bdviolvars);
+   freeMemoryArrayNull(&(*price)->bdviolvarslb);
+   freeMemoryArrayNull(&(*price)->bdviolvarsub);
+   freeMemory(price);
 
    return SCIP_OKAY;
 }
@@ -341,14 +340,14 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          col = var->data.col;
          assert(col != NULL);
          assert(col->var == var);
+         assert(col->lppos >= -1);
          assert(col->lpipos >= -1);
-         assert(col->inlp || col->lpipos == -1);
-         assert(!col->inlp || col->lpipos >= 0);
+         assert((col->lppos >= 0) ^ (col->lpipos == -1));
          assert(col->len >= 0);
             
          /*debugMessage("price column variable <%s> in bounds [%g,%g], inlp=%d\n", 
            var->name, var->dom.lb, var->dom.ub, col->inlp);*/
-         if( !col->inlp )
+         if( col->lppos == -1 )
          {
             Real feasibility;
             Bool added;
@@ -460,7 +459,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
 
       col = var->data.col;
       assert(col != NULL);
-      assert(!col->inlp);
+      assert(col->lppos == -1);
       assert(col->lpipos == -1);
       debugMessage("adding bound violated variable <%s> (lb=%g, ub=%g)\n", var->name, 
          price->bdviolvarslb[v], price->bdviolvarsub[v]);
@@ -491,7 +490,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
 
       col = var->data.col;
       assert(col != NULL);
-      assert(!col->inlp);
+      assert(col->lppos == -1);
       assert(col->lpipos == -1);
       debugMessage("adding priced variable <%s> (score=%g)\n", var->name, price->score[v]);
       CHECK_OKAY( SCIPlpAddCol(lp, set, col) );

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -92,6 +91,7 @@ typedef struct Lp LP;                   /**< actual LP data */
 #include "lpi.h"
 #include "var.h"
 #include "cons.h"
+#include "sol.h"
 
 
 
@@ -111,6 +111,7 @@ struct Col
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
    int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
+   int              lppos;              /**< column position number in actual LP, or -1 if not in actual LP */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              validredcostlp;     /**< lp number for which reduced cost value is valid */
    int              validfarkaslp;      /**< lp number for which farkas value is valid */
@@ -119,7 +120,6 @@ struct Col
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
    unsigned int     coefchanged:1;      /**< TRUE iff the coefficient vector changed, and LP solver has to be updated */
-   unsigned int     inlp:1;             /**< TRUE iff column is in actual LP */
 };
 
 /** row of the LP */
@@ -150,6 +150,7 @@ struct Row
    int              len;                /**< number of nonzeros in row */
    int              nunlinked;          /**< number of row entries, where the columns don't know about the row */
    int              nuses;              /**< number of times, this row is referenced */
+   int              lppos;              /**< row position number in actual LP, or -1 if not in actual LP */
    int              lpipos;             /**< row position number in LP solver, or -1 if not in LP solver */
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
@@ -162,9 +163,8 @@ struct Row
    unsigned int     lhschanged:1;       /**< was left hand side changed, and has data of LP solver to be updated? */
    unsigned int     rhschanged:1;       /**< was right hand side changed, and has data of LP solver to be updated? */
    unsigned int     coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
-   unsigned int     inlp:1;             /**< is row in actual LP? */
    unsigned int     modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
-   unsigned int     nlocks:23;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int     nlocks:24;          /**< number of sealed locks of an unmodifiable row */
 };
 
 /** actual LP data */
@@ -283,6 +283,11 @@ RETCODE SCIPcolBoundChanged(            /**< notifies LP, that the bounds of a c
 
 extern
 VAR* SCIPcolGetVar(                     /**< gets variable this column represents */
+   COL*             col                 /**< LP column */
+   );
+
+extern
+int SCIPcolGetLPPos(                    /**< gets position of column in actual LP, or -1 if it is not in LP */
    COL*             col                 /**< LP column */
    );
 
@@ -510,6 +515,11 @@ Bool SCIProwIsModel(                    /**< returns TRUE iff row belongs to a m
    );
 
 extern
+int SCIProwGetLPPos(                    /**< gets position of row in actual LP, or -1 if it is not in LP */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
 Bool SCIProwIsInLP(                     /**< returns TRUE iff row is member of actual LP */
    ROW*             row                 /**< LP row */
    );
@@ -542,6 +552,26 @@ RETCODE SCIProwGetPseudoFeasibility(    /**< returns the feasibility of a row in
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
+   );
+
+extern
+RETCODE SCIProwGetSolActivity(          /**< returns the activity of a row for a given solution */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solactivity         /**< pointer to store the row's activity for the solution */
+   );
+
+extern
+RETCODE SCIProwGetSolFeasibility(       /**< returns the feasibility of a row for the given solution */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
    );
 
 extern

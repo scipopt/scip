@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -95,9 +94,9 @@ RETCODE SCIPeventhdlrCreate(            /**< creates an event handler */
    assert(desc != NULL);
    assert(eventexec != NULL);
 
-   ALLOC_OKAY( allocMemory(*eventhdlr) );
-   ALLOC_OKAY( duplicateMemoryArray((*eventhdlr)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*eventhdlr)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( allocMemory(eventhdlr) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*eventhdlr)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*eventhdlr)->desc, desc, strlen(desc)+1) );
    (*eventhdlr)->eventfree = eventfree;
    (*eventhdlr)->eventinit = eventinit;
    (*eventhdlr)->eventexit = eventexit;
@@ -125,9 +124,9 @@ RETCODE SCIPeventhdlrFree(              /**< calls destructor and frees memory o
       CHECK_OKAY( (*eventhdlr)->eventfree(*eventhdlr, scip) );
    }
 
-   freeMemoryArray((*eventhdlr)->name);
-   freeMemoryArray((*eventhdlr)->desc);
-   freeMemory(*eventhdlr);
+   freeMemoryArray(&(*eventhdlr)->name);
+   freeMemoryArray(&(*eventhdlr)->desc);
+   freeMemory(eventhdlr);
 
    return SCIP_OKAY;
 }
@@ -258,7 +257,7 @@ RETCODE SCIPeventCreateLbChanged(       /**< creates an event for a change in th
    assert(memhdr != NULL);
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, *event) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
    if( newbound > oldbound )
       (*event)->eventtype = SCIP_EVENTTYPE_LBTIGHTENED;
    else
@@ -282,7 +281,7 @@ RETCODE SCIPeventCreateUbChanged(       /**< creates an event for a change in th
    assert(memhdr != NULL);
 
    /* create event data */
-   ALLOC_OKAY( allocBlockMemory(memhdr, *event) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, event) );
    if( newbound < oldbound )
       (*event)->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;
    else
@@ -302,7 +301,7 @@ RETCODE SCIPeventFree(                  /**< frees an event */
    assert(event != NULL);
    assert(memhdr != NULL);
 
-   freeBlockMemory(memhdr, *event);
+   freeBlockMemory(memhdr, event);
 
    return SCIP_OKAY;
 }
@@ -535,9 +534,9 @@ RETCODE eventfilterEnsureMem(           /**< resizes eventfilter arrays to be ab
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, eventfilter->eventtypes, eventfilter->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, eventfilter->eventhdlrs, eventfilter->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, eventfilter->eventdatas, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventtypes, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventhdlrs, eventfilter->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &eventfilter->eventdatas, eventfilter->size, newsize) );
       eventfilter->size = newsize;
    }
    assert(num <= eventfilter->size);
@@ -553,7 +552,7 @@ RETCODE SCIPeventfilterCreate(          /**< creates an event filter */
    assert(eventfilter != NULL);
    assert(memhdr != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *eventfilter) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, eventfilter) );
    (*eventfilter)->eventtypes = NULL;
    (*eventfilter)->eventhdlrs = NULL;
    (*eventfilter)->eventdatas = NULL;
@@ -589,10 +588,10 @@ RETCODE SCIPeventfilterFree(            /**< frees an event filter and the assoc
    }
 
    /* free event filter data */
-   freeBlockMemoryArrayNull(memhdr, (*eventfilter)->eventtypes, (*eventfilter)->size);
-   freeBlockMemoryArrayNull(memhdr, (*eventfilter)->eventhdlrs, (*eventfilter)->size);
-   freeBlockMemoryArrayNull(memhdr, (*eventfilter)->eventdatas, (*eventfilter)->size);
-   freeBlockMemory(memhdr, *eventfilter);
+   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventtypes, (*eventfilter)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventhdlrs, (*eventfilter)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*eventfilter)->eventdatas, (*eventfilter)->size);
+   freeBlockMemory(memhdr, eventfilter);
 
    return SCIP_OKAY;
 }
@@ -791,7 +790,7 @@ RETCODE eventqueueEnsureEventsMem(      /**< resizes events array to be able to 
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(eventqueue->events, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&eventqueue->events, newsize) );
       eventqueue->eventssize = newsize;
    }
    assert(num <= eventqueue->eventssize);
@@ -805,7 +804,7 @@ RETCODE SCIPeventqueueCreate(           /**< creates an event queue */
 {
    assert(eventqueue != NULL);
 
-   ALLOC_OKAY( allocMemory(*eventqueue) );
+   ALLOC_OKAY( allocMemory(eventqueue) );
    (*eventqueue)->events = NULL;
    (*eventqueue)->eventssize = 0;
    (*eventqueue)->nevents = 0;
@@ -822,8 +821,8 @@ RETCODE SCIPeventqueueFree(             /**< frees event queue; there must not b
    assert(*eventqueue != NULL);
    assert((*eventqueue)->nevents == 0);
 
-   freeMemoryArrayNull((*eventqueue)->events);
-   freeMemory(*eventqueue);
+   freeMemoryArrayNull(&(*eventqueue)->events);
+   freeMemory(eventqueue);
    
    return SCIP_OKAY;
 }

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -72,7 +71,7 @@ RETCODE pqueueResize(                   /**< resizes element memory to hold at l
       return SCIP_OKAY;
 
    pqueue->size = MAX(minsize, (int)(pqueue->size * pqueue->sizefac));
-   ALLOC_OKAY( reallocMemoryArray(pqueue->slots, pqueue->size) );
+   ALLOC_OKAY( reallocMemoryArray(&pqueue->slots, pqueue->size) );
 
    return SCIP_OKAY;
 }
@@ -90,7 +89,7 @@ RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    initsize = MAX(1, initsize);
    sizefac = MAX(1.0, sizefac);
 
-   ALLOC_OKAY( allocMemory(*pqueue) );
+   ALLOC_OKAY( allocMemory(pqueue) );
    (*pqueue)->len = 0;
    (*pqueue)->size = 0;
    (*pqueue)->sizefac = sizefac;
@@ -107,8 +106,8 @@ void SCIPpqueueFree(                    /**< frees priority queue, but not the d
 {
    assert(pqueue != NULL);
 
-   freeMemoryArray((*pqueue)->slots);
-   freeMemory(*pqueue);
+   freeMemoryArray(&(*pqueue)->slots);
+   freeMemory(pqueue);
 }
 
 RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue */
@@ -231,7 +230,7 @@ RETCODE hashlistAppend(                 /**< appends element to the hash list */
    assert(memhdr != NULL);
    assert(element != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, newlist) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, &newlist) );
    newlist->element = element;
    newlist->next = *hashlist;
    *hashlist = newlist;
@@ -255,7 +254,7 @@ void hashlistFree(                      /**< frees a hash list entry and all its
    while( actlist != NULL )
    {
       nextlist = actlist->next;
-      freeBlockMemory(memhdr, actlist);
+      freeBlockMemory(memhdr, &actlist);
       actlist = nextlist;
    }
 
@@ -310,7 +309,7 @@ RETCODE hashlistRemove(                 /**< removes element from the hash list 
    if( *hashlist != NULL )
    {
       nextlist = (*hashlist)->next;
-      freeBlockMemory(memhdr, *hashlist);
+      freeBlockMemory(memhdr, hashlist);
       *hashlist = nextlist;
 
       return SCIP_OKAY;
@@ -339,8 +338,8 @@ RETCODE SCIPhashtableCreate(            /**< creates a hash table */
    assert(hashkeyeq != NULL);
    assert(hashkeyval != NULL);
 
-   ALLOC_OKAY( allocMemory(*hashtable) );
-   ALLOC_OKAY( allocMemoryArray((*hashtable)->lists, tablesize) );
+   ALLOC_OKAY( allocMemory(hashtable) );
+   ALLOC_OKAY( allocMemoryArray(&(*hashtable)->lists, tablesize) );
    (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
@@ -368,8 +367,8 @@ void SCIPhashtableFree(                 /**< frees the hash table */
       hashlistFree(&(*hashtable)->lists[i], memhdr);
 
    /* free main hast table data structure */
-   freeMemoryArray((*hashtable)->lists);
-   freeMemory(*hashtable);
+   freeMemoryArray(&(*hashtable)->lists);
+   freeMemory(hashtable);
 }
 
 RETCODE SCIPhashtableInsert(            /**< inserts element in hash table (multiple inserts of same element possible) */
@@ -561,7 +560,7 @@ RETCODE SCIPrealarrayCreate(            /**< creates a dynamic array of real val
 {
    assert(realarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *realarray) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, realarray) );
    (*realarray)->vals = NULL;
    (*realarray)->valssize = 0;
    (*realarray)->firstidx = -1;
@@ -580,8 +579,8 @@ RETCODE SCIPrealarrayCopy(              /**< creates a copy of a dynamic array o
    assert(realarray != NULL);
    assert(sourcerealarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *realarray) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*realarray)->vals, sourcerealarray->vals, sourcerealarray->valssize) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, realarray) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*realarray)->vals, sourcerealarray->vals, sourcerealarray->valssize) );
    (*realarray)->valssize = sourcerealarray->valssize;
    (*realarray)->firstidx = sourcerealarray->firstidx;
    (*realarray)->minusedidx = sourcerealarray->minusedidx;
@@ -598,8 +597,8 @@ RETCODE SCIPrealarrayFree(              /**< frees a dynamic array of real value
    assert(realarray != NULL);
    assert(*realarray != NULL);
 
-   freeBlockMemoryArrayNull(memhdr, (*realarray)->vals, (*realarray)->valssize);
-   freeBlockMemory(memhdr, *realarray);
+   freeBlockMemoryArrayNull(memhdr, &(*realarray)->vals, (*realarray)->valssize);
+   freeBlockMemory(memhdr, realarray);
 
    return SCIP_OKAY;
 }
@@ -642,7 +641,7 @@ RETCODE SCIPrealarrayExtend(            /**< extends dynamic array to be able to
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       assert(newfirstidx <= minidx);
@@ -666,7 +665,7 @@ RETCODE SCIPrealarrayExtend(            /**< extends dynamic array to be able to
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(memhdr, realarray->vals, realarray->valssize);
+      freeBlockMemoryArrayNull(memhdr, &realarray->vals, realarray->valssize);
       realarray->vals = newvals;
       realarray->valssize = newvalssize;
       realarray->firstidx = newfirstidx;
@@ -897,7 +896,7 @@ RETCODE SCIPintarrayCreate(             /**< creates a dynamic array of int valu
 {
    assert(intarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *intarray) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, intarray) );
    (*intarray)->vals = NULL;
    (*intarray)->valssize = 0;
    (*intarray)->firstidx = -1;
@@ -916,8 +915,8 @@ RETCODE SCIPintarrayCopy(               /**< creates a copy of a dynamic array o
    assert(intarray != NULL);
    assert(sourceintarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *intarray) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, intarray) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*intarray)->vals, sourceintarray->vals, sourceintarray->valssize) );
    (*intarray)->valssize = sourceintarray->valssize;
    (*intarray)->firstidx = sourceintarray->firstidx;
    (*intarray)->minusedidx = sourceintarray->minusedidx;
@@ -934,8 +933,8 @@ RETCODE SCIPintarrayFree(               /**< frees a dynamic array of int values
    assert(intarray != NULL);
    assert(*intarray != NULL);
 
-   freeBlockMemoryArrayNull(memhdr, (*intarray)->vals, (*intarray)->valssize);
-   freeBlockMemory(memhdr, *intarray);
+   freeBlockMemoryArrayNull(memhdr, &(*intarray)->vals, (*intarray)->valssize);
+   freeBlockMemory(memhdr, intarray);
 
    return SCIP_OKAY;
 }
@@ -978,7 +977,7 @@ RETCODE SCIPintarrayExtend(             /**< extends dynamic array to be able to
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       assert(newfirstidx <= minidx);
@@ -1002,7 +1001,7 @@ RETCODE SCIPintarrayExtend(             /**< extends dynamic array to be able to
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(memhdr, intarray->vals, intarray->valssize);
+      freeBlockMemoryArrayNull(memhdr, &intarray->vals, intarray->valssize);
       intarray->vals = newvals;
       intarray->valssize = newvalssize;
       intarray->firstidx = newfirstidx;
@@ -1233,7 +1232,7 @@ RETCODE SCIPboolarrayCreate(            /**< creates a dynamic array of bool val
 {
    assert(boolarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *boolarray) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, boolarray) );
    (*boolarray)->vals = NULL;
    (*boolarray)->valssize = 0;
    (*boolarray)->firstidx = -1;
@@ -1252,8 +1251,8 @@ RETCODE SCIPboolarrayCopy(              /**< creates a copy of a dynamic array o
    assert(boolarray != NULL);
    assert(sourceboolarray != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *boolarray) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*boolarray)->vals, sourceboolarray->vals, sourceboolarray->valssize) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, boolarray) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*boolarray)->vals, sourceboolarray->vals, sourceboolarray->valssize) );
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
    (*boolarray)->minusedidx = sourceboolarray->minusedidx;
@@ -1270,8 +1269,8 @@ RETCODE SCIPboolarrayFree(              /**< frees a dynamic array of bool value
    assert(boolarray != NULL);
    assert(*boolarray != NULL);
 
-   freeBlockMemoryArrayNull(memhdr, (*boolarray)->vals, (*boolarray)->valssize);
-   freeBlockMemory(memhdr, *boolarray);
+   freeBlockMemoryArrayNull(memhdr, &(*boolarray)->vals, (*boolarray)->valssize);
+   freeBlockMemory(memhdr, boolarray);
 
    return SCIP_OKAY;
 }
@@ -1314,7 +1313,7 @@ RETCODE SCIPboolarrayExtend(            /**< extends dynamic array to be able to
 
       /* allocate new memory storage */
       newvalssize = SCIPsetCalcMemGrowSize(set, nused);
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, newvals, newvalssize) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &newvals, newvalssize) );
       nfree = newvalssize - nused;
       newfirstidx = minidx - nfree/2;
       assert(newfirstidx <= minidx);
@@ -1338,7 +1337,7 @@ RETCODE SCIPboolarrayExtend(            /**< extends dynamic array to be able to
       }
 
       /* free old memory storage, and set the new array parameters */
-      freeBlockMemoryArrayNull(memhdr, boolarray->vals, boolarray->valssize);
+      freeBlockMemoryArrayNull(memhdr, &boolarray->vals, boolarray->valssize);
       boolarray->vals = newvals;
       boolarray->valssize = newvalssize;
       boolarray->firstidx = newfirstidx;

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -65,7 +64,8 @@ DECL_NODESELFREE(SCIPnodeselFreeBfs)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   freeMemory(nodeseldata);
+   freeMemory(&nodeseldata);
+   SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
 }
@@ -176,7 +176,7 @@ RETCODE SCIPincludeNodeselBfs(          /**< creates the node selector for best 
    NODESELDATA* nodeseldata;
 
    /* allocate and initialise node selector data; this has to be freed in the destructor */
-   ALLOC_OKAY( allocMemory(nodeseldata) );
+   ALLOC_OKAY( allocMemory(&nodeseldata) );
    nodeseldata->maxplungedepth = SCIP_DEFAULT_MAXPLUNGEDEPTH;
 
    /* include node selector */

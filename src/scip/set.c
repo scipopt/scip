@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -55,7 +54,7 @@
 
 /* LP solving */
 
-#define SCIP_DEFAULT_LPSOLVEFREQ         4 /**< frequency for solving LP at the nodes */
+#define SCIP_DEFAULT_LPSOLVEFREQ         3 /**< frequency for solving LP at the nodes */
 
 
 /* Pricing */
@@ -81,13 +80,13 @@
 /* Tree */
 
 /*#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX*/ /**< maximal number of nodes to create */
-#define SCIP_DEFAULT_NODELIMIT       10000 /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT     1000000 /**< maximal number of nodes to create */
 
 
 /* Display */
 
 #define SCIP_DEFAULT_DISPWIDTH         140 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ         1000 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPFREQ        10000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ     15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -123,7 +122,7 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    assert(set != NULL);
    assert(scip != NULL);
 
-   ALLOC_OKAY( allocMemory(*set) );
+   ALLOC_OKAY( allocMemory(set) );
 
    (*set)->scip = scip;
    (*set)->verblevel = SCIP_DEFAULT_VERBLEVEL;
@@ -195,51 +194,51 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    {
       CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->readers);
+   freeMemoryArrayNull(&(*set)->readers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
    {
       CHECK_OKAY( SCIPconshdlrFree(&(*set)->conshdlrs[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->conshdlrs);
+   freeMemoryArrayNull(&(*set)->conshdlrs);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
    {
       CHECK_OKAY( SCIPheurFree(&(*set)->heurs[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->heurs);
+   freeMemoryArrayNull(&(*set)->heurs);
 
    /* free event handlers */
    for( i = 0; i < (*set)->neventhdlrs; ++i )
    {
       CHECK_OKAY( SCIPeventhdlrFree(&(*set)->eventhdlrs[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->eventhdlrs);
+   freeMemoryArrayNull(&(*set)->eventhdlrs);
 
    /* free node selectors */
    for( i = 0; i < (*set)->nnodesels; ++i )
    {
       CHECK_OKAY( SCIPnodeselFree(&(*set)->nodesels[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->nodesels);
+   freeMemoryArrayNull(&(*set)->nodesels);
 
    /* free branching methods */
    for( i = 0; i < (*set)->nbranchrules; ++i )
    {
       CHECK_OKAY( SCIPbranchruleFree(&(*set)->branchrules[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->branchrules);
+   freeMemoryArrayNull(&(*set)->branchrules);
 
    /* free display columns */
    for( i = 0; i < (*set)->ndisps; ++i )
    {
       CHECK_OKAY( SCIPdispFree(&(*set)->disps[i], (*set)->scip) );
    }
-   freeMemoryArrayNull((*set)->disps);
+   freeMemoryArrayNull(&(*set)->disps);
 
-   freeMemory(*set);
+   freeMemory(set);
 
    return SCIP_OKAY;
 }
@@ -251,12 +250,11 @@ RETCODE SCIPsetIncludeReader(           /**< inserts file reader in file reader 
 {
    assert(set != NULL);
    assert(reader != NULL);
-   assert(!SCIPreaderIsInitialized(reader));
 
    if( set->nreaders >= set->readerssize )
    {
       set->readerssize = SCIPsetCalcMemGrowSize(set, set->nreaders+1);
-      ALLOC_OKAY( reallocMemoryArray(set->readers, set->readerssize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->readers, set->readerssize) );
    }
    assert(set->nreaders < set->readerssize);
    
@@ -296,6 +294,9 @@ RETCODE SCIPsetIncludeConsHdlr(         /**< inserts constraint handler in const
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
+   int chckpriority;
+   int i;
+
    assert(set != NULL);
    assert(conshdlr != NULL);
    assert(!SCIPconshdlrIsInitialized(conshdlr));
@@ -303,11 +304,17 @@ RETCODE SCIPsetIncludeConsHdlr(         /**< inserts constraint handler in const
    if( set->nconshdlrs >= set->conshdlrssize )
    {
       set->conshdlrssize = SCIPsetCalcMemGrowSize(set, set->nconshdlrs+1);
-      ALLOC_OKAY( reallocMemoryArray(set->conshdlrs, set->conshdlrssize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->conshdlrs, set->conshdlrssize) );
    }
    assert(set->nconshdlrs < set->conshdlrssize);
-   
-   set->conshdlrs[set->nconshdlrs] = conshdlr;
+
+   chckpriority = SCIPconshdlrGetChckPriority(conshdlr);
+   for( i = set->nconshdlrs; i > 0 && SCIPconshdlrGetChckPriority(set->conshdlrs[i-1]) < chckpriority; --i )
+   {
+      set->conshdlrs[i] = set->conshdlrs[i-1];
+   }
+
+   set->conshdlrs[i] = conshdlr;
    set->nconshdlrs++;
 
    return SCIP_OKAY;
@@ -350,7 +357,7 @@ RETCODE SCIPsetIncludeHeur(             /**< inserts primal heuristic in primal 
    if( set->nheurs >= set->heurssize )
    {
       set->heurssize = SCIPsetCalcMemGrowSize(set, set->nheurs+1);
-      ALLOC_OKAY( reallocMemoryArray(set->heurs, set->heurssize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->heurs, set->heurssize) );
    }
    assert(set->nheurs < set->heurssize);
    
@@ -397,7 +404,7 @@ RETCODE SCIPsetIncludeEventHdlr(        /**< inserts event handler in event hand
    if( set->neventhdlrs >= set->eventhdlrssize )
    {
       set->eventhdlrssize = SCIPsetCalcMemGrowSize(set, set->neventhdlrs+1);
-      ALLOC_OKAY( reallocMemoryArray(set->eventhdlrs, set->eventhdlrssize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->eventhdlrs, set->eventhdlrssize) );
    }
    assert(set->neventhdlrs < set->eventhdlrssize);
    
@@ -444,7 +451,7 @@ RETCODE SCIPsetIncludeNodesel(          /**< inserts node selector in node selec
    if( set->nnodesels >= set->nodeselssize )
    {
       set->nodeselssize = SCIPsetCalcMemGrowSize(set, set->nnodesels+1);
-      ALLOC_OKAY( reallocMemoryArray(set->nodesels, set->nodeselssize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->nodesels, set->nodeselssize) );
    }
    assert(set->nnodesels < set->nodeselssize);
    
@@ -471,7 +478,7 @@ RETCODE SCIPsetIncludeBranchrule(       /**< inserts branching rule in branching
    if( set->nbranchrules >= set->branchrulessize )
    {
       set->branchrulessize = SCIPsetCalcMemGrowSize(set, set->nbranchrules+1);
-      ALLOC_OKAY( reallocMemoryArray(set->branchrules, set->branchrulessize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->branchrules, set->branchrulessize) );
    }
    assert(set->nbranchrules < set->branchrulessize);
 
@@ -500,7 +507,7 @@ RETCODE SCIPsetIncludeDisp(             /**< inserts display column in display c
    if( set->ndisps >= set->dispssize )
    {
       set->dispssize = SCIPsetCalcMemGrowSize(set, set->ndisps+1);
-      ALLOC_OKAY( reallocMemoryArray(set->disps, set->dispssize) );
+      ALLOC_OKAY( reallocMemoryArray(&set->disps, set->dispssize) );
    }
    assert(set->ndisps < set->dispssize);
 
@@ -521,12 +528,6 @@ RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback funct
    int i;
 
    assert(set != NULL);
-
-   /* file readers */
-   for( i = 0; i < set->nreaders; ++i )
-   {
-      CHECK_OKAY( SCIPreaderInit(set->readers[i], set->scip) );
-   }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
@@ -575,12 +576,6 @@ RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user call
    int i;
 
    assert(set != NULL);
-
-   /* file readers */
-   for( i = 0; i < set->nreaders; ++i )
-   {
-      CHECK_OKAY( SCIPreaderExit(set->readers[i], set->scip) );
-   }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
@@ -878,6 +873,91 @@ Bool SCIPsetIsSumNeg(                   /**< checks, if value is lower than -sum
    assert(set != NULL);
 
    return EPSN(val, set->sumepsilon);
+}
+
+Bool SCIPsetIsFeasEQ(                   /**< checks, if values are in range of feasibility tolerance */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return EPSEQ(val1, val2, set->feastol);
+}
+
+Bool SCIPsetIsFeasL(                    /**< checks, if val1 is (more than feasibility tolerance) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return EPSL(val1, val2, set->feastol);
+}
+
+Bool SCIPsetIsFeasLE(                   /**< checks, if val1 is not (more than feasibility tolerance) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return EPSLE(val1, val2, set->feastol);
+}
+
+Bool SCIPsetIsFeasG(                    /**< checks, if val1 is (more than feasibility tolerance) greater than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return EPSG(val1, val2, set->feastol);
+}
+
+Bool SCIPsetIsFeasGE(                   /**< checks, if val1 is not (more than feasibility tolerance) lower than val2 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val1,               /**< first value to be compared */
+   Real             val2                /**< second value to be compared */
+   )
+{
+   assert(set != NULL);
+
+   return EPSGE(val1, val2, set->feastol);
+}
+
+Bool SCIPsetIsFeasZero(                 /**< checks, if value is in range feasibility tolerance of 0.0 */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(set != NULL);
+
+   return EPSZ(val, set->feastol);
+}
+
+Bool SCIPsetIsFeasPos(                  /**< checks, if value is greater than feasibility tolerance */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(set != NULL);
+
+   return EPSP(val, set->feastol);
+}
+
+Bool SCIPsetIsFeasNeg(                  /**< checks, if value is lower than -feasibility tolerance */
+   const SET*       set,                /**< global SCIP settings */
+   Real             val                 /**< value to be compared against zero */
+   )
+{
+   assert(set != NULL);
+
+   return EPSN(val, set->feastol);
 }
 
 Bool SCIPsetIsRelEQ(                    /**< checks, if relative difference of values is in range of epsilon */

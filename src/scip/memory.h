@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -39,28 +38,30 @@
 
 /* safe memory management with leakage detection in debug mode */
 
-#define allocMemory(ptr)                   ((ptr) = allocMemory_call( sizeof(*(ptr)), __FILE__, __LINE__ ))
-#define allocMemoryArray(ptr,num)          ((ptr) = allocMemory_call( (num)*sizeof(*(ptr)), __FILE__, __LINE__ ))
-#define allocMemorySize(ptr,size)          ((ptr) = allocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
+#define allocMemory(ptr)                   (*(ptr) = allocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define allocMemoryArray(ptr,num)          (*(ptr) = allocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define allocMemorySize(ptr,size)          (*(ptr) = allocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
 #define allocMemoryCPP(size)               allocMemory_call( (size_t)(size), __FILE__, __LINE__ )
 #define allocMemoryArrayCPP(num,size)      allocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
-#define reallocMemoryArray(ptr,num)        ((ptr) = reallocMemory_call( (ptr), (num)*sizeof(*(ptr)), __FILE__, __LINE__ ))
-#define reallocMemorySize(ptr,size)        ((ptr) = reallocMemory_call( (ptr), (size_t)(size), __FILE__, __LINE__ ))
+#define reallocMemoryArray(ptr,num)        (*(ptr) = reallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define reallocMemorySize(ptr,size)        (*(ptr) = reallocMemory_call( *(ptr), (size_t)(size), __FILE__, __LINE__ ))
 #define copyMemory(ptr, source)            copyMemory_call( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
 #define copyMemoryArray(ptr, source, num)  copyMemory_call( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
 #define copyMemorySize(ptr, source, size)  copyMemory_call( (void*)(ptr), (const void*)source, (size_t)(size) )
-#define duplicateMemory(ptr, source)       ((ptr) = duplicateMemory_call( (const void*)source, sizeof(*(ptr)), \
+#define duplicateMemory(ptr, source)       (*(ptr) = duplicateMemory_call( (const void*)source, sizeof(**(ptr)), \
                                            __FILE__, __LINE__ ))
 #define duplicateMemoryArray(ptr, source, num) \
-                                           ((ptr) = duplicateMemory_call( (const void*)source, (num)*sizeof(*(ptr)), \
+                                           (*(ptr) = duplicateMemory_call( (const void*)source, (num)*sizeof(**(ptr)), \
                                            __FILE__, __LINE__ ))
 #define duplicateMemorySize(ptr, source, size) \
-                                           ((ptr) = duplicateMemory_call( (const void*)source, (size_t)(size), \
+                                           (*(ptr) = duplicateMemory_call( (const void*)source, (size_t)(size), \
                                            __FILE__, __LINE__ ))
-#define freeMemory(ptr)                    freeMemory_call( (void**)(&(ptr)), __FILE__, __LINE__ )
-#define freeMemoryNull(ptr)                if( (ptr) != NULL ) freeMemory( (ptr) )
-#define freeMemoryArray(ptr)               freeMemory_call( (void**)(&(ptr)), __FILE__, __LINE__ )
-#define freeMemoryArrayNull(ptr)           if( (ptr) != NULL ) freeMemoryArray( (ptr) )
+#define freeMemory(ptr)                    { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
+                                             assert(*(ptr) == NULL); }
+#define freeMemoryNull(ptr)                if( *(ptr) != NULL ) freeMemory( (ptr) )
+#define freeMemoryArray(ptr)               { freeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
+                                             assert(*(ptr) == NULL); }
+#define freeMemoryArrayNull(ptr)           if( *(ptr) != NULL ) freeMemoryArray( (ptr) )
 
 void*  allocMemory_call(size_t size, const char *filename, int line);
 void*  reallocMemory_call(void* ptr, size_t size, const char *filename, int line);
@@ -81,23 +82,23 @@ size_t memorySize(void *ptr);
 
 #include <string.h>
 
-#define allocMemory(ptr)                   ((ptr) = malloc( sizeof(*(ptr)) ))
-#define allocMemoryArray(ptr,num)          ((ptr) = malloc( (num)*sizeof(*(ptr)) ))
-#define allocMemorySize(ptr,size)          ((ptr) = malloc( (size_t)(size) ))
+#define allocMemory(ptr)                   (*(ptr) = malloc( sizeof(**(ptr)) ))
+#define allocMemoryArray(ptr,num)          (*(ptr) = malloc( (num)*sizeof(**(ptr)) ))
+#define allocMemorySize(ptr,size)          (*(ptr) = malloc( (size_t)(size) ))
 #define allocMemoryCPP(size)               malloc( (size_t)(size) )
 #define allocMemoryArrayCPP(num,size)      malloc( (size_t)((num)*(size)) )
-#define reallocMemoryArray(ptr,num)        ((ptr) = realloc( (ptr), (num)*sizeof(*(ptr)) ))
-#define reallocMemorySize(ptr,size)        ((ptr) = realloc( (ptr), (size_t)(size) ))
+#define reallocMemoryArray(ptr,num)        (*(ptr) = realloc( *(ptr), (num)*sizeof(**(ptr)) ))
+#define reallocMemorySize(ptr,size)        (*(ptr) = realloc( *(ptr), (size_t)(size) ))
 #define copyMemory(ptr, source)            memcpy( (void*)(ptr), (const void*)source, sizeof(*(ptr)) )
 #define copyMemoryArray(ptr, source, num)  memcpy( (void*)(ptr), (const void*)source, (num)*sizeof(*(ptr)) )
 #define copyMemorySize(ptr, source, size)  memcpy( (void*)(ptr), (const void*)source, (size_t)(size) )
-#define duplicateMemory(ptr, source)       ((ptr) = duplicateMemory_call( (const void*)source, sizeof(*(ptr))))
-#define duplicateMemoryArray(ptr, source, num) ((ptr) = duplicateMemory_call( (const void*)source, (num)*sizeof(*(ptr))))
-#define duplicateMemorySize(ptr, source, size) ((ptr) = duplicateMemory_call( (const void*)source, (size_t)(size)))
-#define freeMemory(ptr)                    { free(ptr); ptr = NULL; }
-#define freeMemoryNull(ptr)                if( (ptr) != NULL ) freeMemory( (ptr) )
+#define duplicateMemory(ptr, source)       (*(ptr) = duplicateMemory_call( (const void*)source, sizeof(**(ptr))))
+#define duplicateMemoryArray(ptr, source, num) (*(ptr) = duplicateMemory_call( (const void*)source, (num)*sizeof(**(ptr))))
+#define duplicateMemorySize(ptr, source, size) (*(ptr) = duplicateMemory_call( (const void*)source, (size_t)(size)))
+#define freeMemory(ptr)                    { free(*(ptr)); *(ptr) = NULL; }
+#define freeMemoryNull(ptr)                if( *(ptr) != NULL ) freeMemory( (ptr) )
 #define freeMemoryArray(ptr)               freeMemory(ptr)
-#define freeMemoryArrayNull(ptr)           if( (ptr) != NULL ) freeMemoryArray( (ptr) )
+#define freeMemoryArrayNull(ptr)           if( *(ptr) != NULL ) freeMemoryArray( (ptr) )
 
 void *  duplicateMemory_call(const void* source, size_t size);
 
@@ -127,33 +128,36 @@ typedef struct memory_header MEMHDR;
 #define createBlockMemory(csz,clr,gbf)     createBlockMemory_call( (csz), (clr), (gbf), __FILE__, __LINE__ )
 #define clearBlockMemory(mem)              clearBlockMemory_call( (mem), __FILE__, __LINE__ )
 #define clearBlockMemoryNull(mem)          if( (mem) != NULL ) clearBlockMemory( (mem) )
-#define destroyBlockMemory(mem)            destroyBlockMemory_call( (MEMHDR**)(&(mem)), __FILE__, __LINE__ )
-#define destroyBlockMemoryNull(mem)        if( (mem) != NULL ) destroyBlockMemory( (mem) )
+#define destroyBlockMemory(mem)            destroyBlockMemory_call( (mem), __FILE__, __LINE__ )
+#define destroyBlockMemoryNull(mem)        if( *(mem) != NULL ) destroyBlockMemory( (mem) )
 
-#define allocBlockMemory(mem,ptr)          ((ptr) = allocBlockMemory_call((mem),sizeof(*(ptr)),__FILE__,__LINE__))
-#define allocBlockMemoryArray(mem,ptr,num) ((ptr) = allocBlockMemory_call((mem),(num)*sizeof(*(ptr)),__FILE__,__LINE__))
-#define allocBlockMemorySize(mem,ptr,size) ((ptr) = allocBlockMemory_call((mem),(size_t)(size),__FILE__,__LINE__))
+#define allocBlockMemory(mem,ptr)          (*(ptr) = allocBlockMemory_call((mem),sizeof(**(ptr)),__FILE__,__LINE__))
+#define allocBlockMemoryArray(mem,ptr,num) (*(ptr) = allocBlockMemory_call((mem),(num)*sizeof(**(ptr)),__FILE__,__LINE__))
+#define allocBlockMemorySize(mem,ptr,size) (*(ptr) = allocBlockMemory_call((mem),(size_t)(size),__FILE__,__LINE__))
 #define reallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
-                                           ((ptr) = reallocBlockMemory_call((mem),(ptr),(oldnum)*sizeof(*(ptr)), \
-                                           (newnum)*sizeof(*(ptr)),__FILE__,__LINE__))
+                                           (*(ptr) = reallocBlockMemory_call((mem),*(ptr),(oldnum)*sizeof(**(ptr)), \
+                                           (newnum)*sizeof(**(ptr)),__FILE__,__LINE__))
 #define reallocBlockMemorySize(mem,ptr,oldsize,newsize) \
-                                           ((ptr) = reallocBlockMemory_call((mem),(ptr),(size_t)(oldsize), \
+                                           (*(ptr) = reallocBlockMemory_call((mem),*(ptr),(size_t)(oldsize), \
                                            (size_t)(newsize),__FILE__,__LINE__))
 #define duplicateBlockMemory(mem, ptr, source) \
-                                           ((ptr) = duplicateBlockMemory_call((mem), (const void*)source, \
-                                           sizeof(*(ptr)), __FILE__, __LINE__ ))
+                                           (*(ptr) = duplicateBlockMemory_call((mem), (const void*)source, \
+                                           sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define duplicateBlockMemoryArray(mem, ptr, source, num) \
-                                           ((ptr) = duplicateBlockMemory_call( (mem), (const void*)source, \
-                                           (num)*sizeof(*(ptr)), __FILE__, __LINE__ ))
-#define freeBlockMemory(mem,ptr)           freeBlockMemory_call( (mem), (void**)(&(ptr)), sizeof(*(ptr)), \
-                                           __FILE__, __LINE__ )
-#define freeBlockMemoryNull(mem,ptr)       if( (ptr) != NULL ) freeBlockMemory( (mem), (ptr) )
-#define freeBlockMemoryArray(mem,ptr,num)  freeBlockMemory_call( (mem), (void**)(&(ptr)), (num)*sizeof(*(ptr)), \
-                                           __FILE__, __LINE__ )
-#define freeBlockMemoryArrayNull(mem,ptr,num)  if( (ptr) != NULL ) freeBlockMemoryArray( (mem), (ptr), (num) )
-#define freeBlockMemorySize(mem,ptr,size)  freeBlockMemory_call( (mem), (void**)(&(ptr)), (size_t)(size), \
-                                           __FILE__, __LINE__ )
-#define freeBlockMemorySizeNull(mem,ptr,size)  if( (ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) )
+                                           (*(ptr) = duplicateBlockMemory_call( (mem), (const void*)source, \
+                                           (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define freeBlockMemory(mem,ptr)           { freeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
+                                             __FILE__, __LINE__ ); \
+                                             assert(*(ptr) == NULL); }
+#define freeBlockMemoryNull(mem,ptr)       if( *(ptr) != NULL ) freeBlockMemory( (mem), (ptr) )
+#define freeBlockMemoryArray(mem,ptr,num)  { freeBlockMemory_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), \
+                                             __FILE__, __LINE__ ); \
+                                             assert(*(ptr) == NULL); }
+#define freeBlockMemoryArrayNull(mem,ptr,num)  if( *(ptr) != NULL ) freeBlockMemoryArray( (mem), (ptr), (num) )
+#define freeBlockMemorySize(mem,ptr,size)  { freeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), \
+                                             __FILE__, __LINE__ ); \
+                                             assert(*(ptr) == NULL); }
+#define freeBlockMemorySizeNull(mem,ptr,size)  if( *(ptr) != NULL ) freeBlockMemorySize( (mem), (ptr), (size) )
 
 
 #ifndef NDEBUG

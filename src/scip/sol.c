@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -30,6 +29,28 @@
 
 
 
+/** primal CIP solution
+ *  For reasons of efficiency, a working solution only stores values that have been accessed at least once,
+ *  or that have been changed from the value in the solution's source.
+ *  The user has to call SCIPsolUnlink() in order to retrieve all non-cached elements from the solution's source
+ *  and to store the values in the solution's own array. This changes the solution's origin to SCIP_SOLORIGIN_ZERO.
+ *  A linked solution with origin SCIP_SOLORIGIN_LPSOL or SCIP_SOLORIGIN_PSEUDOSOL becomes invalid after the
+ *  next node is activated (i.e. the LP and pseudo solutions changed) and cannot be accessed anymore.
+ */
+struct Sol
+{
+   REALARRAY*       vals;               /**< solution values for variables */
+   BOOLARRAY*       valid;              /**< for solutions originating from LPSOL or PSEUDOSOL: TRUE iff variable's val
+                                         *   is valid; otherwise the value has to be retrieved from the origin */
+   HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
+   Real             obj;                /**< objective value of solution */
+   Longint          nodenum;            /**< last node number, where this solution was modified */
+   unsigned int     solorigin:2;        /**< origin of solution: where to retrieve uncached elements */
+};
+
+
+
+
 RETCODE SCIPsolCreate(                  /**< creates primal CIP solution, initialized to zero */
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
@@ -40,7 +61,7 @@ RETCODE SCIPsolCreate(                  /**< creates primal CIP solution, initia
    assert(sol != NULL);
    assert(memhdr != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *sol) );   
+   ALLOC_OKAY( allocBlockMemory(memhdr, sol) );   
    CHECK_OKAY( SCIPrealarrayCreate(&(*sol)->vals, memhdr) );
    (*sol)->valid = NULL;
    (*sol)->heur = heur;
@@ -65,7 +86,7 @@ RETCODE SCIPsolCopy(                    /**< creates a copy of a primal CIP solu
 
    debugMessage("copying solution %p\n", sourcesol);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *sol) );   
+   ALLOC_OKAY( allocBlockMemory(memhdr, sol) );   
    CHECK_OKAY( SCIPrealarrayCopy(&(*sol)->vals, memhdr, sourcesol->vals) );
    if( sourcesol->solorigin == SCIP_SOLORIGIN_ZERO )
       (*sol)->valid = NULL;
@@ -160,7 +181,7 @@ RETCODE SCIPsolFree(                    /**< frees primal CIP solution */
    {
       CHECK_OKAY( SCIPboolarrayFree(&(*sol)->valid, memhdr) );
    }
-   freeBlockMemory(memhdr, *sol);
+   freeBlockMemory(memhdr, sol);
 
    return SCIP_OKAY;
 }
@@ -265,7 +286,8 @@ RETCODE SCIPsolLinkActSol(              /**< copies actual solution (LP or pseud
 
 RETCODE SCIPsolClear(                   /**< clears primal CIP solution */
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   STAT*            stat                /**< problem statistics data */
    )
 {
    assert(sol != NULL);
@@ -278,6 +300,7 @@ RETCODE SCIPsolClear(                   /**< clears primal CIP solution */
       CHECK_OKAY( SCIPboolarrayFree(&sol->valid, memhdr) );
       sol->solorigin = SCIP_SOLORIGIN_ZERO;
    }
+   sol->nodenum = stat->nnodes;
 
    return SCIP_OKAY;
 }
@@ -386,6 +409,7 @@ RETCODE SCIPsolSetVal(                  /**< sets value of variable in primal CI
       {
          CHECK_OKAY( SCIPrealarraySet(sol->vals, memhdr, set, var->index, val) );
          sol->obj += var->obj * (val - oldval);
+         sol->nodenum = stat->nnodes;
       }
       return SCIP_OKAY;
 
@@ -438,6 +462,7 @@ RETCODE SCIPsolIncVal(                  /**< increases value of variable in prim
       CHECK_OKAY( solUnlinkVar(sol, memhdr, set, var) );
       CHECK_OKAY( SCIPrealarrayInc(sol->vals, memhdr, set, var->index, incval) );
       sol->obj += var->obj * incval;
+      sol->nodenum = stat->nnodes;
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -515,6 +540,30 @@ RETCODE SCIPsolGetVal(                  /**< returns value of variable in primal
       errorMessage("unknown variable status");
       abort();
    }
+}
+
+RETCODE SCIPsolCheck(                   /**< checks primal CIP solution for feasibility */
+   SOL*             sol,                /**< primal CIP solution */
+   const SET*       set,                /**< global SCIP settings */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            feasible            /**< stores whether solution is feasible */
+   )
+{
+   RESULT result;
+   int h;
+
+   assert(set != NULL);
+   assert(feasible != NULL);
+
+   *feasible = TRUE;
+   for( h = 0; h < set->nconshdlrs && *feasible; ++h )
+   {
+      CHECK_OKAY( SCIPconshdlrCheck(set->conshdlrs[h], set, sol, chckintegrality, chcklprows, &result) );
+      *feasible &= (result == SCIP_FEASIBLE);
+   }
+
+   return SCIP_OKAY;
 }
 
 Real SCIPsolGetObj(                     /**< gets objective value of primal CIP solution */

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -76,10 +75,10 @@ RETCODE SCIPdispCreate(                 /**< creates a display column */
    assert(dispoutp != NULL);
    assert(width >= 0);
 
-   ALLOC_OKAY( allocMemory(*disp) );
-   ALLOC_OKAY( duplicateMemoryArray((*disp)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*disp)->desc, desc, strlen(desc)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*disp)->header, header, strlen(header)+1) );
+   ALLOC_OKAY( allocMemory(disp) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*disp)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*disp)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*disp)->header, header, strlen(header)+1) );
    (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
    (*disp)->dispexit = dispexit;
@@ -110,10 +109,10 @@ RETCODE SCIPdispFree(                   /**< frees memory of display column */
       CHECK_OKAY( (*disp)->dispfree(*disp, scip) );
    }
 
-   freeMemoryArray((*disp)->name);
-   freeMemoryArray((*disp)->desc);
-   freeMemoryArray((*disp)->header);
-   freeMemory(*disp);
+   freeMemoryArray(&(*disp)->name);
+   freeMemoryArray(&(*disp)->desc);
+   freeMemoryArray(&(*disp)->header);
+   freeMemory(disp);
 
    return SCIP_OKAY;
 }
@@ -310,7 +309,7 @@ RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting
    assert(set != NULL);
 
    /* sort display columns w.r. to their priority */
-   ALLOC_OKAY( duplicateMemoryArray(disps, set->disps, set->ndisps) );
+   ALLOC_OKAY( duplicateMemoryArray(&disps, set->disps, set->ndisps) );
    SCIPbsortPtr((void**)disps, set->ndisps, dispCmp);
 
    /* beginning with highest priority display column, activate columns as long as it fits into display width */
@@ -330,7 +329,7 @@ RETCODE SCIPdispAutoActivate(           /**< activates all display lines fitting
    }
 
    /* free temporary memory */
-   freeMemoryArray(disps);
+   freeMemoryArray(&disps);
 
    return SCIP_OKAY;
 }

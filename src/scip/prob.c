@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -50,10 +49,33 @@ RETCODE probEnsureVarsMem(              /**< resizes vars array to be able to st
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(prob->vars, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&prob->vars, newsize) );
       prob->varssize = newsize;
    }
    assert(num <= prob->varssize);
+
+   return SCIP_OKAY;
+}
+
+static
+RETCODE probEnsureConssMem(             /**< resizes conss array to be able to store at least num entries */
+   PROB*            prob,               /**< problem data */
+   const SET*       set,                /**< global SCIP settings */
+   int              num                 /**< minimal number of slots in array */
+   )
+{
+   assert(prob != NULL);
+   assert(set != NULL);
+
+   if( num > prob->consssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&prob->conss, newsize) );
+      prob->consssize = newsize;
+   }
+   assert(num <= prob->consssize);
 
    return SCIP_OKAY;
 }
@@ -71,15 +93,14 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
 {
    assert(prob != NULL);
 
-   ALLOC_OKAY( allocMemory(*prob) );
-   ALLOC_OKAY( allocMemoryArray((*prob)->name, strlen(name)+1) );
-   copyMemoryArray((*prob)->name, name, strlen(name)+1);
+   ALLOC_OKAY( allocMemory(prob) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*prob)->name, name, strlen(name)+1) );
 
    (*prob)->fixedvars = NULL;
    (*prob)->vars = NULL;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
-   (*prob)->conslist = NULL;
+   (*prob)->conss = NULL;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
@@ -93,7 +114,9 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
    (*prob)->nint = 0;
    (*prob)->nimpl = 0;
    (*prob)->ncont = 0;
-   (*prob)->ncons = 0;
+   (*prob)->consssize = 0;
+   (*prob)->nconss = 0;
+   (*prob)->nmodelconss = 0;
 
    return SCIP_OKAY;
 }
@@ -105,15 +128,20 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
    LP*              lp                  /**< actual LP data (or NULL, if it's the original problem) */
    )
 {
+   int c;
    int v;
 
    assert(prob != NULL);
    assert(*prob != NULL);
    
-   freeMemoryArray((*prob)->name);
+   freeMemoryArray(&(*prob)->name);
 
-   /* release constraints and free constraint list */
-   CHECK_OKAY( SCIPconslistFree(&(*prob)->conslist, memhdr, set) );
+   /* release constraints and free constraint array */
+   for( c = 0; c < (*prob)->nconss; ++c )
+   {
+      CHECK_OKAY( SCIPconsRelease(&(*prob)->conss[c], memhdr, set) );
+   }
+   freeMemoryArrayNull(&(*prob)->conss);
    
    /* release problem variables */
    for( v = 0; v < (*prob)->nvars; ++v )
@@ -122,13 +150,13 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
       (*prob)->vars[v]->probindex = -1;
       CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], memhdr, set, lp) );
    }
-   freeMemoryArrayNull((*prob)->vars);
+   freeMemoryArrayNull(&(*prob)->vars);
 
    /* free hash tables for names */
    SCIPhashtableFree(&(*prob)->varnames, memhdr);
    SCIPhashtableFree(&(*prob)->consnames, memhdr);
 
-   freeMemory(*prob);
+   freeMemory(prob);
    
    return SCIP_OKAY;
 }
@@ -143,8 +171,8 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
 {
    VAR* targetvar;
    CONS* targetcons;
-   CONSLIST* conslist;
    int v;
+   int c;
 
    assert(source != NULL);
    assert(memhdr != NULL);
@@ -166,13 +194,19 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    assert((*target)->nvars == source->nvars);
 
    /* transform and copy all constraints to target problem */
-   conslist = source->conslist;
-   while( conslist != NULL )
+   for( c = 0; c < source->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsTransform(&targetcons, memhdr, set, conslist->cons) );
-      CHECK_OKAY( SCIPprobAddCons(*target, memhdr, targetcons) );
-      SCIPconsRelease(&targetcons, memhdr, set);
-      conslist = conslist->next;
+      CHECK_OKAY( SCIPconsTransform(&targetcons, memhdr, set, source->conss[c]) );
+      CHECK_OKAY( SCIPprobAddCons(*target, memhdr, set, targetcons) );
+      CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
+   }
+
+   /* add transformed model constraints to the constraint handlers' probconss arrays */
+   for( c = 0; c < (*target)->nmodelconss; ++c )
+   {
+      targetcons = (*target)->conss[c];
+      assert(targetcons != NULL);
+      CHECK_OKAY( SCIPconshdlrAddProbCons(SCIPconsGetConsHdlr(targetcons), set, targetcons) );
    }
 
    return SCIP_OKAY;
@@ -183,17 +217,15 @@ RETCODE SCIPprobActivate(               /**< activates constraints in the proble
    const SET*       set                 /**< global SCIP settings */
    )
 {
-   CONSLIST* conslist;
+   int c;
 
    assert(prob != NULL);
-   assert(prob->ncons == 0 || prob->conslist != NULL);
+   assert(prob->nconss == 0 || prob->conss != NULL);
    assert(set != NULL);
 
-   conslist = prob->conslist;
-   while( conslist != NULL )
+   for( c = 0; c < prob->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsActivate(conslist->cons, set) );
-      conslist = conslist->next;
+      CHECK_OKAY( SCIPconsActivate(prob->conss[c], set) );
    }
 
    return SCIP_OKAY;
@@ -203,16 +235,14 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
    PROB*            prob                /**< problem data */
    )
 {
-   CONSLIST* conslist;
+   int c;
 
    assert(prob != NULL);
-   assert(prob->ncons == 0 || prob->conslist != NULL);
+   assert(prob->nconss == 0 || prob->conss != NULL);
 
-   conslist = prob->conslist;
-   while( conslist != NULL )
+   for( c = 0; c < prob->nconss; ++c )
    {
-      CHECK_OKAY( SCIPconsDeactivate(conslist->cons) );
-      conslist = conslist->next;
+      CHECK_OKAY( SCIPconsDeactivate(prob->conss[c]) );
    }
 
    return SCIP_OKAY;
@@ -225,7 +255,7 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
  */
 
 static
-RETCODE probInsertVar(                  /**< insert var at the correct position in vars array, depending on its type */
+void probInsertVar(                     /**< insert var at the correct position in vars array, depending on its type */
    PROB*            prob,               /**< problem data */
    VAR*             var                 /**< variable to insert */
    )
@@ -241,6 +271,7 @@ RETCODE probInsertVar(                  /**< insert var at the correct position 
    assert(var != NULL);
    assert(var->probindex == -1);
 
+   /* insert variable in array */
    insertpos = prob->nvars;
    intstart = prob->nbin;
    implstart = intstart + prob->nint;
@@ -297,12 +328,10 @@ RETCODE probInsertVar(                  /**< insert var at the correct position 
 
    prob->vars[insertpos] = var;
    var->probindex = insertpos;
-
-   return SCIP_OKAY;
 }
 
 static
-RETCODE probRemoveVar(                  /**< removes variable from vars array */
+void probRemoveVar(                     /**< removes variable from vars array */
    PROB*            prob,               /**< problem data */
    VAR*             var                 /**< variable to remove */
    )
@@ -341,8 +370,8 @@ RETCODE probRemoveVar(                  /**< removes variable from vars array */
       prob->ncont--;
       break;
    default:
-      errorMessage("invalid variable type");
-      return SCIP_INVALIDDATA;
+      errorMessage("unknown variable type");
+      abort();
    }
 
    /* move last binary, last integer, last implicit, and last continous variable forward to fill the free slot */
@@ -381,8 +410,6 @@ RETCODE probRemoveVar(                  /**< removes variable from vars array */
    var->probindex = -1;
 
    assert(prob->nvars == prob->nbin + prob->nint + prob->nimpl + prob->ncont);
-
-   return SCIP_OKAY;
 }
 
 RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
@@ -397,10 +424,11 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
    assert(var != NULL);
    assert(var->probindex == -1);
 
+   /* allocate additional memory */
    CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
-
+   
    /* insert variable in vars array and mark it to be in problem */
-   CHECK_OKAY( probInsertVar(prob, var) );
+   probInsertVar(prob, var);
 
    /* capture variable */
    SCIPvarCapture(var);
@@ -428,20 +456,46 @@ RETCODE SCIPprobChgVarType(             /**< changes the type of a variable in t
       return SCIP_OKAY;
 
    /* temporarily remove variable from problem */
-   CHECK_OKAY( probRemoveVar(prob, var) );
+   probRemoveVar(prob, var);
 
    /* change the type of the variable */
    CHECK_OKAY( SCIPvarChgType(var, vartype) );
 
    /* reinsert variable into problem */
-   CHECK_OKAY( probInsertVar(prob, var) );
+   probInsertVar(prob, var);
 
    return SCIP_OKAY;
 }
-   
+
+static
+void probInsertCons(                    /**< inserts constraint into the problems constraint array */
+   PROB*            prob,               /**< problem data */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(prob != NULL);
+   assert(prob->nmodelconss <= prob->nconss);
+   assert(prob->nconss < prob->consssize);
+   assert(cons != NULL);
+
+   if( SCIPconsIsModel(cons) )
+   {
+      prob->conss[prob->nconss] = prob->conss[prob->nmodelconss];
+      prob->conss[prob->nmodelconss] = cons;
+      prob->nmodelconss++;
+      prob->nconss++;
+   }
+   else
+   {
+      prob->conss[prob->nconss] = cons;
+      prob->nconss++;
+   }
+}
+
 RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and captures it */
    PROB*            prob,               /**< problem data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
    )
 {
@@ -449,9 +503,12 @@ RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and 
    assert(memhdr != NULL);
    assert(cons != NULL);
 
-   /* add the constraint to the problem's constraint list and capture it */
-   CHECK_OKAY( SCIPconslistAdd(&prob->conslist, memhdr, cons) );
-   prob->ncons++;
+   /* add the constraint to the problem's constraint array */
+   CHECK_OKAY( probEnsureConssMem(prob, set, prob->nconss+1) );
+   probInsertCons(prob, cons);
+
+   /* capture constraint */
+   SCIPconsCapture(cons);
 
    /* add constraint's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->consnames, memhdr, (void*)cons) );

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -82,7 +81,7 @@ RETCODE ensureChgcolsSize(              /**< ensures, that chgcols array can sto
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(lp->chgcols, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lp->chgcols, newsize) );
       lp->chgcolssize = newsize;
    }
    assert(num <= lp->chgcolssize);
@@ -104,7 +103,7 @@ RETCODE ensureChgrowsSize(               /**< ensures, that chgrows array can st
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(lp->chgrows, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lp->chgrows, newsize) );
       lp->chgrowssize = newsize;
    }
    assert(num <= lp->chgrowssize);
@@ -126,7 +125,7 @@ RETCODE ensureLpicolsSize(              /**< ensures, that lpicols array can sto
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(lp->lpicols, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lp->lpicols, newsize) );
       lp->lpicolssize = newsize;
    }
    assert(num <= lp->lpicolssize);
@@ -148,7 +147,7 @@ RETCODE ensureLpirowsSize(              /**< ensures, that lpirows array can sto
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(lp->lpirows, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lp->lpirows, newsize) );
       lp->lpirowssize = newsize;
    }
    assert(num <= lp->lpirowssize);
@@ -170,7 +169,7 @@ RETCODE ensureColsSize(                 /**< ensures, that cols array can store 
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(lp->cols, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lp->cols, newsize) );
       lp->colssize = newsize;
    }
    assert(num <= lp->colssize);
@@ -192,7 +191,7 @@ RETCODE ensureRowsSize(                 /**< ensures, that rows array can store 
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(lp->rows, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&lp->rows, newsize) );
       lp->rowssize = newsize;
    }
    assert(num <= lp->rowssize);
@@ -215,9 +214,9 @@ RETCODE ensureColSize(                  /**< ensures, that row array of column c
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->row, col->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->val, col->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->linkpos, col->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &col->row, col->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &col->val, col->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &col->linkpos, col->size, newsize) );
       col->size = newsize;
    }
    assert(num <= col->size);
@@ -240,9 +239,9 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->col, row->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->val, row->size, newsize) );
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->linkpos, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->col, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->val, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &row->linkpos, row->size, newsize) );
       row->size = newsize;
    }
    assert(num <= row->size);
@@ -1233,15 +1232,15 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    assert(len >= 0);
    assert(len == 0 || (row != NULL && val != NULL));
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *col) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, col) );
 
    if( len > 0 )
    {
       int i;
 
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->row, row, len) );
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->val, val, len) );
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*col)->linkpos, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*col)->row, row, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*col)->val, val, len) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*col)->linkpos, len) );
       for( i = 0; i < len; ++i )
          (*row)->linkpos[i] = -1;
    }
@@ -1257,6 +1256,7 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    (*col)->size = len;
    (*col)->len = len;
    (*col)->nunlinked = len;
+   (*col)->lppos = -1;
    (*col)->lpipos = -1;
    (*col)->primsol = 0.0;
    (*col)->redcost = SCIP_INVALID;
@@ -1270,7 +1270,6 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
    (*col)->coefchanged = FALSE;
-   (*col)->inlp = FALSE;
 
    /* check, if column is sorted
     */
@@ -1296,15 +1295,15 @@ RETCODE SCIPcolFree(                    /**< frees an LP column */
    assert((*col)->var != NULL);
    assert((*col)->var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(&(*col)->var->data.col == col); /* SCIPcolFree() has to be called from SCIPvarFree() */
-   assert(!(*col)->inlp);
+   assert((*col)->lppos == -1);
 
    /* remove column indices from corresponding rows */
    CHECK_OKAY( colUnlink(*col, memhdr, set, lp) );
 
-   freeBlockMemoryArrayNull(memhdr, (*col)->row, (*col)->size);
-   freeBlockMemoryArrayNull(memhdr, (*col)->val, (*col)->size);
-   freeBlockMemoryArrayNull(memhdr, (*col)->linkpos, (*col)->size);
-   freeBlockMemory(memhdr, *col);
+   freeBlockMemoryArrayNull(memhdr, &(*col)->row, (*col)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*col)->val, (*col)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*col)->linkpos, (*col)->size);
+   freeBlockMemory(memhdr, col);
 
    return SCIP_OKAY;
 }
@@ -1626,7 +1625,7 @@ Real SCIPcolGetPrimsol(                 /**< gets the primal LP solution of a co
 {
    assert(col != NULL);
 
-   if( col->inlp )
+   if( col->lppos >= 0 )
       return col->primsol;
    else
       return 0.0;
@@ -1743,10 +1742,12 @@ RETCODE SCIPcolGetStrongbranch(         /**< gets strong branching information o
    assert(col->var->data.col == col);
    assert(col->primsol < SCIP_INVALID);
    assert(col->lpipos >= 0);
-   assert(col->inlp);
+   assert(col->lppos >= 0);
    assert(stat != NULL);
    assert(lp != NULL);
    assert(lp->solved);
+   assert(col->lppos < lp->ncols);
+   assert(lp->cols[col->lppos] == col);
    assert(itlim >= 1);
    assert(down != NULL);
    assert(up != NULL);
@@ -1778,13 +1779,22 @@ VAR* SCIPcolGetVar(                     /**< gets variable this column represent
    return col->var;
 }
 
+int SCIPcolGetLPPos(                    /**< gets position of column in actual LP, or -1 if it is not in LP */
+   COL*             col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->lppos;
+}
+
 Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member of actual LP */
    COL*             col                 /**< LP column */
    )
 {
    assert(col != NULL);
 
-   return col->inlp;
+   return (col->lppos >= 0);
 }
 
 int SCIPcolGetNNonz(                    /**< get number of nonzero entries in column vector */
@@ -1905,15 +1915,15 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    assert(len == 0 || (col != NULL && val != NULL));
    assert(lhs <= rhs);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *row) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, row) );
 
    if( len > 0 )
    {
       int i;
 
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->col, col, len) );
-      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->val, val, len) );
-      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*row)->linkpos, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->col, col, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->val, val, len) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, &(*row)->linkpos, len) );
       for( i = 0; i < len; ++i )
          (*row)->linkpos[i] = -1;
    }
@@ -1924,7 +1934,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
       (*row)->linkpos = NULL;
    }
    
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*row)->name, name, strlen(name)+1) );
    (*row)->cons = cons;
    (*row)->constant = 0.0;
    (*row)->lhs = lhs;
@@ -1944,6 +1954,7 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    (*row)->len = len;
    (*row)->nunlinked = len;
    (*row)->nuses = 0;
+   (*row)->lppos = -1;
    (*row)->lpipos = -1;
    (*row)->minidx = INT_MAX;
    (*row)->maxidx = INT_MIN;
@@ -1956,7 +1967,6 @@ RETCODE SCIProwCreate(                  /**< creates and captures an LP row */
    (*row)->lhschanged = FALSE;
    (*row)->rhschanged = FALSE;
    (*row)->coefchanged = FALSE;
-   (*row)->inlp = FALSE;
    (*row)->modifiable = modifiable;
    (*row)->nlocks = 0;
 
@@ -1980,16 +1990,16 @@ RETCODE SCIProwFree(                    /**< frees an LP row */
    assert(row != NULL);
    assert(*row != NULL);
    assert((*row)->nuses == 0);
-   assert(!(*row)->inlp);
+   assert((*row)->lppos == -1);
 
    /* remove column indices from corresponding rows */
    CHECK_OKAY( rowUnlink(*row, memhdr, set, lp) );
 
-   freeBlockMemoryArray(memhdr, (*row)->name, strlen((*row)->name)+1);
-   freeBlockMemoryArrayNull(memhdr, (*row)->col, (*row)->size);
-   freeBlockMemoryArrayNull(memhdr, (*row)->val, (*row)->size);
-   freeBlockMemoryArrayNull(memhdr, (*row)->linkpos, (*row)->size);
-   freeBlockMemory(memhdr, *row);
+   freeBlockMemoryArray(memhdr, &(*row)->name, strlen((*row)->name)+1);
+   freeBlockMemoryArrayNull(memhdr, &(*row)->col, (*row)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*row)->val, (*row)->size);
+   freeBlockMemoryArrayNull(memhdr, &(*row)->linkpos, (*row)->size);
+   freeBlockMemory(memhdr, row);
 
    return SCIP_OKAY;
 }
@@ -2451,7 +2461,7 @@ RETCODE rowCalcPseudoActivity(          /**< calculates the actual pseudo activi
    assert(!row->validpsactivity);
    assert(row->pseudoactivity >= SCIP_INVALID);
 
-   /* link row to the columns, such that a column bound change affects the now valid activity bounds */
+   /* link row to the columns, such that a column bound change affects the now valid pseudo activity */
    CHECK_OKAY( rowLink(row, memhdr, set, lp) );
    
    /* calculate activity bounds */
@@ -2523,6 +2533,53 @@ RETCODE SCIProwGetPseudoFeasibility(    /**< returns the feasibility of a row in
    CHECK_OKAY( SCIProwGetPseudoActivity(row, memhdr, set, lp, &pseudoactivity) );
 
    *pseudofeasibility = MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwGetSolActivity(          /**< returns the activity of a row for a given solution */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solactivity         /**< pointer to store the row's activity for the solution */
+   )
+{
+   Real solval;
+   int i;
+
+   assert(row != NULL);
+   assert(solactivity != NULL);
+
+   *solactivity = row->constant;
+   for( i = 0; i < row->len; ++i )
+   {
+      assert(row->col[i] != NULL);
+      CHECK_OKAY( SCIPsolGetVal(sol, memhdr, set, stat, row->col[i]->var, &solval) );
+      *solactivity += row->val[i] * solval;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwGetSolFeasibility(       /**< returns the feasibility of a row for the given solution */
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   SOL*             sol,                /**< primal CIP solution */
+   Real*            solfeasibility      /**< pointer to store the row's feasibility for the solution */
+   )
+{
+   Real solactivity;
+
+   assert(row != NULL);
+   assert(solfeasibility != NULL);
+
+   CHECK_OKAY( SCIProwGetSolActivity(row, memhdr, set, stat, sol, &solactivity) );
+
+   *solfeasibility = MIN(row->rhs - solactivity, solactivity - row->lhs);
 
    return SCIP_OKAY;
 }
@@ -2889,13 +2946,22 @@ Bool SCIProwIsModel(                    /**< returns TRUE iff row belongs to a m
    return (row->cons != NULL && SCIPconsIsModel(row->cons));
 }
 
+int SCIProwGetLPPos(                    /**< gets position of row in actual LP, or -1 if it is not in LP */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->lppos;
+}
+
 Bool SCIProwIsInLP(                     /**< returns TRUE iff row is member of actual LP */
    ROW*             row                 /**< LP row */
    )
 {
    assert(row != NULL);
 
-   return row->inlp;
+   return (row->lppos >= 0);
 }
 
 void SCIProwPrint(                      /**< output row to file stream */
@@ -3025,13 +3091,13 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    assert(naddcols > 0);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, obj, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, lb, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ub, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, beg, naddcols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, val, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, name, naddcols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &obj, naddcols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lb, naddcols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ub, naddcols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &beg, naddcols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, naddcoefs) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &val, naddcoefs) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &name, naddcols) );
    
    /* fill temporary memory with column data */
    nnonz = 0;
@@ -3042,7 +3108,7 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
       assert(col->var != NULL);
       assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
       assert(col->var->data.col == col);
-      assert(col->inlp);
+      assert(col->lppos == c);
       assert(nnonz + col->len <= naddcoefs);
 
       debugMessage("flushing added column <%s>:", col->var->name);
@@ -3098,13 +3164,13 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    lp->lpifirstchgcol = lp->nlpicols;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, name);
-   SCIPsetReleaseBufferArray(set, val);
-   SCIPsetReleaseBufferArray(set, ind);
-   SCIPsetReleaseBufferArray(set, beg);
-   SCIPsetReleaseBufferArray(set, ub);
-   SCIPsetReleaseBufferArray(set, lb);
-   SCIPsetReleaseBufferArray(set, obj);
+   SCIPsetReleaseBufferArray(set, &name);
+   SCIPsetReleaseBufferArray(set, &val);
+   SCIPsetReleaseBufferArray(set, &ind);
+   SCIPsetReleaseBufferArray(set, &beg);
+   SCIPsetReleaseBufferArray(set, &ub);
+   SCIPsetReleaseBufferArray(set, &lb);
+   SCIPsetReleaseBufferArray(set, &obj);
 
    return SCIP_OKAY;
 }
@@ -3192,12 +3258,12 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    assert(naddrows > 0);
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, lhs, naddrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, rhs, naddrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, beg, naddrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, val, naddcoefs) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, name, naddrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lhs, naddrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rhs, naddrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &beg, naddrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, naddcoefs) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &val, naddcoefs) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &name, naddrows) );
    
    /* fill temporary memory with row data */
    nnonz = 0;
@@ -3205,7 +3271,7 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    {
       row = lp->rows[r];
       assert(row != NULL);
-      assert(row->inlp);
+      assert(row->lppos == r);
       assert(nnonz + row->len <= naddcoefs);
 
       debugMessage("flushing added row:");
@@ -3258,12 +3324,12 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    lp->lpifirstchgrow = lp->nlpirows;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, name);
-   SCIPsetReleaseBufferArray(set, val);
-   SCIPsetReleaseBufferArray(set, ind);
-   SCIPsetReleaseBufferArray(set, beg);
-   SCIPsetReleaseBufferArray(set, rhs);
-   SCIPsetReleaseBufferArray(set, lhs);
+   SCIPsetReleaseBufferArray(set, &name);
+   SCIPsetReleaseBufferArray(set, &val);
+   SCIPsetReleaseBufferArray(set, &ind);
+   SCIPsetReleaseBufferArray(set, &beg);
+   SCIPsetReleaseBufferArray(set, &rhs);
+   SCIPsetReleaseBufferArray(set, &lhs);
    
    return SCIP_OKAY;
 }
@@ -3290,9 +3356,9 @@ RETCODE lpFlushChgCols(                 /**< applies all cached column changes t
       return SCIP_OKAY;
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, lp->ncols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, lb, lp->ncols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ub, lp->ncols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, lp->ncols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lb, lp->ncols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ub, lp->ncols) );
 
    /* collect all cached bound changes */
    nchg = 0;
@@ -3331,9 +3397,9 @@ RETCODE lpFlushChgCols(                 /**< applies all cached column changes t
    lp->nchgcols = 0;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, ub);
-   SCIPsetReleaseBufferArray(set, lb);
-   SCIPsetReleaseBufferArray(set, ind);
+   SCIPsetReleaseBufferArray(set, &ub);
+   SCIPsetReleaseBufferArray(set, &lb);
+   SCIPsetReleaseBufferArray(set, &ind);
 
    return SCIP_OKAY;
 }
@@ -3359,9 +3425,9 @@ RETCODE lpFlushChgRows(                 /**< applies all cached row changes to t
       return SCIP_OKAY;
 
    /* get temporary memory for changes */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ind, lp->nrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, lhs, lp->nrows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, rhs, lp->nrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, lp->nrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &lhs, lp->nrows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &rhs, lp->nrows) );
 
    /* collect all cached left and right hand side changes */
    nchg = 0;
@@ -3399,9 +3465,9 @@ RETCODE lpFlushChgRows(                 /**< applies all cached row changes to t
    lp->nchgrows = 0;
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, rhs);
-   SCIPsetReleaseBufferArray(set, lhs);
-   SCIPsetReleaseBufferArray(set, ind);
+   SCIPsetReleaseBufferArray(set, &rhs);
+   SCIPsetReleaseBufferArray(set, &lhs);
+   SCIPsetReleaseBufferArray(set, &ind);
 
    return SCIP_OKAY;
 }
@@ -3460,7 +3526,7 @@ RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    assert(set != NULL);
    assert(name != NULL);
 
-   ALLOC_OKAY( allocMemory(*lp) );
+   ALLOC_OKAY( allocMemory(lp) );
 
    /* open LP Solver interface */
    CHECK_OKAY( SCIPlpiCreate(&((*lp)->lpi), name) );
@@ -3516,12 +3582,12 @@ RETCODE SCIPlpFree(                     /**< frees LP data object */
       CHECK_OKAY( SCIPlpiFree(&((*lp)->lpi)) );
    }
 
-   freeMemoryArrayNull((*lp)->lpicols);
-   freeMemoryArrayNull((*lp)->lpirows);
-   freeMemoryArrayNull((*lp)->chgcols);
-   freeMemoryArrayNull((*lp)->cols);
-   freeMemoryArrayNull((*lp)->rows);
-   freeMemory(*lp);
+   freeMemoryArrayNull(&(*lp)->lpicols);
+   freeMemoryArrayNull(&(*lp)->lpirows);
+   freeMemoryArrayNull(&(*lp)->chgcols);
+   freeMemoryArrayNull(&(*lp)->cols);
+   freeMemoryArrayNull(&(*lp)->rows);
+   freeMemory(lp);
 
    return SCIP_OKAY;
 }
@@ -3534,7 +3600,7 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
 {
    assert(lp != NULL);
    assert(col != NULL);
-   assert(!col->inlp);
+   assert(col->lppos == -1);
    assert(col->var != NULL);
    assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
    assert(col->var->data.col == col);
@@ -3542,13 +3608,13 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
    debugMessage("adding column <%s> to LP\n", col->var->name);
    CHECK_OKAY( ensureColsSize(lp, set, lp->ncols+1) );
    lp->cols[lp->ncols] = col;
+   col->lppos = lp->ncols;
    lp->ncols++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->dualfeasible = FALSE;
    lp->objval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-   col->inlp = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3561,20 +3627,20 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP and captures i
 {
    assert(lp != NULL);
    assert(row != NULL);
-   assert(!row->inlp);
+   assert(row->lppos == -1);
 
    SCIProwCapture(row);
 
    debugMessage("adding row <%s> to LP\n", row->name);
    CHECK_OKAY( ensureRowsSize(lp, set, lp->nrows+1) );
    lp->rows[lp->nrows] = row;
+   row->lppos = lp->nrows;
    lp->nrows++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
    lp->primalfeasible = FALSE;
    lp->objval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-   row->inlp = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3598,9 +3664,9 @@ RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given
          assert(lp->cols[c]->var != NULL);
          assert(lp->cols[c]->var->varstatus == SCIP_VARSTATUS_COLUMN);
          assert(lp->cols[c]->var->data.col == lp->cols[c]);
-         assert(lp->cols[c]->inlp);
+         assert(lp->cols[c]->lppos == c);
          
-         lp->cols[c]->inlp = FALSE;
+         lp->cols[c]->lppos = -1;
       }
       lp->ncols = newncols;
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
@@ -3631,8 +3697,8 @@ RETCODE SCIPlpShrinkRows(               /**< removes and releases all rows after
    {
       for( r = newnrows; r < lp->nrows; ++r )
       {
-         assert(lp->rows[r]->inlp);
-         lp->rows[r]->inlp = FALSE;
+         assert(lp->rows[r]->lppos == r);
+         lp->rows[r]->lppos = -1;
          CHECK_OKAY( SCIProwRelease(&lp->rows[r], memhdr, set, lp) );
       }
       lp->nrows = newnrows;
@@ -3990,10 +4056,10 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
    assert(memhdr != NULL);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, primsol, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, dualsol, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, activity, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, redcost, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &primsol, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &dualsol, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &activity, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &redcost, lp->nlpicols) );
    
    CHECK_OKAY( SCIPlpiGetSol(lp->lpi, &lp->objval, primsol, dualsol, activity, redcost) );
 
@@ -4001,25 +4067,27 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
 
    for( c = 0; c < lp->nlpicols; ++c )
    {
-      debugMessage(" col <%s>: primsol=%f, redcost=%f\n", lp->lpicols[c]->var->name, primsol[c], redcost[c]);
       lp->lpicols[c]->primsol = primsol[c];
       lp->lpicols[c]->redcost = redcost[c];
       lp->lpicols[c]->validredcostlp = stat->nlp;
+      debugMessage(" col <%s>: primsol=%f, redcost=%f\n",
+         lp->lpicols[c]->var->name, lp->lpicols[c]->primsol, lp->lpicols[c]->redcost);
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
    {
-      debugMessage(" row <%s>: dualsol=%f, activity=%f\n", lp->lpirows[r]->name, dualsol[r], activity[r]);
       lp->lpirows[r]->dualsol = dualsol[r];
-      lp->lpirows[r]->activity = activity[r];
+      lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
       lp->lpirows[r]->validactivitylp = stat->nlp;
+      debugMessage(" row <%s>: dualsol=%f, activity=%f\n", 
+         lp->lpirows[r]->name, lp->lpirows[r]->dualsol, lp->lpirows[r]->activity);
    }
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, redcost);
-   SCIPsetReleaseBufferArray(set, activity);
-   SCIPsetReleaseBufferArray(set, dualsol);
-   SCIPsetReleaseBufferArray(set, primsol);
+   SCIPsetReleaseBufferArray(set, &redcost);
+   SCIPsetReleaseBufferArray(set, &activity);
+   SCIPsetReleaseBufferArray(set, &dualsol);
+   SCIPsetReleaseBufferArray(set, &primsol);
 
    return SCIP_OKAY;
 }
@@ -4047,9 +4115,9 @@ RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite ob
    assert(memhdr != NULL);
 
    /* get temporary memory */
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, primsol, lp->nlpicols) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, activity, lp->nlpirows) );
-   CHECK_OKAY( SCIPsetCaptureBufferArray(set, ray, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &primsol, lp->nlpicols) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &activity, lp->nlpirows) );
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ray, lp->nlpicols) );
 
    /* get primal feasible point */
    CHECK_OKAY( SCIPlpiGetSol(lp->lpi, &lp->objval, primsol, NULL, activity, NULL) );
@@ -4086,16 +4154,16 @@ RETCODE SCIPlpGetUnboundedSol(          /**< stores LP solution with infinite ob
    for( r = 0; r < lp->nlpirows; ++r )
    {
       lp->lpirows[r]->dualsol = SCIP_INVALID;
-      lp->lpirows[r]->activity = activity[r];
+      lp->lpirows[r]->activity = activity[r] + lp->lpirows[r]->constant;
       lp->lpirows[r]->validactivitylp = stat->nlp;
       debugMessage(" row <%s>: activity=%f\n", lp->lpirows[r]->name, lp->lpirows[r]->activity);
    }
 
 
    /* free temporary memory */
-   SCIPsetReleaseBufferArray(set, ray);
-   SCIPsetReleaseBufferArray(set, activity);
-   SCIPsetReleaseBufferArray(set, primsol);
+   SCIPsetReleaseBufferArray(set, &ray);
+   SCIPsetReleaseBufferArray(set, &activity);
+   SCIPsetReleaseBufferArray(set, &primsol);
 
    return SCIP_OKAY;
 }
@@ -4107,7 +4175,6 @@ RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers 
    )
 {
    Real* dualfarkas;
-   int rowsize;
    int c;
    int r;
 
@@ -4118,21 +4185,22 @@ RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers 
    assert(set != NULL);
    assert(memhdr != NULL);
 
-   rowsize = SCIPsetCalcMemGrowSize(set, lp->nlpirows);
+   /* get temporary memory */
+   CHECK_OKAY( SCIPsetCaptureBufferArray(set, &dualfarkas, lp->nlpirows) );
 
-   ALLOC_OKAY( allocBlockMemoryArray(memhdr, dualfarkas, rowsize) );
-
+   /* get dual farkas infeasibility proof */
    CHECK_OKAY( SCIPlpiGetDualfarkas(lp->lpi, dualfarkas) );
 
+   /* store infeasibility proof in rows */
    debugMessage("LP is infeasible:\n");
-
    for( r = 0; r < lp->nlpirows; ++r )
    {
       debugMessage(" row <%s>: dualfarkas=%f\n", lp->lpirows[r]->name, dualfarkas[r]);
       lp->lpirows[r]->dualfarkas = dualfarkas[r];
    }
 
-   freeBlockMemoryArray(memhdr, dualfarkas, rowsize);
+   /* free temporary memory */
+   SCIPsetReleaseBufferArray(set, &dualfarkas);
    
    return SCIP_OKAY;
 }

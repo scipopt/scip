@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -80,9 +79,9 @@ RETCODE ensureLpcandsSize(              /**< ensures, that lpcands array can sto
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(branchcand->lpcands, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(branchcand->lpcandssol, newsize) );
-      ALLOC_OKAY( reallocMemoryArray(branchcand->lpcandsfrac, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&branchcand->lpcands, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&branchcand->lpcandssol, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&branchcand->lpcandsfrac, newsize) );
       branchcand->lpcandssize = newsize;
    }
    assert(num <= branchcand->lpcandssize);
@@ -104,7 +103,7 @@ RETCODE ensurePseudocandsSize(          /**< ensures, that pseudocands array can
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(branchcand->pseudocands, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(&branchcand->pseudocands, newsize) );
       branchcand->pseudocandssize = newsize;
    }
    assert(num <= branchcand->pseudocandssize);
@@ -129,7 +128,7 @@ RETCODE SCIPbranchcandCreate(           /**< creates a branching candidate stora
    assert(branchcand != NULL);
    assert(prob != NULL);
 
-   ALLOC_OKAY( allocMemory(*branchcand) );
+   ALLOC_OKAY( allocMemory(branchcand) );
    (*branchcand)->lpcands = NULL;
    (*branchcand)->lpcandssol = NULL;
    (*branchcand)->lpcandsfrac = NULL;
@@ -156,11 +155,11 @@ RETCODE SCIPbranchcandFree(             /**< frees branching candidate storage *
 {
    assert(branchcand != NULL);
 
-   freeMemoryArrayNull((*branchcand)->lpcands);
-   freeMemoryArrayNull((*branchcand)->lpcandssol);
-   freeMemoryArrayNull((*branchcand)->lpcandsfrac);
-   freeMemoryArrayNull((*branchcand)->pseudocands);
-   freeMemory(*branchcand);
+   freeMemoryArrayNull(&(*branchcand)->lpcands);
+   freeMemoryArrayNull(&(*branchcand)->lpcandssol);
+   freeMemoryArrayNull(&(*branchcand)->lpcandsfrac);
+   freeMemoryArrayNull(&(*branchcand)->pseudocands);
+   freeMemory(branchcand);
 
    return SCIP_OKAY;
 }
@@ -204,7 +203,7 @@ RETCODE SCIPbranchcandGetLPCands(       /**< gets branching candidates for LP so
          col = lp->cols[c];
          assert(col != NULL);
          assert(col->primsol < SCIP_INVALID);
-         assert(col->inlp);
+         assert(col->lppos == c);
          assert(col->lpipos >= 0);
 
          var = col->var;
@@ -369,9 +368,9 @@ RETCODE SCIPbranchruleCreate(           /**< creates a branching rule */
    assert(name != NULL);
    assert(desc != NULL);
 
-   ALLOC_OKAY( allocMemory(*branchrule) );
-   ALLOC_OKAY( duplicateMemoryArray((*branchrule)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*branchrule)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( allocMemory(branchrule) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*branchrule)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*branchrule)->desc, desc, strlen(desc)+1) );
    (*branchrule)->priority = priority;
    (*branchrule)->branchfree = branchfree;
    (*branchrule)->branchinit = branchinit;
@@ -399,9 +398,9 @@ RETCODE SCIPbranchruleFree(             /**< frees memory of branching rule */
       CHECK_OKAY( (*branchrule)->branchfree(*branchrule, scip) );
    }
 
-   freeMemoryArray((*branchrule)->name);
-   freeMemoryArray((*branchrule)->desc);
-   freeMemory(*branchrule);
+   freeMemoryArray(&(*branchrule)->name);
+   freeMemoryArray(&(*branchrule)->desc);
+   freeMemory(branchrule);
 
    return SCIP_OKAY;
 }

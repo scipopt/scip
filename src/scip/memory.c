@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -258,7 +257,7 @@ duplicateMemory_call(const void* source, size_t size)
 {
    void   *ptr = NULL;
 
-   allocMemorySize(ptr, size);
+   allocMemorySize(&ptr, size);
    if( ptr != NULL )
       copyMemorySize(ptr, source, size);
    return ptr;
@@ -608,7 +607,7 @@ linkChunk(BLKHDR* blk, CHKHDR* chk)
    if( blk->numChunks == blk->chunkarraySize )
    {
       blk->chunkarraySize = 2*(blk->numChunks+1);
-      reallocMemoryArray(blk->chunkarray, blk->chunkarraySize);
+      reallocMemoryArray(&blk->chunkarray, blk->chunkarraySize);
       if( blk->chunkarray == NULL )
          return FALSE;
    }
@@ -731,7 +730,7 @@ createChunk(BLKHDR * blk)
 
    /* create new chunk */
    assert(sizeof(CHKHDR) % ALIGNMENT == 0);
-   allocMemorySize(newchunk, sizeof(CHKHDR) + storeSize * blk->elemSize);
+   allocMemorySize(&newchunk, sizeof(CHKHDR) + storeSize * blk->elemSize);
    if( newchunk == NULL )
       return FALSE;
 
@@ -784,7 +783,7 @@ destroyChunk(CHKHDR * chk)
    assert(chk != NULL);
 
    /* free chunk header and store (allocated in one call) */
-   freeMemory(chk);
+   freeMemory(&chk);
 }
 
 /* remove a completely unused chunk, that is a chunk with all elements in the eager free list
@@ -892,7 +891,7 @@ createBlock(MEMHDR *mem, int size)
 
    assert(size >= (int)ALIGNMENT);
 
-   allocMemory(blk);
+   allocMemory(&blk);
 
    if( blk != NULL )
    {
@@ -957,12 +956,12 @@ destroyBlock(BLKHDR * blk)
 
    clearBlock(blk);
 
-   freeMemoryArrayNull(blk->chunkarray);
+   freeMemoryArrayNull(&blk->chunkarray);
 
 #ifndef NDEBUG
-   freeMemoryArrayNull(blk->filename);
+   freeMemoryArrayNull(&blk->filename);
 #endif
-   freeMemory(blk);
+   freeMemory(&blk);
 }
 
 /*-----------------------------------------------------------------------------
@@ -1088,7 +1087,7 @@ createBlockMemory_call(int initChunkSize, int clearUnusedBlocks,
    MEMHDR *mem;
    int     i;
 
-   allocMemory(mem);
+   allocMemory(&mem);
    if( mem != NULL )
    {
       mem->initChunkSize = initChunkSize;
@@ -1148,8 +1147,8 @@ destroyBlockMemory_call(MEMHDR **mem, const char *filename, int line)
    if( *mem != NULL )
    {
       clearBlockMemory_call(*mem, filename, line);
-      freeMemory(*mem);
-      *mem = NULL;
+      freeMemory(mem);
+      assert(*mem == NULL);
    }
    else
       errorMessage_call("Tried to destroy null block.", filename, line);
@@ -1190,7 +1189,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
 	 return NULL;
       }
 #ifndef NDEBUG
-      allocMemoryArray((*blkptr)->filename, strlen(filename) + 1);
+      allocMemoryArray(&(*blkptr)->filename, strlen(filename) + 1);
       assert((*blkptr)->filename != NULL);
       strcpy((*blkptr)->filename, filename);
       (*blkptr)->line = line;

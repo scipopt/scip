@@ -15,22 +15,22 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nodesel_bfs.h
- * @brief  node selector for best first search
+/**@file   heur_rounding.h
+ * @brief  simple LP rounding heuristic
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __NODESEL_BFS_H__
-#define __NODESEL_BFS_H__
+#ifndef __HEUR_ROUNDING_H__
+#define __HEUR_ROUNDING_H__
 
 
 #include "scip.h"
 
 
 extern
-RETCODE SCIPincludeNodeselBfs(          /**< creates the node selector for best first search and includes it in SCIP */
+RETCODE SCIPincludeHeurRounding(        /**< creates the simple rounding heuristic and includes it in SCIP */
    SCIP*            scip                /**< SCIP data structure */
    );
 

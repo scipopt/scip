@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -37,11 +36,8 @@ struct Reader
    const char*      desc;               /**< description of reader */
    const char*      extension;          /**< file extension that reader processes */
    DECL_READERFREE((*readerfree));      /**< destructor of reader */
-   DECL_READERINIT((*readerinit));      /**< initialise reader */
-   DECL_READEREXIT((*readerexit));      /**< deinitialise reader */
    DECL_READERREAD((*readerread));      /**< read method */
    READERDATA*      readerdata;         /**< reader data */
-   unsigned int     initialized:1;      /**< is reader initialized? */
 };
 
 
@@ -54,8 +50,6 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    const char*      desc,               /**< description of reader */
    const char*      extension,          /**< file extension that reader processes */
    DECL_READERFREE((*readerfree)),      /**< destructor of reader */
-   DECL_READERINIT((*readerinit)),      /**< initialise reader */
-   DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
    DECL_READERREAD((*readerread)),      /**< read method */
    READERDATA*      readerdata          /**< reader data */
    )
@@ -66,16 +60,13 @@ RETCODE SCIPreaderCreate(               /**< creates a reader */
    assert(extension != NULL);
    assert(readerread != NULL);
 
-   ALLOC_OKAY( allocMemory(*reader) );
-   ALLOC_OKAY( duplicateMemoryArray((*reader)->name, name, strlen(name)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*reader)->desc, desc, strlen(desc)+1) );
-   ALLOC_OKAY( duplicateMemoryArray((*reader)->extension, extension, strlen(extension)+1) );
+   ALLOC_OKAY( allocMemory(reader) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*reader)->desc, desc, strlen(desc)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
    (*reader)->readerfree = readerfree;
-   (*reader)->readerinit = readerinit;
-   (*reader)->readerexit = readerexit;
    (*reader)->readerread = readerread;
    (*reader)->readerdata = readerdata;
-   (*reader)->initialized = FALSE;
 
    return SCIP_OKAY;
 }
@@ -87,7 +78,6 @@ RETCODE SCIPreaderFree(                 /**< frees memory of reader */
 {
    assert(reader != NULL);
    assert(*reader != NULL);
-   assert(!(*reader)->initialized);
 
    /* call destructor of reader */
    if( (*reader)->readerfree != NULL )
@@ -95,60 +85,10 @@ RETCODE SCIPreaderFree(                 /**< frees memory of reader */
       CHECK_OKAY( (*reader)->readerfree(*reader, scip) );
    }
 
-   freeMemoryArray((*reader)->name);
-   freeMemoryArray((*reader)->desc);
-   freeMemoryArray((*reader)->extension);
-   freeMemory(*reader);
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPreaderInit(                 /**< initializes reader */
-   READER*          reader,             /**< reader */
-   SCIP*            scip                /**< SCIP data structure */   
-   )
-{
-   assert(reader != NULL);
-   assert(scip != NULL);
-
-   if( reader->initialized )
-   {
-      char s[255];
-      sprintf(s, "reader <%s> already initialized", reader->name);
-      errorMessage(s);
-      return SCIP_INVALIDCALL;
-   }
-
-   if( reader->readerinit != NULL )
-   {
-      CHECK_OKAY( reader->readerinit(reader, scip) );
-   }
-   reader->initialized = TRUE;
-
-   return SCIP_OKAY;
-}
-
-RETCODE SCIPreaderExit(                 /**< deinitializes reader */
-   READER*          reader,             /**< reader */
-   SCIP*            scip                /**< SCIP data structure */   
-   )
-{
-   assert(reader != NULL);
-   assert(scip != NULL);
-
-   if( !reader->initialized )
-   {
-      char s[255];
-      sprintf(s, "reader <%s> not initialized", reader->name);
-      errorMessage(s);
-      return SCIP_INVALIDCALL;
-   }
-
-   if( reader->readerexit != NULL )
-   {
-      CHECK_OKAY( reader->readerexit(reader, scip) );
-   }
-   reader->initialized = FALSE;
+   freeMemoryArray(&(*reader)->name);
+   freeMemoryArray(&(*reader)->desc);
+   freeMemoryArray(&(*reader)->extension);
+   freeMemory(reader);
 
    return SCIP_OKAY;
 }
@@ -225,7 +165,7 @@ RETCODE SCIPreaderRead(                 /**< reads problem data from file with g
    assert(result != NULL);
 
    /* get path, name and extension from filename */
-   ALLOC_OKAY( duplicateMemoryArray(tmpfilename, filename, strlen(filename)+1) );
+   ALLOC_OKAY( duplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
    splitFilename(tmpfilename, &path, &name, &extension);
 
    /* check, if reader is applicable on the given file */
@@ -240,7 +180,7 @@ RETCODE SCIPreaderRead(                 /**< reads problem data from file with g
    else
       *result = SCIP_DIDNOTRUN;
 
-   freeMemoryArray(tmpfilename);
+   freeMemoryArray(&tmpfilename);
 
    return SCIP_OKAY;
 }
@@ -273,11 +213,3 @@ void SCIPreaderSetData(                 /**< sets user data of reader; user has 
    reader->readerdata = readerdata;
 }
 
-Bool SCIPreaderIsInitialized(           /**< is reader initialized? */
-   READER*          reader              /**< reader */
-   )
-{
-   assert(reader != NULL);
-
-   return reader->initialized;
-}

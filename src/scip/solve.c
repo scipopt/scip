@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -63,7 +62,7 @@ RETCODE initRootLP(                     /**< constructs the LP of the root node 
          
          col = var->data.col;
          assert(col != NULL);
-         assert(!col->inlp);
+         assert(col->lppos == -1);
          assert(col->lpipos == -1);
          debugMessage("adding initial variable <%s>\n", var->name);
          CHECK_OKAY( SCIPlpAddCol(lp, set, col) );
@@ -515,7 +514,6 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
 {
    CONSHDLR** conshdlrs_sepa;
    CONSHDLR** conshdlrs_enfo;
-   CONSHDLR** conshdlrs_chck;
    NODE* actnode;
    RESULT result;
    Bool cutoff;
@@ -540,12 +538,10 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    todoMessage("every variable, where zero is not the best bound (w.r.t. objective function) has to be in the problem");
 
    /* sort constraint handlers by priorities */
-   duplicateMemoryArray(conshdlrs_sepa, set->conshdlrs, set->nconshdlrs);
-   duplicateMemoryArray(conshdlrs_enfo, set->conshdlrs, set->nconshdlrs);
-   duplicateMemoryArray(conshdlrs_chck, set->conshdlrs, set->nconshdlrs);
+   ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_sepa, set->conshdlrs, set->nconshdlrs) );
+   ALLOC_OKAY( duplicateMemoryArray(&conshdlrs_enfo, set->conshdlrs, set->nconshdlrs) );
    SCIPbsortPtr((void**)conshdlrs_sepa, set->nconshdlrs, SCIPconshdlrCompSepa);
    SCIPbsortPtr((void**)conshdlrs_enfo, set->nconshdlrs, SCIPconshdlrCompEnfo);
-   SCIPbsortPtr((void**)conshdlrs_chck, set->nconshdlrs, SCIPconshdlrCompChck);
 
    while( stat->nnodes < set->nodelimit )
    {
@@ -678,7 +674,10 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
       }
 
       /* call primal heuristics */
-      todoMessage("primal heuristics");
+      for( h = 0; h < set->nheurs; ++h )
+      {
+         CHECK_OKAY( SCIPheurExec(set->heurs[h], set, actnode->depth, &result) );
+      }
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, FALSE) );
@@ -691,9 +690,8 @@ RETCODE SCIPsolveCIP(                   /**< main solving loop */
    debugMessage("Problem solving finished\n");
 
    /* free sorted constraint handler arrays */
-   freeMemoryArrayNull(conshdlrs_sepa);
-   freeMemoryArrayNull(conshdlrs_enfo);
-   freeMemoryArrayNull(conshdlrs_chck);
+   freeMemoryArrayNull(&conshdlrs_sepa);
+   freeMemoryArrayNull(&conshdlrs_enfo);
 
    return SCIP_OKAY;
 }

@@ -3,10 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2002 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
 /*                            Thorsten Koch                                  */
-/*                            Alexander Martin                               */
-/*                  2002-2002 Konrad-Zuse-Zentrum                            */
+/*                  2002-2003 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -86,7 +85,7 @@ RETCODE domchgCreate(                   /**< creates empty fixed size domain cha
    assert(domchg != NULL);
    assert(memhdr != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *domchg) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, domchg) );
    (*domchg)->boundchg = NULL;
    (*domchg)->holechg = NULL;
    (*domchg)->nboundchg = 0;
@@ -121,7 +120,7 @@ RETCODE ensureBoundchgSize(             /**< ensures, that boundchg array can st
       {
          CHECK_OKAY( domchgCreate(domchg, memhdr) );
       }
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, (*domchg)->boundchg, domchgdyn->boundchgsize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->boundchg, domchgdyn->boundchgsize, newsize) );
       domchgdyn->boundchgsize = newsize;
    }
    assert(num <= domchgdyn->boundchgsize);
@@ -155,7 +154,7 @@ RETCODE ensureHolechgSize(              /**< ensures, that holechg array can sto
       {
          CHECK_OKAY( domchgCreate(domchg, memhdr) );
       }
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, (*domchg)->holechg, domchgdyn->holechgsize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchg)->holechg, domchgdyn->holechgsize, newsize) );
       domchgdyn->holechgsize = newsize;
    }
    assert(num <= domchgdyn->holechgsize);
@@ -182,7 +181,7 @@ RETCODE holelistCreate(                 /**< creates a new holelist element */
    assert(memhdr != NULL);
    assert(SCIPsetIsL(set, left, right));
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *holelist) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, holelist) );
    (*holelist)->hole.left = left;
    (*holelist)->hole.right = right;
    (*holelist)->next = NULL;
@@ -204,7 +203,7 @@ void holelistFree(                      /**< frees all elements in the holelist 
       HOLELIST* next;
 
       next = (*holelist)->next;
-      freeBlockMemory(memhdr, *holelist);
+      freeBlockMemory(memhdr, holelist);
       *holelist = next;
    }
 }
@@ -329,9 +328,9 @@ void SCIPdomchgFree(                    /**< frees fixed size domain change data
 
    if( *domchg != NULL )
    {
-      freeBlockMemoryArrayNull(memhdr, (*domchg)->boundchg, (*domchg)->nboundchg);
-      freeBlockMemoryArrayNull(memhdr, (*domchg)->holechg, (*domchg)->nholechg);
-      freeBlockMemory(memhdr, *domchg);
+      freeBlockMemoryArrayNull(memhdr, &(*domchg)->boundchg, (*domchg)->nboundchg);
+      freeBlockMemoryArrayNull(memhdr, &(*domchg)->holechg, (*domchg)->nholechg);
+      freeBlockMemory(memhdr, domchg);
    }
 }
 
@@ -445,7 +444,7 @@ RETCODE SCIPdomchgdynCreate(            /**< creates a dynamic size attachment f
 {
    assert(domchgdyn != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *domchgdyn) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, domchgdyn) );
 
    (*domchgdyn)->domchg = NULL;
    (*domchgdyn)->boundchgsize = 0;
@@ -465,7 +464,7 @@ void SCIPdomchgdynFree(                 /**< frees a dynamic size attachment for
    assert((*domchgdyn)->boundchgsize == 0);
    assert((*domchgdyn)->holechgsize == 0);
 
-   freeBlockMemory(memhdr, *domchgdyn);
+   freeBlockMemory(memhdr, domchgdyn);
 }
 
 void SCIPdomchgdynAttach(               /**< attaches dynamic size information to domain change data */
@@ -511,20 +510,20 @@ RETCODE SCIPdomchgdynDetach(            /**< detaches dynamic size information a
    {
       if( (*domchgdyn->domchg)->nboundchg == 0 )
       {
-         freeBlockMemoryArrayNull(memhdr, (*domchgdyn->domchg)->boundchg, domchgdyn->boundchgsize);
+         freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->boundchg, domchgdyn->boundchgsize);
       }
       else
       {
-         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, (*domchgdyn->domchg)->boundchg,
+         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchgdyn->domchg)->boundchg,
                         domchgdyn->boundchgsize, (*domchgdyn->domchg)->nboundchg) );
       }
       if( (*domchgdyn->domchg)->nholechg == 0 )
       {
-         freeBlockMemoryArrayNull(memhdr, (*domchgdyn->domchg)->holechg, domchgdyn->holechgsize);
+         freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->holechg, domchgdyn->holechgsize);
       }
       else
       {
-         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, (*domchgdyn->domchg)->holechg,
+         ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &(*domchgdyn->domchg)->holechg,
                         domchgdyn->holechgsize, (*domchgdyn->domchg)->nholechg) );
       }
       if( (*domchgdyn->domchg)->nboundchg == 0 && (*domchgdyn->domchg)->nholechg == 0 )
@@ -560,9 +559,9 @@ void SCIPdomchgdynDiscard(              /**< frees attached domain change data a
    /* free static domain change data */
    if( *domchgdyn->domchg != NULL )
    {      
-      freeBlockMemoryArrayNull(memhdr, (*domchgdyn->domchg)->boundchg, domchgdyn->boundchgsize);
+      freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->boundchg, domchgdyn->boundchgsize);
       (*domchgdyn->domchg)->nboundchg = 0;
-      freeBlockMemoryArrayNull(memhdr, (*domchgdyn->domchg)->holechg, domchgdyn->holechgsize);
+      freeBlockMemoryArrayNull(memhdr, &(*domchgdyn->domchg)->holechg, domchgdyn->holechgsize);
       (*domchgdyn->domchg)->nholechg = 0;
       SCIPdomchgFree(domchgdyn->domchg, memhdr);
       domchgdyn->boundchgsize = 0;
@@ -672,9 +671,9 @@ RETCODE varCreate(                      /**< creates a variable */
    assert(memhdr != NULL);
    assert(stat != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(memhdr, *var) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, var) );
 
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*var)->name, name, strlen(name)+1) );
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*var)->name, name, strlen(name)+1) );
    (*var)->parentvars = NULL;
    (*var)->eventfilter = NULL;
    (*var)->dom.holelist = NULL;
@@ -793,8 +792,8 @@ RETCODE varFree(                        /**< frees a variable */
       assert((*var)->data.multaggr.vars != NULL);
       assert((*var)->data.multaggr.scalars != NULL);
       assert((*var)->data.multaggr.nvars >= 2);
-      freeBlockMemoryArray(memhdr, (*var)->data.multaggr.vars, (*var)->data.multaggr.nvars);
-      freeBlockMemoryArray(memhdr, (*var)->data.multaggr.scalars, (*var)->data.multaggr.nvars);
+      freeBlockMemoryArray(memhdr, &(*var)->data.multaggr.vars, (*var)->data.multaggr.nvars);
+      freeBlockMemoryArray(memhdr, &(*var)->data.multaggr.scalars, (*var)->data.multaggr.nvars);
       break;
    default:
       errorMessage("Unknown variable status");
@@ -832,7 +831,7 @@ RETCODE varFree(                        /**< frees a variable */
    }
 
    /* free parentvars array */
-   freeBlockMemoryArrayNull(memhdr, (*var)->parentvars, (*var)->parentvarssize);
+   freeBlockMemoryArrayNull(memhdr, &(*var)->parentvars, (*var)->parentvarssize);
 
    /* free event filter */
    if( (*var)->varstatus != SCIP_VARSTATUS_ORIGINAL )
@@ -841,8 +840,8 @@ RETCODE varFree(                        /**< frees a variable */
    }
 
    /* free variable data structure */
-   freeBlockMemoryArray(memhdr, (*var)->name, strlen((*var)->name)+1);
-   freeBlockMemory(memhdr, *var);
+   freeBlockMemoryArray(memhdr, &(*var)->name, strlen((*var)->name)+1);
+   freeBlockMemory(memhdr, var);
 
    return SCIP_OKAY;
 }
@@ -912,7 +911,7 @@ RETCODE varEnsureParentvarsSize(        /**< ensures, that parentvars array of v
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, var->parentvars, var->parentvarssize, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, &var->parentvars, var->parentvarssize, newsize) );
       var->parentvarssize = newsize;
    }
    assert(num <= var->parentvarssize);
