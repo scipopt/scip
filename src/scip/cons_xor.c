@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.2 2004/08/24 11:57:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.3 2004/08/24 14:07:01 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -54,6 +54,8 @@
 struct ConsData
 {
    VAR**            vars;               /**< variables (including resultant) in the xor operation */
+   VAR*             intvar;             /**< internal variable for LP relaxation */
+   ROW*             row;                /**< row for linear relaxation of xor constraint */
    int              nvars;              /**< number of variables (including resultant) in xor operation */
    int              varssize;           /**< size of vars array */
    int              watchedvar1;        /**< position of first watched operator variable */
@@ -252,6 +254,8 @@ RETCODE consdataCreate(
    (*consdata)->vars[0] = resvar;
    copyMemoryArray(&(*consdata)->vars[1], vars, nvars);
 
+   (*consdata)->intvar = NULL;
+   (*consdata)->row = NULL;
    (*consdata)->nvars = nvars+1;
    (*consdata)->varssize = nvars+1;
    (*consdata)->watchedvar1 = -1;
@@ -288,6 +292,16 @@ RETCODE consdataFree(
       assert((*consdata)->watchedvar1 == -1);
       assert((*consdata)->watchedvar2 == -1);
    }
+
+   /* release LP row and internal variable */
+   assert(((*consdata)->intvar == NULL) == ((*consdata)->row == NULL));
+   if( (*consdata)->row != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseVar(scip, &(*consdata)->intvar) );
+      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+   assert((*consdata)->intvar == NULL);
+   assert((*consdata)->row == NULL);
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
@@ -433,19 +447,71 @@ RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
+/** creates LP row corresponding to xor constraint: 
+ *    resvar + v1 + ... + vn - 2q == 0
+ *  with internal integer variable q
+ */
+static 
+RETCODE createRelaxation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to check */
+   )
+{
+   CONSDATA* consdata;
+   char varname[MAXSTRLEN];
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->intvar == NULL);
+   assert(consdata->row == NULL);
+
+   /* create internal variable */
+   sprintf(varname, "%s_int", SCIPconsGetName(cons));
+   CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, SCIPfloor(scip, consdata->nvars/2.0), 0.0,
+         SCIP_VARTYPE_INTEGER, SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
+   CHECK_OKAY( SCIPaddVar(scip, consdata->intvar) );
+
+   /* create LP row (resultant variable is also stored in vars array) */
+   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), 0.0, 0.0,
+         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+   CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, consdata->intvar, -2.0) );
+   CHECK_OKAY( SCIPaddVarsToRowSameCoef(scip, consdata->row, consdata->nvars, consdata->vars, 1.0) );
+
+   return SCIP_OKAY;
+}  
+
+/** adds linear relaxation of or constraint to the LP */
+static 
+RETCODE addRelaxation(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to check */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row == NULL )
+   {
+      CHECK_OKAY( createRelaxation(scip, cons) );
+   }
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(SCIProwGetNNonz(consdata->row)+1)) );
+
+   return SCIP_OKAY;
+}
+
 /** checks xor constraint for feasibility of given solution: returns TRUE iff constraint is feasible */
 static
 RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< constraint to check */
    SOL*             sol,                /**< solution to check, NULL for current solution */
+   Bool             checklprows,        /**< should LP rows be checked? */
    Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
    CONSDATA* consdata;
-   Real solval;
-   int i;
-   Bool odd;
 
    assert(violated != NULL);
 
@@ -454,22 +520,69 @@ RETCODE checkCons(
 
    *violated = FALSE;
 
-   /* increase age of constraint; age is reset to zero, if a violation was found */
-   CHECK_OKAY( SCIPincConsAge(scip, cons) );
-   
-   /* check, if all variables (including resultant) sum up to an even value */
-   odd = FALSE;
-   for( i = 0; i < consdata->nvars; ++i )
+   /* check feasibility of constraint if necessary */
+   if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
-      solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
-      assert(SCIPisIntegral(scip, solval));
-      odd = odd ^ (solval > 0.5);
+      Real solval;
+      int i;
+      Bool odd;
+
+      /* increase age of constraint; age is reset to zero, if a violation was found */
+      CHECK_OKAY( SCIPincConsAge(scip, cons) );
+      
+      /* check, if all variables (including resultant) sum up to an even value */
+      odd = FALSE;
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
+         assert(SCIPisIntegral(scip, solval));
+         odd = odd ^ (solval > 0.5);
+      }
+      if( odd )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *violated = TRUE;
+      }
    }
-   if( odd )
+
+   return SCIP_OKAY;
+}
+
+/** separates current LP solution */
+static
+RETCODE separateCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to check */
+   Bool*            separated           /**< pointer to store whether a cut was found */
+   )
+{
+   CONSDATA* consdata;
+   Real feasibility;
+
+   assert(separated != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *separated = FALSE;
+
+   /* create row for the linear relaxation */
+   if( consdata->row == NULL )
    {
-      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
-      *violated = TRUE;
+      CHECK_OKAY( createRelaxation(scip, cons) );
    }
+   assert(consdata->row != NULL);
+
+   /* test row for feasibility and add it, if it is infeasible */
+   if( !SCIProwIsInLP(consdata->row) )
+   {
+      feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+      if( !SCIPisFeasible(scip, feasibility) )
+      {
+         CHECK_OKAY( SCIPaddCut(scip, consdata->row, -feasibility/(SCIProwGetNNonz(consdata->row)+1)) );
+         *separated = TRUE;
+      }
+   }            
 
    return SCIP_OKAY;
 }
@@ -789,11 +902,45 @@ DECL_CONSTRANS(consTransXor)
 
 
 /** LP initialization method of constraint handler */
-#define consInitlpXor NULL
+static
+DECL_CONSINITLP(consInitlpXor)
+{  /*lint --e{715}*/
+   int i;
+
+   for( i = 0; i < nconss; i++ )
+   {
+      if( SCIPconsIsInitial(conss[i]) )
+      {
+         CHECK_OKAY( addRelaxation(scip, conss[i]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** separation method of constraint handler */
-#define consSepaXor NULL
+static
+DECL_CONSSEPA(consSepaXor)
+{  /*lint --e{715}*/
+   Bool separated;
+   int c;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* separate all useful constraints */
+   for( c = 0; c < nusefulconss; ++c )
+   {
+      CHECK_OKAY( separateCons(scip, conss[c], &separated) );
+      if( separated )
+         *result = SCIP_SEPARATED;
+   } 
+
+   /* combine constraints to get more cuts */
+   /**@todo combine constraints to get further cuts */
+
+   return SCIP_OKAY;
+}
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -806,13 +953,17 @@ DECL_CONSENFOLP(consEnfolpXor)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
       if( violated )
       {
-         *result = SCIP_INFEASIBLE;
+         Bool separated;
+
+         CHECK_OKAY( separateCons(scip, conss[i], &separated) );
+         assert(separated); /* because the solution is integral, the separation always finds a cut */
+         *result = SCIP_SEPARATED;
          return SCIP_OKAY;
       }
-   }
+   } 
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
@@ -829,7 +980,7 @@ DECL_CONSENFOPS(consEnfopsXor)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], NULL, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -852,7 +1003,7 @@ DECL_CONSCHECK(consCheckXor)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], sol, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[i], sol, checklprows, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;

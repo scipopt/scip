@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.16 2004/08/24 11:57:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.17 2004/08/24 14:07:01 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1375,7 +1375,7 @@ DECL_CONSCHECK(consCheckOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      CHECK_OKAY( checkCons(scip, conss[i], sol, TRUE, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[i], sol, checklprows, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
