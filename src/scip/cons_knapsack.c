@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.20 2004/03/12 08:54:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.21 2004/03/12 10:31:12 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -282,6 +282,88 @@ RETCODE liftCover(
    int              nnoncovervars       /**< number of non-cover elements */
    )
 {
+   int* minweight;
+   int* weights;
+   CONSDATA* consdata;
+   int weight;
+   int rescapacity;
+   int beta;
+   int i;
+   int j;
+   int z;
+   int left;
+   int right;
+   int middle;
+
+   assert(covervars != NULL);
+   assert(noncovervars != NULL);
+   assert(ncovervars > 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   CHECK_OKAY( SCIPallocBufferArray(scip, &minweight, ncovervars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &weights, ncovervars) );
+  
+   /* sort weights of covervars */
+   for( i = 0; i < ncovervars; i++)
+   {
+      weight = consdata->weights[covervars[i]];
+      for( j = i; j > 0 && weight < weights[j-1]; j--)
+         weights[j] = weights[j-1];
+      weights[j] = weight;   
+   }
+
+   /* calculate minweight vector: 
+    * minweight[z] := minimal sum of weights s.t. activity of cut inequality equals z
+    */
+   minweight[0] = 0;
+   for( z = 1; z < ncovervars; z++)
+      minweight[z] = minweight[z-1] + weights[z-1];
+
+   /* calculate lifting coefficients beta for noncovervars:
+    * for each noncovervar i: 
+    * 1. calculate maximal activity z_max of current cut inequality s.t. the knapsack is still feasible with x_i = 1 
+    * 2. add x_i with lifting coefficient beta_i = ncovervars - 1 - z_max to cut inequality
+    * 3. update minweight table: calculate minimal sum of weights s.t. activity of current cut inequality equals z
+    */
+   for( i = 0; i < nnoncovervars; i++)
+   {
+      /* binary search in sorted minweight array for the largest entry that is not greater then capacity - weight_i */
+      weight = consdata->weights[noncovervars[i]];
+      rescapacity = consdata->capacity - weight;
+      left = 0;
+      right = ncovervars;
+      while( left < right - 1)
+      {
+         middle = (left + right) / 2;
+         if( minweight[middle] <= rescapacity ) 
+            left = middle;
+         else
+            right = middle;
+      }
+      assert(left == right - 1);
+      
+      /* now zmax_i = left: calculate beta_i */
+      beta = ncovervars - 1 - left;
+
+      if( beta == 0 )
+         continue;
+
+      /* insert variable with coefficient beta into cut */
+      CHECK_OKAY( SCIPaddVarToRow(scip, row, consdata->vars[noncovervars[i]], (Real) beta) );
+      
+      /* update minweight table: all entries below beta keep the same */
+      for( z = ncovervars - 1; z >= beta; z-- )
+         minweight[z] = MIN(minweight[z], minweight[z - beta] + weight);
+   }
+
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &minweight) );
+
+   return SCIP_OKAY;
+
+#if 0
    int* weights;
    Real* profits;
    CONSDATA* consdata;
@@ -322,6 +404,7 @@ RETCODE liftCover(
    CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
 
    return SCIP_OKAY;
+#endif
 }
        
 /** separates cover inequalities for given knapsack constraint */
