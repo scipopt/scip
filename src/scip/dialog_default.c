@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.46 2005/02/14 13:35:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.47 2005/02/15 19:59:08 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -872,7 +872,6 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
 
       if( SCIPfileExists(filename) )
       {
-         CHECK_OKAY( SCIPfreeProb(scip) );
          retcode = SCIPreadProb(scip, filename);
          if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
          {

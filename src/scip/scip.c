@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.269 2005/02/14 13:35:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.270 2005/02/15 19:59:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2214,7 +2214,11 @@ RETCODE SCIPcreateProb(
    PROBDATA*        probdata            /**< user problem data set by the reader */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPcreateProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPcreateProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   /* free old problem */
+   CHECK_OKAY( SCIPfreeProb(scip) );
+   assert(scip->set->stage == SCIP_STAGE_INIT);
 
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
@@ -2237,7 +2241,7 @@ RETCODE SCIPreadProb(
 
    assert(filename != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPreadProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;

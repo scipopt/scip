@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.76 2005/02/14 13:35:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.77 2005/02/15 19:59:07 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1611,6 +1611,17 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
    *result = SCIP_CONSADDED;
+
+#if 0   /*????????????????????????????*/
+   if( strcmp(consname, "cf6_5518") == 0 )
+   {
+      printf("\n");
+      printf("created conflict constraint: ");
+      CHECK_OKAY( SCIPprintCons(scip, cons, NULL) );
+      printf("\n");
+      printf("\n");
+   }
+#endif
 
    return SCIP_OKAY;
 }
