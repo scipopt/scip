@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.14 2004/05/21 20:03:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.15 2004/06/22 10:48:53 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -111,7 +111,9 @@ public:
    /** initialization method of constraint handler (called after problem was transformed) */
    virtual RETCODE scip_init(
       SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr            /**< the constraint handler itself */
+      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      CONS**        conss,              /**< array of constraints in transformed problem */
+      int           nconss              /**< number of constraints in transformed problem */
       )
    {
       return SCIP_OKAY;
@@ -120,7 +122,9 @@ public:
    /** deinitialization method of constraint handler (called before transformed problem is freed) */
    virtual RETCODE scip_exit(
       SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr            /**< the constraint handler itself */
+      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
+      CONS**        conss,              /**< array of constraints in transformed problem */
+      int           nconss              /**< number of constraints in transformed problem */
       )
    {
       return SCIP_OKAY;

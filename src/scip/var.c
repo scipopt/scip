@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.97 2004/06/08 20:55:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.98 2004/06/22 10:48:55 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2384,8 +2384,10 @@ RETCODE SCIPvarAggregate(
 
    /* update branching factors and priorities of both variables to be the maximum of both variables */
    branchfactor = MAX(aggvar->branchfactor, var->branchfactor);
-   SCIPvarChgBranchFactor(var, set, branchfactor);
    branchpriority = MAX(aggvar->branchpriority, var->branchpriority);
+   var->branchfactor = branchfactor - 1.0;   /* make sure, the change is actually performed */
+   var->branchpriority = branchpriority - 1; /* make sure, the change is actually performed */
+   SCIPvarChgBranchFactor(var, set, branchfactor);
    SCIPvarChgBranchPriority(var, set, branchpriority);
 
    if( var->probindex != -1 )
@@ -2499,6 +2501,8 @@ RETCODE SCIPvarMultiaggregate(
          branchfactor = MAX(aggvars[v]->branchfactor, branchfactor);
          branchpriority = MAX(aggvars[v]->branchpriority, branchpriority);
       }
+      var->branchfactor = branchfactor - 1.0;   /* make sure, the change is actually performed */
+      var->branchpriority = branchpriority - 1; /* make sure, the change is actually performed */
       SCIPvarChgBranchFactor(var, set, branchfactor);
       SCIPvarChgBranchPriority(var, set, branchpriority);
 
@@ -4385,6 +4389,10 @@ void varProcessChgBranchFactor(
    int i;
 
    assert(var != NULL);
+   assert(set != NULL);
+
+   /* only use positive values */
+   branchfactor = MAX(branchfactor, set->epsilon);
 
    debugMessage("process changing branch factor of <%s> from %f to %f\n", var->name, var->branchfactor, branchfactor);
 
@@ -4801,6 +4809,7 @@ RETCODE SCIPvarGetProbvarSum(
          abort();
       }
    }
+   *scalar = 0.0;
 
    return SCIP_OKAY;
 }

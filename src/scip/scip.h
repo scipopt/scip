@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.139 2004/06/08 20:55:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.140 2004/06/22 10:48:54 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1675,6 +1675,14 @@ RETCODE SCIPscaleVarBranchFactor(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Real             scale               /**< factor to scale variable's branching factor with */
+   );
+
+/** adds the given value to the branch factor of the variable */
+extern
+RETCODE SCIPaddVarBranchFactor(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             addfactor           /**< value to add to the branch factor of the variable */
    );
 
 /** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables

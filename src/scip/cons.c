@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.80 2004/06/01 16:53:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.81 2004/06/22 10:48:53 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1272,7 +1272,7 @@ RETCODE SCIPconshdlrInit(
    /* call initialization method of constraint handler */
    if( conshdlr->consinit != NULL )
    {
-      CHECK_OKAY( conshdlr->consinit(scip, conshdlr) );
+      CHECK_OKAY( conshdlr->consinit(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
    conshdlr->initialized = TRUE;
 
@@ -1296,7 +1296,7 @@ RETCODE SCIPconshdlrExit(
    /* call deinitialization method of constraint handler */
    if( conshdlr->consexit != NULL )
    {
-      CHECK_OKAY( conshdlr->consexit(scip, conshdlr) );
+      CHECK_OKAY( conshdlr->consexit(scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
    }
    conshdlr->initialized = FALSE;
 

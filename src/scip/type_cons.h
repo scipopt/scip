@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.11 2004/05/05 14:05:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.12 2004/06/22 10:48:54 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -48,16 +48,20 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints in transformed problem
+ *  - nconss          : number of constraints in transformed problem
  */
-#define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
+#define DECL_CONSINIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
 
 /** deinitialization method of constraint handler (called before transformed problem is freed)
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints in transformed problem
+ *  - nconss          : number of constraints in transformed problem
  */
-#define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr)
+#define DECL_CONSEXIT(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin)
  *

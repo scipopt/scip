@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.5 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.6 2004/06/22 10:48:54 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -35,7 +35,7 @@
 
 /* variable events */
 #define SCIP_EVENTTYPE_VARADDED       0x00000001 /**< a variable has been added to the transformed problem */
-#define SCIP_EVENTTYPE_VARFIXED       0x00000002 /**< ??? TODO: a variable has been fixed, aggregated, or multiaggregated */
+#define SCIP_EVENTTYPE_VARFIXED       0x00000002 /**< a variable has been fixed, aggregated, or multiaggregated */
 #define SCIP_EVENTTYPE_OBJCHANGED     0x00000004 /**< the objective value of a variable has been changed */
 #define SCIP_EVENTTYPE_LBTIGHTENED    0x00000008 /**< the lower bound of a variable has been increased */
 #define SCIP_EVENTTYPE_LBRELAXED      0x00000010 /**< the lower bound of a variable has been decreased */
@@ -66,8 +66,8 @@
 #define SCIP_EVENTTYPE_BOUNDCHANGED   (SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBCHANGED)
 #define SCIP_EVENTTYPE_HOLECHANGED    (SCIP_EVENTTYPE_HOLEADDED | SCIP_EVENTTYPE_HOLEREMOVED)
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
-#define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_OBJCHANGED | SCIP_EVENTTYPE_DOMCHANGED)
-#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARCHANGED)
+#define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_OBJCHANGED | SCIP_EVENTTYPE_DOMCHANGED)
+#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARCHANGED)
    
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \

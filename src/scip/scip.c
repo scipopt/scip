@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.174 2004/06/08 20:55:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.175 2004/06/22 10:48:54 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2887,6 +2887,8 @@ RETCODE transformProb(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
+   int h;
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
@@ -2928,6 +2930,24 @@ RETCODE transformProb(
    /* update upper bound (e.g. objective limit) in primal data */
    CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
                   scip->tree, scip->lp) );
+
+   /* print transformed problem statistics */
+   infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL,
+      "transformed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
+      scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
+      scip->transprob->ncontvars, scip->transprob->nconss);
+   
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   {
+      int nconss;
+      
+      nconss = SCIPconshdlrGetNConss(scip->set->conshdlrs[h]);
+      if( nconss > 0 )
+      {
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL,
+            " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3168,6 +3188,7 @@ RETCODE initSolve(
    if( scip->set->nactivepricers == 0 )
    {
       VAR* var;
+      Real obj;
       Real objbound;
       Real bd;
       int v;
@@ -3176,11 +3197,15 @@ RETCODE initSolve(
       for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
       {
          var = scip->transprob->vars[v];
-         bd = SCIPvarGetWorstBound(var);
-         if( SCIPsetIsInfinity(scip->set, ABS(bd)) )
-            objbound = scip->set->infinity;
-         else
-            objbound += SCIPvarGetObj(var) * bd;
+         obj = SCIPvarGetObj(var);
+         if( !SCIPsetIsZero(scip->set, obj) )
+         {
+            bd = SCIPvarGetWorstBound(var);
+            if( SCIPsetIsInfinity(scip->set, ABS(bd)) )
+               objbound = scip->set->infinity;
+            else
+               objbound += obj * bd;
+         }
       }
 
       /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
@@ -4389,6 +4414,20 @@ RETCODE SCIPscaleVarBranchFactor(
    CHECK_OKAY( checkStage(scip, "SCIPscaleVarBranchFactor", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarChgBranchFactor(var, scip->set, scale * SCIPvarGetBranchFactor(var));
+
+   return SCIP_OKAY;
+}
+
+/** adds the given value to the branch factor of the variable */
+RETCODE SCIPaddVarBranchFactor(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             addfactor           /**< value to add to the branch factor of the variable */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchFactor", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarChgBranchFactor(var, scip->set, addfactor + SCIPvarGetBranchFactor(var));
 
    return SCIP_OKAY;
 }
@@ -8709,17 +8748,18 @@ RETCODE SCIPprintBranchingStatistics(
          depths[i] = depth;
       }
 
-      fprintf(file, "                                         branchings        inferences         cutoffs               LP gain  \n");
-      fprintf(file, " variable        priority    depth     down       up     down       up     down       up       down         up\n");
+      fprintf(file, "                                                  branchings        inferences         cutoffs               LP gain  \n");
+      fprintf(file, " variable        priority   factor    depth     down       up     down       up     down       up       down         up\n");
 
       for( v = 0; v < scip->transprob->nvars; ++v )
       {
          if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0
             || SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 )
          {
-            fprintf(file, " %-16s %7d %8.1f %8lld %8lld %8.1f %8.1f %7.1f%% %7.1f%% %10.1f %10.1f\n",
+            fprintf(file, " %-16s %7d %8.1f %8.1f %8lld %8lld %8.1f %8.1f %7.1f%% %7.1f%% %10.1f %10.1f\n",
                SCIPvarGetName(vars[v]),
                SCIPvarGetBranchPriority(vars[v]),
+               SCIPvarGetBranchFactor(vars[v]),
                (SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS)
                   + SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS))/2.0 - 1.0,
                SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS),

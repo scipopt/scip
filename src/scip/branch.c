@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.44 2004/06/02 07:39:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.45 2004/06/22 10:48:53 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -310,7 +310,8 @@ RETCODE SCIPbranchcandGetLPCands(
    if( nlpcands != NULL )
       *nlpcands = branchcand->nlpcands;
    if( npriolpcands != NULL )
-      *npriolpcands = branchcand->npriolpcands;
+      *npriolpcands = (set->preferbinbranch && branchcand->npriolpbins > 0 ? branchcand->npriolpbins
+         : branchcand->npriolpcands);
 
    return SCIP_OKAY;
 }
@@ -371,7 +372,8 @@ RETCODE SCIPbranchcandGetPseudoCands(
    if( npseudocands != NULL )
       *npseudocands = branchcand->npseudocands;
    if( npriopseudocands != NULL )
-      *npriopseudocands = branchcand->npriopseudocands;
+      *npriopseudocands = (set->preferbinbranch && branchcand->npriopseudobins > 0 ? branchcand->npriopseudobins
+         : branchcand->npriopseudocands);
 
    return SCIP_OKAY;
 }

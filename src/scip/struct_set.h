@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.19 2004/05/04 09:19:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.20 2004/06/22 10:48:54 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -155,6 +155,7 @@ struct Set
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
    Bool             clocksenabled;      /**< is timing enabled? */
+   Bool             preferbinbranch;    /**< should branching on binary variables be prefered? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.101 2004/06/09 08:26:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.102 2004/06/22 10:48:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -240,7 +240,6 @@ RETCODE conshdlrdataCreate(
    (*conshdlrdata)->linconsupgrades = NULL;
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
-   (*conshdlrdata)->tightenboundsfreq = DEFAULT_TIGHTENBOUNDSFREQ;
 
    /* get event handler for updating linear constraint activity bounds */
    (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
