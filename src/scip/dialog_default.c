@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.32 2004/10/05 16:46:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.33 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1124,6 +1124,115 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set branching direction command */
+DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
+{  /*lint --e{715}*/
+   VAR* var;
+   char prompt[MAXSTRLEN];
+   const char* valuestr;
+   int direction;
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* branching priorities cannot be set, if no problem was created */
+   if( SCIPstage(scip) == SCIP_STAGE_INIT )
+   {
+      printf("cannot set branching priorities before problem was created\n");
+      return SCIP_OKAY;
+   }
+
+   /* get variable name from user */
+   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ");
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   /* find variable */
+   var = SCIPfindVar(scip, valuestr);
+   if( var == NULL )
+   {
+      printf("variable <%s> does not exist in problem\n", valuestr);
+      return SCIP_OKAY;
+   }
+
+   /* get new branching direction from user */
+   snprintf(prompt, MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchDirection(var));
+   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+   snprintf(prompt, MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   if( sscanf(valuestr, "%d", &direction) != 1 )
+   {
+      printf("\ninvalid input <%s>\n\n", valuestr);
+      return SCIP_OKAY;
+   }
+   if( direction < -1 || direction > +1 )
+   {
+      printf("\ninvalid input <%d>: direction must be -1, 0, or +1\n\n", direction);
+      return SCIP_OKAY;
+   }
+
+   /* set new branching direction */
+   CHECK_OKAY( SCIPchgVarBranchDirection(scip, var, direction) );
+   printf("branching direction of variable <%s> set to %d\n", SCIPvarGetName(var), SCIPvarGetBranchDirection(var));
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set branching priority command */
+DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
+{  /*lint --e{715}*/
+   VAR* var;
+   char prompt[MAXSTRLEN];
+   const char* valuestr;
+   int priority;
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* branching priorities cannot be set, if no problem was created */
+   if( SCIPstage(scip) == SCIP_STAGE_INIT )
+   {
+      printf("cannot set branching priorities before problem was created\n");
+      return SCIP_OKAY;
+   }
+
+   /* get variable name from user */
+   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "variable name: ");
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr) );
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   /* find variable */
+   var = SCIPfindVar(scip, valuestr);
+   if( var == NULL )
+   {
+      printf("variable <%s> does not exist in problem\n", valuestr);
+      return SCIP_OKAY;
+   }
+
+   /* get new branching priority from user */
+   snprintf(prompt, MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
+   valuestr = SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt);
+   snprintf(prompt, MAXSTRLEN, "%s %s", SCIPvarGetName(var), valuestr);
+   CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt) );
+   if( valuestr[0] == '\0' )
+      return SCIP_OKAY;
+
+   if( sscanf(valuestr, "%d", &priority) != 1 )
+   {
+      printf("\ninvalid input <%s>\n\n", valuestr);
+      return SCIP_OKAY;
+   }
+   
+   /* set new branching priority */
+   CHECK_OKAY( SCIPchgVarBranchPriority(scip, var, priority) );
+   printf("branching priority of variable <%s> set to %d\n", SCIPvarGetName(var), SCIPvarGetBranchPriority(var));
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -1620,6 +1729,24 @@ RETCODE SCIPincludeDialogDefaultSet(
          CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
          CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
       }
+   }
+
+   /* set branching priority */
+   if( !SCIPdialogHasEntry(submenu, "priority") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetBranchingPriority, NULL,
+            "priority", "change branching priority of a single variable", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set branching direction */
+   if( !SCIPdialogHasEntry(submenu, "direction") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecSetBranchingDirection, NULL,
+            "direction", "change preferred branching direction of a single variable", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
    }
 
    /* set conflict */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.115 2004/10/12 14:06:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.116 2004/10/19 18:36:36 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1675,6 +1675,7 @@ RETCODE varCreate(
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
    (*var)->branchpriority = 0;
+   (*var)->branchdirection = 0;
    (*var)->lbchginfossize = 0;
    (*var)->nlbchginfos = 0;
    (*var)->ubchginfossize = 0;
@@ -2521,6 +2522,7 @@ RETCODE SCIPvarTransform(
       /* copy the branch factor and priority */
       (*transvar)->branchfactor = origvar->branchfactor;
       (*transvar)->branchpriority = origvar->branchpriority;
+      (*transvar)->branchdirection = origvar->branchdirection;
 
       /* duplicate hole lists */
       CHECK_OKAY( holelistDuplicate(&(*transvar)->glbdom.holelist, memhdr, set, origvar->glbdom.holelist) );
@@ -3182,9 +3184,47 @@ RETCODE SCIPvarAggregate(
    branchfactor = MAX(aggvar->branchfactor, var->branchfactor);
    branchpriority = MAX(aggvar->branchpriority, var->branchpriority);
    SCIPvarChgBranchFactor(aggvar, set, branchfactor);
-   SCIPvarChgBranchPriority(aggvar, set, branchpriority);
+   SCIPvarChgBranchPriority(aggvar, branchpriority);
    SCIPvarChgBranchFactor(var, set, branchfactor);
-   SCIPvarChgBranchPriority(var, set, branchpriority);
+   SCIPvarChgBranchPriority(var, branchpriority);
+
+   /* update branching direction of both variables to agree to a single direction */
+   if( scalar >= 0.0 )
+   {
+      if( var->branchdirection + aggvar->branchdirection > 0 )
+      {
+         SCIPvarChgBranchDirection(var, +1);
+         assert(aggvar->branchdirection == +1);
+      }
+      else if( var->branchdirection + aggvar->branchdirection < 0 )
+      {
+         SCIPvarChgBranchDirection(var, -1);
+         assert(aggvar->branchdirection == -1);
+      }
+      else
+      {
+         SCIPvarChgBranchDirection(var, 0);
+         assert(aggvar->branchdirection == 0);
+      }
+   }
+   else
+   {
+      if( var->branchdirection - aggvar->branchdirection > 0 )
+      {
+         SCIPvarChgBranchDirection(var, +1);
+         assert(aggvar->branchdirection == -1);
+      }
+      else if( var->branchdirection - aggvar->branchdirection < 0 )
+      {
+         SCIPvarChgBranchDirection(var, -1);
+         assert(aggvar->branchdirection == +1);
+      }
+      else
+      {
+         SCIPvarChgBranchDirection(var, 0);
+         assert(aggvar->branchdirection == 0);
+      }
+   }
 
    if( var->probindex != -1 )
    {
@@ -3225,6 +3265,7 @@ RETCODE SCIPvarMultiaggregate(
    Real obj;
    Real branchfactor;
    int branchpriority;
+   int branchdirection;
    int nlocksdown;
    int nlocksup;
    int v;
@@ -3291,11 +3332,15 @@ RETCODE SCIPvarMultiaggregate(
       implicsFree(&var->lbimplics, memhdr);
       implicsFree(&var->ubimplics, memhdr);
 
-      /* update flags and branching factors and priorities of aggregation variables */
+      /* update flags and branching factors and priorities of aggregation variables;
+       * update preferred branching direction of all aggregation variables that don't have a preferred direction yet
+       */
       branchfactor = var->branchfactor;
       branchpriority = var->branchpriority;
+      branchdirection = var->branchdirection;
       for( v = 0; v < naggvars; ++v )
       {
+         assert(aggvars[v] != NULL);
          aggvars[v]->removeable &= var->removeable;
          branchfactor = MAX(aggvars[v]->branchfactor, branchfactor);
          branchpriority = MAX(aggvars[v]->branchpriority, branchpriority);
@@ -3303,10 +3348,17 @@ RETCODE SCIPvarMultiaggregate(
       for( v = 0; v < naggvars; ++v )
       {
          SCIPvarChgBranchFactor(aggvars[v], set, branchfactor);
-         SCIPvarChgBranchPriority(aggvars[v], set, branchpriority);
+         SCIPvarChgBranchPriority(aggvars[v], branchpriority);
+         if( aggvars[v]->branchdirection == 0 )
+         {
+            if( scalars[v] >= 0.0 )
+               SCIPvarChgBranchDirection(aggvars[v], branchdirection);
+            else
+               SCIPvarChgBranchDirection(aggvars[v], -branchdirection);
+         }
       }
       SCIPvarChgBranchFactor(var, set, branchfactor);
-      SCIPvarChgBranchPriority(var, set, branchpriority);
+      SCIPvarChgBranchPriority(var, branchpriority);
 
       if( var->probindex != -1 )
       {
@@ -3430,9 +3482,10 @@ RETCODE SCIPvarNegate(
       var->negatedvar = *negvar;
       (*negvar)->negatedvar = var;
 
-      /* copy the branch factor and priority */
+      /* copy the branch factor and priority, and use the negative preferred branching direction */
       (*negvar)->branchfactor = var->branchfactor;
       (*negvar)->branchpriority = var->branchpriority;
+      (*negvar)->branchdirection = -var->branchdirection;
 
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       CHECK_OKAY( varAddParent(var, memhdr, set, *negvar) );
@@ -5361,7 +5414,6 @@ void SCIPvarChgBranchFactor(
 static
 void varProcessChgBranchPriority(
    VAR*             var,                /**< problem variable */
-   SET*             set,                /**< global SCIP settings */
    int              branchpriority      /**< branching priority of the variable */
    )
 {
@@ -5400,7 +5452,7 @@ void varProcessChgBranchPriority(
       
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_NEGATED:
-         varProcessChgBranchPriority(parentvar, set, branchpriority);
+         varProcessChgBranchPriority(parentvar, branchpriority);
          break;
 
       default:
@@ -5415,7 +5467,6 @@ void varProcessChgBranchPriority(
  */
 void SCIPvarChgBranchPriority(
    VAR*             var,                /**< problem variable */
-   SET*             set,                /**< global SCIP settings */
    int              branchpriority      /**< branching priority of the variable */
    )
 {
@@ -5433,35 +5484,161 @@ void SCIPvarChgBranchPriority(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar != NULL )
-         SCIPvarChgBranchPriority(var->data.transvar, set, branchpriority);
+         SCIPvarChgBranchPriority(var->data.transvar, branchpriority);
       else
-      {
-         assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
          var->branchpriority = branchpriority;
-      }
       break;
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_FIXED:
-      varProcessChgBranchPriority(var, set, branchpriority);
+      varProcessChgBranchPriority(var, branchpriority);
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
-      SCIPvarChgBranchPriority(var->data.aggregate.var, set, branchpriority);
+      SCIPvarChgBranchPriority(var->data.aggregate.var, branchpriority);
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
       for( v = 0; v < var->data.multaggr.nvars; ++v )
-         SCIPvarChgBranchPriority(var->data.multaggr.vars[v], set, branchpriority);
+         SCIPvarChgBranchPriority(var->data.multaggr.vars[v], branchpriority);
       break;
 
    case SCIP_VARSTATUS_NEGATED:
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      SCIPvarChgBranchPriority(var->negatedvar, set, branchpriority);
+      SCIPvarChgBranchPriority(var->negatedvar, branchpriority);
+      break;
+         
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
+/** actually changes the branch direction of the variable and of all parent variables */
+static
+void varProcessChgBranchDirection(
+   VAR*             var,                /**< problem variable */
+   int              branchdirection     /**< branching direction of the variable */
+   )
+{
+   VAR* parentvar;
+   int i;
+
+   assert(var != NULL);
+   assert(-1 <= branchdirection && branchdirection <= +1);
+
+   debugMessage("process changing branch direction of <%s> from %d to %d\n", 
+      var->name, var->branchdirection, branchdirection);
+
+   if( branchdirection == var->branchdirection )
+      return;
+
+   /* change the branch direction */
+   var->branchdirection = branchdirection;
+
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+
+      switch( SCIPvarGetStatus(parentvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         /* do not change directions across the border between transformed and original problem */
+         break;
+         
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
+         abort();
+      
+      case SCIP_VARSTATUS_AGGREGATED:
+         if( parentvar->data.aggregate.scalar > 0.0 )
+            varProcessChgBranchDirection(parentvar, branchdirection);
+         else
+            varProcessChgBranchDirection(parentvar, -branchdirection);
+         break;
+
+      case SCIP_VARSTATUS_NEGATED:
+         varProcessChgBranchDirection(parentvar, -branchdirection);
+         break;
+
+      default:
+         errorMessage("unknown variable status\n");
+         abort();
+      }
+   }
+}
+
+/** sets the branch direction of the variable; variables with higher branch direction are always prefered to variables
+ *  with lower direction in selection of branching variable
+ */
+void SCIPvarChgBranchDirection(
+   VAR*             var,                /**< problem variable */
+   int              branchdirection     /**< branching direction of the variable */
+   )
+{
+   int v;
+
+   assert(var != NULL);
+   assert(-1 <= branchdirection && branchdirection <= +1);
+
+   debugMessage("changing branch direction of <%s> from %d to %d\n", var->name, var->branchdirection, branchdirection);
+
+   if( var->branchdirection == branchdirection )
+      return;
+
+   /* change directions of attached variables */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar != NULL )
+         SCIPvarChgBranchDirection(var->data.transvar, branchdirection);
+      else
+         var->branchdirection = branchdirection;
+      break;
+         
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_FIXED:
+      varProcessChgBranchDirection(var, branchdirection);
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(var->data.aggregate.var != NULL);
+      if( var->data.aggregate.scalar > 0.0 )
+         SCIPvarChgBranchDirection(var->data.aggregate.var, branchdirection);
+      else
+         SCIPvarChgBranchDirection(var->data.aggregate.var, -branchdirection);
+      break;
+         
+   case SCIP_VARSTATUS_MULTAGGR:
+      for( v = 0; v < var->data.multaggr.nvars; ++v )
+      {
+         /* only update branching direction of aggregation variables, if they don't have a preferred direction yet */
+         assert(var->data.multaggr.vars[v] != NULL);
+         if( var->data.multaggr.vars[v]->branchdirection == 0 )
+         {
+            if( var->data.multaggr.scalars[v] > 0.0 )
+               SCIPvarChgBranchDirection(var->data.multaggr.vars[v], branchdirection);
+            else
+               SCIPvarChgBranchDirection(var->data.multaggr.vars[v], -branchdirection);
+         }
+      }
+      break;
+
+   case SCIP_VARSTATUS_NEGATED:
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      SCIPvarChgBranchDirection(var->negatedvar, -branchdirection);
       break;
          
    default:
@@ -6083,6 +6260,16 @@ int SCIPvarGetBranchPriority(
    assert(var != NULL);
 
    return var->branchpriority;
+}
+
+/** gets the preferred branch direction of the variable (-1: downwards, 0: automatic, +1: upwards) */
+int SCIPvarGetBranchDirection(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->branchdirection;
 }
 
 /** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
@@ -8344,6 +8531,17 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
       || bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
 
    return (BOUNDTYPE)(bdchginfo->inferboundtype);
+}
+
+/** returns whether the bound change has an inference reason (constraint or propagator), that can be resolved */
+Bool SCIPbdchginfoHasInferenceReason(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   )
+{
+   assert(bdchginfo != NULL);
+
+   return (bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)
+      || (bdchginfo->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && bdchginfo->inferencedata.reason.prop != NULL);
 }
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.215 2004/10/13 14:36:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.216 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5124,7 +5124,7 @@ RETCODE SCIPchgVarBranchPriority(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchPriority(var, scip->set, branchpriority);
+   SCIPvarChgBranchPriority(var, branchpriority);
 
    return SCIP_OKAY;
 }
@@ -5139,7 +5139,7 @@ RETCODE SCIPupdateVarBranchPriority(
    CHECK_OKAY( checkStage(scip, "SCIPupdateVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    if( branchpriority > SCIPvarGetBranchPriority(var) )
-      SCIPvarChgBranchPriority(var, scip->set, branchpriority);
+      SCIPvarChgBranchPriority(var, branchpriority);
 
    return SCIP_OKAY;
 }
@@ -5153,7 +5153,23 @@ RETCODE SCIPaddVarBranchPriority(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPvarChgBranchPriority(var, scip->set, addpriority + SCIPvarGetBranchPriority(var));
+   SCIPvarChgBranchPriority(var, addpriority + SCIPvarGetBranchPriority(var));
+
+   return SCIP_OKAY;
+}
+
+/** sets the branch direction of the variable (-1: prefer downwards branch, 0: automatic selection, +1: prefer upwards
+ *  branch)
+ */
+RETCODE SCIPchgVarBranchDirection(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              branchdirection     /**< preferred branch direction of the variable (-1: down, 0: auto, +1: up) */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchDirection", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarChgBranchDirection(var, branchdirection);
 
    return SCIP_OKAY;
 }
@@ -7843,8 +7859,7 @@ RETCODE SCIPgetLPBranchCands(
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL
-      && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDED )
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
       errorMessage("LP not solved to optimality\n");
       return SCIP_INVALIDDATA;
@@ -9297,17 +9312,21 @@ int SCIPgetNCutsApplied(
    return SCIPsepastoreGetNCutsApplied(scip->sepastore);
 }
 
-/** get total number of conflict constraints found */
-Longint SCIPgetNConflictsFound(
+/** get total number of clauses found in conflict analysis (conflict and reconvergence clauses) */
+Longint SCIPgetNConflictClausesFound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetNConflictsFound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConflictClausesFound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPconflictGetNPropConflicts(scip->conflict)
-      + SCIPconflictGetNLPConflicts(scip->conflict)
-      + SCIPconflictGetNStrongbranchConflicts(scip->conflict)
-      + SCIPconflictGetNPseudoConflicts(scip->conflict);
+   return SCIPconflictGetNPropConflictClauses(scip->conflict)
+      + SCIPconflictGetNPropReconvergenceClauses(scip->conflict)
+      + SCIPconflictGetNLPConflictClauses(scip->conflict)
+      + SCIPconflictGetNLPReconvergenceClauses(scip->conflict)
+      + SCIPconflictGetNStrongbranchConflictClauses(scip->conflict)
+      + SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict)
+      + SCIPconflictGetNPseudoConflictClauses(scip->conflict)
+      + SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict);
 }
 
 /** gets depth of current node, or -1 if no current node exists */
@@ -9539,6 +9558,8 @@ Real SCIPgetGap(
 
    if( SCIPsetIsZero(scip->set, dualbound) || SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
       return SCIPsetInfinity(scip->set);
+   else if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
+      return 0.0;
    else
       return ABS((primalbound - dualbound)/dualbound);
 }
@@ -9560,6 +9581,8 @@ Real SCIPgetTransGap(
       return 0.0;
    else if( SCIPsetIsZero(scip->set, lowerbound) || SCIPsetIsInfinity(scip->set, upperbound) )
       return SCIPsetInfinity(scip->set);
+   else if( SCIPsetIsEQ(scip->set, upperbound, lowerbound) )
+      return 0.0;
    else
       return ABS((upperbound - lowerbound)/lowerbound);
 }
@@ -9857,37 +9880,53 @@ void printConflictStatistics(
    FILE*            file                /**< output file */
    )
 {
-   fprintf(file, "Conflict Analysis  :       Time      Calls  Conflicts   Literals   LP Iters\n");
-   fprintf(file, "  propagation      : %10.2f %10lld %10lld %10.1f          -\n",
+   fprintf(file, "Conflict Analysis  :       Time      Calls  Conflicts   Literals    Reconvs ReconvLits   LP Iters\n");
+   fprintf(file, "  propagation      : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
-      SCIPconflictGetNPropConflicts(scip->conflict),
-      SCIPconflictGetNPropConflicts(scip->conflict) > 0
+      SCIPconflictGetNPropConflictClauses(scip->conflict),
+      SCIPconflictGetNPropConflictClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNPropConflictLiterals(scip->conflict)
-      / (Real)SCIPconflictGetNPropConflicts(scip->conflict) : 0);
-   fprintf(file, "  infeasible LP    : %10.2f %10lld %10lld %10.1f %10lld\n",
+      / (Real)SCIPconflictGetNPropConflictClauses(scip->conflict) : 0,
+      SCIPconflictGetNPropReconvergenceClauses(scip->conflict),
+      SCIPconflictGetNPropReconvergenceClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNPropReconvergenceLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNPropReconvergenceClauses(scip->conflict) : 0);
+   fprintf(file, "  infeasible LP    : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
       SCIPconflictGetLPTime(scip->conflict),
       SCIPconflictGetNLPCalls(scip->conflict),
-      SCIPconflictGetNLPConflicts(scip->conflict),
-      SCIPconflictGetNLPConflicts(scip->conflict) > 0
+      SCIPconflictGetNLPConflictClauses(scip->conflict),
+      SCIPconflictGetNLPConflictClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNLPConflictLiterals(scip->conflict)
-      / (Real)SCIPconflictGetNLPConflicts(scip->conflict) : 0,
+      / (Real)SCIPconflictGetNLPConflictClauses(scip->conflict) : 0,
+      SCIPconflictGetNLPReconvergenceClauses(scip->conflict),
+      SCIPconflictGetNLPReconvergenceClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNLPReconvergenceLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNLPReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNLPIterations(scip->conflict));
-   fprintf(file, "  strong branching : %10.2f %10lld %10lld %10.1f %10lld\n",
+   fprintf(file, "  strong branching : %10.2f %10lld %10lld %10.1f %10lld %10.1f %10lld\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
       SCIPconflictGetNStrongbranchCalls(scip->conflict),
-      SCIPconflictGetNStrongbranchConflicts(scip->conflict),
-      SCIPconflictGetNStrongbranchConflicts(scip->conflict) > 0
+      SCIPconflictGetNStrongbranchConflictClauses(scip->conflict),
+      SCIPconflictGetNStrongbranchConflictClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNStrongbranchConflictLiterals(scip->conflict)
-      / (Real)SCIPconflictGetNStrongbranchConflicts(scip->conflict) : 0,
+      / (Real)SCIPconflictGetNStrongbranchConflictClauses(scip->conflict) : 0,
+      SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict),
+      SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNStrongbranchReconvergenceLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNStrongbranchReconvergenceClauses(scip->conflict) : 0,
       SCIPconflictGetNStrongbranchIterations(scip->conflict));
-   fprintf(file, "  pseudo solution  : %10.2f %10lld %10lld %10.1f          -\n",
+   fprintf(file, "  pseudo solution  : %10.2f %10lld %10lld %10.1f %10lld %10.1f          -\n",
       SCIPconflictGetPseudoTime(scip->conflict),
       SCIPconflictGetNPseudoCalls(scip->conflict),
-      SCIPconflictGetNPseudoConflicts(scip->conflict),
-      SCIPconflictGetNPseudoConflicts(scip->conflict) > 0
+      SCIPconflictGetNPseudoConflictClauses(scip->conflict),
+      SCIPconflictGetNPseudoConflictClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNPseudoConflictLiterals(scip->conflict)
-      / (Real)SCIPconflictGetNPseudoConflicts(scip->conflict) : 0);
+      / (Real)SCIPconflictGetNPseudoConflictClauses(scip->conflict) : 0,
+      SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict),
+      SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) : 0);
 }
 
 static

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.60 2004/09/23 15:46:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.61 2004/10/19 18:36:32 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -51,6 +51,8 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating set covering constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
+/*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
+
 #ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
@@ -62,7 +64,9 @@
 struct ConshdlrData
 {
    EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
+#ifdef VARUSES
    INTARRAY*        varuses;            /**< number of times a var is used in the active set ppc constraints */
+#endif
    int              npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
 };
 
@@ -96,7 +100,9 @@ RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
 
    CHECK_OKAY( SCIPallocMemory(scip, conshdlrdata) );
+#ifdef VARUSES
    CHECK_OKAY( SCIPcreateIntarray(scip, &(*conshdlrdata)->varuses) );
+#endif
    (*conshdlrdata)->npseudobranches = DEFAULT_NPSEUDOBRANCHES;
 
    /* get event handler for bound change events */
@@ -120,8 +126,51 @@ RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
+#ifdef VARUSES
    CHECK_OKAY( SCIPfreeIntarray(scip, &(*conshdlrdata)->varuses) );
+#endif
    SCIPfreeMemory(scip, conshdlrdata);
+
+   return SCIP_OKAY;
+}
+
+#ifdef VARUSES
+/** adds the given value to the usage counter of the given variable */
+static
+RETCODE conshdlrdataAddVaruses(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   VAR*             var,                /**< variable to increase usage counter for */
+   int              addval              /**< value to add to the usage counter */
+   )
+{
+   INTARRAY* varuses;
+
+   assert(conshdlrdata != NULL);
+   assert(var != NULL);
+
+   varuses = conshdlrdata->varuses;
+   assert(varuses != NULL);
+   
+   /* if the variable is the negation of a problem variable, count the varuses in the problem variable */
+   if( SCIPvarIsNegated(var) )
+   {
+      VAR* negvar;
+      int varindex;
+
+      /* move the varuses value of the negated variable to the active problem variable */
+      varindex = SCIPvarGetIndex(var);
+      addval += SCIPgetIntarrayVal(scip, varuses, varindex);
+      CHECK_OKAY( SCIPsetIntarrayVal(scip, varuses, varindex, 0) );
+      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &negvar) );
+      var = negvar;
+   }
+
+   /* increase varuses counter */
+   CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), addval) );
+
+   debugMessage("added %d to varuses of <%s>: %d\n", 
+      addval, SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));
 
    return SCIP_OKAY;
 }
@@ -134,28 +183,12 @@ RETCODE conshdlrdataIncVaruses(
    VAR*             var                 /**< variable to increase usage counter for */
    )
 {
-   INTARRAY* varuses;
-
    assert(conshdlrdata != NULL);
-   assert(var != NULL);
 
-   varuses = conshdlrdata->varuses;
-   assert(varuses != NULL);
+   debugMessage("increasing varuses of <%s>: %d\n", 
+      SCIPvarGetName(var), SCIPgetIntarrayVal(scip, conshdlrdata->varuses, SCIPvarGetIndex(var)));
 
-   /* if the variable is the negation of a problem variable, count the varuses in the problem variable */
-   if( SCIPvarIsNegated(var) )
-   {
-      VAR* negvar;
-
-      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &negvar) );
-      var = negvar;
-   }
-
-   /* increase varuses counter */
-   CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), +1) );
-
-   debugMessage("increased varuses of <%s>: %d\n", 
-      SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));
+   CHECK_OKAY( conshdlrdataAddVaruses(scip, conshdlrdata, var, +1) );
 
    return SCIP_OKAY;
 }
@@ -168,29 +201,12 @@ RETCODE conshdlrdataDecVaruses(
    VAR*             var                 /**< variable to increase usage counter for */
    )
 {
-   INTARRAY* varuses;
-
    assert(conshdlrdata != NULL);
-   assert(var != NULL);
 
-   varuses = conshdlrdata->varuses;
-   assert(varuses != NULL);
+   debugMessage("decreasing varuses of <%s>: %d\n", 
+      SCIPvarGetName(var), SCIPgetIntarrayVal(scip, conshdlrdata->varuses, SCIPvarGetIndex(var)));
 
-   /* if the variable is the negation of a problem variable, count the varuses in the problem variable */
-   if( SCIPvarIsNegated(var) )
-   {
-      VAR* negvar;
-
-      CHECK_OKAY( SCIPgetNegatedVar(scip, var, &negvar) );
-      var = negvar;
-   }
-
-   /* decrease varuses counter */
-   CHECK_OKAY( SCIPincIntarrayVal(scip, varuses, SCIPvarGetIndex(var), -1) );
-
-   debugMessage("decreased varuses of <%s>: %d\n", 
-      SCIPvarGetName(var), SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)));
-   assert(SCIPgetIntarrayVal(scip, varuses, SCIPvarGetIndex(var)) >= 0);
+   CHECK_OKAY( conshdlrdataAddVaruses(scip, conshdlrdata, var, -1) );
 
    return SCIP_OKAY;
 }
@@ -234,6 +250,7 @@ RETCODE consdataDecVaruses(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** ensures, that the vars array can store at least num entries */
 static
@@ -632,11 +649,13 @@ RETCODE addCoef(
       /* catch bound change events of variable */
       CHECK_OKAY( consdataCatchEvent(scip, consdata, conshdlrdata->eventhdlr, consdata->nvars-1) );
 
+#ifdef VARUSES
       /* if the constraint is currently active, increase the variable usage counter */
       if( SCIPconsIsActive(cons) )
       {
          CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, var) );
       }
+#endif
    }
 
    /* if necessary, update the rounding locks of variable */
@@ -1493,6 +1512,7 @@ DECL_CONSSEPA(consSepaSetppc)
    return SCIP_OKAY;
 }
 
+#ifdef VARUSES
 #ifdef BRANCHLP
 /** if fractional variables exist, chooses a set S of them and branches on (i) x(S) == 0, and (ii) x(S) >= 1 */
 static
@@ -1584,17 +1604,17 @@ RETCODE branchLP(
          NODE* node;
 
          /* perform the binary set branching on the selected variables */
-         assert(nselcands <= nlpcands);
+         assert(1 <= nselcands && nselcands <= nlpcands);
          
          /* create left child, fix x_i = 0 for all i \in S */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, -(Real)SCIPvarGetBranchDirection(branchcands[0])) );
          for( i = 0; i < nselcands; ++i )
          {
             CHECK_OKAY( SCIPchgVarUbNode(scip, node, sortcands[i], 0.0) );
          }
 
          /* create right child: add constraint x(S) >= 1 */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)SCIPvarGetBranchDirection(branchcands[0])) );
          if( nselcands == 1 )
          {
             /* only one candidate selected: fix it to 1.0 */
@@ -1755,6 +1775,7 @@ RETCODE branchPseudo(
 
    return SCIP_OKAY;
 }
+#endif
 
 
 
@@ -1792,6 +1813,7 @@ DECL_CONSENFOLP(consEnfolpSetppc)
       CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
+#ifdef VARUSES
 #ifdef BRANCHLP
    if( !cutoff && !separated && !reduceddom )
    {
@@ -1800,6 +1822,7 @@ DECL_CONSENFOLP(consEnfolpSetppc)
       if( *result != SCIP_FEASIBLE )
          return SCIP_OKAY;
    }
+#endif
 #endif
 
    /* return the correct result */
@@ -1833,7 +1856,9 @@ DECL_CONSENFOPS(consEnfopsSetppc)
    if( objinfeasible )
    {
       *result = SCIP_DIDNOTRUN;
+#ifdef VARUSES
       CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
+#endif
       return SCIP_OKAY;
    }
 
@@ -1862,10 +1887,12 @@ DECL_CONSENFOPS(consEnfopsSetppc)
    {
       *result = SCIP_INFEASIBLE;
       
+#ifdef VARUSES
       /* at least one constraint is violated by pseudo solution and we didn't find a better way to resolve this:
        * -> branch on pseudo solution
        */
       CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
+#endif
    }
    
    return SCIP_OKAY;
@@ -2187,20 +2214,24 @@ DECL_CONSPRESOL(consPresolSetppc)
             }
             assert(var1 != NULL && var2 != NULL);
 
+#ifdef VARUSES
             /* in order to not mess up the variable usage counting, we have to decrease usage counting, aggregate,
              * and increase usage counting again
              */
             CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, var1) );
             CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, var2) );
+#endif
 
             /* aggregate binary equality var1 + var2 == 1 */
             debugMessage("set partitioning constraint <%s>: aggregate <%s> + <%s> == 1\n",
                SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
             CHECK_OKAY( SCIPaggregateVars(scip, var1, var2, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
 
+#ifdef VARUSES
             /* increase variable usage counting again */
             CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, var1) );
             CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, var2) );
+#endif
 
             /* evaluate aggregation result */
             if( infeasible )
@@ -2320,6 +2351,7 @@ DECL_CONSUNLOCK(consUnlockSetppc)
 
 
 /** constraint activation notification method of constraint handler */
+#ifdef VARUSES
 static
 DECL_CONSACTIVE(consActiveSetppc)
 {  /*lint --e{715}*/
@@ -2334,9 +2366,13 @@ DECL_CONSACTIVE(consActiveSetppc)
 
    return SCIP_OKAY;
 }
+#else
+#define consActiveSetppc NULL
+#endif
 
 
 /** constraint deactivation notification method of constraint handler */
+#ifdef VARUSES
 static
 DECL_CONSDEACTIVE(consDeactiveSetppc)
 {  /*lint --e{715}*/
@@ -2351,6 +2387,9 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
 
    return SCIP_OKAY;
 }
+#else
+#define consDeactiveSetppc NULL
+#endif
 
 
 /** constraint enabling notification method of constraint handler */
@@ -2597,7 +2636,7 @@ DECL_EVENTEXEC(eventExecSetppc)
    case SCIP_EVENTTYPE_UBRELAXED:
       consdata->nfixedzeros--;
       break;
-   default:
+  default:
       errorMessage("invalid event type\n");
       abort();
    }
@@ -2836,7 +2875,7 @@ VAR** SCIPgetVarsSetppc(
 }
 
 /** gets number of variables in set partitioning / packing / covering constraint */
-int SCIPgetVarsNSetppc(
+int SCIPgetNVarsSetppc(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint data */
    )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.54 2004/09/23 15:46:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.55 2004/10/19 18:36:32 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1049,6 +1049,314 @@ RETCODE enforcePseudo(
    return SCIP_OKAY;
 }
 
+#ifdef BRANCHLP
+/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) >= 0 */
+static
+RETCODE branchLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLR*        conshdlr,           /**< logic or constraint handler */
+   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
+   )
+{
+   CONSHDLRDATA* conshdlrdata;
+   INTARRAY* posvaruses;
+   INTARRAY* negvaruses;
+   VAR** lpcands;
+   VAR** branchcands;
+   VAR* var;
+   Real* usescores;
+   Real maxvarusefac;
+   Real minvarusefac;
+   Real usescore;
+   Real branchweight;
+   Real solval;
+   int varindex;
+   int nlpcands;
+   int nbranchcands;
+   int nselcands;
+   int posuse;
+   int neguse;
+   int i;
+   int j;
+
+   /**@todo use a better logicor branching on LP solution */
+
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   /* get fractional variables */
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
+   if( nlpcands == 0 )
+      return SCIP_OKAY;
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, nlpcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, nlpcands) );
+   
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   posvaruses = conshdlrdata->posvaruses;
+   negvaruses = conshdlrdata->negvaruses;
+   maxvarusefac = conshdlrdata->maxvarusefac;
+   minvarusefac = conshdlrdata->minvarusefac;
+   assert(posvaruses != NULL);
+   assert(negvaruses != NULL);
+
+   /* sort fractional variables by weighted number of uses in enabled logic or constraints */
+   nbranchcands = 0;
+   for( i = 0; i < nlpcands; ++i )
+   {
+      var = lpcands[i];
+      varindex = SCIPvarGetIndex(var);
+      posuse = SCIPgetIntarrayVal(scip, posvaruses, varindex);
+      neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
+      if( posuse + neguse > 0 )
+      {
+         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
+         for( j = nbranchcands; j > 0 && usescore > usescores[j-1]; --j )
+         {
+            branchcands[j] = branchcands[j-1];
+            usescores[j] = usescores[j-1];
+         }
+         assert(0 <= j && j <= nbranchcands);
+
+         /* choose between normal and negated variable in branching, such that setting selected variable
+          * to zero is hopefully leading to a feasible solution
+          */
+         if( posuse > neguse )
+         {
+            CHECK_OKAY( SCIPgetNegatedVar(scip, var, &branchcands[j]) );
+         }
+         else
+            branchcands[j] = var;
+         usescores[j] = usescore;
+         nbranchcands++;
+      }
+   }
+   assert(nbranchcands <= nlpcands);
+
+   /* if none of the fractional variables is member of a logic or constraint,
+    * we are not responsible for doing the branching
+    */
+   if( nbranchcands > 0 )
+   {
+      /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
+       * then choose one less
+       */
+      branchweight = 0.0;
+      solval = 0.0;
+      for( nselcands = 0; nselcands < nbranchcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
+      {
+         solval = SCIPgetVarSol(scip, branchcands[nselcands]);
+         assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
+         branchweight += solval;
+      }
+      assert(nselcands > 0);
+      nselcands--;
+      branchweight -= solval;
+
+      /* check, if we accumulated at least MIN and at most MAXBRANCHWEIGHT weight */
+      if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
+      {
+         NODE* node;
+
+         /* perform the binary set branching on the selected variables */
+         assert(1 <= nselcands && nselcands <= nlpcands);
+         
+         /* create left child, fix x_i = 0 for all i \in S */
+         CHECK_OKAY( SCIPcreateChild(scip, &node, -(Real)SCIPvarGetBranchDirection(branchcands[0])) );
+         for( i = 0; i < nselcands; ++i )
+         {
+            CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
+         }
+
+         /* create right child: add constraint x(S) >= 1 */
+         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)SCIPvarGetBranchDirection(branchcands[0])) );
+         if( nselcands == 1 )
+         {
+            /* only one candidate selected: fix it to 1.0 */
+            debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(branchcands[0]));
+            CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[0], 1.0) );
+         }
+         else
+         {
+            CONS* newcons;
+            char name[MAXSTRLEN];
+         
+            /* add logic or constraint x(S) >= 1 */
+            sprintf(name, "LOB%lld", SCIPgetNTotalNodes(scip));
+
+            CHECK_OKAY( SCIPcreateConsLogicor(scip, &newcons, name, nselcands, branchcands,
+                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
+            CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
+            CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
+         }
+      
+         *result = SCIP_BRANCHED;
+         
+#ifdef DEBUG
+         printf("logic or LP branching: nselcands=%d/%d, weight(S)=%g, S={", nselcands, nlpcands, branchweight);
+         for( i = 0; i < nselcands; ++i )
+            printf(" %s[%g, %g]", SCIPvarGetName(branchcands[i]), usescores[i], SCIPgetSolVal(scip, NULL, branchcands[i]));
+         printf(" }\n");
+#endif
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &usescores);
+   SCIPfreeBufferArray(scip, &branchcands);
+
+   return SCIP_OKAY;
+}
+#endif
+
+/** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
+ *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1
+ *   - create an additional child node x_0 = ... = x_n-1 = 0
+ */
+static
+RETCODE branchPseudo(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSHDLR*        conshdlr,           /**< logic or constraint handler */
+   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
+   )
+{
+   CONSHDLRDATA* conshdlrdata;
+   INTARRAY* posvaruses;
+   INTARRAY* negvaruses;
+   VAR** pseudocands;
+   VAR** branchcands;
+   VAR* var;
+   NODE* node;
+   Real* usescores;
+   Real maxvarusefac;
+   Real minvarusefac;
+   Real usescore;
+   int varindex;
+   int npseudocands;
+   int maxnbranchcands;
+   int nbranchcands;
+   int posuse;
+   int neguse;
+   int i;
+   int j;
+
+   /**@todo use a better logic or branching on pseudo solution */
+
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check, if pseudo branching is disabled */
+   if( conshdlrdata->npseudobranches <= 1 )
+      return SCIP_OKAY;
+
+   /* get fractional variables */
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
+   if( npseudocands == 0 )
+      return SCIP_OKAY;
+
+   posvaruses = conshdlrdata->posvaruses;
+   negvaruses = conshdlrdata->negvaruses;
+   maxvarusefac = conshdlrdata->maxvarusefac;
+   minvarusefac = conshdlrdata->minvarusefac;
+   maxnbranchcands = conshdlrdata->npseudobranches-1;
+   assert(posvaruses != NULL);
+   assert(negvaruses != NULL);
+   assert(maxnbranchcands >= 1);
+
+   /* get temporary memory */
+   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, maxnbranchcands) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, maxnbranchcands) );
+   
+   /* sort unfixed variables by number of uses in enabled logic or constraints */
+   nbranchcands = 0;
+   for( i = 0; i < npseudocands; ++i )
+   {
+      var = pseudocands[i];
+      varindex = SCIPvarGetIndex(var);
+      posuse = SCIPgetIntarrayVal(scip, posvaruses, varindex);
+      neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
+      if( posuse + neguse > 0 )
+      {
+         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
+         if( nbranchcands < maxnbranchcands || usescore > usescores[nbranchcands-1] )
+         {
+            for( j = MIN(nbranchcands, maxnbranchcands-1); j > 0 && usescore > usescores[j-1]; --j )
+            {
+               branchcands[j] = branchcands[j-1];
+               usescores[j] = usescores[j-1];
+            }
+            assert(0 <= j && j <= nbranchcands && j < maxnbranchcands);
+
+            /* choose between normal and negated variable in branching, such that setting selected variable
+             * to zero is hopefully leading to a feasible solution
+             */
+            if( posuse > neguse )
+            {
+               CHECK_OKAY( SCIPgetNegatedVar(scip, var, &branchcands[j]) );
+            }
+            else
+               branchcands[j] = var;
+            usescores[j] = usescore;
+            if( nbranchcands < maxnbranchcands )
+               nbranchcands++;
+         }
+      }
+   }
+   assert(nbranchcands <= maxnbranchcands);
+
+   /* if none of the unfixed variables is member of a logic or constraint,
+    * we are not responsible for doing the branching
+    */
+   if( nbranchcands > 0 )
+   {
+      /* branch on the first part of the sorted candidates:
+       * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
+       * - create an additional child node x_0 = ... = x_n-1 = 0
+       */
+
+      /* create child with x_0 = ... = x_n-1 = 0 */
+      CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)nbranchcands) );
+      for( i = 0; i < nbranchcands; ++i )
+      {
+         CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
+      }
+
+      /* create children with x_0 = ... = x_i-1 = 0, x_i = 1, i = n-1,...,0 */
+      for( i = nbranchcands-1; i >= 0; --i )
+      {            
+         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)i) );
+         for( j = 0; j < i; ++j )
+         {
+            CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
+         }
+         CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
+      }
+
+      *result = SCIP_BRANCHED;
+
+#ifdef DEBUG
+      printf("logic or pseudo branching: nbranchcands=%d/%d, S={", nbranchcands, maxnbranchcands);
+      for( i = 0; i < nbranchcands; ++i )
+         printf(" %s [%g]", SCIPvarGetName(branchcands[i]), usescores[i]);
+      printf(" }\n");
+#endif
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &usescores);
+   SCIPfreeBufferArray(scip, &branchcands);
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -1239,316 +1547,6 @@ DECL_CONSSEPA(consSepaLogicor)
 
    return SCIP_OKAY;
 }
-
-#ifdef BRANCHLP
-/** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) >= 0 */
-static
-RETCODE branchLP(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< logic or constraint handler */
-   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
-   )
-{
-   CONSHDLRDATA* conshdlrdata;
-   INTARRAY* posvaruses;
-   INTARRAY* negvaruses;
-   VAR** lpcands;
-   VAR** branchcands;
-   VAR* var;
-   Real* usescores;
-   Real maxvarusefac;
-   Real minvarusefac;
-   Real usescore;
-   Real branchweight;
-   Real solval;
-   int varindex;
-   int nlpcands;
-   int nbranchcands;
-   int nselcands;
-   int posuse;
-   int neguse;
-   int i;
-   int j;
-
-   /**@todo use a better logicor branching on LP solution */
-
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   /* get fractional variables */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, NULL, &nlpcands) );
-   if( nlpcands == 0 )
-      return SCIP_OKAY;
-
-   /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, nlpcands) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, nlpcands) );
-   
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   posvaruses = conshdlrdata->posvaruses;
-   negvaruses = conshdlrdata->negvaruses;
-   maxvarusefac = conshdlrdata->maxvarusefac;
-   minvarusefac = conshdlrdata->minvarusefac;
-   assert(posvaruses != NULL);
-   assert(negvaruses != NULL);
-
-   /* sort fractional variables by weighted number of uses in enabled logic or constraints */
-   nbranchcands = 0;
-   for( i = 0; i < nlpcands; ++i )
-   {
-      var = lpcands[i];
-      varindex = SCIPvarGetIndex(var);
-      posuse = SCIPgetIntarrayVal(scip, posvaruses, varindex);
-      neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
-      if( posuse + neguse > 0 )
-      {
-         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
-         for( j = nbranchcands; j > 0 && usescore > usescores[j-1]; --j )
-         {
-            branchcands[j] = branchcands[j-1];
-            usescores[j] = usescores[j-1];
-         }
-         assert(0 <= j && j <= nbranchcands);
-
-         /* choose between normal and negated variable in branching, such that setting selected variable
-          * to zero is hopefully leading to a feasible solution
-          */
-         if( posuse > neguse )
-         {
-            CHECK_OKAY( SCIPgetNegatedVar(scip, var, &branchcands[j]) );
-         }
-         else
-            branchcands[j] = var;
-         usescores[j] = usescore;
-         nbranchcands++;
-      }
-   }
-   assert(nbranchcands <= nlpcands);
-
-   /* if none of the fractional variables is member of a logic or constraint,
-    * we are not responsible for doing the branching
-    */
-   if( nbranchcands > 0 )
-   {
-      /* select the first variables from the sorted candidate list, until MAXBRANCHWEIGHT is reached;
-       * then choose one less
-       */
-      branchweight = 0.0;
-      solval = 0.0;
-      for( nselcands = 0; nselcands < nbranchcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
-      {
-         solval = SCIPgetVarSol(scip, branchcands[nselcands]);
-         assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
-         branchweight += solval;
-      }
-      assert(nselcands > 0);
-      nselcands--;
-      branchweight -= solval;
-
-      /* check, if we accumulated at least MIN and at most MAXBRANCHWEIGHT weight */
-      if( MINBRANCHWEIGHT <= branchweight && branchweight <= MAXBRANCHWEIGHT )
-      {
-         NODE* node;
-
-         /* perform the binary set branching on the selected variables */
-         assert(nselcands <= nlpcands);
-         
-         /* create left child, fix x_i = 0 for all i \in S */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
-         for( i = 0; i < nselcands; ++i )
-         {
-            CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
-         }
-
-         /* create right child: add constraint x(S) >= 1 */
-         CHECK_OKAY( SCIPcreateChild(scip, &node) );
-         if( nselcands == 1 )
-         {
-            /* only one candidate selected: fix it to 1.0 */
-            debugMessage("fixing variable <%s> to 1.0 in right child node\n", SCIPvarGetName(branchcands[0]));
-            CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[0], 1.0) );
-         }
-         else
-         {
-            CONS* newcons;
-            char name[MAXSTRLEN];
-         
-            /* add logic or constraint x(S) >= 1 */
-            sprintf(name, "LOB%lld", SCIPgetNTotalNodes(scip));
-
-            CHECK_OKAY( SCIPcreateConsLogicor(scip, &newcons, name, nselcands, branchcands,
-                  FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
-            CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
-            CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
-         }
-      
-         *result = SCIP_BRANCHED;
-         
-#ifdef DEBUG
-         printf("logic or LP branching: nselcands=%d/%d, weight(S)=%g, S={", nselcands, nlpcands, branchweight);
-         for( i = 0; i < nselcands; ++i )
-            printf(" %s[%g, %g]", SCIPvarGetName(branchcands[i]), usescores[i], SCIPgetSolVal(scip, NULL, branchcands[i]));
-         printf(" }\n");
-#endif
-      }
-   }
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &usescores);
-   SCIPfreeBufferArray(scip, &branchcands);
-
-   return SCIP_OKAY;
-}
-#endif
-
-/** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
- *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1
- *   - create an additional child node x_0 = ... = x_n-1 = 0
- */
-static
-RETCODE branchPseudo(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< logic or constraint handler */
-   RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
-   )
-{
-   CONSHDLRDATA* conshdlrdata;
-   INTARRAY* posvaruses;
-   INTARRAY* negvaruses;
-   VAR** pseudocands;
-   VAR** branchcands;
-   VAR* var;
-   NODE* node;
-   Real* usescores;
-   Real maxvarusefac;
-   Real minvarusefac;
-   Real usescore;
-   int varindex;
-   int npseudocands;
-   int maxnbranchcands;
-   int nbranchcands;
-   int posuse;
-   int neguse;
-   int i;
-   int j;
-
-   /**@todo use a better logic or branching on pseudo solution */
-
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* check, if pseudo branching is disabled */
-   if( conshdlrdata->npseudobranches <= 1 )
-      return SCIP_OKAY;
-
-   /* get fractional variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
-   if( npseudocands == 0 )
-      return SCIP_OKAY;
-
-   posvaruses = conshdlrdata->posvaruses;
-   negvaruses = conshdlrdata->negvaruses;
-   maxvarusefac = conshdlrdata->maxvarusefac;
-   minvarusefac = conshdlrdata->minvarusefac;
-   maxnbranchcands = conshdlrdata->npseudobranches-1;
-   assert(posvaruses != NULL);
-   assert(negvaruses != NULL);
-   assert(maxnbranchcands >= 1);
-
-   /* get temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &branchcands, maxnbranchcands) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &usescores, maxnbranchcands) );
-   
-   /* sort unfixed variables by number of uses in enabled logic or constraints */
-   nbranchcands = 0;
-   for( i = 0; i < npseudocands; ++i )
-   {
-      var = pseudocands[i];
-      varindex = SCIPvarGetIndex(var);
-      posuse = SCIPgetIntarrayVal(scip, posvaruses, varindex);
-      neguse = SCIPgetIntarrayVal(scip, negvaruses, varindex);
-      if( posuse + neguse > 0 )
-      {
-         usescore = maxvarusefac * MAX(posuse, neguse) + minvarusefac * MIN(posuse, neguse);
-         if( nbranchcands < maxnbranchcands || usescore > usescores[nbranchcands-1] )
-         {
-            for( j = MIN(nbranchcands, maxnbranchcands-1); j > 0 && usescore > usescores[j-1]; --j )
-            {
-               branchcands[j] = branchcands[j-1];
-               usescores[j] = usescores[j-1];
-            }
-            assert(0 <= j && j <= nbranchcands && j < maxnbranchcands);
-
-            /* choose between normal and negated variable in branching, such that setting selected variable
-             * to zero is hopefully leading to a feasible solution
-             */
-            if( posuse > neguse )
-            {
-               CHECK_OKAY( SCIPgetNegatedVar(scip, var, &branchcands[j]) );
-            }
-            else
-               branchcands[j] = var;
-            usescores[j] = usescore;
-            if( nbranchcands < maxnbranchcands )
-               nbranchcands++;
-         }
-      }
-   }
-   assert(nbranchcands <= maxnbranchcands);
-
-   /* if none of the unfixed variables is member of a logic or constraint,
-    * we are not responsible for doing the branching
-    */
-   if( nbranchcands > 0 )
-   {
-      /* branch on the first part of the sorted candidates:
-       * - for each of these variables i, create a child node x_0 = ... = x_i-1 = 0, x_i = 1
-       * - create an additional child node x_0 = ... = x_n-1 = 0
-       */
-
-      /* create child with x_0 = ... = x_n-1 = 0 */
-      CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)nbranchcands) );
-      for( i = 0; i < nbranchcands; ++i )
-      {
-         CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[i], 0.0) );
-      }
-
-      /* create children with x_0 = ... = x_i-1 = 0, x_i = 1, i = n-1,...,0 */
-      for( i = nbranchcands-1; i >= 0; --i )
-      {            
-         CHECK_OKAY( SCIPcreateChild(scip, &node, (Real)i) );
-         for( j = 0; j < i; ++j )
-         {
-            CHECK_OKAY( SCIPchgVarUbNode(scip, node, branchcands[j], 0.0) );
-         }
-         CHECK_OKAY( SCIPchgVarLbNode(scip, node, branchcands[i], 1.0) );
-      }
-
-      *result = SCIP_BRANCHED;
-
-#ifdef DEBUG
-      printf("logic or pseudo branching: nbranchcands=%d/%d, S={", nbranchcands, maxnbranchcands);
-      for( i = 0; i < nbranchcands; ++i )
-         printf(" %s [%g]", SCIPvarGetName(branchcands[i]), usescores[i]);
-      printf(" }\n");
-#endif
-   }
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &usescores);
-   SCIPfreeBufferArray(scip, &branchcands);
-
-   return SCIP_OKAY;
-}
-
-
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -1888,7 +1886,7 @@ DECL_CONSRESPROP(consRespropLogicor)
    assert(infervarfound);
 
    /* reduce the age of the constraint, because it was responsible for the conflict */
-   CHECK_OKAY( SCIPaddConsAge(scip, cons, -1.0) );
+   CHECK_OKAY( SCIPaddConsAge(scip, cons, -SCIPconsGetAge(cons)/2.0) );
 
    *result = SCIP_SUCCESS;
 

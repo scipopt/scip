@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.152 2004/10/14 17:05:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.153 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1307,8 +1307,9 @@ void rowAddNorms(
    row->minidx = MIN(row->minidx, col->index);
    row->maxidx = MAX(row->maxidx, col->index);
 
-   /* update squared euclidean norm */
+   /* update squared euclidean norm and sum norm */
    row->sqrnorm += SQR(absval);
+   row->sumnorm += absval;
 
    /* update objective function scalar product */
    row->objprod += val * col->obj;
@@ -1363,9 +1364,11 @@ void rowDelNorms(
    if( updateindex && (col->index == row->minidx || col->index == row->maxidx) )
       row->validminmaxidx = FALSE;
 
-   /* update squared euclidean norm */
+   /* update squared euclidean norm and sum norm */
    row->sqrnorm -= SQR(absval);
    row->sqrnorm = MAX(row->sqrnorm, 0.0);
+   row->sumnorm -= absval;
+   row->sumnorm = MAX(row->sumnorm, 0.0);
 
    /* update objective function scalar product */
    row->objprod -= val * col->obj;
@@ -2464,8 +2467,9 @@ RETCODE SCIPcolChgObj(
       assert(lp->nchgcols > 0);
    }  
 
-   /* update squared euclidean norm of objective function vector */
+   /* update squared euclidean norm and sum norm of objective function vector */
    lp->objsqrnorm += SQR(newobj) - SQR(col->obj);
+   lp->objsumnorm += ABS(newobj) - ABS(col->obj);
 
    /* store new objective function value */
    col->obj = newobj;
@@ -3289,6 +3293,7 @@ void rowCalcNorms(
    assert(set != NULL);
 
    row->sqrnorm = 0.0;
+   row->sumnorm = 0.0;
    row->objprod = 0.0;
    row->maxval = 0.0;
    row->nummaxval = 1;
@@ -3301,7 +3306,7 @@ void rowCalcNorms(
    row->nonlpcolssorted = TRUE;
 
    /* check, if row is sorted
-    * calculate sqrnorm, maxval, minval, minidx, and maxidx
+    * calculate sqrnorm, sumnorm, maxval, minval, minidx, and maxidx
     */
    for( i = 0; i < row->nlpcols; ++i )
    {
@@ -3586,6 +3591,7 @@ RETCODE SCIProwCreate(
    (*row)->flushedlhs = -SCIPsetInfinity(set);
    (*row)->flushedrhs = SCIPsetInfinity(set);
    (*row)->sqrnorm = 0.0;
+   (*row)->sumnorm = 0.0;
    (*row)->objprod = 0.0;
    (*row)->maxval = 0.0;
    (*row)->minval = SCIPsetInfinity(set);
@@ -4774,7 +4780,25 @@ Real SCIProwGetEfficacy(
 
    assert(set != NULL);
 
-   norm = SCIProwGetNorm(row);
+   switch( set->sepa_efficacynorm )
+   {
+   case 'e':
+      norm = SCIProwGetNorm(row);
+      break;
+   case 'm':
+      norm = SCIProwGetMaxval(row, set);
+      break;
+   case 's':
+      norm = SCIProwGetSumNorm(row);
+      break;
+   case 'd':
+      norm = (row->len == 0 ? 0.0 : 1.0);
+      break;
+   default:
+      errorMessage("invalid efficacy norm parameter '%c'\n", set->sepa_efficacynorm);
+      abort();
+   }
+
    norm = MAX(norm, SCIPsetSumepsilon(set));
    feasibility = SCIProwGetLPFeasibility(row, stat, lp);
 
@@ -4999,6 +5023,16 @@ Real SCIProwGetNorm(
    assert(row != NULL);
 
    return sqrt(row->sqrnorm);
+}
+
+/** gets sum norm of row vector (sum of absolute values of coefficients) */
+Real SCIProwGetSumNorm(
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->sumnorm;
 }
 
 /** returns the left hand side of the row */
@@ -6110,6 +6144,7 @@ RETCODE SCIPlpCreate(
    (*lp)->nloosevars = 0;
    (*lp)->cutoffbound = SCIPsetInfinity(set);
    (*lp)->objsqrnorm = 0.0;
+   (*lp)->objsumnorm = 0.0;
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
    (*lp)->lpirowssize = 0;
@@ -6241,8 +6276,9 @@ RETCODE SCIPlpAddCol(
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
 
-   /* update squared euclidean norm of objective function vector */
+   /* update squared euclidean norm and sum norm of objective function vector */
    lp->objsqrnorm += SQR(col->obj);
+   lp->objsumnorm += ABS(col->obj);
 
    /* update column arrays of all linked rows */
    colUpdateAddLP(col);
@@ -6339,9 +6375,11 @@ RETCODE SCIPlpShrinkCols(
          if( col->removeable )
             lp->nremoveablecols--;
 
-         /* update squared euclidean norm of objective function vector */
+         /* update squared euclidean norm and sum norm of objective function vector */
          lp->objsqrnorm -= SQR(col->obj);
          lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+         lp->objsumnorm -= ABS(col->obj);
+         lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
 
          /* update column arrays of all linked rows */
          colUpdateDelLP(col);
@@ -8043,9 +8081,9 @@ RETCODE lpSolve(
       lp->lpsolstat = SCIP_LPSOLSTAT_INFEASIBLE;
       lp->lpobjval = SCIPsetInfinity(set);
    }
-   else if( SCIPlpiIsPrimalUnbounded(lp->lpi) )
+   else if( SCIPlpiHasPrimalRay(lp->lpi) )
    {
-      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDED;
+      lp->lpsolstat = SCIP_LPSOLSTAT_UNBOUNDEDRAY;
       lp->lpobjval = -SCIPsetInfinity(set);
    }
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
@@ -8229,9 +8267,9 @@ RETCODE SCIPlpSolveAndEval(
          debugMessage(" -> LP infeasible\n");
          break;
 
-      case SCIP_LPSOLSTAT_UNBOUNDED:
+      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
          CHECK_OKAY( SCIPlpGetUnboundedSol(lp, memhdr, set, stat) );
-         debugMessage(" -> LP unbounded\n");
+         debugMessage(" -> LP has unbounded primal ray\n");
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
@@ -9150,7 +9188,7 @@ RETCODE SCIPlpGetUnboundedSol(
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->solved);
-   assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDED);
+   assert(lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
    assert(SCIPsetIsInfinity(set, -lp->lpobjval));
    assert(set != NULL);
    assert(stat != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.33 2004/10/12 14:06:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.34 2004/10/19 18:36:36 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -112,6 +112,7 @@ struct Set
                                          *   analysis (-1: use All-FirstUIP rule) */
    int              conf_interclauses;  /**< maximal number of intermediate conflict clauses generated in conflict
                                          *   graph (-1: use every intermediate clause) */
+   Bool             conf_reconvclauses; /**< should reconvergence clauses be created for UIPs of last depth level? */
    Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
    Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
    Bool             conf_usesb;         /**< should infeasible strong branching conflict analysis be used? */
@@ -199,6 +200,8 @@ struct Set
    Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   char             sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
+                                         *   'd'iscrete) */
    int              sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int              sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int              sepa_maxaddrounds;  /**< maximal additional number of separation rounds in subsequent price-and-cut

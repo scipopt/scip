@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.27 2004/10/05 11:01:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.28 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -490,6 +490,12 @@ int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
    );
 
+/** gets the preferred branch direction of the variable (-1: downwards, 0: automatic, +1: upwards) */
+extern
+int SCIPvarGetBranchDirection(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** gets number of variable lower bounds x >= b_i*z_i + d_i of given variable x */
 extern
 int SCIPvarGetNVlbs(
@@ -632,6 +638,7 @@ Real* SCIPvarGetUbimplInferbounds(
 #define SCIPvarGetUbLocal(var)          (var)->locdom.ub
 #define SCIPvarGetBranchFactor(var)     (var)->branchfactor
 #define SCIPvarGetBranchPriority(var)   (var)->branchpriority
+#define SCIPvarGetBranchDirection(var)  (var)->branchdirection
 #define SCIPvarGetNVlbs(var)            ((var)->vlbs != NULL ? (var)->vlbs->len : 0)
 #define SCIPvarGetVlbVars(var)          ((var)->vlbs != NULL ? (var)->vlbs->vars : NULL)
 #define SCIPvarGetVlbCoefs(var)         ((var)->vlbs != NULL ? (var)->vlbs->coefs : NULL)
@@ -900,6 +907,12 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
    BDCHGINFO*       bdchginfo           /**< bound change information */
    );
 
+/** returns whether the bound change has an inference reason (constraint or propagator), that can be resolved */
+extern
+Bool SCIPbdchginfoHasInferenceReason(
+   BDCHGINFO*       bdchginfo           /**< bound change information */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -923,6 +936,9 @@ BOUNDTYPE SCIPbdchginfoGetInferBoundtype(
 #define SCIPbdchginfoGetInferProp(bdchginfo)      (bdchginfo)->inferencedata.reason.prop
 #define SCIPbdchginfoGetInferInfo(bdchginfo)      (bdchginfo)->inferencedata.info
 #define SCIPbdchginfoGetInferBoundtype(bdchginfo) (BOUNDTYPE)((bdchginfo)->inferboundtype)
+#define SCIPbdchginfoHasInferenceReason(bdchginfo)                      \
+   (((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER)          \
+      || ((bdchginfo)->boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && (bdchginfo)->inferencedata.reason.prop != NULL))
 
 #endif
 

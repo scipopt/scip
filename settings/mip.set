@@ -46,6 +46,10 @@ conflict/interclauses = 1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/repropagate = TRUE
 
+# should reconvergence clauses be created for UIPs of last depth level?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/reconvclauses = TRUE
+
 # maximum age an unnecessary constraint can reach before it is deleted, or -1 to keep all constraints
 # [type: int, range: [-1,2147483647], default: 200]
 constraints/agelimit = 200
@@ -261,6 +265,10 @@ separating/minorthoroot = 0.5
 # factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)
 # [type: real, range: [0,1e+98], default: 1]
 separating/orthofac = 1
+
+# row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)
+# [type: char, range: {emsd}, default: e]
+separating/efficacynorm = e
 
 # maximal number of separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -735,8 +743,8 @@ branching/relpscost/initcand = 100
 branching/relpscost/inititer = 0
 
 # maximal number of bound tightenings before the node is reevaluated (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: 5]
-branching/relpscost/maxbdchgs = 5
+# [type: int, range: [-1,2147483647], default: 20]
+branching/relpscost/maxbdchgs = 20
 
 # priority of heuristic <coefdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1001000]
@@ -843,8 +851,8 @@ heuristics/fracdiving/priority = -1002000
 heuristics/fracdiving/freq = 10
 
 # frequency offset for calling primal heuristic <fracdiving>
-# [type: int, range: [0,2147483647], default: 2]
-heuristics/fracdiving/freqofs = 2
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/fracdiving/freqofs = 0
 
 # maximal depth level to call primal heuristic <fracdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1011,8 +1019,8 @@ heuristics/pscostdiving/priority = -1000000
 heuristics/pscostdiving/freq = 10
 
 # frequency offset for calling primal heuristic <pscostdiving>
-# [type: int, range: [0,2147483647], default: 0]
-heuristics/pscostdiving/freqofs = 0
+# [type: int, range: [0,2147483647], default: 2]
+heuristics/pscostdiving/freqofs = 2
 
 # maximal depth level to call primal heuristic <pscostdiving> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]

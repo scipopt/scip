@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.139 2004/10/12 14:06:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.140 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -763,7 +763,8 @@ RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* if the LP is unbounded, we don't need to price */
-      mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
+      mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
       /* if all the variables are already in the LP, we don't need to price */
       mustprice = mustprice && (prob->nvars > SCIPlpGetNCols(lp) || set->nactivepricers > 0);
 
@@ -772,7 +773,7 @@ RETCODE priceAndCutLoop(
       {
          assert(lp->flushed);
          assert(lp->solved);
-         assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
+         assert(SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
          /* price problem variables */
          debugMessage("problem variable pricing\n");
@@ -841,7 +842,7 @@ RETCODE priceAndCutLoop(
          }
 
          /* if the LP is unbounded, we can stop pricing */
-         mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDED);
+         mustprice = mustprice && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
       }
       assert(lp->flushed);
       assert(lp->solved);
@@ -1315,6 +1316,7 @@ RETCODE enforceConstraints(
       assert(!(*propagateagain) || (resolved && *infeasible));
    }
    assert(!objinfeasible || *infeasible);
+
    debugMessage(" -> enforcing result: infeasible=%d, solvelpagain=%d, propagateagain=%d, resolved=%d\n",
       *infeasible, *solvelpagain, *propagateagain, resolved);
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -1522,7 +1524,6 @@ RETCODE solveNode(
       CHECK_OKAY( enforceConstraints(memhdr, set, stat, prob, primal, tree, lp, sepastore, branchcand, eventqueue,
             conshdlrs_enfo, cutoff, &enfoinf, &solvelpagain, &propagateagain, &branched) );
       assert(!(*cutoff) || (enfoinf && !solvelpagain && !propagateagain && !branched));
-      assert(!enfoinf || (*cutoff || solvelpagain || propagateagain || branched));
       assert(!solvelpagain || (!(*cutoff) && enfoinf && !branched));
       assert(!propagateagain || (!(*cutoff) && enfoinf && !branched));
       assert(!branched || (enfoinf && !solvelpagain && !propagateagain));
@@ -1656,6 +1657,7 @@ RETCODE solveNode(
 static
 RETCODE primalHeuristics(
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
@@ -1995,7 +1997,7 @@ RETCODE SCIPsolveCIP(
 
          /* call primal heuristics */
          nnodes = SCIPtreeGetNNodes(tree);
-         CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, &foundsol) );
+         CHECK_OKAY( primalHeuristics(set, stat, primal, tree, nextnode, &foundsol) );
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
@@ -2016,6 +2018,19 @@ RETCODE SCIPsolveCIP(
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    debugMessage("Problem solving finished (stopped=%d, restart=%d)\n", SCIPsolveIsStopped(set, stat), *restart);
+
+   /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
+    * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit
+    * was reached (this may happen, if the current node is the one defining the global lower bound and a
+    * feasible solution with the same value was found at this node)
+    */
+   if( tree->focusnode != NULL && tree->nchildren == 0 && tree->nsiblings == 0
+      && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
+   {
+      focusnode = NULL;
+      CHECK_OKAY( SCIPnodeFocus(&focusnode, memhdr, set, stat, prob, primal, tree, lp, branchcand, 
+            eventfilter, eventqueue, &cutoff) );
+   }
 
    /* free sorted constraint handler arrays */
    freeMemoryArrayNull(&conshdlrs_sepa);

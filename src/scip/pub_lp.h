@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.14 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.15 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  public methods for LP management
@@ -284,6 +284,12 @@ Real SCIProwGetNorm(
    ROW*             row                 /**< LP row */
    );
 
+/** gets sum norm of row vector (sum of absolute values of coefficients) */
+extern
+Real SCIProwGetSumNorm(
+   ROW*             row                 /**< LP row */
+   );
+
 /** returns the left hand side of the row */
 extern
 Real SCIProwGetLhs(
@@ -368,6 +374,7 @@ Bool SCIProwIsInLP(
 #define SCIProwGetVals(row)             (row)->vals
 #define SCIProwGetConstant(row)         (row)->constant
 #define SCIProwGetNorm(row)             sqrt((row)->sqrnorm)
+#define SCIProwGetSumNorm(row)          (row)->sumnorm
 #define SCIProwGetLhs(row)              (row)->lhs
 #define SCIProwGetRhs(row)              (row)->rhs
 #define SCIProwGetDualsol(row)          ((row)->lppos >= 0 ? (row)->dualsol : 0.0)

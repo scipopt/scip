@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.35 2004/10/14 17:05:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.36 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -66,6 +66,125 @@ struct SepaData
 
 
 /*
+ * local methods
+ */
+
+/** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm */
+static
+RETCODE storeCutInArrays(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of problem variables */
+   VAR**            vars,               /**< problem variables */
+   Real*            cutcoefs,           /**< dense coefficient vector */
+   Real*            varsolvals,         /**< dense variable LP solution vector */
+   char             normtype,           /**< type of norm to use for efficacy norm calculation */
+   COL**            cutcols,            /**< array to store columns of sparse cut vector */
+   Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
+   int*             cutlen,             /**< pointer to store number of nonzero entries in cut */
+   Real*            cutact,             /**< pointer to store activity of cut */
+   Real*            cutnorm             /**< pointer to store norm of cut vector */
+   )
+{
+   Real val;
+   Real absval;
+   Real cutsqrnorm;
+   Real act;
+   Real norm;
+   int len;
+   int v;
+
+   assert(nvars == 0 || cutcoefs != NULL);
+   assert(nvars == 0 || varsolvals != NULL);
+   assert(cutcols != NULL);
+   assert(cutvals != NULL);
+   assert(cutlen != NULL);
+   assert(cutact != NULL);
+   assert(cutnorm != NULL);
+
+   len = 0;
+   act = 0.0;
+   norm = 0.0;
+   switch( normtype )
+   {
+   case 'e':
+      cutsqrnorm = 0.0;
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            cutsqrnorm += SQR(val);
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      norm = SQRT(cutsqrnorm);
+      break;
+   case 'm':
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            absval = ABS(val);
+            norm = MAX(norm, absval);
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      break;
+   case 's':
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            norm += ABS(val);
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      break;
+   case 'd':
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            norm = 1.0;
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      break;
+   default:
+      errorMessage("invalid efficacy norm parameter '%c'\n", normtype);
+      return SCIP_INVALIDDATA;
+   }
+
+   *cutlen = len;
+   *cutact = act;
+   *cutnorm = norm;
+
+   return SCIP_OKAY;
+}
+
+
+
+
+/*
  * Callback methods
  */
 
@@ -96,9 +215,9 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    VAR** vars;
    COL** cols;
    ROW** rows;
-   Real* varsol;
+   Real* varsolvals;
    Real* binvrow;
-   Real* cutcoef;
+   Real* cutcoefs;
    Real cutrhs;
    Real cutact;
    Real maxscale;
@@ -116,6 +235,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    int i;
    Bool success;
    Bool cutislocal;
+   char normtype;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -148,6 +268,9 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
+   /* get the type of norm to use for efficacy calculations */
+   CHECK_OKAY( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
+
    /* set the maximal denominator in rational representation of gomory cut and the maximal scale factor to
     * scale resulting cut to integral values to avoid numerical instabilities
     */
@@ -177,10 +300,10 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    *result = SCIP_DIDNOTFIND;
 
    /* allocate temporary memory */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &cutcoef, nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &basisind, nrows) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &binvrow, nrows) );
-   varsol = NULL; /* allocate this later, if needed */
+   varsolvals = NULL; /* allocate this later, if needed */
 
    /* get basis indices */
    CHECK_OKAY( SCIPgetLPBasisInd(scip, basisind) );
@@ -221,7 +344,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
                CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
-                     binvrow, 1.0, cutcoef, &cutrhs, &cutact, &success, &cutislocal) );
+                     binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
                assert(ALLOWLOCAL || !cutislocal);
                debugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
@@ -230,46 +353,31 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                {
                   COL** cutcols;
                   Real* cutvals;
-                  Real cutsqrnorm;
                   Real cutnorm;
-                  Real val;
+                  Real cutact;
                   int cutlen;
-                  int v;
 
                   /* if this is the first successful cut, get the LP solution for all COLUMN variables */
-                  if( varsol == NULL )
+                  if( varsolvals == NULL )
                   {
-                     CHECK_OKAY( SCIPallocBufferArray(scip, &varsol, nvars) );
+                     int v;
+
+                     CHECK_OKAY( SCIPallocBufferArray(scip, &varsolvals, nvars) );
                      for( v = 0; v < nvars; ++v )
                      {
                         if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN )
-                           varsol[v] = SCIPvarGetLPSol(vars[v]);
+                           varsolvals[v] = SCIPvarGetLPSol(vars[v]);
                      }
                   }
-                  assert(varsol != NULL);
+                  assert(varsolvals != NULL);
 
                   /* get temporary memory for storing the cut as sparse row */
                   CHECK_OKAY( SCIPallocBufferArray(scip, &cutcols, nvars) );
                   CHECK_OKAY( SCIPallocBufferArray(scip, &cutvals, nvars) );
 
-                  /* store the cut as sparse row, calculate activity of cut */
-                  cutlen = 0;
-                  cutact = 0.0;
-                  cutsqrnorm = 0.0;
-                  for( v = 0; v < nvars; ++v )
-                  {
-                     val = cutcoef[v];
-                     if( !SCIPisZero(scip, val) )
-                     {
-                        assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
-                        cutact += val * varsol[v];
-                        cutsqrnorm += SQR(val);
-                        cutcols[cutlen] = SCIPvarGetCol(vars[v]);
-                        cutvals[cutlen] = val;
-                        cutlen++;
-                     }
-                  }
-                  cutnorm = SQRT(cutsqrnorm);
+                  /* store the cut as sparse row, calculate activity and norm of cut */
+                  CHECK_OKAY( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
+                        cutcols, cutvals, &cutlen, &cutact, &cutnorm) );
 
                   debugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      SCIPvarGetName(var), cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
@@ -335,10 +443,10 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    }
 
    /* free temporary memory */
-   SCIPfreeBufferArrayNull(scip, &varsol);
+   SCIPfreeBufferArrayNull(scip, &varsolvals);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisind);
-   SCIPfreeBufferArray(scip, &cutcoef);
+   SCIPfreeBufferArray(scip, &cutcoefs);
 
    debugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
 

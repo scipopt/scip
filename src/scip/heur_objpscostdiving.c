@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.9 2004/09/07 18:22:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.10 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -242,7 +242,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DELAYED;
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -251,6 +251,8 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* don't dive two times at the same node */
    if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) )
       return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
@@ -267,7 +269,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    nlpiterations = SCIPgetNLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * MAX(nlpiterations, 1000);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )

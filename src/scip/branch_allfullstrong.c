@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.10 2004/10/05 11:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.11 2004/10/19 18:36:31 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -295,6 +295,8 @@ RETCODE branch(
       Real ub;
       Real newlb;
       Real newub;
+      Real downprio;
+      int direction;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestpseudocand && bestpseudocand < npseudocands);
@@ -305,6 +307,8 @@ RETCODE branch(
       rootsolval = SCIPvarGetRootSol(var);
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
+      direction = SCIPvarGetBranchDirection(var);
+      downprio = (direction == 0 ? rootsolval - solval : -direction);
       
       /* perform the branching */
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s>[%g,%g] (solval=%g, down=%g, up=%g, score=%g)\n",
@@ -315,7 +319,7 @@ RETCODE branch(
       if( newub >= lb - 0.5 )
       {
          debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), newub);
-         CHECK_OKAY( SCIPcreateChild(scip, &node, rootsolval - solval) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
          CHECK_OKAY( SCIPchgVarUbNode(scip, node, var, newub) );
          if( allcolsinlp && !exactsolve )
          {
@@ -330,7 +334,7 @@ RETCODE branch(
          assert(solval > lb + 0.5 || solval < ub - 0.5); /* otherwise, the variable is already fixed */
 
          debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), solval);
-         CHECK_OKAY( SCIPcreateChild(scip, &node, SCIPinfinity(scip)) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, direction == 0 ? SCIPinfinity(scip) : 0.0) );
          if( solval > lb + 0.5 )
          {
             CHECK_OKAY( SCIPchgVarLbNode(scip, node, var, solval) );
@@ -351,7 +355,7 @@ RETCODE branch(
       if( newlb <= ub + 0.5 )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), newlb);
-         CHECK_OKAY( SCIPcreateChild(scip, &node, solval - rootsolval) );
+         CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
          CHECK_OKAY( SCIPchgVarLbNode(scip, node, var, newlb) );
          if( allcolsinlp && !exactsolve )
          {

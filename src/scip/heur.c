@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.37 2004/10/12 14:06:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.38 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -58,6 +58,8 @@ DECL_SORTPTRCOMP(SCIPheurComp)
       return +1;                                /* prefer delayed heuristics */
    else if( heur2->delaypos == -1 )
       return -1;                                /* prefer delayed heuristics */
+   else if( heur1->ncalls * heur1->freq != heur2->ncalls * heur2->freq )
+      return heur1->ncalls * heur1->freq - heur2->ncalls * heur2->freq;
    else
       return heur1->delaypos - heur2->delaypos; /* prefer lower delay positions */
 }
@@ -308,14 +310,7 @@ RETCODE SCIPheurExec(
       if( plunging && !heur->duringplunging && depth > 0 )
       {
          /* the heuristic should be delayed until plunging is finished */
-         debugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
-            heur->name, depth, *ndelayedheurs);
-         if( heur->delaypos != *ndelayedheurs )
-         {
-            heur->delaypos = *ndelayedheurs;
-            set->heurssorted = FALSE;
-         }
-         (*ndelayedheurs)++;
+         *result = SCIP_DELAYED;
       }
       else
       {
@@ -337,26 +332,34 @@ RETCODE SCIPheurExec(
          /* evaluate result */
          if( *result != SCIP_FOUNDSOL
             && *result != SCIP_DIDNOTFIND
-            && *result != SCIP_DIDNOTRUN )
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
          {
             errorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
                heur->name, *result);
             return SCIP_INVALIDRESULT;
          }
-         if( *result != SCIP_DIDNOTRUN )
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
             heur->ncalls++;
-
          heur->nsolsfound += primal->nsolsfound - oldnsolsfound;
-         if( heur->delaypos != -1 )
+
+         /* update delay position of heuristic */
+         if( *result != SCIP_DELAYED && heur->delaypos != -1 )
          {
             heur->delaypos = -1;
             set->heurssorted = FALSE;
          }
       }
    }
-   else if( heur->delaypos != -1 )
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || heur->delaypos == -1);
+
+   /* check if the heuristic was (still) delayed */
+   if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      /* keep the heuristic delayed */
+      debugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
+         heur->name, depth, *ndelayedheurs);
+
+      /* mark the heuristic delayed */
       if( heur->delaypos != *ndelayedheurs )
       {
          heur->delaypos = *ndelayedheurs;

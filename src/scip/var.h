@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.76 2004/09/23 15:46:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.77 2004/10/19 18:36:37 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -576,8 +576,16 @@ void SCIPvarChgBranchFactor(
 extern
 void SCIPvarChgBranchPriority(
    VAR*             var,                /**< problem variable */
-   SET*             set,                /**< global SCIP settings */
    int              branchpriority      /**< branching priority of the variable */
+   );
+
+/** sets the branch direction of the variable; variables with higher branch direction are always prefered to variables
+ *  with lower direction in selection of branching variable
+ */
+extern
+void SCIPvarChgBranchDirection(
+   VAR*             var,                /**< problem variable */
+   int              branchdirection     /**< branching direction of the variable */
    );
 
 /** gets objective value of variable in current LP; the value can be different from the bound stored in the variable's own

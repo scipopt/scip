@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.8 2004/06/08 20:55:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.9 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -131,6 +131,8 @@ public:
     *  - SCIP_FOUNDSOL   : at least one feasible primal solution was found
     *  - SCIP_DIDNOTFIND : the heuristic searched, but did not find a feasible solution
     *  - SCIP_DIDNOTRUN  : the heuristic was skipped
+    *  - SCIP_DELAYED    : the heuristic was skipped, but should be called again as soon as possible, disregarding
+    *                      its frequency
     */
    virtual RETCODE scip_exec(
       SCIP*         scip,               /**< SCIP data structure */

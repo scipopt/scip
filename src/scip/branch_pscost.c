@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.1 2004/10/05 11:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.2 2004/10/19 18:36:32 bzfpfend Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -73,8 +73,10 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
    Real bestrootdiff;
    Real rootsolval;
    Real rootdiff;
+   Real downprio;
    int nlpcands;
    int bestcand;
+   int direction;
    int c;
 
    assert(branchrule != NULL);
@@ -110,19 +112,21 @@ DECL_BRANCHEXECLP(branchExeclpPscost)
 
    /* perform the branching */
    rootsolval = SCIPvarGetRootSol(lpcands[bestcand]);
+   direction = SCIPvarGetBranchDirection(lpcands[bestcand]);
+   downprio = (direction == 0 ? rootsolval - lpcandssol[bestcand] : -direction);
    debugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, rootval=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], rootsolval);
 
    /* create child node with x <= floor(x') */
    debugMessage(" -> creating child: <%s> <= %g\n",
       SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
-   CHECK_OKAY( SCIPcreateChild(scip, &node, rootsolval - lpcandssol[bestcand]) );
+   CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
    CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       
    /* create child node with x >= ceil(x') */
    debugMessage(" -> creating child: <%s> >= %g\n", 
       SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
-   CHECK_OKAY( SCIPcreateChild(scip, &node, lpcandssol[bestcand] - rootsolval) );
+   CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
    CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
 
    *result = SCIP_BRANCHED;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.116 2004/10/12 14:06:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.117 2004/10/19 18:36:36 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -567,6 +567,8 @@ RETCODE nodeAssignParent(
       CHECK_OKAY( treeAddChild(tree, set, node, nodeselprio) );
    }
 
+   node->priority = nodeselprio;
+
    return SCIP_OKAY;
 }
 
@@ -671,6 +673,7 @@ RETCODE nodeCreate(
    (*node)->conssetchg = NULL;
    (*node)->domchg = NULL;
    (*node)->lowerbound = -SCIPsetInfinity(set);
+   (*node)->priority = 0.0;
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -1498,6 +1501,16 @@ Real SCIPnodeGetLowerbound(
    assert(node != NULL);
 
    return node->lowerbound;
+}
+
+/** gets the node selection priority of the node assigned by the branching rule */
+Real SCIPnodeGetPriority(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->priority;
 }
 
 /** returns whether node is in the path to the current node */
@@ -3149,6 +3162,8 @@ RETCODE SCIPtreeBranchVar(
    NODE* node;
    Real solval;
    Real rootsolval;
+   Real downprio;
+   int direction;
 
    assert(tree != NULL);
    assert(set != NULL);
@@ -3176,7 +3191,10 @@ RETCODE SCIPtreeBranchVar(
    rootsolval = SCIPvarGetRootSol(var);
    assert(SCIPsetIsGE(set, solval, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
-   
+
+   direction = SCIPvarGetBranchDirection(var);
+   downprio = (direction == 0 ? rootsolval - solval : -direction);
+
    if( SCIPsetIsIntegral(set, solval) )
    {
       Real fixval;
@@ -3195,7 +3213,7 @@ RETCODE SCIPtreeBranchVar(
       if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), fixval-1);
-         CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, rootsolval - solval) );
+         CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, downprio) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                var, fixval-1, SCIP_BOUNDTYPE_UPPER, FALSE) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -3203,7 +3221,7 @@ RETCODE SCIPtreeBranchVar(
                   
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, SCIPsetInfinity(set)) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, direction == 0 ? SCIPsetInfinity(set) : 0.0) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
@@ -3220,7 +3238,7 @@ RETCODE SCIPtreeBranchVar(
       if( SCIPsetIsLE(set, fixval+1, SCIPvarGetUbLocal(var)) )
       {
          debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), fixval+1);
-         CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, solval - rootsolval) );
+         CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, -downprio) );
          CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                var, fixval+1, SCIP_BOUNDTYPE_LOWER, FALSE) );
          debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
@@ -3237,14 +3255,14 @@ RETCODE SCIPtreeBranchVar(
       
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n", SCIPvarGetName(var), SCIPsetFloor(set, solval));
-      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, rootsolval - solval) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, downprio) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
             var, SCIPsetFloor(set, solval), SCIP_BOUNDTYPE_UPPER, FALSE) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", SCIPvarGetName(var), SCIPsetCeil(set, solval));
-      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, solval - rootsolval) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, memhdr, set, stat, tree, -downprio) );
       CHECK_OKAY( SCIPnodeAddBoundchg(node, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
                      var, SCIPsetCeil(set, solval), SCIP_BOUNDTYPE_LOWER, FALSE) );
       debugMessage(" -> child's lowerbound: %g\n", node->lowerbound);

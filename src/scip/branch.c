@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.52 2004/10/05 16:08:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.53 2004/10/19 18:36:31 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -160,7 +160,7 @@ RETCODE branchcandCalcLPCands(
    assert(branchcand->validlpcandslp <= stat->lpcount);
    assert(lp != NULL);
    assert(lp->solved);
-   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDED);
+   assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
    debugMessage("calculating LP branching candidates: validlp=%d, lpcount=%d\n",
       branchcand->validlpcandslp, stat->lpcount);
@@ -1443,7 +1443,7 @@ RETCODE SCIPbranchExecPseudo(
       int bestpriority;
       int bestcand;
 
-      /* no branching method succeeded in choosing a branching: just branch on the first fractional variable with maximal
+      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable with maximal
        * priority, and out of these on the one with maximal branch factor
        */
       bestcand = -1;

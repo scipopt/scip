@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.7 2004/09/21 12:08:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.8 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -69,6 +69,12 @@ Real SCIPnodeGetLowerbound(
    NODE*            node                /**< node */
    );
 
+/** gets the node selection priority of the node assigned by the branching rule */
+extern
+Real SCIPnodeGetPriority(
+   NODE*            node                /**< node */
+   );
+
 /** returns whether node is in the path to the current node */
 extern
 Bool SCIPnodeIsActive(
@@ -90,6 +96,7 @@ Bool SCIPnodeIsPropagatedAgain(
 #define SCIPnodeGetType(node)           ((node)->nodetype)
 #define SCIPnodeGetDepth(node)          ((node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
+#define SCIPnodeGetPriority(node)       ((node)->priority)
 #define SCIPnodeIsActive(node)          ((node)->active)
 #define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_result.h,v 1.3 2004/03/12 08:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_result.h,v 1.4 2004/10/19 18:36:36 bzfpfend Exp $"
 
 /**@file   type_result.h
  * @brief  result codes for SCIP callback methods
@@ -30,19 +30,20 @@
 enum Result
 {
    SCIP_DIDNOTRUN   =   1,            /**< the method was not executed */
-   SCIP_DIDNOTFIND  =   2,            /**< the method was executed, but failed finding anything */
-   SCIP_FEASIBLE    =   3,            /**< no infeasibility could be found */
-   SCIP_INFEASIBLE  =   4,            /**< an infeasibility was detected */
-   SCIP_UNBOUNDED   =   5,            /**< an unboundness was detected */
-   SCIP_CUTOFF      =   6,            /**< the current node is infeasible and can be cut off */
-   SCIP_SEPARATED   =   7,            /**< the method added a cutting plane */
-   SCIP_REDUCEDDOM  =   8,            /**< the method reduced the domain of a variable */
-   SCIP_CONSADDED   =   9,            /**< the method added a constraint */
-   SCIP_CONSCHANGED =  10,            /**< the method changed a constraint */
-   SCIP_BRANCHED    =  11,            /**< the method created a branching */
-   SCIP_SOLVELP     =  12,            /**< the current node's LP must be solved */
-   SCIP_FOUNDSOL    =  13,            /**< the method found a feasible primal solution */
-   SCIP_SUCCESS     =  14             /**< the method was successfully executed */  
+   SCIP_DELAYED     =   2,            /**< the method was not executed, but should be called again later */
+   SCIP_DIDNOTFIND  =   3,            /**< the method was executed, but failed finding anything */
+   SCIP_FEASIBLE    =   4,            /**< no infeasibility could be found */
+   SCIP_INFEASIBLE  =   5,            /**< an infeasibility was detected */
+   SCIP_UNBOUNDED   =   6,            /**< an unboundness was detected */
+   SCIP_CUTOFF      =   7,            /**< the current node is infeasible and can be cut off */
+   SCIP_SEPARATED   =   8,            /**< the method added a cutting plane */
+   SCIP_REDUCEDDOM  =   9,            /**< the method reduced the domain of a variable */
+   SCIP_CONSADDED   =  10,            /**< the method added a constraint */
+   SCIP_CONSCHANGED =  11,            /**< the method changed a constraint */
+   SCIP_BRANCHED    =  12,            /**< the method created a branching */
+   SCIP_SOLVELP     =  13,            /**< the current node's LP must be solved */
+   SCIP_FOUNDSOL    =  14,            /**< the method found a feasible primal solution */
+   SCIP_SUCCESS     =  15             /**< the method was successfully executed */  
 };
 typedef enum Result RESULT;           /**< result codes for SCIP callback methods */
 

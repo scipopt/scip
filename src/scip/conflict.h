@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.21 2004/09/23 15:46:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.22 2004/10/19 18:36:32 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -170,15 +170,27 @@ Longint SCIPconflictGetNPropCalls(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of valid conflicts detected in propagation conflict analysis */
+/** gets number of conflict clauses detected in propagation conflict analysis */
 extern
-Longint SCIPconflictGetNPropConflicts(
+Longint SCIPconflictGetNPropConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets total number of literals in conflict clauses created in propagation conflict analysis */
 extern
 Longint SCIPconflictGetNPropConflictLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of reconvergence clauses detected in propagation conflict analysis */
+extern
+Longint SCIPconflictGetNPropReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of literals in reconvergence clauses created in propagation conflict analysis */
+extern
+Longint SCIPconflictGetNPropReconvergenceLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -219,15 +231,27 @@ Longint SCIPconflictGetNLPCalls(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of valid conflicts detected in infeasible LP conflict analysis */
+/** gets number of conflict clauses detected in infeasible LP conflict analysis */
 extern
-Longint SCIPconflictGetNLPConflicts(
+Longint SCIPconflictGetNLPConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in conflict clauses detected in infeasible LP conflict analysis */
+/** gets total number of literals in conflict clauses created in infeasible LP conflict analysis */
 extern
 Longint SCIPconflictGetNLPConflictLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of reconvergence clauses detected in infeasible LP conflict analysis */
+extern
+Longint SCIPconflictGetNLPReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of literals in reconvergence clauses created in infeasible LP conflict analysis */
+extern
+Longint SCIPconflictGetNLPReconvergenceLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -273,15 +297,27 @@ Longint SCIPconflictGetNStrongbranchCalls(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of valid conflicts detected in infeasible strong branching conflict analysis */
+/** gets number of conflict clauses detected in infeasible strong branching conflict analysis */
 extern
-Longint SCIPconflictGetNStrongbranchConflicts(
+Longint SCIPconflictGetNStrongbranchConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in conflict clauses detected in infeasible strong branching conflict analysis */
+/** gets total number of literals in conflict clauses created in infeasible strong branching conflict analysis */
 extern
 Longint SCIPconflictGetNStrongbranchConflictLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of reconvergence clauses detected in infeasible strong branching conflict analysis */
+extern
+Longint SCIPconflictGetNStrongbranchReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of literals in reconvergence clauses created in infeasible strong branching conflict analysis */
+extern
+Longint SCIPconflictGetNStrongbranchReconvergenceLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
@@ -328,15 +364,27 @@ Longint SCIPconflictGetNPseudoCalls(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of valid conflicts detected in pseudo solution conflict analysis */
+/** gets number of conflict clauses detected in pseudo solution conflict analysis */
 extern
-Longint SCIPconflictGetNPseudoConflicts(
+Longint SCIPconflictGetNPseudoConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets total number of literals in conflict clauses detected in pseudo solution conflict analysis */
+/** gets total number of literals in conflict clauses created in pseudo solution conflict analysis */
 extern
 Longint SCIPconflictGetNPseudoConflictLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of reconvergence clauses detected in pseudo solution conflict analysis */
+extern
+Longint SCIPconflictGetNPseudoReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets total number of literals in reconvergence clauses created in pseudo solution conflict analysis */
+extern
+Longint SCIPconflictGetNPseudoReconvergenceLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    );
 

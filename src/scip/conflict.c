@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.65 2004/10/13 17:41:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.66 2004/10/19 18:36:32 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -61,7 +61,8 @@
  *            final conflict set must consist of only binary variables.
  *          - Otherwise, put the binary variable that was changed, or the negation of it
  *            into the conflict set, depending on which of them is currently fixed to
- *            FALSE.
+ *            FALSE (i.e., the conflict set consists of literals that cannot be FALSE
+ *            altogether at the same time).
  *            Note that if the bound change was a branching, all deduced bound changes
  *            remaining in the priority queue have smaller inference depth level than b,
  *            since deductions are always applied after the branching decisions. However,
@@ -77,10 +78,14 @@
  *     a corresponding constraint (e.g. a logicor constraint) out of these conflict
  *     variables and add it to the problem.
  *
- * If all deduced bound changes come with (global) inference information, the resulting
- * conflict set has the property, that for each depth level at most one variable
- * assigned at that level is member of the conflict set. This conflict variable
- * is the first unique implication point of its depth level (FUIP).
+ * If all deduced bound changes come with (global) inference information, depending on
+ * the conflict analyzing strategy, the resulting conflict set has the following property:
+ *  - 1-FirstUIP: In the depth level where the conflict was found, at most one variable
+ *    assigned at that level is member of the conflict set. This conflict variable is the
+ *    first unique implication point of its depth level (FUIP).
+ *  - All-FirstUIP: For each depth level, at most one variable assigned at that level is
+ *    member of the conflict set. This conflict variable is the first unique implication
+ *    point of its depth level (FUIP).
  *
  * The user has to do the following to get the conflict analysis running in its
  * current implementation:
@@ -418,6 +423,7 @@ RETCODE conflictAddConflictVar(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable that should enter the conflict set */
+   Bool             literalvalue,       /**< current value of the literal, that should enter the conflict set */
    Bool             temporary           /**< should the variable be added only temporary to the conflict set? */
    )
 {
@@ -439,17 +445,17 @@ RETCODE conflictAddConflictVar(
       fixdepth = INT_MAX;
    }
 
-   /* choose between variable or its negation, such that the literal is fixed to FALSE */
-   if( SCIPvarGetLbLP(var) > 0.5 )
+   /* choose variable or its negation, such that the literal is currently fixed to the desired value */
+   if( (SCIPvarGetLbLP(var) > 0.5) != literalvalue )
    {
-      /* variable is fixed to TRUE -> use the negation */
+      /* variable is fixed to the opposite value -> use the negated variable as conflict literal */
       CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
    }
    assert(SCIPsetIsEQ(set, SCIPvarGetLbLP(var), SCIPvarGetUbLP(var)));
-   assert(SCIPsetIsZero(set, SCIPvarGetLbLP(var)));
+   assert((SCIPvarGetLbLP(var) > 0.5) == literalvalue);
 
-   debugMessage("putting variable <%s> fixed at depth %d to conflict set (temporary: %d)\n",
-      SCIPvarGetName(var), fixdepth, temporary);
+   debugMessage("putting variable <%s> fixed to %d at depth %d to conflict set (temporary: %d)\n",
+      SCIPvarGetName(var), (SCIPvarGetLbLP(var) > 0.5), fixdepth, temporary);
 
    if( var->conflictsetcount == conflict->count )
    {
@@ -698,19 +704,27 @@ RETCODE SCIPconflictCreate(
    (*conflict)->ntmpconflictvars = 0;
    (*conflict)->count = 0;
    (*conflict)->npropcalls = 0;
-   (*conflict)->npropconflicts = 0;
-   (*conflict)->npropconflictlits = 0;
+   (*conflict)->npropconfclauses = 0;
+   (*conflict)->npropconfliterals = 0;
+   (*conflict)->npropreconvclauses = 0;
+   (*conflict)->npropreconvliterals = 0;
    (*conflict)->nlpcalls = 0;
-   (*conflict)->nlpconflicts = 0;
-   (*conflict)->nlpconflictlits = 0;
+   (*conflict)->nlpconfclauses = 0;
+   (*conflict)->nlpconfliterals = 0;
+   (*conflict)->nlpreconvclauses = 0;
+   (*conflict)->nlpreconvliterals = 0;
    (*conflict)->nlpiterations = 0;
    (*conflict)->nsbcalls = 0;
-   (*conflict)->nsbconflicts = 0;
-   (*conflict)->nsbconflictlits = 0;
+   (*conflict)->nsbconfclauses = 0;
+   (*conflict)->nsbconfliterals = 0;
+   (*conflict)->nsbreconvclauses = 0;
+   (*conflict)->nsbreconvliterals = 0;
    (*conflict)->nsbiterations = 0;
    (*conflict)->npseudocalls = 0;
-   (*conflict)->npseudoconflicts = 0;
-   (*conflict)->npseudoconflictlits = 0;
+   (*conflict)->npseudoconfclauses = 0;
+   (*conflict)->npseudoconfliterals = 0;
+   (*conflict)->npseudoreconvclauses = 0;
+   (*conflict)->npseudoreconvliterals = 0;
 
    return SCIP_OKAY;
 }
@@ -899,7 +913,7 @@ RETCODE conflictAddClause(
    TREE*            tree,               /**< branch and bound tree */
    int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    Bool*            success,            /**< pointer to store whether the conflict set is valid */
-   int*             nliterals           /**< pointer to store the number of literals in a valid conflict set */
+   int*             nliterals           /**< pointer to store the number of literals in the generated clause */
    )
 {
    BDCHGINFO** bdchginfos;
@@ -933,7 +947,7 @@ RETCODE conflictAddClause(
    debugMessage("adding %d variables from the queue as temporary conflict variables\n", nbdchginfos);
    for( i = 0; i < nbdchginfos; ++i )
    {
-      CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, SCIPbdchginfoGetVar(bdchginfos[i]), TRUE) );
+      CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, SCIPbdchginfoGetVar(bdchginfos[i]), FALSE, TRUE) );
    }
 
 #ifndef NDEBUG
@@ -1088,6 +1102,350 @@ RETCODE conflictAddClause(
    return SCIP_OKAY;
 }
 
+/** tries to resolve given bound change
+ *   - bound changes on non-binary variables are resolved in any case, but if this is done with a
+ *     locally valid constraint, the valid depth level of the conflict set is updated
+ *   - binary resolutions on local constraints are only be applied, if the constraint is valid at the 
+ *     current minimal valid depth level, because this depth level is the topmost level to add the conflict
+ *     clause to anyways
+ */
+static
+RETCODE conflictResolveBound(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   BDCHGINFO*       bdchginfo,          /**< bound change to resolve */
+   int*             validdepth,         /**< pointer to update the minimal depth level at which the conflict is valid */
+   Bool*            resolved            /**< pointer to store whether the bound change was resolved */
+   )
+{
+   VAR* actvar;
+   CONS* infercons;
+   PROP* inferprop;
+   RESULT result;
+
+   assert(conflict != NULL);
+   assert(validdepth != NULL);
+   assert(resolved != NULL);
+
+   *resolved = FALSE;
+
+   actvar = SCIPbdchginfoGetVar(bdchginfo);
+   assert(actvar != NULL);
+   assert(SCIPvarIsActive(actvar));
+
+#ifdef DEBUG
+   {
+      int v;
+         
+      debugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s, vartype: %d): [<%s> %s %g]\n",
+         SCIPbdchginfoGetDepth(bdchginfo), *validdepth,
+         SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
+         : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER ? "cons" : "prop",
+         SCIPvarGetType(actvar), SCIPvarGetName(actvar), 
+         SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+         SCIPbdchginfoGetNewbound(bdchginfo));
+      debugMessage(" - conflict set             :");
+      for( v = 0; v < conflict->nconflictvars; ++v )
+         printf(" <%s>[%d]", SCIPvarGetName(conflict->conflictvars[v]), conflict->conflictvardepths[v]);
+      printf("\n");
+      debugMessage(" - candidate queue (non-bin):");
+      for( v = 0; v < SCIPpqueueNElems(conflict->nonbinbdchgqueue); ++v )
+      {
+         BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->nonbinbdchgqueue)[v]);
+         printf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+            SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(info));
+      }
+      printf("\n");
+      debugMessage(" - candidate queue (bin)    :");
+      for( v = 0; v < SCIPpqueueNElems(conflict->binbdchgqueue); ++v )
+      {
+         BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->binbdchgqueue)[v]);
+         printf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+            SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(info));
+      }
+      printf("\n");
+   }
+#endif
+
+   /* check, if the bound change can and should be resolved:
+    *  - bound changes on non-binary variables have to be resolved in any case, but if this is done with a
+    *    locally valid constraint, the valid depth level of the conflict set has to be updated
+    *  - binary resolutions on local constraints should only be applied, if the constraint is valid at the 
+    *    current minimal valid depth level (which is initialized with the valid depth level of the initial 
+    *    conflict set), because this depth level is the topmost level to add the conflict clause to anyways
+    */
+   switch( SCIPbdchginfoGetChgtype(bdchginfo) )
+   {
+   case SCIP_BOUNDCHGTYPE_CONSINFER:
+      infercons = SCIPbdchginfoGetInferCons(bdchginfo);
+      assert(infercons != NULL);
+
+      if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
+         || SCIPconsIsGlobal(infercons)
+         || (SCIPconsIsActive(infercons) && SCIPconsGetActiveDepth(infercons) <= *validdepth) )
+      {
+         VAR* infervar;
+         int inferinfo;
+         BOUNDTYPE inferboundtype;
+         BDCHGIDX* bdchgidx;
+
+         /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
+          * the reasons for the conflicting bound change on the priority queue
+          */
+         infervar = SCIPbdchginfoGetInferVar(bdchginfo);
+         inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
+         inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
+         bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+         assert(infervar != NULL);
+         assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY
+            || SCIPvarGetType(infervar) != SCIP_VARTYPE_BINARY);
+
+         debugMessage("resolving bound <%s> %s %g [status:%d, type:%d, depth:%d, pos:%d]: <%s> %s %g [cons:<%s>(%s), info:%d]\n",
+            SCIPvarGetName(actvar), 
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPvarGetStatus(actvar), SCIPvarGetType(actvar),
+            SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPvarGetName(infervar), 
+            inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPconsGetName(infercons),
+            SCIPconsIsGlobal(infercons) ? "global" : "local",
+            inferinfo);
+                  
+         CHECK_OKAY( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype,
+               bdchgidx, &result) );
+         *resolved = (result == SCIP_SUCCESS);
+         
+         if( *resolved && SCIPconsIsLocal(infercons) )
+            *validdepth = MAX(*validdepth, SCIPconsGetActiveDepth(infercons));
+      }
+      break;
+
+   case SCIP_BOUNDCHGTYPE_PROPINFER:
+      inferprop = SCIPbdchginfoGetInferProp(bdchginfo);
+      if( inferprop != NULL )
+      {
+         VAR* infervar;
+         int inferinfo;
+         BOUNDTYPE inferboundtype;
+         BDCHGIDX* bdchgidx;
+
+         /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
+          * the reasons for the conflicting bound change on the priority queue
+          */
+         infervar = SCIPbdchginfoGetInferVar(bdchginfo);
+         inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
+         inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
+         bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
+         assert(infervar != NULL);
+         assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY
+            || SCIPvarGetType(infervar) != SCIP_VARTYPE_BINARY);
+
+         debugMessage("resolving bound <%s> %s %g [status:%d, depth:%d, pos:%d]: <%s> %s %g [prop:<%s>, info:%d]\n",
+            SCIPvarGetName(actvar), 
+            SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPbdchginfoGetNewbound(bdchginfo),
+            SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
+            SCIPvarGetName(infervar), 
+            inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+            SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
+            SCIPpropGetName(inferprop), inferinfo);
+                  
+         CHECK_OKAY( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype,
+               bdchgidx, &result) );
+         *resolved = (result == SCIP_SUCCESS);
+      }
+      break;
+
+   case SCIP_BOUNDCHGTYPE_BRANCHING:
+      assert(!(*resolved));
+      break;
+
+   default:
+      errorMessage("invalid bound change type <%d>\n", SCIPbdchginfoGetChgtype(bdchginfo));
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** if only one conflicting bound change of the last depth level was used, and if this can be resolved,
+ *  creates GRASP-like reconvergence clauses in the conflict graph up to the branching variable of the depth level
+ */
+static
+RETCODE conflictCreateReconvergenceClauses(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   MEMHDR*          memhdr,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch and bound tree */
+   int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
+   int              maxsize,            /**< maximal size of conflict set */
+   BDCHGINFO*       firstuip,           /**< first UIP of conflict graph */
+   int*             nreconvclauses,     /**< pointer to store the number of generated reconvergence clauses */
+   int*             nreconvliterals     /**< pointer to store the number of literals generated reconvergence clauses */
+   )
+{
+   BDCHGINFO* uip;
+   int firstuipdepth;
+
+   assert(conflict != NULL);
+   assert(firstuip != NULL);
+   assert(nreconvclauses != NULL);
+   assert(nreconvliterals != NULL);
+
+   firstuipdepth = SCIPbdchginfoGetDepth(firstuip);
+
+   /* for each succeeding UIP pair of the last depth level, create one reconvergence clause */
+   uip = firstuip;
+   while( uip != NULL && SCIPbdchginfoGetDepth(uip) == SCIPbdchginfoGetDepth(firstuip) )
+   {
+      BDCHGINFO* bdchginfo;
+      BDCHGINFO* nextuip;
+      VAR* var;
+      int nresolutions;
+
+      debugMessage("creating reconvergence clause for UIP <%s> in depth %d\n", 
+         SCIPvarGetName(SCIPbdchginfoGetVar(uip)), SCIPbdchginfoGetDepth(uip));
+
+      /* initialize conflict data */
+      CHECK_OKAY( SCIPconflictInit(conflict) );
+
+      /* put the variable of first UIP into the conflict set, using the literal that is currently fixed to TRUE */
+      var = SCIPbdchginfoGetVar(uip);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      CHECK_OKAY( SCIPvarNegate(var, memhdr, set, stat, &var) );
+      CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var, TRUE, FALSE) );
+      
+      /* put current UIP into priority queue */
+      CHECK_OKAY( conflictAddBdchginfo(conflict, uip) );
+
+      /* resolve the queue until the next UIP is reached */
+      bdchginfo = conflictFirstCand(conflict);
+      nextuip = NULL;
+      nresolutions = 0;
+      while( bdchginfo != NULL && conflict->nconflictvars < maxsize && validdepth < firstuipdepth )
+      {
+         BDCHGINFO* nextbdchginfo;
+         int bdchgdepth;
+
+         /* remove currently processed candidate and get next conflicting bound from the conflict candidate queue */
+         assert(bdchginfo == conflictFirstCand(conflict));
+         bdchginfo = conflictRemoveCand(conflict);
+         nextbdchginfo = conflictFirstCand(conflict);
+         bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
+         assert(bdchginfo != NULL);
+         assert(nextbdchginfo == NULL
+            || SCIPbdchginfoGetDepth(bdchginfo) >= SCIPbdchginfoGetDepth(nextbdchginfo)
+            || (SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) != SCIP_VARTYPE_BINARY
+               && SCIPvarGetType(SCIPbdchginfoGetVar(nextbdchginfo)) == SCIP_VARTYPE_BINARY));
+         assert(SCIPvarGetType(SCIPbdchginfoGetVar(bdchginfo)) != SCIP_VARTYPE_BINARY || bdchgdepth <= firstuipdepth);
+
+         /* bound changes that are higher in the tree than the valid depth of the conflict can be ignored;
+          * multiple insertions of the same bound change can be ignored
+          */
+         if( bdchgdepth > validdepth && bdchginfo != nextbdchginfo )
+         {
+            VAR* actvar;
+            Bool resolved;
+            
+            actvar = SCIPbdchginfoGetVar(bdchginfo);
+            assert(actvar != NULL);
+            assert(SCIPvarIsActive(actvar));
+            
+            /* check if we have to resolve the bound change in this depth level
+             *  - a bound change on non-binary variables has to be resolved in any case,
+             *  - at least one resolution has to be performed (we have to resolve the starting uip)
+             *  - a bound change on binary variables should be resolved, if it is in the fuip's depth level and not the
+             *    next uip (i.e., if it is not the last bound change in the fuip's depth level)
+             */
+            resolved = FALSE;
+            if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
+               || nresolutions == 0
+               || (bdchgdepth == firstuipdepth
+                  && nextbdchginfo != NULL
+                  && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
+            {
+               CHECK_OKAY( conflictResolveBound(conflict, memhdr, set, stat, tree, bdchginfo, &validdepth, &resolved) );
+            }
+
+            if( resolved )
+               nresolutions++;
+            else if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY )
+            {
+               /* non-binary variables cannot enter the conflict clause: we have to make the reconvergence clause
+                * local, s.t. the unresolved non-binary bound change is active in the whole sub tree of the
+                * reconvergence clause
+                */
+               assert(bdchgdepth >= validdepth);
+               validdepth = bdchgdepth;
+            }
+            else if( bdchginfo != uip )
+            {
+               assert(SCIPsetIsEQ(set, SCIPbdchginfoGetNewbound(bdchginfo), SCIPvarGetLbLP(actvar)));
+               assert(SCIPsetIsEQ(set, SCIPbdchginfoGetNewbound(bdchginfo), SCIPvarGetUbLP(actvar)));
+               assert(SCIPvarGetLbLP(actvar) > 0.5 || SCIPvarGetUbLP(actvar) < 0.5);
+               assert(conflict->nconflictvars >= 1); /* the starting UIP is already member of the conflict set */
+
+               /* if this is the first variable of the conflict set besides the current starting UIP, it is the next
+                * UIP (or the first unresolvable bound change)
+                */
+               if( conflict->nconflictvars == 1 )
+                  nextuip = bdchginfo;
+               
+               /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
+               CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar, FALSE, FALSE) );
+               assert(conflict->nconflictvars >= 2);
+            }
+            else
+               assert(conflictFirstCand(conflict) == NULL); /* the starting UIP was not resolved */
+         }
+
+         /* get next conflicting bound from the conflict candidate queue (this need not to be nextbdchginfo, because
+          * due to resolving the bound changes, a non-binary variable could be added to the queue which must be
+          * resolved before nextbdchginfo
+          */
+         bdchginfo = conflictFirstCand(conflict);
+      }
+      assert(nextuip != uip);
+
+      /* if only one propagation was resolved, the reconvergence clause is already member of the constraint set
+       * (it is exactly the clause that produced the propagation)
+       */
+      if( nextuip != NULL && nresolutions >= 2
+         && bdchginfo == NULL && conflict->nconflictvars < maxsize && validdepth < firstuipdepth )
+      {
+         int nlits;
+         Bool success;
+
+         assert(SCIPbdchginfoGetDepth(nextuip) == SCIPbdchginfoGetDepth(uip));
+         assert(SCIPvarGetType(SCIPbdchginfoGetVar(nextuip)) == SCIP_VARTYPE_BINARY);
+
+         debugMessage("creating reconvergence clause from UIP <%s> to UIP <%s> in depth %d with %d literals after %d resolutions\n", 
+            SCIPvarGetName(SCIPbdchginfoGetVar(uip)), SCIPvarGetName(SCIPbdchginfoGetVar(nextuip)),
+            SCIPbdchginfoGetDepth(uip), conflict->nconflictvars, nresolutions);
+
+         /* call the conflict handlers to create a conflict clause */
+         CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, &success, &nlits) );
+         if( success )
+         {
+            (*nreconvclauses)++;
+            (*nreconvliterals) += nlits;
+         }
+      }
+
+      uip = nextuip;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** analyzes conflicting bound changes that were added with calls to SCIPconflictAddBound(), and on success, calls the
  *  conflict handlers to create a conflict constraint out of the resulting conflict set
  */
@@ -1102,19 +1460,18 @@ RETCODE conflictAnalyze(
    int              maxsize,            /**< maximal size of conflict set */
    Bool             mustresolve,        /**< should the conflict set only be used, if a resolution was applied? */
    int*             nclauses,           /**< pointer to store the number of generated conflict clauses */
-   int*             nliterals           /**< pointer to store the number of literals in a valid conflict set */
+   int*             nliterals,          /**< pointer to store the number of literals in generated conflict clauses */
+   int*             nreconvclauses,     /**< pointer to store the number of generated reconvergence clauses */
+   int*             nreconvliterals     /**< pointer to store the number of literals generated reconvergence clauses */
    )
 {
    BDCHGINFO* bdchginfo;
-   BDCHGINFO* nextbdchginfo;
-   RESULT result;
+   BDCHGINFO* firstuip;
    int currentdepth;
    int resolvedepth;
-   int bdchgdepth;
    int nresolutions;
    int lastclausenresolutions;
    int lastclauseresoldepth;
-   Bool resolved;
 
    assert(conflict != NULL);
    assert(conflict->nconflictvars >= 0);
@@ -1122,6 +1479,8 @@ RETCODE conflictAnalyze(
    assert(0 <= validdepth && validdepth <= SCIPtreeGetCurrentDepth(tree));
    assert(nclauses != NULL);
    assert(nliterals != NULL);
+   assert(nreconvclauses != NULL);
+   assert(nreconvliterals != NULL);
 
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
@@ -1136,6 +1495,8 @@ RETCODE conflictAnalyze(
 
    *nclauses = 0;
    *nliterals = 0;
+   *nreconvclauses = 0;
+   *nreconvliterals = 0;
 
    /* if the conflict set is only valid at the current node and not higher in the tree, no useful conflict clause
     * can be found
@@ -1148,11 +1509,13 @@ RETCODE conflictAnalyze(
    lastclausenresolutions = (mustresolve ? 0 : -1);
    lastclauseresoldepth = (mustresolve ? currentdepth : INT_MAX);
    bdchginfo = conflictFirstCand(conflict);
+   firstuip = NULL;
    while( bdchginfo != NULL && conflict->nconflictvars < maxsize && validdepth < currentdepth )
    {
-      /* resolve next bound change in queue */
-      resolved = FALSE;
+      BDCHGINFO* nextbdchginfo;
+      int bdchgdepth;
 
+      /* resolve next bound change in queue */
       bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
       assert(0 <= bdchgdepth && bdchgdepth <= currentdepth);
       assert(SCIPvarIsActive(SCIPbdchginfoGetVar(bdchginfo)));
@@ -1174,16 +1537,20 @@ RETCODE conflictAnalyze(
          && SCIPpqueueNElems(conflict->nonbinbdchgqueue) == 0
          && bdchgdepth < lastclauseresoldepth )
       {
+         int nlits;
          Bool success;
          
          /* call the conflict handlers to create a conflict clause */
          debugMessage("creating intermediate clause after %d resolutions up to depth %d: %d conflict vars, %d vars in queue\n",
             nresolutions, bdchgdepth, conflict->nconflictvars, SCIPpqueueNElems(conflict->binbdchgqueue));
-         CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, &success, nliterals) );
+         CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, &success, &nlits) );
          lastclausenresolutions = nresolutions;
          lastclauseresoldepth = bdchgdepth;
          if( success )
+         {
             (*nclauses)++;
+            (*nliterals) += nlits;
+         }
       }
 
       /* remove currently processed candidate and get next conflicting bound from the conflict candidate queue */
@@ -1207,164 +1574,27 @@ RETCODE conflictAnalyze(
       if( bdchgdepth > validdepth && bdchginfo != nextbdchginfo )
       {
          VAR* actvar;
+         Bool resolved;
 
          actvar = SCIPbdchginfoGetVar(bdchginfo);
          assert(actvar != NULL);
          assert(SCIPvarIsActive(actvar));
 
-#ifdef DEBUG
+         /* check if we want to resolve the bound change in this depth level
+          *  - bound changes on non-binary variables have to be resolved in any case,
+          *  - bound changes on binary variables should be resolved, if
+          *     (i)  we must apply at least one resolution and didn't resolve a bound change yet, or
+          *     (ii) their depth level is at least equal to the minimal resolving depth, and
+          *          they are not the last remaining conflicting bound change in their depth level
+          */
+         resolved = FALSE;
+         if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
+            || (mustresolve && nresolutions == 0)
+            || (bdchgdepth >= resolvedepth
+               && nextbdchginfo != NULL
+               && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
          {
-            int v;
-         
-            debugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s, vartype: %d): [<%s> %s %g]\n",
-               bdchgdepth, validdepth,
-               SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-               : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER ? "cons" : "prop",
-               SCIPvarGetType(actvar), SCIPvarGetName(actvar), 
-               SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-               SCIPbdchginfoGetNewbound(bdchginfo));
-            debugMessage(" - conflict set             :");
-            for( v = 0; v < conflict->nconflictvars; ++v )
-               printf(" <%s>[%d]", SCIPvarGetName(conflict->conflictvars[v]), conflict->conflictvardepths[v]);
-            printf("\n");
-            debugMessage(" - candidate queue (non-bin):");
-            for( v = 0; v < SCIPpqueueNElems(conflict->nonbinbdchgqueue); ++v )
-            {
-               BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->nonbinbdchgqueue)[v]);
-               printf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
-                  SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                  SCIPbdchginfoGetNewbound(info));
-            }
-            printf("\n");
-            debugMessage(" - candidate queue (bin)    :");
-            for( v = 0; v < SCIPpqueueNElems(conflict->binbdchgqueue); ++v )
-            {
-               BDCHGINFO* info = (BDCHGINFO*)(SCIPpqueueElems(conflict->binbdchgqueue)[v]);
-               printf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
-                  SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                  SCIPbdchginfoGetNewbound(info));
-            }
-            printf("\n");
-         }
-#endif
-
-         /* check if we want to resolve the bound change in this depth level */
-         if( SCIPbdchginfoGetDepth(bdchginfo) >= resolvedepth
-            || SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
-            || (mustresolve && nresolutions == 0) )
-         {
-            /* check, if the bound change can and should be resolved:
-             *  - bound changes on non-binary variables have to be resolved in any case,
-             *  - bound changes on binary variables should be resolved, if they are not the last remaining conflicting
-             *    bound change in their depth level
-             *  - binary resolutions on local constraints should only be applied, if the constraint is valid at the 
-             *    current minimal valid depth level (which is initialized with the valid depth level of the initial 
-             *    conflict set), because this depth level is the topmost level to add the conflict clause to anyways
-             */
-            if( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER )
-            {
-               CONS* infercons;
-
-               infercons = SCIPbdchginfoGetInferCons(bdchginfo);
-               assert(infercons != NULL);
-
-               if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
-                  || (nextbdchginfo != NULL
-                     && SCIPbdchginfoGetDepth(bdchginfo) == SCIPbdchginfoGetDepth(nextbdchginfo)
-                     && (SCIPconsIsGlobal(infercons)
-                        || (SCIPconsIsActive(infercons) && SCIPconsGetActiveDepth(infercons) <= validdepth))) )
-               {
-                  VAR* infervar;
-                  int inferinfo;
-                  BOUNDTYPE inferboundtype;
-                  BDCHGIDX* bdchgidx;
-
-                  /* resolve bound change by asking the constraint that infered the bound to put all bounds that were
-                   * the reasons for the conflicting bound change on the priority queue
-                   */
-                  infervar = SCIPbdchginfoGetInferVar(bdchginfo);
-                  inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
-                  inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
-                  bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-                  assert(infervar != NULL);
-                  assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY
-                     || SCIPvarGetType(infervar) != SCIP_VARTYPE_BINARY);
-
-                  debugMessage("resolving bound <%s> %s %g [status:%d, type:%d, depth:%d, pos:%d]: <%s> %s %g [cons:<%s>(%s), info:%d]\n",
-                     SCIPvarGetName(actvar), 
-                     SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                     SCIPbdchginfoGetNewbound(bdchginfo),
-                     SCIPvarGetStatus(actvar), SCIPvarGetType(actvar),
-                     SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-                     SCIPvarGetName(infervar), 
-                     inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                     SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
-                     SCIPconsGetName(infercons),
-                     SCIPconsIsGlobal(infercons) ? "global" : "local",
-                     inferinfo);
-                  
-                  CHECK_OKAY( SCIPconsResolvePropagation(infercons, set, infervar, inferinfo, inferboundtype,
-                        bdchgidx, &result) );
-                  resolved = (result == SCIP_SUCCESS);
-               }
-            }
-            else if( SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_PROPINFER )
-            {
-               PROP* inferprop;
-
-               inferprop = SCIPbdchginfoGetInferProp(bdchginfo);
-               if( inferprop != NULL
-                  && (SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
-                     || (nextbdchginfo != NULL
-                        && SCIPbdchginfoGetDepth(bdchginfo) == SCIPbdchginfoGetDepth(nextbdchginfo))) )
-               {
-                  VAR* infervar;
-                  int inferinfo;
-                  BOUNDTYPE inferboundtype;
-                  BDCHGIDX* bdchgidx;
-
-                  /* resolve bound change by asking the propagator that infered the bound to put all bounds that were
-                   * the reasons for the conflicting bound change on the priority queue
-                   */
-                  infervar = SCIPbdchginfoGetInferVar(bdchginfo);
-                  inferinfo = SCIPbdchginfoGetInferInfo(bdchginfo);
-                  inferboundtype = SCIPbdchginfoGetInferBoundtype(bdchginfo);
-                  bdchgidx = SCIPbdchginfoGetIdx(bdchginfo);
-                  assert(infervar != NULL);
-                  assert(SCIPvarGetType(actvar) == SCIP_VARTYPE_BINARY
-                     || SCIPvarGetType(infervar) != SCIP_VARTYPE_BINARY);
-
-                  debugMessage("resolving bound <%s> %s %g [status:%d, depth:%d, pos:%d]: <%s> %s %g [prop:<%s>, info:%d]\n",
-                     SCIPvarGetName(actvar), 
-                     SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                     SCIPbdchginfoGetNewbound(bdchginfo),
-                     SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-                     SCIPvarGetName(infervar), 
-                     inferboundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                     SCIPvarGetBdAtIndex(infervar, inferboundtype, bdchgidx, TRUE),
-                     SCIPpropGetName(inferprop), inferinfo);
-                  
-                  CHECK_OKAY( SCIPpropResolvePropagation(inferprop, set, infervar, inferinfo, inferboundtype,
-                        bdchgidx, &result) );
-                  resolved = (result == SCIP_SUCCESS);
-               }
-#ifdef DEBUG
-               else if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
-                  || (nextbdchginfo != NULL && SCIPbdchginfoGetDepth(bdchginfo) == SCIPbdchginfoGetDepth(nextbdchginfo)) )
-               {
-                  debugMessage("no inference information available to resolve bound <%s> %s %g [status:%d, depth:%d, pos:%d]\n",
-                     SCIPvarGetName(actvar), 
-                     SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-                     SCIPbdchginfoGetNewbound(bdchginfo),
-                     SCIPvarGetStatus(actvar), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo));
-               }
-#endif
-            }
-            else
-            {
-               assert(SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING);
-               assert(!resolved);
-            }
+            CHECK_OKAY( conflictResolveBound(conflict, memhdr, set, stat, tree, bdchginfo, &validdepth, &resolved) );
          }
 
          if( resolved )
@@ -1382,13 +1612,22 @@ RETCODE conflictAnalyze(
             assert(SCIPsetIsEQ(set, SCIPbdchginfoGetNewbound(bdchginfo), SCIPvarGetLbLP(actvar)));
             assert(SCIPsetIsEQ(set, SCIPbdchginfoGetNewbound(bdchginfo), SCIPvarGetUbLP(actvar)));
             assert(SCIPvarGetLbLP(actvar) > 0.5 || SCIPvarGetUbLP(actvar) < 0.5);
-               
-            /* put variable into the conflict set */
-            CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar, FALSE) );
+
+            /* if this is the first variable of the conflict set, it is the first UIP (or the first unresolvable bound
+             * change)
+             */
+            if( conflict->nconflictvars == 0 )
+               firstuip = bdchginfo;
+
+            /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
+            CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar, FALSE, FALSE) );
          }
       }
 
-      /* get next conflicting bound from the conflict candidate queue */
+      /* get next conflicting bound from the conflict candidate queue (this need not to be nextbdchginfo, because
+       * due to resolving the bound changes, a non-binary variable could be added to the queue which must be
+       * resolved before nextbdchginfo
+       */
       bdchginfo = conflictFirstCand(conflict);
    }
 
@@ -1398,12 +1637,23 @@ RETCODE conflictAnalyze(
       && validdepth < currentdepth
       && (!mustresolve || nresolutions > 0 || conflict->nconflictvars == 0) )
    {
+      int nlits;
       Bool success;
 
       /* call the conflict handlers to create a conflict clause */
-      CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, &success, nliterals) );
+      CHECK_OKAY( conflictAddClause(conflict, memhdr, set, stat, tree, validdepth, &success, &nlits) );
       if( success )
+      {
          (*nclauses)++;
+         (*nliterals) += nlits;
+      }
+   }
+
+   /* produce reconvergence clauses defined by succeeding UIP's of the last depth level */
+   if( set->conf_reconvclauses && firstuip != NULL && SCIPbdchginfoHasInferenceReason(firstuip) )
+   {
+      CHECK_OKAY( conflictCreateReconvergenceClauses(conflict, memhdr, set, stat, tree, validdepth, maxsize, firstuip,
+            nreconvclauses, nreconvliterals) );
    }
 
    return SCIP_OKAY;
@@ -1427,6 +1677,8 @@ RETCODE SCIPconflictAnalyze(
    int maxsize;
    int nclauses;
    int nliterals;
+   int nreconvclauses;
+   int nreconvliterals;
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -1443,6 +1695,8 @@ RETCODE SCIPconflictAnalyze(
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
 
+   debugMessage("analyzing conflict after infeasible propagation\n");
+
    /* calculate the maximal size of the conflict set */
    maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
    maxsize = MAX(maxsize, set->conf_minmaxvars);
@@ -1455,16 +1709,14 @@ RETCODE SCIPconflictAnalyze(
    conflict->npropcalls++;
 
    /* analyze the conflict set, and create a conflict constraint on success */
-   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, validdepth, maxsize, TRUE, &nclauses, &nliterals) );
-
-   /* check, if a conflict constraint was created */
-   if( nclauses > 0 )
-   {
-      conflict->npropconflicts += nclauses;
-      conflict->npropconflictlits += nliterals;
-      if( success != NULL )
-         *success = TRUE;
-   }
+   CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, validdepth, maxsize, TRUE,
+         &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
+   conflict->npropconfclauses += nclauses;
+   conflict->npropconfliterals += nliterals;
+   conflict->npropreconvclauses += nreconvclauses;
+   conflict->npropreconvliterals += nreconvliterals;
+   if( success != NULL )
+      *success = (nclauses > 0);
 
    /* stop timing */
    SCIPclockStop(conflict->propanalyzetime, set);
@@ -1492,14 +1744,14 @@ Longint SCIPconflictGetNPropCalls(
    return conflict->npropcalls;
 }
 
-/** gets number of valid conflicts detected in propagation conflict analysis */
-Longint SCIPconflictGetNPropConflicts(
+/** gets number of conflict clauses detected in propagation conflict analysis */
+Longint SCIPconflictGetNPropConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->npropconflicts;
+   return conflict->npropconfclauses;
 }
 
 /** gets total number of literals in conflict clauses created in propagation conflict analysis */
@@ -1509,7 +1761,27 @@ Longint SCIPconflictGetNPropConflictLiterals(
 {
    assert(conflict != NULL);
 
-   return conflict->npropconflictlits;
+   return conflict->npropconfliterals;
+}
+
+/** gets number of reconvergence clauses detected in propagation conflict analysis */
+Longint SCIPconflictGetNPropReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->npropreconvclauses;
+}
+
+/** gets total number of literals in reconvergence clauses created in propagation conflict analysis */
+Longint SCIPconflictGetNPropReconvergenceLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->npropreconvliterals;
 }
 
 
@@ -2930,7 +3202,9 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    int*             lbchginfoposs,      /**< positions of currently active lower bound change infos in variables' arrays */
    int*             ubchginfoposs,      /**< positions of currently active upper bound change infos in variables' arrays */
    int*             nclauses,           /**< pointer to store the number of generated conflict clauses */
-   int*             nliterals           /**< pointer to store the number of literals in a valid conflict set */
+   int*             nliterals,          /**< pointer to store the number of literals in generated conflict clauses */
+   int*             nreconvclauses,     /**< pointer to store the number of generated reconvergence clauses */
+   int*             nreconvliterals     /**< pointer to store the number of literals generated reconvergence clauses */
    )
 {
    VAR** vars;
@@ -2944,9 +3218,13 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    assert(ubchginfoposs != NULL);
    assert(nclauses != NULL);
    assert(nliterals != NULL);
+   assert(nreconvclauses != NULL);
+   assert(nreconvliterals != NULL);
 
    *nclauses = 0;
    *nliterals = 0;
+   *nreconvclauses = 0;
+   *nreconvliterals = 0;
 
    vars = prob->vars;
    nvars = prob->nvars;
@@ -2981,9 +3259,9 @@ RETCODE conflictAnalyzeRemainingBdchgs(
          assert((lbchginfoposs[v] == var->nlbchginfos) == (SCIPvarGetLbLP(var) > 0.5));
          assert((ubchginfoposs[v] == var->nubchginfos) == (SCIPvarGetUbLP(var) < 0.5));
 
-         /* put variable into the conflict set */
+         /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
          debugMessage("   fixed: <%s> == %g [dive/strong]\n", SCIPvarGetName(var), SCIPvarGetLbLP(var));
-         CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var, FALSE) );
+         CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, var, FALSE, FALSE) );
          nbdchgs++;
       }
       else
@@ -3015,7 +3293,8 @@ RETCODE conflictAnalyzeRemainingBdchgs(
    if( v == nvars )
    {
       /* analyze the conflict set, and create conflict constraints on success */
-      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, nclauses, nliterals) );
+      CHECK_OKAY( conflictAnalyze(conflict, memhdr, set, stat, tree, 0, maxsize, FALSE, 
+            nclauses, nliterals, nreconvclauses, nreconvliterals) );
    }
 
    return SCIP_OKAY;
@@ -3033,7 +3312,9 @@ RETCODE conflictAnalyzeLP(
    LP*              lp,                 /**< LP data */
    int*             iterations,         /**< pointer to store the total number of LP iterations used */
    int*             nclauses,           /**< pointer to store the number of generated conflict clauses */
-   int*             nliterals           /**< pointer to store the number of literals in a valid conflict set */
+   int*             nliterals,          /**< pointer to store the number of literals in generated conflict clauses */
+   int*             nreconvclauses,     /**< pointer to store the number of generated reconvergence clauses */
+   int*             nreconvliterals     /**< pointer to store the number of literals generated reconvergence clauses */
    )
 {
    LPI* lpi;
@@ -3061,12 +3342,16 @@ RETCODE conflictAnalyzeLP(
    assert(iterations != NULL);
    assert(nclauses != NULL);
    assert(nliterals != NULL);
+   assert(nreconvclauses != NULL);
+   assert(nreconvliterals != NULL);
 
    debugMessage("analyzing conflict on infeasible LP\n");
 
    *iterations = 0;
    *nclauses = 0;
    *nliterals = 0;
+   *nreconvclauses = 0;
+   *nreconvliterals = 0;
 
    /* conflict analysis only makes sense, if binary variables exist */
    if( prob->nbinvars == 0 )
@@ -3392,7 +3677,7 @@ RETCODE conflictAnalyzeLP(
       if( valid )
       {
          CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree,
-               maxsize, lbchginfoposs, ubchginfoposs, nclauses, nliterals) );
+               maxsize, lbchginfoposs, ubchginfoposs, nclauses, nliterals, nreconvclauses, nreconvliterals) );
       }
 
       /* free temporary memory */
@@ -3437,6 +3722,8 @@ RETCODE SCIPconflictAnalyzeLP(
    int iterations;
    int nclauses;
    int nliterals;
+   int nreconvclauses;
+   int nreconvliterals;
 
    assert(conflict != NULL);
    assert(set != NULL);
@@ -3462,15 +3749,15 @@ RETCODE SCIPconflictAnalyzeLP(
    conflict->nlpcalls++;
 
    /* perform conflict analysis */
-   CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iterations, &nclauses, &nliterals) );
+   CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp,
+         &iterations, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
    conflict->nlpiterations += iterations;
-   if( nclauses > 0 )
-   {
-      conflict->nlpconflicts += nclauses;
-      conflict->nlpconflictlits += nliterals;
-      if( success != NULL )
-         *success = TRUE;
-   }
+   conflict->nlpconfclauses += nclauses;
+   conflict->nlpconfliterals += nliterals;
+   conflict->nlpreconvclauses += nreconvclauses;
+   conflict->nlpreconvliterals += nreconvliterals;
+   if( success != NULL )
+      *success = (nclauses > 0);
 
    /* stop timing */
    SCIPclockStop(conflict->lpanalyzetime, set);
@@ -3498,24 +3785,44 @@ Longint SCIPconflictGetNLPCalls(
    return conflict->nlpcalls;
 }
 
-/** gets number of valid conflicts detected in infeasible LP conflict analysis */
-Longint SCIPconflictGetNLPConflicts(
+/** gets number of conflict clauses detected in infeasible LP conflict analysis */
+Longint SCIPconflictGetNLPConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->nlpconflicts;
+   return conflict->nlpconfclauses;
 }
 
-/** gets total number of literals in conflict clauses detected in infeasible LP conflict analysis */
+/** gets total number of literals in conflict clauses created in infeasible LP conflict analysis */
 Longint SCIPconflictGetNLPConflictLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->nlpconflictlits;
+   return conflict->nlpconfliterals;
+}
+
+/** gets number of reconvergence clauses detected in infeasible LP conflict analysis */
+Longint SCIPconflictGetNLPReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nlpreconvclauses;
+}
+
+/** gets total number of literals in reconvergence clauses created in infeasible LP conflict analysis */
+Longint SCIPconflictGetNLPReconvergenceLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nlpreconvliterals;
 }
 
 /** gets number of LP iterations in infeasible LP conflict analysis */
@@ -3561,6 +3868,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
    int iter;
    int nclauses;
    int nliterals;
+   int nreconvclauses;
+   int nreconvliterals;
 
    assert(stat != NULL);
    assert(lp != NULL);
@@ -3630,15 +3939,15 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          conflict->nsbiterations += iter;
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iter, &nclauses, &nliterals) );
+         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp,
+               &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
          conflict->nsbiterations += iter;
-         if( nclauses > 0 )
-         {
-            conflict->nsbconflicts += nclauses;
-            conflict->nsbconflictlits += nliterals;
-            if( downconflict != NULL )
-               *downconflict = TRUE;
-         }
+         conflict->nsbconfclauses += nclauses;
+         conflict->nsbconfliterals += nliterals;
+         conflict->nsbreconvclauses += nreconvclauses;
+         conflict->nsbreconvliterals += nreconvliterals;
+         if( downconflict != NULL )
+            *downconflict = (nclauses > 0);
 
          /* reset the upper bound */
          col->ub = oldub;
@@ -3675,15 +3984,15 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          conflict->nsbiterations += iter;
 
          /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp, &iter, &nclauses, &nliterals) );
+         CHECK_OKAY( conflictAnalyzeLP(conflict, memhdr, set, stat, prob, tree, lp,
+               &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
          conflict->nsbiterations += iter;
-         if( nclauses > 0 )
-         {
-            conflict->nsbconflicts += nclauses;
-            conflict->nsbconflictlits += nliterals;
-            if( upconflict != NULL )
-               *upconflict = TRUE;
-         }
+         conflict->nsbconfclauses += nclauses;
+         conflict->nsbconfliterals += nliterals;
+         conflict->nsbreconvclauses += nreconvclauses;
+         conflict->nsbreconvliterals += nreconvliterals;
+         if( upconflict != NULL )
+            *upconflict = (nclauses > 0);
 
          /* reset the lower bound */
          col->lb = oldlb;
@@ -3724,24 +4033,44 @@ Longint SCIPconflictGetNStrongbranchCalls(
    return conflict->nsbcalls;
 }
 
-/** gets number of valid conflicts detected in infeasible strong branching conflict analysis */
-Longint SCIPconflictGetNStrongbranchConflicts(
+/** gets number of conflict clauses detected in infeasible strong branching conflict analysis */
+Longint SCIPconflictGetNStrongbranchConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->nsbconflicts;
+   return conflict->nsbconfclauses;
 }
 
-/** gets total number of literals in conflict clauses detected in infeasible strong branching conflict analysis */
+/** gets total number of literals in conflict clauses created in infeasible strong branching conflict analysis */
 Longint SCIPconflictGetNStrongbranchConflictLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->nsbconflictlits;
+   return conflict->nsbconfliterals;
+}
+
+/** gets number of reconvergence clauses detected in infeasible strong branching conflict analysis */
+Longint SCIPconflictGetNStrongbranchReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nsbreconvclauses;
+}
+
+/** gets total number of literals in reconvergence clauses created in infeasible strong branching conflict analysis */
+Longint SCIPconflictGetNStrongbranchReconvergenceLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nsbreconvliterals;
 }
 
 /** gets number of LP iterations in infeasible strong branching conflict analysis */
@@ -3787,8 +4116,6 @@ RETCODE SCIPconflictAnalyzePseudo(
    Real* pseudocoefs;
    Real pseudolhs;
    Real pseudoact;
-   int nclauses;
-   int nliterals;
    int maxsize;
    int nvars;
    int v;
@@ -3873,22 +4200,24 @@ RETCODE SCIPconflictAnalyzePseudo(
    /* check, if the pseudo row is still violated (after recalculation of pseudo activity) */
    if( SCIPsetIsFeasGT(set, pseudolhs, pseudoact) )
    {
+      int nclauses;
+      int nliterals;
+      int nreconvclauses;
+      int nreconvliterals;
+
       /* undo bound changes without destroying the infeasibility proof */
       CHECK_OKAY( undoBdchgsProof(set, prob, pseudocoefs, pseudolhs, pseudoact, 
             curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* analyze conflict on remaining bound changes */
       CHECK_OKAY( conflictAnalyzeRemainingBdchgs(conflict, memhdr, set, stat, prob, tree,
-            maxsize, lbchginfoposs, ubchginfoposs, &nclauses, &nliterals) );
-
-      /* check, if a conflict clause was found */
-      if( nclauses > 0 )
-      {
-         conflict->npseudoconflicts += nclauses;
-         conflict->npseudoconflictlits += nliterals;
-         if( success != NULL )
-            *success = TRUE;
-      }
+            maxsize, lbchginfoposs, ubchginfoposs, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
+      conflict->npseudoconfclauses += nclauses;
+      conflict->npseudoconfliterals += nliterals;
+      conflict->npseudoreconvclauses += nreconvclauses;
+      conflict->npseudoreconvliterals += nreconvliterals;
+      if( success != NULL )
+         *success = (nclauses > 0);
    }
 
    /* free temporary memory */
@@ -3924,23 +4253,43 @@ Longint SCIPconflictGetNPseudoCalls(
    return conflict->npseudocalls;
 }
 
-/** gets number of valid conflicts detected in pseudo solution conflict analysis */
-Longint SCIPconflictGetNPseudoConflicts(
+/** gets number of conflict clauses detected in pseudo solution conflict analysis */
+Longint SCIPconflictGetNPseudoConflictClauses(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->npseudoconflicts;
+   return conflict->npseudoconfclauses;
 }
 
-/** gets total number of literals in conflict clauses detected in pseudo solution conflict analysis */
+/** gets total number of literals in conflict clauses created in pseudo solution conflict analysis */
 Longint SCIPconflictGetNPseudoConflictLiterals(
    CONFLICT*        conflict            /**< conflict analysis data */
    )
 {
    assert(conflict != NULL);
 
-   return conflict->npseudoconflictlits;
+   return conflict->npseudoconfliterals;
+}
+
+/** gets number of reconvergence clauses detected in pseudo solution conflict analysis */
+Longint SCIPconflictGetNPseudoReconvergenceClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->npseudoreconvclauses;
+}
+
+/** gets total number of literals in reconvergence clauses created in pseudo solution conflict analysis */
+Longint SCIPconflictGetNPseudoReconvergenceLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->npseudoreconvliterals;
 }
 

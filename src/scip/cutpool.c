@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.36 2004/10/12 14:06:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.37 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -93,6 +93,7 @@ DECL_HASHKEYEQ(hashKeyEqCut)
       || ABS(row1->lhs - row2->lhs) > SCIP_DEFAULT_EPSILON
       || ABS(row1->rhs - row2->rhs) > SCIP_DEFAULT_EPSILON
       || ABS(row1->sqrnorm - row2->sqrnorm) > SCIP_DEFAULT_SUMEPSILON
+      || ABS(row1->sumnorm - row2->sumnorm) > SCIP_DEFAULT_SUMEPSILON
       || ABS(row1->maxval - row2->maxval) > SCIP_DEFAULT_EPSILON
        )
       return FALSE;

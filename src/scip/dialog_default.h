@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.18 2004/09/23 15:46:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.19 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -158,6 +158,14 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam);
 /** dialog description method for the set parameter command */
 extern
 DECL_DIALOGDESC(SCIPdialogDescSetParam);
+
+/** dialog execution method for the set branching direction command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection);
+
+/** dialog execution method for the set branching priority command */
+extern
+DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 
 /** dialog execution method for the set limits objective command */
 extern

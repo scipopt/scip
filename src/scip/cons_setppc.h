@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.13 2004/09/01 16:53:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.14 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -123,7 +123,7 @@ VAR** SCIPgetVarsSetppc(
 
 /** gets number of variables in set partitioning / packing / covering constraint */
 extern
-int SCIPgetVarsNSetppc(
+int SCIPgetNVarsSetppc(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< constraint data */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.16 2004/09/07 18:22:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.17 2004/10/19 18:36:33 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -34,7 +34,7 @@
 #define HEUR_DISPCHAR         'f'
 #define HEUR_PRIORITY         -1002000
 #define HEUR_FREQ             10
-#define HEUR_FREQOFS          2
+#define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      FALSE     /* call heuristic at nodes where only a pseudo solution exist? */
 #define HEUR_DURINGPLUNGING   FALSE     /* call heuristic during plunging? (should be FALSE for diving heuristics!) */
@@ -197,7 +197,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
-   *result = SCIP_DIDNOTRUN;
+   *result = SCIP_DELAYED;
 
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -206,6 +206,8 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    /* don't dive two times at the same node */
    if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) )
       return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTRUN;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
@@ -222,7 +224,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    nlpiterations = SCIPgetNLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * MAX(nlpiterations, 1000);
+   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * (nlpiterations + 10000);
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( heurdata->nlpiterations >= maxnlpiterations )

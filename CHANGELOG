@@ -5,4 +5,28 @@ SCIP version 0.75
 
 current SCIP version
 ====================
+
+interface:
+- new method SCIPchgVarBranchDirection()
+- new method SCIPvarGetBranchDirection()
+- new possible result code SCIP_DELAYED for primal heuristics
+
+parameters:
+- new parameter separating/efficacynorm to choose between euclidean, maximum, sum, and discrete norm
+  in efficacy calculation
+- changed default frequency offset of pscostdiving (heuristics/pscostdiving/freqofs) to 2,
+  and frequency offset of fracdiving (heuristics/feaspump/freqofs) to 0 in order to not call pscostdiving
+  in root node, where nearly all pseudo costs are uninitialized
+- changed default maximal bound tightenings before resolve in reliability branching (branching/relpscost/maxbdchgs) to 20
+
+features:
+- creation of reconvergence clauses in conflict analysis
+- first node of each plunging is not treated as plunging node w.r.t. calling primal heuristics
+
+fixed bugs:
 - removed bugs in CLP Solver interface
+- SCIP returned "gap limit reached" even if the problem was solved to optimality, if the
+  optimal solution was found at a node with lower bound equal to the global lower bound
+
+known bugs (still not fixed):
+- air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?

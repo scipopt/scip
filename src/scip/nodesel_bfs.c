@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.34 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_bfs.c,v 1.35 2004/10/19 18:36:34 bzfpfend Exp $"
 
 /**@file   nodesel_bfs.c
  * @brief  node selector for best first search
@@ -230,32 +230,44 @@ DECL_NODESELCOMP(nodeselCompBfs)
       return +1;
    else
    {
-      NODETYPE nodetype1;
-      NODETYPE nodetype2;
+      Real priority1;
+      Real priority2;
 
-      nodetype1 = SCIPnodeGetType(node1);
-      nodetype2 = SCIPnodeGetType(node2);
-      if( nodetype1 == SCIP_NODETYPE_CHILD && nodetype2 != SCIP_NODETYPE_CHILD )
+      priority1 = SCIPnodeGetPriority(node1);
+      priority2 = SCIPnodeGetPriority(node2);
+      if( SCIPisGT(scip, priority1, priority2) )
          return -1;
-      else if( nodetype1 != SCIP_NODETYPE_CHILD && nodetype2 == SCIP_NODETYPE_CHILD )
-         return +1;
-      else if( nodetype1 == SCIP_NODETYPE_SIBLING && nodetype2 != SCIP_NODETYPE_SIBLING )
-         return -1;
-      else if( nodetype1 != SCIP_NODETYPE_SIBLING && nodetype2 == SCIP_NODETYPE_SIBLING )
+      else if( SCIPisLT(scip, priority1, priority2) )
          return +1;
       else
       {
-         int depth1;
-         int depth2;
-         
-         depth1 = SCIPnodeGetDepth(node1);
-         depth2 = SCIPnodeGetDepth(node2);
-         if( depth1 < depth2 )
+         NODETYPE nodetype1;
+         NODETYPE nodetype2;
+
+         nodetype1 = SCIPnodeGetType(node1);
+         nodetype2 = SCIPnodeGetType(node2);
+         if( nodetype1 == SCIP_NODETYPE_CHILD && nodetype2 != SCIP_NODETYPE_CHILD )
             return -1;
-         else if( depth1 > depth2 )
+         else if( nodetype1 != SCIP_NODETYPE_CHILD && nodetype2 == SCIP_NODETYPE_CHILD )
+            return +1;
+         else if( nodetype1 == SCIP_NODETYPE_SIBLING && nodetype2 != SCIP_NODETYPE_SIBLING )
+            return -1;
+         else if( nodetype1 != SCIP_NODETYPE_SIBLING && nodetype2 == SCIP_NODETYPE_SIBLING )
             return +1;
          else
-            return 0;
+         {
+            int depth1;
+            int depth2;
+         
+            depth1 = SCIPnodeGetDepth(node1);
+            depth2 = SCIPnodeGetDepth(node2);
+            if( depth1 < depth2 )
+               return -1;
+            else if( depth1 > depth2 )
+               return +1;
+            else
+               return 0;
+         }
       }
    }
 }

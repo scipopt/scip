@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.3 2004/02/05 14:12:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.4 2004/10/19 18:36:36 bzfpfend Exp $"
 
 /**@file   type_lp.h
  * @brief  type definitions for LP management
@@ -30,14 +30,14 @@
 /** solution status after solving LP */
 enum LPSolStat
 {
-   SCIP_LPSOLSTAT_NOTSOLVED  = 0,       /**< LP was not solved, no solution exists */
-   SCIP_LPSOLSTAT_OPTIMAL    = 1,       /**< LP was solved to optimality */
-   SCIP_LPSOLSTAT_INFEASIBLE = 2,       /**< LP is primal infeasible */
-   SCIP_LPSOLSTAT_UNBOUNDED  = 3,       /**< LP is primal unbounded */
-   SCIP_LPSOLSTAT_OBJLIMIT   = 4,       /**< objective limit was reached during optimization */
-   SCIP_LPSOLSTAT_ITERLIMIT  = 5,       /**< iteration limit was reached during optimization */
-   SCIP_LPSOLSTAT_TIMELIMIT  = 6,       /**< time limit was reached during optimization */
-   SCIP_LPSOLSTAT_ERROR      = 7        /**< an error occured during optimization */
+   SCIP_LPSOLSTAT_NOTSOLVED    = 0,     /**< LP was not solved, no solution exists */
+   SCIP_LPSOLSTAT_OPTIMAL      = 1,     /**< LP was solved to optimality */
+   SCIP_LPSOLSTAT_INFEASIBLE   = 2,     /**< LP is primal infeasible */
+   SCIP_LPSOLSTAT_UNBOUNDEDRAY = 3,     /**< LP has a primal unbounded ray */
+   SCIP_LPSOLSTAT_OBJLIMIT     = 4,     /**< objective limit was reached during optimization */
+   SCIP_LPSOLSTAT_ITERLIMIT    = 5,     /**< iteration limit was reached during optimization */
+   SCIP_LPSOLSTAT_TIMELIMIT    = 6,     /**< time limit was reached during optimization */
+   SCIP_LPSOLSTAT_ERROR        = 7      /**< an error occured during optimization */
 };
 typedef enum LPSolStat LPSOLSTAT;
 

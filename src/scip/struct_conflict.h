@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.11 2004/09/28 09:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.12 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -54,19 +54,27 @@ struct Conflicthdlr
 struct Conflict
 {
    Longint          npropcalls;         /**< number of calls to propagation conflict analysis */
-   Longint          npropconflicts;     /**< number of valid conflicts detected in propagation conflict analysis */
-   Longint          npropconflictlits;  /**< total number of literals in valid propagation conflicts */
+   Longint          npropconfclauses;   /**< number of valid conflict clauses detected in propagation conflict analysis */
+   Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict clauses */
+   Longint          npropreconvclauses; /**< number of reconvergence clauses detected in propagation conflict analysis */
+   Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence clauses */
    Longint          nlpcalls;           /**< number of calls to infeasible LP conflict analysis */
-   Longint          nlpconflicts;       /**< number of valid conflicts detected in infeasible LP conflict analysis */
-   Longint          nlpconflictlits;    /**< total number of literals in valid LP conflicts */
+   Longint          nlpconfclauses;     /**< number of valid conflict clauses detected in infeas LP conflict analysis */
+   Longint          nlpconfliterals;    /**< total number of literals in valid infeasible LP conflict clauses */
+   Longint          nlpreconvclauses;   /**< number of reconvergence clauses detected in infeasible LP conflict analysis */
+   Longint          nlpreconvliterals;  /**< total number of literals in valid infeasible LP reconvergence clauses */
    Longint          nlpiterations;      /**< total number of LP iterations used in LP conflict analysis */
    Longint          nsbcalls;           /**< number of calls to infeasible strong branching conflict analysis */
-   Longint          nsbconflicts;       /**< number of valid conflicts detected in infeasible strong branching analysis */
-   Longint          nsbconflictlits;    /**< total number of literals in valid strong branching conflicts */
-   Longint          nsbiterations;      /**< total number of LP iterations used in infeasible strong branching analysis */
+   Longint          nsbconfclauses;     /**< number of conflict clauses detected in strong branching conflict analysis */
+   Longint          nsbconfliterals;    /**< total number of literals in valid strong branching conflict clauses */
+   Longint          nsbreconvclauses;   /**< number of reconvergence clauses detected in strong branch conflict analysis */
+   Longint          nsbreconvliterals;  /**< total number of literals in valid strong branching reconvergence clauses */
+   Longint          nsbiterations;      /**< total number of LP iterations used in strong branching conflict analysis */
    Longint          npseudocalls;       /**< number of calls to pseudo solution conflict analysis */
-   Longint          npseudoconflicts;   /**< number of valid conflicts detected in pseudo solution conflict analysis */
-   Longint          npseudoconflictlits;/**< total number of literals in valid pseudo solution conflicts */
+   Longint          npseudoconfclauses; /**< number of valid conflict clauses detected in pseudo sol conflict analysis */
+   Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict clauses */
+   Longint          npseudoreconvclauses; /**< number of reconvergence clauses detected in pseudo sol conflict analysis */
+   Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence clauses */
    CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
    CLOCK*           lpanalyzetime;      /**< time used for infeasible LP conflict analysis */
    CLOCK*           sbanalyzetime;      /**< time used for infeasible LP conflict analysis */

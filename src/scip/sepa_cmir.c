@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.24 2004/10/13 14:36:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.25 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -98,6 +98,118 @@ struct SepaData
  * Local methods
  */
 
+/** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm */
+static
+RETCODE storeCutInArrays(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nvars,              /**< number of problem variables */
+   VAR**            vars,               /**< problem variables */
+   Real*            cutcoefs,           /**< dense coefficient vector */
+   Real*            varsolvals,         /**< dense variable LP solution vector */
+   char             normtype,           /**< type of norm to use for efficacy norm calculation */
+   COL**            cutcols,            /**< array to store columns of sparse cut vector */
+   Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
+   int*             cutlen,             /**< pointer to store number of nonzero entries in cut */
+   Real*            cutact,             /**< pointer to store activity of cut */
+   Real*            cutnorm             /**< pointer to store norm of cut vector */
+   )
+{
+   Real val;
+   Real absval;
+   Real cutsqrnorm;
+   Real act;
+   Real norm;
+   int len;
+   int v;
+
+   assert(nvars == 0 || cutcoefs != NULL);
+   assert(nvars == 0 || varsolvals != NULL);
+   assert(cutcols != NULL);
+   assert(cutvals != NULL);
+   assert(cutlen != NULL);
+   assert(cutact != NULL);
+   assert(cutnorm != NULL);
+
+   len = 0;
+   act = 0.0;
+   norm = 0.0;
+   switch( normtype )
+   {
+   case 'e':
+      cutsqrnorm = 0.0;
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            cutsqrnorm += SQR(val);
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      norm = SQRT(cutsqrnorm);
+      break;
+   case 'm':
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            absval = ABS(val);
+            norm = MAX(norm, absval);
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      break;
+   case 's':
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            norm += ABS(val);
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      break;
+   case 'd':
+      for( v = 0; v < nvars; ++v )
+      {
+         val = cutcoefs[v];
+         if( !SCIPisZero(scip, val) )
+         {
+            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
+            act += val * varsolvals[v];
+            norm = 1.0;
+            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvals[len] = val;
+            len++;
+         }
+      }
+      break;
+   default:
+      errorMessage("invalid efficacy norm parameter '%c'\n", normtype);
+      return SCIP_INVALIDDATA;
+   }
+
+   *cutlen = len;
+   *cutact = act;
+   *cutnorm = norm;
+
+   return SCIP_OKAY;
+}
+
 /** adds given cut to LP if violated */
 static
 RETCODE addCut(
@@ -107,6 +219,7 @@ RETCODE addCut(
    Real*            cutcoefs,           /**< coefficients of active variables in cut */
    Real             cutrhs,             /**< right hand side of cut */
    Bool             cutislocal,         /**< is the cut only locally valid? */
+   char             normtype,           /**< type of norm to use for efficacy norm calculation */
    int*             ncuts               /**< pointer to count the number of added cuts */
    )
 {
@@ -114,12 +227,9 @@ RETCODE addCut(
    COL** cutcols;
    Real* cutvals;
    Real cutact;
-   Real cutsqrnorm;
    Real cutnorm;
-   Real val;
    int nvars;
    int cutlen;
-   int v;
    Bool success;
    
    assert(scip != NULL);
@@ -136,25 +246,10 @@ RETCODE addCut(
    CHECK_OKAY( SCIPallocBufferArray(scip, &cutcols, nvars) );
    CHECK_OKAY( SCIPallocBufferArray(scip, &cutvals, nvars) );
    
-   /* store the cut as sparse row, calculate activity of cut */
-   cutlen = 0;
-   cutact = 0.0;
-   cutsqrnorm = 0.0;
-   for( v = 0; v < nvars; ++v )
-   {
-      val = cutcoefs[v];
-      if( !SCIPisZero(scip, val) )
-      {
-         assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
-         cutact += val * varsolvals[v];
-         cutsqrnorm += SQR(val);
-         cutcols[cutlen] = SCIPvarGetCol(vars[v]);
-         cutvals[cutlen] = val;
-         cutlen++;
-      }
-   }
-   cutnorm = SQRT(cutsqrnorm);
-   
+   /* store the cut as sparse row, calculate activity and norm of cut */
+   CHECK_OKAY( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
+         cutcols, cutvals, &cutlen, &cutact, &cutnorm) );
+
    if( SCIPisPositive(scip, cutnorm) && SCIPisEfficacious(scip, (cutact - cutrhs)/cutnorm) )
    {
       ROW* cut;
@@ -295,6 +390,7 @@ RETCODE aggregation(
    Real             maxslack,           /**< maximal slack of rows to be used in aggregation */
    int              maxtestdelta,	/**< maximal number of different deltas to try */
    int              maxconts,	        /**< maximal number of active continuous variables in aggregated row */
+   char             normtype,           /**< type of norm to use for efficacy norm calculation */
    int*             ncuts               /**< pointer to count the number of generated cuts */
    )
 {
@@ -537,7 +633,7 @@ RETCODE aggregation(
          CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxrowfac, MINFRAC,
                rowweights, bestdelta, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         CHECK_OKAY( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, cutislocal, ncuts) );
+         CHECK_OKAY( addCut(scip, sepadata, varsolvals, cutcoefs, cutrhs, cutislocal, normtype, ncuts) );
 
          /* if the cut was successfully added, abort the aggregation of further rows */
          if( *ncuts > oldncuts )
@@ -779,6 +875,7 @@ DECL_SEPAEXEC(sepaExecCmir)
    int maxconts;
    int ncuts;
    int r;
+   char normtype;
 
    assert(sepa != NULL);
    assert(scip != NULL);
@@ -803,6 +900,9 @@ DECL_SEPAEXEC(sepaExecCmir)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
+
+   /* get the type of norm to use for efficacy calculations */
+   CHECK_OKAY( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
 
    /* get active problem variables */
    vars = SCIPgetVars(scip);
@@ -889,7 +989,7 @@ DECL_SEPAEXEC(sepaExecCmir)
    for( r = 0; r < ntries && ncuts < maxsepacuts && !SCIPisInfinity(scip, -rowscores[roworder[r]]); r++ )
    {
       CHECK_OKAY( aggregation(scip, sepadata, varsolvals, rowlhsscores, rowrhsscores, roworder[r], 
-            maxaggrs, maxslack, maxtestdelta, maxconts, &ncuts) );
+            maxaggrs, maxslack, maxtestdelta, maxconts, normtype, &ncuts) );
    }
 
    /* free data structure */

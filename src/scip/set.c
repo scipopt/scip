@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.115 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.116 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -69,6 +69,7 @@
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
                                                  *   graph (-1: use every intermediate clause) */
+#define SCIP_DEFAULT_CONF_RECONVCLAUSES    TRUE /**< should reconvergence clauses be created for UIPs of last depth level? */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
@@ -170,6 +171,8 @@
 #define SCIP_DEFAULT_SEPA_MINORTHO         0.50 /**< minimal orthogonality for a cut to enter the LP */
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
+                                                 *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXADDROUNDS        1 /**< maximal additional number of separation rounds in subsequent
@@ -379,6 +382,11 @@ RETCODE SCIPsetCreate(
          "conflict/repropagate",
          "should earlier nodes be repropagated in order to replace branching decisions by deductions",
          &(*set)->conf_repropagate, SCIP_DEFAULT_CONF_REPROPAGATE,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "conflict/reconvclauses",
+         "should reconvergence clauses be created for UIPs of last depth level?",
+         &(*set)->conf_reconvclauses, SCIP_DEFAULT_CONF_RECONVCLAUSES,
          NULL, NULL) );
 
    /* constraint parameters */
@@ -683,6 +691,11 @@ RETCODE SCIPsetCreate(
          "separating/orthofac",
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
          &(*set)->sepa_orthofac, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddCharParam(*set, memhdr,
+         "separating/efficacynorm",
+         "row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)",
+         &(*set)->sepa_efficacynorm, SCIP_DEFAULT_SEPA_EFFICACYNORM, "emsd",
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
          "separating/maxrounds",

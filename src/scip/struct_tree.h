@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.15 2004/09/23 15:46:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.16 2004/10/19 18:36:36 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -89,6 +89,7 @@ struct Subroot
 struct Node
 {
    Real             lowerbound;         /**< lower (dual) LP bound of subtree */
+   Real             priority;           /**< ?????????????????? node selection priority assigned by the branching rule */
    union
    {
       SIBLING       sibling;            /**< data for sibling nodes */

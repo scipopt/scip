@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.25 2004/10/12 14:06:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.26 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -128,6 +128,7 @@ struct Row
    Real             flushedlhs;         /**< left hand side minus constant of row already flushed to the LP solver */
    Real             flushedrhs;         /**< right hand side minus constant of row already flushed to the LP solver */
    Real             sqrnorm;            /**< squared euclidean norm of row vector */
+   Real             sumnorm;            /**< sum norm of row vector (sum of absolute values of coefficients) */
    Real             objprod;            /**< scalar product of row vector with objective function */
    Real             maxval;             /**< maximal absolute value of row vector, only valid if nummaxval > 0 */
    Real             minval;             /**< minimal absolute non-zero value of row vector, only valid if numminval > 0 */
@@ -187,6 +188,7 @@ struct Lp
    Real             lpifeastol;         /**< current feasibility tolerance in LPI */
    Real             lpidualfeastol;     /**< current reduced costs feasibility tolerance in LPI */
    Real             objsqrnorm;         /**< squared euclidean norm of objective function vector of column variables */
+   Real             objsumnorm;         /**< sum norm of objective function vector of column variables */
    LPI*             lpi;                /**< LP solver interface */
    COL**            lpicols;            /**< array with columns currently stored in the LP solver */
    ROW**            lpirows;            /**< array with rows currently stored in the LP solver */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.29 2004/10/05 11:01:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.30 2004/10/19 18:36:32 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -100,7 +100,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    Bool exactsolve;
    int nlpcands;
    int npriolpcands;
-   int bestlpcand;
+   int bestcand;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -133,7 +133,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    assert(npriolpcands > 0);
 
    /* if only one candidate exists, choose this one without applying strong branching */
-   bestlpcand = 0;
+   bestcand = 0;
    bestdown = lpobjval;
    bestup = lpobjval;
    bestscore = -SCIPinfinity(scip);
@@ -247,7 +247,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
             if( score > bestscore )
             {
-               bestlpcand = c;
+               bestcand = c;
                bestdown = down;
                bestup = up;
                bestscore = score;
@@ -266,7 +266,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
          debugMessage(" -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
             c, nlpcands, npriolpcands, SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
-            SCIPvarGetName(lpcands[bestlpcand]), bestscore);
+            SCIPvarGetName(lpcands[bestcand]), bestscore);
       }
 
       /* remember last evaluated candidate */
@@ -277,22 +277,26 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    {
       NODE* node;
       Real rootsolval;
+      Real downprio;
+      int direction;
 
       assert(*result == SCIP_DIDNOTRUN);
-      assert(0 <= bestlpcand && bestlpcand < nlpcands);
+      assert(0 <= bestcand && bestcand < nlpcands);
       assert(SCIPisLT(scip, provedbound, cutoffbound));
 
       /* perform the branching */
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
-         nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, bestscore);
+         nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestdown, bestup, bestscore);
 
-      rootsolval = SCIPvarGetRootSol(lpcands[bestlpcand]);
+      rootsolval = SCIPvarGetRootSol(lpcands[bestcand]);
+      direction = SCIPvarGetBranchDirection(lpcands[bestcand]);
+      downprio = (direction == 0 ? rootsolval - lpcandssol[bestcand] : -direction);
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",
-         SCIPvarGetName(lpcands[bestlpcand]), SCIPfloor(scip, lpcandssol[bestlpcand]));
-      CHECK_OKAY( SCIPcreateChild(scip, &node, rootsolval - lpcandssol[bestlpcand]) );
-      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestlpcand], SCIPfloor(scip, lpcandssol[bestlpcand])) );
+         SCIPvarGetName(lpcands[bestcand]), SCIPfloor(scip, lpcandssol[bestcand]));
+      CHECK_OKAY( SCIPcreateChild(scip, &node, downprio) );
+      CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestdown)) );
@@ -301,9 +305,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
       
       /* create child node with x >= ceil(x') */
       debugMessage(" -> creating child: <%s> >= %g\n", 
-         SCIPvarGetName(lpcands[bestlpcand]), SCIPceil(scip, lpcandssol[bestlpcand]));
-      CHECK_OKAY( SCIPcreateChild(scip, &node, lpcandssol[bestlpcand] - rootsolval) );
-      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestlpcand], SCIPceil(scip, lpcandssol[bestlpcand])) );
+         SCIPvarGetName(lpcands[bestcand]), SCIPceil(scip, lpcandssol[bestcand]));
+      CHECK_OKAY( SCIPcreateChild(scip, &node, -downprio) );
+      CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestcand], SCIPceil(scip, lpcandssol[bestcand])) );
       if( allcolsinlp && !exactsolve )
       {
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestup)) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.172 2004/10/13 14:36:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.173 2004/10/19 18:36:35 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1900,6 +1900,16 @@ RETCODE SCIPaddVarBranchPriority(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    int              addpriority         /**< value to add to the branch priority of the variable */
+   );
+
+/** sets the branch direction of the variable (-1: prefer downwards branch, 0: automatic selection, +1: prefer upwards
+ *  branch)
+ */
+extern
+RETCODE SCIPchgVarBranchDirection(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              branchdirection     /**< preferred branch direction of the variable (-1: down, 0: auto, +1: up) */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -3868,9 +3878,9 @@ int SCIPgetNCutsApplied(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** get total number of conflict constraints found */
+/** get total number of clauses found in conflict analysis (conflict and reconvergence clauses) */
 extern
-Longint SCIPgetNConflictsFound(
+Longint SCIPgetNConflictClausesFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
