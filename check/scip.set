@@ -1,0 +1,404 @@
+# verbosity level of output
+# [type: int, range: [0,4], default: 2]
+global/display/verblevel = 4 # ??? 2
+
+# maximal number of characters in a node information line
+# [type: int, range: [0,2147483647], default: 138]
+global/display/dispwidth = 138
+
+# frequency for displaying node information lines
+# [type: int, range: [-1,2147483647], default: 1000]
+global/display/dispfreq = 1000
+
+# frequency for displaying header lines (every n'th node information line)
+# [type: int, range: [-1,2147483647], default: 15]
+global/display/dispheaderfreq = 15
+
+# values larger than this are considered infinity
+# [type: real, range: [10000000000,1e+98], default: 1e+20]
+global/numerics/infinity = 1e+20
+
+# absolute values smaller than this are considered zero
+# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
+global/numerics/epsilon = 1e-09
+
+# absolute values of sums smaller than this are considered zero
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+global/numerics/sumepsilon = 1e-06
+
+# LP feasibility tolerance
+# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+global/numerics/feastol = 1e-06
+
+# epsilon for deciding if a cut is violated
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.1]
+global/numerics/cutvioleps = 0.1
+
+# epsilon for deciding if a cut is violated in the root node
+# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.005]
+global/numerics/cutviolepsroot = 0.005
+
+# fraction of maximal memory usage resulting in switch to memory saving mode
+# [type: real, range: [0,1], default: 0.8]
+global/memory/memsavefac = 0.8
+
+# memory growing factor for dynamically allocated arrays
+# [type: real, range: [1,10], default: 1.2]
+global/memory/memgrowfac = 1.2
+
+# initial size of dynamically allocated arrays
+# [type: int, range: [0,2147483647], default: 4]
+global/memory/memgrowinit = 4
+
+# memory growing factor for tree array
+# [type: real, range: [1,10], default: 2]
+global/memory/treegrowfac = 2
+
+# initial size of tree array
+# [type: int, range: [0,2147483647], default: 65536]
+global/memory/treegrowinit = 65536
+
+# memory growing factor for path array
+# [type: real, range: [1,10], default: 2]
+global/memory/pathgrowfac = 2
+
+# initial size of path array
+# [type: int, range: [0,2147483647], default: 256]
+global/memory/pathgrowinit = 256
+
+# standard node selection method
+# [type: string, default: ""]
+global/nodeselection/stdnodeselector = ""
+
+# memory saving mode node selection method
+# [type: string, default: ""]
+global/nodeselection/memsavenodeselector = "dfs" # ???
+
+# branching score factor to weigh downward and upward gain prediction
+# [type: real, range: [0,1], default: 0.167]
+global/branching/branchscorefac = 0.167
+
+# maximal number of presolving rounds (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+global/presolving/maxpresolrounds = -1
+
+# abort presolve, if less than this fraction of the problem was changed in last presolve round
+# [type: real, range: [0,1], default: 0.0001]
+global/presolving/presolabortfac = 0.0001
+
+# maximal number of variables priced in per pricing round
+# [type: int, range: [1,2147483647], default: 128]
+global/pricing/maxpricevars = 128
+
+# maximal number of priced variables at the root node
+# [type: int, range: [1,2147483647], default: 2048]
+global/pricing/maxpricevarsroot = 2048
+
+# pricing is aborted, if fac * maxpricevars pricing candidates were found
+# [type: real, range: [1,1.79769313486232e+308], default: 2]
+global/pricing/abortpricevarsfac = 2
+
+# maximal number of cuts separated per separation round
+# [type: int, range: [1,2147483647], default: 128]
+global/separating/maxsepacuts = 128
+
+# maximal number of separated cuts at the root node
+# [type: int, range: [1,2147483647], default: 2048]
+global/separating/maxsepacutsroot = 2048
+
+# maximum age a cut can reach before it is deleted from the global cut pool
+# [type: int, range: [1,2147483647], default: 128]
+global/separating/cutagelimit = 128
+
+# maximum age an unnecessary constraint can reach before it is deleted
+# [type: int, range: [1,2147483647], default: 128]
+global/constraints/consagelimit = 128
+
+# maximal number of solutions to store in the solution storage
+# [type: int, range: [1,2147483647], default: 256]
+global/solutions/maxsol = 256
+
+# maximal number of nodes to process (-1: no limit)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+global/limits/nodelimit = 10000000 # ??? -1
+
+# maximal time in seconds to run
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+global/limits/timelimit = 900 # ??? 1e+20
+
+# maximal memory usage (-1: no limit); reported memory usage is lower than real memory usage!
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+global/limits/memlimit = 100000000 # ??? -1
+
+# solving stops, if the gap = |(primalbound - dualbound)/dualbound| is below the given value
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+global/limits/gaplimit = 0
+
+# solving stops, if the given number of solutions were found (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+global/limits/sollimit = -1
+
+# frequency for solving LP at the nodes (-1: never; 0: only root LP)
+# [type: int, range: [-1,2147483647], default: 4]
+global/lp/lpsolvefreq = 4
+
+# maximal depth for solving LP at the nodes (-1: no depth limit)
+# [type: int, range: [-1,2147483647], default: -1]
+global/lp/lpsolvedepth = -1
+
+# should new non-basic columns be removed after LP solving?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+global/lp/cleanupcols = FALSE
+
+# should new basic rows be removed after LP solving?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+global/lp/cleanuprows = TRUE
+
+# maximum age a column can reach before it is deleted from the LP
+# [type: int, range: [1,2147483647], default: 8]
+global/lp/colagelimit = 8
+
+# maximum age a row can reach before it is deleted from the LP
+# [type: int, range: [1,2147483647], default: 8]
+global/lp/rowagelimit = 8
+
+# default clock type (1: CPU user seconds, 2: wall clock time)
+# [type: int, range: [1,2], default: 1]
+global/timing/clocktype = 1
+
+# is timing enabled?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+global/timing/clocksenabled = TRUE
+
+# should the CTRL-C interrupt be catched by SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+global/catchctrlc = TRUE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/cnf/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/cnf/dynamicrows = FALSE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/mps/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reader/mps/dynamicrows = FALSE
+
+# display activation status of display column <solfound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/solfound/active = 1
+
+# display activation status of display column <time> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/time/active = 1
+
+# display activation status of display column <nodenum> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nodenum/active = 1
+
+# display activation status of display column <nodesleft> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nodesleft/active = 1
+
+# display activation status of display column <lpiterations> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/lpiterations/active = 1
+
+# display activation status of display column <memused> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/memused/active = 1
+
+# display activation status of display column <actdepth> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actdepth/active = 1
+
+# display activation status of display column <maxdepth> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/maxdepth/active = 1
+
+# display activation status of display column <actvars> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actvars/active = 1
+
+# display activation status of display column <actconss> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actconss/active = 1
+
+# display activation status of display column <actcols> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actcols/active = 1
+
+# display activation status of display column <actrows> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actrows/active = 1
+
+# display activation status of display column <cuts> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/cuts/active = 1
+
+# display activation status of display column <separounds> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/separounds/active = 1
+
+# display activation status of display column <poolsize> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/poolsize/active = 1
+
+# display activation status of display column <actdualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/actdualbound/active = 1
+
+# display activation status of display column <avgdualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/avgdualbound/active = 1
+
+# display activation status of display column <dualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/dualbound/active = 1
+
+# display activation status of display column <primalbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/primalbound/active = 1
+
+# display activation status of display column <gap> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/gap/active = 1
+
+# frequency for separating cuts of constraint handler <integral> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+conshdlr/integral/sepafreq = -1
+
+# frequency for propagating domains of constraint handler <integral> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+conshdlr/integral/propfreq = -1
+
+# frequency for separating cuts of constraint handler <linear> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 4]
+conshdlr/linear/sepafreq = 4
+
+# frequency for propagating domains of constraint handler <linear> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 4]
+conshdlr/linear/propfreq = 4
+
+# multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)
+# [type: int, range: [-1,2147483647], default: 5]
+conshdlr/linear/tightenboundsfreq = 5
+
+# frequency for separating cuts of constraint handler <logicor> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 4]
+conshdlr/logicor/sepafreq = 4
+
+# frequency for propagating domains of constraint handler <logicor> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+conshdlr/logicor/propfreq = 1
+
+# number of children created in pseudo branching
+# [type: int, range: [2,2147483647], default: 2]
+conshdlr/logicor/npseudobranches = 2
+
+# branching factor to weigh maximum of positive and negative variable uses
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1]
+conshdlr/logicor/maxvarusefac = 1
+
+# branching factor to weigh minimum of positive and negative variable uses
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: -0.2]
+conshdlr/logicor/minvarusefac = -0.2
+
+# frequency for separating cuts of constraint handler <setppc> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 4]
+conshdlr/setppc/sepafreq = 4
+
+# frequency for propagating domains of constraint handler <setppc> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+conshdlr/setppc/propfreq = 1
+
+# number of children created in pseudo branching
+# [type: int, range: [2,2147483647], default: 2]
+conshdlr/setppc/npseudobranches = 2
+
+# minimal plunging depth, before new best node may be selected
+# [type: int, range: [0,2147483647], default: 10]
+nodesel/bfs/minplungedepth = 10
+
+# maximal plunging depth, before new best node is forced to be selected
+# [type: int, range: [0,2147483647], default: 25]
+nodesel/bfs/maxplungedepth = 25
+
+# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where plunging is performed
+# [type: real, range: [0,1.79769313486232e+308], default: 1.5]
+nodesel/bfs/maxplungequot = 1.5
+
+# frequency for selecting the best node instead of the deepest one (0: never)
+# [type: int, range: [0,2147483647], default: 1000]
+nodesel/restartdfs/selectbestfreq = 1000
+
+# priority of branching rule <fullstrong>
+# [type: int, range: [-2147483648,2147483647], default: 200]
+branchrule/fullstrong/priority = 0 # ??? 200
+
+# priority of branching rule <mostinf>
+# [type: int, range: [-2147483648,2147483647], default: 100]
+branchrule/mostinf/priority = 100
+
+# priority of branching rule <leastinf>
+# [type: int, range: [-2147483648,2147483647], default: 50]
+branchrule/leastinf/priority = 50
+
+# frequency for calling primal heuristic <diving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristic/diving/freq = 10
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0.5]
+heuristic/diving/divestartdepth = 0.5
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.2]
+heuristic/diving/maxlpiterquot = 0.2
+
+# maximal quotient (actlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristic/diving/maxdiveubquot = 0.8
+
+# maximal quotient (actlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1e+99], default: 4]
+heuristic/diving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristic/diving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1e+99], default: 8]
+heuristic/diving/maxdiveavgquotnosol = 8
+
+# frequency for calling primal heuristic <rounding> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristic/rounding/freq = 1
+
+# frequency for calling separator <gomory> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 8]
+separator/gomory/freq = 8
+
+# maximal number of gomory separation rounds per node
+# [type: int, range: [0,2147483647], default: 3]
+separator/gomory/maxrounds = 3
+
+# maximal number of gomory separation rounds in the root node
+# [type: int, range: [0,2147483647], default: 6]
+separator/gomory/maxroundsroot = 6
+
+# maximal number of gomory cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 32]
+separator/gomory/maxsepacuts = 32
+
+# maximal number of gomory cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 128]
+separator/gomory/maxsepacutsroot = 128
+
