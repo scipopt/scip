@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.10 2004/05/03 08:13:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.11 2004/05/05 14:05:03 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -61,23 +61,35 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin)
  *
- *  This method is called when the presolving process is about to begin.
- *  The constraint handler may use this call to initialize its presolving data.
+ *  This method is called when the presolving process is about to begin, even if presolving is turned off.
+ *  The constraint handler may use this call to initialize its presolving data, or to modify its constraints
+ *  before the presolving process begins.
+ *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here
+ *  or in the presolving deinitialization call.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - conss           : array of constraints in transformed problem
  *  - nconss          : number of constraints in transformed problem
+ *
+ *  output:
+ *  - result          : pointer to store the result of the call
+ *
+ *  possible return values for *result:
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+ *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
  */
-#define DECL_CONSINITPRE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
+#define DECL_CONSINITPRE(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, RESULT* result)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished)
  *
  *  This method is called after the presolving has been finished, even if presolving is turned off.
  *  The constraint handler may use this call e.g. to clean up its presolving data, or to finally modify its constraints
  *  before the branch and bound process begins.
- *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here.
+ *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here
+ *  or in the presolving initialization call.
  *  Besides necessary modifications and clean up, no time consuming operations should be done.
  *
  *  input:

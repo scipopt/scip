@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.117 2004/05/05 13:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.118 2004/05/05 14:05:02 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1437,7 +1437,7 @@ RETCODE rowDelCoeffPos(
 
    col = row->cols[pos];
    val = row->vals[pos];
-   assert((col->lppos >= 0) == (pos < row->nlpcols));
+   assert((pos < row->nlpcols) == (col->lppos >= 0 && row->linkpos[pos] >= 0));
 
    /*debugMessage("deleting coefficient %g * <%s> at position %d from row <%s>\n",
      val, SCIPvarGetName(col->var), pos, row->name);*/

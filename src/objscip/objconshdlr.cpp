@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.8 2004/05/03 08:13:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.9 2004/05/05 14:05:03 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -118,7 +118,7 @@ DECL_CONSINITPRE(consInitpreObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_initpre(scip, conshdlr, conss, nconss) );
+   CHECK_OKAY( conshdlrdata->objconshdlr->scip_initpre(scip, conshdlr, conss, nconss, result) );
 
    return SCIP_OKAY;
 }

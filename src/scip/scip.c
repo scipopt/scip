@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.165 2004/05/05 13:27:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.166 2004/05/05 14:05:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3002,10 +3002,11 @@ RETCODE presolve(
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
    /* inform constraint handlers that the presolving is abound to begin */
-   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
    {
-      CHECK_OKAY( SCIPconshdlrInitpre(scip->set->conshdlrs[i], scip) );
+      CHECK_OKAY( SCIPconshdlrInitpre(scip->set->conshdlrs[i], scip, &result) );
    }
+   aborted = aborted || (result == SCIP_CUTOFF) || (result == SCIP_UNBOUNDED);
 
    /* perform presolving rounds */
    while( nrounds < maxnrounds && !aborted )

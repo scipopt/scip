@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.12 2004/05/03 08:13:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.13 2004/05/05 14:05:03 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -122,16 +122,29 @@ public:
 
    /** presolving initialization method of constraint handler (called when presolving is about to begin)
     *
-    *  This method is called when the presolving process is about to begin.
-    *  The constraint handler may use this call to initialize its presolving data.
+    *  This method is called when the presolving process is about to begin, even if presolving is turned off.
+    *  The constraint handler may use this call to initialize its presolving data, or to modify its constraints
+    *  before the presolving process begins.
+    *  Necessary constraint modifications that have to be performed even if presolving is turned off should be done here
+    *  or in the presolving deinitialization call.
+    *
+    *  possible return values for *result:
+    *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in obj. direction -> problem is unbounded
+    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> problem is infeasible
+    *  - SCIP_FEASIBLE   : no infeasibility nor unboundness could be found
     */
    virtual RETCODE scip_initpre(
       SCIP*         scip,               /**< SCIP data structure */
       CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       CONS**        conss,              /**< array of constraints in transformed problem */
-      int           nconss              /**< number of constraints in transformed problem */
+      int           nconss,             /**< number of constraints in transformed problem */
+      RESULT*       result              /**< pointer to store the result of the callback method */
       )
    {
+      assert(result != NULL);
+
+      *result = SCIP_FEASIBLE;
+
       return SCIP_OKAY;
    }
    

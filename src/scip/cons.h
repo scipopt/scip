@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.65 2004/05/03 09:21:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.66 2004/05/05 14:05:02 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -118,7 +118,8 @@ RETCODE SCIPconshdlrExit(
 extern
 RETCODE SCIPconshdlrInitpre(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP*            scip                /**< SCIP data structure */   
+   SCIP*            scip,               /**< SCIP data structure */   
+   RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
 /** informs constraint handler that the presolving is finished */
