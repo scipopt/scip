@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.178 2004/06/30 14:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.179 2004/06/30 14:24:07 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3872,7 +3872,7 @@ RETCODE SCIPgetBinvarRepresentative(
    /* get the active representative of the given variable */
    *repvar = var;
    *negated = FALSE;
-   CHECK_OKAY( SCIPvarGetProbvarBinary(repvar, &negated) );
+   CHECK_OKAY( SCIPvarGetProbvarBinary(repvar, negated) );
 
    /* negate the representative, if it corresponds to the negation of the given variable */
    if( *repvar != NULL && *negated )
