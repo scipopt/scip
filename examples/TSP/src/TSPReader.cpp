@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPReader.cpp,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: TSPReader.cpp,v 1.3 2005/03/16 17:02:46 bzfpfend Exp $"
 
 /**@file   TSPReader.cpp
  * @brief  C++ file reader for TSP data files
@@ -227,8 +227,8 @@ RETCODE TSPReader::scip_read(
    if( retcode == SCIP_OKAY )
    {
       edgeforw = &( graph->edges[0] ); 
-      edgebackw= &( graph->edges[1] );
-   
+      edgebackw= &( graph->edges[nedges/2] );
+
       // constructs all edges in a complete digraph
       for( i = 0; i < nnodes; i++ )
       {
@@ -283,9 +283,8 @@ RETCODE TSPReader::scip_read(
                nodeend->first_edge->next = edgebackw;
             }
 
-            // increase by two
-            edgeforw += 2;
-            edgebackw += 2;  
+            edgeforw++;
+            edgebackw++;
          }
       }
 
@@ -301,7 +300,7 @@ RETCODE TSPReader::scip_read(
    CHECK_OKAY( SCIPcreateObjProb(scip, name.c_str(), new TSPProbData(graph), TRUE) );
 
    // add variables to problem and link them for parallel halfedges
-   for( i = 0; i < nedges; i += 2 )
+   for( i = 0; i < nedges/2; i++ )
    {
       stringstream varname;
       edge = &graph->edges[i];
