@@ -40,7 +40,7 @@
 
 static
 DECL_PRESOLEXEC(presolExecDualfix)
-{
+{  /*lint --e{715}*/
    VAR** vars;
    Real bound;
    Bool infeasible;

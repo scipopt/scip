@@ -319,7 +319,7 @@ RETCODE selectEssentialRounding(
  */
 
 static
-DECL_HEURINIT(SCIPheurInitRounding)
+DECL_HEURINIT(SCIPheurInitRounding) /*lint --e{715}*/
 {
    HEURDATA* heurdata;
 
@@ -337,7 +337,7 @@ DECL_HEURINIT(SCIPheurInitRounding)
 }
 
 static
-DECL_HEUREXIT(SCIPheurExitRounding)
+DECL_HEUREXIT(SCIPheurExitRounding) /*lint --e{715}*/
 {
    HEURDATA* heurdata;
 
@@ -356,13 +356,12 @@ DECL_HEUREXIT(SCIPheurExitRounding)
 }
 
 static
-DECL_HEUREXEC(SCIPheurExecRounding)
+DECL_HEUREXEC(SCIPheurExecRounding) /*lint --e{715}*/
 {
    HEURDATA* heurdata;
    SOL* sol;
    VAR** lpcands;
    Real* lpcandssol;
-   Real* lpcandsnewsol;
    ROW** lprows;
    Real* activities;
    ROW** violrows;
@@ -455,12 +454,6 @@ DECL_HEUREXEC(SCIPheurExecRounding)
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
       if( mayrounddown || mayroundup )
       {
-         ROW** colrows;
-         Real* colvals;
-         COL* col;
-         Real delta;
-         int ncolrows;
-
          /* choose rounding direction */
          if( mayrounddown && mayroundup )
          {

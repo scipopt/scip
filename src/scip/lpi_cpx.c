@@ -427,7 +427,6 @@ int getIntParam(LPI* lpi, const int param)
 
    errorMessage("Unknown CPLEX integer parameter");
    abort();
-   return 0;
 }
 
 static
@@ -443,7 +442,6 @@ double getDblParam(LPI* lpi, const int param)
 
    errorMessage("Unknown CPLEX double parameter");
    abort();
-   return 0.0;
 }
 
 static
@@ -501,7 +499,6 @@ int cpxObjsen(OBJSEN objsen)
    default:
       errorMessage("invalid objective sense");
       abort();
-      return 0;
    }
 }
 

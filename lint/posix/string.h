@@ -36,6 +36,7 @@ char * strrchr(const char *, int);
 size_t strspn(const char *, const char *);
 char * strstr(const char *, const char *);
 char * strtok(char *, const char *);
+char * strtok_r(char *s, const char *delim, char **ptrptr); /* added by Tobias Achterberg */
 size_t strxfrm(char *, const char *, size_t);
 
 #endif

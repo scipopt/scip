@@ -123,6 +123,7 @@ MPSSECTION mpsinputSection(
    return mpsi->section;
 }
 
+#if 0
 static
 int mpsinputLineno(
    const MPSINPUT*  mpsi
@@ -132,6 +133,7 @@ int mpsinputLineno(
 
    return mpsi->lineno;
 }
+#endif
 
 static
 const char* mpsinputField0(
@@ -193,6 +195,7 @@ const char* mpsinputField5(
    return mpsi->f5;
 }
 
+#if 0
 static
 const char* mpsinputProbname(
    const MPSINPUT*  mpsi
@@ -202,6 +205,7 @@ const char* mpsinputProbname(
 
    return mpsi->probname;
 }
+#endif
 
 static
 const char* mpsinputObjname(
@@ -366,11 +370,11 @@ Bool mpsinputReadLine(
    MPSINPUT*        mpsi
    )
 {
-   unsigned int len;
-   unsigned int i;
-   int   space;
+   int len;
+   int i;
+   int space;
    char* s;
-   Bool  is_marker;
+   Bool is_marker;
 
    do
    {
@@ -387,7 +391,7 @@ Bool mpsinputReadLine(
       while(*mpsi->buf == '*');
 
       /* Normalize line */
-      len = strlen(mpsi->buf);
+      len = (int)strlen(mpsi->buf);
 
       for(i = 0; i < len; i++)
          if ((mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r'))
@@ -490,7 +494,7 @@ Bool mpsinputReadLine(
          if ((NULL == (mpsi->f5 = strtok(NULL, " "))) || (*mpsi->f5 == '$'))
             mpsi->f5 = 0;
       }
-      while(FALSE);
+      while(FALSE); /*lint !e717*/
    }
    while(is_marker);
 
@@ -569,7 +573,7 @@ RETCODE readName(
 
       return SCIP_OKAY;
    }
-   while(FALSE);
+   while(FALSE); /*lint !e717*/
 
    mpsinputSyntaxerror(mpsi);
 
@@ -611,7 +615,7 @@ RETCODE readObjsen(
 
       return SCIP_OKAY;
    }
-   while(FALSE);
+   while(FALSE); /*lint !e717*/
 
    mpsinputSyntaxerror(mpsi);
 
@@ -645,7 +649,7 @@ RETCODE readObjname(
       mpsinputSetSection(mpsi, MPS_ROWS);
       return SCIP_OKAY;
    }
-   while(FALSE);
+   while(FALSE); /*lint !e717*/
 
    mpsinputSyntaxerror(mpsi);
 
@@ -1291,7 +1295,7 @@ RETCODE readMps(
 /** problem reading method of reader */
 static
 DECL_READERREAD(readerReadMps)
-{
+{  /*lint --e{715}*/
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);

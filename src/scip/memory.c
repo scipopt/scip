@@ -170,12 +170,10 @@ allocMemory_call(size_t size, const char *filename, int line)
 
    if( ptr == NULL )
    {
-      char    s[MAXSTRLEN];
+      char s[MAXSTRLEN];
 
-      sprintf(s, "Error! Insufficient memory for allocation of %ld bytes.",
-	 (long) size);
+      sprintf(s, "Error! Insufficient memory for allocation of %ld bytes.", (long) size);
       errorMessage_call(s, filename, line);
-      /* abort(); */
    }
 #ifndef NDEBUG
    else
@@ -199,11 +197,10 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
 
    if( newptr == NULL )
    {
-      char    s[MAXSTRLEN];
+      char s[MAXSTRLEN];
 
       sprintf(s, "Error! Insufficient memory for reallocation of %ld bytes.", (long) size);
       errorMessage_call(s, filename, line);
-      /* abort(); */
    }
 #ifndef NDEBUG
    else

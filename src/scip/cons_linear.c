@@ -60,7 +60,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< the constraint handler should only be called, if linear constraints exist */
 
 #define TIGHTENBOUNDSFREQ             5 /**< multiplier on propagation frequency, how often the bounds are tightened */
-#define MAXAGGRNORMSCALE              4 /**< maximal allowed relative gain in maximum norm for constraint aggregation */
+#define MAXAGGRNORMSCALE            4.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation */
 
 #define EVENTHDLR_NAME         "linear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
@@ -210,7 +210,7 @@ RETCODE linconsupgradeCreate(
 
 /** frees a linear constraint upgrade data object */
 static
-RETCODE linconsupgradeFree(
+void linconsupgradeFree(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONSUPGRADE** linconsupgrade      /**< pointer to the linear constraint upgrade */
    )
@@ -219,8 +219,6 @@ RETCODE linconsupgradeFree(
    assert(*linconsupgrade != NULL);
 
    SCIPfreeMemory(scip, linconsupgrade);
-
-   return SCIP_OKAY;
 }
 
 /** creates constaint handler data for linear constraint handler */
@@ -547,8 +545,6 @@ RETCODE consdataCreate(
    Real             rhs                 /**< right hand side of row */
    )
 {
-   int i;
-
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
@@ -611,8 +607,6 @@ RETCODE consdataCreateTransformed(
    Real             rhs                 /**< right hand side of row */
    )
 {
-   int i;
-
    assert(consdata != NULL);
 
    /* create linear constraint data */
@@ -875,7 +869,7 @@ void consdataUpdateDelCoef(
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
    {
-      if( val == consdata->maxabsval )  /* check for equality without epsilon is correct here! */
+      if( val == consdata->maxabsval ) /*lint !e777*/ /* check for equality without epsilon is correct here! */
       {
          consdata->validmaxabsval = FALSE;
          consdata->maxabsval = SCIP_INVALID;
@@ -1660,7 +1654,7 @@ RETCODE addCoef(
    if( SCIPconsIsLocked(cons) )
    {
       assert(transformed);
-      consdataLockRounding(scip, consdata, var, val, SCIPconsIsLockedPos(cons), SCIPconsIsLockedNeg(cons));
+      consdataLockRounding(scip, consdata, var, val, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
    }
 
    consdata->propagated = FALSE;
@@ -1669,7 +1663,8 @@ RETCODE addCoef(
    if( consdata->nvars == 1 )
       consdata->sorted = TRUE;
    else
-      consdata->sorted &= (SCIPvarCmp(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
+      consdata->sorted = consdata->sorted
+         && (SCIPvarCmp(consdata->vars[consdata->nvars-2], consdata->vars[consdata->nvars-1]) == -1);
 
    /* add the new coefficient to the LP row */
    if( consdata->row != NULL )
@@ -1765,7 +1760,6 @@ RETCODE chgCoefPos(
    CONSDATA* consdata;
    VAR* var;
    Real val;
-   Bool updaterounding;
 
    assert(!SCIPisZero(scip, newval));
 
@@ -1789,8 +1783,8 @@ RETCODE chgCoefPos(
    if( SCIPconsIsLocked(cons) && newval * val < 0.0 )
    {
       assert(SCIPconsIsTransformed(cons));
-      consdataUnlockRounding(scip, consdata, var, val, SCIPconsIsLockedPos(cons), SCIPconsIsLockedNeg(cons));
-      consdataLockRounding(scip, consdata, var, newval, SCIPconsIsLockedPos(cons), SCIPconsIsLockedNeg(cons));
+      consdataUnlockRounding(scip, consdata, var, val, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
+      consdataLockRounding(scip, consdata, var, newval, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
    }
 
    /* change the value */
@@ -1812,7 +1806,6 @@ RETCODE scaleCons(
    )
 {
    CONSDATA* consdata;
-   Real newval;
    int i;
 
    consdata = SCIPconsGetData(cons);
@@ -1936,14 +1929,11 @@ RETCODE normalizeCons(
     */
    mult = 0;
    
-   if( mult == 0 )
-   {
-      /* 1. the right hand side must not be negative */
-      if( SCIPisPositive(scip, consdata->lhs) )
-         mult = +1;
-      else if( SCIPisNegative(scip, consdata->rhs) )
-         mult = -1;
-   }
+   /* 1. the right hand side must not be negative */
+   if( SCIPisPositive(scip, consdata->lhs) )
+      mult = +1;
+   else if( SCIPisNegative(scip, consdata->rhs) )
+      mult = -1;
 
    if( mult == 0 )
    {
@@ -2011,7 +2001,7 @@ RETCODE normalizeCons(
       }
    }
    assert(scm >= 1);
-   success &= (scm <= maxmult);
+   success = success && (scm <= maxmult);
    if( success && scm != 1 )
    {
       /* scale the constraint with the smallest common multiple of all denominators */
@@ -2417,7 +2407,7 @@ RETCODE separateCons(
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 DECL_CONSFREE(consFreeLinear)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
@@ -2446,7 +2436,7 @@ DECL_CONSFREE(consFreeLinear)
 /** solving start notification method of constraint handler (called when presolving was finished) */
 static
 DECL_CONSSOLSTART(consSolstartLinear)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -2469,7 +2459,7 @@ DECL_CONSSOLSTART(consSolstartLinear)
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteLinear)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    
    assert(conshdlr != NULL);
@@ -2490,7 +2480,7 @@ DECL_CONSDELETE(consDeleteLinear)
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
 DECL_CONSTRANS(consTransLinear)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
@@ -2529,7 +2519,7 @@ DECL_CONSTRANS(consTransLinear)
 /** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpLinear)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2549,7 +2539,7 @@ DECL_CONSINITLP(consInitlpLinear)
 /** separation method of constraint handler */
 static
 DECL_CONSSEPA(consSepaLinear)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert(conshdlr != NULL);
@@ -2587,7 +2577,7 @@ DECL_CONSSEPA(consSepaLinear)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpLinear)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert(conshdlr != NULL);
@@ -2623,7 +2613,7 @@ DECL_CONSENFOLP(consEnfolpLinear)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsLinear)
-{
+{  /*lint --e{715}*/
    Bool violated;
    int c;
 
@@ -2659,7 +2649,7 @@ DECL_CONSENFOPS(consEnfopsLinear)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckLinear)
-{
+{  /*lint --e{715}*/
    Bool violated;
    int c;
 
@@ -2688,13 +2678,12 @@ DECL_CONSCHECK(consCheckLinear)
 /** domain propagation method of constraint handler */
 static
 DECL_CONSPROP(consPropLinear)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONS* cons;
    CONSDATA* consdata;
    Real minactivity;
    Real maxactivity;
-   Bool redundant;
    Bool tightenbounds;
    int propfreq;
    int actdepth;
@@ -2712,9 +2701,8 @@ DECL_CONSPROP(consPropLinear)
    assert(conshdlrdata != NULL);
    propfreq = SCIPconshdlrGetPropFreq(conshdlr);
    actdepth = SCIPgetActDepth(scip);
-   tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && actdepth == 0);
-   tightenbounds |= (conshdlrdata->tightenboundsfreq >= 1
-      && (actdepth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
+   tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && actdepth == 0)
+      || (conshdlrdata->tightenboundsfreq >= 1 && (actdepth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
    nchgbds = 0;
 
    /* process useful constraints */
@@ -2794,8 +2782,9 @@ RETCODE tightenSides(
       integral = TRUE;
       for( i = 0; i < consdata->nvars && integral; ++i )
       {
-         integral &= SCIPisIntegral(scip, consdata->vals[i]);
-         integral &= (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
+         integral = integral
+            && SCIPisIntegral(scip, consdata->vals[i])
+            && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
       }
       if( integral )
       {
@@ -2992,8 +2981,7 @@ RETCODE convertLongEquality(
       val = vals[v];
             
       actslacktype = SCIPvarGetType(var);
-      integral &= (actslacktype != SCIP_VARTYPE_CONTINUOUS);
-      integral &= SCIPisIntegral(scip, val);
+      integral = integral && (actslacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
 
       assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
       assert(SCIPvarGetNLocksUp(var) >= 1);
@@ -3282,7 +3270,6 @@ RETCODE aggregateConstraints(
 {
    CONSDATA* consdata0;
    CONSDATA* consdata1;
-   VAR* var;
    Real a;
    Real b;
    Real aggrcoef;
@@ -3339,7 +3326,6 @@ RETCODE aggregateConstraints(
    for( v = 0; v < nvarscommon; ++v )
    {
       assert(consdata0->vars[commonidx0[v]] == consdata1->vars[commonidx1[v]]);
-      var = consdata0->vars[commonidx0[v]];
       a = consdata1->vals[commonidx1[v]];
       b = -consdata0->vals[commonidx0[v]];
 
@@ -3911,14 +3897,13 @@ RETCODE preprocessConstraintPairs(
 /** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolLinear)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONS* cons;
    CONS* upgdcons;
    CONSDATA* consdata;
    Real minactivity;
    Real maxactivity;
-   Bool redundant;
    Bool consdeleted;
    Bool conschanged;
    int oldnfixedvars;
@@ -4154,7 +4139,7 @@ DECL_CONSPRESOL(consPresolLinear)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockLinear)
-{
+{  /*lint --e{715}*/
    consdataLockAllRoundings(scip, SCIPconsGetData(cons), nlockspos, nlocksneg);
 
    return SCIP_OKAY;
@@ -4164,7 +4149,7 @@ DECL_CONSLOCK(consLockLinear)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockLinear)
-{
+{  /*lint --e{715}*/
    consdataUnlockAllRoundings(scip, SCIPconsGetData(cons), nunlockspos, nunlocksneg);
 
    return SCIP_OKAY;
@@ -4195,7 +4180,7 @@ DECL_CONSUNLOCK(consUnlockLinear)
 
 static
 DECL_EVENTEXEC(eventExecLinear)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    VAR* var;
    Real oldbound;
@@ -4507,7 +4492,6 @@ RETCODE SCIPupgradeConsLinear(
    Real poscoeffsum;
    Real negcoeffsum;
    Bool integral;
-   Bool upgraded;
    int nposbin;
    int nnegbin;
    int nposint;
@@ -4618,7 +4602,7 @@ RETCODE SCIPupgradeConsLinear(
             nnegimpl++;
          break;
       case SCIP_VARTYPE_CONTINUOUS:
-         integral &= (SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb));
+         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb);
          if( val >= 0.0 )
             nposcont++;
          else

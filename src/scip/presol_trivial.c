@@ -54,7 +54,7 @@
 /** presolving execution method */
 static
 DECL_PRESOLEXEC(presolExecTrivial)
-{
+{  /*lint --e{715}*/
    VAR** vars;
    Real lb;
    Real ub;

@@ -40,7 +40,7 @@
 
 static
 DECL_BRANCHEXECLP(branchExeclpFullstrong)
-{
+{  /*lint --e{715}*/
    VAR** lpcands;
    Real* lpcandssol;
    Real lowerbound;

@@ -64,9 +64,9 @@
 #if 0
 static
 DECL_CONSFREE(consFreeInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -79,9 +79,9 @@ DECL_CONSFREE(consFreeInvarknapsack)
 #if 0
 static
 DECL_CONSINIT(consInitInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -94,9 +94,9 @@ DECL_CONSINIT(consInitInvarknapsack)
 #if 0
 static
 DECL_CONSEXIT(consExitInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -109,9 +109,9 @@ DECL_CONSEXIT(consExitInvarknapsack)
 #if 0
 static
 DECL_CONSSOLSTART(consSolstartInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -124,9 +124,9 @@ DECL_CONSSOLSTART(consSolstartInvarknapsack)
 #if 0
 static
 DECL_CONSDELETE(consDeleteInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -139,9 +139,9 @@ DECL_CONSDELETE(consDeleteInvarknapsack)
 #if 0
 static
 DECL_CONSTRANS(consTransInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -154,9 +154,9 @@ DECL_CONSTRANS(consTransInvarknapsack)
 #if 0
 static
 DECL_CONSINITLP(consInitlpInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -169,9 +169,9 @@ DECL_CONSINITLP(consInitlpInvarknapsack)
 #if 0
 static
 DECL_CONSSEPA(consSepaInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -183,9 +183,9 @@ DECL_CONSSEPA(consSepaInvarknapsack)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -194,9 +194,9 @@ DECL_CONSENFOLP(consEnfolpInvarknapsack)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -205,9 +205,9 @@ DECL_CONSENFOPS(consEnfopsInvarknapsack)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -217,9 +217,9 @@ DECL_CONSCHECK(consCheckInvarknapsack)
 #if 0
 static
 DECL_CONSPROP(consPropInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -232,9 +232,9 @@ DECL_CONSPROP(consPropInvarknapsack)
 #if 0
 static
 DECL_CONSPRESOL(consPresolInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -247,9 +247,9 @@ DECL_CONSPRESOL(consPresolInvarknapsack)
 #if 0
 static
 DECL_CONSRESCVAR(consRescvarInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -261,9 +261,9 @@ DECL_CONSRESCVAR(consRescvarInvarknapsack)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -272,9 +272,9 @@ DECL_CONSLOCK(consLockInvarknapsack)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -284,9 +284,9 @@ DECL_CONSUNLOCK(consUnlockInvarknapsack)
 #if 0
 static
 DECL_CONSACTIVE(consActiveInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -299,9 +299,9 @@ DECL_CONSACTIVE(consActiveInvarknapsack)
 #if 0
 static
 DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -314,9 +314,9 @@ DECL_CONSDEACTIVE(consDeactiveInvarknapsack)
 #if 0
 static
 DECL_CONSENABLE(consEnableInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -329,9 +329,9 @@ DECL_CONSENABLE(consEnableInvarknapsack)
 #if 0
 static
 DECL_CONSDISABLE(consDisableInvarknapsack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -349,7 +349,7 @@ DECL_CONSDISABLE(consDisableInvarknapsack)
 #ifdef LINCONSUPGD_PRIORITY
 static
 DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
-{
+{  /*lint --e{715}*/
    Bool upgrade;
 
    assert(upgdcons != NULL);
@@ -359,9 +359,9 @@ DECL_LINCONSUPGD(linconsUpgdInvarknapsack)
     * - all variables must be binary
     * - either one of the sides is infinite, or both sides are equal
     */
-   upgrade = (nposbin + nnegbin == nvars);
-   upgrade &= (ncoeffspone + ncoeffsnone == nvars);
-   upgrade &= (SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs) || SCIPisEQ(scip, lhs, rhs));
+   upgrade = (nposbin + nnegbin == nvars)
+      && (ncoeffspone + ncoeffsnone == nvars)
+      && (SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs) || SCIPisEQ(scip, lhs, rhs));
 
    if( upgrade )
    {
@@ -444,7 +444,7 @@ RETCODE SCIPcreateConsInvarknapsack(
    CONSDATA* consdata;
 
    errorMessage("method of invarknapsack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527} --e{715}*/
 
    /* find the invarknapsack constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);

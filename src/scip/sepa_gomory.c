@@ -55,7 +55,7 @@ struct SepaData
 
 static
 DECL_SEPAFREE(SCIPsepaFreeGomory)
-{
+{  /*lint --e{715}*/
    SEPADATA* sepadata;
 
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -73,7 +73,7 @@ DECL_SEPAFREE(SCIPsepaFreeGomory)
 
 static
 DECL_SEPAEXEC(SCIPsepaExecGomory)
-{
+{  /*lint --e{715}*/
    SEPADATA* sepadata;
    VAR** vars;
    COL** cols;
@@ -173,7 +173,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
             Real primsol;
 
             primsol = SCIPcolGetPrimsol(cols[c]);
-            assert(SCIPgetVarSol(scip, var) == primsol);
+            assert(SCIPgetVarSol(scip, var) == primsol); /*lint !e777*/
 
             if( !SCIPisIntegral(scip, primsol) )
             {
@@ -236,7 +236,6 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   {
                      ROW* cut;
                      char cutname[MAXSTRLEN];
-                     Bool success;
 
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);

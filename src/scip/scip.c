@@ -4007,8 +4007,7 @@ RETCODE SCIPchgVarObjDive(
 
    todoMessage("implement SCIPchgVarObjDive()");
    errorMessage("not implemented yet");
-   abort();
-   /*lint --e{715}*/
+   abort();  /*lint --e{527} --e{715}*/
 }
 
 /** changes variable's lower bound in current dive */
@@ -4187,14 +4186,13 @@ RETCODE SCIPchgRowLhs(
    )
 {
    errorMessage("sides of row must not be changed (not implemented yet)");
-   abort();
+   abort(); /*lint --e{527} --e{715}*/
 #if 0
    CHECK_OKAY( checkStage(scip, "SCIPchgRowLhs", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwChgLhs(row, scip->set, scip->lp, lhs) );
    return SCIP_OKAY;
 #endif
-   /*lint --e{715}*/
 }
 
 /** changes right hand side of LP row */
@@ -4205,14 +4203,13 @@ RETCODE SCIPchgRowRhs(
    )
 {
    errorMessage("sides of row must not be changed (not implemented yet)");
-   abort();
+   abort(); /*lint --e{527} --e{715}*/
 #if 0
    CHECK_OKAY( checkStage(scip, "SCIPchgRowRhs", FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwChgRhs(row, scip->set, scip->lp, rhs) );
    return SCIP_OKAY;
 #endif
-   /*lint --e{715}*/
 }
 
 /** resolves variable to columns and adds them with the coefficient to the row */
@@ -7247,9 +7244,8 @@ RETCODE SCIPreleaseBuffer(
    void**           ptr,                /**< pointer to store the buffer */
    int              dummysize           /**< used to get a safer define for SCIPreleaseBufferSize/Array */
    )
-{
-   /*lint --e{715}*/
-  assert(ptr != NULL);
+{  /*lint --e{715}*/
+   assert(ptr != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPreleaseBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 

@@ -44,9 +44,11 @@
 
 #define LINCONSUPGD_PRIORITY    +700000
 
-#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
+#ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
+#endif
+#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
 
 enum SetppcType
 {
@@ -317,6 +319,9 @@ void consdataLockRounding(
    case SCIP_SETPPCTYPE_COVERING:
       SCIPvarLock(var, nlockspos, nlocksneg);
       break;
+   default:
+      errorMessage("unknown setppc type");
+      abort();
    }
 }
 
@@ -343,6 +348,9 @@ void consdataUnlockRounding(
    case SCIP_SETPPCTYPE_COVERING:
       SCIPvarUnlock(var, nunlockspos, nunlocksneg);
       break;
+   default:
+      errorMessage("unknown setppc type");
+      abort();
    }
 }
 
@@ -396,9 +404,6 @@ RETCODE consdataCreate(
    (*consdata)->row = NULL;
    if( nvars > 0 )
    {
-      VAR* var;
-      int v;
-
       CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       (*consdata)->varssize = nvars;
       (*consdata)->nvars = nvars;
@@ -411,7 +416,7 @@ RETCODE consdataCreate(
    }
    (*consdata)->nfixedzeros = 0;
    (*consdata)->nfixedones = 0;
-   (*consdata)->setppctype = setppctype;
+   (*consdata)->setppctype = setppctype; /*lint !e641*/
    (*consdata)->changed = TRUE;
 
    return SCIP_OKAY;
@@ -617,7 +622,7 @@ RETCODE analyzeConflictZero(
 
    assert(consdata != NULL);
    assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
-      || consdata->setppctype == SCIP_SETPPCTYPE_COVERING);
+      || consdata->setppctype == SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
@@ -627,8 +632,7 @@ RETCODE analyzeConflictZero(
    }
 
    /* analyze the conflict */
-   maxsize = SCIPgetNBinVars(scip);
-   maxsize *= 0.05; /*???????????????????*/
+   maxsize = (int)(0.05 * SCIPgetNBinVars(scip)); /*???????????????????*/
    maxsize = MAX(maxsize, 12); /*???????????????????*/
    CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
 
@@ -665,7 +669,7 @@ RETCODE analyzeConflictOne(
 
    assert(consdata != NULL);
    assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
-      || consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
+      || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
    /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
    CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
@@ -681,8 +685,7 @@ RETCODE analyzeConflictOne(
    assert(n == 2);
 
    /* analyze the conflict */
-   maxsize = SCIPgetNBinVars(scip);
-   maxsize *= 0.02; /*???????????????????*/
+   maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
    maxsize = MAX(maxsize, 12); /*???????????????????*/
    CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
 
@@ -735,7 +738,7 @@ RETCODE processFixings(
        * - a set covering constraint is feasible anyway and can be disabled
        * - a set partitioning or packing constraint is infeasible
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
@@ -752,7 +755,7 @@ RETCODE processFixings(
        * - a set covering constraint is feasible anyway and can be disabled
        * - all other variables in a set partitioning or packing constraint must be zero
        */
-      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
       {
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
@@ -781,7 +784,7 @@ RETCODE processFixings(
                {
                   if( SCIPvarGetUbLocal(var) > 0.5 )
                   {
-                     CHECK_OKAY( SCIPinferBinVar(scip, var, 0.0, cons) ); /* provide cons for conflict analysis */
+                     CHECK_OKAY( SCIPinferBinVar(scip, var, FALSE, cons) ); /* provide cons for conflict analysis */
                      fixed = TRUE;
                   }
                }
@@ -814,7 +817,7 @@ RETCODE processFixings(
        */
       assert(consdata->nfixedones == 0);
       
-      if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
       {
          if( !SCIPconsIsModifiable(cons) )
          {
@@ -843,7 +846,7 @@ RETCODE processFixings(
        */
       assert(consdata->nfixedones == 0);
       
-      if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+      if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
       {
          if( !SCIPconsIsModifiable(cons) )
          {
@@ -869,7 +872,7 @@ RETCODE processFixings(
             assert(SCIPisZero(scip, SCIPvarGetUbLocal(var)) || SCIPisEQ(scip, SCIPvarGetUbLocal(var), 1.0));
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
-               CHECK_OKAY( SCIPinferBinVar(scip, var, 1.0, cons) ); /* provide cons for conflict analysis */
+               CHECK_OKAY( SCIPinferBinVar(scip, var, TRUE, cons) ); /* provide cons for conflict analysis */
                fixed = TRUE;
             }
          }
@@ -946,7 +949,6 @@ RETCODE createRow(
    CONSDATA* consdata;
    Real lhs;
    Real rhs;
-   int v;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -988,7 +990,6 @@ RETCODE addCut(
    )
 {
    CONSDATA* consdata;
-   ROW* row;
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1140,7 +1141,7 @@ RETCODE enforcePseudo(
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 DECL_CONSFREE(consFreeSetppc)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
@@ -1174,7 +1175,7 @@ DECL_CONSFREE(consFreeSetppc)
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteSetppc)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    
    assert(conshdlr != NULL);
@@ -1195,7 +1196,7 @@ DECL_CONSDELETE(consDeleteSetppc)
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
 DECL_CONSTRANS(consTransSetppc)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
@@ -1219,7 +1220,7 @@ DECL_CONSTRANS(consTransSetppc)
 
    /* create constraint data for target constraint */
    CHECK_OKAY( consdataCreateTransformed(scip, &targetdata, conshdlrdata->eventhdlr,
-                  sourcedata->nvars, sourcedata->vars, sourcedata->setppctype) );
+                  sourcedata->nvars, sourcedata->vars, (SETPPCTYPE)sourcedata->setppctype) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1234,7 +1235,7 @@ DECL_CONSTRANS(consTransSetppc)
 /** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpSetppc)
-{
+{  /*lint --e{715}*/
    int c;
 
    for( c = 0; c < nconss; ++c )
@@ -1252,7 +1253,7 @@ DECL_CONSINITLP(consInitlpSetppc)
 /** separation method of constraint handler */
 static
 DECL_CONSSEPA(consSepaSetppc)
-{
+{  /*lint --e{715}*/
    Bool cutoff;
    Bool separated;
    Bool reduceddom;
@@ -1300,6 +1301,7 @@ DECL_CONSSEPA(consSepaSetppc)
    return SCIP_OKAY;
 }
 
+#ifdef BRANCHLP
 /** if fractional variables exist, chooses a set S of them and branches on (i) x(S) == 0, and (ii) x(S) >= 1 */
 static
 RETCODE branchLP(
@@ -1373,6 +1375,7 @@ RETCODE branchLP(
        * then choose one less
        */
       branchweight = 0.0;
+      solval = 0.0;
       for( nselcands = 0; nselcands < nsortcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
       {
          solval = SCIPgetVarSol(scip, sortcands[nselcands]);
@@ -1437,6 +1440,7 @@ RETCODE branchLP(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
  *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1
@@ -1561,7 +1565,7 @@ RETCODE branchPseudo(
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpSetppc)
-{
+{  /*lint --e{715}*/
    Bool cutoff;
    Bool separated;
    Bool reduceddom;
@@ -1592,7 +1596,7 @@ DECL_CONSENFOLP(consEnfolpSetppc)
       CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
-#if 0
+#ifdef BRANCHLP
    if( !cutoff && !separated && !reduceddom )
    {
       /* step 3: if solution is not integral, choose a variable set to branch on */
@@ -1617,7 +1621,7 @@ DECL_CONSENFOLP(consEnfolpSetppc)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsSetppc)
-{
+{  /*lint --e{715}*/
    Bool cutoff;
    Bool infeasible;
    Bool reduceddom;
@@ -1675,15 +1679,10 @@ DECL_CONSENFOPS(consEnfopsSetppc)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckSetppc)
-{
+{  /*lint --e{715}*/
    CONS* cons;
    CONSDATA* consdata;
-   VAR** vars;
-   Real solval;
-   int nvars;
    int c;
-   int v;
-   Bool found;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1721,7 +1720,7 @@ DECL_CONSCHECK(consCheckSetppc)
 /** domain propagation method of constraint handler */
 static
 DECL_CONSPROP(consPropSetppc)
-{
+{  /*lint --e{715}*/
    Bool cutoff;
    Bool reduceddom;
    Bool addcut;
@@ -1768,7 +1767,7 @@ DECL_CONSPROP(consPropSetppc)
 /** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolSetppc)
-{
+{  /*lint --e{715}*/
    CONS* cons;
    CONSDATA* consdata;
    int c;
@@ -1802,7 +1801,7 @@ DECL_CONSPRESOL(consPresolSetppc)
           * - a set covering constraint is feasible anyway and can be deleted
           * - a set partitioning or packing constraint is infeasible
           */
-         if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+         if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
          {
             debugMessage("set covering constraint <%s> is redundant\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdelCons(scip, cons) );
@@ -1823,7 +1822,7 @@ DECL_CONSPRESOL(consPresolSetppc)
           * - a set covering constraint is feasible anyway and can be disabled
           * - all other variables in a set partitioning or packing constraint must be zero
           */
-         if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING )
+         if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
          {
             debugMessage("set covering constraint <%s> is redundant\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdelCons(scip, cons) );
@@ -1881,7 +1880,7 @@ DECL_CONSPRESOL(consPresolSetppc)
              */
             assert(consdata->nfixedones == 0);
             
-            if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
             {
                debugMessage("set packing constraint <%s> is redundant\n", SCIPconsGetName(cons));
                CHECK_OKAY( SCIPdelCons(scip, cons) );
@@ -1905,7 +1904,7 @@ DECL_CONSPRESOL(consPresolSetppc)
              */
             assert(consdata->nfixedones == 0);
          
-            if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            if( consdata->setppctype == SCIP_SETPPCTYPE_PACKING ) /*lint !e641*/
             {
                debugMessage("set packing constraint <%s> is redundant\n", SCIPconsGetName(cons));
                CHECK_OKAY( SCIPdelCons(scip, cons) );
@@ -1925,6 +1924,7 @@ DECL_CONSPRESOL(consPresolSetppc)
                
                /* search unfixed variable */
                found = FALSE;
+               var = NULL;
                for( v = 0; v < consdata->nvars && !found; ++v )
                {
                   var = consdata->vars[v];
@@ -1947,7 +1947,8 @@ DECL_CONSPRESOL(consPresolSetppc)
                continue;
             }
          }
-         else if( consdata->nfixedzeros == consdata->nvars - 2 && consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
+         else if( consdata->nfixedzeros == consdata->nvars - 2
+            && consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ) /*lint !e641*/
          {
             VAR* var;
             VAR* var1;
@@ -2010,7 +2011,7 @@ DECL_CONSPRESOL(consPresolSetppc)
 /** conflict variable resolving method of constraint handler */
 static
 DECL_CONSRESCVAR(consRescvarSetppc)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int v;
 
@@ -2076,7 +2077,7 @@ DECL_CONSRESCVAR(consRescvarSetppc)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockSetppc)
-{
+{  /*lint --e{715}*/
    consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
 
    return SCIP_OKAY;
@@ -2086,7 +2087,7 @@ DECL_CONSLOCK(consLockSetppc)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockSetppc)
-{
+{  /*lint --e{715}*/
    consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
 
    return SCIP_OKAY;
@@ -2096,7 +2097,7 @@ DECL_CONSUNLOCK(consUnlockSetppc)
 /** constraint activation notification method of constraint handler */
 static
 DECL_CONSACTIVE(consActiveSetppc)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
    int v;
@@ -2127,7 +2128,7 @@ DECL_CONSACTIVE(consActiveSetppc)
 /** constraint deactivation notification method of constraint handler */
 static
 DECL_CONSDEACTIVE(consDeactiveSetppc)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
    int v;
@@ -2277,7 +2278,7 @@ RETCODE createNormalizedSetppc(
 
 static
 DECL_LINCONSUPGD(linconsUpgdSetppc)
-{
+{  /*lint --e{715}*/
    assert(upgdcons != NULL);
 
    /* check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint
@@ -2299,12 +2300,12 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
    {
       int mult;
 
-      if( SCIPisEQ(scip, lhs, rhs) && (SCIPisEQ(scip, lhs, 1 - ncoeffsnone) || SCIPisEQ(scip, lhs, ncoeffspone - 1)) )
+      if( SCIPisEQ(scip, lhs, rhs) && (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) || SCIPisEQ(scip, lhs, ncoeffspone - 1.0)) )
       {
          debugMessage("upgrading constraint <%s> to set partitioning constraint\n", SCIPconsGetName(cons));
          
          /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-         mult = SCIPisEQ(scip, lhs, 1 - ncoeffsnone) ? +1 : -1;
+         mult = SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) ? +1 : -1;
 
          /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
          assert(!SCIPconsIsModifiable(cons));
@@ -2314,8 +2315,8 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
-      else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1 - ncoeffsnone))
-         || (SCIPisEQ(scip, lhs, ncoeffspone - 1) && SCIPisInfinity(scip, rhs)) )
+      else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
+         || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
       {
          debugMessage("upgrading constraint <%s> to set packing constraint\n", SCIPconsGetName(cons));
          
@@ -2330,8 +2331,8 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
       }
-      else if( (SCIPisEQ(scip, lhs, 1 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
-         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1)) )
+      else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
+         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
       {
          debugMessage("upgrading constraint <%s> to set covering constraint\n", SCIPconsGetName(cons));
          
@@ -2360,7 +2361,7 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
 
 static
 DECL_EVENTEXEC(eventExecSetppc)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    EVENTTYPE eventtype;
 

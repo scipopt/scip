@@ -40,7 +40,7 @@
 
 static
 DECL_NODESELSELECT(nodeselSelectDfs)
-{
+{  /*lint --e{715}*/
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
    assert(scip != NULL);
@@ -53,7 +53,7 @@ DECL_NODESELSELECT(nodeselSelectDfs)
 
 static
 DECL_NODESELCOMP(nodeselCompDfs)
-{
+{  /*lint --e{715}*/
    int depth1;
    int depth2;
 

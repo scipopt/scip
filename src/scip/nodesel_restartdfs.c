@@ -56,7 +56,7 @@ struct NodeselData
 
 static
 DECL_NODESELFREE(nodeselFreeRestartdfs)
-{
+{  /*lint --e{715}*/
    NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
@@ -74,7 +74,7 @@ DECL_NODESELFREE(nodeselFreeRestartdfs)
 
 static
 DECL_NODESELSELECT(nodeselSelectRestartdfs)
-{
+{  /*lint --e{715}*/
    NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
@@ -97,7 +97,7 @@ DECL_NODESELSELECT(nodeselSelectRestartdfs)
 
 static
 DECL_NODESELCOMP(nodeselCompRestartdfs)
-{
+{  /*lint --e{715}*/
    int depth1;
    int depth2;
 

@@ -81,7 +81,7 @@ struct HeurData
  */
 
 static
-DECL_HEURFREE(SCIPheurFreeDiving)
+DECL_HEURFREE(SCIPheurFreeDiving) /*lint --e{715}*/
 {
    HEURDATA* heurdata;
 
@@ -99,7 +99,7 @@ DECL_HEURFREE(SCIPheurFreeDiving)
 }
 
 static
-DECL_HEUREXEC(SCIPheurExecDiving)
+DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
 {
    HEURDATA* heurdata;
    LPSOLSTAT lpsolstat;
@@ -121,7 +121,7 @@ DECL_HEUREXEC(SCIPheurExecDiving)
    Bool roundup;
    Longint nlpiterations;
    Longint ndivinglpiterations;
-   int nsolsfound;
+   Longint nsolsfound;
    int nlpcands;
    int startnlpcands;
    int actdepth;
@@ -221,9 +221,10 @@ DECL_HEUREXEC(SCIPheurExecDiving)
        *   - round variable in the feasible direction, that is closest to the rounded value
        */
       bestcand = -1;
+      bestfrac = 100.0;
       bestcandmayrounddown = TRUE;
       bestcandmayroundup = TRUE;
-      bestfrac = 100.0;
+      bestcandroundup = FALSE;
       for( c = 0; c < nlpcands; ++c )
       {
          var = lpcands[c];

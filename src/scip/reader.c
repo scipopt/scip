@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 
 #include "reader.h"
 

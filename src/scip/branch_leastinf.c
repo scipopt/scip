@@ -40,7 +40,7 @@
 
 static
 DECL_BRANCHEXECLP(branchExeclpLeastinf)
-{
+{  /*lint --e{715}*/
    VAR** lpcands;
    Real* lpcandsfrac;
    int nlpcands;

@@ -87,7 +87,7 @@ RETCODE readCnfLine(
       line = fgets(buffer, size, file);
       if( line != NULL )
       {
-         linelen = strlen(line);
+         linelen = (int)strlen(line);
          if( linelen == size-1 )
          {
             char s[MAXSTRLEN];
@@ -101,12 +101,12 @@ RETCODE readCnfLine(
    }
    while( line != NULL && (*line == 'c' || *line == '\n') );
 
-   if( linelen >= 2 && line[linelen-2] == '\n' )
+   if( line != NULL && linelen >= 2 && line[linelen-2] == '\n' )
       line[linelen-2] = '\0';
    else if( linelen == 0 )
       *buffer = '\0';
 
-   assert((line != NULL) ^ (*buffer == '\0'));
+   assert((line == NULL) == (*buffer == '\0'));
  
    return SCIP_OKAY;
 }
@@ -140,7 +140,6 @@ RETCODE readCnf(
    char s[MAXSTRLEN];
    Bool dynamiccols;
    Bool dynamicrows;
-   Bool negative;
    int linecount;
    int clauselen;
    int clausenum;
@@ -300,7 +299,7 @@ RETCODE readCnf(
    CHECK_OKAY( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
    for( v = 0; v < nvars; ++v )
    {
-      CHECK_OKAY( SCIPchgVarObj(scip, vars[v], varsign[v]) );
+      CHECK_OKAY( SCIPchgVarObj(scip, vars[v], (Real)varsign[v]) );
       CHECK_OKAY( SCIPreleaseVar(scip, &vars[v]) );
    }
 
@@ -325,13 +324,9 @@ RETCODE readCnf(
 /** problem reading method of reader */
 static
 DECL_READERREAD(readerReadCnf)
-{
+{  /*lint --e{715}*/
    FILE* f;
    RETCODE retcode;
-   char s[MAXSTRLEN];
-   int linecount;
-   int nvars;
-   int nclauses;
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);

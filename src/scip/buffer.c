@@ -133,8 +133,7 @@ void SCIPbufferRelease(
    void**           ptr,                /**< pointer to the allocated memory buffer */
    int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */
    )
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    int i;
 
    assert(buffer != NULL);

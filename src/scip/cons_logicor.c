@@ -44,8 +44,10 @@
 
 #define LINCONSUPGD_PRIORITY    +800000
 
+#ifdef BRANCHLP
 #define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
 #define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
+#endif
 #define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching */
 #define DEFAULT_MAXVARUSEFAC        1.0  /**< branching factor to weigh maximum of positive and negative variable uses */
 #define DEFAULT_MINVARUSEFAC       -0.2  /**< branching factor to weigh minimum of positive and negative variable uses */
@@ -307,9 +309,6 @@ RETCODE consdataCreate(
    (*consdata)->row = NULL;
    if( nvars > 0 )
    {
-      VAR* var;
-      int v;
-
       CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
       (*consdata)->varssize = nvars;
       (*consdata)->nvars = nvars;
@@ -545,8 +544,7 @@ RETCODE analyzeConflict(
    }
 
    /* analyze the conflict */
-   maxsize = SCIPgetNBinVars(scip);
-   maxsize *= 0.02; /*???????????????????*/
+   maxsize = (int)(0.02 * SCIPgetNBinVars(scip)); /*???????????????????*/
    maxsize = MAX(maxsize, 12); /*???????????????????*/
    CHECK_OKAY( SCIPanalyzeConflict(scip, maxsize, &conflictvars, &nconflictvars, &success) );
 
@@ -772,7 +770,7 @@ RETCODE processWatchedVars(
          /* fixed remaining variable to one and disable constraint */
          debugMessage("single-literal constraint <%s> (fix <%s> to 1.0) at depth %d\n", 
             SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), SCIPgetActDepth(scip));
-         CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], 1.0, cons) ); /* provide cons for conflict analysis */
+         CHECK_OKAY( SCIPinferBinVar(scip, vars[watchedvar1], TRUE, cons) ); /* provide cons for conflict analysis */
          CHECK_OKAY( SCIPresetConsAge(scip, cons) );
          CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          *reduceddom = TRUE;
@@ -850,6 +848,7 @@ Bool checkCons(
 
    /* calculate the constraint's activity */
    sum = 0.0;
+   solval = 0.0;
    assert(SCIPfeastol(scip) < 0.1); /* to make the comparison against 1.1 working */
    for( v = 0; v < nvars && sum < 1.0; ++v )
    {
@@ -903,7 +902,6 @@ RETCODE addCut(
    )
 {
    CONSDATA* consdata;
-   ROW* row;
    
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1058,7 +1056,7 @@ RETCODE enforcePseudo(
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 DECL_CONSFREE(consFreeLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
@@ -1092,7 +1090,7 @@ DECL_CONSFREE(consFreeLogicor)
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
@@ -1115,7 +1113,7 @@ DECL_CONSDELETE(consDeleteLogicor)
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
 DECL_CONSTRANS(consTransLogicor)
-{
+{  /*lint --e{715}*/
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
 
@@ -1147,7 +1145,7 @@ DECL_CONSTRANS(consTransLogicor)
 /** LP initialization method of constraint handler */
 static
 DECL_CONSINITLP(consInitlpLogicor)
-{
+{  /*lint --e{715}*/
    int c;
 
    for( c = 0; c < nconss; ++c )
@@ -1165,7 +1163,7 @@ DECL_CONSINITLP(consInitlpLogicor)
 /** separation method of constraint handler */
 static
 DECL_CONSSEPA(consSepaLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    Bool cutoff;
    Bool separated;
@@ -1217,6 +1215,7 @@ DECL_CONSSEPA(consSepaLogicor)
    return SCIP_OKAY;
 }
 
+#ifdef BRANCHLP
 /** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) >= 0 */
 static
 RETCODE branchLP(
@@ -1313,6 +1312,7 @@ RETCODE branchLP(
        * then choose one less
        */
       branchweight = 0.0;
+      solval = 0.0;
       for( nselcands = 0; nselcands < nbranchcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
       {
          solval = SCIPgetVarSol(scip, branchcands[nselcands]);
@@ -1377,6 +1377,7 @@ RETCODE branchLP(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** if unfixed variables exist, chooses a set S of them and creates |S|+1 child nodes:
  *   - for each variable i from S, create child node with x_0 = ... = x_i-1 = 0, x_i = 1
@@ -1523,7 +1524,7 @@ RETCODE branchPseudo(
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    Bool cutoff;
    Bool separated;
@@ -1558,7 +1559,7 @@ DECL_CONSENFOLP(consEnfolpLogicor)
       CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
-#if 0
+#ifdef BRANCHLP
    /* step 3: if solution is not integral, choose a variable set to branch on */
    if( !cutoff && !separated && !reduceddom )
    {
@@ -1583,7 +1584,7 @@ DECL_CONSENFOLP(consEnfolpLogicor)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    Bool cutoff;
    Bool infeasible;
@@ -1645,15 +1646,10 @@ DECL_CONSENFOPS(consEnfopsLogicor)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckLogicor)
-{
+{  /*lint --e{715}*/
    CONS* cons;
    CONSDATA* consdata;
-   VAR** vars;
-   Real solval;
-   int nvars;
    int c;
-   int v;
-   Bool found;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1691,7 +1687,7 @@ DECL_CONSCHECK(consCheckLogicor)
 /** domain propagation method of constraint handler */
 static
 DECL_CONSPROP(consPropLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    Bool cutoff;
    Bool reduceddom;
@@ -1742,7 +1738,7 @@ DECL_CONSPROP(consPropLogicor)
 /** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONS* cons;
    CONSDATA* consdata;
@@ -1824,7 +1820,7 @@ DECL_CONSPRESOL(consPresolLogicor)
 /** conflict variable resolving method of constraint handler */
 static
 DECL_CONSRESCVAR(consRescvarLogicor)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    Bool infervarfound;
    int v;
@@ -1867,7 +1863,7 @@ DECL_CONSRESCVAR(consRescvarLogicor)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockLogicor)
-{
+{  /*lint --e{715}*/
    consdataLockAllRoundings(SCIPconsGetData(cons), nlockspos, nlocksneg);
 
    return SCIP_OKAY;
@@ -1877,7 +1873,7 @@ DECL_CONSLOCK(consLockLogicor)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockLogicor)
-{
+{  /*lint --e{715}*/
    consdataUnlockAllRoundings(SCIPconsGetData(cons), nunlockspos, nunlocksneg);
 
    return SCIP_OKAY;
@@ -1887,7 +1883,7 @@ DECL_CONSUNLOCK(consUnlockLogicor)
 /** constraint activation notification method of constraint handler */
 static
 DECL_CONSENABLE(consActiveLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
    int v;
@@ -1918,7 +1914,7 @@ DECL_CONSENABLE(consActiveLogicor)
 /** constraint deactivation notification method of constraint handler */
 static
 DECL_CONSDISABLE(consDeactiveLogicor)
-{
+{  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
    int v;
@@ -2013,7 +2009,7 @@ RETCODE createNormalizedLogicor(
 
 static
 DECL_LINCONSUPGD(linconsUpgdLogicor)
-{
+{  /*lint --e{715}*/
    assert(upgdcons != NULL);
 
    /* check, if linear constraint can be upgraded to logic or constraint
@@ -2028,8 +2024,8 @@ DECL_LINCONSUPGD(linconsUpgdLogicor)
     *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
     */
    if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars
-      && ((SCIPisEQ(scip, lhs, 1 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
-         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1))) )
+      && ((SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
+         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0))) )
    {
       int mult;
 
@@ -2058,7 +2054,7 @@ DECL_LINCONSUPGD(linconsUpgdLogicor)
 
 static
 DECL_EVENTEXEC(eventExecLogicor)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
 
    assert(eventhdlr != NULL);

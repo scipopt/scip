@@ -48,8 +48,7 @@ static
 void interruptHandler(
    int              signum              /**< interrupt signal number */
    )
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    ninterrupts++;
    if( ninterrupts >= 5 )
    {

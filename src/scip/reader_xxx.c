@@ -67,9 +67,9 @@ struct ReaderData
 #if 0
 static
 DECL_READERFREE(readerFreeXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx reader not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -81,9 +81,9 @@ DECL_READERFREE(readerFreeXxx)
 /** problem reading method of reader */
 static
 DECL_READERREAD(readerReadXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx reader not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

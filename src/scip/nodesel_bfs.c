@@ -60,7 +60,7 @@ struct NodeselData
 
 static
 DECL_NODESELFREE(nodeselFreeBfs)
-{
+{  /*lint --e{715}*/
    NODESELDATA* nodeseldata;
 
    assert(nodesel != NULL);
@@ -78,7 +78,7 @@ DECL_NODESELFREE(nodeselFreeBfs)
 
 static
 DECL_NODESELSELECT(nodeselSelectBfs)
-{
+{  /*lint --e{715}*/
    NODESELDATA* nodeseldata;
    Real actlowerbound;
    Real avglowerbound;
@@ -128,7 +128,7 @@ DECL_NODESELSELECT(nodeselSelectBfs)
 
 static
 DECL_NODESELCOMP(nodeselCompBfs)
-{
+{  /*lint --e{715}*/
    Real lowerbound1;
    Real lowerbound2;
 

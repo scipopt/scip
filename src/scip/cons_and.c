@@ -268,8 +268,7 @@ RETCODE checkAllConss(
 /** frees specific constraint data */
 static
 DECL_CONSDELETE(consDeleteAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    CHECK_OKAY( consdataFree(scip, consdata) );
    
    return SCIP_OKAY;
@@ -279,7 +278,7 @@ DECL_CONSDELETE(consDeleteAnd)
 /** transforms constraint data into data belonging to the transformed problem */ 
 static
 DECL_CONSTRANS(consTransAnd)
-{
+{  /*lint --e{715}*/
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
    int c;
@@ -327,8 +326,7 @@ DECL_CONSTRANS(consTransAnd)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* add all constraints to the current node */
@@ -341,8 +339,7 @@ DECL_CONSENFOLP(consEnfolpAnd)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* add all constraints to the current node */
@@ -355,8 +352,7 @@ DECL_CONSENFOPS(consEnfopsAnd)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the concatenation */
@@ -373,8 +369,7 @@ DECL_CONSCHECK(consCheckAnd)
 /** presolving method of constraint handler */
 static
 DECL_CONSPRESOL(consPresolAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
    int i;
@@ -432,8 +427,7 @@ DECL_CONSPRESOL(consPresolAnd)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -453,8 +447,7 @@ DECL_CONSLOCK(consLockAnd)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockAnd)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 

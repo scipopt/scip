@@ -46,7 +46,7 @@
 
 static
 DECL_CONSENFOLP(consEnfolpIntegral)
-{
+{  /*lint --e{715}*/
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
@@ -68,7 +68,7 @@ DECL_CONSENFOLP(consEnfolpIntegral)
 
 static
 DECL_CONSCHECK(consCheckIntegral)
-{
+{  /*lint --e{715}*/
    VAR** vars;
    Real solval;
    int nbin;

@@ -64,9 +64,9 @@
 #if 0
 static
 DECL_CONSFREE(consFreeBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -79,9 +79,9 @@ DECL_CONSFREE(consFreeBinpack)
 #if 0
 static
 DECL_CONSINIT(consInitBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -94,9 +94,9 @@ DECL_CONSINIT(consInitBinpack)
 #if 0
 static
 DECL_CONSEXIT(consExitBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -109,9 +109,9 @@ DECL_CONSEXIT(consExitBinpack)
 #if 0
 static
 DECL_CONSSOLSTART(consSolstartBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -124,9 +124,9 @@ DECL_CONSSOLSTART(consSolstartBinpack)
 #if 0
 static
 DECL_CONSDELETE(consDeleteBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -139,9 +139,9 @@ DECL_CONSDELETE(consDeleteBinpack)
 #if 0
 static
 DECL_CONSTRANS(consTransBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -154,9 +154,9 @@ DECL_CONSTRANS(consTransBinpack)
 #if 0
 static
 DECL_CONSINITLP(consInitlpBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -169,9 +169,9 @@ DECL_CONSINITLP(consInitlpBinpack)
 #if 0
 static
 DECL_CONSSEPA(consSepaBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -183,9 +183,9 @@ DECL_CONSSEPA(consSepaBinpack)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -194,9 +194,9 @@ DECL_CONSENFOLP(consEnfolpBinpack)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -205,9 +205,9 @@ DECL_CONSENFOPS(consEnfopsBinpack)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -217,9 +217,9 @@ DECL_CONSCHECK(consCheckBinpack)
 #if 0
 static
 DECL_CONSPROP(consPropBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -232,9 +232,9 @@ DECL_CONSPROP(consPropBinpack)
 #if 0
 static
 DECL_CONSPRESOL(consPresolBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -247,9 +247,9 @@ DECL_CONSPRESOL(consPresolBinpack)
 #if 0
 static
 DECL_CONSRESCVAR(consRescvarBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -261,9 +261,9 @@ DECL_CONSRESCVAR(consRescvarBinpack)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -272,9 +272,9 @@ DECL_CONSLOCK(consLockBinpack)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -284,9 +284,9 @@ DECL_CONSUNLOCK(consUnlockBinpack)
 #if 0
 static
 DECL_CONSACTIVE(consActiveBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -299,9 +299,9 @@ DECL_CONSACTIVE(consActiveBinpack)
 #if 0
 static
 DECL_CONSDEACTIVE(consDeactiveBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -314,9 +314,9 @@ DECL_CONSDEACTIVE(consDeactiveBinpack)
 #if 0
 static
 DECL_CONSENABLE(consEnableBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -329,9 +329,9 @@ DECL_CONSENABLE(consEnableBinpack)
 #if 0
 static
 DECL_CONSDISABLE(consDisableBinpack)
-{
+{  /*lint --e{715}*/
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -349,7 +349,7 @@ DECL_CONSDISABLE(consDisableBinpack)
 #ifdef LINCONSUPGD_PRIORITY
 static
 DECL_LINCONSUPGD(linconsUpgdBinpack)
-{
+{  /*lint --e{715}*/
    Bool upgrade;
 
    assert(upgdcons != NULL);
@@ -470,7 +470,7 @@ RETCODE SCIPcreateConsBinpack(
    CONSDATA* consdata;
 
    errorMessage("method of binpack constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527} --e{715}*/
 
    /* find the binpack constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
@@ -490,3 +490,4 @@ RETCODE SCIPcreateConsBinpack(
 
    return SCIP_OKAY;
 }
+

@@ -87,9 +87,9 @@ struct ConsHdlrData
 #if 0
 static
 DECL_CONSFREE(consFreeXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -102,9 +102,9 @@ DECL_CONSFREE(consFreeXxx)
 #if 0
 static
 DECL_CONSINIT(consInitXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -117,9 +117,9 @@ DECL_CONSINIT(consInitXxx)
 #if 0
 static
 DECL_CONSEXIT(consExitXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -132,9 +132,9 @@ DECL_CONSEXIT(consExitXxx)
 #if 0
 static
 DECL_CONSSOLSTART(consSolstartXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -147,9 +147,9 @@ DECL_CONSSOLSTART(consSolstartXxx)
 #if 0
 static
 DECL_CONSDELETE(consDeleteXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -162,9 +162,9 @@ DECL_CONSDELETE(consDeleteXxx)
 #if 0
 static
 DECL_CONSTRANS(consTransXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -177,9 +177,9 @@ DECL_CONSTRANS(consTransXxx)
 #if 0
 static
 DECL_CONSINITLP(consInitlpXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -192,9 +192,9 @@ DECL_CONSINITLP(consInitlpXxx)
 #if 0
 static
 DECL_CONSSEPA(consSepaXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -206,9 +206,9 @@ DECL_CONSSEPA(consSepaXxx)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 DECL_CONSENFOLP(consEnfolpXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -217,9 +217,9 @@ DECL_CONSENFOLP(consEnfolpXxx)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 DECL_CONSENFOPS(consEnfopsXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -228,9 +228,9 @@ DECL_CONSENFOPS(consEnfopsXxx)
 /** feasibility check method of constraint handler for integral solutions */
 static
 DECL_CONSCHECK(consCheckXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -240,9 +240,9 @@ DECL_CONSCHECK(consCheckXxx)
 #if 0
 static
 DECL_CONSPROP(consPropXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -255,9 +255,9 @@ DECL_CONSPROP(consPropXxx)
 #if 0
 static
 DECL_CONSPRESOL(consPresolXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -270,9 +270,9 @@ DECL_CONSPRESOL(consPresolXxx)
 #if 0
 static
 DECL_CONSRESCVAR(consRescvarXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -284,9 +284,9 @@ DECL_CONSRESCVAR(consRescvarXxx)
 /** variable rounding lock method of constraint handler */
 static
 DECL_CONSLOCK(consLockXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -295,9 +295,9 @@ DECL_CONSLOCK(consLockXxx)
 /** variable rounding unlock method of constraint handler */
 static
 DECL_CONSUNLOCK(consUnlockXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -307,9 +307,9 @@ DECL_CONSUNLOCK(consUnlockXxx)
 #if 0
 static
 DECL_CONSACTIVE(consActiveXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -322,9 +322,9 @@ DECL_CONSACTIVE(consActiveXxx)
 #if 0
 static
 DECL_CONSDEACTIVE(consDeactiveXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -337,9 +337,9 @@ DECL_CONSDEACTIVE(consDeactiveXxx)
 #if 0
 static
 DECL_CONSENABLE(consEnableXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -352,9 +352,9 @@ DECL_CONSENABLE(consEnableXxx)
 #if 0
 static
 DECL_CONSDISABLE(consDisableXxx)
-{
+{  /*lint --e{715}*/
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -372,7 +372,7 @@ DECL_CONSDISABLE(consDisableXxx)
 #ifdef LINCONSUPGD_PRIORITY
 static
 DECL_LINCONSUPGD(linconsUpgdXxx)
-{
+{  /*lint --e{715}*/
    Bool upgrade;
 
    assert(upgdcons != NULL);
@@ -465,7 +465,7 @@ RETCODE SCIPcreateConsXxx(
    CONSDATA* consdata;
 
    errorMessage("method of xxx constraint handler not implemented yet");
-   abort();
+   abort(); /*lint --e{527} --e{715}*/
 
    /* find the xxx constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
