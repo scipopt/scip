@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.106 2004/05/03 11:26:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.107 2004/05/04 09:19:48 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -110,6 +110,8 @@ RETCODE propagateDomains(
 {
    RESULT result;
    Bool propagain;
+   int maxproprounds;
+   int propround;
    int h;
 
    assert(set != NULL);
@@ -118,9 +120,14 @@ RETCODE propagateDomains(
    assert(cutoff != NULL);
 
    debugMessage("domain propagation\n");
+
+   maxproprounds = (tree->actnode->depth == 0 ? set->maxproproundsroot : set->maxproprounds);
+
    *cutoff = FALSE;
+   propround = 0;
    do
    {
+      propround++;
       propagain = FALSE;
       for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
       {
@@ -130,7 +137,7 @@ RETCODE propagateDomains(
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
       }
    }
-   while( propagain && !(*cutoff) );
+   while( propagain && !(*cutoff) && propround < maxproprounds );
 
    return SCIP_OKAY;
 }

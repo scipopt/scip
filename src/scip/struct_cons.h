@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.9 2004/05/03 09:21:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.10 2004/05/04 09:19:48 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -181,6 +181,8 @@ struct Conshdlr
    Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
    Bool             initialized;        /**< is constraint handler initialized? */
    Bool             delayupdates;       /**< must the updates of the constraint arrays be delayed until processUpdates()? */
+   Bool             separated;          /**< was the separation method already called at current node? */
+   Bool             enforced;           /**< was the enforcing method already called at current node? */
 };
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.97 2004/04/29 15:20:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.98 2004/05/04 09:19:48 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -81,6 +81,11 @@
 /* Presolving */
 #define SCIP_DEFAULT_MAXPRESOLROUNDS     -1 /**< maximal number of presolving rounds (-1: unlimited) */
 #define SCIP_DEFAULT_PRESOLABORTFAC   1e-04 /**< abort presolve, if l.t. frac of the problem was changed in last round */
+
+
+/* Propagating */
+#define SCIP_DEFAULT_MAXPROPROUNDS      100 /**< maximal number of propagation rounds per node (-1: unlimited) */
+#define SCIP_DEFAULT_MAXPROPROUNDSROOT 1000 /**< maximal number of propagation rounds in the root node (-1: unlimited) */
 
 
 /* LP Solving */
@@ -417,6 +422,16 @@ RETCODE SCIPsetCreate(
                   "pricing/abortpricevarsfac",
                   "pricing is aborted, if fac * maxpricevars pricing candidates were found",
                   &(*set)->abortpricevarsfac, SCIP_DEFAULT_ABORTPRICEVARSFAC, 1.0, REAL_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+                  "propagating/maxproprounds",
+                  "maximal number of propagation rounds per node (-1: unlimited)",
+                  &(*set)->maxproprounds, SCIP_DEFAULT_MAXPROPROUNDS, -1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
+                  "propagating/maxproproundsroot",
+                  "maximal number of propagation rounds in the root node (-1: unlimited)",
+                  &(*set)->maxproproundsroot, SCIP_DEFAULT_MAXPROPROUNDSROOT, -1, INT_MAX,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
                   "separating/maxsepacuts",

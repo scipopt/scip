@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.18 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.19 2004/05/04 09:19:48 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -118,6 +118,8 @@ struct Set
    int              dispfreq;           /**< frequency for displaying node information lines */
    int              dispheaderfreq;     /**< frequency for displaying header lines (every n'th node information line) */
    int              maxpresolrounds;    /**< maximal number of presolving rounds (-1: unlimited) */
+   int              maxproprounds;      /**< maximal number of propagation rounds per node (-1: unlimited) */
+   int              maxproproundsroot;  /**< maximal number of propagation rounds in the root node (-1: unlimited) */
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
    int              maxpricevarsroot;   /**< maximal number of priced variables at the root node */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.75 2004/05/03 09:21:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.76 2004/05/04 09:19:48 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1155,6 +1155,8 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->initialized = FALSE;
    (*conshdlr)->delayupdates = FALSE;
+   (*conshdlr)->separated = FALSE;
+   (*conshdlr)->enforced = FALSE;
 
    /* add parameters */
    sprintf(paramname, "constraints/%s/sepafreq", name);
@@ -1425,6 +1427,7 @@ RETCODE SCIPconshdlrSeparate(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(conshdlr->separated || conshdlr->lastnsepaconss == 0);
    assert(0 <= conshdlr->lastnsepaconss && conshdlr->lastnsepaconss <= conshdlr->nsepaconss);
    assert(set != NULL);
    assert(stat != NULL);
@@ -1439,7 +1442,7 @@ RETCODE SCIPconshdlrSeparate(
       int nusefulconss;
       int firstcons;
 
-      if( conshdlr->lastnsepaconss > 0 )
+      if( conshdlr->separated )
       {
          /* all new constraints after the last conshdlrResetSepa() call must be useful constraints, which means, that
           * the new constraints are the last constraints of the useful ones
@@ -1459,7 +1462,8 @@ RETCODE SCIPconshdlrSeparate(
       assert(firstcons + nconss <= conshdlr->nsepaconss);
       assert(nusefulconss <= nconss);
 
-      if( !conshdlr->needscons || nconss > 0 )
+      /* constraint handlers without constraints should only be called once */
+      if( nconss > 0 || (!conshdlr->needscons && !conshdlr->separated) )
       {
          CONS** conss;
          Longint oldndomchgs;
@@ -1496,6 +1500,7 @@ RETCODE SCIPconshdlrSeparate(
 
          /* remember, that these constraints have already been processed */
          conshdlr->lastnsepaconss = conshdlr->nsepaconss;
+         conshdlr->separated = TRUE;
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -1543,6 +1548,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(conshdlr->enforced || conshdlr->lastnenfoconss == 0);
    assert(0 <= conshdlr->lastnenfoconss && conshdlr->lastnenfoconss <= conshdlr->nenfoconss);
    assert(set != NULL);
    assert(stat != NULL);
@@ -1558,7 +1564,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
       int nusefulconss;
       int firstcons;
 
-      if( conshdlr->lastnenfoconss > 0 )
+      if( conshdlr->enforced )
       {
          /* all new constraints after the last conshdlrResetEnfo() call must be useful constraints, which means, that
           * the new constraints are the last constraints of the useful ones
@@ -1578,7 +1584,8 @@ RETCODE SCIPconshdlrEnforceLPSol(
       assert(firstcons + nconss <= conshdlr->nenfoconss);
       assert(nusefulconss <= nconss);
 
-      if( !conshdlr->needscons || nconss > 0 )
+      /* constraint handlers without constraints should only be called once */
+      if( nconss > 0 || (!conshdlr->needscons && !conshdlr->enforced) )
       {
          CONS** conss;
          Longint oldndomchgs;
@@ -1615,6 +1622,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
 
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
+         conshdlr->enforced = TRUE;
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -1669,6 +1677,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(conshdlr->enforced || conshdlr->lastnenfoconss == 0);
    assert(0 <= conshdlr->lastnenfoconss && conshdlr->lastnenfoconss <= conshdlr->nenfoconss);
    assert(set != NULL);
    assert(stat != NULL);
@@ -1684,7 +1693,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
       int nusefulconss;
       int firstcons;
 
-      if( conshdlr->lastnenfoconss > 0 )
+      if( conshdlr->enforced )
       {
          /* all new constraints after the last conshdlrResetEnfo() call must be useful constraints, which means, that
           * the new constraints are the last constraints of the useful ones
@@ -1704,7 +1713,8 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
       assert(firstcons + nconss <= conshdlr->nenfoconss);
       assert(nusefulconss <= nconss);
 
-      if( !conshdlr->needscons || nconss > 0 )
+      /* constraint handlers without constraints should only be called once */
+      if( nconss > 0 || (!conshdlr->needscons && !conshdlr->enforced) )
       {
          CONS** conss;
          Longint oldndomchgs;
@@ -1737,6 +1747,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
 
          /* remember, that these constraints have already been processed */
          conshdlr->lastnenfoconss = conshdlr->nenfoconss;
+         conshdlr->enforced = TRUE;
 
          if( *result != SCIP_DIDNOTRUN
             && *result != SCIP_CUTOFF
@@ -2036,6 +2047,7 @@ void SCIPconshdlrResetSepa(
    assert(conshdlr != NULL);
 
    conshdlr->lastnsepaconss = 0;
+   conshdlr->separated = FALSE;
 }
 
 /** resets enforcement to start with first constraint in the next call */
@@ -2046,6 +2058,7 @@ void SCIPconshdlrResetEnfo(
    assert(conshdlr != NULL);
 
    conshdlr->lastnenfoconss = 0;
+   conshdlr->enforced = FALSE;
 }
 
 /** gets name of constraint handler */
