@@ -266,7 +266,7 @@ RETCODE SCIPpresolExec(
    presol->lastnchgsides = *nchgsides;
 
    /* start timing */
-   SCIPclockStart(presol->clock, set->clocktype);
+   SCIPclockStart(presol->clock, set);
 
    /* call external method */
    CHECK_OKAY( presol->presolexec(set->scip, presol, nrounds,
@@ -276,7 +276,7 @@ RETCODE SCIPpresolExec(
                   ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
 
    /* stop timing */
-   SCIPclockStop(presol->clock);
+   SCIPclockStop(presol->clock, set);
 
    /* count the new changes */
    presol->nfixedvars += *nfixedvars - presol->lastnfixedvars;

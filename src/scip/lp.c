@@ -1669,7 +1669,7 @@ RETCODE SCIPcolGetStrongbranch(
       debugMessage("calling strong branching for variable <%s> with %d iterations\n", col->var->name, itlim);
 
       /* start timing */
-      SCIPclockStart(stat->strongbranchtime, set->clocktype);
+      SCIPclockStart(stat->strongbranchtime, set);
       
       /* call LPI strong branching */
       stat->nstrongbranch++;
@@ -1680,7 +1680,7 @@ RETCODE SCIPcolGetStrongbranch(
       col->strongup = MIN(col->strongup, upperbound);
       
       /* start timing */
-      SCIPclockStop(stat->strongbranchtime);
+      SCIPclockStop(stat->strongbranchtime, set);
    }
    assert(col->strongdown < SCIP_INVALID);
    assert(col->strongup < SCIP_INVALID);
@@ -4708,13 +4708,13 @@ RETCODE SCIPlpSolvePrimal(
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
    /* start timing */
-   SCIPclockStart(stat->primallptime, set->clocktype);
+   SCIPclockStart(stat->primallptime, set);
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
 
    /* stop timing */
-   SCIPclockStop(stat->primallptime);
+   SCIPclockStop(stat->primallptime, set);
 
    /* check for primal and dual feasibility */
    CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
@@ -4845,13 +4845,13 @@ RETCODE SCIPlpSolveDual(
    CHECK_OKAY( lpFlush(lp, memhdr, set) );
 
    /* start timing */
-   SCIPclockStart(stat->duallptime, set->clocktype);
+   SCIPclockStart(stat->duallptime, set);
 
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
 
    /* stop timing */
-   SCIPclockStop(stat->duallptime);
+   SCIPclockStop(stat->duallptime, set);
 
    /* check for primal and dual feasibility */
    CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );

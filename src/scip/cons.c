@@ -1298,14 +1298,14 @@ RETCODE SCIPconshdlrSeparate(
          conshdlrDelayUpdates(conshdlr);
 
          /* start timing */
-         SCIPclockStart(conshdlr->sepatime, set->clocktype);
+         SCIPclockStart(conshdlr->sepatime, set);
 
          /* call external method */
          CHECK_OKAY( conshdlr->conssepa(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> separating returned result <%d>\n", *result);
 
          /* stop timing */
-         SCIPclockStop(conshdlr->sepatime);
+         SCIPclockStop(conshdlr->sepatime, set);
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1407,14 +1407,14 @@ RETCODE SCIPconshdlrEnforceLPSol(
          conshdlrDelayUpdates(conshdlr);
 
          /* start timing */
-         SCIPclockStart(conshdlr->enfolptime, set->clocktype);
+         SCIPclockStart(conshdlr->enfolptime, set);
 
          /* call external method */
          CHECK_OKAY( conshdlr->consenfolp(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */
-         SCIPclockStop(conshdlr->enfolptime);
+         SCIPclockStop(conshdlr->enfolptime, set);
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1516,14 +1516,14 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          conshdlrDelayUpdates(conshdlr);
 
          /* start timing */
-         SCIPclockStart(conshdlr->enfopstime, set->clocktype);
+         SCIPclockStart(conshdlr->enfopstime, set);
 
          /* call external method */
          CHECK_OKAY( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
          debugMessage(" -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */
-         SCIPclockStop(conshdlr->enfopstime);
+         SCIPclockStop(conshdlr->enfopstime, set);
 
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1646,7 +1646,7 @@ RETCODE SCIPconshdlrPropagate(
       conshdlrDelayUpdates(conshdlr);
 
       /* start timing */
-      SCIPclockStart(conshdlr->proptime, set->clocktype);
+      SCIPclockStart(conshdlr->proptime, set);
 
       /* call external method */
       CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conshdlr->propconss, conshdlr->npropconss, 
@@ -1654,7 +1654,7 @@ RETCODE SCIPconshdlrPropagate(
       debugMessage(" -> propagation returned result <%d>\n", *result);
       
       /* stop timing */
-      SCIPclockStop(conshdlr->proptime);
+      SCIPclockStop(conshdlr->proptime, set);
 
       /* perform the cached constraint updates */
       CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, prob) );
@@ -1761,7 +1761,7 @@ RETCODE SCIPconshdlrPresolve(
       conshdlr->lastnchgsides = *nchgsides;
 
       /* start timing */
-      SCIPclockStart(conshdlr->presoltime, set->clocktype);
+      SCIPclockStart(conshdlr->presoltime, set);
 
       /* call external method */
       CHECK_OKAY( conshdlr->conspresol(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss, nrounds,
@@ -1771,7 +1771,7 @@ RETCODE SCIPconshdlrPresolve(
                      ndelconss, nupgdconss, nchgcoefs, nchgsides, result) );
       
       /* stop timing */
-      SCIPclockStop(conshdlr->presoltime);
+      SCIPclockStop(conshdlr->presoltime, set);
 
       /* count the new changes */
       conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;

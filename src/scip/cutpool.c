@@ -476,7 +476,7 @@ RETCODE SCIPcutpoolSeparate(
       cutpool, cutpool->ncuts, cutpool->firstunprocessed);
 
    /* start timing */
-   SCIPclockStart(cutpool->clock, set->clocktype);
+   SCIPclockStart(cutpool->clock, set);
 
    /* remember the current total number of found cuts */
    oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
@@ -530,7 +530,7 @@ RETCODE SCIPcutpoolSeparate(
    cutpool->ncutsfound += SCIPsepastoreGetNCutsFound(sepastore) - oldncutsfound;
 
    /* stop timing */
-   SCIPclockStop(cutpool->clock);
+   SCIPclockStop(cutpool->clock, set);
 
    if( found )
       *result = SCIP_SEPARATED;

@@ -309,7 +309,7 @@ RETCODE priceProbVars(
    stat->nlppricings++;
 
    /* start timing */
-   SCIPclockStart(stat->lppricingtime, set->clocktype);
+   SCIPclockStart(stat->lppricingtime, set);
    
    /* price already existing problem variables */
    for( v = 0; v < prob->nvars && price->nfoundvars < abortpricevars; ++v )
@@ -441,7 +441,7 @@ RETCODE priceProbVars(
    }
 
    /* stop timing */
-   SCIPclockStop(stat->lppricingtime);
+   SCIPclockStop(stat->lppricingtime, set);
 
    return SCIP_OKAY;
 }

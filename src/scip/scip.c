@@ -291,7 +291,7 @@ RETCODE SCIPcreate(
    CHECK_OKAY( SCIPmemCreate(&(*scip)->mem) );
    CHECK_OKAY( SCIPsetCreate(&(*scip)->set, (*scip)->mem->setmem, *scip) );
    CHECK_OKAY( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIPclockStart((*scip)->totaltime, (*scip)->set->clocktype);
+   SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->origprob = NULL;
    (*scip)->stat = NULL;
    (*scip)->transprob = NULL;
@@ -1975,13 +1975,13 @@ RETCODE SCIPpresolve(
    scip->stage = SCIP_STAGE_PRESOLVING;
 
    /* start presolving timer */
-   SCIPclockStart(scip->stat->presolvingtime, scip->set->clocktype);
+   SCIPclockStart(scip->stat->presolvingtime, scip->set);
 
    /* presolve problem */
    CHECK_OKAY( presolve(scip, &result) );
 
    /* stop presolving time */
-   SCIPclockStop(scip->stat->presolvingtime);
+   SCIPclockStop(scip->stat->presolvingtime, scip->set);
 
    /* create primal solution storage */
    CHECK_OKAY( SCIPprimalCreate(&scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->lp) );
@@ -2045,7 +2045,7 @@ RETCODE SCIPsolve(
    CHECK_OKAY( checkStage(scip, "SCIPsolve", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    /* start solving timer */
-   SCIPclockStart(scip->stat->solvingtime, scip->set->clocktype);
+   SCIPclockStart(scip->stat->solvingtime, scip->set);
 
    switch( scip->stage )
    {
@@ -2103,7 +2103,7 @@ RETCODE SCIPsolve(
    }
 
    /* stop solving timer */
-   SCIPclockStop(scip->stat->solvingtime);
+   SCIPclockStop(scip->stat->solvingtime, scip->set);
 
    return SCIP_OKAY;
 }
@@ -5218,7 +5218,7 @@ RETCODE SCIPstartClock(
 {
    CHECK_OKAY( checkStage(scip, "SCIPstartClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIPclockStart(clock, scip->set->clocktype);
+   SCIPclockStart(clock, scip->set);
 
    return SCIP_OKAY;
 }
@@ -5231,7 +5231,7 @@ RETCODE SCIPstopClock(
 {
    CHECK_OKAY( checkStage(scip, "SCIPstopClock", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIPclockStop(clock);
+   SCIPclockStop(clock, scip->set);
 
    return SCIP_OKAY;
 }

@@ -195,13 +195,13 @@ RETCODE SCIPsepaExec(
       oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
       /* start timing */
-      SCIPclockStart(sepa->clock, set->clocktype);
+      SCIPclockStart(sepa->clock, set);
 
       /* call external separation method */
       CHECK_OKAY( sepa->sepaexec(set->scip, sepa, result) );
 
       /* stop timing */
-      SCIPclockStop(sepa->clock);
+      SCIPclockStop(sepa->clock, set);
 
       /* evaluate result */
       if( *result != SCIP_CUTOFF

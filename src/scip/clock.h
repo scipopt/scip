@@ -43,6 +43,7 @@ typedef struct WallClock WALLCLOCK;     /**< wall clock counter */
 
 #include "def.h"
 #include "retcode.h"
+#include "set.h"
 
 
 /** CPU clock counter */
@@ -122,13 +123,14 @@ void SCIPclockSetType(
 extern
 void SCIPclockStart(
    CLOCK*           clock,              /**< clock timer */
-   CLOCKTYPE        defaultclocktype    /**< default type of clock to use */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** stops measurement of time in the given clock */
 extern
 void SCIPclockStop(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clock,              /**< clock timer */
+   const SET*       set                 /**< global SCIP settings */
    );
 
 /** gets the used time of this clock in seconds */

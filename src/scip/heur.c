@@ -220,13 +220,13 @@ RETCODE SCIPheurExec(
       oldnsolsfound = primal->nsolsfound;
 
       /* start timing */
-      SCIPclockStart(heur->clock, set->clocktype);
+      SCIPclockStart(heur->clock, set);
 
       /* call external method */
       CHECK_OKAY( heur->heurexec(set->scip, heur, result) );
 
       /* stop timing */
-      SCIPclockStop(heur->clock);
+      SCIPclockStop(heur->clock, set);
 
       /* evaluate result */
       if( *result != SCIP_FOUNDSOL

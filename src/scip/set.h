@@ -133,6 +133,7 @@ struct Set
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
    int              clocktype;          /**< default clock type to use */
+   Bool             clocksenabled;      /**< is timing enabled? */
 };
 
 

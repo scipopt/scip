@@ -1,5 +1,5 @@
 # verbosity level of output [default: 2]
-global_VerbLevel = 2
+global_VerbLevel = 4
 
 # values larger than this are considered infinity [default: 1.000000000000000e+20]
 global_Infinity = 1.000000000000000e+20
@@ -96,6 +96,12 @@ global_CleanupCols = FALSE
 
 # should new basic rows be removed after LP solving? [default: TRUE]
 global_CleanupRows = TRUE
+
+# default clock type (1: CPU user seconds, 2: wall clock time) [default: 1]
+global_ClockType = 1
+
+# is timing enabled? [default: TRUE]
+global_ClocksEnabled = TRUE
 
 # should variables be added and removed dynamically to the problem? [default: TRUE]
 reader_MPS_DynamicVars = TRUE

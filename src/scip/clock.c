@@ -195,14 +195,15 @@ void SCIPclockSetType(
 /** starts measurement of time in the given clock */
 void SCIPclockStart(
    CLOCK*           clock,              /**< clock timer */
-   CLOCKTYPE        defaultclocktype    /**< default type of clock to use */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(clock != NULL);
+   assert(set != NULL);
 
-   if( clock->enabled )
+   if( set->clocksenabled && clock->enabled )
    {
-      clockUpdateDefaultType(clock, defaultclocktype);
+      clockUpdateDefaultType(clock, set->clocktype);
 
       if( clock->nruns == 0 )
       {
@@ -243,12 +244,14 @@ void SCIPclockStart(
 
 /** stops measurement of time in the given clock */
 void SCIPclockStop(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clock,              /**< clock timer */
+   const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(clock != NULL);
+   assert(set != NULL);
 
-   if( clock->enabled )
+   if( set->clocksenabled && clock->enabled )
    {
       assert(clock->nruns >= 1);
 
@@ -359,9 +362,6 @@ Real SCIPclockGetTime(
 
    debugMessage("getting time of clock %p (type %d, usedefault=%d, nruns=%d)\n",
       clock, clock->clocktype, clock->usedefault, clock->nruns);
-
-   if( !clock->enabled )
-      return 0.0;
 
    if( clock->nruns == 0 )
    {

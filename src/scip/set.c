@@ -110,6 +110,7 @@
 /* Timing */
 
 #define SCIP_DEFAULT_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
+#define SCIP_DEFAULT_CLOCKSENABLED    TRUE /**< is timing enabled? */
 
 
 
@@ -341,8 +342,12 @@ RETCODE SCIPsetCreate(
                   &(*set)->cleanuprows, SCIP_DEFAULT_CLEANUPROWS,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr,
-                  "global_ClockType", "default clock type (0: CPU user seconds, 1: wall clock time)",
-                  &(*set)->clocktype, SCIP_DEFAULT_CLOCKTYPE, 0, 1,
+                  "global_ClockType", "default clock type (1: CPU user seconds, 2: wall clock time)",
+                  &(*set)->clocktype, SCIP_DEFAULT_CLOCKTYPE, 1, 2,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "global_ClocksEnabled", "is timing enabled?",
+                  &(*set)->clocksenabled, SCIP_DEFAULT_CLOCKSENABLED,
                   NULL, NULL) );
 
    return SCIP_OKAY;
