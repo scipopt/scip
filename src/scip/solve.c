@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.124 2004/08/03 16:02:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.125 2004/08/03 16:14:25 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -441,6 +441,7 @@ RETCODE updatePseudocost(
        */
       weight = nvalidupdates > 0 ? 1.0 / (Real)nvalidupdates : 1.0;
       lpgain = SCIPlpGetObjval(lp, set) - tree->actlpfork->lowerbound;
+      lpgain = MAX(lpgain, 0.0);
       for( i = 0; i < nupdates; ++i )
       {
          assert(updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
