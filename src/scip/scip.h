@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.111 2004/03/10 17:00:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.112 2004/03/16 13:41:18 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2047,7 +2047,8 @@ Real SCIPgetVarUbDive(
 /** solves the LP of the current dive */
 extern
 RETCODE SCIPsolveDiveLP(
-   SCIP*            scip                /**< SCIP data structure */
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
 /** returns the number of the node where the last LP diving was applied */
@@ -2832,6 +2833,18 @@ int SCIPgetNLPs(
 /** gets total number of simplex iterations used so far in primal and dual simplex */
 extern
 Longint SCIPgetNLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of LPs solved so far for node relaxations */
+extern
+int SCIPgetNNodeLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets total number of simplex iterations used so far for node relaxations */
+extern
+Longint SCIPgetNNodeLPIterations(
    SCIP*            scip                /**< SCIP data structure */
    );
 

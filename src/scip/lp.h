@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.68 2004/03/08 18:05:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.69 2004/03/16 13:41:18 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -609,7 +609,8 @@ RETCODE SCIPlpSolve(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
-   Bool             fromscratch         /**< should the LP be solved from scratch without using current basis? */
+   Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
 /** solves the LP with simplex algorithm, and copy the solution into the column's data */
@@ -620,7 +621,8 @@ RETCODE SCIPlpSolveAndEval(
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
-   Bool             aging               /**< should aging and removal of obsolete cols/rows be applied? */
+   Bool             aging,              /**< should aging and removal of obsolete cols/rows be applied? */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    );
 
 /** gets solution status of last solve call */

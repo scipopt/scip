@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.38 2004/03/10 17:00:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.39 2004/03/16 13:41:17 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -41,7 +41,7 @@
 #define DISP_DESC_TIME          "total solution time"
 #define DISP_HEAD_TIME          "time"
 #define DISP_WIDT_TIME          5
-#define DISP_PRIO_TIME          1000
+#define DISP_PRIO_TIME          4000
 #define DISP_POSI_TIME          50
 #define DISP_STRI_TIME          TRUE
 
@@ -89,7 +89,7 @@
 #define DISP_DESC_MAXDEPTH      "maximal depth of all processed nodes"
 #define DISP_HEAD_MAXDEPTH      "mdpt"
 #define DISP_WIDT_MAXDEPTH      5
-#define DISP_PRIO_MAXDEPTH      2000
+#define DISP_PRIO_MAXDEPTH      5000
 #define DISP_POSI_MAXDEPTH      2100
 #define DISP_STRI_MAXDEPTH      TRUE
 
@@ -97,7 +97,7 @@
 #define DISP_DESC_VARS          "number of variables in the problem"
 #define DISP_HEAD_VARS          "vars"
 #define DISP_WIDT_VARS          5
-#define DISP_PRIO_VARS          130
+#define DISP_PRIO_VARS          3000
 #define DISP_POSI_VARS          3000
 #define DISP_STRI_VARS          TRUE
 
@@ -105,7 +105,7 @@
 #define DISP_DESC_CONSS         "number of globally valid constraints in the problem"
 #define DISP_HEAD_CONSS         "cons"
 #define DISP_WIDT_CONSS         5
-#define DISP_PRIO_CONSS         140
+#define DISP_PRIO_CONSS         3100
 #define DISP_POSI_CONSS         3100
 #define DISP_STRI_CONSS         TRUE
 
@@ -113,7 +113,7 @@
 #define DISP_DESC_CURCONSS      "number of enabled constraints in current node"
 #define DISP_HEAD_CURCONSS      "ccons"
 #define DISP_WIDT_CURCONSS      5
-#define DISP_PRIO_CURCONSS      70
+#define DISP_PRIO_CURCONSS      600
 #define DISP_POSI_CURCONSS      3200
 #define DISP_STRI_CURCONSS      TRUE
 
@@ -121,7 +121,7 @@
 #define DISP_DESC_CURCOLS       "number of LP columns in current node"
 #define DISP_HEAD_CURCOLS       "cols"
 #define DISP_WIDT_CURCOLS       5
-#define DISP_PRIO_CURCOLS       100
+#define DISP_PRIO_CURCOLS       800
 #define DISP_POSI_CURCOLS       3300
 #define DISP_STRI_CURCOLS       TRUE
 
@@ -129,7 +129,7 @@
 #define DISP_DESC_CURROWS       "number of LP rows in current node"
 #define DISP_HEAD_CURROWS       "rows"
 #define DISP_WIDT_CURROWS       5
-#define DISP_PRIO_CURROWS       110
+#define DISP_PRIO_CURROWS       900
 #define DISP_POSI_CURROWS       3400
 #define DISP_STRI_CURROWS       TRUE
 
@@ -137,7 +137,7 @@
 #define DISP_DESC_CUTS          "total number of cuts applied to the LPs"
 #define DISP_HEAD_CUTS          "cuts"
 #define DISP_WIDT_CUTS          5
-#define DISP_PRIO_CUTS          90
+#define DISP_PRIO_CUTS          2100
 #define DISP_POSI_CUTS          3500
 #define DISP_STRI_CUTS          TRUE
 
@@ -145,7 +145,7 @@
 #define DISP_DESC_SEPAROUNDS    "number of separation rounds performed at the current node"
 #define DISP_HEAD_SEPAROUNDS    "sepa"
 #define DISP_WIDT_SEPAROUNDS    4
-#define DISP_PRIO_SEPAROUNDS    10
+#define DISP_PRIO_SEPAROUNDS    100
 #define DISP_POSI_SEPAROUNDS    3600
 #define DISP_STRI_SEPAROUNDS    TRUE
 
@@ -153,7 +153,7 @@
 #define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
 #define DISP_HEAD_POOLSIZE      "pool"
 #define DISP_WIDT_POOLSIZE      5
-#define DISP_PRIO_POOLSIZE      60
+#define DISP_PRIO_POOLSIZE      50
 #define DISP_POSI_POOLSIZE      3700
 #define DISP_STRI_POOLSIZE      TRUE
 
@@ -161,7 +161,7 @@
 #define DISP_DESC_CONFLICTS     "total number of conflicts found in conflict analysis"
 #define DISP_HEAD_CONFLICTS     "confs"
 #define DISP_WIDT_CONFLICTS     5
-#define DISP_PRIO_CONFLICTS     80
+#define DISP_PRIO_CONFLICTS     2000
 #define DISP_POSI_CONFLICTS     4000
 #define DISP_STRI_CONFLICTS     TRUE
 
@@ -169,7 +169,7 @@
 #define DISP_DESC_STRONGBRANCHS "total number of strong branching calls"
 #define DISP_HEAD_STRONGBRANCHS "strbr"
 #define DISP_WIDT_STRONGBRANCHS 5
-#define DISP_PRIO_STRONGBRANCHS 85
+#define DISP_PRIO_STRONGBRANCHS 1000
 #define DISP_POSI_STRONGBRANCHS 5000
 #define DISP_STRI_STRONGBRANCHS TRUE
 
@@ -177,7 +177,7 @@
 #define DISP_DESC_CURDUALBOUND  "dual bound of current node"
 #define DISP_HEAD_CURDUALBOUND  "curdualbound"
 #define DISP_WIDT_CURDUALBOUND  14
-#define DISP_PRIO_CURDUALBOUND  50
+#define DISP_PRIO_CURDUALBOUND  400
 #define DISP_POSI_CURDUALBOUND  7000
 #define DISP_STRI_CURDUALBOUND  TRUE
 
@@ -190,7 +190,7 @@
 #define DISP_STRI_AVGDUALBOUND  TRUE
 
 #define DISP_NAME_DUALBOUND     "dualbound"
-#define DISP_DESC_DUALBOUND     "current dual bound"
+#define DISP_DESC_DUALBOUND     "current global dual bound"
 #define DISP_HEAD_DUALBOUND     "dualbound"
 #define DISP_WIDT_DUALBOUND     14
 #define DISP_PRIO_DUALBOUND     70000

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objhistdiving.c,v 1.4 2004/03/10 17:15:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objhistdiving.c,v 1.5 2004/03/16 13:41:17 bzfpfend Exp $"
 
 /**@file   heur_objhistdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using history values as guide
@@ -209,8 +209,9 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
    Bool mayrounddown;
    Bool mayroundup;
    Bool roundup;
+   Bool lperror;
    Longint nlpiterations;
-   Longint ndivinglpiterations;
+   Longint maxnlpiterations;
    int* roundings;
    int nvars;
    int varidx;
@@ -256,6 +257,10 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTFIND;
 
+   /* calculate the maximal number of LP iterations until heuristic is aborted */
+   maxnlpiterations = heurdata->maxlpiterquot*nlpiterations - heurdata->nlpiterations;
+   maxnlpiterations = MAX(maxnlpiterations, 1000);
+
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
    nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -274,23 +279,24 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
-   debugMessage("(node %lld) executing objhistdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxdivedepth=%d\n", 
-      SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxdivedepth);
+   debugMessage("(node %lld) executing objhistdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d\n", 
+      SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
-   /* dive as long we are in the given diving depth limits and fractional variables exist, but
+   /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
     * - if the last objective change was in a direction, that corresponds to a feasibile rounding, we continue in any case
     * - if possible, we dive at least with the depth 10
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
+   lperror = FALSE;
    divedepth = 0;
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
-   while( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (bestcandmayrounddown || bestcandmayroundup
          || divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || divedepth < maxdivedepth) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) )
    {
       divedepth++;
 
@@ -449,14 +455,20 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
             roundings[varidx] = -1;
          }
          CHECK_OKAY( SCIPchgVarObjDive(scip, var, newobj) );
-         debugMessage("  dive %d/%d: var <%s>, round=%d/%d, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
-            divedepth, maxdivedepth,
+         debugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
+            divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var), oldobj, newobj);
       }
 
       /* resolve the diving LP */
-      CHECK_OKAY( SCIPsolveDiveLP(scip) );
+      CHECK_OKAY( SCIPsolveDiveLP(scip, &lperror) );
+      if( lperror )
+         break;
+
+      /* update iteration count */
+      heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
+      nlpiterations = SCIPgetNLPIterations(scip);
 
       /* get LP solution status  and fractional variables, that should be integral */
       lpsolstat = SCIPgetLPSolstat(scip);
@@ -469,7 +481,7 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
    }
 
    /* check if a solution has been found */
-   if( nlpcands == 0 && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+   if( nlpcands == 0 && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       Bool success;
 
@@ -490,9 +502,6 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
 
    /* end diving */
    CHECK_OKAY( SCIPendDive(scip) );
-
-   /* update iteration count */
-   heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
 
    /* free temporary memory for remembering the current soft roundings */
    CHECK_OKAY( SCIPfreeBufferArray(scip, &roundings) );

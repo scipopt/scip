@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.90 2004/03/08 18:05:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.91 2004/03/16 13:41:18 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -51,6 +51,8 @@
 #include "pricer.h"
 #include "sepa.h"
 
+
+#define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
 
 
 /** returns whether the solving process will be / was stopped before proving optimality */
@@ -358,7 +360,8 @@ RETCODE solveNodeInitialLP(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
    EVENT event;
@@ -368,8 +371,10 @@ RETCODE solveNodeInitialLP(
    assert(tree->actnode != NULL);
    assert(lp != NULL);
    assert(cutoff != NULL);
+   assert(lperror != NULL);
 
    *cutoff = FALSE;
+   *lperror = FALSE;
 
    /* load the LP into the solver and load the LP state */
    debugMessage("loading LP\n");
@@ -386,16 +391,19 @@ RETCODE solveNodeInitialLP(
     * -> dual simplex is applicable as first solver
     */
    debugMessage("node: solve initial LP\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
-   assert(lp->solved);
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
+   assert(lp->solved || *lperror);
 
-   /* issue FIRSTLPSOLVED event */
-   CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
-   CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
-   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
-
-   /* update history values */
-   CHECK_OKAY( updateHistory(set, stat, tree, lp) );
+   if( !(*lperror) )
+   {
+      /* issue FIRSTLPSOLVED event */
+      CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
+      CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
+      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
+      
+      /* update history values */
+      CHECK_OKAY( updateHistory(set, stat, tree, lp) );
+   }
 
    return SCIP_OKAY;
 }
@@ -419,7 +427,8 @@ RETCODE solveNodeLP(
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers sorted by separation priority */
-   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
    )
 {
    RESULT result;
@@ -443,11 +452,13 @@ RETCODE solveNodeLP(
    assert(primal != NULL);
    assert(set->nconshdlrs == 0 || conshdlrs_sepa != NULL);
    assert(cutoff != NULL);
+   assert(lperror != NULL);
 
    root = (SCIPnodeGetDepth(tree->actnode) == 0);
 
+   /* solve initial LP of price-and-cut loop */
    debugMessage("node: solve LP with price and cut\n");
-   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
+   CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
    assert(lp->solved);
 
    /* display node information line for root node */
@@ -460,7 +471,7 @@ RETCODE solveNodeLP(
    mustprice = TRUE;
    mustsepar = TRUE;
    *cutoff = FALSE;
-   while( !(*cutoff) && (mustprice || mustsepar) )
+   while( !(*cutoff) && !(*lperror) && (mustprice || mustsepar) )
    {
       debugMessage("-------- node solving loop --------\n");
       assert(lp->solved);
@@ -471,7 +482,7 @@ RETCODE solveNodeLP(
       mustprice = mustprice && (prob->nvars > SCIPlpGetNCols(lp) || set->nactivepricers > 0);
 
       /* pricing (has to be done completely to get a valid lower bound) */
-      while( !(*cutoff) && mustprice )
+      while( !(*cutoff) && !(*lperror) && mustprice )
       {
          assert(lp->solved);
          assert(lp->lpsolstat != SCIP_LPSOLSTAT_UNBOUNDED);
@@ -512,8 +523,8 @@ RETCODE solveNodeLP(
           * if LP was infeasible, we have to use dual simplex
           */
          debugMessage("pricing: solve LP\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
-         assert(lp->solved);
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
+         assert(lp->solved || *lperror);
 
          /* reset bounds temporarily set by pricer to their original values */
          debugMessage("pricing: reset bounds\n");
@@ -525,8 +536,8 @@ RETCODE solveNodeLP(
 
          /* solve LP again after resetting bounds (with dual simplex) */
          debugMessage("pricing: solve LP after resetting bounds\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
-         assert(lp->solved);
+         CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE, lperror) );
+         assert(lp->solved || *lperror);
 
          /* increase pricing round counter */
          stat->npricerounds++;
@@ -543,8 +554,15 @@ RETCODE solveNodeLP(
       assert(lp->solved);
 
       /* update lower bound w.r.t. the the LP solution */
-      SCIPnodeUpdateLowerbound(tree->actnode, SCIPlpGetObjval(lp, set));
-      debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
+      if( !(*lperror) )
+      {
+         SCIPnodeUpdateLowerbound(tree->actnode, SCIPlpGetObjval(lp, set));
+         debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
+      }
+      else
+      {
+         debugMessage(" -> error solving LP. keeping old bound: %g\n", tree->actnode->lowerbound);
+      }
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
       mustsepar = mustsepar
@@ -553,7 +571,7 @@ RETCODE solveNodeLP(
          && SCIPsetIsLT(set, tree->actnode->lowerbound, primal->cutoffbound);
 
       /* separation (has not to be done completely, because we just want to increase the lower bound) */
-      if( !(*cutoff) && mustsepar )
+      if( !(*cutoff) && !(*lperror) && mustsepar )
       {
          Bool separateagain;
          Bool enoughcuts;
@@ -640,11 +658,11 @@ RETCODE solveNodeLP(
                {
                   /* solve LP (with dual simplex) */
                   debugMessage("separation: solve LP\n");
-                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE) );
+                  CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, TRUE, lperror) );
                }
             }
          }
-         assert(*cutoff || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
+         assert(*cutoff || *lperror || lp->solved); /* after cutoff, the LP may be unsolved due to bound changes */
 
          /* increase separation round counter */
          stat->nseparounds++;
@@ -662,7 +680,7 @@ RETCODE solveNodeLP(
    {
       SCIPnodeUpdateLowerbound(tree->actnode, primal->cutoffbound);
    }
-   else
+   else if( !(*lperror) )
    {
       assert(lp->solved);
 
@@ -672,14 +690,14 @@ RETCODE solveNodeLP(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
       CHECK_OKAY( SCIPeventChgNode(&event, tree->actnode) );
       CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
+
+      /* analyze an infeasible LP */
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+      {
+         CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, NULL) );
+      }
    }
    debugMessage(" -> new lower bound: %g\n", tree->actnode->lowerbound);
-
-   /* analyze an infeasible LP */
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
-   {
-      CHECK_OKAY( SCIPlpconflictAnalyze(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, NULL) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1146,6 +1164,7 @@ RETCODE SCIPsolveCIP(
    Bool solveagain;
    Bool initiallpsolved;
    Bool foundsol;
+   int nlperrors;
 
    assert(set != NULL);
    assert(memhdr != NULL);
@@ -1264,30 +1283,39 @@ RETCODE SCIPsolveCIP(
          
          /* external node solving loop */
          initiallpsolved = FALSE;
+         nlperrors = 0;
          do
          {
             Real pseudoobjval;
+            Bool lperror;
 
             solveagain = FALSE;
             infeasible = FALSE;
-            
+            lperror = FALSE;
+
             stat->npricerounds = 0;
             stat->nseparounds = 0;
 
             /* check, if we want to solve the LP at this node */
             if( tree->actnodehaslp )
             {
+               Longint nlpiterations;
+               int nlps;
+
+               nlps = stat->nlps;
+               nlpiterations = stat->nlpiterations;
+
                if( !initiallpsolved )
                {
                   /* load and solve the initial LP of the node */
                   CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, 
-                                 branchcand, eventfilter, eventqueue, &cutoff) );
-                  assert(lp->solved);
+                                 branchcand, eventfilter, eventqueue, &cutoff, &lperror) );
+                  assert(lp->solved || lperror);
                   initiallpsolved = TRUE;
                }
                assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
-               if( !cutoff )
+               if( !cutoff && !lperror )
                {
                   /* solve-redcost-propagate loop */
                   do
@@ -1295,11 +1323,11 @@ RETCODE SCIPsolveCIP(
                      /* continue solving the LP with price and cut */
                      CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, cutpool, 
                                     conflict, lpconflict, primal, branchcand, eventfilter, eventqueue, conshdlrs_sepa,
-                                    &cutoff) );
-                     assert(cutoff || lp->solved);
+                                    &cutoff, &lperror) );
+                     assert(cutoff || lperror || lp->solved);
                      
                      /* reduced cost bound strengthening */
-                     if( !cutoff
+                     if( !cutoff && !lperror
                         && ((set->redcostfreq == 0 && actnode->depth == 0)
                            || (set->redcostfreq >= 1 && (actnode->depth % set->redcostfreq) == 0))
                         && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
@@ -1326,11 +1354,25 @@ RETCODE SCIPsolveCIP(
                         }
                      }
                   }
-                  while( !cutoff && !lp->solved );
+                  while( !cutoff && !lperror && !lp->solved );
                }
+
+               /* update node's LP iteration counter */
+               stat->nnodelps += stat->nlps - nlps;
+               stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
             }
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             
+            /* if an error occured during LP solving, switch to pseudo solution */
+            if( lperror )
+            {
+               tree->actnodehaslp = FALSE;
+               nlperrors++;
+               infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %lld) unresolved numerical troubles in LP %d -- using pseudo solution instead (loop %d)\n", 
+                  stat->nnodes, stat->nlps, nlperrors);
+            }
+
             /* update lower bound w.r.t. the pseudo solution */
             pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
             SCIPnodeUpdateLowerbound(tree->actnode, pseudoobjval);
@@ -1370,8 +1412,14 @@ RETCODE SCIPsolveCIP(
             }
             assert(!solveagain || !cutoff);
          }
-         while( solveagain );
+         while( solveagain && nlperrors < MAXNLPERRORS );
          assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+
+         if( nlperrors >= MAXNLPERRORS )
+         {
+            errorMessage("(node %lld) unresolved numerical troubles in LP %d -- aborting\n", stat->nnodes, stat->nlps);
+            return SCIP_LPERROR;
+         }
       }
       assert(!cutoff || infeasible);
 

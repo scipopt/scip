@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.7 2004/02/25 16:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.8 2004/03/16 13:41:19 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -39,6 +39,7 @@ struct Stat
    Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    Longint          nduallpiterations;  /**< number of iterations in dual simplex */
+   Longint          nnodelpiterations;  /**< number of iterations for solving node relaxations */
    Longint          ndivinglpiterations;/**< number of iterations in diving */
    Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
@@ -71,6 +72,7 @@ struct Stat
    int              nlps;               /**< number of LPs solved (primal + dual) with at least 1 iteration */
    int              nprimallps;         /**< number of primal LPs solved */
    int              nduallps;           /**< number of dual LPs solved */
+   int              nnodelps;           /**< number of LPs solved for node relaxations */
    int              ndivinglps;         /**< number of LPs solved during diving */
    int              nstrongbranchs;     /**< number of strong branching calls */
    int              npricerounds;       /**< number of pricing rounds performed in current node */

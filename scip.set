@@ -307,7 +307,7 @@ constraints/setppc/npseudobranches = 2
 constraints/knapsack/sepafreq = 5
 
 # frequency for propagating domains of constraint handler <knapsack> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
+# [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
 
 # should columns be added and removed dynamically to the LP?
@@ -394,17 +394,25 @@ branching/history/minreliable = 4
 # [type: real, range: [0,1.79769313486232e+308], default: 16]
 branching/history/maxreliable = 16
 
+# maximal fraction of strong branching LP iterations compared to node relaxation LP iterations
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+branching/history/sbiterquot = 0.5
+
+# additional number of allowed strong branching LP iterations
+# [type: int, range: [0,2147483647], default: 10000]
+branching/history/sbiterofs = 10000
+
 # maximal number of further variables evaluated without better score
 # [type: int, range: [1,2147483647], default: 8]
 branching/history/maxlookahead = 8
 
 # maximal number of candidates initialized with strong branching per node
 # [type: int, range: [0,2147483647], default: 100]
-branching/history/strongbranchcand = 100
+branching/history/initcand = 100
 
 # iteration limit for strong branching initializations of history entries (0: auto)
 # [type: int, range: [0,2147483647], default: 0]
-branching/history/strongbranchiter = 0
+branching/history/inititer = 0
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-2147483648,2147483647], default: 100]

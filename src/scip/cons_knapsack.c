@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.27 2004/03/15 17:51:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.28 2004/03/16 13:41:17 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -997,6 +997,9 @@ void tightenWeights(
       consdata->capacity -= (weight - newweight);
       (*nchgcoefs)++;
       (*nchgsides)++;
+      debugMessage("knapsack constraint <%s>: changed weight of <%s> from %d to %d, capacity from %d to %d\n",
+         SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[consdata->nvars-1]),
+         weight, newweight, consdata->capacity + (weight-newweight), consdata->capacity);
    }
 
    /* apply rule (2) */
@@ -1004,8 +1007,10 @@ void tightenWeights(
    for( i = consdata->nvars-1; i >= 0; --i )
    {
       weight = consdata->weights[i];
-      if( minweight + weight > consdata->capacity )
+      if( minweight + weight > consdata->capacity && weight < consdata->capacity )
       {
+         debugMessage("knapsack constraint <%s>: changing weight of <%s> from %d to %d\n",
+            SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), weight, consdata->capacity);
          consdataChgWeight(consdata, i, consdata->capacity);
          (*nchgcoefs)++;
       }

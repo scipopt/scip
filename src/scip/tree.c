@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.83 2004/03/09 18:03:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.84 2004/03/16 13:41:19 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -1743,6 +1743,7 @@ RETCODE actnodeToFork(
    )
 {
    FORK* fork;
+   Bool lperror;
 
    assert(memhdr != NULL);
    assert(tree != NULL);
@@ -1759,6 +1760,7 @@ RETCODE actnodeToFork(
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
+   lperror = FALSE;
    if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up newly created part of LP to keep only necessary columns and rows */
@@ -1767,10 +1769,10 @@ RETCODE actnodeToFork(
       /* resolve LP after cleaning up */
       if( !lp->solved )
       {
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
       }
    }
-   assert(lp->solved);
+   assert(lp->solved || lperror);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
@@ -1784,7 +1786,7 @@ RETCODE actnodeToFork(
     * However, the node's lower bound is kept, thus automatically throwing away nodes that
     * were cut off due to a primal solution.
     */
-   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lperror || lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
       infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of fork\n", 
@@ -1845,6 +1847,7 @@ RETCODE actnodeToSubroot(
    )
 {
    SUBROOT* subroot;
+   Bool lperror;
 
    assert(memhdr != NULL);
    assert(tree != NULL);
@@ -1862,6 +1865,7 @@ RETCODE actnodeToSubroot(
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
     * and we have to forget about the LP and transform the node into a junction (see below)
     */
+   lperror = FALSE;
    if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* clean up whole LP to keep only necessary columns and rows */
@@ -1879,10 +1883,10 @@ RETCODE actnodeToSubroot(
       /* resolve LP after cleaning up */
       if( !lp->solved )
       {
-         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+         CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE, &lperror) );
       }
    }
-   assert(lp->solved);
+   assert(lp->solved || lperror);
 
    /* There are two reasons, that the (reduced) LP is not solved to optimality:
     *  - The primal heuristics (called after the current node's LP was solved) found a new 
@@ -1896,7 +1900,7 @@ RETCODE actnodeToSubroot(
     * However, the node's lower bound is kept, thus automatically throwing away nodes that
     * were cut off due to a primal solution.
     */
-   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( lperror || lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
    {
       infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
          "(node %lld) numerical troubles: LP %d not optimal -- convert node into junction instead of subroot\n", 

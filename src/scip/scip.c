@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.132 2004/03/12 08:54:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.133 2004/03/16 13:41:18 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5274,7 +5274,8 @@ Real SCIPgetVarUbDive(
 
 /** solves the LP of the current dive */
 RETCODE SCIPsolveDiveLP(
-   SCIP*            scip                /**< SCIP data structure */
+   SCIP*            scip,               /**< SCIP data structure */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
@@ -5285,7 +5286,7 @@ RETCODE SCIPsolveDiveLP(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, FALSE) );
+   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, FALSE, lperror) );
 
    return SCIP_OKAY;
 }
@@ -6883,6 +6884,26 @@ Longint SCIPgetNLPIterations(
    CHECK_ABORT( checkStage(scip, "SCIPgetNLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nlpiterations;
+}
+
+/** gets total number of LPs solved so far for node relaxations */
+int SCIPgetNNodeLPs(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNNodeLPs", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nnodelps;
+}
+
+/** gets total number of simplex iterations used so far for node relaxations */
+Longint SCIPgetNNodeLPIterations(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNNodeLPIterations", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nnodelpiterations;
 }
 
 /** gets total number of LPs solved so far during diving */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.8 2004/02/05 14:12:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.9 2004/03/16 13:41:17 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -35,9 +35,11 @@
 
 #define DEFAULT_MINRELIABLE      4.0    /**< minimal value for minimum history size to regard history value as reliable */
 #define DEFAULT_MAXRELIABLE     16.0    /**< maximal value for minimum history size to regard history value as reliable */
+#define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iters */
+#define DEFAULT_SBITEROFS    10000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     8      /**< maximal number of further variables evaluated without better score */
-#define DEFAULT_STRONGBRANCHCAND 100    /**< maximal number of candidates initialized with strong branching per node */
-#define DEFAULT_STRONGBRANCHITER 0      /**< iteration limit for strong branching init of history entries (0: auto) */
+#define DEFAULT_INITCAND       100      /**< maximal number of candidates initialized with strong branching per node */
+#define DEFAULT_INITITER         0      /**< iteration limit for strong branching init of history entries (0: auto) */
 
 
 /** branching rule data */
@@ -45,9 +47,11 @@ struct BranchruleData
 {
    Real             minreliable;        /**< minimal value for minimum history size to regard history value as reliable */
    Real             maxreliable;        /**< maximal value for minimum history size to regard history value as reliable */
+   Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iters */
+   int              sbiterofs;          /**< additional number of allowed strong branching LP iterations */
    int              maxlookahead;       /**< maximal number of further variables evaluated without better score */
-   int              strongbranchcand;   /**< maximal number of candidates initialized with strong branching per node */
-   int              strongbranchiter;   /**< iteration limit for strong branching init of history entries (0: auto) */
+   int              initcand;           /**< maximal number of candidates initialized with strong branching per node */
+   int              inititer;           /**< iteration limit for strong branching init of history entries (0: auto) */
 };
 
 
@@ -136,10 +140,10 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    }
    else
    {
-      int* sbcands;
-      Real* sbcandscores;
-      int nsbcands;
-      int maxnsbcands;
+      int* initcands;
+      Real* initcandscores;
+      int ninitcands;
+      int maxninitcands;
       Real downsize;
       Real upsize;
       Real size;
@@ -152,29 +156,31 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       Real upscore;
       Real besthistscore;
       Real bestsbscore;
+      Real bestuninitsbscore;
       Real depthfac;
       Real sizefac;
       Real prio;
       Longint nodenum;
+      Longint maxnsblpiterations;
       Bool usesb;
       int depth;
       int maxdepth;
       int nintvars;
       int reliable;
       int besthistcand;
-      int bestsbcand;
+      int bestinitcand;
       int maxlookahead;
       int lookahead;
-      int sbiter;
+      int inititer;
       int i;
       int j;
       int c;
 
       /* get buffer for storing the unreliable candidates */
-      maxnsbcands = MIN(nlpcands, branchruledata->strongbranchcand);
-      CHECK_OKAY( SCIPallocBufferArray(scip, &sbcands, maxnsbcands+1) ); /* allocate one additional slot for convenience */
-      CHECK_OKAY( SCIPallocBufferArray(scip, &sbcandscores, maxnsbcands+1) );
-      nsbcands = 0;
+      maxninitcands = MIN(nlpcands, branchruledata->initcand);
+      CHECK_OKAY( SCIPallocBufferArray(scip, &initcands, maxninitcands+1) ); /* allocate one additional slot for convenience */
+      CHECK_OKAY( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
+      ninitcands = 0;
 
       /* get current node number, depth, maximal depth, and number of binary/integer variables */
       nodenum = SCIPgetNodenum(scip);
@@ -241,16 +247,16 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
 
          if( usesb )
          {
-            /* history of variable is not reliable: insert candidate in sbcands buffer */
-            for( j = nsbcands; j > 0 && score > sbcandscores[j-1]; --j )
+            /* history of variable is not reliable: insert candidate in initcands buffer */
+            for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
             {
-               sbcands[j] = sbcands[j-1];
-               sbcandscores[j] = sbcandscores[j-1];
+               initcands[j] = initcands[j-1];
+               initcandscores[j] = initcandscores[j-1];
             }
-            sbcands[j] = c;
-            sbcandscores[j] = score;
-            nsbcands++;
-            nsbcands = MIN(nsbcands, maxnsbcands);
+            initcands[j] = c;
+            initcandscores[j] = score;
+            ninitcands++;
+            ninitcands = MIN(ninitcands, maxninitcands);
          }
          else
          {
@@ -263,33 +269,38 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          }
       }
 
+      /* calculate maximal number of strong branching LP iterations */
+      maxnsblpiterations = branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip) + branchruledata->sbiterofs;
+
       /* initialize unreliable candidates with strong branching until maxlookahead is reached,
        * search best strong branching candidate
        */
       maxlookahead = branchruledata->maxlookahead;
-      sbiter = branchruledata->strongbranchiter;
-      if( sbiter == 0 )
+      inititer = branchruledata->inititer;
+      if( inititer == 0 )
       {
          int nlps = SCIPgetNLPs(scip);
-         sbiter = 2*SCIPgetNLPIterations(scip) / MAX(1, nlps);
-         sbiter = MAX(sbiter, 10);
-         sbiter = MIN(sbiter, 100);
+         inititer = 2*SCIPgetNLPIterations(scip) / MAX(1, nlps);
+         inititer = MAX(inititer, 10);
+         inititer = MIN(inititer, 100);
       }
-      bestsbcand = -1;
+      bestinitcand = -1;
       bestsbscore = -SCIPinfinity(scip);
       lookahead = 0;
-      for( i = 0; i < nsbcands && lookahead < maxlookahead; ++i )
+      for( i = 0; i < ninitcands && lookahead < maxlookahead
+              && SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations; ++i )
       {
          /* get candidate number to initialize */
-         c = sbcands[i];
+         c = initcands[i];
          assert(!SCIPisIntegral(scip, lpcandssol[c]));
 
-         debugMessage("initializing history (%g/%g) of variable <%s> at %g with strong branching (%d iterations)\n",
+         debugMessage("init history (%g/%g) of <%s> at %g with strong branching (%d iters) -- %lld/%lld iterations\n",
             SCIPgetVarLPHistoryCount(scip, lpcands[c], 0), SCIPgetVarLPHistoryCount(scip, lpcands[c], 1), 
-            SCIPvarGetName(lpcands[c]), lpcandssol[c], sbiter);
+            SCIPvarGetName(lpcands[c]), lpcandssol[c], inititer,
+            SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations);
 
          /* use strong branching on candidate */
-         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], sbiter, &down, &up) );
+         CHECK_OKAY( SCIPgetVarStrongbranch(scip, lpcands[c], inititer, &down, &up) );
          down = MAX(down, lowerbound);
          up = MAX(up, lowerbound);
          downgain = down - lowerbound;
@@ -337,7 +348,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          score *= SCIPvarGetBranchingPriority(lpcands[c]);
          if( score > bestsbscore )
          {
-            bestsbcand = c;
+            bestinitcand = c;
             bestsbscore = score;
             bestsbdown = down;
             bestsbup = up;
@@ -352,24 +363,41 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       
          debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), prio=%g, score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
             SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, SCIPvarGetBranchingPriority(lpcands[c]), 
-            score, SCIPvarGetName(lpcands[bestsbcand]), bestsbscore, lookahead, maxlookahead);
+            score, SCIPvarGetName(lpcands[bestinitcand]), bestsbscore, lookahead, maxlookahead);
       }
 
-      /* free buffer for the unreliable candidates */
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &sbcandscores) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &sbcands) );
+      /* get the score of the best uninitialized strong branching candidate */
+      if( i < ninitcands )
+         bestuninitsbscore = initcandscores[i];
+      else
+         bestuninitsbscore = -SCIPinfinity(scip);
 
-      /* compare best strong branching candidate against best history candidate */
-      if( bestsbscore >= besthistscore )
+      /* if the best history candidate is better than the best uninitialized strong branching candidate,
+       * compare it to the best initialized strong branching candidate
+       */
+      if( besthistscore > bestuninitsbscore && besthistscore > bestsbscore )
       {
+         bestcand = besthistcand;
+         bestisstrongbranch = FALSE;
+      }
+      else if( bestinitcand >= 0 )
+      {
+         bestcand = bestinitcand;
          bestisstrongbranch = TRUE;
-         bestcand = bestsbcand;
       }
       else
       {
-         assert(!bestisstrongbranch);
-         bestcand = besthistcand;
+         /* no candidate was initialized, and the best score is the one of the first candidate in the initialization
+          * queue
+          */
+         assert(ninitcands >= 1);
+         bestcand = initcands[0];
+         bestisstrongbranch = FALSE;
       }
+
+      /* free buffer for the unreliable candidates */
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &initcandscores) );
+      CHECK_OKAY( SCIPfreeBufferArray(scip, &initcands) );
    }
 
    /* if no domain could be reduced, create the branching */
@@ -451,18 +479,26 @@ RETCODE SCIPincludeBranchruleHistory(
                   "branching/history/maxreliable", 
                   "maximal value for minimum history size to regard history value as reliable",
                   &branchruledata->maxreliable, DEFAULT_MAXRELIABLE, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddRealParam(scip,
+                  "branching/history/sbiterquot", 
+                  "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
+                  &branchruledata->sbiterquot, DEFAULT_SBITERQUOT, 0.0, REAL_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+                  "branching/history/sbiterofs", 
+                  "additional number of allowed strong branching LP iterations",
+                  &branchruledata->sbiterofs, DEFAULT_SBITEROFS, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
                   "branching/history/maxlookahead", 
                   "maximal number of further variables evaluated without better score",
                   &branchruledata->maxlookahead, DEFAULT_MAXLOOKAHEAD, 1, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/history/strongbranchcand", 
+                  "branching/history/initcand", 
                   "maximal number of candidates initialized with strong branching per node",
-                  &branchruledata->strongbranchcand, DEFAULT_STRONGBRANCHCAND, 0, INT_MAX, NULL, NULL) );
+                  &branchruledata->initcand, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
-                  "branching/history/strongbranchiter", 
+                  "branching/history/inititer", 
                   "iteration limit for strong branching initializations of history entries (0: auto)",
-                  &branchruledata->strongbranchiter, DEFAULT_STRONGBRANCHITER, 0, INT_MAX, NULL, NULL) );
+                  &branchruledata->inititer, DEFAULT_INITITER, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

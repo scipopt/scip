@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.33 2004/02/05 14:12:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.34 2004/03/16 13:41:18 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -141,12 +141,14 @@ void SCIPstatReset(
    stat->nlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
+   stat->nnodelpiterations = 0;
    stat->ndivinglpiterations = 0;
    stat->nsblpiterations = 0;
    stat->lpcount = 0;
    stat->nlps = 0;
    stat->nprimallps = 0;
    stat->nduallps = 0;
+   stat->nnodelps = 0;
    stat->ndivinglps = 0;
    stat->nstrongbranchs = 0;
    stat->npricerounds = 0;

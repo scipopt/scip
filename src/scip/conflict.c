@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.31 2004/03/08 18:05:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.32 2004/03/16 13:41:17 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1797,6 +1797,7 @@ RETCODE SCIPlpconflictAnalyze(
 {
    Real oldcutoffbound;
    Bool valid;
+   Bool error;
    int maxsize;
 
    assert(lpconflict != NULL);
@@ -1830,6 +1831,7 @@ RETCODE SCIPlpconflictAnalyze(
    SCIPclockStart(lpconflict->analyzetime, set);
 
    lpconflict->ncalls++;
+   error = FALSE;
 
 #if 0
    /* analyze conflict with alternative polyhedron */
@@ -1843,25 +1845,29 @@ RETCODE SCIPlpconflictAnalyze(
       /* temporarily remove cutoff bound, and continue solving LP */
       oldcutoffbound = lp->cutoffbound;
       CHECK_OKAY( SCIPlpSetCutoffbound(lp, set->infinity) );
-      CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
+      CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE, &error) );
       CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
       lpconflict->nlpiterations += iterations;
       CHECK_OKAY( SCIPlpSetCutoffbound(lp, oldcutoffbound) );
    }
 
-   /* analyze conflict with dual farkas or dual solution */
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( !error )
    {
-      CHECK_OKAY( lpconflictAnalyzeDualfarkas(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, maxsize, &valid) );
-   }
-   else
-   {
-      CHECK_OKAY( lpconflictAnalyzeDualsol(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, maxsize, &valid) );
+      /* analyze conflict with dual farkas or dual solution */
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      {
+         CHECK_OKAY( lpconflictAnalyzeDualfarkas(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, maxsize,
+                        &valid) );
+      }
+      else
+      {
+         CHECK_OKAY( lpconflictAnalyzeDualsol(lpconflict, memhdr, set, stat, prob, tree, lp, conflict, maxsize, &valid) );
+      }
    }
 #endif
-   
+      
    /* check, if a valid conflict have been found */
-   if( valid )
+   if( !error && valid )
    {
       lpconflict->nconflicts++;
       if( success != NULL )
