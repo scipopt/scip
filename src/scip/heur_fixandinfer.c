@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.3 2004/10/14 13:28:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.4 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   heur_fixandinfer.c
  * @brief  fix-and-infer primal heuristic
@@ -32,7 +32,7 @@
 #define HEUR_DESC             "iteratively fixes variables and propagates inferences"
 #define HEUR_DISPCHAR         'i'
 #define HEUR_PRIORITY         -500000
-#define HEUR_FREQ             10
+#define HEUR_FREQ             -1        /* at the moment, the heuristic seems to be useless */
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_PSEUDONODES      TRUE      /* call heuristic at nodes where only a pseudo solution exist? */

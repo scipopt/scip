@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.15 2004/10/28 14:30:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.16 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -858,6 +858,9 @@ DECL_CONSPRESOL(consPresolVarbound)
       /**@todo tighten variable bound coefficient */
    } 
 
+   /**@todo preprocess pairs of variable bound constraints */
+
+   /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( *nchgbds > oldnchgbds || *ndelconss > oldndelconss

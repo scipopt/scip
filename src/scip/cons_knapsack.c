@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.70 2004/11/22 16:09:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.71 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1091,6 +1091,7 @@ RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
+#if 0 /*?????????????????????*/
 /** deletes all fixed variables from knapsack constraint */
 static
 RETCODE applyFixings(
@@ -1132,6 +1133,59 @@ RETCODE applyFixings(
 
    return SCIP_OKAY;
 }
+#else
+/** deletes all fixed variables from knapsack constraint */
+static
+RETCODE applyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< knapsack constraint */
+   EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
+   )
+{
+   CONSDATA* consdata;
+   int v;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->nvars == 0 || consdata->vars != NULL);
+
+   v = 0;
+   while( v < consdata->nvars )
+   {
+      VAR* var;
+
+      var = consdata->vars[v];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+      if( SCIPvarGetLbGlobal(var) > 0.5 )
+      {
+         assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
+         consdata->capacity -= consdata->weights[v];
+         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+      }
+      else if( SCIPvarGetUbGlobal(var) < 0.5 )
+      {
+         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0));
+         CHECK_OKAY( delCoefPos(scip, cons, eventhdlr, v) );
+      }
+      else
+      {
+         VAR* repvar;
+         Bool negated;
+         
+         /* get binary representative of variable */
+         CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+         assert(repvar != NULL); /* fixed variables are already treated in the other cases above */
+
+         
+         ++v;
+      }
+   }
+   assert(consdata->onesweightsum == 0);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
 static
@@ -1604,6 +1658,7 @@ DECL_CONSPRESOL(consPresolKnapsack)
    int oldnchgsides;
    int i;
 
+   /* remember old preprocessing counters */
    cutoff = FALSE;
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
@@ -1626,7 +1681,10 @@ DECL_CONSPRESOL(consPresolKnapsack)
          consdata->propagated = FALSE;
 
       /* remove all fixed variables */
-      CHECK_OKAY( applyFixings(scip, conss[i], eventhdlr) );
+      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      {
+         CHECK_OKAY( applyFixings(scip, conss[i], eventhdlr) );
+      }
 
       if( consdata->propagated )
          continue;
@@ -1657,6 +1715,8 @@ DECL_CONSPRESOL(consPresolKnapsack)
          tightenWeights(scip, conss[i], nchgcoefs, nchgsides);
       }
    } 
+
+   /**@todo preprocess pairs of knapsack constraints */
 
    if( cutoff )
       *result = SCIP_CUTOFF;

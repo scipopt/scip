@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.63 2004/11/12 13:03:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.64 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1328,6 +1328,8 @@ DECL_CONSPRESOL(consPresolLogicor)
       }
    }
    
+   /**@todo preprocess pairs of logic or constraints */
+
    return SCIP_OKAY;
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.22 2004/11/17 13:09:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.23 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1517,6 +1517,8 @@ DECL_CONSPRESOL(consPresolOr)
          }
       }
    }
+
+   /**@todo preprocess pairs of or constraints */
 
    /* return the correct result code */
    if( cutoff )

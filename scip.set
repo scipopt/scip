@@ -823,8 +823,8 @@ heuristics/feaspump/depthfacnosol = 2
 heuristics/fixandinfer/priority = -500000
 
 # frequency for calling primal heuristic <fixandinfer> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 10]
-heuristics/fixandinfer/freq = 10
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/fixandinfer/freq = -1
 
 # frequency offset for calling primal heuristic <fixandinfer>
 # [type: int, range: [0,2147483647], default: 0]

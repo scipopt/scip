@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.11 2004/11/17 13:09:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.12 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1253,6 +1253,8 @@ DECL_CONSPRESOL(consPresolXor)
          }
       }
    }
+
+   /**@todo preprocess pairs of xor constraints */
 
    /* return the correct result code */
    if( cutoff )

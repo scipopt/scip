@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.67 2004/10/29 10:38:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.68 2004/11/23 16:09:56 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2291,6 +2291,8 @@ DECL_CONSPRESOL(consPresolSetppc)
       }
    }
    
+   /**@todo preprocess pairs of setppc constraints */
+
    return SCIP_OKAY;
 }
 
