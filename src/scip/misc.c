@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.29 2004/11/17 15:53:58 bzfwolte Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.30 2004/11/17 16:07:15 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3017,16 +3017,14 @@ RETCODE SCIPcalcIntegralScalar(
    }
    assert(minval > MIN(-mindelta, maxdelta));
 
-
    /* try, if values can be made integral multiplying them with the reciprocal of the smallest value and a power of 2 */
    scalable = TRUE;
    scaleval = 1.0/minval;
-   debugMessage("scalable-test:\n");
    for( c = 0; c < nvals && scalable; ++c )
    {
       /* check, if the value can be scaled with a simple scalar */
       val = vals[c];
-      if( val == 0.0 ) /* new */
+      if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
     
       absval = REALABS(val);
@@ -3063,12 +3061,11 @@ RETCODE SCIPcalcIntegralScalar(
    /* try, if values can be made integral by multiplying them by a power of 2 */
    twomult = TRUE;
    twomultval = 1.0;
-   debugMessage("twomult-test:\n");
    for( c = 0; c < nvals && twomult; ++c )
    {
       /* check, if the value can be scaled with a simple scalar */
       val = vals[c];
-      if( val == 0.0 ) /* new */
+      if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
       
       absval = REALABS(val);
@@ -3108,13 +3105,14 @@ RETCODE SCIPcalcIntegralScalar(
    gcd = 1;
    scm = 1;
    rational = TRUE;
-   debugMessage("gcd-test:\n");
+
    /* first value (to initialize gcd) */
    for( c = 0; c < nvals && rational; ++c )
    {
       val = vals[c];
-      if( val == 0.0 ) /* new */
+      if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
+
       rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
       if( rational && nominator != 0 )
       {
@@ -3132,19 +3130,22 @@ RETCODE SCIPcalcIntegralScalar(
    for( ++c; c < nvals && rational; ++c )
    {
       val = vals[c];
-      if( val == 0.0 ) /* new */
+      if( val == 0.0 ) /* zeros are allowed in the vals array */
          continue;
+
       rational = SCIPrealToRational(val, mindelta, maxdelta, maxdnom, &nominator, &denominator);
-      debugMessage(" -> c1=%d next rational : val: %g == %lld/%lld, rational=%d\n",
-         c, val, nominator, denominator, rational);
       if( rational && nominator != 0 )
       {
          assert(denominator > 0);
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((Real)scm/(Real)gcd <= maxscale);
-         debugMessage(" -> c2=%d next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
+         debugMessage(" -> c=%d next rational : val: %g == %lld/%lld, gcd=%lld, scm=%lld, rational=%d\n",
             c, val, nominator, denominator, gcd, scm, rational);
+      }
+      else
+      {
+         debugMessage(" -> failed to convert %g into a rational representation\n", val);
       }
    }
 

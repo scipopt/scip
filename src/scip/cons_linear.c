@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.128 2004/11/17 15:53:57 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.129 2004/11/17 16:07:15 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2517,128 +2517,122 @@ RETCODE separateRelaxedKnapsack(
 
       var = knapvars[i];
 
-      /* binary variable */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          debugMessage(" -> binary variable %+g<%s>\n", valscale * knapvals[i], SCIPvarGetName(var));
       }
-      /* continuous or integer variable */
-      else
+      else if( valscale * knapvals[i] > 0 )
       {
-
-         /* a_j > 0: substitution with lb or vlb */
-         if( valscale * knapvals[i] > 0 )
-         {
-            VAR** zvlb;
-            Real* bvlb;
-            Real* dvlb;
-            Real bestlbsol;
-            int bestlbtype;
-            int nvlb;
-            int j;
+         VAR** zvlb;
+         Real* bvlb;
+         Real* dvlb;
+         Real bestlbsol;
+         int bestlbtype;
+         int nvlb;
+         int j;
             
-            nvlb = SCIPvarGetNVlbs(var);
-            zvlb = SCIPvarGetVlbVars(var);
-            bvlb = SCIPvarGetVlbCoefs(var);
-            dvlb = SCIPvarGetVlbConstants(var);
+         /* a_j > 0: substitution with lb or vlb */
+         nvlb = SCIPvarGetNVlbs(var);
+         zvlb = SCIPvarGetVlbVars(var);
+         bvlb = SCIPvarGetVlbCoefs(var);
+         dvlb = SCIPvarGetVlbConstants(var);
    
-            /* search for lb or vlb with maximal bound value */ 
-            bestlbsol = SCIPvarGetLbLocal(var);
-            bestlbtype = -1;
-            for( j = 0; j < nvlb; j++ )
+         /* search for lb or vlb with maximal bound value */ 
+         bestlbsol = SCIPvarGetLbLocal(var);
+         bestlbtype = -1;
+         for( j = 0; j < nvlb; j++ )
+         {
+            /* use only vlb with binary variable z */
+            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY )
             {
-               /* use only vlb with binary variable z */
-               if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY )
+               Real vlbsol;
+
+               assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
+               vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
+               if( SCIPisGE(scip, vlbsol, bestlbsol) )
                {
-                  Real vlbsol;
-
-                  assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
-                  vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
-                  if( SCIPisGE(scip, vlbsol, bestlbsol) )
-                  {
-                     bestlbsol = vlbsol;
-                     bestlbtype = j;
-                  }
+                  bestlbsol = vlbsol;
+                  bestlbtype = j;
                }
-            }
-
-            /* if no lb or vlb with binary variable was found, we have to abort */
-            if( SCIPisInfinity(scip, -bestlbsol) ) 
-               goto TERMINATE;
-
-            if( bestlbtype == -1 )
-            {
-               rhs -= valscale * knapvals[i] * bestlbsol;
-               debugMessage(" -> non-binary variable %+g<%s> replaced with lower bound %g (rhs=%g)\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), bestlbsol, rhs);
-            }
-            else
-            {
-               assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
-               rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
-               binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
-               debugMessage(" -> non-binary variable %+g<%s> replaced with variable lower bound %+g<%s>(%g) %+g (rhs=%g)\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]), 
-                  SCIPvarGetLPSol(zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
             }
          }
-         /* a_j < 0: substitution with ub or vub */
+
+         /* if no lb or vlb with binary variable was found, we have to abort */
+         if( SCIPisInfinity(scip, -bestlbsol) ) 
+            goto TERMINATE;
+
+         if( bestlbtype == -1 )
+         {
+            rhs -= valscale * knapvals[i] * bestlbsol;
+            debugMessage(" -> non-binary variable %+g<%s> replaced with lower bound %g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), bestlbsol, rhs);
+         }
          else
          {
-            VAR** zvub;
-            Real* bvub;
-            Real* dvub;
-            Real bestubsol;
-            int bestubtype;
-            int nvub;
-            int j;
-
-            nvub = SCIPvarGetNVubs(var);
-            zvub = SCIPvarGetVubVars(var);
-            bvub = SCIPvarGetVubCoefs(var);
-            dvub = SCIPvarGetVubConstants(var);
+            assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
+            rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
+            binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
+            debugMessage(" -> non-binary variable %+g<%s> replaced with variable lower bound %+g<%s>(%g) %+g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]), 
+               SCIPvarGetLPSol(zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
+         }
+      }
+      else
+      {
+         VAR** zvub;
+         Real* bvub;
+         Real* dvub;
+         Real bestubsol;
+         int bestubtype;
+         int nvub;
+         int j;
+         
+         /* a_j < 0: substitution with ub or vub */
+         nvub = SCIPvarGetNVubs(var);
+         zvub = SCIPvarGetVubVars(var);
+         bvub = SCIPvarGetVubCoefs(var);
+         dvub = SCIPvarGetVubConstants(var);
                      
-            /* search for ub or vub with minimal bound value */   
-            bestubsol = SCIPvarGetUbLocal(var);
-            bestubtype = -1;
-            for( j = 0; j < nvub; j++ )
+         /* search for ub or vub with minimal bound value */   
+         bestubsol = SCIPvarGetUbLocal(var);
+         bestubtype = -1;
+         for( j = 0; j < nvub; j++ )
+         {
+            /* use only vub with active binary variable z */
+            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY )
             {
-               /* use only vub with active binary variable z */
-               if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY )
-               {
-                  Real vubsol;
+               Real vubsol;
 
-                  assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
-                  vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
-                  if( SCIPisLE(scip, vubsol, bestubsol) )
-                  {
-                     bestubsol = vubsol;
-                     bestubtype = j;
-                  }
+               assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
+               vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
+               if( SCIPisLE(scip, vubsol, bestubsol) )
+               {
+                  bestubsol = vubsol;
+                  bestubtype = j;
                }
             }
+         }
 
-            /* if no ub or vub with binary variable was found, we have to abort */
-            if( SCIPisInfinity(scip, bestubsol) ) 
-               goto TERMINATE;
+         /* if no ub or vub with binary variable was found, we have to abort */
+         if( SCIPisInfinity(scip, bestubsol) ) 
+            goto TERMINATE;
 
-            if( bestubtype == -1 )
-            {
-               rhs -= valscale * knapvals[i] * bestubsol;
-               debugMessage(" -> non-binary variable %+g<%s> replaced with upper bound %g (rhs=%g)\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), bestubsol, rhs);
-            }
-            else
-            {
-               assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
-               rhs -= valscale * knapvals[i] * dvub[bestubtype];
-               binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
-               debugMessage(" -> non-binary variable %+g<%s> replaced with variable upper bound %+g<%s>(%g) %+g (rhs=%g)\n",
-                  valscale * knapvals[i], SCIPvarGetName(var), bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]), 
-                  SCIPvarGetLPSol(zvub[bestubtype]), dvub[bestubtype], rhs);
-            }
+         if( bestubtype == -1 )
+         {
+            rhs -= valscale * knapvals[i] * bestubsol;
+            debugMessage(" -> non-binary variable %+g<%s> replaced with upper bound %g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), bestubsol, rhs);
+         }
+         else
+         {
+            assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
+            rhs -= valscale * knapvals[i] * dvub[bestubtype];
+            binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
+            debugMessage(" -> non-binary variable %+g<%s> replaced with variable upper bound %+g<%s>(%g) %+g (rhs=%g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]), 
+               SCIPvarGetLPSol(zvub[bestubtype]), dvub[bestubtype], rhs);
          }
       }
    }
@@ -2660,7 +2654,8 @@ RETCODE separateRelaxedKnapsack(
 
    /* make all coefficients integral and positive:
     *  - scale a~_j = a_j * intscalar
-    *  - substitute x~_j = 1 - x_j if a~_j < 0 */
+    *  - substitute x~_j = 1 - x_j if a~_j < 0
+    */
    rhs = rhs*intscalar;
 
    debugMessage(" -> rhs = %g\n", rhs);
