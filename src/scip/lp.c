@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.132 2004/08/02 14:17:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.133 2004/08/03 16:02:50 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2199,6 +2199,7 @@ RETCODE SCIPcolCreate(
    (*col)->strongbranchdown = SCIP_INVALID;
    (*col)->strongbranchup = SCIP_INVALID;
    (*col)->strongbranchsolval  = SCIP_INVALID;
+   (*col)->strongbranchlpobjval = SCIP_INVALID;
    (*col)->strongbranchnode = -1;
    (*col)->validredcostlp = -1;
    (*col)->validfarkaslp = -1;
@@ -2815,6 +2816,7 @@ RETCODE colStrongbranch(
       col->strongbranchup = SCIP_INVALID;
       col->validstrongbranchlp = -1;
       col->strongbranchsolval = SCIP_INVALID;
+      col->strongbranchlpobjval = SCIP_INVALID;
       col->strongbranchnode = -1;
    }
    else
@@ -2882,6 +2884,7 @@ RETCODE SCIPcolGetStrongbranch(
    {
       col->validstrongbranchlp = stat->lpcount;
       col->strongbranchsolval = col->primsol;
+      col->strongbranchlpobjval = SCIPlpGetObjval(lp, set);
       col->strongbranchnode = stat->nnodes;
 
       /* if a loose variables has an infinite best bound, the LP bound is -infinity and no gain can be achieved */
@@ -2913,7 +2916,8 @@ void SCIPcolGetStrongbranchLast(
    COL*             col,                /**< LP column */
    Real*            down,               /**< stores dual bound after branching column down, or NULL */
    Real*            up,                 /**< stores dual bound after branching column up, or NULL */
-   Real*            solval              /**< stores LP solution value of column at last strong branching call, or NULL */
+   Real*            solval,             /**< stores LP solution value of column at last strong branching call, or NULL */
+   Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    )
 {
    assert(col != NULL);
@@ -2924,6 +2928,8 @@ void SCIPcolGetStrongbranchLast(
       *up = col->strongbranchup;
    if( solval != NULL )
       *solval = col->strongbranchsolval;
+   if( lpobjval != NULL )
+      *lpobjval = col->strongbranchlpobjval;
 }
 
 /** output column to file stream */
@@ -6021,7 +6027,6 @@ void sumMIRRow(
    }
 }
 
-#define BOUNDSWITCH 0.5
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
  *    a'*x' == b, 0 <= x' <= ub'.
  *  
@@ -6047,6 +6052,8 @@ void transformMIRRow(
    int              nvars,              /**< number of active variables in the problem */
    int              nintvars,           /**< number of active binary/integer variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*             varsign,            /**< stores the sign of the transformed variable in summation */
@@ -6057,8 +6064,6 @@ void transformMIRRow(
    VAR* var;
    VARTYPE vartype;
    Real varsol;
-   Real lb;
-   Real ub;
    int idx;
    int v;
 
@@ -6072,10 +6077,8 @@ void transformMIRRow(
    VAR** zvub;
    Real* dvub;
 
-   Real bestlbdist;
-   Real bestlbsol;
-   Real bestubdist;
-   Real bestubsol;
+   Real bestlb;
+   Real bestub;
    int bestlbtype;
    int bestubtype;
    int i;
@@ -6112,63 +6115,53 @@ void transformMIRRow(
       varsol = SCIPvarGetLPSol(var);
 
       /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-      lb = SCIPvarGetLbLocal(var);
-      bestlbdist = varsol - lb;
-      bestlbsol = lb;
+      bestlb = SCIPvarGetLbLocal(var);
       bestlbtype = -1;
-      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+      if( usevbds && vartype == SCIP_VARTYPE_CONTINUOUS )
       {
          nvlb = SCIPvarGetNVlbs(var);
          zvlb = SCIPvarGetVlbVars(var);
          bvlb = SCIPvarGetVlbCoefs(var);
          dvlb = SCIPvarGetVlbConstants(var);
 
-         for( i = 0; i < nvlb && !SCIPsetIsZero(set, bestlbdist); i++ )
+         for( i = 0; i < nvlb; i++ )
          {
             Real vlbsol;
-            Real vlbdist;
 
             vlbsol = bvlb[i] * SCIPvarGetLPSol(zvlb[i]) + dvlb[i];
-            vlbdist = varsol - vlbsol;
-            if( vlbdist < bestlbdist )
+            if( vlbsol > bestlb )
             {
-               bestlbdist = vlbdist;
-               bestlbsol = vlbsol;
+               bestlb = vlbsol;
                bestlbtype = i;
             }
          }
       }
 
       /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-      ub = SCIPvarGetUbLocal(var);
-      bestubdist = ub - varsol;
-      bestubsol = ub;
+      bestub = SCIPvarGetUbLocal(var);
       bestubtype = -1;
-      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+      if( usevbds && vartype == SCIP_VARTYPE_CONTINUOUS )
       {   
          nvub = SCIPvarGetNVubs(var);
          zvub = SCIPvarGetVubVars(var);
          bvub = SCIPvarGetVubCoefs(var);
          dvub = SCIPvarGetVubConstants(var);
  
-         for( i = 0; i < nvub && !SCIPsetIsZero(set, bestubdist); i++ )
+         for( i = 0; i < nvub; i++ )
          {
             Real vubsol;
-            Real vubdist;
                
             vubsol = bvub[i] * SCIPvarGetLPSol(zvub[i]) + dvub[i];
-            vubdist = vubsol - varsol;
-            if( vubdist < bestubdist )
+            if( vubsol < bestub )
             {
-               bestubdist = vubdist;
-               bestubsol = vubsol;
+               bestub = vubsol;
                bestubtype = i;
             }
          }
       }
 
       /* check, if variable is free variable */
-      if( SCIPsetIsInfinity(set, -bestlbsol) && SCIPsetIsInfinity(set, bestubsol) )
+      if( SCIPsetIsInfinity(set, -bestlb) && SCIPsetIsInfinity(set, bestub) )
       {
          /* we found a free variable in the row with non-zero coefficient
           *  -> MIR row can't be transformed in standard form
@@ -6178,7 +6171,7 @@ void transformMIRRow(
       }
 
       /* select transformation bound */
-      if( varsol <= (1.0 - BOUNDSWITCH) * bestlbsol + BOUNDSWITCH * bestubsol )
+      if( varsol <= (1.0 - boundswitch) * bestlb + boundswitch * bestub )
       {
          /* use lower bound as transformation bound: x'_j := x_j - lb_j */
          varsign[idx] = +1;
@@ -6186,7 +6179,7 @@ void transformMIRRow(
     
          /* standard (bestlbtype == -1) or variable (bestlbtype >= 0) lower bound? */
          if( bestlbtype == -1 )
-            (*mirrhs) -= mircoef[idx] * lb;
+            (*mirrhs) -= mircoef[idx] * bestlb;
          else
          {
             assert(bestlbtype >= 0);
@@ -6205,7 +6198,7 @@ void transformMIRRow(
          
          /* standard (bestubtype == -1) or variable (bestubtype >= 0) upper bound? */
          if( bestubtype == -1 )
-            (*mirrhs) -= mircoef[idx] * ub;
+            (*mirrhs) -= mircoef[idx] * bestub;
          else
          {
             assert(bestubtype >= 0);
@@ -6599,6 +6592,8 @@ RETCODE SCIPlpCalcMIR(
    int              nvars,              /**< number of active variables in the problem */
    int              nintvars,           /**< number of active binary/integer variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
@@ -6652,7 +6647,7 @@ RETCODE SCIPlpCalcMIR(
     *   x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
     * and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
     */
-   transformMIRRow(set, nvars, nintvars, vars, mircoef, &rhs, varsign, boundtype, &freevariable);
+   transformMIRRow(set, nvars, nintvars, vars, boundswitch, usevbds, mircoef, &rhs, varsign, boundtype, &freevariable);
    if( freevariable )
       goto TERMINATE;
 

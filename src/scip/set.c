@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.103 2004/08/02 16:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.104 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -77,7 +77,7 @@
 
 /* Branching */
 #define SCIP_DEFAULT_BRANCHSCOREFAC   0.167 /**< branching score factor to weigh downward and upward gain prediction */
-#define SCIP_DEFAULT_PREFERBINBRANCH   TRUE /**< should branching on binary variables be prefered? */
+#define SCIP_DEFAULT_PREFERBINBRANCH  FALSE /**< should branching on binary variables be prefered? */
 
 
 /* Presolving */
@@ -100,7 +100,7 @@
 #define SCIP_DEFAULT_SCALING           TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LPSOLVEFREQ          1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
 #define SCIP_DEFAULT_LPSOLVEDEPTH        -1 /**< maximal depth for solving LPs (-1: no depth limit) */
-#define SCIP_DEFAULT_REDCOSTFREQ          5 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
+#define SCIP_DEFAULT_REDCOSTFREQ          1 /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
 #define SCIP_DEFAULT_COLAGELIMIT         10 /**< maximum age a dynamic column can reach before it is deleted from the LP */
 #define SCIP_DEFAULT_ROWAGELIMIT         10 /**< maximum age a dynamic row can reach before it is deleted from the LP */
 
@@ -139,7 +139,7 @@
 #define SCIP_DEFAULT_USESBCONFLICT    FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_USEPSEUDOCONFLICT TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_MAXCONFVARSFAC    0.02 /**< maximal fraction of binary variables involved in a conflict clause */
-#define SCIP_DEFAULT_MINMAXCONFVARS      20 /**< minimal absolute maximum of variables involved in a conflict clause */
+#define SCIP_DEFAULT_MINMAXCONFVARS      30 /**< minimal absolute maximum of variables involved in a conflict clause */
 
 
 /* Primal Solutions */
@@ -289,6 +289,7 @@ RETCODE SCIPsetCreate(
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
+   (*set)->vbcfilename = NULL;
 
    /* SCIP parameters */
    assert(sizeof(int) == sizeof(VERBLEVEL));

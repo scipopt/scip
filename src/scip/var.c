@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.104 2004/07/12 11:14:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.105 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1239,6 +1239,7 @@ RETCODE varCreate(
 
    /* create branching and inference history entries */
    CHECK_OKAY( SCIPhistoryCreate(&(*var)->history, memhdr) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*var)->historycrun, memhdr) );
 
    return SCIP_OKAY;
 }
@@ -1520,6 +1521,7 @@ RETCODE varFree(
 
    /* free branching and inference history entries */
    SCIPhistoryFree(&(*var)->history, memhdr);
+   SCIPhistoryFree(&(*var)->historycrun, memhdr);
 
    /* free variable data structure */
    freeBlockMemoryArray(memhdr, &(*var)->name, strlen((*var)->name)+1);
@@ -2302,6 +2304,7 @@ RETCODE SCIPvarFix(
 
       /* clear the history of the variable */
       SCIPhistoryReset(var->history);
+      SCIPhistoryReset(var->historycrun);
 
       /* convert variable into fixed variable */
       var->varstatus = SCIP_VARSTATUS_FIXED; /*lint !e641*/
@@ -2679,7 +2682,9 @@ RETCODE SCIPvarAggregate(
 
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
+   SCIPhistoryUnite(aggvar->historycrun, var->historycrun, scalar < 0.0);
    SCIPhistoryReset(var->history);
+   SCIPhistoryReset(var->historycrun);
 
    /* update flags of aggregation variable */
    aggvar->removeable &= var->removeable;
@@ -6518,6 +6523,16 @@ RETCODE SCIPvarDropEvent(
    return SCIP_OKAY;
 }
 
+/** resets history of current run for given variable */
+void SCIPvarResetHistoryCurrentRun(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   SCIPhistoryReset(var->historycrun);
+}
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
@@ -6547,7 +6562,9 @@ RETCODE SCIPvarUpdatePseudocost(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       SCIPhistoryUpdatePseudocost(var->history, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdatePseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
       SCIPhistoryUpdatePseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdatePseudocost(stat->glbhistorycrun, set, solvaldelta, objdelta, weight);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -6620,6 +6637,54 @@ Real SCIPvarGetPseudocost(
    }
 }
 
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPvarGetPseudocostCurrentRun(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   BRANCHDIR dir;
+
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return SCIPhistoryGetPseudocost(stat->glbhistorycrun, solvaldelta);
+      else
+         return SCIPvarGetPseudocost(var->data.transvar, stat, solvaldelta);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      dir = (solvaldelta >= 0.0 ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+      
+      return SCIPhistoryGetPseudocostCount(var->historycrun, dir) > 0.0
+         ? SCIPhistoryGetPseudocost(var->historycrun, solvaldelta)
+         : SCIPhistoryGetPseudocost(stat->glbhistorycrun, solvaldelta);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      return SCIPvarGetPseudocost(var->data.aggregate.var, stat, var->data.aggregate.scalar * solvaldelta);
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetPseudocost(var->negatedvar, stat, -solvaldelta);
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
 Real SCIPvarGetPseudocostCount(
    VAR*             var,                /**< problem variable */
@@ -6640,6 +6705,50 @@ Real SCIPvarGetPseudocostCount(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       return SCIPhistoryGetPseudocostCount(var->history, dir);
+      
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+      
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetPseudocostCount(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetPseudocostCount(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetPseudocostCount(var->negatedvar, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPvarGetPseudocostCountCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
+   )
+{
+   assert(var != NULL);
+   assert(dir == 0 || dir == 1);
+   
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return 0.0;
+      else
+         return SCIPvarGetPseudocostCount(var->data.transvar, dir);
+      
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetPseudocostCount(var->historycrun, dir);
       
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
@@ -6687,7 +6796,9 @@ RETCODE SCIPvarIncNBranchings(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       SCIPhistoryIncNBranchings(var->history, depth, dir);
+      SCIPhistoryIncNBranchings(var->historycrun, depth, dir);
       SCIPhistoryIncNBranchings(stat->glbhistory, depth, dir);
+      SCIPhistoryIncNBranchings(stat->glbhistorycrun, depth, dir);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -6744,7 +6855,9 @@ RETCODE SCIPvarIncNInferences(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       SCIPhistoryIncNInferences(var->history, dir);
+      SCIPhistoryIncNInferences(var->historycrun, dir);
       SCIPhistoryIncNInferences(stat->glbhistory, dir);
+      SCIPhistoryIncNInferences(stat->glbhistorycrun, dir);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -6801,7 +6914,9 @@ RETCODE SCIPvarIncNCutoffs(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       SCIPhistoryIncNCutoffs(var->history, dir);
+      SCIPhistoryIncNCutoffs(var->historycrun, dir);
       SCIPhistoryIncNCutoffs(stat->glbhistory, dir);
+      SCIPhistoryIncNCutoffs(stat->glbhistorycrun, dir);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -6875,6 +6990,49 @@ Longint SCIPvarGetNBranchings(
    }
 }
 
+/** returns the number of times, a bound of the variable was changed in given direction due to branching 
+ *  in the current run
+ */
+Longint SCIPvarGetNBranchingsCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return 0;
+      else
+         return SCIPvarGetNBranchings(var->data.transvar, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetNBranchings(var->historycrun, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetNBranchings(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetNBranchings(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetNBranchings(var->negatedvar, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
 /** returns the average depth of bound changes in given direction due to branching on the variable */
 Real SCIPvarGetAvgBranchdepth(
    VAR*             var,                /**< problem variable */
@@ -6916,6 +7074,49 @@ Real SCIPvarGetAvgBranchdepth(
    }
 }
 
+/** returns the average depth of bound changes in given direction due to branching on the variable
+ *  in the current run
+ */
+Real SCIPvarGetAvgBranchdepthCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return 0.0;
+      else
+         return SCIPvarGetAvgBranchdepth(var->data.transvar, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return  SCIPhistoryGetAvgBranchdepth(var->historycrun, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetAvgBranchdepth(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetAvgBranchdepth(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAvgBranchdepth(var->negatedvar, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
 /** returns the number of inferences branching on this variable in given direction triggered */
 Longint SCIPvarGetNInferences(
    VAR*             var,                /**< problem variable */
@@ -6935,6 +7136,49 @@ Longint SCIPvarGetNInferences(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       return SCIPhistoryGetNInferences(var->history, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetNInferences(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetNInferences(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetNInferences(var->negatedvar, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
+/** returns the number of inferences branching on this variable in given direction triggered
+ *  in the current run
+ */
+Longint SCIPvarGetNInferencesCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return 0;
+      else
+         return SCIPvarGetNInferences(var->data.transvar, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetNInferences(var->historycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
       return 0;
@@ -7002,6 +7246,53 @@ Real SCIPvarGetAvgInferences(
    }
 }
 
+/** returns the average number of inferences found after branching on the variable in given direction
+ *  in the current run
+ */
+Real SCIPvarGetAvgInferencesCurrentRun(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir);
+      else
+         return SCIPvarGetAvgInferences(var->data.transvar, stat, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetNBranchings(var->historycrun, dir) > 0
+         ? SCIPhistoryGetAvgInferences(var->historycrun, dir)
+         : SCIPhistoryGetAvgInferences(stat->glbhistorycrun, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetAvgInferences(var->data.aggregate.var, stat, dir);
+      else
+         return SCIPvarGetAvgInferences(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAvgInferences(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
 /** returns the number of cutoffs branching on this variable in given direction produced */
 Longint SCIPvarGetNCutoffs(
    VAR*             var,                /**< problem variable */
@@ -7021,6 +7312,47 @@ Longint SCIPvarGetNCutoffs(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       return SCIPhistoryGetNCutoffs(var->history, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetNCutoffs(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetNCutoffs(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetNCutoffs(var->negatedvar, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
+/** returns the number of cutoffs branching on this variable in given direction produced in the current run */
+Longint SCIPvarGetNCutoffsCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return 0;
+      else
+         return SCIPvarGetNCutoffs(var->data.transvar, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetNCutoffs(var->historycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
       return 0;
@@ -7066,6 +7398,51 @@ Real SCIPvarGetAvgCutoffs(
       return SCIPhistoryGetNBranchings(var->history, dir) > 0
          ? SCIPhistoryGetAvgCutoffs(var->history, dir)
          : SCIPhistoryGetAvgCutoffs(stat->glbhistory, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetAvgCutoffs(var->data.aggregate.var, stat, dir);
+      else
+         return SCIPvarGetAvgCutoffs(var->data.aggregate.var, stat, SCIPbranchdirOpposite(dir));
+      
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAvgCutoffs(var->negatedvar, stat, SCIPbranchdirOpposite(dir));
+      
+   default:
+      errorMessage("unknown variable status\n");
+      abort();
+   }
+}
+
+/** returns the average number of cutoffs found after branching on the variable in given direction in the current run */
+Real SCIPvarGetAvgCutoffsCurrentRun(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( var->varstatus )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.transvar == NULL )
+         return SCIPhistoryGetAvgCutoffs(stat->glbhistorycrun, dir);
+      else
+         return SCIPvarGetAvgCutoffs(var->data.transvar, stat, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetNBranchings(var->historycrun, dir) > 0
+         ? SCIPhistoryGetAvgCutoffs(var->historycrun, dir)
+         : SCIPhistoryGetAvgCutoffs(stat->glbhistorycrun, dir);
 
    case SCIP_VARSTATUS_FIXED:
       return 0.0;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.151 2004/08/02 14:17:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.152 2004/08/03 16:02:51 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1529,7 +1529,8 @@ RETCODE SCIPgetVarStrongbranchLast(
    VAR*             var,                /**< variable to get last strong branching values for */
    Real*            down,               /**< stores dual bound after branching column down, or NULL */
    Real*            up,                 /**< stores dual bound after branching column up, or NULL */
-   Real*            solval              /**< stores LP solution value of variable at last strong branching call, or NULL */
+   Real*            solval,             /**< stores LP solution value of variable at last strong branching call, or NULL */
+   Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    );
 
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
@@ -1848,6 +1849,16 @@ Real SCIPgetVarPseudocost(
    Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
+/** gets the variable's pseudo cost value for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetVarPseudocostCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
 extern
 Real SCIPgetVarPseudocostCount(
@@ -1856,9 +1867,29 @@ Real SCIPgetVarPseudocostCount(
    int              dir                 /**< branching direction: 0 (down), or 1 (up) */
    );
 
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetVarPseudocostCountCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   );
+
 /** gets the variable's pseudo cost score value for the given LP solution value */
 extern
 Real SCIPgetVarPseudocostScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solval              /**< variable's LP solution value */
+   );
+
+/** gets the variable's pseudo cost score value for the given LP solution value,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPgetVarPseudocostScoreCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Real             solval              /**< variable's LP solution value */
@@ -1875,9 +1906,27 @@ Real SCIPgetVarAvgInferences(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** returns the average number of inferences found after branching on the variable in given direction in the current run;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
+ *  over all variables for branching in the given direction is returned
+ */
+extern
+Real SCIPgetVarAvgInferencesCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** returns the variable's average inference score value */
 extern
 Real SCIPgetVarAvgInferenceScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's average inference score value only using inferences of the current run */
+extern
+Real SCIPgetVarAvgInferenceScoreCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< problem variable */
    );
@@ -1893,9 +1942,27 @@ Real SCIPgetVarAvgCutoffs(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** returns the average number of cutoffs found after branching on the variable in given direction in the current run;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
+ *  over all variables for branching in the given direction is returned
+ */
+extern
+Real SCIPgetVarAvgCutoffsCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** returns the variable's average cutoff score value */
 extern
 Real SCIPgetVarAvgCutoffScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's average cutoff score value, only using cutoffs of the current run */
+extern
+Real SCIPgetVarAvgCutoffScoreCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< problem variable */
    );
@@ -1905,6 +1972,16 @@ Real SCIPgetVarAvgCutoffScore(
  */
 extern
 Real SCIPgetVarAvgInferenceCutoffScore(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
+   );
+
+/** returns the variable's average inference/cutoff score value, weighting the cutoffs of the variable with the given
+ *  factor, only using inferences and cutoffs of the current run
+ */
+extern
+Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
@@ -2252,6 +2329,8 @@ RETCODE SCIPsumLPRows(
 extern
 RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.25 2004/07/13 15:03:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.26 2004/08/03 16:02:51 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -42,6 +42,9 @@
 #define DEFAULT_MAXSEPACUTS          25 /**< maximal number of gomory cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     100 /**< maximal number of gomory cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS       FALSE /**< should generated cuts be removed from the LP if they are no longer tight? */
+
+#define BOUNDSWITCH              0.9999
+#define USEVBDS                    TRUE
 
 
 /** separator data */
@@ -145,22 +148,22 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    if( depth == 0 )
    {
       maxdnom = 1000000;
-      maxscale = 65536.0;
+      maxscale = 10000000.0;
    }
    else if( depth <= maxdepth/4 )
    {
       maxdnom = 100;
-      maxscale = 128.0;
+      maxscale = 1000.0;
    }
    else if( depth <= maxdepth/2 )
    {
       maxdnom = 10;
-      maxscale = 16.0;
+      maxscale = 100.0;
    }
    else
    {
       maxdnom = 1;
-      maxscale = 4.0;
+      maxscale = 10.0;
    }
 
    *result = SCIP_DIDNOTFIND;
@@ -209,7 +212,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
 
                /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-               CHECK_OKAY( SCIPcalcMIR(scip, 0.05, binvrow, 1.0, cutcoef, &cutrhs, &cutact, &success) );
+               CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, binvrow, 1.0,
+                     cutcoef, &cutrhs, &cutact, &success) );
                debugMessage("  -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
                /* if successful, convert dense cut into sparse row, and add the row as a cut */

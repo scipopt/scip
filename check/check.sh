@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.7 2004/02/25 16:49:52 bzfpfend Exp $
+# $Id: check.sh,v 1.8 2004/08/03 16:02:49 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -53,6 +53,7 @@ do
 	echo display statistics                >> $TMPFILE
 	echo quit                              >> $TMPFILE
 	../$2 < $TMPFILE 2>>$ERRFILE
+	echo
 	echo =ready=
     else
 	echo @02 FILE NOT FOUND: $i ===========

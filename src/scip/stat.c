@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.44 2004/07/12 11:14:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.45 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -60,6 +60,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistory, memhdr) );
+   CHECK_OKAY( SCIPhistoryCreate(&(*stat)->glbhistorycrun, memhdr) );
    CHECK_OKAY( SCIPvbcCreate(&(*stat)->vbc) );
 
    (*stat)->marked_nvaridx = 0;
@@ -92,6 +93,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nodeactivationtime);
 
    SCIPhistoryFree(&(*stat)->glbhistory, memhdr);
+   SCIPhistoryFree(&(*stat)->glbhistorycrun, memhdr);
    SCIPvbcFree(&(*stat)->vbc);
 
    freeMemory(stat);
@@ -197,6 +199,8 @@ void SCIPstatResetCurrentRun(
    stat->lastdivenode = 0;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
+
+   SCIPhistoryReset(stat->glbhistorycrun);
 
    SCIPstatResetDisplay(stat);
 }

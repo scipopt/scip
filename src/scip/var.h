@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.70 2004/07/07 09:52:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.71 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -697,6 +697,12 @@ RETCODE SCIPvarDropEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
 
+/** resets history of current run for given variable */
+extern
+void SCIPvarResetHistoryCurrentRun(
+   VAR*             var                 /**< problem variable */
+   );
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
@@ -718,9 +724,28 @@ Real SCIPvarGetPseudocost(
    Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
+/** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPvarGetPseudocostCurrentRun(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
 extern
 Real SCIPvarGetPseudocostCount(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
+   );
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+extern
+Real SCIPvarGetPseudocostCountCurrentRun(
    VAR*             var,                /**< problem variable */
    BRANCHDIR        dir                 /**< branching direction: 0 (down), or 1 (up) */
    );
@@ -758,9 +783,27 @@ Real SCIPvarGetAvgInferences(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** returns the average number of inferences found after branching on the variable in given direction
+ *  in the current run
+ */
+extern
+Real SCIPvarGetAvgInferencesCurrentRun(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** returns the average number of cutoffs found after branching on the variable in given direction */
 extern
 Real SCIPvarGetAvgCutoffs(
+   VAR*             var,                /**< problem variable */
+   STAT*            stat,               /**< problem statistics */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the average number of cutoffs found after branching on the variable in given direction in the current run */
+extern
+Real SCIPvarGetAvgCutoffsCurrentRun(
    VAR*             var,                /**< problem variable */
    STAT*            stat,               /**< problem statistics */
    BRANCHDIR        dir                 /**< branching direction */

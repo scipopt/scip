@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.123 2004/07/12 11:14:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.124 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -133,7 +133,7 @@ RETCODE propagateDomains(
       for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
       {
          CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], memhdr, set, stat, prob, SCIPnodeGetDepth(tree->actnode),
-                        &result) );
+               &result) );
          propagain = propagain || (result == SCIP_REDUCEDDOM);
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
       }
@@ -241,7 +241,7 @@ RETCODE redcostStrengthening(
                   debugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, oldlb, newbd, primal->cutoffbound, lpobjval, redcost);
                   CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                                 var, newbd, SCIP_BOUNDTYPE_UPPER) );
+                        var, newbd, SCIP_BOUNDTYPE_UPPER) );
                   stat->nredcoststrfound++;
                }
             }
@@ -286,7 +286,7 @@ RETCODE redcostStrengthening(
                   debugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                      SCIPvarGetName(var), oldlb, oldub, newbd, oldub, primal->cutoffbound, lpobjval, redcost);
                   CHECK_OKAY( SCIPnodeAddBoundchg(tree->actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue,
-                                 var, newbd, SCIP_BOUNDTYPE_LOWER) );
+                        var, newbd, SCIP_BOUNDTYPE_LOWER) );
                   stat->nredcoststrfound++;
                }
             }
@@ -390,7 +390,7 @@ RETCODE updatePseudocost(
       /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
        * current node and LP fork
        */
-      CHECK_OKAY( SCIPsetAllocBufferArray(set, &updates, tree->actnode->depth - tree->actlpfork->depth) );
+      CHECK_OKAY( SCIPsetAllocBufferArray(set, &updates, 2*(tree->actnode->depth - tree->actlpfork->depth)) );
       nupdates = 0;
       nvalidupdates = 0;
 
@@ -440,7 +440,7 @@ RETCODE updatePseudocost(
        * is equally spread on all bound changes that lead to valid pseudo cost updates
        */
       weight = nvalidupdates > 0 ? 1.0 / (Real)nvalidupdates : 1.0;
-      lpgain = tree->actnode->lowerbound - tree->actlpfork->lowerbound;
+      lpgain = SCIPlpGetObjval(lp, set) - tree->actlpfork->lowerbound;
       for( i = 0; i < nupdates; ++i )
       {
          assert(updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
@@ -448,8 +448,11 @@ RETCODE updatePseudocost(
          assert(var->pseudocostflag != PSEUDOCOST_NONE);
          if( var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
+            debugMessage("updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => gain=%g, weight: %g\n",
+               SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
+               tree->actlpfork->lowerbound, SCIPlpGetObjval(lp, set), lpgain, weight);
             CHECK_OKAY( SCIPvarUpdatePseudocost(var, set, stat, 
-                           SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
+                  SCIPvarGetLPSol(var) - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
          }
          var->pseudocostflag = PSEUDOCOST_NONE;
       }
@@ -814,7 +817,7 @@ RETCODE priceAndCutLoop(
             for( h = 0; h < set->nconshdlrs && !(*cutoff) && !enoughcuts && lp->solved; ++h )
             {
                CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, stat, prob, sepastore, 
-                              SCIPnodeGetDepth(tree->actnode), &result) );
+                     SCIPnodeGetDepth(tree->actnode), &result) );
                *cutoff = *cutoff || (result == SCIP_CUTOFF);
                separateagain = separateagain || (result == SCIP_CONSADDED);
                enoughcuts = enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
@@ -969,7 +972,7 @@ RETCODE solveNodeLP(
    {
       /* load and solve the initial LP of the node */
       CHECK_OKAY( solveNodeInitialLP(memhdr, set, stat, prob, tree, lp, pricestore, sepastore, 
-                     branchcand, eventfilter, eventqueue, cutoff, lperror) );
+            branchcand, eventfilter, eventqueue, cutoff, lperror) );
       assert(*cutoff || *lperror || lp->solved);
       debugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n", 
          SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
@@ -980,7 +983,7 @@ RETCODE solveNodeLP(
    {
       /* solve the LP with price-and-cut*/
       CHECK_OKAY( priceAndCutLoop(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, cutpool, 
-                     branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, cutoff, lperror) );
+            branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa, cutoff, lperror) );
    }
    assert(*cutoff || *lperror || lp->solved);
 
@@ -1344,8 +1347,8 @@ RETCODE solveNode(
       {
          /* solve the node's LP */
          CHECK_OKAY( solveNodeLP(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore,
-                        cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
-                        initiallpsolved, cutoff, &lperror) );
+               cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
+               initiallpsolved, cutoff, &lperror) );
          initiallpsolved = TRUE;
          debugMessage(" -> LP status: %d, LP obj: %g\n", SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
 
@@ -1487,7 +1490,7 @@ RETCODE primalHeuristics(
    for( h = 0; h < set->nheurs; ++h )
    {
       CHECK_OKAY( SCIPheurExec(set->heurs[h], set, primal, depth, lpforkdepth, tree->actnodehaslp, plunging,
-                     &ndelayedheurs, &result) );
+            &ndelayedheurs, &result) );
       *foundsol = *foundsol || (result == SCIP_FOUNDSOL);
    }
    assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
@@ -1524,7 +1527,7 @@ RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          CHECK_OKAY( SCIPprimalTrySolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol,
-                        TRUE, TRUE, &foundsol) );
+               TRUE, TRUE, &foundsol) );
       }
       else
       {
@@ -1547,7 +1550,7 @@ RETCODE addCurrentSolution(
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
          CHECK_OKAY( SCIPprimalTrySolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol,
-                        TRUE, TRUE, &foundsol) );
+               TRUE, TRUE, &foundsol) );
       }
       else
       {

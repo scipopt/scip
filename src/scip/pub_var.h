@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.21 2004/07/07 09:52:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.22 2004/08/03 16:02:51 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -232,9 +232,27 @@ Longint SCIPvarGetNBranchings(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** returns the number of times, a bound of the variable was changed in given direction due to branching
+ *  in the current run
+ */
+extern
+Longint SCIPvarGetNBranchingsCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** returns the number of inferences branching on this variable in given direction triggered */
 extern
 Longint SCIPvarGetNInferences(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the number of inferences branching on this variable in given direction triggered
+ *  in the current run
+ */
+extern
+Longint SCIPvarGetNInferencesCurrentRun(
    VAR*             var,                /**< problem variable */
    BRANCHDIR        dir                 /**< branching direction */
    );
@@ -246,9 +264,25 @@ Longint SCIPvarGetNCutoffs(
    BRANCHDIR        dir                 /**< branching direction */
    );
 
+/** returns the number of cutoffs branching on this variable in given direction produced in the current run */
+extern
+Longint SCIPvarGetNCutoffsCurrentRun(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
 /** returns the average depth of bound changes in given direction due to branching on the variable */
 extern
 Real SCIPvarGetAvgBranchdepth(
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** returns the average depth of bound changes in given direction due to branching on the variable
+ *  in the current run
+ */
+extern
+Real SCIPvarGetAvgBranchdepthCurrentRun(
    VAR*             var,                /**< problem variable */
    BRANCHDIR        dir                 /**< branching direction */
    );

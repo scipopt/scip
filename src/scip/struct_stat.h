@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.17 2004/07/12 11:14:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.18 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -68,6 +68,7 @@ struct Stat
    CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    HISTORY*         glbhistory;         /**< global history information over all variables */
+   HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    VAR*             lastbranchvar;      /**< last variable, that was branched on */
    VBC*             vbc;                /**< VBC Tool information */
    BRANCHDIR        lastbranchdir;      /**< direction of the last branching */

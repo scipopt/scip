@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.81 2004/07/09 08:11:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.82 2004/08/03 16:02:50 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -195,7 +195,8 @@ void SCIPcolGetStrongbranchLast(
    COL*             col,                /**< LP column */
    Real*            down,               /**< stores dual bound after branching column down, or NULL */
    Real*            up,                 /**< stores dual bound after branching column up, or NULL */
-   Real*            solval              /**< stores LP solution value of column at last strong branching call, or NULL */
+   Real*            solval,             /**< stores LP solution value of column at last strong branching call, or NULL */
+   Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    );
 
 
@@ -589,6 +590,8 @@ RETCODE SCIPlpCalcMIR(
    int              nvars,              /**< number of active variables in the problem */
    int              nintvars,           /**< number of active binary/integer variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */

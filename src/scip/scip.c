@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.190 2004/08/02 14:17:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.191 2004/08/03 16:02:51 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -502,7 +502,7 @@ RETCODE SCIPaddBoolParam(
    CHECK_OKAY( checkStage(scip, "SCIPaddBoolParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddBoolParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue,
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -523,7 +523,7 @@ RETCODE SCIPaddIntParam(
    CHECK_OKAY( checkStage(scip, "SCIPaddIntParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddIntParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -544,7 +544,7 @@ RETCODE SCIPaddLongintParam(
    CHECK_OKAY( checkStage(scip, "SCIPaddLongintParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddLongintParam(scip->set, scip->mem->setmem, name, desc,
-                  valueptr, defaultvalue, minvalue, maxvalue, paramchgd, paramdata) );
+         valueptr, defaultvalue, minvalue, maxvalue, paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -565,7 +565,7 @@ RETCODE SCIPaddRealParam(
    CHECK_OKAY( checkStage(scip, "SCIPaddRealParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddRealParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, minvalue, maxvalue,
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -585,7 +585,7 @@ RETCODE SCIPaddCharParam(
    CHECK_OKAY( checkStage(scip, "SCIPaddCharParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddCharParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue, allowedvalues,
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -604,7 +604,7 @@ RETCODE SCIPaddStringParam(
    CHECK_OKAY( checkStage(scip, "SCIPaddStringParam", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAddStringParam(scip->set, scip->mem->setmem, name, desc, valueptr, defaultvalue,
-                  paramchgd, paramdata) );
+         paramchgd, paramdata) );
 
    return SCIP_OKAY;
 }
@@ -908,8 +908,8 @@ RETCODE SCIPincludePricer(
    CHECK_OKAY( checkStage(scip, "SCIPincludePricer", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPpricerCreate(&pricer, scip->set, scip->mem->setmem,
-                  name, desc, priority,
-                  pricerfree, pricerinit, pricerexit, pricerredcost, pricerfarkas, pricerdata) );
+         name, desc, priority,
+         pricerfree, pricerinit, pricerexit, pricerredcost, pricerfarkas, pricerdata) );
    CHECK_OKAY( SCIPsetIncludePricer(scip->set, pricer) );
    
    return SCIP_OKAY;
@@ -1098,8 +1098,8 @@ RETCODE SCIPincludeConflicthdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConflicthdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority, 
-                  conflictfree, conflictinit, conflictexit, conflictexec,
-                  conflicthdlrdata) );
+         conflictfree, conflictinit, conflictexit, conflictexec,
+         conflicthdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
    
    return SCIP_OKAY;
@@ -1249,8 +1249,8 @@ RETCODE SCIPincludeSepa(
    CHECK_OKAY( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
-                  name, desc, priority, freq,
-                  sepafree, sepainit, sepaexit, sepaexec, sepadata) );
+         name, desc, priority, freq,
+         sepafree, sepainit, sepaexit, sepaexec, sepadata) );
    CHECK_OKAY( SCIPsetIncludeSepa(scip->set, sepa) );
    
    return SCIP_OKAY;
@@ -1329,8 +1329,8 @@ RETCODE SCIPincludeHeur(
    CHECK_OKAY( checkStage(scip, "SCIPincludeHeur", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
-                  name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging,
-                  heurfree, heurinit, heurexit, heurexec, heurdata) );
+         name, desc, dispchar, priority, freq, freqofs, maxdepth, pseudonodes, duringplunging,
+         heurfree, heurinit, heurexit, heurexec, heurdata) );
    CHECK_OKAY( SCIPsetIncludeHeur(scip->set, heur) );
    
    return SCIP_OKAY;
@@ -1403,8 +1403,8 @@ RETCODE SCIPincludeEventhdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeEventhdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPeventhdlrCreate(&eventhdlr, name, desc, 
-                  eventfree, eventinit, eventexit, eventdelete, eventexec,
-                  eventhdlrdata) );
+         eventfree, eventinit, eventexit, eventdelete, eventexec,
+         eventhdlrdata) );
    CHECK_OKAY( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
    
    return SCIP_OKAY;
@@ -1464,7 +1464,7 @@ RETCODE SCIPincludeNodesel(
    CHECK_OKAY( checkStage(scip, "SCIPincludeNodesel", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority, 
-                  lowestboundfirst, nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata) );
+         lowestboundfirst, nodeselfree, nodeselinit, nodeselexit, nodeselselect, nodeselcomp, nodeseldata) );
    CHECK_OKAY( SCIPsetIncludeNodesel(scip->set, nodesel) );
    
    return SCIP_OKAY;
@@ -1561,7 +1561,7 @@ RETCODE SCIPincludeBranchrule(
    CHECK_OKAY( checkStage(scip, "SCIPincludeBranchrule", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
-                  branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
+         branchfree, branchinit, branchexit, branchexeclp, branchexecps, branchruledata) );
    CHECK_OKAY( SCIPsetIncludeBranchrule(scip->set, branchrule) );
    
    return SCIP_OKAY;
@@ -1653,8 +1653,8 @@ RETCODE SCIPincludeDisp(
    CHECK_OKAY( checkStage(scip, "SCIPincludeDisp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPdispCreate(&disp, scip->set, scip->mem->setmem,
-                  name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispoutput, dispdata,
-                  width, priority, position, stripline) );
+         name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispoutput, dispdata,
+         width, priority, position, stripline) );
    CHECK_OKAY( SCIPsetIncludeDisp(scip->set, disp) );
    
    return SCIP_OKAY;
@@ -1843,7 +1843,7 @@ RETCODE SCIPcreateProb(
    
    CHECK_OKAY( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
    CHECK_OKAY( SCIPprobCreate(&scip->origprob, scip->mem->probmem, name, 
-                  probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probdata, FALSE) );
+         probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probdata, FALSE) );
    
    return SCIP_OKAY;
 }
@@ -2038,7 +2038,7 @@ RETCODE SCIPsetObjlimit(
       SCIPprobSetExternObjlim(scip->origprob, objlimit);
       SCIPprobSetExternObjlim(scip->transprob, SCIPprobGetInternObjlim(scip->origprob, scip->set));
       CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->tree, scip->lp) );
+            scip->tree, scip->lp) );
       break;
    default:
       errorMessage("invalid SCIP stage\n");
@@ -2139,7 +2139,7 @@ RETCODE SCIPaddVar(
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->origprob, scip->mem->probmem, scip->set, scip->lp, scip->branchcand, 
-                     scip->eventfilter, scip->eventqueue, var) );
+            scip->eventfilter, scip->eventqueue, var) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -2159,7 +2159,7 @@ RETCODE SCIPaddVar(
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
-                     scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
+            scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
       return SCIP_OKAY;
 
    default:
@@ -2202,12 +2202,12 @@ RETCODE SCIPaddPricedVar(
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
-                     scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
+            scip->branchcand, scip->eventfilter, scip->eventqueue, var) );
    }
 
    /* add variable to pricing storage */
    CHECK_OKAY( SCIPpricestoreAddVar(scip->pricestore, scip->mem->solvemem, scip->set, scip->lp, var, score,
-                  (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
+         (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
    
    return SCIP_OKAY;
 }
@@ -2848,7 +2848,7 @@ RETCODE SCIPupdateLocalDualbound(
    CHECK_OKAY( checkStage(scip, "SCIPupdateLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPnodeUpdateLowerbound(scip->tree->actnode, SCIPprobInternObjval(scip->transprob, scip->set, 
-                               SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
+         SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
 
    return SCIP_OKAY;
 }
@@ -2880,7 +2880,7 @@ RETCODE SCIPupdateNodeDualbound(
    CHECK_OKAY( checkStage(scip, "SCIPupdateNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPnodeUpdateLowerbound(node, SCIPprobInternObjval(scip->transprob, scip->set, 
-                               SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
+         SCIPprobInternObjval(scip->origprob, scip->set, newbound)));
 
    return SCIP_OKAY;
 }
@@ -2946,14 +2946,14 @@ RETCODE transformProb(
 
    /* copy problem in solve memory */
    CHECK_OKAY( SCIPprobTransform(scip->origprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
-                  scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
+         scip->branchcand, scip->eventfilter, scip->eventqueue, &scip->transprob) );
 
    /* switch stage to TRANSFORMED */
    scip->stage = SCIP_STAGE_TRANSFORMED;
 
    /* update upper bound (e.g. objective limit) in primal data */
    CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->tree, scip->lp) );
+         scip->tree, scip->lp) );
 
    /* print transformed problem statistics */
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_FULL,
@@ -3026,7 +3026,7 @@ RETCODE presolve(
 
    /* update upper bound (e.g. objective limit) in primal data */
    CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->tree, scip->lp) );
+         scip->tree, scip->lp) );
 
    /* switch stage to PRESOLVING */
    scip->stage = SCIP_STAGE_PRESOLVING;
@@ -3093,8 +3093,8 @@ RETCODE presolve(
       for( i = 0; i < scip->set->npresols && !(*unbounded) && !(*infeasible); ++i )
       {
          CHECK_OKAY( SCIPpresolExec(scip->set->presols[i], scip->set, nrounds, 
-                        &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
-                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
+               &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
+               &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
          *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
          *infeasible = *infeasible || (result == SCIP_CUTOFF);
       }
@@ -3103,9 +3103,9 @@ RETCODE presolve(
       for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible); ++i )
       {
          CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
-                        scip->transprob, nrounds,
-                        &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
-                        &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
+               scip->transprob, nrounds,
+               &nfixedvars, &naggrvars, &nchgvartypes, &nchgbds, &naddholes,
+               &ndelconss, &nupgdconss, &nchgcoefs, &nchgsides, &result) );
          *unbounded = *unbounded || (result == SCIP_UNBOUNDED);
          *infeasible = *infeasible || (result == SCIP_CUTOFF);
       }
@@ -3201,7 +3201,7 @@ RETCODE initSolve(
 
    /* update upper bound (e.g. objective limit) in primal data */
    CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->tree, scip->lp) );
+         scip->tree, scip->lp) );
 
    /* switch stage to INITSOLVE */
    scip->stage = SCIP_STAGE_INITSOLVE;
@@ -3215,7 +3215,7 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->cutagelimit) );
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
-                  SCIPsetGetNodesel(scip->set, scip->stat)) );
+         SCIPsetGetNodesel(scip->set, scip->stat)) );
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
@@ -3263,7 +3263,7 @@ RETCODE initSolve(
       if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->upperbound) )
       {
          CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, objbound + 1.0) );
+               scip->transprob, scip->tree, scip->lp, objbound + 1.0) );
       }
    }
 
@@ -3289,7 +3289,7 @@ RETCODE freeSolve(
 
    /* deactivate the active node */
    CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, scip->primal->cutoffbound) );
+         scip->branchcand, scip->eventqueue, scip->primal->cutoffbound) );
    
    /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
@@ -3682,7 +3682,7 @@ RETCODE SCIPcreateVar(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat, 
-                     name, lb, ub, obj, vartype, initial, removeable, vardelorig, vartrans, vardeltrans, vardata) );
+            name, lb, ub, obj, vartype, initial, removeable, vardelorig, vartrans, vardeltrans, vardata) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -3690,7 +3690,7 @@ RETCODE SCIPcreateVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat,
-                     name, lb, ub, obj, vartype, initial, removeable, NULL, NULL, vardeltrans, vardata) );
+            name, lb, ub, obj, vartype, initial, removeable, NULL, NULL, vardeltrans, vardata) );
       break;
 
    default:
@@ -3806,7 +3806,7 @@ RETCODE SCIPtransformVars(
       else
       {
          CHECK_OKAY( SCIPvarTransform(vars[v], scip->mem->solvemem, scip->set, scip->stat, scip->origprob->objsense,
-                        &transvars[v]) );
+               &transvars[v]) );
       }
    }
 
@@ -3987,7 +3987,7 @@ RETCODE SCIPgetVarStrongbranch(
          || (col->strongbranchup >= scip->lp->cutoffbound && SCIPsetFloor(scip->set, col->primsol+1.0) <= col->ub + 0.5) )
       {
          CHECK_OKAY( SCIPconflictAnalyzeStrongbranch(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-                        scip->transprob, scip->tree, scip->lp, col, NULL) );
+               scip->transprob, scip->tree, scip->lp, col, NULL) );
       }
    }
 
@@ -4003,7 +4003,8 @@ RETCODE SCIPgetVarStrongbranchLast(
    VAR*             var,                /**< variable to get last strong branching values for */
    Real*            down,               /**< stores dual bound after branching column down */
    Real*            up,                 /**< stores dual bound after branching column up */
-   Real*            solval              /**< stores LP solution value of variable at the last strong branching call */
+   Real*            solval,             /**< stores LP solution value of variable at the last strong branching call */
+   Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetVarStrongbranchLast", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
@@ -4014,7 +4015,7 @@ RETCODE SCIPgetVarStrongbranchLast(
       return SCIP_INVALIDDATA;
    }
 
-   SCIPcolGetStrongbranchLast(SCIPvarGetCol(var), down, up, solval);
+   SCIPcolGetStrongbranchLast(SCIPvarGetCol(var), down, up, solval, lpobjval);
 
    return SCIP_OKAY;
 }
@@ -4079,13 +4080,13 @@ RETCODE SCIPaddVarObj(
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
       CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->primal, scip->lp,
-                     scip->eventqueue, addobj) );
+            scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->eventqueue, addobj) );
+            scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -4142,21 +4143,21 @@ RETCODE SCIPchgVarLb(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
       return SCIP_OKAY;
 
    default:
@@ -4181,21 +4182,21 @@ RETCODE SCIPchgVarUb(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
       return SCIP_OKAY;
 
    default:
@@ -4220,7 +4221,7 @@ RETCODE SCIPchgVarLbNode(
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
    
    return SCIP_OKAY;
 }
@@ -4241,7 +4242,7 @@ RETCODE SCIPchgVarUbNode(
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    CHECK_OKAY( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
    
    return SCIP_OKAY;
 }
@@ -4290,14 +4291,14 @@ RETCODE SCIPtightenVarLb(
    {
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarSetLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarSetLbGlobal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
+            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER) );
       break;
 
    default:
@@ -4355,14 +4356,14 @@ RETCODE SCIPtightenVarUb(
    {
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarSetUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-                     scip->branchcand, scip->eventqueue, newbound) );
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarSetUbGlobal(var, scip->set, newbound) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPnodeAddBoundchg(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                     scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
+            scip->lp, scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER) );
       break;
 
    default:
@@ -4436,7 +4437,7 @@ RETCODE SCIPinferBinVar(
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
+            scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4444,14 +4445,14 @@ RETCODE SCIPinferBinVar(
       if( fixedval == TRUE )
       {
          CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                        scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
-                        infercons, inferinfo) );
+               scip->lp, scip->branchcand, scip->eventqueue, var, 1.0, SCIP_BOUNDTYPE_LOWER, 
+               infercons, inferinfo) );
       }
       else
       {
          CHECK_OKAY( SCIPnodeAddBoundinfer(scip->tree->actnode, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                        scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
-                        infercons, inferinfo) );
+               scip->lp, scip->branchcand, scip->eventqueue, var, 0.0, SCIP_BOUNDTYPE_UPPER, 
+               infercons, inferinfo) );
       }
       break;
 
@@ -4724,7 +4725,7 @@ RETCODE SCIPfixVar(
 
    case SCIP_STAGE_PRESOLVING:
       CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->branchcand, scip->eventqueue, fixedval, infeasible) );
+            scip->branchcand, scip->eventqueue, fixedval, infeasible) );
       *fixed = TRUE;
       return SCIP_OKAY;
       
@@ -4823,8 +4824,8 @@ RETCODE aggregateActiveIntVars(
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
-                     vary, (Real)(-b/a), (Real)(c/a), infeasible) );
+            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
+            vary, (Real)(-b/a), (Real)(c/a), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -4833,8 +4834,8 @@ RETCODE aggregateActiveIntVars(
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
-                     varx, (Real)(-a/b), (Real)(c/b), infeasible) );
+            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
+            varx, (Real)(-a/b), (Real)(c/b), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -4884,19 +4885,19 @@ RETCODE aggregateActiveIntVars(
     */
    sprintf(aggvarname, "agg%d", scip->stat->nvaridx);
    CHECK_OKAY( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->set, scip->stat,
-                  aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
-                  SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary),
-                  NULL, NULL, NULL, NULL) );
+         aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
+         SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary),
+         NULL, NULL, NULL, NULL) );
    CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
-                  scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
+         scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->primal, scip->lp, scip->branchcand, scip->eventqueue,
-                  aggvar, (Real)(-b), (Real)xsol, infeasible) );
+         scip->primal, scip->lp, scip->branchcand, scip->eventqueue,
+         aggvar, (Real)(-b), (Real)xsol, infeasible) );
    if( !(*infeasible) )
    {
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
-                     aggvar, (Real)a, (Real)ysol, infeasible) );
+            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
+            aggvar, (Real)a, (Real)ysol, infeasible) );
    }
    *aggregated = TRUE;
 
@@ -4997,7 +4998,7 @@ RETCODE aggregateActiveVars(
 
       /* aggregate the variable */
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
+            scip->primal, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -5084,7 +5085,7 @@ RETCODE SCIPaggregateVars(
       
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
       CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
+            scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -5095,7 +5096,7 @@ RETCODE SCIPaggregateVars(
       
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
       CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                     scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+            scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -5112,7 +5113,7 @@ RETCODE SCIPaggregateVars(
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
          CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
-                        scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
+               scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
          *aggregated = TRUE;
       }
       *redundant = TRUE;
@@ -5143,7 +5144,7 @@ RETCODE SCIPmultiaggregateVar(
    CHECK_OKAY( checkStage(scip, "SCIPmultiaggregateVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, 
-                  scip->lp, scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
+         scip->lp, scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -5178,6 +5179,20 @@ Real SCIPgetVarPseudocost(
    return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
 }
 
+/** gets the variable's pseudo cost value for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetVarPseudocostCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetPseudocostCurrentRun(var, scip->stat, solvaldelta);
+}
+
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
 Real SCIPgetVarPseudocostCount(
    SCIP*            scip,               /**< SCIP data structure */
@@ -5188,6 +5203,20 @@ Real SCIPgetVarPseudocostCount(
    CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPvarGetPseudocostCount(var, dir);
+}
+
+/** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetVarPseudocostCountCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              dir                 /**< branching direction: 0 (down), or 1 (up) */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetPseudocostCountCurrentRun(var, dir);
 }
 
 /** gets the variable's pseudo cost score value for the given LP solution value */
@@ -5212,6 +5241,30 @@ Real SCIPgetVarPseudocostScore(
    return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
 
+/** gets the variable's pseudo cost score value for the given LP solution value,
+ *  only using the pseudo cost information of the current run
+ */
+Real SCIPgetVarPseudocostScoreCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             solval              /**< variable's LP solution value */
+   )
+{
+   Real downsol;
+   Real upsol;
+   Real pscostdown;
+   Real pscostup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarPseudocostScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   downsol = SCIPsetCeil(scip->set, solval-1.0);
+   upsol = SCIPsetFloor(scip->set, solval+1.0);
+   pscostdown = SCIPvarGetPseudocostCurrentRun(var, scip->stat, downsol-solval);
+   pscostup = SCIPvarGetPseudocostCurrentRun(var, scip->stat, upsol-solval);
+
+   return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
+}
+
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
  *  over all variables for branching in the given direction is returned
@@ -5225,6 +5278,21 @@ Real SCIPgetVarAvgInferences(
    CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferences", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPvarGetAvgInferences(var, scip->stat, dir);
+}
+
+/** returns the average number of inferences found after branching on the variable in given direction in the current run;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
+ *  over all variables for branching in the given direction is returned
+ */
+Real SCIPgetVarAvgInferencesCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferencesCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, dir);
 }
 
 /** returns the variable's average inference score value */
@@ -5244,6 +5312,23 @@ Real SCIPgetVarAvgInferenceScore(
    return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
 }
 
+/** returns the variable's average inference score value only using inferences of the current run */
+Real SCIPgetVarAvgInferenceScoreCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real inferdown;
+   Real inferup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   inferdown = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   inferup = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
+}
+
 /** returns the average number of cutoffs found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
  *  over all variables for branching in the given direction is returned
@@ -5259,6 +5344,21 @@ Real SCIPgetVarAvgCutoffs(
    return SCIPvarGetAvgCutoffs(var, scip->stat, dir);
 }
 
+/** returns the average number of cutoffs found after branching on the variable in given direction in the current run;
+ *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
+ *  over all variables for branching in the given direction is returned
+ */
+Real SCIPgetVarAvgCutoffsCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   BRANCHDIR        dir                 /**< branching direction */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffsCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, dir);
+}
+
 /** returns the variable's average cutoff score value */
 Real SCIPgetVarAvgCutoffScore(
    SCIP*            scip,               /**< SCIP data structure */
@@ -5272,6 +5372,23 @@ Real SCIPgetVarAvgCutoffScore(
    
    cutoffdown = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    cutoffup = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, cutoffdown, cutoffup);
+}
+
+/** returns the variable's average cutoff score value, only using cutoffs of the current run */
+Real SCIPgetVarAvgCutoffScoreCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   Real cutoffdown;
+   Real cutoffup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgCutoffScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   cutoffdown = SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   cutoffup = SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, cutoffdown, cutoffup);
 }
@@ -5302,6 +5419,37 @@ Real SCIPgetVarAvgInferenceCutoffScore(
    inferup = SCIPvarGetAvgInferences(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
    cutoffdown = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
    cutoffup = SCIPvarGetAvgCutoffs(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, 
+      inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
+}
+
+/** returns the variable's average inference/cutoff score value, weighting the cutoffs of the variable with the given
+ *  factor, only using inferences and cutoffs of the current run
+ */
+Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
+   )
+{
+   Real avginferdown;
+   Real avginferup;
+   Real avginfer;
+   Real inferdown;
+   Real inferup;
+   Real cutoffdown;
+   Real cutoffup;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarAvgInferenceCutoffScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   
+   avginferdown = SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS);
+   avginferup = SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
+   avginfer = (avginferdown + avginferup)/2.0;
+   inferdown = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   inferup = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
+   cutoffdown = SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS);
+   cutoffup = SCIPvarGetAvgCutoffsCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, 
       inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
@@ -5369,7 +5517,7 @@ RETCODE SCIPanalyzeConflict(
    CHECK_OKAY( checkStage(scip, "SCIPanalyzeConflict", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
-                  scip->transprob, scip->tree, success) );
+         scip->transprob, scip->tree, success) );
    
    return SCIP_OKAY;
 }
@@ -5413,7 +5561,7 @@ RETCODE SCIPcreateCons(
    {
    case SCIP_STAGE_PROBLEM:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->probmem, name, conshdlr, consdata, 
-                     initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
+            initial, separate, enforce, check, propagate, local, modifiable, removeable, TRUE) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5421,7 +5569,7 @@ RETCODE SCIPcreateCons(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       CHECK_OKAY( SCIPconsCreate(cons, scip->mem->solvemem, name, conshdlr, consdata,
-                     initial, separate, enforce, check, propagate, local, modifiable, removeable, FALSE) );
+            initial, separate, enforce, check, propagate, local, modifiable, removeable, FALSE) );
       return SCIP_OKAY;
 
    default:
@@ -5937,6 +6085,8 @@ RETCODE SCIPsumLPRows(
  */
 RETCODE SCIPcalcMIR(
    SCIP*            scip,               /**< SCIP data structure */
+   Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    Real             scale,              /**< additional scaling factor multiplied to all rows */
@@ -5949,8 +6099,8 @@ RETCODE SCIPcalcMIR(
    CHECK_OKAY( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob->nvars,
-                  scip->transprob->nvars - scip->transprob->ncontvars, scip->transprob->vars,
-                  minfrac, weights, scale, mircoef, mirrhs, cutactivity, success) );
+         scip->transprob->nvars - scip->transprob->ncontvars, scip->transprob->vars,
+         boundswitch, usevbds, minfrac, weights, scale, mircoef, mirrhs, cutactivity, success) );
 
    return SCIP_OKAY;
 }
@@ -6017,7 +6167,7 @@ RETCODE SCIPendDive(
 
    /* unmark the diving flag in the LP and reset all variables' objective and bound values */
    CHECK_OKAY( SCIPlpEndDive(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->transprob->vars, scip->transprob->nvars) );
+         scip->transprob->vars, scip->transprob->nvars) );
 
    /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
     * the cutoff has to be done now.
@@ -6162,7 +6312,7 @@ RETCODE SCIPsolveDiveLP(
    }
 
    CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-                  itlim, FALSE, lperror) );
+         itlim, FALSE, lperror) );
 
    return SCIP_OKAY;
 }
@@ -6202,7 +6352,7 @@ RETCODE SCIPcreateRow(
    CHECK_OKAY( checkStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
-                  name, len, cols, vals, lhs, rhs, local, modifiable, removeable) );
+         name, len, cols, vals, lhs, rhs, local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -6222,7 +6372,7 @@ RETCODE SCIPcreateEmptyRow(
    CHECK_OKAY( checkStage(scip, "SCIPcreateEmptyRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIProwCreate(row, scip->mem->solvemem, scip->set, scip->stat,
-                  name, 0, NULL, NULL, lhs, rhs, local, modifiable, removeable) );
+         name, 0, NULL, NULL, lhs, rhs, local, modifiable, removeable) );
 
    return SCIP_OKAY;
 }
@@ -6356,7 +6506,7 @@ RETCODE SCIPaddVarsToRow(
    for( v = 0; v < nvars; ++v )
    {
       CHECK_OKAY( SCIPvarAddToRow(vars[v], scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     row, vals[v]) );
+            row, vals[v]) );
    }
 
    /* force the row sorting */
@@ -6392,7 +6542,7 @@ RETCODE SCIPaddVarsToRowSameCoef(
    for( v = 0; v < nvars; ++v )
    {
       CHECK_OKAY( SCIPvarAddToRow(vars[v], scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     row, val) );
+            row, val) );
    }
 
    /* force the row sorting */
@@ -6640,7 +6790,7 @@ RETCODE SCIPaddCut(
    }
 
    CHECK_OKAY( SCIPsepastoreAddCut(scip->sepastore, scip->mem->solvemem, scip->set, scip->lp,
-                  cut, score, (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
+         cut, score, (SCIPnodeGetDepth(scip->tree->actnode) == 0)) );
    
    return SCIP_OKAY;
 }
@@ -6767,7 +6917,7 @@ RETCODE SCIPseparateCutpool(
    }
    
    CHECK_OKAY( SCIPcutpoolSeparate(cutpool, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->sepastore,
-				   (SCIPnodeGetDepth(scip->tree->actnode) == 0), result) );
+         (SCIPnodeGetDepth(scip->tree->actnode) == 0), result) );
    return SCIP_OKAY;
 }
 
@@ -6803,7 +6953,7 @@ RETCODE SCIPgetLPBranchCands(
    }
 
    CHECK_OKAY( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-                  lpcands, lpcandssol, lpcandsfrac, nlpcands, npriolpcands) );
+         lpcands, lpcandssol, lpcandsfrac, nlpcands, npriolpcands) );
    
    return SCIP_OKAY;
 }
@@ -6824,7 +6974,7 @@ int SCIPgetNLPBranchCands(
    }
 
    CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-                   NULL, NULL, NULL, &nlpcands, NULL) );
+         NULL, NULL, NULL, &nlpcands, NULL) );
    
    return nlpcands;
 }
@@ -6845,7 +6995,7 @@ int SCIPgetNPrioLPBranchCands(
    }
 
    CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-                   NULL, NULL, NULL, NULL, &npriolpcands) );
+         NULL, NULL, NULL, NULL, &npriolpcands) );
    
    return npriolpcands;
 }
@@ -6861,7 +7011,7 @@ RETCODE SCIPgetPseudoBranchCands(
    CHECK_OKAY( checkStage(scip, "SCIPgetPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->transprob, 
-                  pseudocands, npseudocands, npriopseudocands) );
+         pseudocands, npseudocands, npriopseudocands) );
 
    return SCIP_OKAY;
 }
@@ -6982,7 +7132,7 @@ RETCODE SCIPbranchVar(
    }
 
    CHECK_OKAY( SCIPtreeBranchVar(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
-                  scip->eventqueue, var) );
+         scip->eventqueue, var) );
 
    return SCIP_OKAY;
 }
@@ -6999,7 +7149,7 @@ RETCODE SCIPbranchLP(
    CHECK_OKAY( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecLP(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->sepastore, scip->branchcand, scip->eventqueue, result) );
+         scip->sepastore, scip->branchcand, scip->eventqueue, result) );
 
    return SCIP_OKAY;
 }
@@ -7013,7 +7163,7 @@ RETCODE SCIPbranchPseudo(
    CHECK_OKAY( checkStage(scip, "SCIPbranchPseudo", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPbranchExecPseudo(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                  scip->branchcand, scip->eventqueue, result) );
+         scip->branchcand, scip->eventqueue, result) );
 
    return SCIP_OKAY;
 }
@@ -7055,7 +7205,7 @@ RETCODE SCIPcreateLPSol(
    }
 
    CHECK_OKAY( SCIPsolCreateLPSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
-                  heur) );
+         heur) );
 
    return SCIP_OKAY;
 }
@@ -7070,7 +7220,7 @@ RETCODE SCIPcreatePseudoSol(
    CHECK_OKAY( checkStage(scip, "SCIPcreatePseudoSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPsolCreatePseudoSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
-                  heur) );
+         heur) );
 
    return SCIP_OKAY;
 }
@@ -7085,7 +7235,7 @@ RETCODE SCIPcreateCurrentSol(
    CHECK_OKAY( checkStage(scip, "SCIPcreateCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPsolCreateCurrentSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
-                  heur) );
+         heur) );
 
    return SCIP_OKAY;
 }
@@ -7293,7 +7443,7 @@ Real SCIPgetSolOrigObj(
    else
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolOrigObj(sol==NULL)", 
-                      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       if( scip->tree->actnodehaslp )
          return SCIPprobExternObjval(scip->origprob, scip->set,
             SCIPprobExternObjval(scip->transprob, scip->set, SCIPlpGetObjval(scip->lp, scip->set)));
@@ -7316,7 +7466,7 @@ Real SCIPgetSolTransObj(
    else
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", 
-                      FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       if( scip->tree->actnodehaslp )
          return SCIPlpGetObjval(scip->lp, scip->set);
       else
@@ -7404,7 +7554,7 @@ RETCODE SCIPprintSol(
 
    fprintf(file, "objective value:                 ");
    SCIPprintReal(scip, SCIPprobExternObjval(scip->origprob, scip->set, 
-                    SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol))), file);
+         SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol))), file);
    fprintf(file, "\n");
 
    CHECK_OKAY( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file) );
@@ -7541,7 +7691,7 @@ RETCODE SCIPaddSol(
    CHECK_OKAY( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalAddSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, stored) );
+         scip->lp, scip->eventfilter, sol, stored) );
 
    return SCIP_OKAY;
 }
@@ -7556,7 +7706,7 @@ RETCODE SCIPaddSolFree(
    CHECK_OKAY( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, stored) );
+         scip->lp, scip->eventfilter, sol, stored) );
 
    return SCIP_OKAY;
 }
@@ -7573,7 +7723,7 @@ RETCODE SCIPtrySol(
    CHECK_OKAY( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalTrySol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
+         scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -7590,7 +7740,7 @@ RETCODE SCIPtrySolFree(
    CHECK_OKAY( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPprimalTrySolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
+         scip->lp, scip->eventfilter, sol, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
 }
@@ -8989,7 +9139,7 @@ RETCODE SCIPprintBranchingStatistics(
    int i;
 
    CHECK_OKAY( checkStage(scip, "SCIPprintBranchingHistory",
-                  TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+         TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( file == NULL )
       file = stdout;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.24 2004/06/01 16:40:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.25 2004/08/03 16:02:50 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -89,11 +89,13 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    Real* lpcandssol;
    Real* lpcandsfrac;
    Real cutoffbound;
-   Real lowerbound;
+   Real lpobjval;
    Real bestdown;
    Real bestup;
    Real bestscore;
+   Real provedbound;
    Bool allcolsinlp;
+   Bool exactsolve;
    int nlpcands;
    int npriolpcands;
    int bestlpcand;
@@ -111,9 +113,14 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* get current lower objective bound of the local sub problem and global cutoff bound */
-   lowerbound = SCIPgetLocalLowerbound(scip);
+   /* get current LP objective bound of the local sub problem and global cutoff bound */
+   lpobjval = SCIPgetLPObjval(scip);
    cutoffbound = SCIPgetCutoffbound(scip);
+
+   /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
+    * for cutting off sub problems and improving lower bounds of children
+    */
+   exactsolve = SCIPisExactSolve(scip);
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -125,9 +132,10 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    /* if only one candidate exists, choose this one without applying strong branching */
    bestlpcand = 0;
-   bestdown = lowerbound;
-   bestup = lowerbound;
+   bestdown = lpobjval;
+   bestup = lpobjval;
    bestscore = -SCIPinfinity(scip);
+   provedbound = lpobjval;
    if( nlpcands > 1 )
    {
       Real down;
@@ -163,14 +171,14 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          }
 
          /* evaluate strong branching */
-         down = MAX(down, lowerbound);
-         up = MAX(up, lowerbound);
+         down = MAX(down, lpobjval);
+         up = MAX(up, lpobjval);
          downinf = SCIPisGE(scip, down, cutoffbound);
          upinf = SCIPisGE(scip, up, cutoffbound);
-         downgain = down - lowerbound;
-         upgain = up - lowerbound;
+         downgain = down - lpobjval;
+         upgain = up - lpobjval;
 
-         if( allcolsinlp )
+         if( allcolsinlp && !exactsolve )
          {
             /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
             if( downinf && upinf )
@@ -195,6 +203,14 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
                *result = SCIP_REDUCEDDOM;
                debugMessage(" -> variable <%s> is infeasible in upward branch\n", SCIPvarGetName(lpcands[c]));
                break; /* terminate initialization loop, because LP was changed */
+            }
+            else
+            {
+               Real minbound;
+               
+               /* the minimal lower bound of both children is a proved lower bound of the current subtree */
+               minbound = MIN(down, up);
+               provedbound = MAX(provedbound, minbound);
             }
          }
 
@@ -221,8 +237,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
          }
 
-         debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
-            SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
+         debugMessage(" -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
+            c, nlpcands, npriolpcands, SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
             SCIPvarGetName(lpcands[bestlpcand]), bestscore);
       }
 
@@ -237,6 +253,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestlpcand && bestlpcand < nlpcands);
+      assert(SCIPisLT(scip, provedbound, cutoffbound));
 
       /* perform the branching */
       debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
@@ -249,9 +266,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          SCIPvarGetName(lpcands[bestlpcand]), SCIPfloor(scip, lpcandssol[bestlpcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node, rootsolval - lpcandssol[bestlpcand]) );
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestlpcand], SCIPfloor(scip, lpcandssol[bestlpcand])) );
-      if( allcolsinlp )
+      if( allcolsinlp && !exactsolve )
       {
-         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestdown)) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
       
@@ -260,9 +277,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
          SCIPvarGetName(lpcands[bestlpcand]), SCIPceil(scip, lpcandssol[bestlpcand]));
       CHECK_OKAY( SCIPcreateChild(scip, &node, lpcandssol[bestlpcand] - rootsolval) );
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestlpcand], SCIPceil(scip, lpcandssol[bestlpcand])) );
-      if( allcolsinlp )
+      if( allcolsinlp && !exactsolve )
       {
-         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
+         CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, MAX(provedbound, bestup)) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
 

@@ -2,6 +2,10 @@
 # [type: int, range: [0,4], default: 2]
 display/verblevel = 4
 
+# should the LP solver display status messages?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+display/lpinfo = FALSE
+
 # maximal number of characters in a node information line
 # [type: int, range: [0,2147483647], default: 139]
 display/dispwidth = 139
@@ -19,35 +23,35 @@ display/dispheaderfreq = 15
 numerics/infinity = 1e+20
 
 # absolute values smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-16,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-19,0.001], default: 1e-09]
 numerics/epsilon = 1e-09
 
 # absolute values of sums smaller than this are considered zero
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/sumepsilon = 1e-06
 
 # LP feasibility tolerance for constraints
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-06]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-06]
 numerics/feastol = 1e-06
 
 # LP feasibility tolerance for reduced costs
-# [type: real, range: [2.22044604925031e-13,0.001], default: 1e-09]
+# [type: real, range: [1.0842021724855e-16,0.001], default: 1e-09]
 numerics/dualfeastol = 1e-09
 
 # minimal improve for strengthening bounds
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0001]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0001]
 numerics/boundstreps = 0.0001
 
 # epsilon for deciding if a cut is violated
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.05]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.05]
 numerics/cutvioleps = 0.05
 
 # epsilon for deciding if a cut is violated in the root node
-# [type: real, range: [2.22044604925031e-13,1e+98], default: 0.0025]
+# [type: real, range: [1.0842021724855e-16,1e+98], default: 0.0025]
 numerics/cutviolepsroot = 0.0025
 
 # minimal variable distance value to use for branching pseudo cost updates
-# [type: real, range: [2.22044604925031e-13,1], default: 0.1]
+# [type: real, range: [1.0842021724855e-16,1], default: 0.1]
 numerics/pseudocosteps = 0.1
 
 # minimal objective distance value to use for branching pseudo cost updates
@@ -87,8 +91,8 @@ memory/pathgrowinit = 256
 branching/branchscorefac = 0.167
 
 # should branching on binary variables be prefered?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-branching/preferbinbranch = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+branching/preferbinbranch = FALSE
 
 # number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)
 # [type: int, range: [-1,2147483647], default: 100]
@@ -116,11 +120,11 @@ pricing/abortpricevarsfac = 2
 
 # maximal number of propagation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 100]
-propagating/maxproprounds = 100
+propagation/maxproprounds = 100
 
 # maximal number of propagation rounds in the root node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 1000]
-propagating/maxproproundsroot = 1000
+propagation/maxproproundsroot = 1000
 
 # maximal number of cuts separated per separation round
 # [type: int, range: [1,2147483647], default: 100]
@@ -163,8 +167,8 @@ conflict/usepseudoconflict = TRUE
 conflict/maxconfvarsfac = 0.02
 
 # minimal absolute maximum of variables involved in a conflict clause
-# [type: int, range: [0,2147483647], default: 20]
-conflict/minmaxconfvars = 20
+# [type: int, range: [0,2147483647], default: 30]
+conflict/minmaxconfvars = 30
 
 # maximal number of nodes to process (-1: no limit)
 # [type: longint, range: [-1,9223372036854775807], default: -1]
@@ -199,8 +203,8 @@ lp/lpsolvefreq = 1
 lp/lpsolvedepth = -1
 
 # frequency for applying reduced cost fixing (-1: never; 0: only root LP)
-# [type: int, range: [-1,2147483647], default: 5]
-lp/redcostfreq = 5
+# [type: int, range: [-1,2147483647], default: 1]
+lp/redcostfreq = 1
 
 # should LP solutions be checked, resolving LP when numerical troubles occur?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -289,6 +293,10 @@ constraints/linear/maxsepacuts = 50
 # maximal number of cuts separated per separation round in the root node
 # [type: int, range: [0,2147483647], default: 200]
 constraints/linear/maxsepacutsroot = 200
+
+# maximal number of presolving aggregation rounds (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linear/maxpresolaggrrounds = -1
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -503,8 +511,8 @@ nodeselection/bfs/stdpriority = 100000
 nodeselection/bfs/memsavepriority = 0
 
 # minimal plunging depth, before new best node may be selected
-# [type: int, range: [0,2147483647], default: 5]
-nodeselection/bfs/minplungedepth = 5
+# [type: int, range: [0,2147483647], default: 0]
+nodeselection/bfs/minplungedepth = 0
 
 # maximal plunging depth, before new best node is forced to be selected
 # [type: int, range: [0,2147483647], default: 25]
@@ -599,8 +607,8 @@ branching/relpscost/maxreliable = 8
 branching/relpscost/sbiterquot = 0.5
 
 # additional number of allowed strong branching LP iterations
-# [type: int, range: [0,2147483647], default: 10000]
-branching/relpscost/sbiterofs = 10000
+# [type: int, range: [0,2147483647], default: 100000]
+branching/relpscost/sbiterofs = 100000
 
 # maximal number of further variables evaluated without better score
 # [type: int, range: [1,2147483647], default: 4]
@@ -647,7 +655,7 @@ heuristics/coefdiving/maxlpiterquot = 0.02
 heuristics/coefdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1e+99], default: 4]
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
 heuristics/coefdiving/maxdiveavgquot = 4
 
 # maximal UBQUOT when no solution was found yet
@@ -655,7 +663,7 @@ heuristics/coefdiving/maxdiveavgquot = 4
 heuristics/coefdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1e+99], default: 8]
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
 heuristics/coefdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <feaspump>
@@ -727,7 +735,7 @@ heuristics/fracdiving/maxlpiterquot = 0.02
 heuristics/fracdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1e+99], default: 4]
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
 heuristics/fracdiving/maxdiveavgquot = 4
 
 # maximal UBQUOT when no solution was found yet
@@ -735,8 +743,52 @@ heuristics/fracdiving/maxdiveavgquot = 4
 heuristics/fracdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1e+99], default: 8]
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
 heuristics/fracdiving/maxdiveavgquotnosol = 8
+
+# priority of heuristic <linesearchdiving>
+# [type: int, range: [-2147483648,2147483647], default: -1006000]
+heuristics/linesearchdiving/priority = -1006000
+
+# frequency for calling primal heuristic <linesearchdiving> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/linesearchdiving/freq = 10
+
+# frequency offset for calling primal heuristic <linesearchdiving>
+# [type: int, range: [0,2147483647], default: 6]
+heuristics/linesearchdiving/freqofs = 6
+
+# maximal depth level to call primal heuristic <linesearchdiving> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/linesearchdiving/maxdepth = -1
+
+# minimal relative depth to start diving
+# [type: real, range: [0,1], default: 0]
+heuristics/linesearchdiving/minreldepth = 0
+
+# maximal relative depth to start diving
+# [type: real, range: [0,1], default: 1]
+heuristics/linesearchdiving/maxreldepth = 1
+
+# maximal fraction of diving LP iterations compared to total iteration number
+# [type: real, range: [0,1], default: 0.02]
+heuristics/linesearchdiving/maxlpiterquot = 0.02
+
+# maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed
+# [type: real, range: [0,1], default: 0.8]
+heuristics/linesearchdiving/maxdiveubquot = 0.8
+
+# maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
+heuristics/linesearchdiving/maxdiveavgquot = 4
+
+# maximal UBQUOT when no solution was found yet
+# [type: real, range: [0,1], default: 0.1]
+heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
+
+# maximal AVGQUOT when no solution was found yet
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
+heuristics/linesearchdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
@@ -807,7 +859,7 @@ heuristics/pscostdiving/maxlpiterquot = 0.02
 heuristics/pscostdiving/maxdiveubquot = 0.8
 
 # maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed
-# [type: real, range: [0,1e+99], default: 4]
+# [type: real, range: [0,1.79769313486232e+308], default: 4]
 heuristics/pscostdiving/maxdiveavgquot = 4
 
 # maximal UBQUOT when no solution was found yet
@@ -815,7 +867,7 @@ heuristics/pscostdiving/maxdiveavgquot = 4
 heuristics/pscostdiving/maxdiveubquotnosol = 0.1
 
 # maximal AVGQUOT when no solution was found yet
-# [type: real, range: [0,1e+99], default: 8]
+# [type: real, range: [0,1.79769313486232e+308], default: 8]
 heuristics/pscostdiving/maxdiveavgquotnosol = 8
 
 # priority of heuristic <rootsoldiving>
@@ -922,7 +974,7 @@ separating/cmir/maxaggrsroot = 8
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/cmir/dynamiccuts = FALSE
 
-# min. violation of c-MIR cut to be used
+# min. violation of unscaled c-MIR cut to be used
 # [type: real, range: [0,1.79769313486232e+308], default: 0.2]
 separating/cmir/minviolation = 0.2
 

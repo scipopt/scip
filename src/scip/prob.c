@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.52 2004/08/02 14:17:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.53 2004/08/03 16:02:51 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -929,13 +929,14 @@ RETCODE SCIPprobExitPresolve(
    return SCIP_OKAY;
 }
 
-/** initializes problem for branch and bound process and resets all constraint's ages */
+/** initializes problem for branch and bound process and resets all constraint's ages and histories of current run */
 RETCODE SCIPprobInitSolve(
    PROB*            prob,               /**< problem data */
    SET*             set                 /**< global SCIP settings */
    )
 {
    int c;
+   int v;
 
    assert(prob != NULL);
    assert(prob->transformed);
@@ -945,6 +946,12 @@ RETCODE SCIPprobInitSolve(
    for( c = 0; c < prob->nconss; ++c )
    {
       CHECK_OKAY( SCIPconsResetAge(prob->conss[c], set) );
+   }
+
+   /* reset variable's current run history entries */
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      SCIPvarResetHistoryCurrentRun(prob->vars[v]);
    }
 
    /* call user data function */

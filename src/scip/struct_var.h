@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.16 2004/07/07 09:52:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.17 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -207,6 +207,7 @@ struct Var
    VAR*             infervar;           /**< variable whose fixing was deduced (parent of var, or var itself) */
    CONS*            infercons;          /**< constraint that deduced the fixing (binary variables only), or NULL */
    HISTORY*         history;            /**< branching and inference history information */
+   HISTORY*         historycrun;        /**< branching and inference history information for current run */
    int              index;              /**< consecutively numbered variable identifier */
    int              probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int              pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.19 2004/07/13 15:03:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.20 2004/08/03 16:02:52 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -79,6 +79,7 @@ struct Col
    Real             strongbranchdown;   /**< strong branching information for downwards branching */
    Real             strongbranchup;     /**< strong branching information for upwards branching */
    Real             strongbranchsolval; /**< LP solution value of column at last strong branching call */
+   Real             strongbranchlpobjval;/**< LP objective value at last strong branching call on the column */
    Longint          strongbranchnode;   /**< node number of the last strong branching call on this column */
    Longint          obsoletenode;       /**< last node where this column was removed due to aging */
    VAR*             var;                /**< variable, this column represents; there cannot be a column without variable */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.9 2004/08/02 16:22:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.10 2004/08/03 16:02:51 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -49,6 +49,8 @@
 #define DEFAULT_MAXTESTDELTA        100	/**< max. nr. of different deltas to try */
 #define DEFAULT_MAXCONT              10 /**< max. nr. of cont. vars in aggregated row */
 
+#define BOUNDSWITCH                 0.5
+#define USEVBDS                    TRUE
 
 
 /*
@@ -363,7 +365,8 @@ RETCODE aggregation(
             ntesteddeltas++;
 
             /* create a MIR cut out of the weighted LP rows */
-            CHECK_OKAY( SCIPcalcMIR(scip, 0.05, rowweights, delta, cutcoefs, &cutrhs, &cutact, &success) );
+            CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, delta, 
+                  cutcoefs, &cutrhs, &cutact, &success) );
             debugMessage("delta = %g -> success: %d\n", delta, success);
             
             /* delta generates cut which is more violated */
@@ -405,7 +408,8 @@ RETCODE aggregation(
                continue;
 
             /* create a MIR cut out of the weighted LP rows */
-            CHECK_OKAY( SCIPcalcMIR(scip, 0.05, rowweights, delta, cutcoefs, &cutrhs, &cutact, &success) );
+            CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, delta, 
+                  cutcoefs, &cutrhs, &cutact, &success) );
             if( success )
             {
                violation = cutact - cutrhs;
@@ -419,7 +423,8 @@ RETCODE aggregation(
          
          /* generate cut with bestdelta */
          oldncuts = *ncuts;
-         CHECK_OKAY( SCIPcalcMIR(scip, 0.05, rowweights, bestdelta, cutcoefs, &cutrhs, &cutact, &success) );
+         CHECK_OKAY( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, 0.05, rowweights, bestdelta, 
+               cutcoefs, &cutrhs, &cutact, &success) );
          CHECK_OKAY( addCut(scip, sepadata, vars, nvars, varsol, cutcoefs, cutrhs, ncuts) );
 
          /* if the cut was successfully added, abort the aggregation of further rows */
