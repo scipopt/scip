@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.94 2004/06/01 16:40:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.95 2004/06/02 08:45:28 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2026,6 +2026,12 @@ RETCODE SCIPvarFix(
                      NULL, NULL, 0, 0, -1, SCIP_BOUNDCHGTYPE_INFERENCE) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval,
                      NULL, NULL, 0, 0, -1, SCIP_BOUNDCHGTYPE_INFERENCE) );
+
+      /* explicitly set variable's bounds, even if the fixed value is in epsilon range of the old bound */
+      var->glbdom.lb = fixedval;
+      var->glbdom.ub = fixedval;
+      var->locdom.lb = fixedval;
+      var->locdom.ub = fixedval;
 
       /* delete variable bounds information */
       vboundsFree(&var->vlbs, memhdr);
