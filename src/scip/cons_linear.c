@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.97 2004/05/21 20:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.98 2004/05/28 09:18:22 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2815,6 +2815,7 @@ DECL_CONSPROP(consPropLinear)
    tightenbounds = (conshdlrdata->tightenboundsfreq == 0 && depth == 0)
       || (conshdlrdata->tightenboundsfreq >= 1 && (depth % (propfreq * conshdlrdata->tightenboundsfreq) == 0));
 
+   cutoff = FALSE;
    nchgbds = 0;
 
    /* process useful constraints */
