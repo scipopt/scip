@@ -43,10 +43,10 @@ typedef enum Varstatus VARSTATUS;
 /** variable type */
 enum Vartype
 {
-   SCIP_VARTYPE_BINARY    = 0,          /**< binary variable: $x \in \{0,1\}$ */
-   SCIP_VARTYPE_INTEGER   = 1,          /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
-   SCIP_VARTYPE_IMPLINT   = 2,          /**< implicit integer variable: continous variable, that is always integral */
-   SCIP_VARTYPE_CONTINOUS = 3           /**< continous variable: $x \in [lb,ub] */
+   SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: $x \in \{0,1\}$ */
+   SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: $x \in \{lb, \ldots, \ub\}$ */
+   SCIP_VARTYPE_IMPLINT    = 2,         /**< implicit integer variable: continuous variable, that is always integral */
+   SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: $x \in [lb,ub] */
 };
 typedef enum Vartype VARTYPE;
 
@@ -226,7 +226,7 @@ struct Var
    unsigned int     inferdepth:16;      /**< depth in the tree, where this bound change took place */
    unsigned int     infernum:15;        /**< bound change index for each node representing the order of changes */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
-   unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continous */
+   unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
 };
 

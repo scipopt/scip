@@ -322,7 +322,7 @@ void probInsertVar(
    implstart = intstart + prob->nint;
    contstart = implstart + prob->nimpl;
 
-   if( var->vartype == SCIP_VARTYPE_CONTINOUS )
+   if( var->vartype == SCIP_VARTYPE_CONTINUOUS )
       prob->ncont++;
    else
    {
@@ -369,7 +369,7 @@ void probInsertVar(
    assert((var->vartype == SCIP_VARTYPE_BINARY && insertpos == prob->nbin - 1)
       || (var->vartype == SCIP_VARTYPE_INTEGER && insertpos == prob->nbin + prob->nint - 1)
       || (var->vartype == SCIP_VARTYPE_IMPLINT && insertpos == prob->nbin + prob->nint + prob->nimpl - 1)
-      || (var->vartype == SCIP_VARTYPE_CONTINOUS && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
+      || (var->vartype == SCIP_VARTYPE_CONTINUOUS && insertpos == prob->nbin + prob->nint + prob->nimpl + prob->ncont - 1));
 
    prob->vars[insertpos] = var;
    var->probindex = insertpos;
@@ -411,7 +411,7 @@ void probRemoveVar(
       assert(implstart <= var->probindex && var->probindex < contstart);
       prob->nimpl--;
       break;
-   case SCIP_VARTYPE_CONTINOUS:
+   case SCIP_VARTYPE_CONTINUOUS:
       assert(contstart <= var->probindex && var->probindex < prob->nvars);
       prob->ncont--;
       break;
@@ -420,7 +420,7 @@ void probRemoveVar(
       abort();
    }
 
-   /* move last binary, last integer, last implicit, and last continous variable forward to fill the free slot */
+   /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
    freepos = var->probindex;
    if( freepos < intstart-1 )
    {
@@ -495,7 +495,7 @@ RETCODE SCIPprobAddVar(
       CHECK_OKAY( SCIPtreeUpdateVar(tree, set, var, 0.0, 0.0, 0.0, var->obj, var->actdom.lb, var->actdom.ub) );
    }
 
-   debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continous)\n",
+   debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
       var->name, prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
 
    return SCIP_OKAY;
@@ -880,7 +880,7 @@ void SCIPprobPrintStatistics(
       file = stdout;
 
    fprintf(file, "  Problem name     : %s\n", prob->name);
-   fprintf(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continous)\n",
+   fprintf(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
    fprintf(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
 }

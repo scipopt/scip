@@ -321,10 +321,10 @@ RETCODE SCIPbranchcandUpdateVar(
       || var->varstatus == SCIP_VARSTATUS_AGGREGATED
       || var->varstatus == SCIP_VARSTATUS_MULTAGGR
       || var->varstatus == SCIP_VARSTATUS_NEGATED
-      || var->vartype == SCIP_VARTYPE_CONTINOUS
+      || var->vartype == SCIP_VARTYPE_CONTINUOUS
       || SCIPsetIsEQ(set, var->actdom.lb, var->actdom.ub) )
    {
-      /* variable is continous or fixed: make sure it is not member of the pseudo branching candidate list */
+      /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
       if( var->pseudocandindex >= 0 )
       {
          int freepos;

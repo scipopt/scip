@@ -690,7 +690,7 @@ RETCODE SCIPgetVarsData(
    int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
    int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
    int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /** gets array with active problem variables; data may become invalid after
@@ -725,7 +725,7 @@ int SCIPgetNImplVars(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets number of continous active problem variables */
+/** gets number of continuous active problem variables */
 extern
 int SCIPgetNContVars(
    SCIP*            scip                /**< SCIP data structure */
@@ -742,7 +742,7 @@ RETCODE SCIPgetOrigVarsData(
    int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
    int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
    int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
    );
 
 /** gets array with original problem variables; data may become invalid after
@@ -777,7 +777,7 @@ int SCIPgetNOrigImplVars(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets number of continous original problem variables */
+/** gets number of continuous original problem variables */
 extern
 int SCIPgetNOrigContVars(
    SCIP*            scip                /**< SCIP data structure */
@@ -1113,8 +1113,8 @@ RETCODE SCIPfixVar(
  *  of infeasibility, if $a' == -b'$ and $c' != 0$, or to a variable fixing $x' == c'/(a'+b')$ (and possible
  *  infeasibility) otherwise.
  *  In the second step, the variable to be aggregated is chosen among $x'$ and $y'$, prefering a less strict variable
- *  type as aggregation variable (i.e. continous variables are prefered over implicit integers, implicit integers
- *  over integers, and integers over binaries). If none of the variables is continous, it is tried to find an integer
+ *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
  *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
@@ -1958,6 +1958,16 @@ RETCODE SCIPsetSolVal(
    Real             val                 /**< solution value of variable */
    );
 
+/** sets values of multiple variables in primal CIP solution */
+extern
+RETCODE SCIPsetSolVals(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution */
+   int              nvars,              /**< number of variables to set solution value for */
+   VAR**            vars,               /**< array with variables to add to solution */
+   Real*            vals                /**< array with solution values of variables */
+   );
+
 /** increases value of variable in primal CIP solution */
 extern
 RETCODE SCIPincSolVal(
@@ -1973,6 +1983,16 @@ Real SCIPgetSolVal(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
    VAR*             var                 /**< variable to get value for */
+   );
+
+/** gets values of multiple variables in primal CIP solution */
+extern
+RETCODE SCIPgetSolVals(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
+   int              nvars,              /**< number of variables to get solution value for */
+   VAR**            vars,               /**< array with variables to get value for */
+   Real*            vals                /**< array to store solution values of variables */
    );
 
 /** returns objective value of primal CIP solution, or actual LP/pseudo objective value */

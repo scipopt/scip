@@ -375,7 +375,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    int c;
    int r;
 
-   todoMessage("try to shift continous variables to stay feasible");
+   todoMessage("try to shift continuous variables to stay feasible");
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);

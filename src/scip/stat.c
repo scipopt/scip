@@ -47,6 +47,7 @@ RETCODE SCIPstatCreate(
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lppricingtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   CHECK_OKAY( SCIPclockCreate(&(*stat)->redcoststrtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
 
    (*stat)->marked_nvaridx = 0;
@@ -74,6 +75,7 @@ RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->lppricingtime);
    SCIPclockFree(&(*stat)->lpsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
+   SCIPclockFree(&(*stat)->redcoststrtime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
 
    freeMemory(stat);
@@ -118,6 +120,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->lppricingtime);
    SCIPclockReset(stat->lpsoltime);
    SCIPclockReset(stat->pseudosoltime);
+   SCIPclockReset(stat->redcoststrtime);
    SCIPclockReset(stat->nodeactivationtime);
 
    stat->nvaridx = stat->marked_nvaridx;
@@ -135,6 +138,8 @@ void SCIPstatReset(
    stat->nseparounds = 0;
    stat->nlppricings = 0;
    stat->nlppricingvars = 0;
+   stat->nredcoststrcalls = 0;
+   stat->nredcoststrfound = 0;
    stat->nnodes = 0;
    stat->nboundchanges = 0;
    stat->nlpsolsfound = 0;

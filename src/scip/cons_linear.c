@@ -2795,7 +2795,7 @@ RETCODE tightenSides(
       for( i = 0; i < consdata->nvars && integral; ++i )
       {
          integral &= SCIPisIntegral(scip, consdata->vals[i]);
-         integral &= (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINOUS);
+         integral &= (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
       }
       if( integral )
       {
@@ -2992,17 +2992,17 @@ RETCODE convertLongEquality(
       val = vals[v];
             
       actslacktype = SCIPvarGetType(var);
-      integral &= (actslacktype != SCIP_VARTYPE_CONTINOUS);
+      integral &= (actslacktype != SCIP_VARTYPE_CONTINUOUS);
       integral &= SCIPisIntegral(scip, val);
 
       assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
       assert(SCIPvarGetNLocksUp(var) >= 1);
       if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 )
       {
-         /* variable is only locked in this equality: if variable is continous or if the value is 1.0,
+         /* variable is only locked in this equality: if variable is continuous or if the value is 1.0,
           * it is a candidate for being a slack variable
           */
-         if( actslacktype == SCIP_VARTYPE_CONTINOUS
+         if( actslacktype == SCIP_VARTYPE_CONTINUOUS
             || actslacktype == SCIP_VARTYPE_IMPLINT
             || (integral && SCIPisEQ(scip, ABS(val), 1.0))
              )
@@ -3033,7 +3033,7 @@ RETCODE convertLongEquality(
     * we cannot aggregate the variable, because the integrality condition would get lost
     */
    if( bestslackpos >= 0 &&
-      (bestslacktype == SCIP_VARTYPE_CONTINOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
+      (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
    {
       VAR* slackvar;
       Real* scalars;
@@ -3245,7 +3245,7 @@ int getVarWeight(
    case SCIP_VARTYPE_INTEGER:
    case SCIP_VARTYPE_IMPLINT:
       return INTWEIGHT;
-   case SCIP_VARTYPE_CONTINOUS:
+   case SCIP_VARTYPE_CONTINUOUS:
       return CONTWEIGHT;
    default:
       errorMessage("invalid variable type");
@@ -3258,7 +3258,7 @@ int getVarWeight(
  * where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
  * for numerical stability, we will only accept integral a and b;
  * the variable weight is a weighted sum over all included variables, where each binary variable weighs BINWEIGHT, 
- * each integer or implicit integer variable weighs INTWEIGHT and each continous variable weighs CONTWEIGHT
+ * each integer or implicit integer variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
  */
 static 
 RETCODE aggregateConstraints(
@@ -3654,7 +3654,7 @@ RETCODE preprocessConstraintPairs(
        * - if both at least one constraint is an equality, count the weighted number of common variables W_c
        *   and the weighted number of variable in the difference sets W_0 = w(V_0 \ V_1), W_1 = w(V_1 \ V_0),
        *   where the weight of each variable depends on its type, such that aggregations in order to remove the
-       *   number of continous and integer variables are prefered:
+       *   number of continuous and integer variables are prefered:
        *   - if W_c > W_1, try to aggregate  consdata0 := a * consdata0 + b * consdata1  in order to decrease the 
        *     variable weight in consdata0, where a = +/- val1[v] and b = -/+ val0[v] for common v which leads to
        *     the smallest weight; for numerical stability, we will only accept integral a and b; the sign of a has
@@ -4602,7 +4602,7 @@ RETCODE SCIPupgradeConsLinear(
          else
             nnegimpl++;
          break;
-      case SCIP_VARTYPE_CONTINOUS:
+      case SCIP_VARTYPE_CONTINUOUS:
          integral &= (SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb));
          if( val >= 0.0 )
             nposcont++;

@@ -168,7 +168,7 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
 
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
          {
             Real primsol;
 

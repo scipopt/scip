@@ -2650,7 +2650,7 @@ RETCODE SCIProwMakeRational(
    assert(SCIPsetIsPositive(set, maxval));
    onedivminval = 1.0/minval;
 
-   /* check, if there are fractional coefficients and continous variables in the row */
+   /* check, if there are fractional coefficients and continuous variables in the row */
    contvars = FALSE;
    fractional = FALSE;
    for( c = 0; c < row->len; ++c )
@@ -2663,7 +2663,7 @@ RETCODE SCIProwMakeRational(
       val = row->vals[c];
       assert(!SCIPsetIsZero(set, val));
       
-      contvars |= (col->var->vartype == SCIP_VARTYPE_CONTINOUS);
+      contvars |= (col->var->vartype == SCIP_VARTYPE_CONTINUOUS);
       fractional |= !SCIPsetIsIntegral(set, val);
    }
 
@@ -2772,7 +2772,7 @@ RETCODE SCIProwMakeRational(
       row->constant = 0.0;
       if( !contvars )
       {
-         /* no continous variables exist in the row, all coefficients of the new row are integral -> round sides */
+         /* no continuous variables exist in the row, all coefficients of the new row are integral -> round sides */
          if( !SCIPsetIsInfinity(set, -row->lhs) )
             row->lhs = SCIPsetCeil(set, row->lhs);
          if( !SCIPsetIsInfinity(set, row->rhs) )
@@ -4237,7 +4237,7 @@ void SCIPlpMarkSize(
 
 /** get array with newly added columns after the last mark */
 COL** SCIPlpGetNewcols(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(lp != NULL);
@@ -4248,7 +4248,7 @@ COL** SCIPlpGetNewcols(
 
 /** get number of newly added columns after the last mark */
 int SCIPlpGetNumNewcols(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(lp != NULL);
@@ -4259,7 +4259,7 @@ int SCIPlpGetNumNewcols(
 
 /** get array with newly added rows after the last mark */
 ROW** SCIPlpGetNewrows(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(lp != NULL);
@@ -4270,7 +4270,7 @@ ROW** SCIPlpGetNewrows(
 
 /** get number of newly added rows after the last mark */
 int SCIPlpGetNumNewrows(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    )
 {
    assert(lp != NULL);
@@ -4289,6 +4289,20 @@ RETCODE SCIPlpGetBasisInd(
    assert(basisind != NULL);
 
    CHECK_OKAY( SCIPlpiGetBasisInd(lp->lpi, basisind) );
+
+   return SCIP_OKAY;
+}
+
+/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+RETCODE SCIPlpGetBase(
+   LP*              lp,                 /**< LP data */
+   int*             cstat,              /**< array to store column basis status, or NULL */
+   int*             rstat               /**< array to store row basis status, or NULL */
+   )
+{
+   assert(lp != NULL);
+
+   CHECK_OKAY( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
 
    return SCIP_OKAY;
 }
@@ -4570,7 +4584,7 @@ void transformMIRRow(
  *    a~*x' <= down(b)
  *  integers : a~_j = down(a_j)                      , if f_j <= f0
  *             a~_j = down(a_j) + (f_j - f0)/(1 - f0), if f_j >  f0
- *  continous: a~_j = 0                              , if a_j >= 0
+ *  continuous: a~_j = 0                              , if a_j >= 0
  *             a~_j = a_j/(1 - f0)                   , if a_j <  0
  *  Keep in mind, that the varsign has to be implicitly incorporated into a~_j.
  *  Transform inequality back to a°*x <= down(b):
@@ -4620,7 +4634,7 @@ void roundMIRRow(
 
       /* calculate the coefficient in the retransformed cut */
       aj = varsign[idx] * mircoef[idx];
-      if( var->vartype != SCIP_VARTYPE_CONTINOUS )
+      if( var->vartype != SCIP_VARTYPE_CONTINUOUS )
       {
          /* integer variable */
          downaj = SCIPsetFloor(set, aj);
@@ -4632,7 +4646,7 @@ void roundMIRRow(
       }
       else
       {
-         /* continous variable */
+         /* continuous variable */
          if( SCIPsetIsSumGE(set, aj, 0.0) )
             cutaj = 0.0;
          else
@@ -4661,10 +4675,10 @@ void roundMIRRow(
 }
 
 /** substitute negatively aggregated slack variables:
- *  - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continous
+ *  - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continuous
  *    slack variable is a_j > 0, which leads to a°_j = 0, so we can ignore the slack variable in
  *    the resulting cut
- *  - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continous
+ *  - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continuous
  *    slack variable is a_j < 0, which leads to a°_j = a_j/(1 - f0), so we have to subtract 
  *    a°_j times the row to the cut to eliminate the slack variable
  */
@@ -4793,7 +4807,7 @@ RETCODE SCIPlpCalcMIR(
     *   a~*x' <= down(b)
     * integers : a~_j = down(a_j)                      , if f_j <= f0
     *            a~_j = down(a_j) + (f_j - f0)/(1 - f0), if f_j >  f0
-    * continous: a~_j = 0                              , if a_j >= 0
+    * continuous: a~_j = 0                              , if a_j >= 0
     *            a~_j = a_j/(1 - f0)                   , if a_j <  0
     * Keep in mind, that the varsign has to be implicitly incorporated into a~_j.
     * Transform inequality back to a°*x <= down(b):
@@ -4815,10 +4829,10 @@ RETCODE SCIPlpCalcMIR(
    roundMIRRow(set, nvars, vars, mircoef, mirrhs, varsign, f0);
 
    /* substitute negatively aggregated slack variables:
-    * - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continous
+    * - if row was aggregated with a positive factor (weight * slacksign), the a_j for the continuous
     *   slack variable is a_j > 0, which leads to a°_j = 0, so we can ignore the slack variable in
     *   the resulting cut
-    * - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continous
+    * - if row was aggregated with a negative factor (weight * slacksign), the a_j for the continuous
     *   slack variable is a_j < 0, which leads to a°_j = a_j/(1 - f0), so we have to subtract 
     *   a°_j times the row to the cut to eliminate the slack variable
     */

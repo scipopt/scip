@@ -80,7 +80,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
       ub = SCIPvarGetUbGlobal(vars[v]);
 
       /* is variable integral? */
-      if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINOUS )
+      if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS )
       {
          Real newlb;
          Real newub;
@@ -136,12 +136,12 @@ DECL_PRESOLEXEC(presolExecTrivial)
       }
       else
       {
-         /* check bounds on continous variable for infeasibility */
+         /* check bounds on continuous variable for infeasibility */
          if( SCIPisFeasGT(scip, lb, ub) )
          {
             char msg[MAXSTRLEN];
 
-            sprintf(msg, "problem infeasible: continous variable <%s> has bounds [%g,%g]",
+            sprintf(msg, "problem infeasible: continuous variable <%s> has bounds [%g,%g]",
                SCIPvarGetName(vars[v]), lb, ub);
             SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL, msg);
             *result = SCIP_CUTOFF;
@@ -151,7 +151,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* fix variables with equal bounds */
          if( SCIPisFeasEQ(scip, lb, ub) )
          {
-            debugMessage("fixing continous variable <%s>: [%g,%g]\n", SCIPvarGetName(vars[v]), lb, ub);
+            debugMessage("fixing continuous variable <%s>: [%g,%g]\n", SCIPvarGetName(vars[v]), lb, ub);
             CHECK_OKAY( SCIPfixVar(scip, vars[v], lb, &infeasible) );
             if( infeasible )
             {

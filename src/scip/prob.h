@@ -75,7 +75,7 @@ struct Prob
    DECL_PROBTRANS   ((*probtrans));     /**< transforms user problem data into data belonging to the transformed problem */
    PROBDATA*        probdata;           /**< user problem data set by the reader */
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */
-   VAR**            vars;               /**< array with active variables ordered binary, integer, implicit, continous */
+   VAR**            vars;               /**< array with active variables ordered binary, integer, implicit, continuous */
    HASHTABLE*       varnames;           /**< hash table storing variable's names */
    CONS**           conss;              /**< array with constraints of the problem */
    HASHTABLE*       consnames;          /**< hash table storing constraints' names */
@@ -89,7 +89,7 @@ struct Prob
    int              nbin;               /**< number of binary variables */
    int              nint;               /**< number of general integer variables */
    int              nimpl;              /**< number of implicit integer variables */
-   int              ncont;              /**< number of continous variables */
+   int              ncont;              /**< number of continuous variables */
    int              consssize;          /**< available slots in conss array */
    int              nconss;             /**< number of constraints in the problem (number of used slots in conss array) */
    int              maxnconss;          /**< maximum number of constraints existing at the same time */

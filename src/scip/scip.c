@@ -1384,7 +1384,7 @@ RETCODE SCIPgetVarsData(
    int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
    int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
    int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetVarsData", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE) );
@@ -1546,7 +1546,7 @@ int SCIPgetNImplVars(
    }
 }
 
-/** gets number of continous active problem variables */
+/** gets number of continuous active problem variables */
 int SCIPgetNContVars(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -1579,7 +1579,7 @@ RETCODE SCIPgetOrigVarsData(
    int*             nbin,               /**< pointer to store number of binary variables or NULL if not needed */
    int*             nint,               /**< pointer to store number of integer variables or NULL if not needed */
    int*             nimpl,              /**< pointer to store number of implicit integral vars or NULL if not needed */
-   int*             ncont               /**< pointer to store number of continous variables or NULL if not needed */
+   int*             ncont               /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetOrigVarsData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -1651,7 +1651,7 @@ int SCIPgetNOrigImplVars(
    return scip->origprob->nimpl;
 }
 
-/** gets number of continous original problem variables */
+/** gets number of continuous original problem variables */
 int SCIPgetNOrigContVars(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -2865,7 +2865,7 @@ RETCODE SCIPfixVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPfixVar", FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
    
-   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(scip->set, fixedval))
+   if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsIntegral(scip->set, fixedval))
       || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
       || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
    {
@@ -2944,10 +2944,10 @@ RETCODE aggregateActiveIntVars(
    assert(scip->stage == SCIP_STAGE_PRESOLVING);
    assert(varx != NULL);
    assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINOUS);
+   assert(SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS);
    assert(vary != NULL);
    assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINOUS);
+   assert(SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINUOUS);
    assert(!SCIPsetIsZero(scip->set, scalarx));
    assert(!SCIPsetIsZero(scip->set, scalary));
    assert(infeasible != NULL);
@@ -3070,8 +3070,8 @@ RETCODE aggregateActiveIntVars(
 
 /** performs second step of SCIPaggregateVars(): 
  *  the variable to be aggregated is chosen among active problem variables $x'$ and $y'$, prefering a less strict variable
- *  type as aggregation variable (i.e. continous variables are prefered over implicit integers, implicit integers
- *  over integers, and integers over binaries). If none of the variables is continous, it is tried to find an integer
+ *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
  *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
@@ -3110,9 +3110,9 @@ RETCODE aggregateActiveVars(
     *  ->  x == -b/a * y + c/a  (agg=0)
     *  ->  y == -a/b * x + c/b  (agg=1)
     */
-   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINOUS )
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
       agg = 0;
-   else if( SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINOUS )
+   else if( SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS )
       agg = 1;
    else if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT )
       agg = 0;
@@ -3149,8 +3149,8 @@ RETCODE aggregateActiveVars(
       constant = rhs/scalarx;
 
       /* check aggregation for integer feasibility */
-      if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINOUS
-         && SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINOUS
+      if( SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS
+         && SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINUOUS
          && SCIPisIntegral(scip, scalar) && !SCIPisIntegral(scip, constant) )
       {
          *infeasible = TRUE;
@@ -3177,8 +3177,8 @@ RETCODE aggregateActiveVars(
  *  of infeasibility, if $a' == -b'$ and $c' != 0$, or to a variable fixing $x' == c'/(a'+b')$ (and possible
  *  infeasibility) otherwise.
  *  In the second step, the variable to be aggregated is chosen among $x'$ and $y'$, prefering a less strict variable
- *  type as aggregation variable (i.e. continous variables are prefered over implicit integers, implicit integers
- *  over integers, and integers over binaries). If none of the variables is continous, it is tried to find an integer
+ *  type as aggregation variable (i.e. continuous variables are prefered over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
  *  aggregation (i.e. integral coefficients $a''$ and $b''$, such that $a''*x' + b''*y' == c''$). This can lead to
  *  the detection of infeasibility (e.g. if $c''$ is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
@@ -4645,10 +4645,10 @@ RETCODE SCIPbranchVar(
 
    CHECK_OKAY( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   if( var->vartype == SCIP_VARTYPE_CONTINOUS )
+   if( var->vartype == SCIP_VARTYPE_CONTINUOUS )
    {
       char s[MAXSTRLEN];
-      sprintf(s, "cannot branch on continous variable <%s>", var->name);
+      sprintf(s, "cannot branch on continuous variable <%s>", var->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
    }
@@ -4914,6 +4914,31 @@ RETCODE SCIPsetSolVal(
    return SCIP_OKAY;
 }
 
+/** sets values of multiple variables in primal CIP solution */
+RETCODE SCIPsetSolVals(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution */
+   int              nvars,              /**< number of variables to set solution value for */
+   VAR**            vars,               /**< array with variables to add to solution */
+   Real*            vals                /**< array with solution values of variables */
+   )
+{
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPsetSolVals", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   for( v = 0; v < nvars; ++v )
+   {
+      CHECK_OKAY( SCIPsolSetVal(sol, scip->set, scip->stat, scip->tree, vars[v], vals[v]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** increases value of variable in primal CIP solution */
 RETCODE SCIPincSolVal(
    SCIP*            scip,               /**< SCIP data structure */
@@ -4950,6 +4975,40 @@ Real SCIPgetSolVal(
       CHECK_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
       return SCIPvarGetSol(var, scip->tree);
    }
+}
+
+/** gets values of multiple variables in primal CIP solution */
+RETCODE SCIPgetSolVals(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
+   int              nvars,              /**< number of variables to get solution value for */
+   VAR**            vars,               /**< array with variables to get value for */
+   Real*            vals                /**< array to store solution values of variables */
+   )
+{
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetSolVals", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( sol != NULL )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         CHECK_OKAY( SCIPsolGetVal(sol, scip->set, scip->stat, vars[v], &vals[v]) );
+      }
+   }
+   else
+   {
+      CHECK_OKAY( checkStage(scip, "SCIPgetSolVals(sol==NULL)", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+      for( v = 0; v < nvars; ++v )
+         vals[v] = SCIPvarGetSol(vars[v], scip->tree);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns objective value of primal CIP solution, or actual LP/pseudo objective value */
@@ -5946,6 +6005,19 @@ void printConstraintStatistics(
 }
 
 static
+void printRedcostStrengtheningStatistics(
+   SCIP*            scip,               /**< SCIP data structure */
+   FILE*            file                /**< output file */
+   )
+{
+   fprintf(file, "Reduced Cost Str.  :         Time        Calls        Found\n");
+   fprintf(file, "  total            : %12.2f %12lld %12lld\n",
+      SCIPclockGetTime(scip->stat->redcoststrtime),
+      scip->stat->nredcoststrcalls,
+      scip->stat->nredcoststrfound);
+}
+
+static
 void printConflictStatistics(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file                /**< output file */
@@ -6253,6 +6325,7 @@ RETCODE SCIPprintStatistics(
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
+      printRedcostStrengtheningStatistics(scip, file);
       printConflictStatistics(scip, file);
       printSeparatorStatistics(scip, file);
       printPricerStatistics(scip, file);

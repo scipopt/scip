@@ -46,6 +46,7 @@ struct Stat
    CLOCK*           lppricingtime;      /**< LP pricing time */
    CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
    CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
+   CLOCK*           redcoststrtime;     /**< time needed for reduced cost strengthening */
    CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
    Longint          nlpiterations;      /**< number of simplex iterations (primal + dual) */
    Longint          nprimallpiterations;/**< number of iterations in primal simplex */
@@ -53,6 +54,8 @@ struct Stat
    Longint          ndivinglpiterations;/**< number of iterations in diving */
    Longint          nlppricings;        /**< number of times, the problem variables were priced */
    Longint          nlppricingvars;     /**< number of times, a problem variable was priced into the LP */
+   Longint          nredcoststrcalls;   /**< number of times, reduced cost strengthening was called */
+   Longint          nredcoststrfound;   /**< number of reduced cost strengthenings found */
    Longint          nnodes;             /**< number of nodes processed (including active node) */
    Longint          nboundchanges;      /**< number of times a variable's bound has been changed */
    Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */

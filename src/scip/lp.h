@@ -867,25 +867,25 @@ void SCIPlpMarkSize(
 /** get array with newly added columns after the last mark */
 extern
 COL** SCIPlpGetNewcols(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** get number of newly added columns after the last mark */
 extern
 int SCIPlpGetNumNewcols(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** get array with newly added rows after the last mark */
 extern
 ROW** SCIPlpGetNewrows(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** get number of newly added rows after the last mark */
 extern
 int SCIPlpGetNumNewrows(
-   const LP*        lp                  /**< actual LP data */
+   LP*              lp                  /**< actual LP data */
    );
 
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
@@ -893,6 +893,14 @@ extern
 RETCODE SCIPlpGetBasisInd(
    LP*              lp,                 /**< LP data */
    int*             basisind            /**< pointer to store the basis indices */
+   );
+
+/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+extern
+RETCODE SCIPlpGetBase(
+   LP*              lp,                 /**< LP data */
+   int*             cstat,              /**< array to store column basis status, or NULL */
+   int*             rstat               /**< array to store row basis status, or NULL */
    );
 
 /** gets a row from the inverse basis matrix B^-1 */

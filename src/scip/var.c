@@ -715,7 +715,7 @@ RETCODE SCIPdomchgAddHolechg(
  * methods for variables 
  */
 
-/** creates a variable; if the variable is not of type CONTINOUS, fractional bounds are automatically tightened to
+/** creates a variable; if the variable is not of type CONTINUOUS, fractional bounds are automatically tightened to
  *  the next integral value
  */
 static
@@ -1562,7 +1562,7 @@ RETCODE SCIPvarFix(
 
    debugMessage("fix variable <%s>[%g,%g] to %g\n", var->name, var->glbdom.lb, var->glbdom.ub, fixedval);
 
-   if( (var->vartype != SCIP_VARTYPE_CONTINOUS && !SCIPsetIsIntegral(set, fixedval))
+   if( (var->vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->actdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->actdom.ub) )
    {
@@ -3285,7 +3285,7 @@ void SCIPvarAdjustLb(
 
    debugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
 
-   if( var->vartype != SCIP_VARTYPE_CONTINOUS )
+   if( var->vartype != SCIP_VARTYPE_CONTINUOUS )
    {
       /* adjust new bound to integral value */
       *lb = SCIPsetCeil(set, *lb);
@@ -3306,7 +3306,7 @@ void SCIPvarAdjustUb(
 
    debugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
 
-   if( var->vartype != SCIP_VARTYPE_CONTINOUS )
+   if( var->vartype != SCIP_VARTYPE_CONTINUOUS )
    {
       /* adjust new bound to integral value */
       *ub = SCIPsetFloor(set, *ub);

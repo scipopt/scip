@@ -775,8 +775,8 @@ RETCODE readCols(
          }
          else
          {
-            /* for continous variables, default bounds are 0 <= x, and default cost is 0 */
-            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINOUS, 
+            /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
+            CHECK_OKAY( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, 
                            dynamiccols) );
          }
       }

@@ -46,8 +46,8 @@ typedef struct LinConsUpgrade LINCONSUPGRADE; /**< linear constraint update meth
  *  - nnegint         : number of integer variables with negative coefficient
  *  - nposimpl        : number of implicit integer variables with positive coefficient
  *  - nnegimpl        : number of implicit integer variables with negative coefficient
- *  - nposcont        : number of continous variables with positive coefficient
- *  - nnegcont        : number of continous variables with negative coefficient
+ *  - nposcont        : number of continuous variables with positive coefficient
+ *  - nnegcont        : number of continuous variables with negative coefficient
  *  - ncoeffspone     : number of +1 coefficients
  *  - ncoeffsnone     : number of -1 coefficients
  *  - ncoeffspint     : number of positive integral coefficients other than +1
