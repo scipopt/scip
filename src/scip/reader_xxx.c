@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.6 2004/02/04 17:27:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_xxx.c,v 1.7 2004/07/14 14:05:09 bzfpfend Exp $"
 
 /**@file   reader_xxx.c
  * @brief  XXX file reader
@@ -108,7 +108,7 @@ RETCODE SCIPincludeReaderXxx(
    
    /* include xxx reader */
    CHECK_OKAY( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-                  readerFreeXxx, readerReadXxx, readerdata) );
+         readerFreeXxx, readerReadXxx, readerdata) );
 
    /* add xxx reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.15 2004/07/07 18:06:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.16 2004/07/14 14:05:08 bzfpfend Exp $"
 
 /**@file   heur_coefdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
@@ -466,12 +466,12 @@ DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
             if( bestcandroundup )
             {
                CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
-                              objval - oldobjval, 1.0) );
+                     objval - oldobjval, 1.0) );
             }
             else
             {
                CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
-                              objval - oldobjval, 1.0) );
+                     objval - oldobjval, 1.0) );
             }
          }
 
@@ -528,39 +528,39 @@ RETCODE SCIPincludeHeurCoefdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving, heurExecCoefdiving,
-                  heurdata) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving, heurExecCoefdiving,
+         heurdata) );
 
    /* coefdiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/minreldepth", 
-                  "minimal relative depth to start diving",
-                  &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         "heuristics/coefdiving/minreldepth", 
+         "minimal relative depth to start diving",
+         &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/maxreldepth", 
-                  "maximal relative depth to start diving",
-                  &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         "heuristics/coefdiving/maxreldepth", 
+         "maximal relative depth to start diving",
+         &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/maxlpiterquot", 
-                  "maximal fraction of diving LP iterations compared to total iteration number",
-                  &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
+         "heuristics/coefdiving/maxlpiterquot", 
+         "maximal fraction of diving LP iterations compared to total iteration number",
+         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/maxdiveubquot",
-                  "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
-                  &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
+         "heuristics/coefdiving/maxdiveubquot",
+         "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
+         &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/maxdiveavgquot", 
-                  "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
-                  &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_INVALID, NULL, NULL) );
+         "heuristics/coefdiving/maxdiveavgquot", 
+         "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
+         &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/maxdiveubquotnosol", 
-                  "maximal UBQUOT when no solution was found yet",
-                  &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
+         "heuristics/coefdiving/maxdiveubquotnosol", 
+         "maximal UBQUOT when no solution was found yet",
+         &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/coefdiving/maxdiveavgquotnosol", 
-                  "maximal AVGQUOT when no solution was found yet",
-                  &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_INVALID, NULL, NULL) );
+         "heuristics/coefdiving/maxdiveavgquotnosol", 
+         "maximal AVGQUOT when no solution was found yet",
+         &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.7 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.8 2004/07/14 14:05:08 bzfpfend Exp $"
 
 /**@file   heur_xxx.c
  * @brief  xxx primal heuristic
@@ -146,9 +146,9 @@ RETCODE SCIPincludeHeurXxx(
 
    /* include primal heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeXxx, heurInitXxx, heurExitXxx, heurExecXxx,
-                  heurdata) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeXxx, heurInitXxx, heurExitXxx, heurExecXxx,
+         heurdata) );
 
    /* add xxx primal heuristic parameters */
    /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */

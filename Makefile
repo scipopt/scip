@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.79 2004/07/07 09:52:40 bzfwolte Exp $
+# $Id: Makefile,v 1.80 2004/07/14 14:05:07 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -229,6 +229,7 @@ SCIPLIBOBJ	=	branch.o \
 			heur_coefdiving.o \
 			heur_feaspump.o \
 			heur_fracdiving.o \
+			heur_linesearchdiving.o \
 			heur_objpscostdiving.o \
 			heur_pscostdiving.o \
 			heur_rootsoldiving.o \

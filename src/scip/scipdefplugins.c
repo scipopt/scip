@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.22 2004/07/07 09:52:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.23 2004/07/14 14:05:09 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -46,6 +46,7 @@
 #include "heur_coefdiving.h"
 #include "heur_feaspump.h"
 #include "heur_fracdiving.h"
+#include "heur_linesearchdiving.h"
 #include "heur_objpscostdiving.h"
 #include "heur_pscostdiving.h"
 #include "heur_rootsoldiving.h"
@@ -103,6 +104,7 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeHeurCoefdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurFeaspump(scip) );
    CHECK_OKAY( SCIPincludeHeurFracdiving(scip) );
+   CHECK_OKAY( SCIPincludeHeurLinesearchdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurObjpscostdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurPscostdiving(scip) );
    CHECK_OKAY( SCIPincludeHeurRootsoldiving(scip) );

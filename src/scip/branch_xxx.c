@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.6 2004/04/27 15:49:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.7 2004/07/14 14:05:08 bzfpfend Exp $"
 
 /**@file   branch_xxx.c
  * @brief  xxx branching rule
@@ -160,8 +160,8 @@ RETCODE SCIPincludeBranchruleXxx(
 
    /* include branching rule */
    CHECK_OKAY( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
-                  branchFreeXxx, branchInitXxx, branchExitXxx, branchExeclpXxx, branchExecpsXxx,
-                  branchruledata) );
+         branchFreeXxx, branchInitXxx, branchExitXxx, branchExeclpXxx, branchExecpsXxx,
+         branchruledata) );
 
    /* add xxx branching rule parameters */
    /* TODO: (optional) add branching rule specific parameters with SCIPaddTypeParam() here */

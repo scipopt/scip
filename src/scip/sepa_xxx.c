@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.5 2004/04/27 15:50:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.6 2004/07/14 14:05:09 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -141,8 +141,8 @@ RETCODE SCIPincludeSepaXxx(
 
    /* include separator */
    CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
-                  sepaFreeXxx, sepaInitXxx, sepaExitXxx, sepaExecXxx,
-                  sepadata) );
+         sepaFreeXxx, sepaInitXxx, sepaExitXxx, sepaExecXxx,
+         sepadata) );
 
    /* add xxx separator parameters */
    /* TODO: (optional) add separator specific parameters with SCIPaddTypeParam() here */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.14 2004/07/07 18:06:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.15 2004/07/14 14:05:08 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -432,7 +432,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
             SCIPgetVarLbDive(scip, var), SCIPfloor(scip, lpcandssol[bestcand]));
-         CHECK_OKAY( SCIPchgVarUbDive(scip, lpcands[bestcand], SCIPfloor(scip, lpcandssol[bestcand])) );
+         CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfloor(scip, lpcandssol[bestcand])) );
       }
 
       /* resolve the diving LP */
@@ -458,12 +458,12 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
             if( bestcandroundup )
             {
                CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
-                              objval - oldobjval, 1.0) );
+                     objval - oldobjval, 1.0) );
             }
             else
             {
                CHECK_OKAY( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
-                              objval - oldobjval, 1.0) );
+                     objval - oldobjval, 1.0) );
             }
          }
 
@@ -520,39 +520,39 @@ RETCODE SCIPincludeHeurFracdiving(
 
    /* include heuristic */
    CHECK_OKAY( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-                  HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
-                  heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, heurExecFracdiving,
-                  heurdata) );
+         HEUR_MAXDEPTH, HEUR_PSEUDONODES, HEUR_DURINGPLUNGING,
+         heurFreeFracdiving, heurInitFracdiving, heurExitFracdiving, heurExecFracdiving,
+         heurdata) );
 
    /* fracdiving heuristic parameters */
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/minreldepth", 
-                  "minimal relative depth to start diving",
-                  &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         "heuristics/fracdiving/minreldepth", 
+         "minimal relative depth to start diving",
+         &heurdata->minreldepth, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/maxreldepth", 
-                  "maximal relative depth to start diving",
-                  &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
+         "heuristics/fracdiving/maxreldepth", 
+         "maximal relative depth to start diving",
+         &heurdata->maxreldepth, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/maxlpiterquot", 
-                  "maximal fraction of diving LP iterations compared to total iteration number",
-                  &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
+         "heuristics/fracdiving/maxlpiterquot", 
+         "maximal fraction of diving LP iterations compared to total iteration number",
+         &heurdata->maxlpiterquot, DEFAULT_MAXLPITERQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/maxdiveubquot",
-                  "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
-                  &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
+         "heuristics/fracdiving/maxdiveubquot",
+         "maximal quotient (curlowerbound - lowerbound)/(upperbound - lowerbound) where diving is performed",
+         &heurdata->maxdiveubquot, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/maxdiveavgquot", 
-                  "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
-                  &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_INVALID, NULL, NULL) );
+         "heuristics/fracdiving/maxdiveavgquot", 
+         "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed",
+         &heurdata->maxdiveavgquot, DEFAULT_MAXDIVEAVGQUOT, 0.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/maxdiveubquotnosol", 
-                  "maximal UBQUOT when no solution was found yet",
-                  &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
+         "heuristics/fracdiving/maxdiveubquotnosol", 
+         "maximal UBQUOT when no solution was found yet",
+         &heurdata->maxdiveubquotnosol, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
    CHECK_OKAY( SCIPaddRealParam(scip,
-                  "heuristics/fracdiving/maxdiveavgquotnosol", 
-                  "maximal AVGQUOT when no solution was found yet",
-                  &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_INVALID, NULL, NULL) );
+         "heuristics/fracdiving/maxdiveavgquotnosol", 
+         "maximal AVGQUOT when no solution was found yet",
+         &heurdata->maxdiveavgquotnosol, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, REAL_MAX, NULL, NULL) );
    
    return SCIP_OKAY;
 }

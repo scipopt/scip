@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.5 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.6 2004/07/14 14:05:08 bzfpfend Exp $"
 
 /**@file   nodesel_xxx.c
  * @brief  xxx node selector
@@ -151,9 +151,9 @@ RETCODE SCIPincludeNodeselXxx(
 
    /* include node selector */
    CHECK_OKAY( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-                  NODESEL_LOWESTFIRST,
-                  nodeselFreeXxx, nodeselInitXxx, nodeselExitXxx, nodeselSelectXxx, nodeselCompXxx,
-                  nodeseldata) );
+         NODESEL_LOWESTFIRST,
+         nodeselFreeXxx, nodeselInitXxx, nodeselExitXxx, nodeselSelectXxx, nodeselCompXxx,
+         nodeseldata) );
 
    /* add xxx node selector parameters */
    /* TODO: (optional) add node selector specific parameters with SCIPaddTypeParam() here */

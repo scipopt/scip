@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.3 2004/04/27 15:50:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.4 2004/07/14 14:05:08 bzfpfend Exp $"
 
 /**@file   pricer_xxx.c
  * @brief  xxx variable pricer
@@ -154,8 +154,8 @@ RETCODE SCIPincludePricerXxx(
 
    /* include variable pricer */
    CHECK_OKAY( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY,
-                  pricerFreeXxx, pricerInitXxx, pricerExitXxx, pricerRedcostXxx, pricerFarkasXxx,
-                  pricerdata) );
+         pricerFreeXxx, pricerInitXxx, pricerExitXxx, pricerRedcostXxx, pricerFarkasXxx,
+         pricerdata) );
 
    /* add xxx variable pricer parameters */
    /* TODO: (optional) add variable pricer specific parameters with SCIPaddTypeParam() here */
