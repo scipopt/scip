@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.25 2004/03/15 15:26:05 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.26 2004/03/15 15:54:36 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -664,6 +664,7 @@ RETCODE separateCovers(
          debug(SCIProwPrint(row, NULL));
          CHECK_OKAY( SCIPaddCut(scip, row, infeasibility/(SCIProwGetNNonz(row)+1)) );
          CHECK_OKAY( SCIPreleaseRow(scip, &row) );
+         *separated = TRUE;
       }
 
       CHECK_OKAY( SCIPfreeBufferArray(scip, &noncovervars) );
@@ -739,7 +740,6 @@ RETCODE propagateCons(
       {
          if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 && SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
          {
-            /**@todo provide cons for conflict analysis */
             CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
             assert(!infeasible);
             assert(tightened);
