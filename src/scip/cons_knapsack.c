@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.38 2004/04/16 12:37:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.39 2004/04/16 12:41:32 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -322,7 +322,7 @@ void consdataChgWeight(
 static 
 RETCODE createRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to check */
+   CONS*            cons                /**< knapsack constraint */
    )
 {
    CONSDATA* consdata;
@@ -347,7 +347,7 @@ RETCODE createRelaxation(
 static 
 RETCODE addRelaxation(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to check */
+   CONS*            cons                /**< knapsack constraint */
    )
 {
    CONSDATA* consdata;
