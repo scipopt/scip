@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.23 2005/01/18 09:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.24 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -134,9 +134,7 @@ RETCODE SCIPconflictInit(
 extern
 RETCODE SCIPconflictAddBound(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< problem variable */
    BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
    BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */

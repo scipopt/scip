@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.33 2005/01/18 09:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.34 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -126,7 +126,6 @@ void SCIPsolSetHeur(
 extern
 RETCODE SCIPsolLinkLPSol(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
@@ -137,7 +136,6 @@ RETCODE SCIPsolLinkLPSol(
 extern
 RETCODE SCIPsolLinkPseudoSol(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
@@ -148,7 +146,6 @@ RETCODE SCIPsolLinkPseudoSol(
 extern
 RETCODE SCIPsolLinkCurrentSol(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
@@ -238,7 +235,6 @@ RETCODE SCIPsolRound(
 extern
 void SCIPsolUpdateVarsum(
    SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem data */
    Real             weight              /**< weight of solution in weighted average */

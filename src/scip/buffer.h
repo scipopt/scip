@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.10 2005/01/18 09:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.11 2005/01/18 14:34:27 bzfpfend Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects
@@ -78,7 +78,7 @@ extern
 void SCIPbufferFreeMem(
    BUFFER*          buffer,             /**< memory buffer storage */
    void**           ptr,                /**< pointer to the allocated memory buffer */
-   int              dummysize           /**< used to get a safer define for SCIPsetReleaseBufferSize/Array */
+   int              dummysize           /**< used to get a safer define for SCIPsetFreeBufferSize/Array */
    );
 
 /** gets number of used buffers */

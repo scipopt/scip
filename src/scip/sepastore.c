@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.31 2005/01/18 09:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.32 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -287,7 +287,7 @@ RETCODE sepastoreAddCut(
    }
    else
    {
-      cutefficacy = -SCIProwGetLPFeasibility(cut, stat, lp) / SCIProwGetNorm(cut);
+      cutefficacy = SCIProwGetEfficacy(cut, set, stat, lp);
       cutscore = cutefficacy + set->sepa_objparalfac * cutobjparallelism + set->sepa_orthofac * cutorthogonality;
    }
 

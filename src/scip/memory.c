@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.33 2005/01/18 09:26:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.34 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -397,6 +397,7 @@ int isAligned(size_t size)
    return( size >= ALIGNMENT && size % ALIGNMENT == 0 );
 }
 
+#ifndef NDEBUG
 /* checks, if ptr belongs to chunk 'chk' */
 static
 int isPtrInChunk(const CHKHDR * chk, const void *ptr)
@@ -406,6 +407,7 @@ int isPtrInChunk(const CHKHDR * chk, const void *ptr)
 
    return (ptr >= (void*)(chk->store) && ptr < (void*)(chk->storeend));
 }
+#endif
 
 /* Given a pointer, find the chunk this pointer points to
  * in the chunk array of the block. Binary search is used.

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.170 2005/01/18 09:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.171 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -352,11 +352,11 @@ void rowBSort(
 {
    COL** cols;
    Real* vals;
-   int* index;
+   int* idx;
    int* linkpos;
    COL* tmpcol;
    Real tmpval;
-   int tmpindex;
+   int tmpidx;
    int tmplinkpos;
    int pos;
    int sortpos;
@@ -367,12 +367,12 @@ void rowBSort(
    /**@todo do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?) */
    cols = row->cols;
    vals = row->vals;
-   index = row->cols_index;
+   idx = row->cols_index;
    linkpos = row->linkpos;
 
 #ifndef NDEBUG
    for( pos = 0; pos < row->len; ++pos )
-      assert(index[pos] == cols[pos]->index);
+      assert(idx[pos] == cols[pos]->index);
 #endif
 
    while( firstpos < lastpos )
@@ -382,26 +382,26 @@ void rowBSort(
       sortpos = firstpos;
       while( pos < lastpos )
       {
-         while( pos < lastpos && index[pos] <= index[pos+1] )
+         while( pos < lastpos && idx[pos] <= idx[pos+1] )
             pos++;
          if( pos >= lastpos )
             break;
-         assert(index[pos] > index[pos+1]);
+         assert(idx[pos] > idx[pos+1]);
          tmpcol = cols[pos];
-         tmpindex = index[pos];
+         tmpidx = idx[pos];
          tmpval = vals[pos];
          tmplinkpos = linkpos[pos];
          do
          {
             cols[pos] = cols[pos+1];
-            index[pos] = index[pos+1];
+            idx[pos] = idx[pos+1];
             vals[pos] = vals[pos+1];
             linkpos[pos] = linkpos[pos+1];
             pos++;
          }
-         while( pos < lastpos && index[pos+1] < tmpindex );
+         while( pos < lastpos && idx[pos+1] < tmpidx );
          cols[pos] = tmpcol;
-         index[pos] = tmpindex;
+         idx[pos] = tmpidx;
          vals[pos] = tmpval;
          linkpos[pos] = tmplinkpos;
          sortpos = pos;
@@ -414,26 +414,26 @@ void rowBSort(
       sortpos = lastpos;
       while( pos > firstpos )
       {
-         while( pos > firstpos && index[pos-1] <= index[pos] )
+         while( pos > firstpos && idx[pos-1] <= idx[pos] )
             pos--;
          if( pos <= firstpos )
             break;
-         assert(index[pos-1] > index[pos]);
+         assert(idx[pos-1] > idx[pos]);
          tmpcol = cols[pos];
-         tmpindex = index[pos];
+         tmpidx = idx[pos];
          tmpval = vals[pos];
          tmplinkpos = linkpos[pos];
          do
          {
             cols[pos] = cols[pos-1];
-            index[pos] = index[pos-1];
+            idx[pos] = idx[pos-1];
             vals[pos] = vals[pos-1];
             linkpos[pos] = linkpos[pos-1];
             pos--;
          }
-         while( pos > firstpos && index[pos-1] > tmpindex );
+         while( pos > firstpos && idx[pos-1] > tmpidx );
          cols[pos] = tmpcol;
-         index[pos] = tmpindex;
+         idx[pos] = tmpidx;
          vals[pos] = tmpval;
          linkpos[pos] = tmplinkpos;
          sortpos = pos;
@@ -3239,7 +3239,6 @@ Bool isIntegralScalar(
    )
 {
    Real sval;
-   Real abssval;
    Real downval;
    Real upval;
 
@@ -3291,7 +3290,6 @@ RETCODE rowScale(
    Real intval;
    Real mindelta;
    Real maxdelta;
-   Real absscaleval;
    Real lb;
    Real ub;
    Bool mindeltainf;
@@ -6346,7 +6344,6 @@ RETCODE SCIPlpSumRows(
 static
 void sumMIRRow(
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
@@ -7213,7 +7210,7 @@ RETCODE SCIPlpCalcMIR(
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
 
    /* calculate the row summation */
-   sumMIRRow(set, stat, prob, lp, weights, scale, allowlocal, 
+   sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
       maxweightrange, mircoef, &rhs, slacksign, &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
@@ -7330,7 +7327,6 @@ RETCODE SCIPlpCalcMIR(
 static
 void sumStrongCGRow(
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
@@ -8019,7 +8015,7 @@ RETCODE SCIPlpCalcStrongCG(
    CHECK_OKAY( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
 
    /* calculate the row summation */
-   sumStrongCGRow(set, stat, prob, lp, weights, scale, allowlocal, 
+   sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
       maxweightrange, strongcgcoef, &rhs, slacksign, &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
@@ -8829,19 +8825,19 @@ RETCODE SCIPlpSolveAndEval(
          if( set->lp_checkfeas )
          {
             /* get LP solution and check the solution's feasibility again */
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, &primalfeasible, &dualfeasible) );
+            CHECK_OKAY( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
          }
          else
          {
             /* get LP solution believing in the feasibility of the LP solution */
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, NULL) );
+            CHECK_OKAY( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
             primalfeasible = TRUE;
             dualfeasible = TRUE;
          }
          if( primalfeasible && dualfeasible && aging && !lp->diving && stat->nlps > oldnlps )
          {
             /* update ages and remove obsolete columns and rows from LP */
-            CHECK_OKAY( SCIPlpUpdateAges(lp, set, stat) );
+            CHECK_OKAY( SCIPlpUpdateAges(lp, stat) );
             CHECK_OKAY( SCIPlpRemoveNewObsoletes(lp, memhdr, set, stat) );
             
             if( !lp->solved )
@@ -8884,20 +8880,20 @@ RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_INFEASIBLE:
          if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
-            CHECK_OKAY( SCIPlpGetDualfarkas(lp, memhdr, set, stat) );
+            CHECK_OKAY( SCIPlpGetDualfarkas(lp, set, stat) );
          }
          debugMessage(" -> LP infeasible\n");
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         CHECK_OKAY( SCIPlpGetUnboundedSol(lp, memhdr, set, stat) );
+         CHECK_OKAY( SCIPlpGetUnboundedSol(lp, set, stat) );
          debugMessage(" -> LP has unbounded primal ray\n");
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
          if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
-            CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat, NULL, NULL) );
+            CHECK_OKAY( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
          }
          debugMessage(" -> LP objective limit reached\n");
          break;
@@ -9678,7 +9674,6 @@ RETCODE SCIPlpUpdateVarLoose(
 /** stores the LP solution in the columns and rows */
 RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
@@ -9804,7 +9799,6 @@ RETCODE SCIPlpGetSol(
 /** stores LP solution with infinite objective value in the columns and rows */
 RETCODE SCIPlpGetUnboundedSol(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
@@ -9899,7 +9893,6 @@ RETCODE SCIPlpGetUnboundedSol(
 /** stores the dual farkas multipliers for infeasibility proof in rows */
 RETCODE SCIPlpGetDualfarkas(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
@@ -9963,7 +9956,6 @@ RETCODE SCIPlpGetIterations(
  */
 RETCODE SCIPlpUpdateAges(
    LP*              lp,                 /**< current LP data */
-   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    )
 {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.34 2005/01/18 09:26:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.35 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3176,7 +3176,6 @@ Bool isIntegralScalar(
    )
 {
    Real sval;
-   Real abssval;
    Real downval;
    Real upval;
 
@@ -3212,7 +3211,6 @@ RETCODE SCIPcalcIntegralScalar(
    Longint denominator;
    Real val;
    Real minval;
-   Real usedtol;
    Real absval;
    Real scaleval;
    Real twomultval;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.21 2005/01/18 09:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.22 2005/01/18 14:34:27 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -336,14 +336,14 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
          {
             Real down;
             Real up;
-            Real lpobjval;
+            Real lastlpobjval;
             Real downgain;
             Real upgain;
 
             /* use the score of the strong branching call at the current node */
-            CHECK_OKAY( SCIPgetVarStrongbranchLast(scip, lpcands[c], &down, &up, NULL, &lpobjval) );
-            downgain = MAX(down - lpobjval, 0.0);
-            upgain = MAX(up - lpobjval, 0.0);
+            CHECK_OKAY( SCIPgetVarStrongbranchLast(scip, lpcands[c], &down, &up, NULL, &lastlpobjval) );
+            downgain = MAX(down - lastlpobjval, 0.0);
+            upgain = MAX(up - lastlpobjval, 0.0);
             score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
             usesb = FALSE;
 

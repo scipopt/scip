@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.141 2005/01/18 09:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.142 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -78,7 +78,8 @@
 #define DEFAULT_MAXPRESOLAGGRROUNDS  -1 /**< maximal number of presolving aggregation rounds (-1: no limit) */
 
 #define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
-#define KNAPSACKRELAX_MAXSCALE     1000 /**< maximal allowed scaling factor in knapsack relaxation */
+#define KNAPSACKRELAX_MAXDNOM      1000 /**< maximal allowed denominator in knapsack rational relaxation */
+#define KNAPSACKRELAX_MAXSCALE   1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
 
 /** constraint data for linear constraints */
@@ -2537,7 +2538,6 @@ RETCODE createRow(
    )
 {
    CONSDATA* consdata;
-   int v;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2762,7 +2762,7 @@ RETCODE separateRelaxedKnapsack(
 
    /* calculate scalar which makes all coefficients integral */
    CHECK_OKAY( SCIPcalcIntegralScalar(binvals, nbinvars, -SCIPepsilon(scip), KNAPSACKRELAX_MAXDELTA, 
-         KNAPSACKRELAX_MAXSCALE, KNAPSACKRELAX_MAXSCALE, &intscalar, &success) );
+         KNAPSACKRELAX_MAXDNOM, KNAPSACKRELAX_MAXSCALE, &intscalar, &success) );
    debugMessage(" -> intscalar = %g\n", intscalar);
   
    /* if coefficients can not be made integral, we have to use a scalar of 1.0 and only round fractional coefficients down */
@@ -3043,6 +3043,8 @@ DECL_CONSEXITPRE(consExitpreLinear)
          CHECK_OKAY( applyFixings(scip, conss[c]) );
       }
    }
+
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -4030,7 +4032,6 @@ RETCODE aggregateConstraints(
    int              diffidx0minus1weight, /**< variable weight sum of variables in cons0, that don't appear in cons1 */
    int              diffidx1minus0weight, /**< variable weight sum of variables in cons1, that don't appear in cons0 */
    Real             maxaggrnormscale,   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
-   int*             nupgdconss,         /**< pointer to count the number of upgraded constraints */
    int*             nchgcoefs,          /**< pointer to count the number of changed coefficients */
    Bool*            aggregated          /**< pointer to store whether an aggregation was made */
    )
@@ -4236,8 +4237,6 @@ RETCODE aggregateConstraints(
        */
       if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
-         CONS* upgdcons;
-
          debugMessage(" -> aggregated to <%s>\n", SCIPconsGetName(newcons));
          debug(CHECK_OKAY( SCIPprintCons(scip, newcons, NULL) ));
 
@@ -4274,7 +4273,6 @@ RETCODE preprocessConstraintPairs(
    Real             maxaggrnormscale,   /**< maximal allowed relative gain in maximum norm for constraint aggregation */
    Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*             ndelconss,          /**< pointer to count number of deleted constraints */
-   int*             nupgdconss,         /**< pointer to count the number of upgraded constraints */
    int*             nchgsides,          /**< pointer to count number of changed left/right hand sides */
    int*             nchgcoefs           /**< pointer to count number of changed coefficients */
    )
@@ -4731,14 +4729,14 @@ RETCODE preprocessConstraintPairs(
             /* W_c > W_1: try to aggregate  consdata0 := a * consdata0 + b * consdata1 */
             CHECK_OKAY( aggregateConstraints(scip, cons0, cons1, commonidx0, commonidx1, diffidx0minus1, diffidx1minus0, 
                   nvarscommon, commonidxweight, diffidx0minus1weight, diffidx1minus0weight, maxaggrnormscale,
-                  nupgdconss, nchgcoefs, &aggregated) );
+                  nchgcoefs, &aggregated) );
          }
          if( !aggregated && cons0isequality && !consdata1->upgraded && commonidxweight > diffidx0minus1weight )
          {
             /* W_c > W_0: try to aggregate  consdata1 := a * consdata1 + b * consdata0 */
             CHECK_OKAY( aggregateConstraints(scip, cons1, cons0, commonidx1, commonidx0, diffidx1minus0, diffidx0minus1,
                   nvarscommon, commonidxweight, diffidx1minus0weight, diffidx0minus1weight, maxaggrnormscale,
-                  nupgdconss, nchgcoefs, &aggregated) );
+                  nchgcoefs, &aggregated) );
          }
       }
    }
@@ -4950,7 +4948,7 @@ DECL_CONSPRESOL(consPresolLinear)
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
                CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
-                     &cutoff, ndelconss, nupgdconss, nchgsides, nchgcoefs) );
+                     &cutoff, ndelconss, nchgsides, nchgcoefs) );
             }
          }
       }

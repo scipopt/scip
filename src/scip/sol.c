@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.50 2005/01/18 09:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.51 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -68,17 +68,17 @@ RETCODE solSetArrayVal(
    Real             val                 /**< value to set variable to */
    )
 {
-   int index;
+   int idx;
 
    assert(sol != NULL);
 
-   index = SCIPvarGetIndex(var);
+   idx = SCIPvarGetIndex(var);
 
    /* mark the variable valid */
-   CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, index, TRUE) );
+   CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
 
    /* set the value in the solution array */
-   CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, index, val) );
+   CHECK_OKAY( SCIPrealarraySetVal(sol->vals, set, idx, val) );
 
    return SCIP_OKAY;
 }
@@ -92,17 +92,17 @@ RETCODE solIncArrayVal(
    Real             incval              /**< increase of variable's solution value */
    )
 {
-   int index;
+   int idx;
 
    assert(sol != NULL);
 
-   index = SCIPvarGetIndex(var);
+   idx = SCIPvarGetIndex(var);
 
    /* mark the variable valid */
-   CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, index, TRUE) );
+   CHECK_OKAY( SCIPboolarraySetVal(sol->valid, set, idx, TRUE) );
 
    /* increase the value in the solution array */
-   CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, index, incval) );
+   CHECK_OKAY( SCIPrealarrayIncVal(sol->vals, set, idx, incval) );
 
    return SCIP_OKAY;
 }
@@ -114,20 +114,20 @@ Real solGetArrayVal(
    VAR*             var                 /**< problem variable */
    )
 {
-   int index;
+   int idx;
 
    assert(sol != NULL);
 
-   index = SCIPvarGetIndex(var);
+   idx = SCIPvarGetIndex(var);
 
    /* check, if the variable's value is valid */
-   if( SCIPboolarrayGetVal(sol->valid, index) )
+   if( SCIPboolarrayGetVal(sol->valid, idx) )
    {
-      return SCIPrealarrayGetVal(sol->vals, index);
+      return SCIPrealarrayGetVal(sol->vals, idx);
    }
    else
    {
-      assert(SCIPrealarrayGetVal(sol->vals, index) == 0.0);
+      assert(SCIPrealarrayGetVal(sol->vals, idx) == 0.0);
 
       /* return the variable's value corresponding to the origin */
       switch( sol->solorigin )
@@ -239,7 +239,7 @@ RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    solStamp(*sol, stat, tree);
 
-   CHECK_OKAY( SCIPprimalSolCreated(primal, memhdr, set, *sol) );
+   CHECK_OKAY( SCIPprimalSolCreated(primal, set, *sol) );
 
    return SCIP_OKAY;
 }
@@ -268,7 +268,7 @@ RETCODE SCIPsolCopy(
    (*sol)->runnum = sourcesol->runnum;
    (*sol)->depth = sourcesol->depth;
 
-   CHECK_OKAY( SCIPprimalSolCreated(primal, memhdr, set, *sol) );
+   CHECK_OKAY( SCIPprimalSolCreated(primal, set, *sol) );
 
    return SCIP_OKAY;
 }
@@ -290,7 +290,7 @@ RETCODE SCIPsolCreateLPSol(
    assert(lp->solved);
 
    CHECK_OKAY( SCIPsolCreate(sol, memhdr, set, stat, primal, tree, heur) );
-   CHECK_OKAY( SCIPsolLinkLPSol(*sol, memhdr, set, stat, tree, lp) );
+   CHECK_OKAY( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -310,7 +310,7 @@ RETCODE SCIPsolCreatePseudoSol(
    assert(sol != NULL);
 
    CHECK_OKAY( SCIPsolCreate(sol, memhdr, set, stat, primal, tree, heur) );
-   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, memhdr, set, stat, tree, lp) );
+   CHECK_OKAY( SCIPsolLinkPseudoSol(*sol, set, stat, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -375,7 +375,6 @@ void SCIPsolSetHeur(
 /** copies current LP solution into CIP solution by linking */
 RETCODE SCIPsolLinkLPSol(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
@@ -433,7 +432,6 @@ RETCODE SCIPsolLinkLPSol(
 /** copies current pseudo solution into CIP solution by linking */
 RETCODE SCIPsolLinkPseudoSol(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
@@ -462,7 +460,6 @@ RETCODE SCIPsolLinkPseudoSol(
 /** copies current solution (LP or pseudo solution) into CIP solution by linking */
 RETCODE SCIPsolLinkCurrentSol(
    SOL*             sol,                /**< primal CIP solution */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    TREE*            tree,               /**< branch and bound tree */
@@ -475,11 +472,11 @@ RETCODE SCIPsolLinkCurrentSol(
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      CHECK_OKAY( SCIPsolLinkLPSol(sol, memhdr, set, stat, tree, lp) );
+      CHECK_OKAY( SCIPsolLinkLPSol(sol, set, stat, tree, lp) );
    }
    else
    {
-      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, memhdr, set, stat, tree, lp) );
+      CHECK_OKAY( SCIPsolLinkPseudoSol(sol, set, stat, tree, lp) );
    }
 
    return SCIP_OKAY;
@@ -827,7 +824,6 @@ RETCODE SCIPsolRound(
 /** updates the solution value sums in variables by adding the value in the given solution */
 void SCIPsolUpdateVarsum(
    SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem data */
    Real             weight              /**< weight of solution in weighted average */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.35 2005/01/18 09:26:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.36 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -184,14 +184,18 @@ RETCODE SCIPdispExit(
 /** output display column to screen */
 RETCODE SCIPdispOutput(
    DISP*            disp,               /**< display column */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
    assert(disp != NULL);
    assert(disp->dispoutput != NULL);
    assert(set != NULL);
 
-   CHECK_OKAY( disp->dispoutput(set->scip, disp, stdout) );
+   if( file == NULL )
+      file = stdout;
+
+   CHECK_OKAY( disp->dispoutput(set->scip, disp, file) );
 
    return SCIP_OKAY;
 }
@@ -301,6 +305,7 @@ Bool SCIPdispIsInitialized(
 RETCODE SCIPdispPrintLine(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   FILE*            file,               /**< output file (or NULL for standard output) */
    Bool             forcedisplay        /**< should the line be printed without regarding frequency? */
    )
 {
@@ -321,6 +326,10 @@ RETCODE SCIPdispPrintLine(
       int j;
       Bool stripline;
 
+      /* use stdout, if file is unspecified */
+      if( file == NULL )
+         file = stdout;
+
       /* display header line */
       if( (set->disp_headerfreq == 0 && stat->ndisplines == 0)
          || (set->disp_headerfreq > 0 && stat->ndisplines % set->disp_headerfreq == 0) )
@@ -334,17 +343,17 @@ RETCODE SCIPdispPrintLine(
             if( set->disps[i]->active )
             {
                if( stripline )
-                  printf("|");
+                  fprintf(file, "|");
                fillspace = set->disps[i]->width - (int)strlen(set->disps[i]->header);
                for( j = 0; j < (fillspace)/2; ++j )
-                  printf(" ");
-               printf(set->disps[i]->header);
+                  fprintf(file, " ");
+               fprintf(file, set->disps[i]->header);
                for( j = 0; j < (fillspace+1)/2; ++j )
-                  printf(" ");
+                  fprintf(file, " ");
                stripline = set->disps[i]->stripline;
             }
          }
-         printf("\n");
+         fprintf(file, "\n");
       }
 
       /* display node information line */
@@ -355,12 +364,12 @@ RETCODE SCIPdispPrintLine(
          if( set->disps[i]->active )
          {
             if( stripline )
-               printf("|");
-            CHECK_OKAY( SCIPdispOutput(set->disps[i], set) );
+               fprintf(file, "|");
+            CHECK_OKAY( SCIPdispOutput(set->disps[i], set, file) );
             stripline = set->disps[i]->stripline;
          }
       }
-      printf("\n");
+      fprintf(file, "\n");
       fflush(stdout);
 
       stat->lastdispnode = stat->nnodes;

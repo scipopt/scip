@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.73 2005/01/18 09:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.74 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -426,7 +426,6 @@ RETCODE consdataFree(
 /** prints set partitioning / packing / covering constraint to file stream */
 static
 void consdataPrint(
-   SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< set partitioning / packing / covering constraint data */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
@@ -2382,7 +2381,7 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
 static
 DECL_CONSPRINT(consPrintSetppc)
 {
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   consdataPrint(SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;
 }

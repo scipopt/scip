@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.17 2005/01/18 09:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.18 2005/01/18 14:34:27 bzfpfend Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -220,6 +220,7 @@ void SCIPbufferFreeMem(
    assert(buffer != NULL);
    assert(buffer->firstfree <= buffer->ndata);
    assert(buffer->firstfree >= 1);
+   assert(dummysize == 0);
 
    /* Search the pointer in the buffer list
     * Usally, buffers are allocated and freed like a stack, such that the freed pointer is

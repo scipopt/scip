@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.131 2005/01/18 09:26:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.132 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -575,8 +575,6 @@ RETCODE SCIPboundchgUndo(
    )
 {
    VAR* var;
-   int depth;
-   int pos;
 
    assert(boundchg != NULL);
    assert(stat != NULL);
@@ -990,7 +988,6 @@ static
 RETCODE domchgShrinkBdchgs(
    DOMCHG*          domchg,             /**< domain change to apply */
    MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
    int              newnbdchgs          /**< new number of bound changes */
    )
 {
@@ -1072,7 +1069,7 @@ RETCODE SCIPdomchgApply(
    /* clean up deactivated bound changes and all bound changes from the point on where a cutoff was detected */
    if( j < (int)domchg->domchgbound.nboundchgs )
    {
-      CHECK_OKAY( domchgShrinkBdchgs(domchg, memhdr, set, j) );
+      CHECK_OKAY( domchgShrinkBdchgs(domchg, memhdr, j) );
    }
    assert((int)domchg->domchgbound.nboundchgs == j);
 
@@ -1130,7 +1127,6 @@ RETCODE SCIPdomchgAddBoundchg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< variable to change the bounds for */
    Real             newbound,           /**< new value for bound */
    BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
@@ -1146,7 +1142,6 @@ RETCODE SCIPdomchgAddBoundchg(
    BOUNDCHG* boundchg;
 
    assert(domchg != NULL);
-   assert(stat != NULL);
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
@@ -1227,7 +1222,6 @@ RETCODE SCIPdomchgAddHolechg(
    DOMCHG**         domchg,             /**< pointer to domain change data structure */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    HOLELIST**       ptr,                /**< changed list pointer */
    HOLELIST*        newlist,            /**< new value of list pointer */
    HOLELIST*        oldlist             /**< old value of list pointer */
@@ -1497,7 +1491,6 @@ RETCODE implicsEnsureSize(
 static
 RETCODE implicsSearchVar(
    IMPLICS**        implics,            /**< pointer to implications data structure */
-   SET*             set,                /**< global SCIP settings */
    VAR*             implvar,            /**< variable y to search for */
    BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
    Bool             i,                  /**< FALSE if y is searched in implications for x <= 0, TRUE for x >= 1 */
@@ -1654,7 +1647,7 @@ RETCODE implicsAdd(
    /* searches if variable is allready contained in implications data structure */
    if( *implics != NULL )
    {
-      CHECK_OKAY( implicsSearchVar(implics, set, implvar, impltype, i, &poslower, &posupper, &posadd) );
+      CHECK_OKAY( implicsSearchVar(implics, implvar, impltype, i, &poslower, &posupper, &posadd) );
       assert(poslower >= 0);
       assert(posupper >= 0);
       assert(posadd >= 0 && posadd <= (*implics)->nimpls[i]);
@@ -3114,7 +3107,6 @@ RETCODE SCIPvarAggregate(
    Real** implbounds;
    Real* coefs;
    Real* constants;
-   Real* bounds;
    Real obj;
    Real branchfactor;
    Bool implconflict[2];

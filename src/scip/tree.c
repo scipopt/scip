@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.127 2005/01/18 09:26:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.128 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1362,8 +1362,7 @@ RETCODE SCIPnodeAddBoundinfer(
          lpsolval = SCIP_INVALID;
 
       /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
-      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
-            var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
+      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, var, newbound, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING, 
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
       
       /* update the child's lower bound */
@@ -1380,8 +1379,8 @@ RETCODE SCIPnodeAddBoundinfer(
    else
    {
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
-      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, stat,
-            var, newbound, boundtype, infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER, 
+      CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, var, newbound, boundtype,
+            infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER, 
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
 
       /* update the inference history */
@@ -1458,7 +1457,7 @@ RETCODE SCIPnodeAddHolechg(
 
    stat->nholechgs++;
 
-   CHECK_OKAY( SCIPdomchgAddHolechg(&node->domchg, memhdr, set, stat, ptr, newlist, oldlist) );
+   CHECK_OKAY( SCIPdomchgAddHolechg(&node->domchg, memhdr, set, ptr, newlist, oldlist) );
 
    /**@todo apply hole change on active nodes and issue event */
 

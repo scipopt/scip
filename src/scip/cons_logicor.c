@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.69 2005/01/18 09:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.70 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -83,6 +83,7 @@ struct ConsData
  * Local methods
  */
 
+#if 0
 /** installs rounding locks for the given variable in the given logic or constraint */
 static
 RETCODE lockRounding(
@@ -96,6 +97,7 @@ RETCODE lockRounding(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** removes rounding locks for the given variable in the given logic or constraint */
 static
@@ -455,7 +457,6 @@ RETCODE processWatchedVars(
    int watchedvar1;
    int watchedvar2;
    int v;
-   int i;
    Bool infeasible;
 
    assert(cons != NULL);
@@ -665,7 +666,6 @@ RETCODE createRow(
    )
 {
    CONSDATA* consdata;
-   int v;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);

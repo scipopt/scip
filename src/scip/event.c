@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.40 2005/01/18 09:26:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.41 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -591,7 +591,6 @@ RETCODE SCIPeventChgSol(
 /** processes event by calling the appropriate event handlers */
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
-   MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
    LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
@@ -619,7 +618,7 @@ RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_LPSOLVED:
    case SCIP_EVENTTYPE_POORSOLFOUND:
    case SCIP_EVENTTYPE_BESTSOLFOUND:
-      CHECK_OKAY( SCIPeventfilterProcess(eventfilter, memhdr, set, event) );
+      CHECK_OKAY( SCIPeventfilterProcess(eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_VARFIXED:
@@ -627,7 +626,7 @@ RETCODE SCIPeventProcess(
       assert(var != NULL);
 
       /* process variable's event filter */
-      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, memhdr, set, event) );
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_LOCKSCHANGED:
@@ -635,7 +634,7 @@ RETCODE SCIPeventProcess(
       assert(var != NULL);
 
       /* process variable's event filter */
-      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, memhdr, set, event) );
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_OBJCHANGED:
@@ -658,7 +657,7 @@ RETCODE SCIPeventProcess(
       SCIPprimalUpdateVarObj(primal, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj);
 
       /* process variable's event filter */
-      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, memhdr, set, event) );
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_LBTIGHTENED:
@@ -681,7 +680,7 @@ RETCODE SCIPeventProcess(
       }
 
       /* process variable's event filter */
-      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, memhdr, set, event) );
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -704,7 +703,7 @@ RETCODE SCIPeventProcess(
       }
 
       /* process variable's event filter */
-      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, memhdr, set, event) );
+      CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
    case SCIP_EVENTTYPE_HOLEADDED:
@@ -1022,7 +1021,6 @@ void eventfilterProcessUpdates(
 /** processes the event with all event handlers with matching filter setting */
 RETCODE SCIPeventfilterProcess(
    EVENTFILTER*     eventfilter,        /**< event filter */
-   MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
    EVENT*           event               /**< event to process */
    )
@@ -1187,7 +1185,7 @@ RETCODE SCIPeventqueueAdd(
    if( !eventqueue->delayevents )
    {
       /* immediately process event */
-      CHECK_OKAY( SCIPeventProcess(*event, memhdr, set, primal, lp, branchcand, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(*event, set, primal, lp, branchcand, eventfilter) );
       CHECK_OKAY( SCIPeventFree(event, memhdr) );
    }
    else
@@ -1442,7 +1440,7 @@ RETCODE SCIPeventqueueProcess(
       }
 
       /* process event */
-      CHECK_OKAY( SCIPeventProcess(event, memhdr, set, primal, lp, branchcand, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(event, set, primal, lp, branchcand, eventfilter) );
 
       /* free the event immediately, because additionally raised events during event processing
        * can lead to a large event queue

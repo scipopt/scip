@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.39 2005/01/18 09:26:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.40 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -354,7 +354,6 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   COL** cutcols;
                   Real* cutvals;
                   Real cutnorm;
-                  Real cutact;
                   int cutlen;
 
                   /* if this is the first successful cut, get the LP solution for all COLUMN variables */

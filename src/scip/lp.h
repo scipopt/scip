@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.97 2005/01/18 09:26:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.98 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -874,7 +874,6 @@ RETCODE SCIPlpUpdateVarLoose(
 extern
 RETCODE SCIPlpGetSol(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
@@ -885,7 +884,6 @@ RETCODE SCIPlpGetSol(
 extern
 RETCODE SCIPlpGetUnboundedSol(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
@@ -894,7 +892,6 @@ RETCODE SCIPlpGetUnboundedSol(
 extern
 RETCODE SCIPlpGetDualfarkas(
    LP*              lp,                 /**< current LP data */
-   MEMHDR*          memhdr,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
@@ -912,7 +909,6 @@ RETCODE SCIPlpGetIterations(
 extern
 RETCODE SCIPlpUpdateAges(
    LP*              lp,                 /**< current LP data */
-   SET*             set,                /**< global SCIP settings */
    STAT*            stat                /**< problem statistics */
    );
 

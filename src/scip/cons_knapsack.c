@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.77 2005/01/18 09:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.78 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -900,11 +900,8 @@ RETCODE SCIPseparateKnapsackCardinality(
          if( SCIPisEfficacious(scip, (activity + liftlpval - ncovervars)/sqrt((Real)ncovervars)) )
          {
             ROW* row;
-            Real cutnorm;
-            Real cutfeas;
             char name[MAXSTRLEN];
             int v;
-            
             
             /* create LP row */
             sprintf(name, "%s_card%lld_%d", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), i);
@@ -975,7 +972,6 @@ RETCODE separateCons(
    )
 {
    CONSDATA* consdata;
-   Real feasibility;
    Bool violated;
 
    assert(ncuts != NULL);
@@ -1387,7 +1383,6 @@ RETCODE applyFixings(
 /** divides weights by their greatest common divisor and divides capacity by the same value, rounding down the result */
 static
 void normalizeWeights(
-   SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    int*             nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*             nchgsides           /**< pointer to count number of side changes */
@@ -1448,7 +1443,6 @@ void normalizeWeights(
  */
 static
 void tightenWeights(
-   SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    int*             nchgcoefs,          /**< pointer to count total number of changed coefficients */
    int*             nchgsides           /**< pointer to count number of side changes */
@@ -1651,7 +1645,6 @@ DECL_CONSSEPA(consSepaKnapsack)
 {  /*lint --e{715}*/
    CONSHDLRDATA* conshdlrdata;
    Bool sepacardinality;
-   Bool separated;
    int depth;
    int nrounds;
    int sepafreq;
@@ -1890,10 +1883,10 @@ DECL_CONSPRESOL(consPresolKnapsack)
       if( !SCIPconsIsModifiable(cons) )
       {
          /* divide weights by their greatest common divisor */
-         normalizeWeights(scip, cons, nchgcoefs, nchgsides);
+         normalizeWeights(cons, nchgcoefs, nchgsides);
 
          /* tighten capacity and weights */
-         tightenWeights(scip, cons, nchgcoefs, nchgsides);
+         tightenWeights(cons, nchgcoefs, nchgsides);
       }
    } 
 

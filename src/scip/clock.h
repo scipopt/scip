@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.10 2005/01/18 09:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.11 2005/01/18 14:34:27 bzfpfend Exp $"
 
 /**@file   clock.h
  * @brief  internal methods for clocks and timing issues
@@ -36,78 +36,78 @@
 /** creates a clock and initializes it */
 extern
 RETCODE SCIPclockCreate(
-   CLOCK**          clock,              /**< pointer to clock timer */
+   CLOCK**          clck,               /**< pointer to clock timer */
    CLOCKTYPE        clocktype           /**< type of clock */
    );
 
 /** frees a clock */
 extern
 void SCIPclockFree(
-   CLOCK**          clock               /**< pointer to clock timer */
+   CLOCK**          clck                /**< pointer to clock timer */
    );
 
 /** initializes and resets a clock */
 extern
 void SCIPclockInit(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    CLOCKTYPE        clocktype           /**< type of clock */
    );
 
 /** completely stop the clock and reset the clock's counter to zero */
 extern
 void SCIPclockReset(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    );
 
 /** enables the clock */
 extern
 void SCIPclockEnable(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    );
 
 /** disables and resets the clock */
 extern
 void SCIPclockDisable(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    );
 
 /** sets the type of the clock, overriding the default clock type, and resets the clock */
 extern
 void SCIPclockSetType(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    CLOCKTYPE        clocktype           /**< type of clock */
    );
 
 /** starts measurement of time in the given clock, update the clock's type if it is bound to the default type */
 extern
 void SCIPclockStart(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    SET*             set                 /**< global SCIP settings */
    );
 
 /** stops measurement of time in the given clock */
 extern
 void SCIPclockStop(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    SET*             set                 /**< global SCIP settings */
    );
 
 /** returns whether the clock is currently running */
 extern
 Bool SCIPclockIsRunning(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    );
 
 /** gets the used time of this clock in seconds */
 extern
 Real SCIPclockGetTime(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    );
 
 /** sets the used time of this clock in seconds */
 extern
 void SCIPclockSetTime(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    Real             sec                 /**< time in seconds to set the clock's timer to */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.30 2005/01/18 09:26:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.31 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -97,6 +97,7 @@ typedef enum Proprule PROPRULE;
  * Local methods
  */
 
+#if 0
 /** installs rounding locks for the given variable in the given or constraint */
 static
 RETCODE lockRounding(
@@ -110,6 +111,7 @@ RETCODE lockRounding(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** removes rounding locks for the given variable in the given or constraint */
 static
@@ -775,7 +777,6 @@ RETCODE analyzeConflictZero(
    )
 {
    CONSDATA* consdata;
-   int v;
 
    /* conflict analysis can only be applied in solving stage */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )

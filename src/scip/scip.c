@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.242 2005/01/18 09:26:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.243 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -241,6 +241,24 @@ RETCODE checkStage(
       if( !presolved )
       {
          errorMessage("cannot call method <%s> in problem presolved stage\n", method);
+         return SCIP_INVALIDCALL;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+      assert(scip->stat != NULL);
+      assert(scip->origprob != NULL);
+      assert(scip->eventfilter != NULL);
+      assert(scip->eventqueue != NULL);
+      assert(scip->branchcand != NULL);
+      assert(scip->lp != NULL);
+      assert(scip->primal != NULL);
+      assert(scip->tree != NULL);
+      assert(scip->transprob != NULL);
+
+      if( !initsolve )
+      {
+         errorMessage("cannot call method <%s> in init solve stage\n", method);
          return SCIP_INVALIDCALL;
       }
       return SCIP_OKAY;
@@ -4355,7 +4373,6 @@ RETCODE SCIPgetVarSols(
    )
 {
    int v;
-   Bool uselp;
 
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
@@ -6599,8 +6616,7 @@ RETCODE SCIPaddConflictLb(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddConflictLb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-         var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
+   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_LOWER, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -6621,8 +6637,7 @@ RETCODE SCIPaddConflictUb(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddConflictUb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-         var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
+   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_UPPER, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -6644,8 +6659,7 @@ RETCODE SCIPaddConflictBd(
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddConflictBd", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-         var, boundtype, bdchgidx) );
+   CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, boundtype, bdchgidx) );
 
    return SCIP_OKAY;
 }
@@ -6667,13 +6681,11 @@ RETCODE SCIPaddConflictBinvar(
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
    if( SCIPvarGetLbLocal(var) > 0.5 )
    {
-      CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-            var, SCIP_BOUNDTYPE_LOWER, NULL) );
+      CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_LOWER, NULL) );
    }
    else if( SCIPvarGetUbLocal(var) < 0.5 )
    {
-      CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->mem->solvemem, scip->set, scip->stat,
-            var, SCIP_BOUNDTYPE_UPPER, NULL) );
+      CHECK_OKAY( SCIPconflictAddBound(scip->conflict, scip->set, var, SCIP_BOUNDTYPE_UPPER, NULL) );
    }
 
    return SCIP_OKAY;
@@ -8801,7 +8813,7 @@ RETCODE SCIPlinkLPSol(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsolLinkLPSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp) );
+   CHECK_OKAY( SCIPsolLinkLPSol(sol, scip->set, scip->stat, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -8814,7 +8826,7 @@ RETCODE SCIPlinkPseudoSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPlinkPseudoSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolLinkPseudoSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp) );
+   CHECK_OKAY( SCIPsolLinkPseudoSol(sol, scip->set, scip->stat, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -8827,7 +8839,7 @@ RETCODE SCIPlinkCurrentSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPlinkCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolLinkCurrentSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp) );
+   CHECK_OKAY( SCIPsolLinkCurrentSol(sol, scip->set, scip->stat, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -11023,7 +11035,7 @@ RETCODE SCIPprintDisplayLine(
 
    if( (VERBLEVEL)scip->set->disp_verblevel >= verblevel )
    {
-      CHECK_OKAY( SCIPdispPrintLine(scip->set, scip->stat, TRUE) );
+      CHECK_OKAY( SCIPdispPrintLine(scip->set, scip->stat, file, TRUE) );
    }
 
    return SCIP_OKAY;
@@ -11457,6 +11469,7 @@ void SCIPfreeBufferSize(
    )
 {  /*lint --e{715}*/
    assert(ptr != NULL);
+   assert(dummysize == 0);
 
    CHECK_ABORT( checkStage(scip, "SCIPfreeBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.54 2005/01/18 09:26:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.55 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -483,7 +483,7 @@ RETCODE primalAddSol(
       insertpos, primal->nsols, primal->nsolsfound);
 
    /* update the solution value sums in variables */
-   SCIPsolUpdateVarsum(sol, set, stat, prob, (Real)(primal->nsols - insertpos)/(Real)(2.0*primal->nsols - 1.0));
+   SCIPsolUpdateVarsum(sol, stat, prob, (Real)(primal->nsols - insertpos)/(Real)(2.0*primal->nsols - 1.0));
 
    /* change color of node in VBC output */
    SCIPvbcFoundSolution(stat->vbc, stat, SCIPtreeGetCurrentNode(tree));
@@ -500,7 +500,7 @@ RETCODE primalAddSol(
       primal->nbestsolsfound++;
       
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, TRUE) );
    }
    else
    {
@@ -508,7 +508,7 @@ RETCODE primalAddSol(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
    }
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
-   CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -652,7 +652,7 @@ RETCODE primalLinkCurrentSol(
    }
    else
    {
-      CHECK_OKAY( SCIPsolLinkCurrentSol(primal->currentsol, memhdr, set, stat, tree, lp) );
+      CHECK_OKAY( SCIPsolLinkCurrentSol(primal->currentsol, set, stat, tree, lp) );
       SCIPsolSetHeur(primal->currentsol, heur);
    }
 
@@ -833,7 +833,6 @@ RETCODE SCIPprimalTryCurrentSol(
 /** inserts solution into the global array of all existing primal solutions */
 RETCODE SCIPprimalSolCreated(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    SOL*             sol                 /**< primal CIP solution */
    )

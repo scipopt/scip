@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.157 2005/01/18 09:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.158 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -178,7 +178,6 @@ RETCODE redcostStrengthening(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
@@ -653,7 +652,7 @@ RETCODE solveNodeInitialLP(
       /* issue FIRSTLPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_FIRSTLPSOLVED) );
       CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
       
       /* update pseudo cost values */
       CHECK_OKAY( updatePseudocost(set, stat, tree, lp) );
@@ -836,7 +835,7 @@ RETCODE priceAndCutLoop(
          /* display node information line for root node */
          if( root && mustprice && (VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_FULL )
          {
-            CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+            CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, TRUE) );
          }
 
          /* if the LP is unbounded, we can stop pricing */
@@ -860,7 +859,7 @@ RETCODE priceAndCutLoop(
       /* display node information line for root node */
       if( root && (VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
       {
-         CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
+         CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, TRUE) );
       }
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
@@ -991,7 +990,7 @@ RETCODE priceAndCutLoop(
                if( (set->prop_redcostfreq == 0 && root)
                   || (set->prop_redcostfreq > 0 && actdepth % set->prop_redcostfreq == 0) )
                {
-                  CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, primal, tree, lp, branchcand, eventqueue) );
+                  CHECK_OKAY( redcostStrengthening(memhdr, set, stat, primal, tree, lp, branchcand, eventqueue) );
                }
             }
         
@@ -1049,7 +1048,7 @@ RETCODE priceAndCutLoop(
       /* issue LPSOLVED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_LPSOLVED) );
       CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
       /* analyze an infeasible LP (not necessary in the root node) */
       if( !set->misc_exactsolve && !root
@@ -1182,6 +1181,9 @@ RETCODE solveNodeRelax(
 
    for( r = 0; r < set->nrelaxs && !(*cutoff); ++r )
    {
+      if( beforelp != (SCIPrelaxGetPriority(set->relaxs[r]) >= 0) )
+         continue;
+
       CHECK_OKAY( SCIPrelaxExec(set->relaxs[r], set, stat, depth, &result) );
 
       switch( result )
@@ -1578,7 +1580,6 @@ RETCODE solveNode(
    {
       Real pseudoobjval;
       Bool lperror;
-      Longint olddomchgcount;
       int r;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -1909,7 +1910,6 @@ RETCODE solveNode(
 static
 RETCODE primalHeuristics(
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
@@ -1968,7 +1968,6 @@ RETCODE addCurrentSolution(
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
    )
 {
@@ -2157,7 +2156,7 @@ RETCODE SCIPsolveCIP(
       /* issue NODEFOCUSED event */
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
-      CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
       /* solve focus node */
       CHECK_OKAY( solveNode(memhdr, set, stat, prob, primal, tree, lp, pricestore, sepastore, branchcand, cutpool,
@@ -2181,12 +2180,12 @@ RETCODE SCIPsolveCIP(
             assert(!cutoff);
 
             /* node solution is feasible: add it to the solution store */
-            CHECK_OKAY( addCurrentSolution(memhdr, set, stat, prob, primal, tree, lp, branchcand, eventfilter) );
+            CHECK_OKAY( addCurrentSolution(memhdr, set, stat, prob, primal, tree, lp, eventfilter) );
 
             /* issue NODEFEASIBLE event */
             CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
             CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
-            CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+            CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          }
          else if( !unbounded )
          {
@@ -2209,7 +2208,7 @@ RETCODE SCIPsolveCIP(
                CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
             }
             CHECK_OKAY( SCIPeventChgNode(&event, focusnode) );
-            CHECK_OKAY( SCIPeventProcess(&event, memhdr, set, NULL, NULL, NULL, eventfilter) );
+            CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -2256,7 +2255,7 @@ RETCODE SCIPsolveCIP(
 
          /* call primal heuristics */
          nnodes = SCIPtreeGetNNodes(tree);
-         CHECK_OKAY( primalHeuristics(set, stat, primal, tree, nextnode, &foundsol) );
+         CHECK_OKAY( primalHeuristics(set, primal, tree, nextnode, &foundsol) );
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
          /* if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
@@ -2268,7 +2267,7 @@ RETCODE SCIPsolveCIP(
       }
 
       /* display node information line */
-      CHECK_OKAY( SCIPdispPrintLine(set, stat, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
+      CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol) );
 
       debugMessage("Processing of node in depth %d finished. %d siblings, %d children, %d leaves left\n", 
          SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));

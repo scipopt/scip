@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.27 2005/01/18 09:26:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.28 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -497,7 +497,6 @@ RETCODE aggregation(
       COL** bestrownonzcols;     /* columns with nonzero coefficients in best row to add */
       Real* bestrownonzcoefs;    /* nonzero coefficients of columns in best row to add */
       int nbestrownonzcols;      /* number of columns with nonzero coefficients in best row to add */
-      Real bestrowact;           /* activity of best row to add */
       Real bestbounddist;
       Real bestscore;
       Real aggrfac;

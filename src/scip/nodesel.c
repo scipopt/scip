@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.40 2005/01/18 09:26:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.41 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -178,8 +178,6 @@ RETCODE SCIPnodepqFree(
    LP*              lp                  /**< current LP data */
    )
 {
-   int i;
-
    assert(nodepq != NULL);
    assert(*nodepq != NULL);
 

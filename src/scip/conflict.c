@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.81 2005/01/18 09:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.82 2005/01/18 14:34:27 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -737,9 +737,7 @@ RETCODE conflictAddBdchginfo(
 /** adds variable's bound to conflict candidate queue */
 RETCODE SCIPconflictAddBound(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    VAR*             var,                /**< problem variable */
    BOUNDTYPE        boundtype,          /**< type of bound that was changed: lower or upper bound */
    BDCHGIDX*        bdchgidx            /**< bound change index (time stamp of bound change), or NULL for current time */
@@ -1085,10 +1083,7 @@ RETCODE conflictAddClause(
 static
 RETCODE conflictResolveBound(
    CONFLICT*        conflict,           /**< conflict analysis data */
-   MEMHDR*          memhdr,             /**< block memory of transformed problem */
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
-   TREE*            tree,               /**< branch and bound tree */
    BDCHGINFO*       bdchginfo,          /**< bound change to resolve */
    int*             validdepth,         /**< pointer to update the minimal depth level at which the conflict is valid */
    Bool*            resolved            /**< pointer to store whether the bound change was resolved */
@@ -1349,7 +1344,7 @@ RETCODE conflictCreateReconvergenceClauses(
                   && nextbdchginfo != NULL
                   && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
             {
-               CHECK_OKAY( conflictResolveBound(conflict, memhdr, set, stat, tree, bdchginfo, &validdepth, &resolved) );
+               CHECK_OKAY( conflictResolveBound(conflict, set, bdchginfo, &validdepth, &resolved) );
             }
 
             if( resolved )
@@ -1574,7 +1569,7 @@ RETCODE conflictAnalyze(
                && nextbdchginfo != NULL
                && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
          {
-            CHECK_OKAY( conflictResolveBound(conflict, memhdr, set, stat, tree, bdchginfo, &validdepth, &resolved) );
+            CHECK_OKAY( conflictResolveBound(conflict, set, bdchginfo, &validdepth, &resolved) );
          }
 
          if( resolved )
@@ -2738,7 +2733,6 @@ RETCODE undoBdchgsProof(
 static
 RETCODE undoBdchgsDualfarkas(
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Real*            curvarlbs,          /**< current lower bounds of active problem variables */
@@ -2922,7 +2916,6 @@ RETCODE undoBdchgsDualfarkas(
 static
 RETCODE undoBdchgsDualsol(
    SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
    LP*              lp,                 /**< LP data */
    Real*            curvarlbs,          /**< current lower bounds of active problem variables */
@@ -2952,8 +2945,6 @@ RETCODE undoBdchgsDualsol(
    Real* varredcosts;
    Real duallhs;
    Real dualact;
-   Real duallhsdelta;
-   Real dualactdelta;
    int nrows;
    int ncols;
    int nvars;
@@ -3755,14 +3746,14 @@ RETCODE conflictAnalyzeLP(
             /* undo additional bound changes */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
-               CHECK_OKAY( undoBdchgsDualfarkas(set, stat, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+               CHECK_OKAY( undoBdchgsDualfarkas(set, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
                      &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
                      &valid, &resolve) );
             }
             else
             {
                assert(SCIPlpiIsOptimal(lpi));
-               CHECK_OKAY( undoBdchgsDualsol(set, stat, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+               CHECK_OKAY( undoBdchgsDualsol(set, prob, lp, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
                      &bdchginds, &bdchgoldlbs, &bdchgoldubs, &bdchgnewlbs, &bdchgnewubs, &bdchgssize, &nbdchgs,
                      &valid, &resolve) );
             }

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.93 2005/01/18 09:26:40 bzfpfend Exp $
+# $Id: Makefile,v 1.94 2005/01/18 14:34:27 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -65,16 +65,18 @@ LDFLAGS		=	-lpthread -lm
 ARFLAGS		=	cr
 DFLAGS		=	-MM
 
-GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings \
-			-Wmissing-declarations -Wno-unknown-pragmas \
-			-Wno-unused
+GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
+			-Wsign-compare -Wstrict-prototypes \
+			-Wmissing-declarations -Wmissing-prototypes
 
-GXXWARN		=	-Wall -W -Wpointer-arith \
-			-Wcast-align -Wwrite-strings -Wconversion \
-			-Wno-unknown-pragmas \
+GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)

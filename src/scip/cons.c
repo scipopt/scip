@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.106 2005/01/18 09:26:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.107 2005/01/18 14:34:28 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -232,9 +232,6 @@ Bool consExceedsObsoleteage(
 static
 RETCODE conshdlrMarkConsObsolete(
    CONSHDLR*        conshdlr,           /**< constraint handler */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   PROB*            prob,               /**< problem data */
    CONS*            cons                /**< constraint to be marked obsolete */
    )
 {
@@ -1105,8 +1102,7 @@ RETCODE conshdlrProcessUpdates(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< problem data */
-   int              depth               /**< depth in the tree where the update processing takes place, or -1 for global problem */
+   PROB*            prob                /**< problem data */
    )
 {
    CONS* cons;
@@ -1211,7 +1207,7 @@ RETCODE conshdlrProcessUpdates(
          if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
          {
             /* the constraint's status must be switched to obsolete */
-            CHECK_OKAY( conshdlrMarkConsObsolete(conshdlr, memhdr, set, prob, cons) );
+            CHECK_OKAY( conshdlrMarkConsObsolete(conshdlr, cons) );
          }
          else if( cons->obsolete && !consExceedsObsoleteage(cons, set) )
          {
@@ -1262,8 +1258,7 @@ RETCODE conshdlrForceUpdates(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< problem data */
-   int              depth               /**< depth in the tree where the update processing takes place, or -1 for global problem */
+   PROB*            prob                /**< problem data */
    )
 {
    assert(conshdlr != NULL);
@@ -1272,7 +1267,7 @@ RETCODE conshdlrForceUpdates(
    debugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
    conshdlr->delayupdates = FALSE;
 
-   CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, stat, prob, depth) );
+   CHECK_OKAY( conshdlrProcessUpdates(conshdlr, memhdr, set, stat, prob) );
    assert(conshdlr->nupdateconss == 0);
 
    return SCIP_OKAY;
@@ -1762,7 +1757,7 @@ RETCODE SCIPconshdlrInitLP(
       CHECK_OKAY( conshdlr->consinitlp(set->scip, conshdlr, conshdlr->conss, conshdlr->nconss) );
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, 0) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
    }
 
    return SCIP_OKAY;
@@ -1866,7 +1861,7 @@ RETCODE SCIPconshdlrSeparate(
          SCIPclockStop(conshdlr->sepatime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, depth) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -1999,7 +1994,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          SCIPclockStop(conshdlr->enfolptime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree)) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -2134,7 +2129,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIPclockStop(conshdlr->enfopstime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, SCIPtreeGetCurrentDepth(tree)) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -2214,7 +2209,7 @@ RETCODE SCIPconshdlrCheck(
       debugMessage(" -> checking returned result <%d>\n", *result);
       
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, -1) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
@@ -2322,7 +2317,7 @@ RETCODE SCIPconshdlrPropagate(
          SCIPclockStop(conshdlr->proptime, set);
 
          /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, depth) );
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
          /* check result code of callback method */
          if( *result != SCIP_CUTOFF
@@ -2455,7 +2450,7 @@ RETCODE SCIPconshdlrPresolve(
       conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
 
       /* perform the cached constraint updates */
-      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob, -1) );
+      CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
 
       /* check result code of callback method */
       if( *result != SCIP_CUTOFF
@@ -3899,7 +3894,7 @@ RETCODE SCIPconsAddAge(
       }
       else
       {
-         CHECK_OKAY( conshdlrMarkConsObsolete(cons->conshdlr, memhdr, set, prob, cons) );
+         CHECK_OKAY( conshdlrMarkConsObsolete(cons->conshdlr, cons) );
          assert(cons->obsolete);
       }
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.4 2005/01/18 09:26:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.5 2005/01/18 14:34:30 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -353,7 +353,6 @@ DECL_SEPAEXEC(SCIPsepaExecStrongcg)
                   COL** cutcols;
                   Real* cutvals;
                   Real cutnorm;
-                  Real cutact;
                   int cutlen;
 
                   /* if this is the first successful cut, get the LP solution for all COLUMN variables */

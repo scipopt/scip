@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.25 2005/01/18 09:26:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.26 2005/01/18 14:34:29 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -190,7 +190,6 @@ RETCODE SCIPprimalTryCurrentSol(
 extern
 RETCODE SCIPprimalSolCreated(
    PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    SOL*             sol                 /**< primal CIP solution */
    );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.14 2005/01/18 09:26:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.15 2005/01/18 14:34:27 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -45,30 +45,30 @@
 /** sets the clock's type and converts the clock timer accordingly */
 static
 void clockSetType(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    CLOCKTYPE        newtype             /**< new clock type */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
    assert(newtype != SCIP_CLOCKTYPE_DEFAULT);
 
-   if( clock->clocktype != newtype )
+   if( clck->clocktype != newtype )
    {
-      if( clock->clocktype == SCIP_CLOCKTYPE_DEFAULT )
+      if( clck->clocktype == SCIP_CLOCKTYPE_DEFAULT )
       {
-         assert(clock->nruns == 0);
-         clock->clocktype = newtype;
-         SCIPclockReset(clock);
+         assert(clck->nruns == 0);
+         clck->clocktype = newtype;
+         SCIPclockReset(clck);
          debugMessage("switched clock type to %d\n", newtype);
       }
       else
       {
          Real sec;
          
-         sec = SCIPclockGetTime(clock);
-         clock->clocktype = newtype;
-         SCIPclockSetTime(clock, sec);
-         debugMessage("switched clock type to %d (%g seconds -> %g seconds)\n", newtype, sec, SCIPclockGetTime(clock));
+         sec = SCIPclockGetTime(clck);
+         clck->clocktype = newtype;
+         SCIPclockSetTime(clck, sec);
+         debugMessage("switched clock type to %d (%g seconds -> %g seconds)\n", newtype, sec, SCIPclockGetTime(clck));
       }
    }
 }
@@ -76,160 +76,160 @@ void clockSetType(
 /** if the clock uses the default clock type and the default changed, converts the clock timer to the new type */
 static
 void clockUpdateDefaultType(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    CLOCKTYPE        defaultclocktype    /**< default type of clock to use */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
    assert(defaultclocktype != SCIP_CLOCKTYPE_DEFAULT);
 
-   if( clock->usedefault && clock->clocktype != defaultclocktype )
-      clockSetType(clock, defaultclocktype);
+   if( clck->usedefault && clck->clocktype != defaultclocktype )
+      clockSetType(clck, defaultclocktype);
 }
 
 /** creates a clock and initializes it */
 RETCODE SCIPclockCreate(
-   CLOCK**          clock,              /**< pointer to clock timer */
+   CLOCK**          clck,               /**< pointer to clock timer */
    CLOCKTYPE        clocktype           /**< type of clock */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
-   ALLOC_OKAY( allocMemory(clock) );
+   ALLOC_OKAY( allocMemory(clck) );
 
-   SCIPclockInit(*clock, clocktype);
+   SCIPclockInit(*clck, clocktype);
 
    return SCIP_OKAY;
 }
 
 /** frees a clock */
 void SCIPclockFree(
-   CLOCK**          clock               /**< pointer to clock timer */
+   CLOCK**          clck                /**< pointer to clock timer */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
    
-   freeMemory(clock);
+   freeMemory(clck);
 }
 
 /** initializes and resets a clock */
 void SCIPclockInit(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    CLOCKTYPE        clocktype           /**< type of clock */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
-   debugMessage("initializing clock %p of type %d\n", clock, clocktype);
-   clock->enabled = TRUE;
-   SCIPclockSetType(clock, clocktype);
+   debugMessage("initializing clock %p of type %d\n", clck, clocktype);
+   clck->enabled = TRUE;
+   SCIPclockSetType(clck, clocktype);
 }
 
 /** completely stop the clock and reset the clock's counter to zero */
 void SCIPclockReset(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
-   debugMessage("resetting clock %p of type %d (usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
-   switch( clock->clocktype )
+   debugMessage("resetting clock %p of type %d (usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
+   switch( clck->clocktype )
    {
    case SCIP_CLOCKTYPE_DEFAULT:
       break;
    case SCIP_CLOCKTYPE_CPU:
-      clock->data.cpuclock.user = 0;
+      clck->data.cpuclock.user = 0;
       break;
    case SCIP_CLOCKTYPE_WALL:
-      clock->data.wallclock.sec = 0;
-      clock->data.wallclock.usec = 0;
+      clck->data.wallclock.sec = 0;
+      clck->data.wallclock.usec = 0;
       break;
    default:
       errorMessage("invalid clock type\n");
       abort();
    }
-   clock->nruns = 0;
+   clck->nruns = 0;
 }
 
 /** enables the clock */
 void SCIPclockEnable(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
-   debugMessage("enabling clock %p of type %d (usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
+   debugMessage("enabling clock %p of type %d (usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
 
-   clock->enabled = TRUE;
+   clck->enabled = TRUE;
 }
 
 /** disables and resets the clock */
 void SCIPclockDisable(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
-   debugMessage("disabling clock %p of type %d (usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
+   debugMessage("disabling clock %p of type %d (usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
 
-   clock->enabled = FALSE;
-   SCIPclockReset(clock);
+   clck->enabled = FALSE;
+   SCIPclockReset(clck);
 }
 
 /** sets the type of the clock, overriding the default clock type, and resets the clock */
 void SCIPclockSetType(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    CLOCKTYPE        clocktype           /**< type of clock */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
    debugMessage("setting type of clock %p (type %d, usedefault=%d) to %d\n", 
-      clock, clock->clocktype, clock->usedefault, clocktype);
+      clck, clck->clocktype, clck->usedefault, clocktype);
 
-   clock->clocktype = clocktype;
-   clock->usedefault = (clocktype == SCIP_CLOCKTYPE_DEFAULT);
-   SCIPclockReset(clock);
+   clck->clocktype = clocktype;
+   clck->usedefault = (clocktype == SCIP_CLOCKTYPE_DEFAULT);
+   SCIPclockReset(clck);
 }
 
 /** starts measurement of time in the given clock */
 void SCIPclockStart(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    SET*             set                 /**< global SCIP settings */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
    assert(set != NULL);
 
-   if( set->time_enabled && clock->enabled )
+   if( set->time_enabled && clck->enabled )
    {
-      clockUpdateDefaultType(clock, set->time_clocktype);
+      clockUpdateDefaultType(clck, set->time_clocktype);
 
-      if( clock->nruns == 0 )
+      if( clck->nruns == 0 )
       {
          struct timeval tp; /*lint !e86*/
          struct tms now;
          
-         debugMessage("starting clock %p (type %d, usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
+         debugMessage("starting clock %p (type %d, usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
 
-         switch( clock->clocktype )
+         switch( clck->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
             (void)times(&now);
-            clock->data.cpuclock.user -= now.tms_utime;
+            clck->data.cpuclock.user -= now.tms_utime;
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
             gettimeofday(&tp, NULL);
-            if( tp.tv_usec > clock->data.wallclock.usec ) /*lint !e115 !e40*/
+            if( tp.tv_usec > clck->data.wallclock.usec ) /*lint !e115 !e40*/
             {
-               clock->data.wallclock.sec -= (tp.tv_sec + 1); /*lint !e115 !e40*/
-               clock->data.wallclock.usec += (1000000 - tp.tv_usec); /*lint !e115 !e40*/
+               clck->data.wallclock.sec -= (tp.tv_sec + 1); /*lint !e115 !e40*/
+               clck->data.wallclock.usec += (1000000 - tp.tv_usec); /*lint !e115 !e40*/
             }
             else
             {
-               clock->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
-               clock->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
+               clck->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
+               clck->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
             }
             break;
 
@@ -239,49 +239,49 @@ void SCIPclockStart(
             abort();
          }
       }
-      clock->nruns++;
+      clck->nruns++;
    }
 }
 
 /** stops measurement of time in the given clock */
 void SCIPclockStop(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    SET*             set                 /**< global SCIP settings */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
    assert(set != NULL);
 
-   if( set->time_enabled && clock->enabled )
+   if( set->time_enabled && clck->enabled )
    {
-      assert(clock->nruns >= 1);
+      assert(clck->nruns >= 1);
 
-      clock->nruns--;
-      if( clock->nruns == 0 )
+      clck->nruns--;
+      if( clck->nruns == 0 )
       {
          struct timeval tp; /*lint !e86*/
          struct tms now;
          
-         debugMessage("stopping clock %p (type %d, usedefault=%d)\n", clock, clock->clocktype, clock->usedefault);
+         debugMessage("stopping clock %p (type %d, usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
 
-         switch( clock->clocktype )
+         switch( clck->clocktype )
          {
          case SCIP_CLOCKTYPE_CPU:
             (void)times(&now);
-            clock->data.cpuclock.user += now.tms_utime;
+            clck->data.cpuclock.user += now.tms_utime;
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
             gettimeofday(&tp, NULL);
-            if( tp.tv_usec + clock->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
+            if( tp.tv_usec + clck->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
             {
-               clock->data.wallclock.sec += (tp.tv_sec + 1); /*lint !e115 !e40*/
-               clock->data.wallclock.usec -= (1000000 - tp.tv_usec); /*lint !e115 !e40*/
+               clck->data.wallclock.sec += (tp.tv_sec + 1); /*lint !e115 !e40*/
+               clck->data.wallclock.usec -= (1000000 - tp.tv_usec); /*lint !e115 !e40*/
             }
             else
             {
-               clock->data.wallclock.sec += tp.tv_sec; /*lint !e115 !e40*/
-               clock->data.wallclock.usec += tp.tv_usec; /*lint !e115 !e40*/
+               clck->data.wallclock.sec += tp.tv_sec; /*lint !e115 !e40*/
+               clck->data.wallclock.usec += tp.tv_usec; /*lint !e115 !e40*/
             }
             break;
 
@@ -296,12 +296,12 @@ void SCIPclockStop(
 
 /** returns whether the clock is currently running */
 Bool SCIPclockIsRunning(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
-   return (clock->nruns > 0);
+   return (clck->nruns > 0);
 }
 
 /** converts CPU clock ticks into seconds */
@@ -367,27 +367,27 @@ void sec2walltime(
 
 /** gets the used time of this clock in seconds */
 Real SCIPclockGetTime(
-   CLOCK*           clock               /**< clock timer */
+   CLOCK*           clck                /**< clock timer */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
    debugMessage("getting time of clock %p (type %d, usedefault=%d, nruns=%d)\n",
-      clock, clock->clocktype, clock->usedefault, clock->nruns);
+      clck, clck->clocktype, clck->usedefault, clck->nruns);
 
-   if( clock->nruns == 0 )
+   if( clck->nruns == 0 )
    {
       /* the clock is not running: convert the clocks timer into seconds */
-      switch( clock->clocktype )
+      switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_DEFAULT:
          return 0.0;
 
       case SCIP_CLOCKTYPE_CPU:
-         return cputime2sec(clock->data.cpuclock.user);
+         return cputime2sec(clck->data.cpuclock.user);
 
       case SCIP_CLOCKTYPE_WALL:            
-         return walltime2sec(clock->data.wallclock.sec, clock->data.wallclock.usec);
+         return walltime2sec(clck->data.wallclock.sec, clck->data.wallclock.usec);
 
       default:
          errorMessage("invalid clock type\n");
@@ -400,20 +400,20 @@ Real SCIPclockGetTime(
       struct tms now;
          
       /* the clock is currently running: we have to add the current time to the clocks timer */
-      switch( clock->clocktype )
+      switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
          (void)times(&now);
-         return cputime2sec(clock->data.cpuclock.user + now.tms_utime);
+         return cputime2sec(clck->data.cpuclock.user + now.tms_utime);
 
       case SCIP_CLOCKTYPE_WALL:            
          gettimeofday(&tp, NULL);
-         if( tp.tv_usec + clock->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
-            return walltime2sec(clock->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
-               (clock->data.wallclock.usec - 1000000) + tp.tv_usec); /*lint !e115 !e40*/
+         if( tp.tv_usec + clck->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
+            return walltime2sec(clck->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
+               (clck->data.wallclock.usec - 1000000) + tp.tv_usec); /*lint !e115 !e40*/
          else
-            return walltime2sec(clock->data.wallclock.sec + tp.tv_sec, /*lint !e115 !e40*/
-               clock->data.wallclock.usec + tp.tv_usec); /*lint !e115 !e40*/
+            return walltime2sec(clck->data.wallclock.sec + tp.tv_sec, /*lint !e115 !e40*/
+               clck->data.wallclock.usec + tp.tv_usec); /*lint !e115 !e40*/
 
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
@@ -425,27 +425,27 @@ Real SCIPclockGetTime(
 
 /** sets the used time of this clock in seconds */
 void SCIPclockSetTime(
-   CLOCK*           clock,              /**< clock timer */
+   CLOCK*           clck,               /**< clock timer */
    Real             sec                 /**< time in seconds to set the clock's timer to */
    )
 {
-   assert(clock != NULL);
+   assert(clck != NULL);
 
    debugMessage("setting time of clock %p (type %d, usedefault=%d, nruns=%d) to %g\n",
-      clock, clock->clocktype, clock->usedefault, clock->nruns, sec);
+      clck, clck->clocktype, clck->usedefault, clck->nruns, sec);
 
    /* if the clock type is not yet set, set it to an arbitrary value to be able to store the number */
-   if( clock->clocktype == SCIP_CLOCKTYPE_DEFAULT )
-      clockSetType(clock, SCIP_CLOCKTYPE_WALL);
+   if( clck->clocktype == SCIP_CLOCKTYPE_DEFAULT )
+      clockSetType(clck, SCIP_CLOCKTYPE_WALL);
 
-   switch( clock->clocktype )
+   switch( clck->clocktype )
    {
    case SCIP_CLOCKTYPE_CPU:
-      sec2cputime(sec, &clock->data.cpuclock.user);
+      sec2cputime(sec, &clck->data.cpuclock.user);
       break;
       
    case SCIP_CLOCKTYPE_WALL:            
-      sec2walltime(sec, &clock->data.wallclock.sec, &clock->data.wallclock.usec);
+      sec2walltime(sec, &clck->data.wallclock.sec, &clck->data.wallclock.usec);
       break;
       
    case SCIP_CLOCKTYPE_DEFAULT:
@@ -454,30 +454,30 @@ void SCIPclockSetTime(
       abort();
    }
    
-   if( clock->nruns >= 1 )
+   if( clck->nruns >= 1 )
    {
       struct timeval tp; /*lint !e86*/
       struct tms now;
          
       /* the clock is currently running: we have to subtract the current time from the new timer value */
-      switch( clock->clocktype )
+      switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_CPU:
          (void)times(&now);
-         clock->data.cpuclock.user -= now.tms_utime;
+         clck->data.cpuclock.user -= now.tms_utime;
          break;
 
       case SCIP_CLOCKTYPE_WALL:            
          gettimeofday(&tp, NULL);
-         if( tp.tv_usec > clock->data.wallclock.usec ) /*lint !e115 !e40*/
+         if( tp.tv_usec > clck->data.wallclock.usec ) /*lint !e115 !e40*/
          {
-            clock->data.wallclock.sec -= (tp.tv_sec + 1); /*lint !e115 !e40*/
-            clock->data.wallclock.usec += (1000000 - tp.tv_usec); /*lint !e115 !e40*/
+            clck->data.wallclock.sec -= (tp.tv_sec + 1); /*lint !e115 !e40*/
+            clck->data.wallclock.usec += (1000000 - tp.tv_usec); /*lint !e115 !e40*/
          }
          else
          {
-            clock->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
-            clock->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
+            clck->data.wallclock.sec -= tp.tv_sec; /*lint !e115 !e40*/
+            clck->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
          }
          break;
 
