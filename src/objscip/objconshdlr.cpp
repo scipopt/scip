@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.14 2004/07/06 17:04:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.15 2004/07/07 08:58:31 bzfpfend Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -221,23 +221,6 @@ DECL_CONSINITLP(consInitlpObj)
 
    /* call virtual method of conshdlr object */
    CHECK_OKAY( conshdlrdata->objconshdlr->scip_initlp(scip, conshdlr, conss, nconss) );
-
-   return SCIP_OKAY;
-}
-
-
-/** LP relaxation method of constraint handler */
-static
-DECL_CONSRELAXLP(consRelaxlpObj)
-{  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->objconshdlr != NULL);
-
-   /* call virtual method of conshdlr object */
-   CHECK_OKAY( conshdlrdata->objconshdlr->scip_relaxlp(scip, conshdlr, conss, nconss, nusefulconss, result) );
 
    return SCIP_OKAY;
 }
@@ -508,12 +491,11 @@ RETCODE SCIPincludeObjConshdlr(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, objconshdlr->scip_name_, objconshdlr->scip_desc_, 
          objconshdlr->scip_sepapriority_, objconshdlr->scip_enfopriority_, objconshdlr->scip_checkpriority_,
-         objconshdlr->scip_relaxfreq_, objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, 
-         objconshdlr->scip_eagerfreq_,
+         objconshdlr->scip_sepafreq_, objconshdlr->scip_propfreq_, objconshdlr->scip_eagerfreq_,
          objconshdlr->scip_maxprerounds_, objconshdlr->scip_needscons_,
          consFreeObj, consInitObj, consExitObj, 
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
-         consDeleteObj, consTransObj, consInitlpObj, consRelaxlpObj,
+         consDeleteObj, consTransObj, consInitlpObj,
          consSepaObj, consEnfolpObj, consEnfopsObj, consCheckObj, 
          consPropObj, consPresolObj, consRescvarObj,
          consLockObj, consUnlockObj,

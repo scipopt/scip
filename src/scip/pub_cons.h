@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.10 2004/07/06 17:04:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.11 2004/07/07 08:58:31 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -41,7 +41,7 @@
  * Constraint handler methods
  */
 
-/** compares two constraint handlers w. r. to their relaxation and separation priority */
+/** compares two constraint handlers w. r. to their separation priority */
 extern
 DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
 
@@ -102,12 +102,6 @@ Real SCIPconshdlrGetPresolTime(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets time in seconds used for relaxation in this constraint handler */
-extern
-Real SCIPconshdlrGetRelaxTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** gets time in seconds used for separation in this constraint handler */
 extern
 Real SCIPconshdlrGetSepaTime(
@@ -129,12 +123,6 @@ Real SCIPconshdlrGetEnfoPSTime(
 /** gets time in seconds used for propagation in this constraint handler */
 extern
 Real SCIPconshdlrGetPropTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
-/** gets number of calls to the constraint handler's relaxation method */
-extern
-Longint SCIPconshdlrGetNRelaxCalls(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -258,7 +246,7 @@ int SCIPconshdlrGetNChgSides(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets relaxation and separation priority of constraint handler */
+/** gets separation priority of constraint handler */
 extern
 int SCIPconshdlrGetSepaPriority(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -276,12 +264,6 @@ int SCIPconshdlrGetCheckPriority(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets relaxation frequency of constraint handler */
-extern
-int SCIPconshdlrGetRelaxFreq(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** gets separation frequency of constraint handler */
 extern
 int SCIPconshdlrGetSepaFreq(
@@ -294,7 +276,7 @@ int SCIPconshdlrGetPropFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** gets frequency of constraint handler for eager evaluations in relaxation, separation, propagation and enforcement */
+/** gets frequency of constraint handler for eager evaluations in separation, propagation and enforcement */
 extern
 int SCIPconshdlrGetEagerFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -388,12 +370,6 @@ Real SCIPconsGetAge(
 /** returns TRUE iff the LP relaxation of constraint should be in the initial LP */
 extern
 Bool SCIPconsIsInitial(
-   CONS*            cons                /**< constraint */
-   );
-
-/** returns TRUE iff constraint should be relaxed during LP processing */
-extern
-Bool SCIPconsIsRelaxed(
    CONS*            cons                /**< constraint */
    );
 
@@ -497,7 +473,6 @@ Bool SCIPconsIsLocked(
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
-#define SCIPconsIsRelaxed(cons)         (cons)->relax
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check

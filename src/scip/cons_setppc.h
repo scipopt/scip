@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.11 2004/07/06 17:04:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.12 2004/07/07 08:58:31 bzfpfend Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -45,8 +45,7 @@ RETCODE SCIPcreateConsSetpart(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -64,8 +63,7 @@ RETCODE SCIPcreateConsSetpack(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -83,8 +81,7 @@ RETCODE SCIPcreateConsSetcover(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */

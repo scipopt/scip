@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.7 2004/07/06 17:04:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.8 2004/07/07 08:58:31 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -37,8 +37,7 @@
 #define CONSHDLR_SEPAPRIORITY   +900000
 #define CONSHDLR_ENFOPRIORITY   -500000
 #define CONSHDLR_CHECKPRIORITY  -500000
-#define CONSHDLR_RELAXFREQ            1
-#define CONSHDLR_SEPAFREQ            -1
+#define CONSHDLR_SEPAFREQ             1
 #define CONSHDLR_PROPFREQ             1
 #define CONSHDLR_EAGERFREQ          100
 #define CONSHDLR_MAXPREROUNDS        -1
@@ -234,9 +233,9 @@ RETCODE addRelaxation(
    return SCIP_OKAY;
 }
 
-/** separates the LP relaxation of the given varbound constraint */
+/** separates the given varbound constraint */
 static
-RETCODE relaxCons(
+RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< varbound constraint */
    Bool*            separated           /**< pointer to store whether a cut was found */
@@ -250,7 +249,7 @@ RETCODE relaxCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   debugMessage("relaxing varbound constraint <%s>\n", SCIPconsGetName(cons));
+   debugMessage("separating varbound constraint <%s>\n", SCIPconsGetName(cons));
 
    *separated = FALSE;
 
@@ -547,8 +546,8 @@ DECL_CONSTRANS(consTransVarbound)
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
-         SCIPconsIsInitial(sourcecons), SCIPconsIsRelaxed(sourcecons), SCIPconsIsSeparated(sourcecons),
-         SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+         SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+         SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
 
    return SCIP_OKAY;
@@ -573,9 +572,9 @@ DECL_CONSINITLP(consInitlpVarbound)
 }
 
 
-/** LP relaxation method of constraint handler */
+/** separation method of constraint handler */
 static
-DECL_CONSRELAXLP(consRelaxlpVarbound)
+DECL_CONSSEPA(consSepaVarbound)
 {  /*lint --e{715}*/
    Bool separated;
    int i;
@@ -585,7 +584,7 @@ DECL_CONSRELAXLP(consRelaxlpVarbound)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss; ++i )
    {
-      CHECK_OKAY( relaxCons(scip, conss[i], &separated) );
+      CHECK_OKAY( separateCons(scip, conss[i], &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    }
@@ -593,17 +592,13 @@ DECL_CONSRELAXLP(consRelaxlpVarbound)
    /* separate remaining constraints */
    for( i = nusefulconss; i < nconss && *result == SCIP_DIDNOTFIND; ++i )
    {
-      CHECK_OKAY( relaxCons(scip, conss[i], &separated) );
+      CHECK_OKAY( separateCons(scip, conss[i], &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    }
 
    return SCIP_OKAY;
 }
-
-
-/** separation method of constraint handler */
-#define consSepaVarbound NULL
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -619,7 +614,7 @@ DECL_CONSENFOLP(consEnfolpVarbound)
    {
       if( !checkCons(scip, conss[i], NULL, FALSE) )
       {
-         CHECK_OKAY( relaxCons(scip, conss[i], &separated) );
+         CHECK_OKAY( separateCons(scip, conss[i], &separated) );
          if( separated )
          {
             *result = SCIP_SEPARATED;
@@ -922,7 +917,7 @@ DECL_LINCONSUPGD(linconsUpgdVarbound)
       /* create the bin Varbound constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
       CHECK_OKAY( SCIPcreateConsVarbound(scip, upgdcons, SCIPconsGetName(cons), var, vbdvar, vbdcoef, vbdlhs, vbdrhs,
-            SCIPconsIsInitial(cons), SCIPconsIsRelaxed(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
    }
@@ -972,11 +967,10 @@ RETCODE SCIPincludeConshdlrVarbound(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ,
-         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeVarbound, consInitVarbound, consExitVarbound, 
          consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
-         consDeleteVarbound, consTransVarbound, consInitlpVarbound, consRelaxlpVarbound,
+         consDeleteVarbound, consTransVarbound, consInitlpVarbound,
          consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
          consPropVarbound, consPresolVarbound, consRescvarVarbound,
          consLockVarbound, consUnlockVarbound,
@@ -1008,8 +1002,7 @@ RETCODE SCIPcreateConsVarbound(
    Real             lhs,                /**< left hand side of variable bound inequality */
    Real             rhs,                /**< right hand side of variable bound inequality */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -1033,7 +1026,7 @@ RETCODE SCIPcreateConsVarbound(
    CHECK_OKAY( consdataCreate(scip, &consdata, var, vbdvar, vbdcoef, lhs, rhs) );
 
    /* create constraint */
-   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, relax, separate, enforce, check, propagate,
+   CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, removeable) );
 
    return SCIP_OKAY;

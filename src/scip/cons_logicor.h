@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.h,v 1.9 2004/07/06 17:04:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.h,v 1.10 2004/07/07 08:58:30 bzfpfend Exp $"
 
 /**@file   cons_logicor.h
  * @brief  constraint handler for logicor constraints
@@ -45,8 +45,7 @@ RETCODE SCIPcreateConsLogicor(
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */

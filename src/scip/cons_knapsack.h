@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.15 2004/07/06 17:04:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.16 2004/07/07 08:58:30 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -47,8 +47,7 @@ RETCODE SCIPcreateConsKnapsack(
    Longint*         weights,            /**< array with item weights */
    Longint          capacity,           /**< capacity of knapsack (right hand side of inequality) */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.29 2004/07/06 17:04:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.30 2004/07/07 08:58:29 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -35,7 +35,6 @@
 #define CONSHDLR_SEPAPRIORITY         0
 #define CONSHDLR_ENFOPRIORITY         0
 #define CONSHDLR_CHECKPRIORITY        0
-#define CONSHDLR_RELAXFREQ           -1
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_EAGERFREQ           -1
@@ -86,10 +85,6 @@
 
 /** LP initialization method of constraint handler */
 #define consInitlpIntegral NULL
-
-
-/** LP relaxation method of constraint handler */
-#define consRelaxlpIntegral NULL
 
 
 /** separation method of constraint handler */
@@ -226,11 +221,10 @@ RETCODE SCIPincludeConshdlrIntegral(
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_RELAXFREQ, CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ,
-         CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, CONSHDLR_NEEDSCONS,
          consFreeIntegral, consInitIntegral, consExitIntegral, 
          consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
-         consDeleteIntegral, consTransIntegral, consInitlpIntegral, consRelaxlpIntegral,
+         consDeleteIntegral, consTransIntegral, consInitlpIntegral,
          consSepaIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
          consPropIntegral, consPresolIntegral, consRescvarIntegral,
          consLockIntegral, consUnlockIntegral,

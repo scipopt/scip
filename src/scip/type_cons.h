@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.14 2004/07/06 17:04:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.15 2004/07/07 08:58:32 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -176,47 +176,11 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  */
 #define DECL_CONSINITLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss)
 
-/** LP relaxation method of constraint handler
- *
- *  Separates LP relaxations of the constraints of the constraint handler. The method is called in the LP solution
- *  loop, which means that a valid LP solution exists.
- *
- *  This method should only generate simple LP relaxations that can be found fast (e.g. in the knapsack constraint
- *  handler, the knapsack constraint itself stored as an LP row).
- *
- *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The relaxation
- *  method should process only the useful constraints in most runs, and only occasionally the remaining
- *  nconss - nusefulconss constraints.
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - conshdlr        : the constraint handler itself
- *  - conss           : array of constraints to process
- *  - nconss          : number of constraints to process
- *  - nusefulconss    : number of useful (non-obsolete) constraints to process
- *  - result          : pointer to store the result of the relaxation call
- *
- *  possible return values for *result:
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
- *  - SCIP_SEPARATED  : at least one LP relaxation row was generated
- *  - SCIP_REDUCEDDOM : no LP relaxation row was generated, but at least one domain was reduced
- *  - SCIP_CONSADDED  : no LP relaxation rows or domain reductions, but at least one additional constraint was generated
- *  - SCIP_DIDNOTFIND : the relaxation method searched, but did not find a violated LP relaxation
- *  - SCIP_DIDNOTRUN  : the relaxation method was skipped
- */
-#define DECL_CONSRELAXLP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
-                                       RESULT* result)
-
 /** separation method of constraint handler
  *
- *  Separates constraints of the constraint handler. The method is called in the LP solution loop,
+ *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
  *  which means that a valid LP solution exists.
  *
- *  This method should generate additional cutting planes that tighten the LP relaxation created in the
- *  CONSRELAX call. It can spend some time to find these cutting planes (e.g. in the knapsack constraint
- *  handler, separating the lifted cardinality cuts is done by solving a few dynamic programs for each
- *  knapsack constraint).
- *  
  *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
  *  method should process only the useful constraints in most runs, and only occasionally the remaining
  *  nconss - nusefulconss constraints.

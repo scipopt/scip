@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.14 2004/07/06 17:04:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.15 2004/07/07 08:58:32 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -45,7 +45,6 @@ struct Cons
                                          *   constraint is from global problem */
    int              addarraypos;        /**< position of constraint in the conssetchg's/prob's addedconss/conss array */
    int              consspos;           /**< position of constraint in the handler's conss array */
-   int              relaxconsspos;      /**< position of constraint in the handler's relaxconss array */
    int              sepaconsspos;       /**< position of constraint in the handler's sepaconss array */
    int              enfoconsspos;       /**< position of constraint in the handler's enfoconss array */
    int              checkconsspos;      /**< position of constraint in the handler's checkconss array */
@@ -54,8 +53,7 @@ struct Cons
    int              nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int              nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
-   unsigned int     relax:1;            /**< TRUE iff LP relaxation should be separated during LP processing */
-   unsigned int     separate:1;         /**< TRUE iff additional cutting planes should be separated during LP processing */
+   unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */
    unsigned int     check:1;            /**< TRUE iff constraint should be checked for feasibility */
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
@@ -64,7 +62,7 @@ struct Cons
    unsigned int     removeable:1;       /**< TRUE iff constraint should be removed from the LP due to aging or cleanup */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
-   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, relaxed, separated, and propagated in active node */
+   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
    unsigned int     obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int     deleted:1;          /**< TRUE iff constraint was globally deleted */
    unsigned int     update:1;           /**< TRUE iff constraint has to be updated in update phase */
@@ -90,13 +88,12 @@ struct ConsSetChg
 /** constraint handler */
 struct Conshdlr
 {
-   Longint          nrelaxcalls;        /**< number of times, the relaxation separator was called */
    Longint          nsepacalls;         /**< number of times, the separator was called */
    Longint          nenfolpcalls;       /**< number of times, the LP enforcer was called */
    Longint          nenfopscalls;       /**< number of times, the pseudo enforcer was called */
    Longint          npropcalls;         /**< number of times, the propagator was called */
    Longint          ncutoffs;           /**< number of cutoffs found so far by this constraint handler */
-   Longint          ncutsfound;         /**< number of additional cuts found by this constraint handler */
+   Longint          ncutsfound;         /**< number of cuts found by this constraint handler */
    Longint          nconssfound;        /**< number of additional constraints added by this constraint handler */
    Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    Longint          nchildren;          /**< number of children the constraint handler created during branching */
@@ -112,8 +109,7 @@ struct Conshdlr
    DECL_CONSDELETE  ((*consdelete));    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans));     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp));    /**< initialize LP with relaxations of "initial" constraints */
-   DECL_CONSRELAXLP ((*consrelaxlp));   /**< separate LP relaxations */
-   DECL_CONSSEPA    ((*conssepa));      /**< separate additional cutting planes */
+   DECL_CONSSEPA    ((*conssepa));      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp));    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops));    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck));     /**< check feasibility of primal solution */
@@ -129,35 +125,28 @@ struct Conshdlr
    DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
    CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    CONS**           conss;              /**< array with all active constraints */
-   CONS**           relaxconss;         /**< array with active constraints that must be relaxed during LP processing */
    CONS**           sepaconss;          /**< array with active constraints that must be separated during LP processing */
    CONS**           enfoconss;          /**< array with active constraints that must be enforced during node processing */
    CONS**           checkconss;         /**< array with active constraints that must be checked for feasibility */
    CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
    CONS**           updateconss;        /**< array with constraints that changed and have to be update in the handler */
    CLOCK*           presoltime;         /**< time used for presolving of this constraint handler */
-   CLOCK*           relaxtime;          /**< time used for relaxation separation of this constraint handler */
-   CLOCK*           sepatime;           /**< time used for additional separation of this constraint handler */
+   CLOCK*           sepatime;           /**< time used for separation of this constraint handler */
    CLOCK*           enfolptime;         /**< time used for LP enforcement of this constraint handler */
    CLOCK*           enfopstime;         /**< time used for pseudo enforcement of this constraint handler */
    CLOCK*           proptime;           /**< time used for propagation of this constraint handler */
-   int              sepapriority;       /**< priority of the constraint handler for relaxation and separation */
+   int              sepapriority;       /**< priority of the constraint handler for separation */
    int              enfopriority;       /**< priority of the constraint handler for constraint enforcing */
    int              checkpriority;      /**< priority of the constraint handler for checking infeasibility */
-   int              relaxfreq;          /**< frequency for separating relaxation cuts; zero means to separate only in the root node */
-   int              sepafreq;           /**< frequency for separating additional cuts; zero means to separate only in the root node */
+   int              sepafreq;           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq;           /**< frequency for propagating domains; zero means only preprocessing propagation */
-   int              eagerfreq;          /**< frequency for using all instead of only the useful constraints in relaxation,
-                                         *   separation, propagation and enforcement (-1 for no eager evaluations, 
-                                         *   0 for first only) */
+   int              eagerfreq;          /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds;       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    int              consssize;          /**< size of conss array */
    int              nconss;             /**< total number of active constraints */
    int              maxnconss;          /**< maximal number of active constraints existing at the same time */
    int              startnconss;        /**< number of active constraints existing when problem solving started */
-   int              relaxconsssize;     /**< size of relaxconss array */
-   int              nrelaxconss;        /**< number of active constraints that may be relaxed during LP processing */
-   int              nusefulrelaxconss;  /**< number of non-obsolete active constraints that should be relaxed */
    int              sepaconsssize;      /**< size of sepaconss array */
    int              nsepaconss;         /**< number of active constraints that may be separated during LP processing */
    int              nusefulsepaconss;   /**< number of non-obsolete active constraints that should be separated */
@@ -173,7 +162,6 @@ struct Conshdlr
    int              updateconsssize;    /**< size of updateconss array */
    int              nupdateconss;       /**< number of update constraints */
    int              nenabledconss;      /**< total number of enabled constraints of the handler */
-   int              lastnrelaxconss;    /**< number of already relaxed constraints after last conshdlrResetRelax() call */
    int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
    int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
    int              lastnfixedvars;     /**< number of variables fixed before the last call to the presolver */
@@ -197,7 +185,6 @@ struct Conshdlr
    Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
    Bool             initialized;        /**< is constraint handler initialized? */
    Bool             delayupdates;       /**< must the updates of the constraint arrays be delayed until processUpdates()? */
-   Bool             relaxed;            /**< was the relaxation method already called at current node? */
    Bool             separated;          /**< was the separation method already called at current node? */
    Bool             enforced;           /**< was the enforcing method already called at current node? */
 };

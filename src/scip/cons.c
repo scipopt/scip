@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.84 2004/07/06 17:04:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.85 2004/07/07 08:58:28 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -69,30 +69,6 @@ RETCODE conshdlrEnsureConssMem(
       conshdlr->consssize = newsize;
    }
    assert(num <= conshdlr->consssize);
-
-   return SCIP_OKAY;
-}
-
-/** resizes relaxconss array to be able to store at least num constraints */
-static
-RETCODE conshdlrEnsureRelaxconssMem(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   SET*             set,                /**< global SCIP settings */
-   int              num                 /**< minimal number of slots in array */
-   )
-{
-   assert(conshdlr != NULL);
-   assert(set != NULL);
-
-   if( num > conshdlr->relaxconsssize )
-   {
-      int newsize;
-
-      newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&conshdlr->relaxconss, newsize) );
-      conshdlr->relaxconsssize = newsize;
-   }
-   assert(num <= conshdlr->relaxconsssize);
 
    return SCIP_OKAY;
 }
@@ -251,7 +227,7 @@ Bool consExceedsObsoleteage(
 }
 
 /** marks constraint to be obsolete; it will be moved to the last part of the constraint arrays, such that
- *  it is checked, enforced, relaxed, separated, and propagated after the useful constraints
+ *  it is checked, enforced, separated, and propagated after the useful constraints
  */
 static
 RETCODE conshdlrMarkConsObsolete(
@@ -265,7 +241,6 @@ RETCODE conshdlrMarkConsObsolete(
    CONS* tmpcons;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -295,21 +270,6 @@ RETCODE conshdlrMarkConsObsolete(
    }
    if( cons->enabled )
    {
-      if( cons->relax )
-      {
-         /* switch the last useful (non-obsolete) relax constraint with this constraint */
-         assert(0 <= cons->relaxconsspos && cons->relaxconsspos < conshdlr->nusefulrelaxconss);
-         
-         tmpcons = conshdlr->relaxconss[conshdlr->nusefulrelaxconss-1];
-         assert(tmpcons->relaxconsspos == conshdlr->nusefulrelaxconss-1);
-         
-         conshdlr->relaxconss[conshdlr->nusefulrelaxconss-1] = cons;
-         conshdlr->relaxconss[cons->relaxconsspos] = tmpcons;
-         tmpcons->relaxconsspos = cons->relaxconsspos;
-         cons->relaxconsspos = conshdlr->nusefulrelaxconss-1;
-         
-         conshdlr->nusefulrelaxconss--;
-      }
       if( cons->separate )
       {
          /* switch the last useful (non-obsolete) sepa constraint with this constraint */
@@ -361,7 +321,7 @@ RETCODE conshdlrMarkConsObsolete(
 }
 
 /** marks obsolete constraint to be not obsolete anymore;
- *  it will be moved to the first part of the constraint arrays, such that it is checked, enforced, relaxed, separated,
+ *  it will be moved to the first part of the constraint arrays, such that it is checked, enforced, separated,
  *  and propagated before the obsolete constraints
  */
 static
@@ -373,7 +333,6 @@ RETCODE conshdlrMarkConsUseful(
    CONS* tmpcons;
       
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -403,21 +362,6 @@ RETCODE conshdlrMarkConsUseful(
    }
    if( cons->enabled )
    {
-      if( cons->relax )
-      {
-         /* switch the first obsolete relax constraint with this constraint */
-         assert(conshdlr->nusefulrelaxconss <= cons->relaxconsspos && cons->relaxconsspos < conshdlr->nrelaxconss);
-         
-         tmpcons = conshdlr->relaxconss[conshdlr->nusefulrelaxconss];
-         assert(tmpcons->relaxconsspos == conshdlr->nusefulrelaxconss);
-         
-         conshdlr->relaxconss[conshdlr->nusefulrelaxconss] = cons;
-         conshdlr->relaxconss[cons->relaxconsspos] = tmpcons;
-         tmpcons->relaxconsspos = cons->relaxconsspos;
-         cons->relaxconsspos = conshdlr->nusefulrelaxconss;
-         
-         conshdlr->nusefulrelaxconss++;
-      }
       if( cons->separate )
       {
          /* switch the first obsolete sepa constraint with this constraint */
@@ -468,7 +412,7 @@ RETCODE conshdlrMarkConsUseful(
    return SCIP_OKAY;
 }
 
-/** enables relaxation, separation, enforcement, and propagation of constraint */
+/** enables separation, enforcement, and propagation of constraint */
 static
 RETCODE conshdlrEnableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -480,7 +424,6 @@ RETCODE conshdlrEnableCons(
    int insertpos;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -491,7 +434,6 @@ RETCODE conshdlrEnableCons(
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
    assert(!cons->enabled);
-   assert(cons->relaxconsspos == -1);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
    assert(cons->propconsspos == -1);
@@ -503,26 +445,6 @@ RETCODE conshdlrEnableCons(
    conshdlr->nenabledconss++;
    stat->nenabledconss++;
 
-   /* add constraint to the relaxation array */
-   if( cons->relax )
-   {
-      CHECK_OKAY( conshdlrEnsureRelaxconssMem(conshdlr, set, conshdlr->nrelaxconss+1) );
-      insertpos = conshdlr->nrelaxconss;
-      if( !cons->obsolete )
-      {
-         if( conshdlr->nusefulrelaxconss < conshdlr->nrelaxconss )
-         {
-            conshdlr->relaxconss[conshdlr->nrelaxconss] = conshdlr->relaxconss[conshdlr->nusefulrelaxconss];
-            conshdlr->relaxconss[conshdlr->nrelaxconss]->relaxconsspos = conshdlr->nrelaxconss;
-            insertpos = conshdlr->nusefulrelaxconss;
-         }
-         conshdlr->nusefulrelaxconss++;
-      }
-      conshdlr->relaxconss[insertpos] = cons;
-      cons->relaxconsspos = insertpos;
-      conshdlr->nrelaxconss++;
-   }
-      
    /* add constraint to the separation array */
    if( cons->separate )
    {
@@ -592,7 +514,7 @@ RETCODE conshdlrEnableCons(
    return SCIP_OKAY;
 }
 
-/** disables relaxation, separation, enforcement, and propagation of constraint */
+/** disables separation, enforcement, and propagation of constraint */
 static
 RETCODE conshdlrDisableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -604,7 +526,6 @@ RETCODE conshdlrDisableCons(
    int delpos;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -615,40 +536,17 @@ RETCODE conshdlrDisableCons(
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
    assert(cons->enabled);
-   assert(cons->relax == (cons->relaxconsspos != -1));
    assert(cons->separate == (cons->sepaconsspos != -1));
    assert(cons->enforce == (cons->enfoconsspos != -1));
    assert(cons->propagate == (cons->propconsspos != -1));
 
-   debugMessage("disable constraint <%s> at position %d in constraint handler <%s>\n", 
-      cons->name, cons->consspos, conshdlr->name);
+   debugMessage("disable constraint <%s> at sepa position %d in constraint handler <%s> (%d/%d)\n", 
+      cons->name, cons->sepaconsspos, conshdlr->name, conshdlr->nusefulsepaconss, conshdlr->nsepaconss);
 
    /* call constraint handler's disabling notification method */
    if( conshdlr->consdisable != NULL )
    {
       CHECK_OKAY( conshdlr->consdisable(set->scip, conshdlr, cons) );
-   }
-
-   /* delete constraint from the relaxation array */
-   if( cons->relax )
-   {
-      delpos = cons->relaxconsspos;
-      if( !cons->obsolete )
-      {
-         assert(0 <= delpos && delpos < conshdlr->nusefulrelaxconss);
-         conshdlr->relaxconss[delpos] = conshdlr->relaxconss[conshdlr->nusefulrelaxconss-1];
-         conshdlr->relaxconss[delpos]->relaxconsspos = delpos;
-         delpos = conshdlr->nusefulrelaxconss-1;
-         conshdlr->nusefulrelaxconss--;
-      }
-      assert(conshdlr->nusefulrelaxconss <= delpos && delpos < conshdlr->nrelaxconss);
-      if( delpos < conshdlr->nrelaxconss-1 )
-      {
-         conshdlr->relaxconss[delpos] = conshdlr->relaxconss[conshdlr->nrelaxconss-1];
-         conshdlr->relaxconss[delpos]->relaxconsspos = delpos;
-      }
-      conshdlr->nrelaxconss--;
-      cons->relaxconsspos = -1;
    }
 
    /* delete constraint from the separation array */
@@ -717,7 +615,6 @@ RETCODE conshdlrDisableCons(
       cons->propconsspos = -1;
    }
 
-   assert(cons->relaxconsspos == -1);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
    assert(cons->propconsspos == -1);
@@ -780,7 +677,6 @@ RETCODE conshdlrActivateCons(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -792,7 +688,6 @@ RETCODE conshdlrActivateCons(
    assert(!cons->active);
    assert(!cons->enabled);
    assert(cons->consspos == -1);
-   assert(cons->relaxconsspos == -1);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
    assert(cons->checkconsspos == -1);
@@ -821,7 +716,7 @@ RETCODE conshdlrActivateCons(
       CHECK_OKAY( conshdlr->consactive(set->scip, conshdlr, cons) );
    }
 
-   /* enable relaxation, separation, enforcement, and propagation of constraint */
+   /* enable separation, enforcement, and propagation of constraint */
    CHECK_OKAY( conshdlrEnableCons(conshdlr, set, stat, cons) );
 
    return SCIP_OKAY;
@@ -839,7 +734,6 @@ RETCODE conshdlrDeactivateCons(
    int delpos;
 
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -903,7 +797,6 @@ RETCODE conshdlrDeactivateCons(
    stat->nactiveconss--;
 
    assert(cons->consspos == -1);
-   assert(cons->relaxconsspos == -1);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
    assert(cons->checkconsspos == -1);
@@ -913,12 +806,11 @@ RETCODE conshdlrDeactivateCons(
 }
 
 /** processes all delayed updates of constraints:
- *  - recently (de)activated constraints will be (de)activated;
- *  - recently en/disabled constraints will be en/disabled;
- *  - recent obsolete non-check constraints will be globally deleted;
- *  - recent obsolete check constraints will be moved to the last positions in the relax-, sepa-, enfo-, check-, and
- *    prop-arrays;
- *  - recent useful constraints will be moved to the first positions in the relax-, sepa-, enfo-, check-, and prop-arrays;
+ *  recently (de)activated constraints will be (de)activated;
+ *  recently en/disabled constraints will be en/disabled;
+ *  recent obsolete non-check constraints will be globally deleted;
+ *  recent obsolete check constraints will be moved to the last positions in the sepa-, enfo-, check-, and prop-arrays;
+ *  recent useful constraints will be moved to the first positions in the sepa-, enfo-, check-, and prop-arrays;
  */
 static
 RETCODE conshdlrProcessUpdates(
@@ -934,7 +826,6 @@ RETCODE conshdlrProcessUpdates(
 
    assert(conshdlr != NULL);
    assert(!conshdlr->delayupdates);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -1102,7 +993,7 @@ RETCODE conshdlrAddUpdateCons(
    return SCIP_OKAY;
 }
 
-/** compares two constraint handlers w. r. to their relaxation and separation priority */
+/** compares two constraint handlers w. r. to their separation priority */
 DECL_SORTPTRCOMP(SCIPconshdlrCompSepa)
 {  /*lint --e{715}*/
    return ((CONSHDLR*)elem2)->sepapriority - ((CONSHDLR*)elem1)->sepapriority;
@@ -1127,15 +1018,13 @@ RETCODE SCIPconshdlrCreate(
    MEMHDR*          memhdr,             /**< block memory for parameter settings */
    const char*      name,               /**< name of constraint handler */
    const char*      desc,               /**< description of constraint handler */
-   int              sepapriority,       /**< priority of the constraint handler for relaxation and separation */
+   int              sepapriority,       /**< priority of the constraint handler for separation */
    int              enfopriority,       /**< priority of the constraint handler for constraint enforcing */
    int              checkpriority,      /**< priority of the constraint handler for checking infeasibility */
-   int              relaxfreq,          /**< frequency for separating relaxation cuts; zero means to separate only in the root node */
-   int              sepafreq,           /**< frequency for separating additional cuts; zero means to separate only in the root node */
+   int              sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
    int              propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
-   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in relaxation,
-                                         *   separation, propagation and enforcement (-1 for no eager evaluations,
-                                         *   0 for first only) */
+   int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
@@ -1148,8 +1037,7 @@ RETCODE SCIPconshdlrCreate(
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
    DECL_CONSTRANS   ((*constrans)),     /**< transform constraint data into data belonging to the transformed problem */
    DECL_CONSINITLP  ((*consinitlp)),    /**< initialize LP with relaxations of "initial" constraints */
-   DECL_CONSRELAXLP ((*consrelaxlp)),   /**< separate LP relaxations */
-   DECL_CONSSEPA    ((*conssepa)),      /**< separate additional cutting planes */
+   DECL_CONSSEPA    ((*conssepa)),      /**< separate cutting planes */
    DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
    DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
@@ -1171,7 +1059,6 @@ RETCODE SCIPconshdlrCreate(
    assert(conshdlr != NULL);
    assert(name != NULL);
    assert(desc != NULL);
-   assert((consrelaxlp != NULL) || (relaxfreq == -1));
    assert((conssepa != NULL) || (sepafreq == -1));
    assert((consprop != NULL) || (propfreq == -1));
    assert(eagerfreq >= -1);
@@ -1182,7 +1069,6 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->sepapriority = sepapriority;
    (*conshdlr)->enfopriority = enfopriority;
    (*conshdlr)->checkpriority = checkpriority;
-   (*conshdlr)->relaxfreq = relaxfreq;
    (*conshdlr)->sepafreq = sepafreq;
    (*conshdlr)->propfreq = propfreq;
    (*conshdlr)->eagerfreq = eagerfreq;
@@ -1197,7 +1083,6 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consdelete = consdelete;
    (*conshdlr)->constrans = constrans;
    (*conshdlr)->consinitlp = consinitlp;
-   (*conshdlr)->consrelaxlp = consrelaxlp;
    (*conshdlr)->conssepa = conssepa;
    (*conshdlr)->consenfolp = consenfolp;
    (*conshdlr)->consenfops = consenfops;
@@ -1218,10 +1103,6 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nconss = 0;
    (*conshdlr)->maxnconss = 0;
    (*conshdlr)->startnconss = 0;
-   (*conshdlr)->relaxconss = NULL;
-   (*conshdlr)->relaxconsssize = 0;
-   (*conshdlr)->nrelaxconss = 0;
-   (*conshdlr)->nusefulrelaxconss = 0;
    (*conshdlr)->sepaconss = NULL;
    (*conshdlr)->sepaconsssize = 0;
    (*conshdlr)->nsepaconss = 0;
@@ -1242,18 +1123,15 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->updateconsssize = 0;
    (*conshdlr)->nupdateconss = 0;
    (*conshdlr)->nenabledconss = 0;
-   (*conshdlr)->lastnrelaxconss = 0;
    (*conshdlr)->lastnsepaconss = 0;
    (*conshdlr)->lastnenfoconss = 0;
 
    CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->presoltime, SCIP_CLOCKTYPE_DEFAULT) );
-   CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->relaxtime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT) );
    CHECK_OKAY( SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
 
-   (*conshdlr)->nrelaxcalls = 0;
    (*conshdlr)->nsepacalls = 0;
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
@@ -1284,19 +1162,13 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->needscons = needscons;
    (*conshdlr)->initialized = FALSE;
    (*conshdlr)->delayupdates = FALSE;
-   (*conshdlr)->relaxed = FALSE;
    (*conshdlr)->separated = FALSE;
    (*conshdlr)->enforced = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "constraints/%s/relaxfreq", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
-         "frequency for separating relaxation cuts (-1: never, 0: only in root node)",
-         &(*conshdlr)->relaxfreq, relaxfreq, -1, INT_MAX, NULL, NULL) );
-
    sprintf(paramname, "constraints/%s/sepafreq", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
-         "frequency for separating additional cuts (-1: never, 0: only in root node)",
+         "frequency for separating cuts (-1: never, 0: only in root node)",
          &(*conshdlr)->sepafreq, sepafreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/propfreq", name);
@@ -1306,7 +1178,7 @@ RETCODE SCIPconshdlrCreate(
 
    sprintf(paramname, "constraints/%s/eagerfreq", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, 
-         "frequency for using all instead of only the useful constraints in relaxation, separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
+         "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
          &(*conshdlr)->eagerfreq, eagerfreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/maxprerounds", name);
@@ -1335,7 +1207,6 @@ RETCODE SCIPconshdlrFree(
    }
 
    SCIPclockFree(&(*conshdlr)->presoltime);
-   SCIPclockFree(&(*conshdlr)->relaxtime);
    SCIPclockFree(&(*conshdlr)->sepatime);
    SCIPclockFree(&(*conshdlr)->enfolptime);
    SCIPclockFree(&(*conshdlr)->enfopstime);
@@ -1344,7 +1215,6 @@ RETCODE SCIPconshdlrFree(
    freeMemoryArray(&(*conshdlr)->name);
    freeMemoryArray(&(*conshdlr)->desc);
    freeMemoryArrayNull(&(*conshdlr)->conss);
-   freeMemoryArrayNull(&(*conshdlr)->relaxconss);
    freeMemoryArrayNull(&(*conshdlr)->sepaconss);
    freeMemoryArrayNull(&(*conshdlr)->enfoconss);
    freeMemoryArrayNull(&(*conshdlr)->checkconss);
@@ -1370,13 +1240,11 @@ RETCODE SCIPconshdlrInit(
    }
 
    SCIPclockReset(conshdlr->presoltime);
-   SCIPclockReset(conshdlr->relaxtime);
    SCIPclockReset(conshdlr->sepatime);
    SCIPclockReset(conshdlr->enfolptime);
    SCIPclockReset(conshdlr->enfopstime);
    SCIPclockReset(conshdlr->proptime);
 
-   conshdlr->nrelaxcalls = 0;
    conshdlr->nsepacalls = 0;
    conshdlr->nenfolpcalls = 0;
    conshdlr->nenfopscalls = 0;
@@ -1541,7 +1409,7 @@ RETCODE SCIPconshdlrExitsol(
    return SCIP_OKAY;
 }
 
-/** calls LP initialization method of constraint handler to add LP relaxations of all initial constraints */
+/** calls LP initialization method of constraint handler to separate all initial constraints */
 RETCODE SCIPconshdlrInitLP(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1572,127 +1440,6 @@ RETCODE SCIPconshdlrInitLP(
    return SCIP_OKAY;
 }
 
-/** calls relaxation method of constraint handler to separate LP relaxations of constraints added after last
- *  conshdlrResetRelax() call
- */
-RETCODE SCIPconshdlrRelax(
-   CONSHDLR*        conshdlr,           /**< constraint handler */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< problem data */
-   SEPASTORE*       sepastore,          /**< separation storage */
-   int              depth,              /**< depth of current node */
-   RESULT*          result              /**< pointer to store the result of the callback method */
-   )
-{
-   assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
-   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
-   assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
-   assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
-   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
-   assert(conshdlr->relaxed || conshdlr->lastnrelaxconss == 0);
-   assert(0 <= conshdlr->lastnrelaxconss && conshdlr->lastnrelaxconss <= conshdlr->nrelaxconss);
-   assert(set != NULL);
-   assert(stat != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   if( conshdlr->consrelaxlp != NULL
-      && ((depth == 0 && conshdlr->relaxfreq == 0) || (conshdlr->relaxfreq > 0 && depth % conshdlr->relaxfreq == 0)) )
-   {
-      int nconss;
-      int nusefulconss;
-      int firstcons;
-
-      if( conshdlr->relaxed )
-      {
-         /* all new constraints after the last conshdlrResetRelax() call must be useful constraints, which means, that
-          * the new constraints are the last constraints of the useful ones
-          */
-         nconss = conshdlr->nrelaxconss - conshdlr->lastnrelaxconss;
-         nusefulconss = nconss;
-         firstcons = conshdlr->nusefulrelaxconss - nconss;
-      }
-      else
-      {
-         /* immediately after a conshdlrResetRelax() call, we want to relax all constraints */
-         nconss = conshdlr->nrelaxconss;
-         nusefulconss = conshdlr->nusefulrelaxconss;
-         firstcons = 0;
-      }
-      assert(firstcons >= 0);
-      assert(firstcons + nconss <= conshdlr->nrelaxconss);
-      assert(nusefulconss <= nconss);
-
-      /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && !conshdlr->relaxed) )
-      {
-         CONS** conss;
-         Longint oldndomchgs;
-
-         debugMessage("relaxing constraints %d to %d of %d constraints of handler <%s>\n",
-            firstcons, firstcons + nconss - 1, conshdlr->nrelaxconss, conshdlr->name);
-
-         conss = &(conshdlr->relaxconss[firstcons]);
-         
-         oldndomchgs = stat->nboundchgs + stat->nholechgs;
-
-         /* check, if we want to use eager evaluation */
-         if( (conshdlr->eagerfreq == 0 && conshdlr->nrelaxcalls == 0)
-            || (conshdlr->eagerfreq > 0 && conshdlr->nrelaxcalls % conshdlr->eagerfreq == 0) )
-            nusefulconss = nconss;
-
-         /* because during constraint processing, constraints of this handler may be activated, deactivated,
-          * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
-          * external method; to avoid this, these changes will be buffered and processed after the method call
-          */
-         conshdlrDelayUpdates(conshdlr);
-
-         /* start timing */
-         SCIPclockStart(conshdlr->relaxtime, set);
-
-         /* call external method */
-         CHECK_OKAY( conshdlr->consrelaxlp(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
-         debugMessage(" -> relaxation returned result <%d>\n", *result);
-
-         /* stop timing */
-         SCIPclockStop(conshdlr->relaxtime, set);
-
-         /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, memhdr, set, stat, prob) );
-
-         /* remember, that these constraints have already been processed */
-         conshdlr->lastnrelaxconss = conshdlr->nrelaxconss;
-         conshdlr->relaxed = TRUE;
-
-         /* evaluate result */
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_SEPARATED
-            && *result != SCIP_REDUCEDDOM
-            && *result != SCIP_CONSADDED
-            && *result != SCIP_DIDNOTFIND
-            && *result != SCIP_DIDNOTRUN )
-         {
-            errorMessage("relaxation method of constraint handler <%s> returned invalid result <%d>\n", 
-               conshdlr->name, *result);
-            return SCIP_INVALIDRESULT;
-         }
-
-         /* update statistics */
-         if( *result != SCIP_DIDNOTRUN )
-            conshdlr->nrelaxcalls++;
-         if( *result == SCIP_CUTOFF )
-            conshdlr->ncutoffs++;
-         conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** calls separator method of constraint handler to separate all constraints added after last conshdlrResetSepa() call */
 RETCODE SCIPconshdlrSeparate(
    CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -1706,7 +1453,6 @@ RETCODE SCIPconshdlrSeparate(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -1833,7 +1579,6 @@ RETCODE SCIPconshdlrEnforceLPSol(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -1968,7 +1713,6 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -2102,7 +1846,6 @@ RETCODE SCIPconshdlrCheck(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -2154,7 +1897,6 @@ RETCODE SCIPconshdlrPropagate(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -2247,7 +1989,6 @@ RETCODE SCIPconshdlrPresolve(
    )
 {
    assert(conshdlr != NULL);
-   assert(conshdlr->nusefulrelaxconss <= conshdlr->nrelaxconss);
    assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
@@ -2353,17 +2094,6 @@ RETCODE SCIPconshdlrPresolve(
    return SCIP_OKAY;
 }
 
-/** resets relaxation to start with first constraint in the next call */
-void SCIPconshdlrResetRelax(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   assert(conshdlr != NULL);
-
-   conshdlr->lastnrelaxconss = 0;
-   conshdlr->relaxed = FALSE;
-}
-
 /** resets separation to start with first constraint in the next call */
 void SCIPconshdlrResetSepa(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -2467,16 +2197,6 @@ Real SCIPconshdlrGetPresolTime(
    return SCIPclockGetTime(conshdlr->presoltime);
 }
 
-/** gets time in seconds used for relaxation in this constraint handler */
-Real SCIPconshdlrGetRelaxTime(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   assert(conshdlr != NULL);
-
-   return SCIPclockGetTime(conshdlr->relaxtime);
-}
-
 /** gets time in seconds used for separation in this constraint handler */
 Real SCIPconshdlrGetSepaTime(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -2515,16 +2235,6 @@ Real SCIPconshdlrGetPropTime(
    assert(conshdlr != NULL);
 
    return SCIPclockGetTime(conshdlr->proptime);
-}
-
-/** gets number of calls to the constraint handler's relaxation method */
-Longint SCIPconshdlrGetNRelaxCalls(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   assert(conshdlr != NULL);
-
-   return conshdlr->nrelaxcalls;
 }
 
 /** gets number of calls to the constraint handler's separation method */
@@ -2727,7 +2437,7 @@ int SCIPconshdlrGetNChgSides(
    return conshdlr->nchgsides;
 }
 
-/** gets relaxation and separation priority of constraint handler */
+/** gets separation priority of constraint handler */
 int SCIPconshdlrGetSepaPriority(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -2757,16 +2467,6 @@ int SCIPconshdlrGetCheckPriority(
    return conshdlr->checkpriority;
 }
 
-/** gets relaxation frequency of constraint handler */
-int SCIPconshdlrGetRelaxFreq(
-   CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   assert(conshdlr != NULL);
-
-   return conshdlr->relaxfreq;
-}
-
 /** gets separation frequency of constraint handler */
 int SCIPconshdlrGetSepaFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
@@ -2787,7 +2487,7 @@ int SCIPconshdlrGetPropFreq(
    return conshdlr->propfreq;
 }
 
-/** gets frequency of constraint handler for eager evaluations in relaxation, separation, propagation and enforcement */
+/** gets frequency of constraint handler for eager evaluations in separation, propagation and enforcement */
 int SCIPconshdlrGetEagerFreq(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
@@ -3302,8 +3002,7 @@ RETCODE SCIPconsCreate(
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   Bool             relax,              /**< should the LP relaxation be separated during LP processing? */
-   Bool             separate,           /**< should additional cutting planes be separated during LP processing? */
+   Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
@@ -3326,7 +3025,6 @@ RETCODE SCIPconsCreate(
    (*cons)->addconssetchg = NULL;
    (*cons)->addarraypos = -1;
    (*cons)->consspos = -1;
-   (*cons)->relaxconsspos = -1;
    (*cons)->sepaconsspos = -1;
    (*cons)->enfoconsspos = -1;
    (*cons)->checkconsspos = -1;
@@ -3336,7 +3034,6 @@ RETCODE SCIPconsCreate(
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
    (*cons)->initial = initial;
-   (*cons)->relax = relax;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
    (*cons)->check = check;
@@ -3566,8 +3263,8 @@ RETCODE SCIPconsTransform(
       {
          /* create new constraint with empty constraint data */
          CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, NULL, origcons->initial,
-               origcons->relax, origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
-               origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
+                        origcons->separate, origcons->enforce, origcons->check, origcons->propagate, 
+                        origcons->local, origcons->modifiable, origcons->removeable, FALSE) );
       }
 
       /* link original and transformed constraint */
@@ -3648,9 +3345,7 @@ RETCODE SCIPconsDeactivate(
    return SCIP_OKAY;
 }
 
-/** enables constraint's relaxation, separation, enforcing, and propagation capabilities or marks them to be enabled#
- *  in next update
- */
+/** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
 RETCODE SCIPconsEnable(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
@@ -3680,9 +3375,7 @@ RETCODE SCIPconsEnable(
    return SCIP_OKAY;
 }
 
-/** disables constraint's relaxation, separation, enforcing, and propagation capabilities or marks them to be disabled
- *  in next update
- */
+/** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
 RETCODE SCIPconsDisable(
    CONS*            cons,               /**< constraint */
    SET*             set,                /**< global SCIP settings */
@@ -3714,7 +3407,6 @@ RETCODE SCIPconsDisable(
 
 /** adds given value to age of constraint, but age can never become negative;
  *  should be called
- *   - in constraint relaxation, if relaxation of this constraint is not already included in LP and if it is not violated,
  *   - in constraint separation, if no cut was found for this constraint,
  *   - in constraint enforcing, if constraint was feasible, and
  *   - in constraint propagation, if no domain reduction was deduced;
@@ -3774,7 +3466,6 @@ RETCODE SCIPconsAddAge(
 
 /** increases age of constraint by 1.0;
  *  should be called
- *   - in constraint relaxation, if relaxation of this constraint is not already included in LP and if it is not violated,
  *   - in constraint separation, if no cut was found for this constraint,
  *   - in constraint enforcing, if constraint was feasible, and
  *   - in constraint propagation, if no domain reduction was deduced;
@@ -3796,7 +3487,6 @@ RETCODE SCIPconsIncAge(
 
 /** resets age of constraint to zero;
  *  should be called
- *   - in constraint relaxation, if a violated relaxation of this constraint was found,
  *   - in constraint separation, if a cut was found for this constraint,
  *   - in constraint enforcing, if the constraint was violated, and
  *   - in constraint propagation, if a domain reduction was deduced;
@@ -4115,16 +3805,6 @@ Bool SCIPconsIsInitial(
    assert(cons != NULL);
 
    return cons->initial;
-}
-
-/** returns TRUE iff constraint should be relaxed during LP processing */
-Bool SCIPconsIsRelaxed(
-   CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-
-   return cons->relax;
 }
 
 /** returns TRUE iff constraint should be separated during LP processing */

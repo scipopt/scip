@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.18 2004/07/06 17:04:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.19 2004/07/07 08:58:31 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -57,18 +57,13 @@ public:
    /** default checking priority of the constraint handler */
    const int scip_checkpriority_;
 
-   /** default frequency for separating relaxation cuts; zero means to separate only in the root node */
-   const int scip_relaxfreq_;
-
-   /** default frequency for separating additional cuts; zero means to separate only in the root node */
+   /** default separation frequency of the constraint handler */
    const int scip_sepafreq_;
 
-   /** default frequency for propagating domains; zero means only preprocessing propagation */
+   /** default propagation frequency of the constraint handler */
    const int scip_propfreq_;
 
-   /** default frequency of the constraint handler for eager evaluations in relaxation, separation, propagation, and
-    *  enforcement
-    */
+   /** default frequency of the constraint handler for eager evaluations in separation, propagation and enforcement */
    const int scip_eagerfreq_;
 
    /** maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
@@ -84,8 +79,7 @@ public:
       int           sepapriority,       /**< priority of the constraint handler for separation */
       int           enfopriority,       /**< priority of the constraint handler for constraint enforcing */
       int           checkpriority,      /**< priority of the constraint handler for checking infeasibility */
-      int           relaxfreq,          /**< frequency for separating relaxation cuts; zero means to separate only in the root node */
-      int           sepafreq,           /**< frequency for separating additional cuts; zero means to separate only in the root node */
+      int           sepafreq,           /**< frequency for separating cuts; zero means to separate only in the root node */
       int           propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
       int           eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -97,7 +91,6 @@ public:
         scip_sepapriority_(sepapriority),
         scip_enfopriority_(enfopriority),
         scip_checkpriority_(checkpriority),
-        scip_relaxfreq_(relaxfreq),
         scip_sepafreq_(sepafreq),
         scip_propfreq_(propfreq),
         scip_eagerfreq_(eagerfreq),
@@ -267,50 +260,11 @@ public:
       return SCIP_OKAY;
    }
 
-   /** LP relaxation method of constraint handler
-    *
-    *  Separates LP relaxations of the constraints of the constraint handler. The method is called in the LP solution
-    *  loop, which means that a valid LP solution exists.
-    *
-    *  This method should only generate simple LP relaxations that can be found fast (e.g. in the knapsack constraint
-    *  handler, the knapsack constraint itself stored as an LP row).
-    *
-    *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The relaxation
-    *  method should process only the useful constraints in most runs, and only occasionally the remaining
-    *  nconss - nusefulconss constraints.
-    *
-    *  possible return values for *result:
-    *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
-    *  - SCIP_SEPARATED  : at least one LP relaxation row was generated
-    *  - SCIP_REDUCEDDOM : no LP relaxation row was generated, but at least one domain was reduced
-    *  - SCIP_CONSADDED  : no LP relaxation rows or domain reductions, but at least one additional constraint was generated
-    *  - SCIP_DIDNOTFIND : the relaxation method searched, but did not find a violated LP relaxation
-    *  - SCIP_DIDNOTRUN  : the relaxation method was skipped
-    */
-   virtual RETCODE scip_relaxlp(
-      SCIP*         scip,               /**< SCIP data structure */
-      CONSHDLR*     conshdlr,           /**< the constraint handler itself */
-      CONS**        conss,              /**< array of constraints to process */
-      int           nconss,             /**< number of constraints to process */
-      int           nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-      RESULT*       result              /**< pointer to store the result of the relaxation call */
-      )
-   {
-      assert(result != NULL);
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
-
    /** separation method of constraint handler
     *
-    *  Separates constraints of the constraint handler. The method is called in the LP solution loop,
+    *  Separates all constraints of the constraint handler. The method is called in the LP solution loop,
     *  which means that a valid LP solution exists.
     *
-    *  This method should generate additional cutting planes that tighten the LP relaxation created in the
-    *  CONSRELAX call. It can spend some time to find these cutting planes (e.g. in the knapsack constraint
-    *  handler, separating the lifted cardinality cuts is done by solving a few dynamic programs for each
-    *  knapsack constraint).
-    *  
     *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The separation
     *  method should process only the useful constraints in most runs, and only occasionally the remaining
     *  nconss - nusefulconss constraints.
