@@ -303,7 +303,7 @@ RETCODE forkCreate(
 
    ALLOC_OKAY( allocBlockMemory(memhdr, fork) );
 
-   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, &((*fork)->lpistate)) );
+   CHECK_OKAY( SCIPlpGetState(lp, memhdr, &((*fork)->lpistate)) );
    (*fork)->nlpistateref = 0;
    (*fork)->addedcols = NULL;
    (*fork)->addedrows = NULL;
@@ -392,7 +392,7 @@ RETCODE subrootCreate(
 
    ALLOC_OKAY( allocBlockMemory(memhdr, subroot) );
 
-   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, &((*subroot)->lpistate)) );
+   CHECK_OKAY( SCIPlpGetState(lp, memhdr, &((*subroot)->lpistate)) );
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = lp->ncols;
    (*subroot)->nrows = lp->nrows;

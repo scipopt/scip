@@ -895,28 +895,28 @@ RETCODE SCIPincSolVal(
    Real             incval              /**< increment for solution value of variable */
    );
 
-/** returns value of variable in primal CIP solution */
+/** returns value of variable in primal CIP solution, or in actual LP/pseudo solution */
 extern
 RETCODE SCIPgetSolVal(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
    VAR*             var,                /**< variable to get value for */
    Real*            solval              /**< pointer to store the solution value */
    );
 
-/** returns objective value of primal CIP solution */
+/** returns objective value of primal CIP solution, or actual LP/pseudo objective value */
 extern
 RETCODE SCIPgetSolObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo objective value */
    Real*            objval              /**< pointer to store the objective value */
    );
 
-/** returns objective value of primal CIP solution */
+/** returns transformed objective value of primal CIP solution, or transformed actual LP/pseudo objective value */
 extern
 RETCODE SCIPgetSolTransObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo objective value */
    Real*            objval              /**< pointer to store the objective value */
    );
 

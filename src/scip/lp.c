@@ -3149,6 +3149,7 @@ RETCODE lpFlushAddCols(
    char** name;
    COL* col;
    const VAR* var;
+   Real infinity;
    int c;
    int pos;
    int nnonz;
@@ -3169,6 +3170,9 @@ RETCODE lpFlushAddCols(
    /* add the additional columns */
    assert(lp->ncols > lp->nlpicols);
    CHECK_OKAY( ensureLpicolsSize(lp, set, lp->ncols) );
+
+   /* get the solver's infinity value */
+   infinity = SCIPlpiInfinity(lp->lpi);
 
    /* count the (maximal) number of added coefficients, calculate the number of added columns */
    naddcols = lp->ncols - lp->nlpicols;
@@ -3226,8 +3230,14 @@ RETCODE lpFlushAddCols(
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
       obj[pos] = var->obj;
-      lb[pos] = var->dom.lb;
-      ub[pos] = var->dom.ub;
+      if( SCIPsetIsInfinity(set, -var->dom.lb) )
+         lb[pos] = -infinity;
+      else
+         lb[pos] = var->dom.lb;
+      if( SCIPsetIsInfinity(set, var->dom.ub) )
+         ub[pos] = infinity;
+      else
+         ub[pos] = var->dom.ub;
       beg[pos] = nnonz;
       name[pos] = var->name;
 
@@ -3246,7 +3256,7 @@ RETCODE lpFlushAddCols(
 
    /* call LP interface */
    debugMessage("flushing col additions: enlarge LP from %d to %d colums\n", lp->nlpicols, lp->ncols);
-   CHECK_OKAY( SCIPlpiAddCols(lp->lpi, naddcols, nnonz, obj, lb, ub, beg, ind, val, name, set->infinity) );
+   CHECK_OKAY( SCIPlpiAddCols(lp->lpi, naddcols, obj, lb, ub, nnonz, beg, ind, val, name) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;
 
@@ -3319,6 +3329,7 @@ RETCODE lpFlushAddRows(
    Real* val;
    char** name;
    ROW* row;
+   Real infinity;
    int r;
    int pos;
    int nnonz;
@@ -3338,6 +3349,9 @@ RETCODE lpFlushAddRows(
    /* add the additional rows */
    assert(lp->nrows > lp->nlpirows);
    CHECK_OKAY( ensureLpirowsSize(lp, set, lp->nrows) );
+
+   /* get the solver's infinity value */
+   infinity = SCIPlpiInfinity(lp->lpi);
 
    /* count the (maximal) number of added coefficients, calculate the number of added rows */
    naddrows = lp->nrows - lp->nlpirows;
@@ -3381,12 +3395,14 @@ RETCODE lpFlushAddRows(
       row->lhschanged = FALSE;
       row->rhschanged = FALSE;
       row->coefchanged = FALSE;
-      lhs[pos] = row->lhs;
-      if( !SCIPsetIsInfinity(set, -lhs[pos]) )
-         lhs[pos] += row->constant;
-      rhs[pos] = row->rhs;
-      if( !SCIPsetIsInfinity(set, rhs[pos]) )
-         rhs[pos] += row->constant;
+      if( SCIPsetIsInfinity(set, -row->lhs) )
+         lhs[pos] = -infinity;
+      else
+         lhs[pos] = row->lhs + row->constant;
+      if( SCIPsetIsInfinity(set, row->rhs) )
+         rhs[pos] = infinity;
+      else
+         rhs[pos] = row->rhs + row->constant;
       beg[pos] = nnonz;
       name[pos] = row->name;
 
@@ -3408,7 +3424,7 @@ RETCODE lpFlushAddRows(
 
    /* call LP interface */
    debugMessage("flushing row additions: enlarge LP from %d to %d rows\n", lp->nlpirows, lp->nrows);
-   CHECK_OKAY( SCIPlpiAddRows(lp->lpi, naddrows, nnonz, lhs, rhs, beg, ind, val, name, set->infinity) );
+   CHECK_OKAY( SCIPlpiAddRows(lp->lpi, naddrows, lhs, rhs, nnonz, beg, ind, val, name) );
    lp->nlpirows = lp->nrows;
    lp->lpifirstchgrow = lp->nlpirows;
 
@@ -3436,6 +3452,7 @@ RETCODE lpFlushChgCols(
    int* ind;
    Real* lb;
    Real* ub;
+   Real infinity;
    int i;
    int nchg;
 
@@ -3444,6 +3461,9 @@ RETCODE lpFlushChgCols(
 
    if( lp->nchgcols == 0 )
       return SCIP_OKAY;
+
+   /* get the solver's infinity value */
+   infinity = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, lp->ncols) );
@@ -3468,8 +3488,14 @@ RETCODE lpFlushChgCols(
          {
             assert(nchg < lp->ncols);
             ind[nchg] = col->lpipos;
-            lb[nchg] = var->dom.lb;
-            ub[nchg] = var->dom.ub;
+            if( SCIPsetIsInfinity(set, -var->dom.lb) )
+               lb[nchg] = -infinity;
+            else
+               lb[nchg] = var->dom.lb;
+            if( SCIPsetIsInfinity(set, var->dom.ub) )
+               ub[nchg] = infinity;
+            else
+               ub[nchg] = var->dom.ub;
             nchg++;
             col->lbchanged = FALSE;
             col->ubchanged = FALSE;
@@ -3481,7 +3507,7 @@ RETCODE lpFlushChgCols(
    if( nchg > 0 )
    {
       debugMessage("flushing bound changes: change %d bounds of %d columns\n", nchg, lp->nchgcols);
-      CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, nchg, ind, lb, ub, set->infinity) );
+      CHECK_OKAY( SCIPlpiChgBounds(lp->lpi, nchg, ind, lb, ub) );
    }
 
    lp->nchgcols = 0;
@@ -3506,6 +3532,7 @@ RETCODE lpFlushChgRows(
    int* ind;
    Real* lhs;
    Real* rhs;
+   Real infinity;
    int i;
    int nchg;
 
@@ -3514,6 +3541,9 @@ RETCODE lpFlushChgRows(
 
    if( lp->nchgrows == 0 )
       return SCIP_OKAY;
+
+   /* get the solver's infinity value */
+   infinity = SCIPlpiInfinity(lp->lpi);
 
    /* get temporary memory for changes */
    CHECK_OKAY( SCIPsetCaptureBufferArray(set, &ind, lp->nrows) );
@@ -3533,12 +3563,14 @@ RETCODE lpFlushChgRows(
          {
             assert(nchg < lp->nrows);
             ind[nchg] = row->lpipos;
-            lhs[nchg] = row->lhs;
-            if( !SCIPsetIsInfinity(set, -lhs[nchg]) )
-               lhs[nchg] += row->constant;
-            rhs[nchg] = row->rhs;
-            if( !SCIPsetIsInfinity(set, rhs[nchg]) )
-               rhs[nchg] += row->constant;
+            if( SCIPsetIsInfinity(set, -row->lhs) )
+               lhs[nchg] = -infinity;
+            else
+               lhs[nchg] = row->lhs + row->constant;
+            if( SCIPsetIsInfinity(set, row->rhs) )
+               rhs[nchg] = infinity;
+            else
+               rhs[nchg] = row->rhs + row->constant;
             nchg++;
             row->lhschanged = FALSE;
             row->rhschanged = FALSE;
@@ -3550,7 +3582,7 @@ RETCODE lpFlushChgRows(
    if( nchg > 0 )
    {
       debugMessage("flushing side changes: change %d sides of %d rows\n", nchg, lp->nchgrows);
-      CHECK_OKAY( SCIPlpiChgSides(lp->lpi, nchg, ind, lhs, rhs, set->infinity) );
+      CHECK_OKAY( SCIPlpiChgSides(lp->lpi, nchg, ind, lhs, rhs) );
    }
 
    lp->nchgrows = 0;
@@ -3885,7 +3917,6 @@ int SCIPlpGetNumNewrows(
 RETCODE SCIPlpGetState(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    )
 {
@@ -3895,7 +3926,7 @@ RETCODE SCIPlpGetState(
    assert(memhdr != NULL);
    assert(lpistate != NULL);
 
-   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, set, lpistate) );
+   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, lpistate) );
 
    return SCIP_OKAY;
 }
@@ -3914,7 +3945,7 @@ RETCODE SCIPlpSetState(
 
    lpFlush(lp, memhdr, set);
 
-   CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, set, lpistate) );
+   CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, lpistate) );
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
 

@@ -1189,9 +1189,7 @@ allocBlockMemory_call(MEMHDR *mem, size_t size, const char *filename, int line)
 	 return NULL;
       }
 #ifndef NDEBUG
-      allocMemoryArray(&(*blkptr)->filename, strlen(filename) + 1);
-      assert((*blkptr)->filename != NULL);
-      strcpy((*blkptr)->filename, filename);
+      duplicateMemoryArray(&(*blkptr)->filename, filename, strlen(filename) + 1);
       (*blkptr)->line = line;
 #endif
    }

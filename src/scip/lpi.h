@@ -63,17 +63,26 @@ enum Pricing
 };
 typedef enum Pricing PRICING;
 
+/** basis status for columns and rows */
+enum BaseStat
+{
+   SCIP_BASESTAT_LOWER = 0,             /**< (slack) variable is at its lower bound */
+   SCIP_BASESTAT_BASIC = 1,             /**< (slack) variable is basic */
+   SCIP_BASESTAT_UPPER = 2              /**< (slack) variable is at its upper bound */
+};
+typedef enum BaseStat BASESTAT;
+
+
 
 
 #include "def.h"
 #include "mem.h"
 #include "retcode.h"
-#include "set.h"
 
 
 
 /*
- * LP interface methods
+ * LP interface methods needed by SCIP's internal methods
  */
 
 /** gets name and version of LP solver */
@@ -95,49 +104,19 @@ RETCODE SCIPlpiFree(
    LPI**            lpi                 /**< pointer to an LP interface structure */
    );
 
-/** copies data into LP problem object */
-extern 
-RETCODE SCIPlpiCopyData(
-   LPI*             lpi,                /**< LP interface structure */
-   int              ncol,               /**< number of columns */
-   int              nrow,               /**< number of rows */
-   OBJSEN           objsen,             /**< objective sense */
-   const Real*      obj,                /**< objective function vector */
-   const Real*      rhs,                /**< right hand side vector */
-   const char*      sen,                /**< row sense vector */
-   const int*       beg,                /**< start index of each column in ind- and val-array */
-   const int*       cnt,                /**< number of nonzeros for each column */
-   const int*       ind,                /**< row indices of constraint matrix entries */
-   const Real*      val,                /**< values of constraint matrix entries */
-   const Real*      lb,                 /**< lower bound vector */
-   const Real*      ub,                 /**< upper bound vector */
-   const char**     cname,              /**< column names */
-   const char**     rname               /**< row names */
-   );
-
 /** adds columns to the LP */
 extern 
 RETCODE SCIPlpiAddCols(
    LPI*             lpi,                /**< LP interface structure */
-   int              ncol,               /**< number of columns to be added */
-   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   int              ncols,              /**< number of columns to be added */
    const Real*      obj,                /**< objective function values of new columns */
    const Real*      lb,                 /**< lower bounds of new columns */
    const Real*      ub,                 /**< upper bounds of new columns */
+   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*       beg,                /**< start index of each column in ind- and val-array */
    const int*       ind,                /**< row indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   char**           name,               /**< column names */
-   Real             infinity            /**< value used as infinity */
-   );
-
-/** deletes columns from LP */
-extern 
-RETCODE SCIPlpiDelColset(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             dstat               /**< deletion status of columns
-                                         *   input:  1 if column should be deleted, 0 if not
-                                         *   output: new position of column, -1 if column was deleted */
+   char**           name                /**< column names */
    );
 
 /** deletes all columns in the given range from LP */
@@ -152,24 +131,14 @@ RETCODE SCIPlpiDelCols(
 extern 
 RETCODE SCIPlpiAddRows(
    LPI*             lpi,                /**< LP interface structure */
-   int              nrow,               /**< number of rows to be added */
-   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
+   int              nrows,              /**< number of rows to be added */
    const Real*      lhs,                /**< left hand sides of new rows */
    const Real*      rhs,                /**< right hand sides of new rows */
+   int              nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*       beg,                /**< start index of each row in ind- and val-array */
    const int*       ind,                /**< column indices of constraint matrix entries */
    const Real*      val,                /**< values of constraint matrix entries */
-   char**           name,               /**< row names */
-   Real             infinity            /**< value used as infinity */
-   );
-
-/** deletes rows from LP */
-extern 
-RETCODE SCIPlpiDelRowset(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             dstat               /**< deletion status of rows
-                                         *   input:  1 if row should be deleted, 0 if not
-                                         *   output: new position of row, -1 if row was deleted */
+   char**           name                /**< row names */
    );
 
 /** deletes all rows in the given range from LP */
@@ -180,23 +149,6 @@ RETCODE SCIPlpiDelRows(
    int              lastrow             /**< last row to be deleted */
    );
 
-/** get dense row of inverse basis matrix (A_B)^-1 */
-extern 
-RETCODE SCIPlpiGetBinvRow(
-   LPI*             lpi,                /**< LP interface structure */
-   int              i,                  /**< row number */
-   Real*            val                 /**< vector to return coefficients */
-   );
-
-/** get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
-extern 
-RETCODE SCIPlpiGetBinvARow(
-   LPI*             lpi,                /**< LP interface structure */
-   int              i,                  /**< row number */
-   const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
-   Real*            val                 /**< vector to return coefficients */
-   );
-
 /** changes lower and upper bounds of columns */
 extern 
 RETCODE SCIPlpiChgBounds(
@@ -204,8 +156,7 @@ RETCODE SCIPlpiChgBounds(
    int              n,                  /**< number of columns to change bounds for */
    const int*       ind,                /**< column indices */
    const Real*      lb,                 /**< values for the new lower bounds */
-   const Real*      ub,                 /**< values for the new upper bounds */
-   Real             infinity            /**< value used as infinity */
+   const Real*      ub                  /**< values for the new upper bounds */
    );
 
 /** changes left and right hand sides of rows */
@@ -215,8 +166,7 @@ RETCODE SCIPlpiChgSides(
    int              n,                  /**< number of rows to change sides for */
    const int*       ind,                /**< row indices */
    const Real*      lhs,                /**< new values for left hand sides */
-   const Real*      rhs,                /**< new values for right hand sides */
-   Real             infinity            /**< value used as infinity */
+   const Real*      rhs                 /**< new values for right hand sides */
    );
 
 /** changes the objective sense */
@@ -224,13 +174,6 @@ extern
 RETCODE SCIPlpiChgObjsen(
    LPI*             lpi,                /**< LP interface structure */
    OBJSEN           objsen              /**< new objective sense */
-   );
-
-/** returns the indices of the basic columns and rows */
-extern 
-RETCODE SCIPlpiGetBind(
-   LPI*             lpi,                /**< LP interface structure */
-   int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
    );
 
 /** gets integer parameter of LP */
@@ -263,6 +206,19 @@ RETCODE SCIPlpiSetRealpar(
    LPI*             lpi,                /**< LP interface structure */
    LPPARAM          type,               /**< parameter number */
    Real             dval                /**< parameter value */
+   );
+
+/** returns value treated as infinity in the LP solver */
+extern
+Real SCIPlpiInfinity(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
+/** checks if given value is treated as infinity in the LP solver */
+extern
+Bool SCIPlpiIsInfinity(
+   LPI*             lpi,                /**< LP interface structure */
+   Real             val
    );
 
 /** gets objective value of solution */
@@ -375,7 +331,6 @@ extern
 RETCODE SCIPlpiGetState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
@@ -384,7 +339,6 @@ extern
 RETCODE SCIPlpiSetState(
    LPI*             lpi,                /**< LP interface structure */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
@@ -396,9 +350,109 @@ RETCODE SCIPlpiFreeState(
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
-/** writes LP state (like basis information) to a file */
+
+
+
+
+/*
+ * LP interface methods needed by external SCIP features
+ */
+
+/** gets columns from LP problem object; the arrays have to be large enough to store all values
+ *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+extern
+RETCODE SCIPlpiGetCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstcol,           /**< first column to get from LP */
+   int              lastcol,            /**< last column to get from LP */
+   Real*            lb,                 /**< buffer to store the lower bound vector, or NULL */
+   Real*            ub,                 /**< buffer to store the upper bound vector, or NULL */
+   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*             beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
+   int*             ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
+   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   );
+
+/** gets rows from LP problem object; the arrays have to be large enough to store all values.
+ *  Either both, lhs and rhs, have to be NULL, or both have to be non-NULL,
+ *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
+ */
+extern
+RETCODE SCIPlpiGetRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int              firstrow,           /**< first row to get from LP */
+   int              lastrow,            /**< last row to get from LP */
+   Real*            lhs,                /**< buffer to store left hand side vector, or NULL */
+   Real*            rhs,                /**< buffer to store right hand side vector, or NULL */
+   int*             nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
+   int*             beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
+   int*             ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
+   Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   );
+
+/** deletes columns from LP */
 extern 
-RETCODE SCIPlpiWriteState(
+RETCODE SCIPlpiDelColset(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of columns
+                                         *   input:  1 if column should be deleted, 0 if not
+                                         *   output: new position of column, -1 if column was deleted */
+   );
+
+/** deletes rows from LP */
+extern 
+RETCODE SCIPlpiDelRowset(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             dstat               /**< deletion status of rows
+                                         *   input:  1 if row should be deleted, 0 if not
+                                         *   output: new position of row, -1 if row was deleted */
+   );
+
+/** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
+extern
+RETCODE SCIPlpiGetBase(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             cstat,              /**< array to store column basis status, or NULL */
+   int*             rstat               /**< array to store row basis status, or NULL */
+   );
+
+/** sets actual basis status for columns and rows */
+extern
+RETCODE SCIPlpiSetBase(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             cstat,              /**< array with column basis status */
+   int*             rstat               /**< array with row basis status */
+   );
+
+/** returns the indices of the basic columns and rows */
+extern 
+RETCODE SCIPlpiGetBind(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             bind                /**< basic column n gives value n, basic row m gives value -1-m */
+   );
+
+/** get dense row of inverse basis matrix (A_B)^-1 */
+extern 
+RETCODE SCIPlpiGetBinvRow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              i,                  /**< row number */
+   Real*            val                 /**< vector to return coefficients */
+   );
+
+/** get dense row of inverse basis matrix times constraint matrix (A_B)^-1 * A */
+extern 
+RETCODE SCIPlpiGetBinvARow(
+   LPI*             lpi,                /**< LP interface structure */
+   int              i,                  /**< row number */
+   const Real*      binv,               /**< dense row vector of row in (A_B)^-1 from prior call to SCIPgetrowBinv() */
+   Real*            val                 /**< vector to return coefficients */
+   );
+
+/** reads LP from a file */
+extern
+RETCODE SCIPlpiReadLP(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );
@@ -406,6 +460,20 @@ RETCODE SCIPlpiWriteState(
 /** writes LP to a file */
 extern 
 RETCODE SCIPlpiWriteLP(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   );
+
+/** reads LP state (like basis information from a file */
+extern 
+RETCODE SCIPlpiReadState(
+   LPI*             lpi,                /**< LP interface structure */
+   const char*      fname               /**< file name */
+   );
+
+/** writes LP state (like basis information) to a file */
+extern 
+RETCODE SCIPlpiWriteState(
    LPI*             lpi,                /**< LP interface structure */
    const char*      fname               /**< file name */
    );

@@ -789,7 +789,6 @@ extern
 RETCODE SCIPlpGetState(
    LP*              lp,                 /**< LP data */
    MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
    LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 

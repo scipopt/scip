@@ -544,20 +544,20 @@ Real SCIPvarGetUb(
    VAR*             var                 /**< problem variable */
    );
 
-/** get primal LP solution value of variable */
+/** gets primal LP solution value of variable */
 extern
 Real SCIPvarGetLPSol(
    VAR*             var                 /**< problem variable */
    );
 
-/** get pseudo solution value of variable at actual node */
+/** gets pseudo solution value of variable at actual node */
 extern
 Real SCIPvarGetPseudoSol(
    VAR*             var                 /**< problem variable */
    );
 
-/**< get solution value of variable at actual node: if LP was solved at the node, the method returns the LP primal
- *   solution value, otherwise the pseudo solution
+/** gets solution value of variable at actual node: if LP was solved at the node, the method returns the LP primal
+ *  solution value, otherwise the pseudo solution
  */
 extern
 Real SCIPvarGetSol(

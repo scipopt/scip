@@ -2075,7 +2075,7 @@ Real varGetBestBound(
       return var->dom.ub;
 }
 
-/** get primal LP solution value of variable */
+/** gets primal LP solution value of variable */
 Real SCIPvarGetLPSol(
    VAR*             var                 /**< problem variable */
    )
@@ -2119,11 +2119,11 @@ Real SCIPvarGetLPSol(
 
    default:
       errorMessage("Unknown variable status");
-      return SCIP_INVALIDDATA;
+      abort();
    }
 }
 
-/** get pseudo solution value of variable at actual node */
+/** gets pseudo solution value of variable at actual node */
 Real SCIPvarGetPseudoSol(
    VAR*             var                 /**< problem variable */
    )
@@ -2163,12 +2163,12 @@ Real SCIPvarGetPseudoSol(
 
    default:
       errorMessage("Unknown variable status");
-      return SCIP_INVALIDDATA;
+      abort();
    }
 }
 
-/**< get solution value of variable at actual node: if LP was solved at the node, the method returns the
- *   LP primal solution value, otherwise the pseudo solution
+/** gets solution value of variable at actual node: if LP was solved at the node, the method returns the
+ *  LP primal solution value, otherwise the pseudo solution
  */
 Real SCIPvarGetSol(
    VAR*             var,                /**< problem variable */

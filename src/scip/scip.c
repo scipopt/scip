@@ -2214,25 +2214,33 @@ RETCODE SCIPincSolVal(
    return SCIP_OKAY;
 }
 
-/** returns value of variable in primal CIP solution */
+/** returns value of variable in primal CIP solution, or in actual LP/pseudo solution */
 RETCODE SCIPgetSolVal(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo solution */
    VAR*             var,                /**< variable to get value for */
    Real*            solval              /**< pointer to store the solution value */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolGetVal(sol, scip->mem->solvemem, scip->set, scip->stat, var, solval) );
+   if( sol != NULL )
+   {
+      CHECK_OKAY( SCIPsolGetVal(sol, scip->mem->solvemem, scip->set, scip->stat, var, solval) );
+   }
+   else
+   {
+      CHECK_OKAY( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+      *solval = SCIPvarGetSol(var, scip->tree);
+   }
 
    return SCIP_OKAY;
 }
 
-/** returns objective value of primal CIP solution */
+/** returns objective value of primal CIP solution, or actual LP/pseudo objective value */
 RETCODE SCIPgetSolObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo objective value */
    Real*            objval              /**< pointer to store the objective value */
    )
 {
@@ -2240,24 +2248,48 @@ RETCODE SCIPgetSolObj(
 
    CHECK_OKAY( checkStage(scip, "SCIPgetSolObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   *objval = SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, SCIPsolGetObj(sol)));
-
+   if( sol != NULL )
+      *objval = SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, SCIPsolGetObj(sol)));
+   else
+   {
+      CHECK_OKAY( checkStage(scip, "SCIPgetSolObj(sol==NULL)", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+      if( scip->tree->actnodehaslp )
+      {
+         assert(scip->lp->solved);
+         *objval = SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, scip->lp->objval));
+      }
+      else
+         *objval = SCIPprobExternObjval(scip->origprob, SCIPprobExternObjval(scip->transprob, scip->tree->actpseudoobjval));
+   }
+   
    return SCIP_OKAY;
 }
 
-/** returns objective value of primal CIP solution */
+/** returns transformed objective value of primal CIP solution, or transformed actual LP/pseudo objective value */
 RETCODE SCIPgetSolTransObj(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal solution */
+   SOL*             sol,                /**< primal solution, or NULL for actual LP/pseudo objective value */
    Real*            objval              /**< pointer to store the objective value */
    )
 {
    assert(objval != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPgetSolObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPgetSolTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   *objval = SCIPsolGetObj(sol);
-
+   if( sol != NULL )
+      *objval = SCIPsolGetObj(sol);
+   else
+   {
+      CHECK_OKAY( checkStage(scip, "SCIPgetSolTransObj(sol==NULL)", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+      if( scip->tree->actnodehaslp )
+      {
+         assert(scip->lp->solved);
+         *objval = scip->lp->objval;
+      }
+      else
+         *objval = scip->tree->actpseudoobjval;
+   }
+   
    return SCIP_OKAY;
 }
 
