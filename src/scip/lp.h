@@ -183,7 +183,6 @@ void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain ch
 extern
 RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain change into dynamically sized one */
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    DOMCHG*          domchg              /**< static domain change */
    );
@@ -191,7 +190,6 @@ RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain 
 extern
 RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEM*             mem,                /**< block memory buffers */   
    const SET*       set,                /**< global SCIP settings */
    COL*             col,                /**< column to change the bounds for */
    Real             newbound,           /**< new value for bound */
@@ -202,7 +200,6 @@ RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes
 extern
 RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes */
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEM*             mem,                /**< block memory buffers */   
    const SET*       set,                /**< global SCIP settings */
    HOLELIST**       ptr,                /**< changed list pointer */
    HOLELIST*        newlist,            /**< new value of list pointer */
@@ -212,20 +209,19 @@ RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes 
 extern
 RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed size) from dynamically sized data */
    DOMCHG**         domchg,             /**< pointer to fixed size domain change data */
-   MEM*             mem,                /**< block memory buffers */   
+   MEMHDR*          memhdr,             /**< block memory */
    const DOMCHGDYN* domchgdyn           /**< dynamically sized domain change data structure */
    );
 
 extern
-void SCIPdomchgFree(                    /**< frees domain change data */
+void SCIPdomchgFree(                    /**< frees fixed size domain change data */
    DOMCHG**         domchg,             /**< pointer to domain change */
-   MEM*             mem                 /**< block memory buffers */
+   MEMHDR*          memhdr              /**< block memory */
    );
 
 extern
 RETCODE SCIPlpApplyDomchg(              /**< applies domain change */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    const DOMCHG*    domchg              /**< domain change to apply */
    );
@@ -233,26 +229,25 @@ RETCODE SCIPlpApplyDomchg(              /**< applies domain change */
 extern
 RETCODE SCIPlpUndoDomchg(               /**< undoes domain change */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    const DOMCHG*    domchg              /**< domain change to remove */
    );
 
 extern
-RETCODE SCIPlpFlush(                    /**< applies all cached changes to the LP */
+RETCODE SCIPlpFlush(                    /**< applies all cached changes to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 
 extern
 RETCODE SCIPcolCreate(                  /**< creates an LP column */
    COL**            col,                /**< pointer to column data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
-   char*            name,               /**< name of column */
+   const char*      name,               /**< name of column */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
    Real*            val,                /**< array with coefficients of column entries */
@@ -265,11 +260,11 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
 extern
 RETCODE SCIProwCreate(                  /**< creates an LP row */
    ROW**            row,                /**< pointer to LP row data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
-   char*            name,               /**< name of row */
+   const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
@@ -282,7 +277,7 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
 extern
 void SCIPcolFree(                       /**< frees an LP column */
    COL**            col,                /**< pointer to LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
@@ -290,7 +285,7 @@ void SCIPcolFree(                       /**< frees an LP column */
 extern
 void SCIProwFree(                       /**< frees an LP row */
    ROW**            row,                /**< pointer to LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
@@ -308,7 +303,7 @@ void SCIProwCapture(                    /**< increases usage counter of LP row *
 extern
 void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
    COL**            col,                /**< pointer to LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
@@ -316,7 +311,7 @@ void SCIPcolRelease(                    /**< decreases usage counter of LP colum
 extern
 void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
    ROW**            row,                /**< pointer to LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    );
@@ -334,7 +329,7 @@ void SCIProwSort(                       /**< sorts row entries by column index *
 extern
 RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
    COL*             col,                /**< LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
@@ -344,7 +339,7 @@ RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coef
 extern
 RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
    ROW*             row,                /**< LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    COL*             col,                /**< LP column */
@@ -370,7 +365,7 @@ void SCIProwDelCoeff(                   /**< deletes coefficient from row */
 extern
 RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
    COL*             col,                /**< LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
@@ -380,7 +375,7 @@ RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an
 extern
 RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an LP row */
    ROW*             row,                /**< LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    COL*             col,                /**< LP column */
@@ -415,21 +410,20 @@ int SCIPlpGetNumNewrows(                /**< get number of newly added rows afte
 extern
 RETCODE SCIPlpGetState(                 /**< stores LP state (like basis information) into LP state object */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    );
 
 extern
 RETCODE SCIPlpSetState(                 /**< loads LP state (like basis information) into solver */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE*         lpstate             /**< LP state information (like basis information) */
    );
 
 extern
 RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    COL*             col                 /**< LP column */
    );
@@ -437,7 +431,6 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
 extern
 RETCODE SCIPlpAddRow(                   /**< adds a row to the LP */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row                 /**< LP row */
    );
@@ -461,7 +454,8 @@ RETCODE SCIPlpClear(                    /** removes all columns and rows from LP
 
 extern
 RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
-   LP**             lp                  /**< pointer to LP data object */
+   LP**             lp,                 /**< pointer to LP data object */
+   const char*      name                /**< problem name */
    );
 
 extern

@@ -54,6 +54,11 @@ RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    );
 
 extern
+void SCIPpqueueFree(                    /**< frees priority queue, but not the data elements themselves */
+   PQUEUE**         pqueue              /**< pointer to a priority queue */
+   );
+
+extern
 RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue */
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    void*            elem                /**< element to be inserted */

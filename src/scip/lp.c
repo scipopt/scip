@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 
 #include "sort.h"
 #include "lp.h"
@@ -290,11 +291,14 @@ void SCIPdomchgdynFree(                 /**< frees a dynamically sized domain ch
 
 RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain change into dynamically sized one */
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    DOMCHG*          domchg              /**< static domain change */
    )
 {
+   assert(domchgdyn != NULL);
+   assert(set != NULL);
+   assert(domchg != NULL);
+
    CHECK_OKAY( ensureBoundchgSize(domchgdyn, set, domchg->nboundchg) );
    CHECK_OKAY( ensureHolechgSize(domchgdyn, set, domchg->nholechg) );
 
@@ -308,7 +312,6 @@ RETCODE SCIPdomchgdynCopy(              /**< copies data from fixed size domain 
 
 RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes */
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEM*             mem,                /**< block memory buffers */   
    const SET*       set,                /**< global SCIP settings */
    COL*             col,                /**< column to change the bounds for */
    Real             newbound,           /**< new value for bound */
@@ -317,7 +320,6 @@ RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes
    )
 {
    assert(domchgdyn != NULL);
-   assert(mem != NULL);
    assert(col != NULL);
 
    CHECK_OKAY( ensureBoundchgSize(domchgdyn, set, domchgdyn->boundchgsize+1) );
@@ -331,7 +333,6 @@ RETCODE SCIPdomchgdynAddBoundchg(       /**< adds bound change to domain changes
 
 RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes */
    DOMCHGDYN*       domchgdyn,          /**< dynamically sized domain change data structure */
-   MEM*             mem,                /**< block memory buffers */   
    const SET*       set,                /**< global SCIP settings */
    HOLELIST**       ptr,                /**< changed list pointer */
    HOLELIST*        newlist,            /**< new value of list pointer */
@@ -339,7 +340,6 @@ RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes 
    )
 {
    assert(domchgdyn != NULL);
-   assert(mem != NULL);
    assert(ptr != NULL);
 
    CHECK_OKAY( ensureHolechgSize(domchgdyn, set, domchgdyn->holechgsize+1) );
@@ -352,19 +352,19 @@ RETCODE SCIPdomchgdynAddHolechg(        /**< adds hole change to domain changes 
 
 RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed size) from dynamically sized data */
    DOMCHG**         domchg,             /**< pointer to fixed size domain change data */
-   MEM*             mem,                /**< block memory buffers */   
+   MEMHDR*          memhdr,             /**< block memory */
    const DOMCHGDYN* domchgdyn           /**< dynamically sized domain change data structure */
    )
 {
    assert(domchg != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(domchgdyn != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(mem->dommem, *domchg) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, *domchg) );
 
    if( domchgdyn->domchg.nboundchg > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(mem->dommem, (*domchg)->boundchg, domchgdyn->domchg.boundchg,
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*domchg)->boundchg, domchgdyn->domchg.boundchg,
                      domchgdyn->domchg.nboundchg) );
    }
    else
@@ -372,7 +372,7 @@ RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed s
 
    if( domchgdyn->domchg.nholechg > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(mem->dommem, (*domchg)->holechg, domchgdyn->domchg.holechg,
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*domchg)->holechg, domchgdyn->domchg.holechg,
                      domchgdyn->domchg.nholechg) );
    }
    else
@@ -386,21 +386,20 @@ RETCODE SCIPdomchgCreate(               /**< creates domain change data (fixed s
 
 void SCIPdomchgFree(                    /**< frees fixed size domain change data */
    DOMCHG**         domchg,             /**< pointer to domain change */
-   MEM*             mem                 /**< block memory buffers */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    assert(domchg != NULL);
    assert(*domchg != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
 
-   freeBlockMemoryArrayNull(mem->dommem, (*domchg)->boundchg, (*domchg)->nboundchg);
-   freeBlockMemoryArrayNull(mem->dommem, (*domchg)->holechg, (*domchg)->nholechg);
-   freeBlockMemory(mem->dommem, *domchg);
+   freeBlockMemoryArrayNull(memhdr, (*domchg)->boundchg, (*domchg)->nboundchg);
+   freeBlockMemoryArrayNull(memhdr, (*domchg)->holechg, (*domchg)->nholechg);
+   freeBlockMemory(memhdr, *domchg);
 }
 
 RETCODE SCIPlpApplyDomchg(              /**< applies domain change */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    const DOMCHG*    domchg              /**< domain change to apply */
    )
@@ -449,7 +448,6 @@ RETCODE SCIPlpApplyDomchg(              /**< applies domain change */
    
 RETCODE SCIPlpUndoDomchg(               /**< undoes domain change */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    const DOMCHG*    domchg              /**< domain change to remove */
    )
@@ -511,7 +509,13 @@ void coefChanged(                       /**< announces, that the given coefficie
 {
    assert(row != NULL);
    assert(col != NULL);
-   assert(lp != NULL);
+
+   if( lp == NULL )
+   {
+      assert(row->lpipos == -1);
+      assert(col->lpipos == -1);
+      return;
+   }
 
    if( row->lpipos >= 0 && col->lpipos >= 0 )
    {
@@ -576,12 +580,10 @@ RETCODE lpFlushDelCols(                 /**< applies all cached column removals 
 static
 RETCODE lpFlushAddCols(                 /**< applies all cached column additions to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
-   Real* realbuf;
-   int* intbuf;
    Real* obj;
    Real* lb;
    Real* ub;
@@ -596,10 +598,12 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    int naddcoefs;
    int i;
    int lpipos;
+   int tmpsizecols;
+   int tmpsizecoefs;
 
    assert(lp != NULL);
    assert(lp->lpifirstchgcol == lp->nlpicols);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(set != NULL);
 
    /* if there are no columns to add, we are ready */
@@ -617,16 +621,18 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
       naddcoefs += lp->cols[c]->len;
    assert(naddcols > 0);
 
-   /* get temporary memory for bound changes */
-   CHECK_OKAY( SCIPmemGetRealbuf(&realbuf, mem, set, 3*naddcols + naddcoefs) );
-   obj = &(realbuf[0*naddcols]);
-   lb = &(realbuf[1*naddcols]);
-   ub = &(realbuf[2*naddcols]);
-   val = &(realbuf[3*naddcols]);
-   CHECK_OKAY( SCIPmemGetIntbuf(&intbuf, mem, set, naddcols + naddcoefs) );
-   beg = &(intbuf[0*naddcols]);
-   ind = &(intbuf[1*naddcols]);
-   CHECK_OKAY( SCIPmemGetPtrbuf((void***)(&name), mem, set, naddcols) );
+   /* get temporary memory for changes */
+   tmpsizecols = SCIPcalcMemGrowSize(set, naddcols);     /* use standard sizes to reuse memory more often */
+   tmpsizecoefs = SCIPcalcMemGrowSize(set, naddcoefs);
+   assert(tmpsizecols >= naddcols);
+   assert(tmpsizecoefs >= naddcoefs);
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, obj, tmpsizecols) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, lb, tmpsizecols) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ub, tmpsizecols) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, beg, tmpsizecols) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizecoefs) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, val, tmpsizecoefs) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, name, tmpsizecols) );
    
    /* fill temporary memory with column data */
    nnonz = 0;
@@ -663,6 +669,15 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    CHECK_OKAY( SCIPlpiAddCols(lp->lpi, naddcols, nnonz, obj, lb, ub, beg, ind, val, name) );
    lp->nlpicols = lp->ncols;
    lp->lpifirstchgcol = lp->nlpicols;
+
+   /* free temporary memory */
+   freeBlockMemoryArray(memhdr, obj, tmpsizecols);
+   freeBlockMemoryArray(memhdr, lb, tmpsizecols);
+   freeBlockMemoryArray(memhdr, ub, tmpsizecols);
+   freeBlockMemoryArray(memhdr, beg, tmpsizecols);
+   freeBlockMemoryArray(memhdr, ind, tmpsizecoefs);
+   freeBlockMemoryArray(memhdr, val, tmpsizecoefs);
+   freeBlockMemoryArray(memhdr, name, tmpsizecols);
 
    return SCIP_OKAY;
 }
@@ -703,12 +718,10 @@ RETCODE lpFlushDelRows(                 /**< applies all cached row removals to 
 static
 RETCODE lpFlushAddRows(                 /**< applies all cached row additions and removals to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
-   Real* realbuf;
-   int* intbuf;
    Real* rhs;
    char* sen;
    int* beg;
@@ -722,10 +735,12 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    int naddcoefs;
    int i;
    int lpipos;
+   int tmpsizerows;
+   int tmpsizecoefs;
 
    assert(lp != NULL);
    assert(lp->lpifirstchgrow == lp->nlpirows);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
       
    /* if there are no rows to add, we are ready */
    if( lp->nrows == lp->nlpirows )
@@ -742,15 +757,17 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
       naddcoefs += lp->rows[r]->len;
    assert(naddrows > 0);
 
-   /* get temporary memory for bound changes */
-   CHECK_OKAY( SCIPmemGetRealbuf(&realbuf, mem, set, naddrows + naddcoefs) );
-   rhs = &(realbuf[0*naddrows]);
-   val = &(realbuf[1*naddrows]);
-   CHECK_OKAY( SCIPmemGetIntbuf(&intbuf, mem, set, naddrows + naddcoefs) );
-   beg = &(intbuf[0*naddrows]);
-   ind = &(intbuf[1*naddrows]);
-   CHECK_OKAY( SCIPmemGetCharbuf(&sen, mem, set, naddrows) );
-   CHECK_OKAY( SCIPmemGetPtrbuf((void***)(&name), mem, set, naddrows) );
+   /* get temporary memory for changes */
+   tmpsizerows = SCIPcalcMemGrowSize(set, naddrows);     /* use standard sizes to reuse memory more often */
+   tmpsizecoefs = SCIPcalcMemGrowSize(set, naddcoefs);
+   assert(tmpsizerows >= naddrows);
+   assert(tmpsizecoefs >= naddcoefs);
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rhs, tmpsizerows) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, sen, tmpsizerows) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, beg, tmpsizerows) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizecoefs) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, val, tmpsizecoefs) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, name, tmpsizerows) );
    
    /* fill temporary memory with row data */
    nnonz = 0;
@@ -786,13 +803,21 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
    lp->nlpirows = lp->nrows;
    lp->lpifirstchgrow = lp->nlpirows;
 
+   /* free temporary memory */
+   freeBlockMemoryArray(memhdr, rhs, tmpsizerows);
+   freeBlockMemoryArray(memhdr, sen, tmpsizerows);
+   freeBlockMemoryArray(memhdr, beg, tmpsizerows);
+   freeBlockMemoryArray(memhdr, ind, tmpsizecoefs);
+   freeBlockMemoryArray(memhdr, val, tmpsizecoefs);
+   freeBlockMemoryArray(memhdr, name, tmpsizerows);
+   
    return SCIP_OKAY;
 }
 
 static
 RETCODE lpFlushChgbds(                  /**< applies all cached bound changes to the LP */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
@@ -802,17 +827,20 @@ RETCODE lpFlushChgbds(                  /**< applies all cached bound changes to
    Real* bd;
    int i;
    int nchg;
+   int tmpsizecols;
 
    assert(lp != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
 
    if( lp->nchgbds == 0 )
       return SCIP_OKAY;
 
-   /* get temporary memory for bound changes */
-   CHECK_OKAY( SCIPmemGetIntbuf(&ind, mem, set, 2*lp->ncols) );
-   CHECK_OKAY( SCIPmemGetCharbuf(&lu, mem, set, 2*lp->ncols) );
-   CHECK_OKAY( SCIPmemGetRealbuf(&bd, mem, set, 2*lp->ncols) );
+   /* get temporary memory for changes */
+   tmpsizecols = SCIPcalcMemGrowSize(set, 2*lp->ncols);     /* use standard sizes to reuse memory more often */
+   assert(tmpsizecols >= 2*lp->ncols);
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, ind, tmpsizecols) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, lu, tmpsizecols) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, bd, tmpsizecols) );
 
    /* collect all cached bound changes */
    nchg = 0;
@@ -850,17 +878,22 @@ RETCODE lpFlushChgbds(                  /**< applies all cached bound changes to
 
    lp->nchgbds = 0;
 
+   /* free temporary memory */
+   freeBlockMemoryArray(memhdr, ind, tmpsizecols);
+   freeBlockMemoryArray(memhdr, lu, tmpsizecols);
+   freeBlockMemoryArray(memhdr, bd, tmpsizecols);
+
    return SCIP_OKAY;
 }
 
 RETCODE SCIPlpFlush(                    /**< applies all cached changes to the LP solver */
    LP*              lp,                 /**< actual LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    )
 {
    assert(lp != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    
    if( lp->flushed )
    {
@@ -875,9 +908,9 @@ RETCODE SCIPlpFlush(                    /**< applies all cached changes to the L
 
    CHECK_OKAY( lpFlushDelCols(lp) );
    CHECK_OKAY( lpFlushDelRows(lp) );
-   CHECK_OKAY( lpFlushChgbds(lp, mem, set) );
-   CHECK_OKAY( lpFlushAddCols(lp, mem, set) );
-   CHECK_OKAY( lpFlushAddRows(lp, mem, set) );
+   CHECK_OKAY( lpFlushChgbds(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushAddCols(lp, memhdr, set) );
+   CHECK_OKAY( lpFlushAddRows(lp, memhdr, set) );
 
    lp->flushed = TRUE;
 
@@ -1152,7 +1185,7 @@ int rowSearchCoeff(                     /**< searches coefficient in row, return
 
 static
 RETCODE ensureColSize(                  /**< ensures, that row array of column can store at least num additional entries */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    COL*             col,                /**< LP column */
    int              num                 /**< minimum number of additional entries to store */
@@ -1165,7 +1198,8 @@ RETCODE ensureColSize(                  /**< ensures, that row array of column c
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, col->row, col->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->row, col->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, col->val, col->size, newsize) );
       col->size = newsize;
    }
    assert(num <= col->size);
@@ -1175,7 +1209,7 @@ RETCODE ensureColSize(                  /**< ensures, that row array of column c
 
 static
 RETCODE ensureRowSize(                  /**< ensures, that column array of row can store at least num additional entries */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row,                /**< LP row */
    int              num                 /**< minimum number of additional entries to store */
@@ -1188,7 +1222,8 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocBlockMemoryArray(mem->lpmem, row->col, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->col, row->size, newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(memhdr, row->val, row->size, newsize) );
       row->size = newsize;
    }
    assert(num <= row->size);
@@ -1198,22 +1233,26 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
 
 RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coefficient to an LP column */
    COL*             col,                /**< LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(col != NULL);
    assert(row != NULL);
    assert(!SCIPisZero(set, val));
    assert(colSearchCoeff(col, row) == -1);
 
-   col->sorted &= (col->row[col->len-1]->index < row->index);
+   if( col->len > 0 )
+      col->sorted &= (col->row[col->len-1]->index < row->index);
 
-   CHECK_OKAY( ensureColSize(mem, set, col, col->len+1) );
+   CHECK_OKAY( ensureColSize(memhdr, set, col, col->len+1) );
+   assert(col->row != NULL);
+   assert(col->val != NULL);
+
    col->row[col->len] = row;
    col->val[col->len] = val;
    col->len++;
@@ -1226,22 +1265,26 @@ RETCODE SCIPcolAddCoeff(                /**< adds a previously non existing coef
 
 RETCODE SCIProwAddCoeff(                /**< adds a previously non existing coefficient to an LP row */
    ROW*             row,                /**< LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    COL*             col,                /**< LP column */
    Real             val                 /**< value of coefficient */
    )
 {
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(row != NULL);
    assert(col != NULL);
    assert(!SCIPisZero(set, val));
    assert(rowSearchCoeff(row, col) == -1);
 
-   row->sorted &= (row->col[row->len-1]->index < col->index);
+   if( row->len > 0 )
+      row->sorted &= (row->col[row->len-1]->index < col->index);
 
-   CHECK_OKAY( ensureRowSize(mem, set, row, row->len+1) );
+   CHECK_OKAY( ensureRowSize(memhdr, set, row, row->len+1) );
+   assert(row->col != NULL);
+   assert(row->val != NULL);
+
    row->col[row->len] = col;
    row->val[row->len] = val;
    row->len++;
@@ -1265,7 +1308,6 @@ void colDelCoeffPos(                    /**< deletes coefficient at given positi
 
    assert(col != NULL);
    assert(set != NULL);
-   assert(lp != NULL);
    assert(0 <= pos && pos < col->len);
 
    row = col->row[pos];
@@ -1317,7 +1359,6 @@ void rowDelCoeffPos(                    /**< deletes coefficient at given positi
 
    assert(row != NULL);
    assert(set != NULL);
-   assert(lp != NULL);
    assert(0 <= pos && pos < row->len);
 
    col = row->col[pos];
@@ -1358,7 +1399,7 @@ void SCIProwDelCoeff(                   /**< deletes coefficient from row */
 
 RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an LP column */
    COL*             col,                /**< LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    ROW*             row,                /**< LP row */
@@ -1368,7 +1409,7 @@ RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an
    int pos;
    Bool isZero;
 
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(col != NULL);
    assert(row != NULL);
 
@@ -1392,7 +1433,7 @@ RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an
    else if( !isZero )
    {
       /* add non existing coefficient */
-      CHECK_OKAY( SCIPcolAddCoeff(col, mem, set, lp, row, val) );
+      CHECK_OKAY( SCIPcolAddCoeff(col, memhdr, set, lp, row, val) );
    }
 
    return SCIP_OKAY;
@@ -1400,7 +1441,7 @@ RETCODE SCIPcolChgCoeff(                /**< changes or adds a coefficient to an
 
 RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an LP row */
    ROW*             row,                /**< LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    COL*             col,                /**< LP column */
@@ -1410,7 +1451,7 @@ RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an
    int pos;
    Bool isZero;
 
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(row != NULL);
    assert(col != NULL);
 
@@ -1434,7 +1475,7 @@ RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an
    else if( !isZero )
    {
       /* add non existing coefficient */
-      CHECK_OKAY( SCIProwAddCoeff(row, mem, set, lp, col, val) );
+      CHECK_OKAY( SCIProwAddCoeff(row, memhdr, set, lp, col, val) );
    }
 
    return SCIP_OKAY;
@@ -1442,11 +1483,11 @@ RETCODE SCIProwChgCoeff(                /**< changes or adds a coefficient to an
 
 RETCODE SCIPcolCreate(                  /**< creates an LP column */
    COL**            col,                /**< pointer to column data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
-   char*            name,               /**< name of column */
+   const char*      name,               /**< name of column */
    int              len,                /**< number of nonzeros in the column */
    ROW**            row,                /**< array with rows of column entries */
    Real*            val,                /**< array with coefficients of column entries */
@@ -1460,17 +1501,17 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    int idx;
 
    assert(col != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(stat != NULL);
    assert(len >= 0);
    assert(len == 0 || (row != NULL && val != NULL));
 
-   ALLOC_OKAY( allocBlockMemory(mem->lpmem, *col) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, *col) );
 
    if( len > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(mem->lpmem, (*col)->row, row, len) );
-      ALLOC_OKAY( duplicateBlockMemoryArray(mem->lpmem, (*col)->val, val, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->row, row, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->val, val, len) );
    }
    else
    {
@@ -1478,7 +1519,7 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
       (*col)->val = NULL;
    }
 
-   (*col)->name = name;
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*col)->name, name, strlen(name)+1) );
    (*col)->dom.holelist = NULL;
    (*col)->dom.lb = lb;
    (*col)->dom.ub = ub;
@@ -1507,7 +1548,7 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
       assert(!SCIPisZero(set, (*col)->val[i]));
       (*col)->sorted &= (i == 0 || (*col)->row[i-1]->index < (*col)->row[i]->index);
       colAddSign(*col, set, (*col)->val[i]);
-      CHECK_OKAY( SCIProwAddCoeff((*col)->row[i], mem, set, lp, *col, (*col)->val[i]) );
+      CHECK_OKAY( SCIProwAddCoeff((*col)->row[i], memhdr, set, lp, *col, (*col)->val[i]) );
    }
 
    return SCIP_OKAY;
@@ -1515,14 +1556,14 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
 
 void SCIPcolFree(                       /**< frees an LP column */
    COL**            col,                /**< pointer to LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    )
 {
    int i;
 
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(col != NULL);
    assert(*col != NULL);
    assert((*col)->numuses == 0);
@@ -1531,9 +1572,9 @@ void SCIPcolFree(                       /**< frees an LP column */
    for( i = 0; i < (*col)->len; ++i )
       SCIProwDelCoeff((*col)->row[i], set, lp, *col);
 
-   freeBlockMemoryArray(mem->lpmem, (*col)->row, (*col)->size);
-   freeBlockMemoryArray(mem->lpmem, (*col)->val, (*col)->size);
-   freeBlockMemory(mem->lpmem, *col);
+   freeBlockMemoryArray(memhdr, (*col)->row, (*col)->size);
+   freeBlockMemoryArray(memhdr, (*col)->val, (*col)->size);
+   freeBlockMemory(memhdr, *col);
 }
 
 void SCIPcolCapture(                    /**< increases usage counter of LP column */
@@ -1548,28 +1589,28 @@ void SCIPcolCapture(                    /**< increases usage counter of LP colum
 
 void SCIPcolRelease(                    /**< decreases usage counter of LP column, and frees memory if necessary */
    COL**            col,                /**< pointer to LP column */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    )
 {
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(col != NULL);
    assert(*col != NULL);
    assert((*col)->numuses >= 1);
 
    (*col)->numuses--;
    if( (*col)->numuses == 0 )
-      SCIPcolFree(col, mem, set, lp);
+      SCIPcolFree(col, memhdr, set, lp);
 }
 
 RETCODE SCIProwCreate(                  /**< creates an LP row */
    ROW**            row,                /**< pointer to LP row data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    STAT*            stat,               /**< problem statistics */
-   char*            name,               /**< name of row */
+   const char*      name,               /**< name of row */
    int              len,                /**< number of nonzeros in the row */
    COL**            col,                /**< array with columns of row entries */
    Real*            val,                /**< array with coefficients of row entries */
@@ -1583,18 +1624,18 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    int idx;
 
    assert(row != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(stat != NULL);
    assert(len >= 0);
    assert(len == 0 || (col != NULL && val != NULL));
    assert(epsilon >= 0.0);
 
-   ALLOC_OKAY( allocBlockMemory(mem->lpmem, *row) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, *row) );
 
    if( len > 0 )
    {
-      ALLOC_OKAY( duplicateBlockMemoryArray(mem->lpmem, (*row)->col, col, len) );
-      ALLOC_OKAY( duplicateBlockMemoryArray(mem->lpmem, (*row)->val, val, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->col, col, len) );
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->val, val, len) );
    }
    else
    {
@@ -1602,7 +1643,7 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
       (*row)->val = NULL;
    }
    
-   (*row)->name = name;
+   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, (*row)->name, name, strlen(name)+1) );
    (*row)->rhs = rhs;
    (*row)->lhs = lhs;
    (*row)->epsilon = epsilon;
@@ -1620,7 +1661,7 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    /* add coefficients to columns */
    for( i = 0; i < len; ++i )
    {
-      CHECK_OKAY( SCIPcolAddCoeff((*row)->col[i], mem, set, lp, *row, (*row)->val[i]) );
+      CHECK_OKAY( SCIPcolAddCoeff((*row)->col[i], memhdr, set, lp, *row, (*row)->val[i]) );
    }
 
    return SCIP_OKAY;
@@ -1628,14 +1669,14 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
 
 void SCIProwFree(                       /**< frees an LP row */
    ROW**            row,                /**< pointer to LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    )
 {
    int i;
 
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(row != NULL);
    assert(*row != NULL);
    assert((*row)->numuses == 0);
@@ -1644,9 +1685,9 @@ void SCIProwFree(                       /**< frees an LP row */
    for( i = 0; i < (*row)->len; ++i )
       SCIPcolDelCoeff((*row)->col[i], set, lp, *row);
 
-   freeBlockMemoryArray(mem->lpmem, (*row)->col, (*row)->size);
-   freeBlockMemoryArray(mem->lpmem, (*row)->val, (*row)->size);
-   freeBlockMemory(mem->lpmem, *row);
+   freeBlockMemoryArray(memhdr, (*row)->col, (*row)->size);
+   freeBlockMemoryArray(memhdr, (*row)->val, (*row)->size);
+   freeBlockMemory(memhdr, *row);
 }
 
 void SCIProwCapture(                    /**< increases usage counter of LP row */
@@ -1661,19 +1702,19 @@ void SCIProwCapture(                    /**< increases usage counter of LP row *
 
 void SCIProwRelease(                    /**< decreases usage counter of LP row, and frees memory if necessary */
    ROW**            row,                /**< pointer to LP row */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp                  /**< actual LP data */
    )
 {
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(row != NULL);
    assert(*row != NULL);
    assert((*row)->numuses >= 1);
 
    (*row)->numuses--;
    if( (*row)->numuses == 0 )
-      SCIProwFree(row, mem, set, lp);
+      SCIProwFree(row, memhdr, set, lp);
 }
 
 void SCIPlpMarkSize(                    /**< remembers number of columns and rows to track the newly added ones */
@@ -1727,33 +1768,32 @@ int SCIPlpGetNumNewrows(                /**< get number of newly added rows afte
 
 RETCODE SCIPlpGetState(                 /**< stores LP state (like basis information) into LP state object */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    )
 {
    assert(lp != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(lpstate != NULL);
 
-   return SCIPlpiGetState(lp->lpi, mem, lpstate);
+   return SCIPlpiGetState(lp->lpi, memhdr, lpstate);
 }
 
 RETCODE SCIPlpSetState(                 /**< loads LP state (like basis information) into solver */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE*         lpstate             /**< LP state information (like basis information) */
    )
 {
    assert(lp != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(lpstate != NULL);
 
-   return SCIPlpiSetState(lp->lpi, mem, lpstate);
+   return SCIPlpiSetState(lp->lpi, memhdr, lpstate);
 }
 
 RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    COL*             col                 /**< LP column */
    )
@@ -1772,7 +1812,6 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
 
 RETCODE SCIPlpAddRow(                   /**< adds a row to the LP */
    LP*              lp,                 /**< LP data */
-   MEM*             mem,                /**< block memory buffers */
    const SET*       set,                /**< global SCIP settings */
    ROW*             row                 /**< LP row */
    )
@@ -1838,12 +1877,13 @@ RETCODE SCIPlpClear(                    /**< removes all columns and rows from L
 }
 
 RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
-   LP**             lp                  /**< pointer to LP data object */
+   LP**             lp,                 /**< pointer to LP data object */
+   const char*      name                /**< problem name */
    )
 {
    ALLOC_OKAY( allocMemory(*lp) );
    
-   CHECK_OKAY( SCIPlpiOpen(&((*lp)->lpi)) );
+   CHECK_OKAY( SCIPlpiOpen(&((*lp)->lpi), name) );
 
    (*lp)->lpicols = NULL;
    (*lp)->lpirows = NULL;

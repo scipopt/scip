@@ -28,17 +28,6 @@
 #include "constraint.h"
 
 
-/** constraint handler */
-struct ConsHdlr
-{
-   char*            name;               /**< name of constraint handler */
-   DECL_CONSINIT((*consinit));          /**< initialise constraint handler */
-   DECL_CONSEXIT((*consexit));          /**< deinitialise constraint handler */
-   DECL_CONSFREE((*consfree));          /**< frees specific constraint data */
-   DECL_CONSCHCK((*conschck));          /**< check feasibility of primal solution */
-   DECL_CONSPROP((*consprop));          /**< propagate variable domains */
-};
-
 /** constraint data structure */
 struct Cons
 {
@@ -60,7 +49,7 @@ struct ConsList
 
 RETCODE SCIPconsCreate(                 /**< creates a constraint */
    CONS**           cons,               /**< pointer to constraint */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    Bool             original,           /**< belongs constraint to the original problem formulation? */
    Bool             model,              /**< is constraint necessary for feasibility? */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
@@ -68,10 +57,10 @@ RETCODE SCIPconsCreate(                 /**< creates a constraint */
    )
 {
    assert(cons != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(conshdlr != NULL);
 
-   ALLOC_OKAY( allocBlockMemory(mem->consmem, *cons) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, *cons) );
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
    (*cons)->numuses = 0;
@@ -83,17 +72,17 @@ RETCODE SCIPconsCreate(                 /**< creates a constraint */
 
 void SCIPconsFree(                      /**< frees a constraint */
    CONS**           cons,               /**< constraint to free */
-   MEM*             mem                 /**< block memory buffers */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
    assert(cons != NULL);
    assert(*cons != NULL);
    assert((*cons)->conshdlr != NULL);
    assert((*cons)->numuses == 0);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
 
-   (*cons)->conshdlr->consfree((*cons)->conshdlr, mem->consmem, (*cons)->consdata);
-   freeBlockMemory(mem->consmem, *cons);
+   (*cons)->conshdlr->consfree((*cons)->conshdlr, memhdr, (*cons)->consdata);
+   freeBlockMemory(memhdr, *cons);
 }
 
 void SCIPconsCapture(                   /**< increases usage counter of constraint */
@@ -108,32 +97,32 @@ void SCIPconsCapture(                   /**< increases usage counter of constrai
 
 void SCIPconsRelease(                   /**< decreases usage counter of constraint, and frees memory if necessary */
    CONS**           cons,               /**< pointer to constraint */
-   MEM*             mem                 /**< block memory buffers */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(cons != NULL);
    assert(*cons != NULL);
    assert((*cons)->numuses >= 1);
 
    (*cons)->numuses--;
    if( (*cons)->numuses == 0 )
-      SCIPconsFree(cons, mem);
+      SCIPconsFree(cons, memhdr);
 }
 
 RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constraints and captures it */
    CONSLIST**       conslist,           /**< constraint list to extend */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
    )
 {
    CONSLIST* newlist;
 
    assert(conslist != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(cons != NULL);
    
-   ALLOC_OKAY( allocBlockMemory(mem->consmem, newlist) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, newlist) );
    newlist->cons = cons;
    newlist->next = *conslist;
    *conslist = newlist;
@@ -145,21 +134,21 @@ RETCODE SCIPconslistAdd(                /**< adds constraint to a list of constr
 
 void SCIPconslistFreePart(              /**< partially unlinks and releases the constraints in the list */
    CONSLIST**       conslist,           /**< constraint list to delete from */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    CONSLIST*        firstkeep           /**< first constraint list entry to keep */
    )
 {
    CONSLIST* next;
 
    assert(conslist != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(firstkeep != NULL);
    
    while(*conslist != NULL && *conslist != firstkeep)
    {
-      SCIPconsRelease(&((*conslist)->cons), mem);
+      SCIPconsRelease(&((*conslist)->cons), memhdr);
       next = (*conslist)->next;
-      freeBlockMemory(mem->consmem, *conslist);
+      freeBlockMemory(memhdr, *conslist);
       *conslist = next;
    }
    assert(*conslist == firstkeep); /* firstkeep should be part of conslist */
@@ -167,8 +156,8 @@ void SCIPconslistFreePart(              /**< partially unlinks and releases the 
 
 void SCIPconslistFree(                  /**< unlinks and releases all the constraints in the list */
    CONSLIST**       conslist,           /**< constraint list to delete from */
-   MEM*             mem                 /**< block memory buffers */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
-   SCIPconslistFreePart(conslist, mem, NULL);
+   SCIPconslistFreePart(conslist, memhdr, NULL);
 }

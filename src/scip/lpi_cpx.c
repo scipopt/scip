@@ -154,19 +154,19 @@ void lpstateUnpack(                     /**< unpacks row and column basis status
 static
 RETCODE lpstateCreate(                  /**< creates LP state information object */
    LPSTATE**        lpstate,            /**< pointer to LP state */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    int              ncol,               /**< number of columns to store */
    int              nrow                /**< number of rows to store */
    )
 {
    assert(lpstate != NULL);
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(ncol >= 0);
    assert(nrow >= 0);
 
-   ALLOC_OKAY( allocBlockMemory(mem->statemem, *lpstate) );
-   ALLOC_OKAY( allocBlockMemoryArray(mem->statemem, (*lpstate)->packcstat, colpacketNum(ncol)) );
-   ALLOC_OKAY( allocBlockMemoryArray(mem->statemem, (*lpstate)->packrstat, rowpacketNum(nrow)) );
+   ALLOC_OKAY( allocBlockMemory(memhdr, *lpstate) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpstate)->packcstat, colpacketNum(ncol)) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpstate)->packrstat, rowpacketNum(nrow)) );
    (*lpstate)->dnorm = NULL;
 
    return SCIP_OKAY;
@@ -175,17 +175,17 @@ RETCODE lpstateCreate(                  /**< creates LP state information object
 static
 void lpstateFree(                       /**< frees LP state information */
    LPSTATE**        lpstate,            /**< pointer to LP state information (like basis information) */
-   MEM*             mem                 /**< block memory buffers */
+   MEMHDR*          memhdr              /**< block memory */
    )
 {
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(lpstate != NULL);
    assert(*lpstate != NULL);
 
-   freeBlockMemoryArray(mem->statemem, (*lpstate)->packcstat, colpacketNum((*lpstate)->ncol));
-   freeBlockMemoryArray(mem->statemem, (*lpstate)->packrstat, rowpacketNum((*lpstate)->nrow));
-   freeBlockMemoryArrayNull(mem->statemem, (*lpstate)->dnorm, (*lpstate)->ncol);
-   freeBlockMemory(mem->statemem, *lpstate);
+   freeBlockMemoryArray(memhdr, (*lpstate)->packcstat, colpacketNum((*lpstate)->ncol));
+   freeBlockMemoryArray(memhdr, (*lpstate)->packrstat, rowpacketNum((*lpstate)->nrow));
+   freeBlockMemoryArrayNull(memhdr, (*lpstate)->dnorm, (*lpstate)->ncol);
+   freeBlockMemory(memhdr, *lpstate);
 }
 
 
@@ -394,7 +394,8 @@ int cpxObjsen(OBJSEN objsen)
 }
 
 RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
-   LPI**            lpi                 /**< pointer to an LP interface structure */
+   LPI**            lpi,                /**< pointer to an LP interface structure */
+   const char*      name                /**< problem name */
    )
 {
    int     restat;
@@ -418,7 +419,7 @@ RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
 
    /* create LP */
    allocMemory(*lpi);
-   (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, "SCIP_CPLEX");
+   (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
    CHECK_ZERO(restat);
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
@@ -1113,7 +1114,7 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
 
 RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpstate object */
    LPI*             lpi,                /**< LP interface structure */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    )
 {
@@ -1122,7 +1123,7 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
    int* cstat;
    int* rstat;
 
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -1134,15 +1135,15 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
    assert(0 <= nrow && nrow < SCIP_MAXNROW);
    
    /* allocate lpstate data */
-   CHECK_OKAY( lpstateCreate(lpstate, mem, ncol, nrow) );
+   CHECK_OKAY( lpstateCreate(lpstate, memhdr, ncol, nrow) );
 
    /* allocate temporary buffer for storing uncompressed basis information */
-   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, cstat, ncol) );
-   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, rstat, nrow) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, ncol) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, nrow) );
 
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP )
    {
-      ALLOC_OKAY( allocBlockMemoryArray(mem->statemem, (*lpstate)->dnorm, ncol) );
+      ALLOC_OKAY( allocBlockMemoryArray(memhdr, (*lpstate)->dnorm, ncol) );
       CHECK_ZERO( CPXgetbasednorms(cpxenv, lpi->cpxlp, cstat, rstat, (*lpstate)->dnorm) );
    }
    else
@@ -1157,15 +1158,15 @@ RETCODE SCIPlpiGetState(                /**< stores LP state (like basis informa
    lpstatePack(*lpstate, cstat, rstat);
 
    /* free temporary memory */
-   freeBlockMemoryArray(mem->tempmem, cstat, ncol);
-   freeBlockMemoryArray(mem->tempmem, rstat, nrow);
+   freeBlockMemoryArray(memhdr, cstat, ncol);
+   freeBlockMemoryArray(memhdr, rstat, nrow);
 
    return SCIP_OKAY;
 }
 
 RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE*         lpstate             /**< LP state information (like basis information) */
    )
 {
@@ -1173,7 +1174,7 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    int* cstat;
    int* rstat;
 
-   assert(mem != NULL);
+   assert(memhdr != NULL);
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -1182,8 +1183,8 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    assert(lpstate->nrow == CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    /* allocate temporary buffer for storing uncompressed basis information */
-   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, cstat, lpstate->ncol) );
-   ALLOC_OKAY( allocBlockMemoryArray(mem->tempmem, rstat, lpstate->nrow) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, cstat, lpstate->ncol) );
+   ALLOC_OKAY( allocBlockMemoryArray(memhdr, rstat, lpstate->nrow) );
 
    lpstateUnpack(lpstate, cstat, rstat);
    if( getIntParam(lpi, CPX_PARAM_DPRIIND) == CPX_DPRIIND_STEEP && lpstate->dnorm != NULL )
@@ -1196,21 +1197,21 @@ RETCODE SCIPlpiSetState(                /**< loads LP state (like basis informat
    }
 
    /* free temporary memory */
-   freeBlockMemoryArray(mem->tempmem, cstat, lpstate->ncol);
-   freeBlockMemoryArray(mem->tempmem, rstat, lpstate->nrow);
+   freeBlockMemoryArray(memhdr, cstat, lpstate->ncol);
+   freeBlockMemoryArray(memhdr, rstat, lpstate->nrow);
 
    return SCIP_OKAY;
 }
 
 RETCODE SCIPlpiFreeState(               /**< frees LP state information */
    LPI*             lpi,                /**< LP interface structure */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    )
 {
    assert(lpi != NULL);
 
-   lpstateFree(lpstate, mem);
+   lpstateFree(lpstate, memhdr);
 
    return SCIP_OKAY;
 }

@@ -60,6 +60,7 @@ typedef struct memory_header MEMHDR;
 
 #define createBlockMemory(csz,clr,gbf)     createBlockMemory_call( (csz), (clr), (gbf), __FILE__, __LINE__ )
 #define clearBlockMemory(mem)              clearBlockMemory_call( (mem), __FILE__, __LINE__ )
+#define clearBlockMemoryNull(mem)          if( (mem) != NULL ) clearBlockMemory( (mem) )
 #define destroyBlockMemory(mem)            destroyBlockMemory_call( (MEMHDR**)(&(mem)), __FILE__, __LINE__ )
 #define destroyBlockMemoryNull(mem)        if( (mem) != NULL ) destroyBlockMemory( (mem) )
 

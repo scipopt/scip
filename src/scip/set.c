@@ -64,6 +64,17 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    return SCIP_OKAY;
 }
 
+RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
+   SET**            set                 /**< pointer to SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   freeMemory(*set);
+
+   return SCIP_OKAY;
+}
+
 static
 int calcGrowSize(                       /**< calculate memory size for dynamically allocated arrays */
    int              initsize,           /**< initial size of array */

@@ -97,6 +97,16 @@ RETCODE SCIPpqueueInit(                 /**< initializes priority queue */
    return SCIP_OKAY;
 }
 
+void SCIPpqueueFree(                    /**< frees priority queue, but not the data elements themselves */
+   PQUEUE**         pqueue              /**< pointer to a priority queue */
+   )
+{
+   assert(pqueue != NULL);
+
+   freeMemoryArray((*pqueue)->slots);
+   freeMemory(*pqueue);
+}
+
 RETCODE SCIPpqueueInsert(               /**< inserts element into priority queue */
    PQUEUE*          pqueue,             /**< pointer to a priority queue */
    void*            elem                /**< element to be inserted */

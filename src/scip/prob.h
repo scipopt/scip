@@ -36,6 +36,16 @@ typedef struct Prob PROB;               /**< main problem to solve */
 
 
 /*
+ * problem information
+ */
+
+extern
+const char* SCIPprobGetName(            /**< gets problem name */
+   const PROB*      prob                /**< problem data */
+   );
+
+
+/*
  * problem modification
  */
 
@@ -49,8 +59,7 @@ RETCODE SCIPprobAddCol(                 /**< adds variable to the problem */
 extern
 RETCODE SCIPprobAddConstraint(          /**< adds constraint to the problem */
    PROB*            prob,               /**< problem data */
-   MEM*             mem,                /**< block memory buffers */
-   const SET*       set,                /**< global SCIP settings */
+   MEMHDR*          memhdr,             /**< block memory */
    CONS*            cons                /**< constraint to add */
    );
 
@@ -62,8 +71,20 @@ RETCODE SCIPprobAddConstraint(          /**< adds constraint to the problem */
 
 extern
 RETCODE SCIPprobCreate(                 /**< creates problem data structure */
+   PROB**           prob,               /**< pointer to problem data structure */
+   const char*      name                /**< problem name */
+   );
+
+extern
+RETCODE SCIPprobFree(                   /**< frees problem data structure */
    PROB**           prob                /**< pointer to problem data structure */
    );
 
+extern
+RETCODE SCIPprobDuplicate(              /**< duplicates problem data */
+   PROB**           prob,               /**< pointer to target problem data structure */
+   MEMHDR*          memhdr,             /**< block memory of new problem data */
+   PROB*            source              /**< problem to duplicate */
+   );
 
 #endif

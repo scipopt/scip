@@ -27,6 +27,16 @@
 #define __SET_H__
 
 
+/** possible settings for enabling/disabling algorithms and other features */
+enum Setting
+{
+   SCIP_UNDEFINED = 0,                  /**< undefined setting */
+   SCIP_DISABLED  = 1,                  /**< feature is disabled */
+   SCIP_AUTO      = 2,                  /**< feature is set to automatic mode */
+   SCIP_ENABLED   = 3                   /**< feature is enabled */
+};
+typedef enum Setting SETTING;
+
 typedef struct Set SET;                 /**< global SCIP settings */
 
 
@@ -53,6 +63,11 @@ struct Set
 
 extern
 RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
+   SET**            set                 /**< pointer to SCIP settings */
+   );
+
+extern
+RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    SET**            set                 /**< pointer to SCIP settings */
    );
 

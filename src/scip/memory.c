@@ -31,7 +31,7 @@
 #include "memory.h"
 
 /* check memory structures after every call */
-/* #define DEBUG */
+#define DEBUG
 
 #define BLOCKHASH_SIZE     1013	/* should be prime */
 #define CHUNKLENGTH_MAX 1048576	/* maximal size of a chunk (in bytes) */

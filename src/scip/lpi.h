@@ -78,7 +78,8 @@ typedef enum Pricing PRICING;
 
 extern 
 RETCODE SCIPlpiOpen(                    /**< creates an LP problem object */
-   LPI**            lpi                 /**< pointer to an LP interface structure */
+   LPI**            lpi,                /**< pointer to an LP interface structure */
+   const char*      name                /**< problem name */
    );
 
 extern
@@ -329,21 +330,21 @@ Bool SCIPlpiIsTimelimExc(               /**< returns TRUE iff the time limit was
 extern
 RETCODE SCIPlpiGetState(                /**< stores LP state (like basis information) into lpstate object */
    LPI*             lpi,                /**< LP interface structure */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    );
 
 extern
 RETCODE SCIPlpiSetState(                /**< loads LP state (like basis information) into solver */
    LPI*             lpi,                /**< LP interface structure */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE*         lpstate             /**< LP state information (like basis information) */
    );
 
 extern
 RETCODE SCIPlpiFreeState(               /**< frees LP state information */
    LPI*             lpi,                /**< LP interface structure */
-   MEM*             mem,                /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory */
    LPSTATE**        lpstate             /**< pointer to LP state information (like basis information) */
    );
 

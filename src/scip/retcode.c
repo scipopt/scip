@@ -16,40 +16,59 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   retcode.h
+/**@file   retcode.c
  * @brief  return codes for SCIP methods
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __RETCODE_H__
-#define __RETCODE_H__
+#include <assert.h>
 
-#include <stdio.h>
-
-/** return codes for SCIP methods: negative return codes are errors */
-enum Retcode
-{
-   SCIP_SUCCESS     =   2,              /**< normal termination with success */
-   SCIP_FAILURE     =   1,              /**< normal termination without success */
-   SCIP_OKAY        =   0,              /**< normal termination */
-   SCIP_ERROR       =  -1,              /**< unspecified error */
-   SCIP_NOMEMORY    =  -2,              /**< insufficient memory error */
-   SCIP_READERR     =  -3,              /**< file read error */
-   SCIP_NOFILE      =  -4,              /**< file not found error */
-   SCIP_LPERROR     =  -5,              /**< error in LP solver */
-   SCIP_NOPROBLEM   =  -6,              /**< no problem exists */
-   SCIP_INVALIDCALL =  -7               /**< method cannot be called at this time in solution process */
-};
-typedef enum Retcode RETCODE;           /**< return code for SCIP method */
+#include "retcode.h"
 
 
-
-extern
 void SCIPretcodePrint(                  /**< prints error message for return code */
    FILE*            errout,             /**< file stream to write error message */
    RETCODE          retcode             /**< SCIP return code causing the error */
-   );
+   )
+{
+   assert(errout != NULL);
 
-#endif
+   switch( retcode )
+   {
+   case SCIP_SUCCESS:
+      fprintf(errout, "normal termination with success");
+      break;
+   case SCIP_FAILURE:
+      fprintf(errout, "normal termination without success");
+      break;
+   case SCIP_OKAY:
+      fprintf(errout, "normal termination");
+      break;
+   case SCIP_ERROR:
+      fprintf(errout, "unspecified error");
+      break;
+   case SCIP_NOMEMORY:
+      fprintf(errout, "insufficient memory error");
+      break;
+   case SCIP_READERR:
+      fprintf(errout, "file read error");
+      break;
+   case SCIP_NOFILE:
+      fprintf(errout, "file not found error");
+      break;
+   case SCIP_LPERROR:
+      fprintf(errout, "error in LP solver");
+      break;
+   case SCIP_NOPROBLEM:
+      fprintf(errout, "no problem exists");
+      break;
+   case SCIP_INVALIDCALL:
+      fprintf(errout, "method cannot be called at this time in solution process");
+      break;
+   default:
+      fprintf(errout, "unknown error code");
+      break;
+   }
+}

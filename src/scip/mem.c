@@ -139,12 +139,16 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
 
    ALLOC_OKAY( allocMemory(*mem) );
 
+   ALLOC_OKAY( (*mem)->probmem = createBlockMemory(1, TRUE, 10) );
+   ALLOC_OKAY( (*mem)->solvemem = createBlockMemory(1, FALSE, 10) );
+#if 0 /* ??? */
    ALLOC_OKAY( (*mem)->treemem = createBlockMemory(1, FALSE, 10) );
    ALLOC_OKAY( (*mem)->statemem = createBlockMemory(1, FALSE, 10) );
    ALLOC_OKAY( (*mem)->lpmem = createBlockMemory(1, FALSE, 10) );
    ALLOC_OKAY( (*mem)->dommem = createBlockMemory(1, FALSE, 10) );
    ALLOC_OKAY( (*mem)->consmem = createBlockMemory(1, FALSE, 10) );
    ALLOC_OKAY( (*mem)->primalmem = createBlockMemory(1, FALSE, 10) );
+#endif
    ALLOC_OKAY( (*mem)->tempmem = createBlockMemory(1, FALSE, 10) );
    (*mem)->ptrbuf = NULL;
    (*mem)->charbuf = NULL;
@@ -158,6 +162,29 @@ RETCODE SCIPmemCreate(                  /**< creates block memory structures */
    return SCIP_OKAY;
 }
 
+RETCODE SCIPmemFree(                    /**< frees block memory structures */
+   MEM**            mem                 /**< pointer to block memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   destroyBlockMemory((*mem)->probmem);
+   destroyBlockMemory((*mem)->solvemem);
+#if 0 /* ??? */
+   destroyBlockMemory((*mem)->treemem);
+   destroyBlockMemory((*mem)->statemem);
+   destroyBlockMemory((*mem)->lpmem);
+   destroyBlockMemory((*mem)->dommem);
+   destroyBlockMemory((*mem)->consmem);
+   destroyBlockMemory((*mem)->primalmem);
+#endif
+   destroyBlockMemory((*mem)->tempmem);
+
+   freeMemory(*mem);
+
+   return SCIP_OKAY;
+}
+   
 RETCODE SCIPmemGetPtrbuf(               /**< returns buffer for storing pointer array */
    void***          ptrbuf,             /**< pointer to a pointer array */
    MEM*             mem,                /**< block memory buffers */

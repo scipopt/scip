@@ -17,7 +17,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def.h
- * @brief  comon defines used in all packages of SCIP
+ * @brief  comon defines and data types used in all packages of SCIP
  * @author Tobias Achterberg
  */
 
@@ -26,8 +26,31 @@
 #ifndef __DEF_H__
 #define __DEF_H__
 
-#define SCIP_VERSION_MAJOR  0           /**< major part of SCIP version */
-#define SCIP_VERSION_MINOR  1           /**< minor part of SCIP version */
+#define SCIP_VERSION  0.1               /**< SCIP version number */
+
+#define SCIP_MAXNCOL       0x0000fffff  /**< maximal number of columns; 20 bits available */
+#define SCIP_MAXNROW       0x0000fffff  /**< maximal number of rows; 20 bits available */
+#define SCIP_MAXNCHILDREN  0x00000ffff  /**< maximal number of children per node; 16 bits available */
+#define SCIP_MAXNADDEDROWS 0x0000fffff  /**< maximal number of added rows per node; 20 bits available */
+
+#define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) < SCIP_OKAY ) return _restat_; }
+#define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
+
+#ifndef SQR
+#define SQR(x)        ((x)*(x))
+#define SQRT(x)       (sqrt(x))
+#endif
+
+#ifndef ABS
+#define ABS(x)        ((x) >= 0 ? (x) : -(x))
+#endif
+
+#ifndef MAX
+#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
+#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
+#endif
+
+
 
 /*
  * Boolean values
@@ -55,40 +78,7 @@ typedef double Real;                    /**< type used for floating point values
 #endif
 
 
-#define SCIP_MAXNCOL       0x0000fffff  /**< maximal number of columns; 20 bits available */
-#define SCIP_MAXNROW       0x0000fffff  /**< maximal number of rows; 20 bits available */
-#define SCIP_MAXNCHILDREN  0x00000ffff  /**< maximal number of children per node; 16 bits available */
-#define SCIP_MAXNADDEDROWS 0x0000fffff  /**< maximal number of added rows per node; 20 bits available */
 
-
-/** possible settings for enabling/disabling algorithms and other features */
-enum Setting
-{
-   SCIP_UNDEFINED = 0,                  /**< undefined setting */
-   SCIP_DISABLED  = 1,                  /**< feature is disabled */
-   SCIP_AUTO      = 2,                  /**< feature is set to automatic mode */
-   SCIP_ENABLED   = 3                   /**< feature is enabled */
-};
-typedef enum Setting SETTING;
-
-
-
-#define CHECK_OKAY(x) { int _restat_; if( (_restat_ = (x)) < SCIP_OKAY ) return _restat_; }
-#define ALLOC_OKAY(x) { if( NULL == (x) ) return SCIP_NOMEMORY; }
-
-#ifndef SQR
-#define SQR(x)        ((x)*(x))
-#define SQRT(x)       (sqrt(x))
-#endif
-
-#ifndef ABS
-#define ABS(x)        ((x) >= 0 ? (x) : -(x))
-#endif
-
-#ifndef MAX
-#define MAX(x,y)      ((x) >= (y) ? (x) : (y))     /**< returns maximum of x and y */
-#define MIN(x,y)      ((x) <= (y) ? (x) : (y))     /**< returns minimum of x and y */
-#endif
 
 #endif
 

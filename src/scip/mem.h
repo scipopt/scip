@@ -39,13 +39,17 @@ typedef struct Mem MEM;
 /** various block memory buffers */
 struct Mem
 {
+   MEMHDR*          probmem;            /**< memory blocks for original problem */
+   MEMHDR*          solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
+#if 0
    MEMHDR*          treemem;            /**< ptr to memory blocks for the tree */
    MEMHDR*          statemem;           /**< ptr to memory blocks for LP states */
    MEMHDR*          lpmem;              /**< ptr to memory blocks for LP data */
    MEMHDR*          dommem;             /**< ptr to memory blocks for domains of variables */
    MEMHDR*          consmem;            /**< ptr to memory blocks for constraint data */
    MEMHDR*          primalmem;          /**< ptr to memory blocks for primal solutions */
-   MEMHDR*          tempmem;            /**< ptr to memory blocks for short living objects */
+#endif
+   MEMHDR*          tempmem;            /**< memory blocks for short living objects */
    void**           ptrbuf;             /**< buffer for storing temporary pointer arrays */
    char*            charbuf;            /**< buffer for storing temporary char arrays */
    int*             intbuf;             /**< buffer for storing temporary int arrays */
@@ -60,6 +64,11 @@ struct Mem
 
 extern
 RETCODE SCIPmemCreate(                  /**< creates block memory structures */
+   MEM**            mem                 /**< pointer to block memory structure */
+   );
+
+extern
+RETCODE SCIPmemFree(                    /**< frees block memory structures */
    MEM**            mem                 /**< pointer to block memory structure */
    );
 

@@ -1,1 +1,1 @@
-$(OBJDIR)/cmain.o: src/cmain.c src/def.h
+$(OBJDIR)/cmain.o: src/cmain.c src/scip.h src/def.h src/retcode.h
