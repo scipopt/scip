@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.17 2004/02/06 11:53:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.18 2004/03/05 11:38:56 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -197,6 +197,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
 
             if( !SCIPisIntegral(scip, primsol) )
             {
+               debugMessage("trying gomory cut for <%s> [%g]\n", SCIPvarGetName(var), primsol);
+
                /* get the row of B^-1 for this basic integer variable with fractional solution value */
                CHECK_OKAY( SCIPgetLPBInvRow(scip, i, binvrow) );
 

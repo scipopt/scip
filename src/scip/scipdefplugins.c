@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.11 2004/02/04 17:27:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.12 2004/03/05 11:38:55 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -28,8 +28,8 @@
 #include "branch_history.h"
 #include "branch_mostinf.h"
 #include "branch_leastinf.h"
-#include "cons_and.h"
 #include "cons_binpack.h"
+#include "cons_conjunction.h"
 #include "cons_eqknapsack.h"
 #include "cons_integral.h"
 #include "cons_invarknapsack.h"
@@ -65,7 +65,7 @@ RETCODE SCIPincludeDefaultPlugins(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( SCIPincludeConshdlrAnd(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrConjunction(scip) );
    CHECK_OKAY( SCIPincludeConshdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConshdlrLogicor(scip) );
