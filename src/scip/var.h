@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.46 2003/12/15 17:45:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.47 2003/12/18 15:03:31 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -154,6 +154,7 @@ extern
 RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable */
    Real             lb,                 /**< lower bound of variable */
@@ -169,6 +170,7 @@ extern
 RETCODE SCIPvarCreateTransformed(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable */
    Real             lb,                 /**< lower bound of variable */
@@ -323,7 +325,23 @@ RETCODE SCIPvarAddObj(
    Real             addobj              /**< additional objective value for variable */
    );
 
-/** changes global lower bound of variable */
+/** adjust lower bound to integral value, if variable is integral */
+extern
+void SCIPvarAdjustLb(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            lb                  /**< pointer to lower bound to adjust */
+   );
+
+/** adjust upper bound to integral value, if variable is integral */
+extern
+void SCIPvarAdjustUb(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            ub                  /**< pointer to upper bound to adjust */
+   );
+
+/** changes global lower bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgLbGlobal(
    VAR*             var,                /**< problem variable to change */
@@ -331,7 +349,7 @@ RETCODE SCIPvarChgLbGlobal(
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes global upper bound of variable */
+/** changes global upper bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgUbGlobal(
    VAR*             var,                /**< problem variable to change */
@@ -339,7 +357,7 @@ RETCODE SCIPvarChgUbGlobal(
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes global bound of variable */
+/** changes global bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgBdGlobal(
    VAR*             var,                /**< problem variable to change */
@@ -348,7 +366,7 @@ RETCODE SCIPvarChgBdGlobal(
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
-/** changes current local lower bound of variable */
+/** changes current local lower bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgLbLocal(
    VAR*             var,                /**< problem variable to change */
@@ -365,7 +383,7 @@ RETCODE SCIPvarChgLbLocal(
    int              infernum            /**< bound change index for each node representing the order of changes */
    );
 
-/** changes current local upper bound of variable */
+/** changes current local upper bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgUbLocal(
    VAR*             var,                /**< problem variable to change */
@@ -382,7 +400,7 @@ RETCODE SCIPvarChgUbLocal(
    int              infernum            /**< bound change index for each node representing the order of changes */
    );
 
-/** changes current local bound of variable */
+/** changes current local bound of variable; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgBdLocal(
    VAR*             var,                /**< problem variable to change */
@@ -400,23 +418,7 @@ RETCODE SCIPvarChgBdLocal(
    int              infernum            /**< bound change index for each node representing the order of changes */
    );
 
-/** adjust lower bound to integral value, if variable is integral */
-extern
-void SCIPvarAdjustLb(
-   VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
-   Real*            lb                  /**< pointer to lower bound to adjust */
-   );
-
-/** adjust upper bound to integral value, if variable is integral */
-extern
-void SCIPvarAdjustUb(
-   VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
-   Real*            ub                  /**< pointer to upper bound to adjust */
-   );
-
-/** changes lower bound of variable in current dive */
+/** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgLbDive(
    VAR*             var,                /**< problem variable to change */
@@ -425,7 +427,7 @@ RETCODE SCIPvarChgLbDive(
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes upper bound of variable in current dive */
+/** changes upper bound of variable in current dive; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPvarChgUbDive(
    VAR*             var,                /**< problem variable to change */

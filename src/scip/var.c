@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.61 2003/12/15 17:45:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.62 2003/12/18 15:03:31 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -719,13 +719,44 @@ RETCODE SCIPdomchgAddHolechg(
  * methods for variables 
  */
 
-/** creates a variable; if the variable is not of type CONTINUOUS, fractional bounds are automatically tightened to
- *  the next integral value
- */
+/** returns adjusted lower bound value, which is rounded for integral variable types */
+static
+Real adjustedLb(
+   const SET*       set,                /**< global SCIP settings */
+   VARTYPE          vartype,            /**< type of variable */
+   Real             lb                  /**< lower bound to adjust */
+   )
+{
+   if( SCIPsetIsInfinity(set, -lb) )
+      return -set->infinity;
+   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      return SCIPsetCeil(set, lb);
+   else
+      return lb;
+}
+
+/** returns adjusted upper bound value, which is rounded for integral variable types */
+static
+Real adjustedUb(
+   const SET*       set,                /**< global SCIP settings */
+   VARTYPE          vartype,            /**< type of variable */
+   Real             ub                  /**< upper bound to adjust */
+   )
+{
+   if( SCIPsetIsInfinity(set, ub) )
+      return set->infinity;
+   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      return SCIPsetFloor(set, ub);
+   else
+      return ub;
+}
+
+/** creates variable; if variable is of integral type, fractional bounds are automatically rounded */
 static
 RETCODE varCreate(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable, or NULL for automatic name creation */
    Real             lb,                 /**< lower bound of variable */
@@ -739,6 +770,10 @@ RETCODE varCreate(
    assert(var != NULL);
    assert(memhdr != NULL);
    assert(stat != NULL);
+
+   /* adjust bounds of variable */
+   lb = adjustedLb(set, vartype, lb);
+   ub = adjustedUb(set, vartype, ub);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, var) );
 
@@ -782,6 +817,11 @@ RETCODE varCreate(
    (*var)->removeable = removeable;
    (*var)->vartype = vartype; /*lint !e641*/
 
+   /* adjust bounds, if variable is integral */
+   SCIPvarAdjustLb(*var, set, &lb);
+   SCIPvarAdjustUb(*var, set, &ub);
+   assert(lb <= ub);
+
    return SCIP_OKAY;
 }
 
@@ -789,6 +829,7 @@ RETCODE varCreate(
 RETCODE SCIPvarCreateOriginal(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable, or NULL for automatic name creation */
    Real             lb,                 /**< lower bound of variable */
@@ -804,7 +845,7 @@ RETCODE SCIPvarCreateOriginal(
    assert(stat != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, stat, name, lb, ub, obj, vartype, initial, removeable) );
+   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
@@ -820,6 +861,7 @@ RETCODE SCIPvarCreateOriginal(
 RETCODE SCIPvarCreateTransformed(
    VAR**            var,                /**< pointer to variable data */
    MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    const char*      name,               /**< name of variable, or NULL for automatic name creation */
    Real             lb,                 /**< lower bound of variable */
@@ -834,7 +876,7 @@ RETCODE SCIPvarCreateTransformed(
    assert(memhdr != NULL);
 
    /* create variable */
-   CHECK_OKAY( varCreate(var, memhdr, stat, name, lb, ub, obj, vartype, initial, removeable) );
+   CHECK_OKAY( varCreate(var, memhdr, set, stat, name, lb, ub, obj, vartype, initial, removeable) );
 
    /* set variable status and data */
    (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
@@ -1470,7 +1512,7 @@ RETCODE SCIPvarTransform(
       
       /* create transformed variable */
       sprintf(name, "t_%s", origvar->name);
-      CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, stat,
+      CHECK_OKAY( SCIPvarCreateTransformed(transvar, memhdr, set, stat,
                      name, origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
                      vartype, origvar->initial, origvar->removeable) );
       
@@ -2124,7 +2166,7 @@ RETCODE SCIPvarNegate(
       sprintf(negvarname, "%s_neg", var->name);
 
       /* create negated variable */
-      CHECK_OKAY( varCreate(negvar, memhdr, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
+      CHECK_OKAY( varCreate(negvar, memhdr, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
                      SCIPvarGetType(var), var->initial, var->removeable) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
@@ -2362,6 +2404,37 @@ RETCODE SCIPvarAddObj(
    return SCIP_OKAY;
 }
 
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLb(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            lb                  /**< pointer to lower bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(lb != NULL);
+
+   debugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
+
+   *lb = adjustedLb(set, var->vartype, *lb);
+}
+
+/** adjust upper bound to integral value, if variable is integral */
+void SCIPvarAdjustUb(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   Real*            ub                  /**< pointer to upper bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(ub != NULL);
+
+   debugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
+
+   *ub = adjustedUb(set, var->vartype, *ub);
+}
+
+
 /* forward declaration, because both methods call each other recursively */
 
 /** performs the actual change in upper bound, changes all parents accordingly */
@@ -2385,6 +2458,7 @@ RETCODE varProcessChgLbGlobal(
    int i;
 
    assert(var != NULL);
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, var->vartype, newbound)));
 
    debugMessage("process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -2466,6 +2540,7 @@ RETCODE varProcessChgUbGlobal(
    int i;
 
    assert(var != NULL);
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, var->vartype, newbound)));
 
    debugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -2533,7 +2608,7 @@ RETCODE varProcessChgUbGlobal(
    return SCIP_OKAY;
 }
 
-/** changes global lower bound of variable */
+/** changes global lower bound of variable; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgLbGlobal(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
@@ -2541,6 +2616,9 @@ RETCODE SCIPvarChgLbGlobal(
    )
 {
    assert(var != NULL);
+
+   /* adjust bound for integral variables */
+   SCIPvarAdjustLb(var, set, &newbound);
 
    debugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
@@ -2621,7 +2699,7 @@ RETCODE SCIPvarChgLbGlobal(
    return SCIP_OKAY;
 }
 
-/** changes global upper bound of variable */
+/** changes global upper bound of variable; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgUbGlobal(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
@@ -2629,6 +2707,9 @@ RETCODE SCIPvarChgUbGlobal(
    )
 {
    assert(var != NULL);
+
+   /* adjust bound for integral variables */
+   SCIPvarAdjustUb(var, set, &newbound);
 
    debugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
@@ -2709,7 +2790,7 @@ RETCODE SCIPvarChgUbGlobal(
    return SCIP_OKAY;
 }
 
-/** changes global bound of variable */
+/** changes global bound of variable; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgBdGlobal(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
@@ -2843,6 +2924,7 @@ RETCODE varProcessChgLbLocal(
    int i;
 
    assert(var != NULL);
+   assert(SCIPsetIsEQ(set, newbound, adjustedLb(set, var->vartype, newbound)));
 
    debugMessage("process changing lower bound of <%s> from %f to %f\n", var->name, var->actdom.lb, newbound);
 
@@ -2948,6 +3030,7 @@ RETCODE varProcessChgUbLocal(
    int i;
 
    assert(var != NULL);
+   assert(SCIPsetIsEQ(set, newbound, adjustedUb(set, var->vartype, newbound)));
 
    debugMessage("process changing upper bound of <%s> from %f to %f\n", var->name, var->actdom.ub, newbound);
 
@@ -3030,7 +3113,7 @@ RETCODE varProcessChgUbLocal(
    return SCIP_OKAY;
 }
 
-/** changes current local lower bound of variable */
+/** changes current local lower bound of variable; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgLbLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
@@ -3047,6 +3130,9 @@ RETCODE SCIPvarChgLbLocal(
    )
 {
    assert(var != NULL);
+
+   /* adjust bound for integral variables */
+   SCIPvarAdjustLb(var, set, &newbound);
 
    debugMessage("changing lower bound of <%s> from %g to %g\n", var->name, var->actdom.lb, newbound);
 
@@ -3139,7 +3225,7 @@ RETCODE SCIPvarChgLbLocal(
    return SCIP_OKAY;
 }
 
-/** changes current local upper bound of variable */
+/** changes current local upper bound of variable; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgUbLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
@@ -3156,6 +3242,9 @@ RETCODE SCIPvarChgUbLocal(
    )
 {
    assert(var != NULL);
+
+   /* adjust bound for integral variables */
+   SCIPvarAdjustUb(var, set, &newbound);
 
    debugMessage("changing upper bound of <%s> from %g to %g\n", var->name, var->actdom.ub, newbound);
 
@@ -3248,7 +3337,7 @@ RETCODE SCIPvarChgUbLocal(
    return SCIP_OKAY;
 }
 
-/** changes current local bound of variable */
+/** changes current local bound of variable; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgBdLocal(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
@@ -3280,49 +3369,7 @@ RETCODE SCIPvarChgBdLocal(
    }
 }
 
-/** adjust lower bound to integral value, if variable is integral */
-void SCIPvarAdjustLb(
-   VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
-   Real*            lb                  /**< pointer to lower bound to adjust */
-   )
-{
-   assert(var != NULL);
-   assert(lb != NULL);
-
-   debugMessage("adjust lower bound %g of <%s>\n", *lb, var->name);
-
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-   {
-      /* adjust new bound to integral value */
-      *lb = SCIPsetCeil(set, *lb);
-   }
-   if( SCIPsetIsInfinity(set, -(*lb)) )
-      *lb = -set->infinity;
-}
-
-/** adjust upper bound to integral value, if variable is integral */
-void SCIPvarAdjustUb(
-   VAR*             var,                /**< problem variable */
-   const SET*       set,                /**< global SCIP settings */
-   Real*            ub                  /**< pointer to upper bound to adjust */
-   )
-{
-   assert(var != NULL);
-   assert(ub != NULL);
-
-   debugMessage("adjust upper bound %g of <%s>\n", *ub, var->name);
-
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-   {
-      /* adjust new bound to integral value */
-      *ub = SCIPsetFloor(set, *ub);
-   }
-   if( SCIPsetIsInfinity(set, *ub) )
-      *ub = set->infinity;
-}
-
-/** changes lower bound of variable in current dive */
+/** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgLbDive(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
@@ -3331,6 +3378,9 @@ RETCODE SCIPvarChgLbDive(
    )
 {
    assert(var != NULL);
+
+   /* adjust bound for integral variables */
+   SCIPvarAdjustLb(var, set, &newbound);
 
    debugMessage("changing lower bound of <%s> to %g in current dive\n", var->name, newbound);
 
@@ -3399,7 +3449,7 @@ RETCODE SCIPvarChgLbDive(
    return SCIP_OKAY;
 }
 
-/** changes upper bound of variable in current dive */
+/** changes upper bound of variable in current dive; if possible, adjusts bound to integral value */
 RETCODE SCIPvarChgUbDive(
    VAR*             var,                /**< problem variable to change */
    const SET*       set,                /**< global SCIP settings */
@@ -3408,6 +3458,9 @@ RETCODE SCIPvarChgUbDive(
    )
 {
    assert(var != NULL);
+
+   /* adjust bound for integral variables */
+   SCIPvarAdjustUb(var, set, &newbound);
 
    debugMessage("changing upper bound of <%s> to %g in current dive\n", var->name, newbound);
 

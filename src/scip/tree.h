@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.44 2003/12/15 17:45:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.45 2003/12/18 15:03:31 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -124,7 +124,7 @@ RETCODE SCIPnodeDisableCons(
    CONS*            cons                /**< constraint to disable */
    );
 
-/** adds bound change to actual node, child or sibling of actual node */
+/** adds bound change to actual node, child or sibling of actual node; if possible, adjusts bound to integral value */
 extern
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.69 2003/12/15 17:45:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.70 2003/12/18 15:03:31 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -839,7 +839,7 @@ RETCODE SCIPnodeDisableCons(
    return SCIP_OKAY;
 }
 
-/** adds bound change to active node, child or sibling of active node */
+/** adds bound change to active node, child or sibling of active node; if possible, adjusts bound to integral value */
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
    MEMHDR*          memhdr,             /**< block memory */
@@ -872,14 +872,13 @@ RETCODE SCIPnodeAddBoundchg(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   
-   debugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
-      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, SCIPvarGetObj(var));
 
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       oldbound = SCIPvarGetLbLocal(var);
+
+      /* adjust the new bound */
+      SCIPvarAdjustLb(var, set, &newbound);
 
       if( SCIPsetIsLE(set, newbound, oldbound) )
       {
@@ -893,6 +892,9 @@ RETCODE SCIPnodeAddBoundchg(
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
       oldbound = SCIPvarGetUbLocal(var);
 
+      /* adjust the new bound */
+      SCIPvarAdjustUb(var, set, &newbound);
+
       if( SCIPsetIsGE(set, newbound, oldbound) )
       {
          errorMessage("variable's upper bound was not tightened: var <%s>, oldbound=%f, newbound=%f\n",
@@ -901,6 +903,10 @@ RETCODE SCIPnodeAddBoundchg(
       }
    }
    
+   debugMessage(" -> transformed to active variable <%s>: old bounds=[%g,%g], new %s bound: %g, obj: %g\n",
+      SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, SCIPvarGetObj(var));
+
    /* remember the bound change */
    CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, memhdr, set, 
                   var, newbound, oldbound, boundtype, node, infercons, infervar) );

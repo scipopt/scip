@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.112 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.113 2003/12/18 15:03:31 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3106,7 +3106,7 @@ RETCODE SCIPfreeSolve(
  * variable methods
  */
 
-/** create and capture problem variable */
+/** create and capture problem variable; if variable is of integral type, fractional bounds are automatically rounded */
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
    VAR**            var,                /**< pointer to variable object */
@@ -3127,22 +3127,24 @@ RETCODE SCIPcreateVar(
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->stat, 
+      CHECK_OKAY( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat, 
                      name, lb, ub, obj, vartype, initial, removeable) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->stat,
+      CHECK_OKAY( SCIPvarCreateTransformed(var, scip->mem->solvemem, scip->set, scip->stat,
                      name, lb, ub, obj, vartype, initial, removeable) );
-      return SCIP_OKAY;
+      break;
 
    default:
       errorMessage("invalid SCIP stage\n");
       return SCIP_ERROR;
    }  /*lint !e788*/
+
+   return SCIP_OKAY;
 }
 
 /** increases usage counter of variable */
@@ -3445,8 +3447,6 @@ RETCODE SCIPchgVarLb(
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarLb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   SCIPvarAdjustLb(var, scip->set, &newbound);
-
    switch( scip->stage )
    {
    case SCIP_STAGE_PROBLEM:
@@ -3485,8 +3485,6 @@ RETCODE SCIPchgVarUb(
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPchgVarUb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-
-   SCIPvarAdjustUb(var, scip->set, &newbound);
 
    switch( scip->stage )
    {
@@ -4012,7 +4010,7 @@ RETCODE aggregateActiveIntVars(
     * - the bounds of z are calculated automatically during aggregation
     */
    sprintf(aggvarname, "agg%d", scip->stat->nvaridx);
-   CHECK_OKAY( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->stat,
+   CHECK_OKAY( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->set, scip->stat,
                   aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
                   SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary),
                   SCIPvarIsRemoveable(varx) && SCIPvarIsRemoveable(vary) ) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.94 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.95 2003/12/18 15:03:31 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1298,7 +1298,7 @@ RETCODE SCIPfreeSolve(
 /**@name Variable Methods */
 /**@{ */
 
-/** create and capture problem variable */
+/** create and capture problem variable; if variable is of integral type, fractional bounds are automatically rounded */
 extern
 RETCODE SCIPcreateVar(
    SCIP*            scip,               /**< SCIP data structure */
