@@ -164,6 +164,7 @@ RETCODE SCIPdispOutput(                 /**< output display column to screen */
    )
 {
    assert(disp != NULL);
+   assert(disp->dispoutp != NULL);
    assert(scip != NULL);
 
    CHECK_OKAY( disp->dispoutp(disp, scip, stdout) );

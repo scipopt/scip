@@ -75,6 +75,9 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->treeGrowInit = SCIP_DEFAULT_TREEGROWINIT;
    (*set)->pathGrowFac = SCIP_DEFAULT_PATHGROWFAC;
    (*set)->pathGrowInit = SCIP_DEFAULT_PATHGROWINIT;
+   (*set)->readers = NULL;
+   (*set)->nreaders = 0;
+   (*set)->readerssize = 0;
    (*set)->conshdlrs = NULL;
    (*set)->nconshdlrs = 0;
    (*set)->conshdlrssize = 0;
@@ -91,6 +94,8 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
    (*set)->maxpricevars = SCIP_DEFAULT_MAXPRICEVARS;
    (*set)->maxsepacuts = SCIP_DEFAULT_MAXSEPACUTS;
    (*set)->maxsol = SCIP_DEFAULT_MAXSOL;
+   (*set)->nodelimit = SCIP_DEFAULT_NODELIMIT;
+   (*set)->usepricing = SCIP_DEFAULT_USEPRICING;
 
    return SCIP_OKAY;
 }
@@ -102,6 +107,13 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    int i;
 
    assert(set != NULL);
+
+   /* free file readers */
+   for( i = 0; i < (*set)->nreaders; ++i )
+   {
+      CHECK_OKAY( SCIPreaderFree(&(*set)->readers[i]) );
+   }
+   freeMemoryArray((*set)->readers);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
@@ -125,6 +137,53 @@ RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    freeMemoryArray((*set)->disps);
 
    freeMemory(*set);
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPsetIncludeReader(           /**< inserts file reader in file reader list */
+   SET*             set,                /**< global SCIP settings */
+   READER*          reader              /**< file reader */
+   )
+{
+   assert(set != NULL);
+   assert(reader != NULL);
+   assert(!SCIPreaderIsInitialized(reader));
+
+   if( set->nreaders >= set->readerssize )
+   {
+      set->readerssize = SCIPsetCalcMemGrowSize(set, set->nreaders+1);
+      ALLOC_OKAY( reallocMemoryArray(set->readers, set->readerssize) );
+   }
+   assert(set->nreaders < set->readerssize);
+   
+   set->readers[set->nreaders] = reader;
+   set->nreaders++;
+
+   return SCIP_OKAY;
+}   
+
+RETCODE SCIPsetFindReader(              /**< finds the file reader of the given name */
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of file reader */
+   READER**         reader              /**< pointer for storing the file reader (returns NULL, if not found) */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+   assert(reader != NULL);
+
+   *reader = NULL;
+   for( i = 0; i < set->nreaders; ++i )
+   {
+      if( strcmp(SCIPreaderGetName(set->readers[i]), name) == 0 )
+      {
+         *reader = set->readers[i];
+         return SCIP_OKAY;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -237,6 +296,12 @@ RETCODE SCIPsetInitCallbacks(           /**< initializes all user callback funct
 
    assert(set != NULL);
 
+   /* file readers */
+   for( i = 0; i < set->nreaders; ++i )
+   {
+      CHECK_OKAY( SCIPreaderInit(set->readers[i], set->scip) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
@@ -266,6 +331,12 @@ RETCODE SCIPsetExitCallbacks(           /**< calls exit methods of all user call
    int i;
 
    assert(set != NULL);
+
+   /* file readers */
+   for( i = 0; i < set->nreaders; ++i )
+   {
+      CHECK_OKAY( SCIPreaderExit(set->readers[i], set->scip) );
+   }
 
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
@@ -455,5 +526,9 @@ Bool SCIPsetIsIntegral(                 /**< checks, if value is integral within
    Real             val                 /**< value to be compared against zero */
    )
 {
+#if 0
    return (SCIPsetCeil(set, val) - SCIPsetFloor(set, val) < 0.5);
+#else
+   return (SCIPsetCeil(set, val) - val <= set->feastol);
+#endif
 }

@@ -113,6 +113,8 @@ struct Col
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
    int              numpos;             /**< number of positive coefficients */
    int              numneg;             /**< number of negative coefficients */
+   int              validredcostlp;     /**< lp number for which reduced cost value is valid */
+   int              validfarkaslp;      /**< lp number for which farkas value is valid */
    unsigned int     sorted:1;           /**< TRUE iff row indices are sorted in increasing order */
    unsigned int     lbchanged:1;        /**< TRUE iff lower bound changed, and data of LP solver has to be updated */
    unsigned int     ubchanged:1;        /**< TRUE iff upper bound changed, and data of LP solver has to be updated */
@@ -143,6 +145,7 @@ struct Row
    int              minidx;             /**< minimal column index of row entries */
    int              maxidx;             /**< maximal column index of row entries */
    int              nummaxval;          /**< number of coefficients with absolute value equal to maxval */
+   int              validslacklp;       /**< lp number for which slack value is valid */
    unsigned int     sorted:1;           /**< TRUE iff column indices are sorted in increasing order */
    unsigned int     validminmaxidx:1;   /**< TRUE iff minimal and maximal column index is valid */
    unsigned int     lhschanged:1;       /**< TRUE iff left hand side changed, and data of LP solver has to be updated */
@@ -182,6 +185,8 @@ struct Lp
    int              firstnewrow;        /**< first row added at the active node */
    unsigned int     flushed:1;          /**< TRUE iff all cached changes are applied to the LP solver */
    unsigned int     solved:1;           /**< TRUE iff current LP is solved */
+   unsigned int     primalfeasible:1;   /**< actual LP basis is primal feasible */
+   unsigned int     dualfeasible:1;     /**< actual LP basis is dual feasible */
 };
 
 
@@ -269,17 +274,20 @@ Bool SCIPcolIsInLP(                     /**< returns TRUE iff column is member o
 
 extern
 Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column in last LP or after recalculation */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
 Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in last LP or after recalculation */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
 Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column in last LP (which must be infeasible) */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
@@ -390,6 +398,32 @@ RETCODE SCIProwSideChanged(             /**< notifies LP row, that its sides wer
    );
 
 extern
+RETCODE SCIProwChgLhs(                  /**< changes left hand side of LP row */
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             lhs                 /**< new left hand side */
+   );
+
+extern
+RETCODE SCIProwChgRhs(                  /**< changes right hand side of LP row */
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             rhs                 /**< new right hand side */
+   );
+
+extern
+Real SCIProwGetLhs(                     /**< returns the left hand side of the row */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
+Real SCIProwGetRhs(                     /**< returns the right hand side of the row */
+   ROW*             row                 /**< LP row */
+   );
+
+extern
 const char* SCIProwGetName(             /**< returns the name of the row */
    ROW*             row                 /**< LP row */
    );
@@ -406,12 +440,14 @@ void SCIProwCalcSlack(                  /**< recalculates the actual slack of a 
 
 extern
 Real SCIProwGetSlack(                   /**< returns the slack of a row in the last LP solution or after recalculation */
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
 Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in the last solution or after recalc */
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
@@ -427,7 +463,6 @@ Real SCIProwGetNorm(                    /**< get euclidean norm of row vector */
 extern
 void SCIProwPrint(                      /**< output row to file stream */
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
@@ -568,7 +603,8 @@ extern
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   STAT*            stat                /**< problem statistics */
    );
 
 extern
@@ -577,5 +613,12 @@ RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers 
    const SET*       set,                /**< global SCIP settings */
    MEMHDR*          memhdr              /**< block memory buffers */
    );
+
+extern
+RETCODE SCIPlpGetIterations(            /**< get number of iterations used in last LP solve */
+   LP*              lp,                 /**< actual LP data */
+   int*             iterations          /**< pointer to store the iteration count */
+   );
+
 
 #endif

@@ -251,6 +251,23 @@ RETCODE ensureRowSize(                  /**< ensures, that column array of row c
 }
 
 
+/*
+ * compare methods for sorting
+ */
+
+static
+DECL_SORTPTRCOMP(cmpRow)
+{
+   return ((ROW*)elem1)->index - ((ROW*)elem2)->index;
+}
+
+static
+DECL_SORTPTRCOMP(cmpCol)
+{
+   return ((COL*)elem1)->index - ((COL*)elem2)->index;
+}
+
+
 
 /*
  * double linked coefficient matrix methods 
@@ -489,12 +506,6 @@ void coefChanged(                       /**< announces, that the given coefficie
 /*
  * Column methods
  */
-
-static
-DECL_SORTPTRCOMP(cmpCol)
-{
-   return ((COL*)elem1)->index - ((COL*)elem2)->index;
-}
 
 static
 int colSearchCoeff(                     /**< searches coefficient in column, returns position in col vector or -1 */
@@ -846,6 +857,8 @@ RETCODE SCIPcolCreate(                  /**< creates an LP column */
    (*col)->farkas = SCIP_INVALID;
    (*col)->numpos = 0;
    (*col)->numneg = 0;
+   (*col)->validredcostlp = -1;
+   (*col)->validfarkaslp = -1;
    (*col)->sorted = TRUE;
    (*col)->lbchanged = FALSE;
    (*col)->ubchanged = FALSE;
@@ -896,7 +909,7 @@ void SCIPcolSort(                       /**< sorts column entries by row index *
 {
    if( !col->sorted )
    {
-      SCIPbsortPtrDbl((void**)(col->row), col->val, col->len, &cmpCol);
+      SCIPbsortPtrDbl((void**)(col->row), col->val, col->len, &cmpRow);
       col->sorted = TRUE;
    }
 }
@@ -1015,20 +1028,24 @@ void colCalcRedcost(                    /**< calculates the reduced costs of a c
 }
 
 Real SCIPcolGetRedcost(                 /**< gets the reduced costs of a column in last LP or after recalculation */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(col != NULL);
+   assert(col->validredcostlp <= stat->nlp);
 
-   if( col->redcost >= SCIP_INVALID )
+   if( col->validfarkaslp < stat->nlp )
       colCalcRedcost(col);
    assert(col->redcost < SCIP_INVALID);
+   col->validredcostlp = stat->nlp;
 
    return col->redcost;
 }
 
 Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in last LP or after recalculation */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    )
 {
    Real redcost;
@@ -1036,7 +1053,7 @@ Real SCIPcolGetFeasibility(             /**< gets the feasibility of a column in
    assert(col != NULL);
    assert(col->var != NULL);
 
-   redcost = SCIPcolGetRedcost(col);
+   redcost = SCIPcolGetRedcost(col, stat);
 
    if( col->var->dom.lb < 0 )
       return -ABS(redcost);
@@ -1070,15 +1087,18 @@ void colCalcFarkas(                     /**< calculates the farkas value of a co
 }
 
 Real SCIPcolGetFarkas(                  /**< gets the farkas value of a column in last LP (which must be infeasible) */
-   COL*             col                 /**< LP column */
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(col != NULL);
+   assert(col->validfarkaslp <= stat->nlp);
 
-   if( col->farkas >= SCIP_INVALID )
+   if( col->validfarkaslp < stat->nlp )
       colCalcFarkas(col);
    assert(col->farkas < SCIP_INVALID);
-   
+   col->validfarkaslp = stat->nlp;
+
    return col->farkas;
 }
 
@@ -1126,12 +1146,6 @@ void SCIPcolPrint(                      /**< output column to file stream */
 /*
  * Row methods
  */
-
-static
-DECL_SORTPTRCOMP(cmpRow)
-{
-   return ((ROW*)elem1)->index - ((ROW*)elem2)->index;
-}
 
 static
 int rowSearchCoeff(                     /**< searches coefficient in row, returns position in row vector or -1 */
@@ -1295,7 +1309,8 @@ RETCODE rowAddCoeffLinked(              /**< adds a previously non existing coef
    assert(!SCIPsetIsZero(set, val));
    assert(rowSearchCoeff(row, col) == -1);
 
-   debugMessage("adding coefficient %g * <%s> to row <%s>, linkupdate=%d\n", val, col->var->name, row->name, linkupdate);
+   /*debugMessage("adding coefficient %g * <%s> to row <%s>, linkupdate=%d\n", 
+     val, col->var->name, row->name, linkupdate);*/
 
    if( row->len > 0 )
       row->sorted &= (row->col[row->len-1]->index < col->index);
@@ -1456,8 +1471,8 @@ RETCODE rowIncCoeffLinked(              /**< increases value of an existing or n
    assert(row != NULL);
    assert(col != NULL);
 
-   debugMessage("increasing coefficient <%s> of row <%s> with %g, linkupdate=%d\n", 
-      col->var->name, row->name, incval, linkupdate);
+   /*debugMessage("increasing coefficient <%s> of row <%s> with %g, linkupdate=%d\n", 
+     col->var->name, row->name, incval, linkupdate);*/
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
@@ -1543,7 +1558,7 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    (*row)->maxval = 0.0;
    (*row)->dualsol = 0.0;
    (*row)->slack = SCIP_INVALID;
-   (*row)->dualfarkas = SCIP_INVALID;
+   (*row)->dualfarkas = 0.0;
    (*row)->index = stat->nrowidx++;
    (*row)->size = len;
    (*row)->len = len;
@@ -1552,6 +1567,7 @@ RETCODE SCIProwCreate(                  /**< creates an LP row */
    (*row)->minidx = INT_MAX;
    (*row)->maxidx = INT_MIN;
    (*row)->nummaxval = 0;
+   (*row)->validslacklp = -1;
    (*row)->sorted = FALSE;
    (*row)->validminmaxidx = FALSE;
    (*row)->lhschanged = FALSE;
@@ -1696,7 +1712,7 @@ void SCIProwSort(                       /**< sorts row entries by column index *
 {
    if( !row->sorted )
    {
-      SCIPbsortPtrDbl((void**)(row->col), row->val, row->len, &cmpRow);
+      SCIPbsortPtrDbl((void**)(row->col), row->val, row->len, &cmpCol);
       row->sorted = TRUE;
    }
 }
@@ -1720,27 +1736,31 @@ void SCIProwCalcSlack(                  /**< recalculates the actual slack of a 
 }
 
 Real SCIProwGetSlack(                   /**< returns the slack of a row in the last LP solution or after recalculation */
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
    )
 {
    assert(row != NULL);
+   assert(row->validslacklp <= stat->nlp);
 
-   if( row->slack >= SCIP_INVALID )
+   if( row->validslacklp < stat->nlp )
       SCIProwCalcSlack(row);
    assert(row->slack < SCIP_INVALID);
+   row->validslacklp = stat->nlp;
 
    return row->slack;
 }
 
 Real SCIProwGetFeasibility(             /**< returns the feasibility of a row in the last solution or after recalc */
-   ROW*             row                 /**< LP row */
+   ROW*             row,                /**< LP row */
+   STAT*            stat                /**< problem statistics */
    )
 {
    Real slack;
 
    assert(row != NULL);
 
-   slack = SCIProwGetSlack(row);
+   slack = SCIProwGetSlack(row, stat);
 
    return MIN(slack, row->rhs - row->lhs - slack);
 }
@@ -1808,6 +1828,60 @@ RETCODE SCIProwSideChanged(             /**< notifies LP row, that its sides wer
    return SCIP_OKAY;
 }
 
+RETCODE SCIProwChgLhs(                  /**< changes left hand side of LP row */
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             lhs                 /**< new left hand side */
+   )
+{
+   assert(row != NULL);
+
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) )
+   {
+      row->lhs = lhs;
+      CHECK_OKAY( SCIProwSideChanged(row, set, lp, SCIP_SIDETYPE_LEFT) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIProwChgRhs(                  /**< changes right hand side of LP row */
+   ROW*             row,                /**< LP row */
+   const SET*       set,                /**< global SCIP settings */
+   LP*              lp,                 /**< actual LP data */
+   Real             rhs                 /**< new right hand side */
+   )
+{
+   assert(row != NULL);
+
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) )
+   {
+      row->rhs = rhs;
+      CHECK_OKAY( SCIProwSideChanged(row, set, lp, SCIP_SIDETYPE_RIGHT) );
+   }
+
+   return SCIP_OKAY;
+}
+
+Real SCIProwGetLhs(                     /**< returns the left hand side of the row */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->lhs;
+}
+
+Real SCIProwGetRhs(                     /**< returns the right hand side of the row */
+   ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->rhs;
+}
+
 const char* SCIProwGetName(             /**< returns the name of the row */
    ROW*             row                 /**< LP row */
    )
@@ -1828,7 +1902,6 @@ Bool SCIProwIsInLP(                     /**< returns TRUE iff row is member of a
 
 void SCIProwPrint(                      /**< output row to file stream */
    ROW*             row,                /**< LP row */
-   const SET*       set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
@@ -1840,8 +1913,7 @@ void SCIProwPrint(                      /**< output row to file stream */
       file = stdout;
 
    /* print left hand side */
-   if( !SCIPsetIsInfinity(set, -row->lhs) )
-      fprintf(file, "%+f <= ", row->lhs);
+   fprintf(file, "%+f <= ", row->lhs);
 
    /* print coefficients */
    if( row->len == 0 )
@@ -1898,6 +1970,8 @@ RETCODE lpFlushDelCols(                 /**< applies all cached column removals 
          lp->lpicols[i]->primsol = 0.0;
          lp->lpicols[i]->redcost = SCIP_INVALID;
          lp->lpicols[i]->farkas = SCIP_INVALID;
+         lp->lpicols[i]->validredcostlp = -1;
+         lp->lpicols[i]->validfarkaslp = -1;
       }
       lp->nlpicols = lp->lpifirstchgcol;
    }
@@ -1971,10 +2045,13 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
    {
       col = lp->cols[c];
       assert(col != NULL);
+      assert(col->var != NULL);
+      assert(col->var->varstatus == SCIP_VARSTATUS_COLUMN);
+      assert(col->var->data.col == col);
       assert(col->inlp);
       assert(nnonz + col->len <= naddcoefs);
 
-      debugMessage("flushing added column:");
+      debugMessage("flushing added column <%s>:", col->var->name);
       debug( SCIPcolPrint(col, set, NULL) );
 
       /* Because the column becomes a member of the LP solver, it now can take values
@@ -1993,6 +2070,8 @@ RETCODE lpFlushAddCols(                 /**< applies all cached column additions
       col->primsol = SCIP_INVALID;
       col->redcost = SCIP_INVALID;
       col->farkas = SCIP_INVALID;
+      col->validredcostlp = -1;
+      col->validfarkaslp = -1;
       col->lbchanged = FALSE;
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
@@ -2065,7 +2144,8 @@ RETCODE lpFlushDelRows(                 /**< applies all cached row removals to 
          lp->lpirows[i]->lpipos = -1;
          lp->lpirows[i]->dualsol = 0.0;
          lp->lpirows[i]->slack = SCIP_INVALID;
-         lp->lpirows[i]->dualfarkas = SCIP_INVALID;
+         lp->lpirows[i]->dualfarkas = 0.0;
+         lp->lpirows[i]->validslacklp = -1;
       }
       lp->nlpirows = lp->lpifirstchgrow;
    }
@@ -2139,7 +2219,7 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
       assert(nnonz + row->len <= naddcoefs);
 
       debugMessage("flushing added row:");
-      debug( SCIProwPrint(row, set, NULL) );
+      debug( SCIProwPrint(row, NULL) );
 
       /* Because the row becomes a member of the LP solver, its dual variable now can take values
        * different from zero. That means, we have to include the row in the corresponding
@@ -2152,6 +2232,7 @@ RETCODE lpFlushAddRows(                 /**< applies all cached row additions an
       row->dualsol = SCIP_INVALID;
       row->slack = SCIP_INVALID;
       row->dualfarkas = SCIP_INVALID;
+      row->validslacklp = -1;
       row->lhschanged = FALSE;
       row->rhschanged = FALSE;
       row->coefchanged = FALSE;
@@ -2398,6 +2479,8 @@ RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    (*lp)->chgrows = NULL;
    (*lp)->cols = NULL;
    (*lp)->rows = NULL;
+   (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
+   (*lp)->objval = 0.0;
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
    (*lp)->lpirowssize = 0;
@@ -2416,8 +2499,8 @@ RETCODE SCIPlpCreate(                   /**< creates empty LP data object */
    (*lp)->firstnewrow = 0;
    (*lp)->flushed = TRUE;
    (*lp)->solved = TRUE;
-   (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   (*lp)->objval = 0.0;
+   (*lp)->primalfeasible = TRUE;
+   (*lp)->dualfeasible = TRUE;
 
    /* set default parameters in LP solver */
    CHECK_OKAY( SCIPlpSetFeastol(*lp, set->feastol) );
@@ -2470,6 +2553,7 @@ RETCODE SCIPlpAddCol(                   /**< adds a column to the LP */
    lp->ncols++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
+   lp->dualfeasible = FALSE;
    lp->objval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    col->inlp = TRUE;
@@ -2495,6 +2579,7 @@ RETCODE SCIPlpAddRow(                   /**< adds a row to the LP and captures i
    lp->nrows++;
    lp->flushed = FALSE;
    lp->solved = FALSE;
+   lp->primalfeasible = FALSE;
    lp->objval = SCIP_INVALID;
    lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    row->inlp = TRUE;
@@ -2510,9 +2595,10 @@ RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given
    int c;
 
    assert(lp != NULL);
-   assert(0 <= newncols && newncols <= lp->ncols);
-
    debugMessage("shrinking LP from %d to %d columns\n", lp->ncols, newncols);
+   assert(0 <= newncols);
+   assert(newncols <= lp->ncols);
+
    if( newncols < lp->ncols )
    {
       for( c = newncols; c < lp->ncols; ++c )
@@ -2528,6 +2614,7 @@ RETCODE SCIPlpShrinkCols(               /**< removes all columns after the given
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
       lp->flushed = FALSE;
       lp->solved = FALSE;
+      lp->primalfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -2560,6 +2647,7 @@ RETCODE SCIPlpShrinkRows(               /**< removes and releases all rows after
       lp->lpifirstchgrow = MIN(lp->lpifirstchgrow, newnrows);
       lp->flushed = FALSE;
       lp->solved = FALSE;
+      lp->dualfeasible = FALSE;
       lp->objval = SCIP_INVALID;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    }
@@ -2643,7 +2731,9 @@ RETCODE SCIPlpGetState(                 /**< stores LP state (like basis informa
    assert(memhdr != NULL);
    assert(lpistate != NULL);
 
-   return SCIPlpiGetState(lp->lpi, memhdr, lpistate);
+   CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, lpistate) );
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPlpSetState(                 /**< loads LP state (like basis information) into solver */
@@ -2659,7 +2749,11 @@ RETCODE SCIPlpSetState(                 /**< loads LP state (like basis informat
 
    lpFlush(lp, set, memhdr);
 
-   return SCIPlpiSetState(lp->lpi, memhdr, lpistate);
+   CHECK_OKAY( SCIPlpiSetState(lp->lpi, memhdr, lpistate) );
+   lp->primalfeasible = TRUE;
+   lp->dualfeasible = TRUE;
+
+   return SCIP_OKAY;
 }
 
 RETCODE SCIPlpSetFeastol(               /**< sets the feasibility tolerance of the LP solver */
@@ -2675,6 +2769,7 @@ RETCODE SCIPlpSetFeastol(               /**< sets the feasibility tolerance of t
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lp->primalfeasible = FALSE;
    }
 
    return SCIP_OKAY;
@@ -2700,12 +2795,16 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
    STAT*            stat                /**< problem statistics */
    )
 {
+   int iterations;
+   Bool primalfeasible;
+   Bool dualfeasible;
+
    assert(lp != NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(stat != NULL);
 
-   debugMessage("solving primal LP %d (LP %d)\n", stat->nprimallp+1, stat->nlp+1);
+   debugMessage("solving primal LP %d (LP %d, %d cols, %d rows)\n", stat->nprimallp+1, stat->nlp+1, lp->ncols, lp->nrows);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, set, memhdr) );
@@ -2713,9 +2812,16 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
 
+   /* check for primal and dual feasibility */
+   CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
+   lp->primalfeasible = primalfeasible;
+   lp->dualfeasible = dualfeasible;
+
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
    {
+      assert(lp->primalfeasible);
+      assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
    }
@@ -2757,6 +2863,9 @@ RETCODE SCIPlpSolvePrimal(              /**< solves the LP with the primal simpl
 
    stat->nlp++;
    stat->nprimallp++;
+   CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
+   stat->nlpiterations += iterations;
+   stat->nprimallpiterations += iterations;
 
    debugMessage("solving primal LP returned solstat=%d\n", lp->lpsolstat);
 
@@ -2770,12 +2879,16 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
    STAT*            stat                /**< problem statistics */
    )
 {
+   int iterations;
+   Bool primalfeasible;
+   Bool dualfeasible;
+
    assert(lp != NULL);
    assert(memhdr != NULL);
    assert(set != NULL);
    assert(stat != NULL);
 
-   debugMessage("solving dual LP %d (LP %d)\n", stat->nduallp+1, stat->nlp+1);
+   debugMessage("solving dual LP %d (LP %d, %d cols, %d rows)\n", stat->nduallp+1, stat->nlp+1, lp->ncols, lp->nrows);
 
    /* flush changes to the LP solver */
    CHECK_OKAY( lpFlush(lp, set, memhdr) );
@@ -2783,9 +2896,16 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
    /* call primal simplex */
    CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
 
+   /* check for primal and dual feasibility */
+   CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
+   lp->primalfeasible = primalfeasible;
+   lp->dualfeasible = dualfeasible;
+
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
    {
+      assert(lp->primalfeasible);
+      assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
    }
@@ -2826,6 +2946,9 @@ RETCODE SCIPlpSolveDual(                /**< solves the LP with the dual simplex
 
    stat->nlp++;
    stat->nduallp++;
+   CHECK_OKAY( SCIPlpGetIterations(lp, &iterations) );
+   stat->nlpiterations += iterations;
+   stat->nduallpiterations += iterations;
 
    debugMessage("solving dual LP returned solstat=%d\n", lp->lpsolstat);
 
@@ -2856,7 +2979,8 @@ Real SCIPlpGetObjval(                   /**< gets objective value of last soluti
 RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the columns and rows */
    LP*              lp,                 /**< actual LP data */
    const SET*       set,                /**< global SCIP settings */
-   MEMHDR*          memhdr              /**< block memory buffers */
+   MEMHDR*          memhdr,             /**< block memory buffers */
+   STAT*            stat                /**< problem statistics */
    )
 {
    Real* primsol;
@@ -2891,6 +3015,7 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
       debugMessage(" col <%s>: primsol=%f, redcost=%f\n", lp->lpicols[c]->var->name, primsol[c], redcost[c]);
       lp->lpicols[c]->primsol = primsol[c];
       lp->lpicols[c]->redcost = redcost[c];
+      lp->lpicols[c]->validredcostlp = stat->nlp;
    }
 
    for( r = 0; r < lp->nlpirows; ++r )
@@ -2898,6 +3023,7 @@ RETCODE SCIPlpGetSol(                   /**< stores the LP solution in the colum
       debugMessage(" row <%s>: dualsol=%f, slack=%f\n", lp->lpirows[r]->name, dualsol[r], slack[r]);
       lp->lpirows[r]->dualsol = dualsol[r];
       lp->lpirows[r]->slack = slack[r];
+      lp->lpirows[r]->validslacklp = stat->nlp;
    }
 
    freeBlockMemoryArray(memhdr, primsol, colsize);
@@ -2916,6 +3042,7 @@ RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers 
 {
    Real* dualfarkas;
    int rowsize;
+   int c;
    int r;
 
    assert(lp != NULL);
@@ -2940,5 +3067,24 @@ RETCODE SCIPlpGetDualfarkas(            /**< stores the dual farkas multipliers 
 
    freeBlockMemoryArray(memhdr, dualfarkas, rowsize);
    
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpGetIterations(            /**< get number of iterations used in last LP solve */
+   LP*              lp,                 /**< actual LP data */
+   int*             iterations          /**< pointer to store the iteration count */
+   )
+{
+   int iter1;
+   int iter2;
+
+   assert(lp != NULL);
+   assert(iterations != NULL);
+
+   CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPIT1, &iter1) );
+   CHECK_OKAY( SCIPlpiGetIntpar(lp->lpi, SCIP_LPPAR_LPIT2, &iter2) );
+   
+   *iterations = iter1 + iter2;
+
    return SCIP_OKAY;
 }

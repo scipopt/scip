@@ -287,7 +287,8 @@ RETCODE SCIPconsCreate(                 /**< creates a constraint */
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             ismodel             /**< is constraint necessary for feasibility? */
+   Bool             original,           /**< is constraint belonging to the original problem? */
+   Bool             model               /**< is constraint necessary for feasibility? */
    );
 
 extern
@@ -334,7 +335,17 @@ const char* SCIPconsGetName(            /**< returns the name of the constraint 
    );
 
 extern
+CONSHDLR* SCIPconsGetConsHdlr(          /**< returns the constraint handler of the constraint */
+   CONS*            cons                /**< constraint */
+   );
+
+extern
 CONSDATA* SCIPconsGetConsdata(          /**< returns the constraint data field of the constraint */
+   CONS*            cons                /**< constraint */
+   );
+
+extern
+Bool SCIPconsIsOriginal(                /**< returns TRUE iff constraint is belonging to original problem */
    CONS*            cons                /**< constraint */
    );
 
@@ -342,6 +353,14 @@ extern
 Bool SCIPconsIsModel(                   /**< returns TRUE iff constraint is necessary for feasibility */
    CONS*            cons                /**< constraint */
    );
+
+
+/*
+ * Hash functions
+ */
+
+extern
+DECL_HASHGETKEY(SCIPhashGetKeyCons);    /**< gets the key (i.e. the name) of the given constraint */
 
 
 

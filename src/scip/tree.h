@@ -330,4 +330,14 @@ Real SCIPtreeGetLowerbound(             /**< gets the minimal lower bound of all
    const SET*       set                 /**< global SCIP settings */
    );
 
+extern
+Real SCIPtreeGetActLowerbound(          /**< gets the lower bound of the active node */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
+extern
+Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all nodes in the tree */
+   TREE*            tree                /**< branch-and-bound tree */
+   );
+
 #endif

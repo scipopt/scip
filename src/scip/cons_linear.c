@@ -69,12 +69,12 @@ typedef struct LinCons LINCONS;         /**< externally stored linear constraint
 /** externally stored linear constraint */
 struct LinCons
 {
-   VAR**            var;                /**< variables of constraint entries */
-   Real*            val;                /**< coefficients of constraint entries */
+   VAR**            vars;               /**< variables of constraint entries */
+   Real*            vals;               /**< coefficients of constraint entries */
    Real             lhs;                /**< left hand side of row (for ranged rows) */
    Real             rhs;                /**< right hand side of row */
-   int              size;               /**< size of the var- and val-arrays */
-   int              len;                /**< number of nonzeros in constraint */
+   int              varssize;           /**< size of the vars- and vals-arrays */
+   int              nvars;              /**< number of nonzeros in constraint */
 };
 
 /** constraint data for linear constraints */
@@ -90,6 +90,33 @@ struct ConsData
 
 
 /*
+ * memory growing methods for dynamically allocated arrays
+ */
+
+static
+RETCODE ensureVarsSize(                 /**< ensures, that vars and vals arrays can store at least num entries */
+   LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip,               /**< SCIP data structure */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lincons->nvars <= lincons->varssize);
+   
+   if( num > lincons->varssize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, num);
+      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, lincons->vars, lincons->varssize, newsize) );
+      ALLOC_OKAY( SCIPreallocBlockMemoryArray(scip, lincons->vals, lincons->varssize, newsize) );
+      lincons->varssize = newsize;
+   }
+   assert(num <= lincons->varssize);
+
+   return SCIP_OKAY;
+}
+
+/*
  * local methods
  */
 
@@ -97,9 +124,9 @@ static
 RETCODE linconsCreate(                  /**< creates a linear constraint data object */
    LINCONS**        lincons,            /**< pointer to linear constraint data object */
    SCIP*            scip,               /**< SCIP data structure */
-   int              len,                /**< number of nonzeros in the constraint */
-   VAR**            var,                /**< array with variables of constraint entries */
-   Real*            val,                /**< array with coefficients of constraint entries */
+   int              nvars,              /**< number of nonzeros in the constraint */
+   VAR**            vars,               /**< array with variables of constraint entries */
+   Real*            vals,               /**< array with coefficients of constraint entries */
    Real             lhs,                /**< left hand side of row */
    Real             rhs                 /**< right hand side of row */
    )
@@ -118,21 +145,21 @@ RETCODE linconsCreate(                  /**< creates a linear constraint data ob
 
    ALLOC_OKAY( SCIPallocBlockMemory(scip, *lincons) );
 
-   if( len > 0 )
+   if( nvars > 0 )
    {
-      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, (*lincons)->var, var, len) );
-      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, (*lincons)->val, val, len) );
+      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, (*lincons)->vars, vars, nvars) );
+      ALLOC_OKAY( SCIPduplicateBlockMemoryArray(scip, (*lincons)->vals, vals, nvars) );
    }
    else
    {
-      (*lincons)->var = NULL;
-      (*lincons)->val = NULL;
+      (*lincons)->vars = NULL;
+      (*lincons)->vals = NULL;
    }
 
    (*lincons)->lhs = lhs;
    (*lincons)->rhs = rhs;
-   (*lincons)->size = len;
-   (*lincons)->len = len;
+   (*lincons)->varssize = nvars;
+   (*lincons)->nvars = nvars;
 
    return SCIP_OKAY;
 }
@@ -145,11 +172,31 @@ void linconsFree(                       /**< frees a linear constraint data obje
 {
    assert(lincons != NULL);
    assert(*lincons != NULL);
-   assert((*lincons)->size >= 0);
+   assert((*lincons)->varssize >= 0);
 
-   SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->var, (*lincons)->size);
-   SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->val, (*lincons)->size);
+   SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->vars, (*lincons)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, (*lincons)->vals, (*lincons)->varssize);
    SCIPfreeBlockMemory(scip, *lincons);
+}
+
+static
+RETCODE linconsAddCoef(                 /**< adds coefficient in linear constraint */
+   LINCONS*         lincons,            /**< linear constraint data object */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficients of constraint entry */
+   )
+{
+   assert(lincons != NULL);
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   CHECK_OKAY( ensureVarsSize(lincons, scip, lincons->nvars+1) );
+   lincons->vars[lincons->nvars] = var;
+   lincons->vals[lincons->nvars] = val;
+   lincons->nvars++;
+
+   return SCIP_OKAY;
 }
 
 static
@@ -163,8 +210,10 @@ Real linconsGetSlack(                   /**< calculates the slack for the linear
    assert(lincons != NULL);
    
    slack = lincons->rhs;
-   for( v = 0; v < lincons->len; ++v )
-      slack -= SCIPvarGetPrimsol(lincons->var[v]) * lincons->val[v];
+   for( v = 0; v < lincons->nvars; ++v )
+   {
+      slack -= SCIPvarGetPrimsol(lincons->vars[v]) * lincons->vals[v];
+   }
 
    return slack;
 }
@@ -200,9 +249,9 @@ RETCODE linconsToRow(                   /**< creates an LP row from a linear con
 
    CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, lincons->lhs, lincons->rhs) );
    
-   for( v = 0; v < lincons->len; ++v )
+   for( v = 0; v < lincons->nvars; ++v )
    {
-      CHECK_OKAY( SCIPaddVarToRow(scip, *row, lincons->var[v], lincons->val[v]) );
+      CHECK_OKAY( SCIPaddVarToRow(scip, *row, lincons->vars[v], lincons->vals[v]) );
    }
 
    return SCIP_OKAY;
@@ -247,7 +296,7 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
          {         
             Real feasibility;
 
-            feasibility = SCIProwGetFeasibility(row);
+            CHECK_OKAY( SCIPgetRowFeasibility(scip, row, &feasibility) );
             debugMessage("row feasibility = %g\n", feasibility);
             if( !SCIPisFeasible(scip, feasibility) )
             {
@@ -272,7 +321,13 @@ RETCODE applyConstraints(               /**< separates violated inequalities; ca
             
             /* convert lincons data into LP row */
             CHECK_OKAY( linconsToRow(lincons, SCIPconsGetName(cons), scip, &row) );
-            assert(SCIPisEQ(scip, SCIProwGetFeasibility(row), feasibility));
+#ifndef NDEBUG
+            {
+               Real rowfeasibility;
+               CHECK_OKAY( SCIPgetRowFeasibility(scip, row, &rowfeasibility) );
+               assert(SCIPisEQ(scip, rowfeasibility, feasibility));
+            }
+#endif
 
             /* capture the row, because we need it as data storage */
             SCIPcaptureRow(scip, row);
@@ -365,7 +420,7 @@ DECL_CONSTRAN(SCIPconsTranLinear)
    ALLOC_OKAY( SCIPallocBlockMemory(scip, *targetdata) );
    (*targetdata)->islprow = FALSE;
 
-   CHECK_OKAY( linconsCreate(&(*targetdata)->data.lincons, scip, lincons->len, lincons->var, lincons->val,
+   CHECK_OKAY( linconsCreate(&(*targetdata)->data.lincons, scip, lincons->nvars, lincons->vars, lincons->vals,
                   lincons->lhs, lincons->rhs) );
    
    return SCIP_OKAY;
@@ -514,6 +569,172 @@ RETCODE SCIPcreateConsLPRow(            /**< creates a linear constraint from an
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, SCIProwGetName(row), conshdlr, consdata, model) );
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficients of constraint entry */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   /*debugMessage("adding coefficient %g * <%s> to linear constraint <%s>\n", val, var->name, SCIPconsGetName(cons));*/
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear");
+      return SCIP_INVALIDDATA;
+   }
+   
+   consdata = SCIPconsGetConsdata(cons);
+   if( consdata->islprow )
+   {
+      assert(consdata->data.row != NULL);
+      CHECK_OKAY( SCIPaddVarToRow(scip, consdata->data.row, var, val) );
+   }
+   else
+   {
+      assert(consdata->data.lincons != NULL);
+      CHECK_OKAY( linconsAddCoef(consdata->data.lincons, scip, var, val) );
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconsLinearGetLhs(           /**< gets left hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            lhs                 /**< pointer to store left hand side */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(lhs != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear");
+      return SCIP_INVALIDDATA;
+   }
+   
+   consdata = SCIPconsGetConsdata(cons);
+   if( consdata->islprow )
+   {
+      assert(consdata->data.row != NULL);
+      *lhs = SCIProwGetLhs(consdata->data.row);
+   }
+   else
+   {
+      assert(consdata->data.lincons != NULL);
+      *lhs = consdata->data.lincons->lhs;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconsLinearGetRhs(           /**< gets right hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            rhs                 /**< pointer to store right hand side */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(scip != NULL);
+   assert(rhs != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear");
+      return SCIP_INVALIDDATA;
+   }
+   
+   consdata = SCIPconsGetConsdata(cons);
+   if( consdata->islprow )
+   {
+      assert(consdata->data.row != NULL);
+      *rhs = SCIProwGetRhs(consdata->data.row);
+   }
+   else
+   {
+      assert(consdata->data.lincons != NULL);
+      *rhs = consdata->data.lincons->rhs;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconsLinearChgLhs(           /**< changes left hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             lhs                 /**< new left hand side */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear");
+      return SCIP_INVALIDDATA;
+   }
+   
+   consdata = SCIPconsGetConsdata(cons);
+   if( consdata->islprow )
+   {
+      errorMessage("cannot change sides of linear constraint already stored as LP row");
+      return SCIP_INVALIDDATA;
+   }
+   else
+   {
+      assert(consdata->data.lincons != NULL);
+      consdata->data.lincons->lhs = lhs;
+   }
+
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPconsLinearChgRhs(           /**< changes right hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             rhs                 /**< new right hand side */
+   )
+{
+   CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(scip != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetConsHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      errorMessage("constraint is not linear");
+      return SCIP_INVALIDDATA;
+   }
+   
+   consdata = SCIPconsGetConsdata(cons);
+   if( consdata->islprow )
+   {
+      errorMessage("cannot change sides of linear constraint already stored as LP row");
+      return SCIP_INVALIDDATA;
+   }
+   else
+   {
+      assert(consdata->data.lincons != NULL);
+      consdata->data.lincons->rhs = rhs;
+   }
 
    return SCIP_OKAY;
 }

@@ -34,8 +34,10 @@
  */
 
 #include <assert.h>
+#include <string.h>
 
 #include "memory.h"
+#include "message.h"
 #include "retcode.h"
 #include "sort.h"
 
@@ -191,6 +193,294 @@ void* SCIPpqueueFirst(                  /**< returns the best element of the que
 
 
 
+
+/*
+ * Hash Table
+ */
+
+typedef struct HashList HASHLIST;       /**< element list to store in a hash table */
+
+/** element list to store in a hash table */
+struct HashList
+{
+   void*            element;            /**< this element */
+   HASHLIST*        next;               /**< rest of the hash list */
+};
+
+/** hash table data structure */
+struct HashTable
+{
+   HASHLIST**       lists;              /**< hash lists of the hash table */
+   int              nlists;             /**< number of lists stored in the hash table */
+   DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
+   DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
+   DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
+};
+
+
+static
+RETCODE hashlistAppend(                 /**< appends element to the hash list */
+   HASHLIST**       hashlist,           /**< pointer to hash list to free */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to append to the list */
+   )
+{
+   HASHLIST* newlist;
+
+   assert(hashlist != NULL);
+   assert(memhdr != NULL);
+   assert(element != NULL);
+
+   ALLOC_OKAY( allocBlockMemory(memhdr, newlist) );
+   newlist->element = element;
+   newlist->next = *hashlist;
+   *hashlist = newlist;
+
+   return SCIP_OKAY;
+}
+
+static
+void hashlistFree(                      /**< frees a hash list entry and all its successors */
+   HASHLIST**       hashlist,           /**< pointer to hash list to free */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   HASHLIST* actlist;
+   HASHLIST* nextlist;
+
+   assert(hashlist != NULL);
+   assert(memhdr != NULL);
+   
+   actlist = *hashlist;
+   while( actlist != NULL )
+   {
+      nextlist = actlist->next;
+      freeBlockMemory(memhdr, actlist);
+      actlist = nextlist;
+   }
+
+   *hashlist = NULL;
+}
+
+static
+void* hashlistRetrieve(                 /**< retrieves element with given key from the hash list, or NULL */
+   HASHLIST*        hashlist,           /**< hash list */
+   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   void*            key                 /**< key to retrieve */
+   )
+{
+   void* actkey;
+
+   assert(hashkeyeq != NULL);
+   assert(key != NULL);
+
+   while( hashlist != NULL )
+   {
+      actkey = hashgetkey(hashlist->element);
+      if( hashkeyeq(actkey, key) )
+         return hashlist->element;
+      hashlist = hashlist->next;
+   }
+
+   return NULL;
+}
+
+static
+RETCODE hashlistRemove(                 /**< removes element from the hash list */
+   HASHLIST**       hashlist,           /**< pointer to hash list to free */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to remove from the list */
+   )
+{
+   HASHLIST* nextlist;
+
+   assert(hashlist != NULL);
+   assert(memhdr != NULL);
+   assert(element != NULL);
+
+   while( *hashlist != NULL && (*hashlist)->element != element )
+   {
+      hashlist = &(*hashlist)->next;
+   }
+   if( *hashlist != NULL )
+   {
+      nextlist = (*hashlist)->next;
+      freeBlockMemory(memhdr, *hashlist);
+      *hashlist = nextlist;
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      errorMessage("element not found in the hash table");
+      return SCIP_INVALIDDATA;
+   }
+}
+
+   
+RETCODE SCIPhashtableCreate(            /**< creates a hash table */
+   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   int              tablesize,          /**< size of the hash table */
+   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
+   )
+{
+   int i;
+
+   assert(hashtable != NULL);
+   assert(tablesize > 0);
+   assert(hashgetkey != NULL);
+   assert(hashkeyeq != NULL);
+   assert(hashkeyval != NULL);
+
+   ALLOC_OKAY( allocMemory(*hashtable) );
+   ALLOC_OKAY( allocMemoryArray((*hashtable)->lists, tablesize) );
+   (*hashtable)->nlists = tablesize;
+   (*hashtable)->hashgetkey = hashgetkey;
+   (*hashtable)->hashkeyeq = hashkeyeq;
+   (*hashtable)->hashkeyval = hashkeyval;
+
+   /* initialize hash lists */
+   for( i = 0; i < tablesize; ++i )
+      (*hashtable)->lists[i] = NULL;
+
+   return SCIP_OKAY;
+}
+
+void SCIPhashtableFree(                 /**< frees the hash table */
+   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   MEMHDR*          memhdr              /**< block memory */
+   )
+{
+   int i;
+
+   assert(hashtable != NULL);
+   assert(memhdr != NULL);
+
+   /* free hash lists */
+   for( i = 0; i < (*hashtable)->nlists; ++i )
+      hashlistFree(&(*hashtable)->lists[i], memhdr);
+
+   /* free main hast table data structure */
+   freeMemoryArray((*hashtable)->lists);
+   freeMemory(*hashtable);
+}
+
+RETCODE SCIPhashtableInsert(            /**< inserts element in hash table */
+   HASHTABLE*       hashtable,          /**< hash table */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to insert into the table */
+   )
+{
+   void* key;
+   int keyval;
+   int hashval;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(memhdr != NULL);
+   assert(element != NULL);
+
+   /* get the hash key and its hash value */
+   key = hashtable->hashgetkey(element);
+   keyval = hashtable->hashkeyval(key);
+   hashval = keyval % hashtable->nlists;
+
+   /* append element to the list at the hash position */
+   CHECK_OKAY( hashlistAppend(&hashtable->lists[hashval], memhdr, element) );
+   
+   return SCIP_OKAY;
+}
+
+void* SCIPhashtableRetrieve(            /**< retrieve element with key from hash table, returns NULL if not existing */
+   HASHTABLE*       hashtable,          /**< hash table */
+   void*            key                 /**< key to retrieve */
+   )
+{
+   int keyval;
+   int hashval;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(key != NULL);
+
+   /* get the hash value of the key */
+   keyval = hashtable->hashkeyval(key);
+   hashval = keyval % hashtable->nlists;
+
+   return hashlistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, key);
+}
+
+RETCODE SCIPhashtableRemove(            /**< removes existing element from the hash table */
+   HASHTABLE*       hashtable,          /**< hash table */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to remove from the table */
+   )
+{
+   void* key;
+   int keyval;
+   int hashval;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(memhdr != NULL);
+   assert(element != NULL);
+
+   /* get the hash key and its hash value */
+   key = hashtable->hashgetkey(element);
+   keyval = hashtable->hashkeyval(key);
+   hashval = keyval % hashtable->nlists;
+
+   /* append element to the list at the hash position */
+   CHECK_OKAY( hashlistRemove(&hashtable->lists[hashval], memhdr, element) );
+   
+   return SCIP_OKAY;
+}
+
+
+/** returns TRUE iff both keys (i.e. strings) are equal */
+DECL_HASHKEYEQ(SCIPhashKeyEqString)
+{
+   const char* string1 = (const char*)key1;
+   const char* string2 = (const char*)key2;
+
+   return (strcmp(string1, string2) == 0);
+}
+
+/** returns the hash value of the key (i.e. string) */
+DECL_HASHKEYVAL(SCIPhashKeyValString)
+{
+   const char* string = (const char*)key;
+   int sum;
+   int len;
+   int i;
+
+   sum = 0;
+   len = strlen(string);
+   for( i = 0; i < len; ++i )
+      sum += (int)string[i];
+
+   return sum;
+}
+
+
+/*
+ * Sorting algorithms
+ */
 
 void SCIPbsortPtr(                      /**< bubble sort of an array of pointers */
    void**           ptrarray,           /**< pointer array to be sorted */

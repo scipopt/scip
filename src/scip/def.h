@@ -101,12 +101,14 @@ typedef double Real;                    /**< type used for floating point values
 #define SCIP_DEFAULT_TREEGROWINIT 65536
 #define SCIP_DEFAULT_PATHGROWFAC      2.0
 #define SCIP_DEFAULT_PATHGROWINIT   256
+#define SCIP_HASHSIZE_NAMES       23663
 
 
 /*
  * Pricing
  */
 
+#define SCIP_DEFAULT_USEPRICING   FALSE /**< activate pricing of variables */
 #define SCIP_DEFAULT_MAXPRICEVARS    16 /**< maximal number of variables priced in per pricing round */
 
 
@@ -115,7 +117,7 @@ typedef double Real;                    /**< type used for floating point values
  * Cut Separation
  */
 
-#define SCIP_DEFAULT_MAXSEPACUTS     16 /**< maximal number of cuts separated per separation round */
+#define SCIP_DEFAULT_MAXSEPACUTS     32 /**< maximal number of cuts separated per separation round */
 
 
 
@@ -126,13 +128,19 @@ typedef double Real;                    /**< type used for floating point values
 #define SCIP_DEFAULT_MAXSOL         256 /**< maximal number of solutions to store in the solution storage */
 
 
+/*
+ * Tree
+ */
+
+#define SCIP_DEFAULT_NODELIMIT  1000000 /**< maximal number of nodes to create */
+
 
 /*
  * Display
  */
 
-#define SCIP_DEFAULT_DISPWIDTH      120 /**< maximal number of characters in a node information line */
-#define SCIP_DEFAULT_DISPFREQ         1 /**< frequency for displaying node information lines */
+#define SCIP_DEFAULT_DISPWIDTH      140 /**< maximal number of characters in a node information line */
+#define SCIP_DEFAULT_DISPFREQ     10000 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISPHEADERFREQ  15 /**< frequency for displaying header lines (every n'th node information line) */
 
 
@@ -142,7 +150,7 @@ typedef double Real;                    /**< type used for floating point values
  */
 
 #define SCIP_SAFEMEMORY                 /**< use memory leakage detection in debug mode */
-/*#define SCIP_BLOCKMEMORY*/                /**< use block memory */
+#define SCIP_BLOCKMEMORY                /**< use block memory */
 
 
 

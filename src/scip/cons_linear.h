@@ -66,4 +66,41 @@ RETCODE SCIPcreateConsLPRow(            /**< creates a linear constraint from an
    Bool             model               /**< is constraint necessary for feasibility? */
    );
 
+extern
+RETCODE SCIPconsLinearAddCoef(          /**< adds coefficient in linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable of constraint entry */
+   Real             val                 /**< coefficients of constraint entry */
+   );
+
+extern
+RETCODE SCIPconsLinearGetLhs(           /**< gets left hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            lhs                 /**< pointer to store left hand side */
+   );
+
+extern
+RETCODE SCIPconsLinearGetRhs(           /**< gets right hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            rhs                 /**< pointer to store right hand side */
+   );
+
+extern
+RETCODE SCIPconsLinearChgLhs(           /**< changes left hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             lhs                 /**< new left hand side */
+   );
+
+extern
+RETCODE SCIPconsLinearChgRhs(           /**< changes right hand side of linear constraint */
+   CONS*            cons,               /**< constraint data */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real             rhs                 /**< new right hand side */
+   );
+
+
 #endif

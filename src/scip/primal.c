@@ -71,13 +71,17 @@ RETCODE primalSetUpperbound(            /**< sets upper bound in primal data and
 {
    assert(primal != NULL);
    assert(lp != NULL);
+   assert(upperbound <= set->infinity);
 
    debugMessage("set upper bound from %g to %g\n", primal->upperbound, upperbound);
    if( upperbound < primal->upperbound )
    {
       primal->upperbound = upperbound;
       CHECK_OKAY( SCIPlpSetUpperbound(lp, upperbound) );
-      CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, lp, upperbound) );
+      if( tree != NULL )
+      {
+         CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, lp, upperbound) );
+      }
    }
    else
    {
@@ -93,7 +97,6 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    )
 {
@@ -104,9 +107,9 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
    (*primal)->solssize = 0;
    (*primal)->nsols = 0;
    (*primal)->nsolsfound = 0;
-   (*primal)->upperbound = 2*SCIP_INVALID;
+   (*primal)->upperbound = SCIP_INVALID;
 
-   CHECK_OKAY( primalSetUpperbound(*primal, memhdr, set, tree, lp, prob->objlim) );
+   CHECK_OKAY( primalSetUpperbound(*primal, memhdr, set, NULL, lp, MIN(prob->objlim, set->infinity)) );
 
    return SCIP_OKAY;
 }

@@ -27,12 +27,16 @@
 #define __SORT_H__
 
 
+#if 0
 typedef struct PQueue PQUEUE;           /**< priority queue */
+#endif
 
+typedef struct HashTable HASHTABLE;     /**< hash table */
 
 
 #include "def.h"
 #include "retcode.h"
+#include "memory.h"
 
 
 
@@ -43,6 +47,15 @@ typedef struct PQueue PQUEUE;           /**< priority queue */
  *    > 0: elem2 comes after (is worse than) elem2
  */
 #define DECL_SORTPTRCOMP(x) int x (void* elem1, void* elem2)
+
+/** gets the key of the given element */
+#define DECL_HASHGETKEY(x) void* x (void* elem)
+
+/** returns TRUE iff both keys are equal */
+#define DECL_HASHKEYEQ(x) Bool x (void* key1, void* key2)
+
+/** returns the hash value of the key */
+#define DECL_HASHKEYVAL(x) int x (void* key)
 
 
 #if 0 /* PRIORITY QUEUE NOT NEEDED */
@@ -75,6 +88,58 @@ void* SCIPpqueueFirst(                  /**< returns the best element of the que
    const PQUEUE*    pqueue              /**< pointer to a priority queue */
    );
 #endif
+
+
+/*
+ * Hash Table
+ */
+
+extern
+RETCODE SCIPhashtableCreate(            /**< creates a hash table */
+   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   int              tablesize,          /**< size of the hash table */
+   DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
+   );
+
+extern
+void SCIPhashtableFree(                 /**< frees the hash table */
+   HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
+   MEMHDR*          memhdr              /**< block memory */
+   );
+
+extern
+RETCODE SCIPhashtableInsert(            /**< inserts element in hash table */
+   HASHTABLE*       hashtable,          /**< hash table */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to append to the list */
+   );
+
+extern
+void* SCIPhashtableRetrieve(            /**< retrieve element with key from hash table, returns NULL if not existing */
+   HASHTABLE*       hashtable,          /**< hash table */
+   void*            key                 /**< key to retrieve */
+   );
+
+extern
+RETCODE SCIPhashtableRemove(            /**< removes existing element from the hash table */
+   HASHTABLE*       hashtable,          /**< hash table */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to remove from the table */
+   );
+
+extern
+DECL_HASHKEYEQ(SCIPhashKeyEqString);    /**< standard hash key comparator for string keys */
+
+extern
+DECL_HASHKEYVAL(SCIPhashKeyValString);  /**< standard hashing function for string keys */
+
+
+
+/*
+ * Sorting algorithms
+ */
 
 extern
 void SCIPbsortPtr(                      /**< bubble sort of an array of pointers */

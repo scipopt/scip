@@ -45,8 +45,12 @@ struct Stat
    int              nlp;                /**< number of LPs solved (primal + dual) */
    int              nprimallp;          /**< number of primal LPs solved */
    int              nduallp;            /**< number of dual LPs solved */
+   int              nlpiterations;      /**< number of simplex iterations (primal + dual) */
+   int              nprimallpiterations;/**< number of iterations in primal simplex */
+   int              nduallpiterations;  /**< number of iterations in dual simplex */
    int              nnodes;             /**< number of nodes processed (including active node) */
    int              lastdispnode;       /**< last node for which an information line was displayed */
+   int              maxdepth;           /**< maximal depth of all processed nodes */
 };
 
 

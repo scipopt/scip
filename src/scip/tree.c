@@ -308,7 +308,6 @@ RETCODE forkCreate(                     /**< creates fork data */
    assert(tree != NULL);
    assert(tree->nchildren > 0);
 
-   debugMessage("creating fork information with %d children\n", tree->nchildren);
    ALLOC_OKAY( allocBlockMemory(memhdr, *fork) );
 
    CHECK_OKAY( SCIPlpiGetState(lp->lpi, memhdr, &((*fork)->lpistate)) );
@@ -318,6 +317,9 @@ RETCODE forkCreate(                     /**< creates fork data */
    (*fork)->naddedcols = SCIPlpGetNumNewcols(lp);
    (*fork)->naddedrows = SCIPlpGetNumNewrows(lp);
    (*fork)->nchildren = tree->nchildren;
+
+   debugMessage("creating fork information with %d children (%d new cols, %d new rows)\n",
+      (*fork)->nchildren, (*fork)->naddedcols, (*fork)->naddedrows);
 
    if( (*fork)->naddedcols > 0 )
    {
@@ -461,7 +463,6 @@ RETCODE nodeAssignParent(               /**< makes node a child of the given par
    assert(tree->actnode == parent);
    assert(parent == NULL || parent->nodetype == SCIP_NODETYPE_ACTNODE);
 
-   debugMessage("assigning parent %p to node %p in depth %d\n", parent, node, node->depth);
    /* link node to parent */
    node->parent = parent;
    if( parent != NULL )
@@ -469,6 +470,7 @@ RETCODE nodeAssignParent(               /**< makes node a child of the given par
       node->lowerbound = parent->lowerbound;
       node->depth = parent->depth+1;
    }
+   debugMessage("assigning parent %p to node %p in depth %d\n", parent, node, node->depth);
 
    /* register node in the childlist of the active (the parent) node */
    CHECK_OKAY( treeEnsureChildrenMem(tree, memhdr, set, tree->nchildren+1) );
@@ -1274,6 +1276,9 @@ RETCODE SCIPtreeLoadLP(                 /**< constructs the LP and loads LP stat
          CHECK_OKAY( subrootReleaseLPIState(lpfork->data.subroot, memhdr, lp) );
       }
    }
+
+   /* mark the LP's size, such that we know which rows and columns were added in the new node */
+   SCIPlpMarkSize(lp);
    
    return SCIP_OKAY;
 }
@@ -1940,13 +1945,13 @@ int SCIPtreeGetNLeaves(                 /**< gets number of leaves */
    return SCIPnodepqLen(tree->leaves);
 }
    
-int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + siblings + leaves) */
+int SCIPtreeGetNNodes(                  /**< gets number of nodes (children + siblings + leaves + active) */
    TREE*            tree                /**< branch-and-bound tree */
    )
 {
    assert(tree != NULL);
 
-   return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree);
+   return tree->nchildren + tree->nsiblings + SCIPtreeGetNLeaves(tree) + (tree->actnode != NULL ? 1 : 0);
 }
 
 NODE* SCIPtreeGetBestLeaf(              /**< gets the best leaf from the node queue */
@@ -2037,4 +2042,54 @@ Real SCIPtreeGetLowerbound(             /**< gets the minimal lower bound of all
    }
 
    return lowerbound;
+}
+
+Real SCIPtreeGetActLowerbound(          /**< gets the lower bound of the active node */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   if( tree->actnode != NULL )
+      return tree->actnode->lowerbound;
+   else
+      return SCIP_INVALID;
+}
+
+Real SCIPtreeGetAvgLowerbound(          /**< gets the average lower bound of all nodes in the tree */
+   TREE*            tree                /**< branch-and-bound tree */
+   )
+{
+   Real lowerboundsum;
+   int nnodes;
+   int i;
+
+   assert(tree != NULL);
+
+   /* get sum of lower bounds from nodes in the queue */
+   lowerboundsum = SCIPnodepqGetLowerboundSum(tree->leaves);
+   
+   /* add lower bound of active node */
+   if( tree->actnode != NULL )
+   {
+      lowerboundsum += tree->actnode->lowerbound;
+   }
+
+   /* add lower bounds of siblings */
+   for( i = 0; i < tree->nsiblings; ++i )
+   {
+      assert(tree->siblings[i] != NULL);
+      lowerboundsum += tree->siblings[i]->lowerbound;
+   }
+
+   /* add lower bounds of children */
+   for( i = 0; i < tree->nchildren; ++i )
+   {
+      assert(tree->children[i] != NULL);
+      lowerboundsum += tree->children[i]->lowerbound;
+   }
+
+   nnodes = SCIPtreeGetNNodes(tree);
+
+   return nnodes == 0 ? 0.0 : lowerboundsum/nnodes;
 }

@@ -55,7 +55,6 @@ RETCODE SCIPprimalCreate(               /**< creates primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
-   TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp                  /**< actual LP data */
    );
 

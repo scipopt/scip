@@ -50,12 +50,13 @@
 /** SCIP operation stage */
 enum Stage
 {
-   SCIP_STAGE_INIT      = 0,            /**< SCIP datastructures are initialized, no problem exists */
-   SCIP_STAGE_PROBLEM   = 1,            /**< the problem is being created and modified */
-   SCIP_STAGE_INITSOLVE = 2,            /**< the solving process data is being initialized */
-   SCIP_STAGE_SOLVING   = 3,            /**< the problem is being solved */
-   SCIP_STAGE_SOLVED    = 4,            /**< the problem was solved */
-   SCIP_STAGE_FREESOLVE = 5             /**< the solving process data is being freed */
+   SCIP_STAGE_INIT       = 0,           /**< SCIP datastructures are initialized, no problem exists */
+   SCIP_STAGE_PROBLEM    = 1,           /**< the problem is being created and modified */
+   SCIP_STAGE_INITSOLVE  = 2,           /**< the solving process data is being initialized */
+   SCIP_STAGE_PRESOLVING = 3,           /**< the problem is being presolved */
+   SCIP_STAGE_SOLVING    = 4,           /**< the problem is being solved */
+   SCIP_STAGE_SOLVED     = 5,           /**< the problem was solved */
+   SCIP_STAGE_FREESOLVE  = 6            /**< the solving process data is being freed */
 };
 typedef enum Stage STAGE;
 
@@ -69,6 +70,7 @@ typedef struct Scip SCIP;               /**< SCIP main data structure */
 #include "retcode.h"
 #include "memory.h"
 #include "message.h"
+#include "reader.h"
 #include "cons.h"
 #include "var.h"
 #include "lp.h"
@@ -140,6 +142,12 @@ RETCODE SCIPcreateProb(                 /**< creates empty problem and initializ
    );
 
 extern
+RETCODE SCIPreadProb(                   /**< reads problem from file and initializes all solving data structures */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      filename            /**< problem file name */
+   );
+
+extern
 RETCODE SCIPfreeProb(                   /**< frees problem and branch-and-bound data structures */
    SCIP*            scip                /**< SCIP data structure */
    );
@@ -201,6 +209,13 @@ RETCODE SCIPgetVars(                    /**< gets variables of the problem */
    );
 
 extern
+RETCODE SCIPfindVar(                    /**< finds variable of given name in the problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of variable to find */
+   VAR**            var                 /**< pointer to store the variable, returns NULL if not found */
+   );
+
+extern
 RETCODE SCIPcreateRow(                  /**< creates an LP row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW**            row,                /**< pointer to row */
@@ -225,11 +240,32 @@ RETCODE SCIPreleaseRow(                 /**< decreases usage counter of LP row, 
    );
 
 extern
+RETCODE SCIPchgLhs(                     /**< changes left hand side of LP row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real             lhs                 /**< new left hand side */
+   );
+
+extern
+RETCODE SCIPchgRhs(                     /**< changes right hand side of LP row */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real             rhs                 /**< new right hand side */
+   );
+
+extern
 RETCODE SCIPaddVarToRow(                /**< resolves variable to columns and adds them with the coefficient to the row */
    SCIP*            scip,               /**< SCIP data structure */
    ROW*             row,                /**< LP row */
    VAR*             var,                /**< problem variable */
    Real             val                 /**< value of coefficient */
+   );
+
+extern
+RETCODE SCIPgetRowFeasibility(          /**< returns the feasibility of a row in the last LP solution */
+   SCIP*            scip,               /**< SCIP data structure */
+   ROW*             row,                /**< LP row */
+   Real*            feasibility         /**< pointer to store the row's feasibility */
    );
 
 extern
@@ -251,6 +287,18 @@ extern
 RETCODE SCIPcreateChild(                /**< creates a child node of the active node */
    SCIP*            scip,               /**< SCIP data structure */
    NODE**           node                /**< pointer to node data structure */
+   );
+
+extern
+RETCODE SCIPincludeReader(              /**< creates a reader and includes it in SCIP */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of reader */
+   const char*      desc,               /**< description of reader */
+   const char*      extension,          /**< file extension that reader processes */
+   DECL_READERINIT((*readerinit)),      /**< initialise reader */
+   DECL_READEREXIT((*readerexit)),      /**< deinitialise reader */
+   DECL_READERREAD((*readerread)),      /**< read method */
+   READERDATA*      readerdata          /**< reader data */
    );
 
 extern
@@ -343,6 +391,13 @@ RETCODE SCIPaddLocalCons(               /**< adds local constraint to the actual
    );
 
 extern
+RETCODE SCIPfindCons(                   /**< finds constraint of given name in the problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   const char*      name,               /**< name of constraint to find */
+   CONS**           cons                /**< pointer to store the constraint, returns NULL if not found */
+   );
+
+extern
 RETCODE SCIPchgNodeBd(                  /**< changes bound of variable at the given node */
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to change bound at, or NULL for active node */
@@ -376,6 +431,20 @@ RETCODE SCIPchgLocalLb(                 /**< changes lower bound of variable in 
 
 extern
 RETCODE SCIPchgLocalUb(                 /**< changes upper bound of variable in the active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPchgLb(                      /**< changes lower bound of variable in the problem */
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable to change the bound for */
+   Real             newbound            /**< new value for bound */
+   );
+
+extern
+RETCODE SCIPchgUb(                      /**< changes upper bound of variable in the problem */
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< variable to change the bound for */
    Real             newbound            /**< new value for bound */
@@ -420,6 +489,48 @@ RETCODE SCIPgetNNodesLeft(              /**< gets number of nodes left in the tr
    );
 
 extern
+RETCODE SCIPgetNLPIterations(           /**< gets number of simplex iterations used so far */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             lpiterations        /**< pointer to store the iterations */
+   );
+
+extern
+RETCODE SCIPgetActDepth(                /**< gets depth of active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             actdepth            /**< pointer to store the depth */
+   );
+
+extern
+RETCODE SCIPgetMaxDepth(                /**< gets maximal depth of all processed nodes */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             maxdepth            /**< pointer to store the depth */
+   );
+
+extern
+RETCODE SCIPgetActNCols(                /**< gets number of columns in actual LP */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             actncols            /**< pointer to store the number of columns */
+   );
+
+extern
+RETCODE SCIPgetActNRows(                /**< gets number of rows in actual LP */
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             actnrows            /**< pointer to store the number of columns */
+   );
+
+extern
+RETCODE SCIPgetActDualBound(            /**< gets dual bound of active node */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            actdualbound        /**< pointer to store the dual bound */
+   );
+
+extern
+RETCODE SCIPgetAvgDualBound(            /**< gets average dual bound of all unprocessed nodes */
+   SCIP*            scip,               /**< SCIP data structure */
+   Real*            avgdualbound        /**< pointer to store the average dual bound */
+   );
+
+extern
 RETCODE SCIPgetDualBound(               /**< gets actual dual bound */
    SCIP*            scip,               /**< SCIP data structure */
    Real*            dualbound           /**< pointer to store the dual bound */
@@ -456,6 +567,12 @@ STAGE SCIPstage(                        /**< returns current stage of SCIP */
 extern
 MEMHDR* SCIPmemhdr(                     /**< returns block memory to use at the current time */
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+extern
+int SCIPcalcMemGrowSize(                /**< calculate memory size for dynamically allocated arrays */
+   SCIP*            scip,               /**< SCIP data structure */
+   int              num                 /**< minimum number of entries to store */
    );
 
 extern

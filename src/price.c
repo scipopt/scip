@@ -287,7 +287,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          /* A loose variable is a pricing candidate, if it can contribute negatively to the objective function.
           * In addition, we have to add all variables, where zero violates the bounds.
           */
-         debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->dom.lb, var->dom.ub);
+         /*debugMessage("price loose variable <%s> in bounds [%g,%g]\n", var->name, var->dom.lb, var->dom.ub);*/
          if( SCIPsetIsNeg(set, var->dom.lb) )
          {
             if( SCIPsetIsNeg(set, var->dom.ub) )
@@ -320,8 +320,8 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
          assert(!col->inlp || col->lpipos >= 0);
          assert(col->len >= 0);
 
-         debugMessage("price column variable <%s> in bounds [%g,%g], inlp=%d\n", 
-            var->name, var->dom.lb, var->dom.ub, col->inlp);
+         /*debugMessage("price column variable <%s> in bounds [%g,%g], inlp=%d\n", 
+           var->name, var->dom.lb, var->dom.ub, col->inlp);*/
          if( !col->inlp )
          {
             Real feasibility;
@@ -339,7 +339,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
                 *    x'_i = lb_i, if y^T A_i < 0.
                 * Pricing in this case means to add variables i with positive farkas value, i.e. y^T A_i x'_i > 0
                 */
-               feasibility = -SCIPcolGetFarkas(col);
+               feasibility = -SCIPcolGetFarkas(col, stat);
                debugMessage("  <%s> farkas feasibility: %g\n", col->var->name, feasibility);
             }
             else
@@ -348,7 +348,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
                 * add variables with negative feasibility, that is negative reduced costs for non-negative
                 * variables, and non-zero reduced costs for variables that can be negative.
                 */
-               feasibility = SCIPcolGetFeasibility(col);
+               feasibility = SCIPcolGetFeasibility(col, stat);
                debugMessage("  <%s> reduced cost feasibility: %g\n", col->var->name, feasibility);
             }
 
@@ -385,7 +385,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       /* add variable to problem, if needed */
       if( !var->inprob )
       {
-         CHECK_OKAY( SCIPprobAddVar(prob, set, var) );
+         CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, var) );
       }
       assert(var->inprob);
       assert(var->numuses >= 2); /* at least used in pricing storage and in problem */
@@ -413,7 +413,7 @@ RETCODE SCIPpriceVars(                  /**< calls all external pricer, prices p
       /* add variable to problem, if needed */
       if( !var->inprob )
       {
-         CHECK_OKAY( SCIPprobAddVar(prob, set, var) );
+         CHECK_OKAY( SCIPprobAddVar(prob, memhdr, set, var) );
       }
       assert(var->inprob);
       assert(var->numuses >= 2); /* at least used in pricing storage and in problem */

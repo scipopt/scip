@@ -192,7 +192,7 @@ RETCODE SCIPsepaApplyCuts(              /**< adds cuts to the LP and clears sepa
    for( c = 0; c < MIN(sepa->ncuts, set->maxsepacuts); ++c )
    {
       debugMessage("apply cut: ");
-      debug( SCIProwPrint(sepa->cuts[c], set, NULL) );
+      debug( SCIProwPrint(sepa->cuts[c], NULL) );
 
       /* add cut to the LP and capture it */
       CHECK_OKAY( SCIPlpAddRow(lp, set, sepa->cuts[c]) );

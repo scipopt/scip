@@ -88,8 +88,12 @@ void SCIPstatReset(                     /**< reset statistics to the data before
    stat->nlp = 0;
    stat->nprimallp = 0;
    stat->nduallp = 0;
+   stat->nlpiterations = 0;
+   stat->nprimallpiterations = 0;
+   stat->nduallpiterations = 0;
    stat->nnodes = 0;
    stat->lastdispnode = 0;
+   stat->maxdepth = -1;
 
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;

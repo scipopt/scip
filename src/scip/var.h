@@ -300,6 +300,12 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
    );
 
 extern
+RETCODE SCIPvarChgType(                 /**< changes type of variable */
+   VAR*             var,                /**< problem variable to change */
+   VARTYPE          vartype             /**< new type of variable */
+   );
+
+extern
 RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
@@ -328,6 +334,12 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    TREE*            tree,               /**< branch-and-bound tree */
    Real             newbound,           /**< new bound for variable */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
+extern
+RETCODE SCIPvarChgObj(                  /**< changes objective value of variable */
+   VAR*             var,                /**< variable to change, must not be member of the problem */
+   Real             newobj              /**< new objective value for variable */
    );
 
 extern
@@ -372,6 +384,15 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
    ROW*             row,                /**< LP row */
    Real             val                 /**< value of coefficient */
    );
+
+
+/*
+ * Hash functions
+ */
+
+extern
+DECL_HASHGETKEY(SCIPhashGetKeyVar);     /**< gets the key (i.e. the name) of the given variable */
+
 
 
 #endif

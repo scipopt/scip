@@ -43,6 +43,7 @@ typedef struct Set SET;                 /**< global SCIP settings */
 #include "def.h"
 #include "sort.h"
 #include "scip.h"
+#include "reader.h"
 #include "cons.h"
 #include "nodesel.h"
 #include "disp.h"
@@ -64,6 +65,9 @@ struct Set
    int              treeGrowInit;       /**< initial size of tree array */
    Real             pathGrowFac;        /**< memory growing factor for path array */
    int              pathGrowInit;       /**< initial size of path array */
+   READER**         readers;            /**< file readers */
+   int              nreaders;           /**< number of file readers */
+   int              readerssize;        /**< size of readers array */
    CONSHDLR**       conshdlrs;          /**< constraint handlers */
    int              nconshdlrs;         /**< number of constraint handlers */
    int              conshdlrssize;      /**< size of conshdlrs array */
@@ -80,6 +84,8 @@ struct Set
    int              maxpricevars;       /**< maximal number of variables priced in per pricing round */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsol;             /**< maximal number of solutions to store in the solution storage */
+   int              nodelimit;          /**< maximal number of nodes to process */
+   unsigned int     usepricing:1;       /**< use pricing of variables */
 };
 
 
@@ -92,6 +98,19 @@ RETCODE SCIPsetCreate(                  /**< creates global SCIP settings */
 extern
 RETCODE SCIPsetFree(                    /**< frees global SCIP settings */
    SET**            set                 /**< pointer to SCIP settings */
+   );
+
+extern
+RETCODE SCIPsetIncludeReader(           /**< inserts file reader in file reader list */
+   SET*             set,                /**< global SCIP settings */
+   READER*          reader              /**< file reader */
+   );
+
+extern
+RETCODE SCIPsetFindReader(              /**< finds the file reader of the given name */
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name,               /**< name of file reader */
+   READER**         reader              /**< pointer for storing the file reader (returns NULL, if not found) */
    );
 
 extern

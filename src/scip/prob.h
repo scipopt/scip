@@ -52,7 +52,9 @@ struct Prob
    char*            name;               /**< problem name */
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */
    VAR**            vars;               /**< array with non-fixed variables ordered binary, integer, implicit, continous */
+   HASHTABLE*       varnames;           /**< hash table storing variable's names */
    CONSLIST*        conslist;           /**< list of constraints of the problem */
+   HASHTABLE*       consnames;          /**< hash table storing constraints' names */
    OBJSENSE         objsense;           /**< objective sense */
    Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
    Real             objlim;             /**< objective limit for non-fixed variables */
@@ -114,6 +116,7 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
 extern
 RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
    PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< variable to add */
    );
@@ -151,7 +154,19 @@ Real SCIPprobExternObjval(              /**< returns the external value of the g
 
 extern
 const char* SCIPprobGetName(            /**< gets problem name */
-   const PROB*      prob                /**< problem data */
+   PROB*            prob                /**< problem data */
+   );
+
+extern
+VAR* SCIPprobFindVar(                   /**< returns variable of the problem with given name */
+   PROB*            prob,               /**< problem data */
+   const char*      name                /**< name of variable to find */
+   );
+
+extern
+CONS* SCIPprobFindCons(                 /**< returns constraint of the problem with given name */
+   PROB*            prob,               /**< problem data */
+   const char*      name                /**< name of variable to find */
    );
 
 

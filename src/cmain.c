@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include "scip.h"
+#include "reader_mps.h"
 #include "disp_default.h"
 #include "cons_integral.h"
 #include "cons_linear.h"
@@ -124,6 +125,7 @@ main(void)
    CHECK_SCIP( SCIPsetVerbLevel(scip, SCIP_VERBLEVEL_FULL) );
 
    /* include user defined callbacks */
+   CHECK_OKAY( SCIPincludeReaderMPS(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_SCIP( SCIPincludeConsHdlrLinear(scip) );
@@ -134,6 +136,7 @@ main(void)
     * Problem Creation *
     ********************/
 
+#if 0
    printf("\ncreate problem\n");
 
    /* create problem */
@@ -171,6 +174,14 @@ main(void)
       CHECK_SCIP( SCIPreleaseVar(scip, &vars[v]) );
    }
 
+#else
+
+   printf("\nread problem\n");
+   /*CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/egout.mps") );*/
+   CHECK_OKAY( SCIPreadProb(scip, "IP/miplib/markshare1.mps") );
+
+#endif
+
 
    /*******************
     * Problem Solving *
@@ -180,7 +191,7 @@ main(void)
    printf("\nsolve problem\n");
    CHECK_SCIP( SCIPsolve(scip) );
 
-#if 1
+#if 0
    /* free solution process */
    printf("\nfree problem solution\n");
    CHECK_SCIP( SCIPfreeSolve(scip) );
@@ -191,7 +202,7 @@ main(void)
 #endif
 
 #ifndef NDEBUG
-   /*SCIPdebugMemory(scip);*/
+   SCIPdebugMemory(scip);
 #endif
 
 

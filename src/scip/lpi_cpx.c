@@ -78,8 +78,9 @@ struct LPi
    char*            senarray;           /**< array for storing row senses */
    Real*            rhsarray;           /**< array for storing rhs values */
    Real*            rngarray;           /**< array for storing range values */
+   int*             rngindarray;        /**< array for storing row indices with range values */
    int              boundchgarraysize;  /**< size of larray and uarray */
-   int              sidechgarraysize;   /**< size of senarray and rngarray */
+   int              sidechgarraysize;   /**< size of senarray, rngarray, and rngindarray */
 };
 
 /** LPi state stores basis information */
@@ -133,7 +134,7 @@ RETCODE ensureBoundchgarrayMem(         /**< resizes larray and uarray to have a
 }
 
 static
-RETCODE ensureSidechgarrayMem(          /**< resizes senarray and rngarray to have at least num entries */
+RETCODE ensureSidechgarrayMem(          /**< resizes senarray, rngarray, and rngindarray to have at least num entries */
    LPI*             lpi,                /**< LP interface structure */
    int              num                 /**< minimal number of entries in array */
    )
@@ -148,6 +149,7 @@ RETCODE ensureSidechgarrayMem(          /**< resizes senarray and rngarray to ha
       ALLOC_OKAY( reallocMemoryArray(lpi->senarray, newsize) );
       ALLOC_OKAY( reallocMemoryArray(lpi->rhsarray, newsize) );
       ALLOC_OKAY( reallocMemoryArray(lpi->rngarray, newsize) );
+      ALLOC_OKAY( reallocMemoryArray(lpi->rngindarray, newsize) );
       lpi->sidechgarraysize = newsize;
    }
    assert(num <= lpi->sidechgarraysize);
@@ -459,6 +461,7 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    (*lpi)->senarray = NULL;
    (*lpi)->rhsarray = NULL;
    (*lpi)->rngarray = NULL;
+   (*lpi)->rngindarray = NULL;
    (*lpi)->boundchgarraysize = 0;
    (*lpi)->sidechgarraysize = 0;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
@@ -467,6 +470,9 @@ RETCODE SCIPlpiCreate(                  /**< creates an LP problem object */
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
    numlp++;
 
+   todoMessage("can presolving be turned on? it has to be turned off because dual farkas doesn't work if presolver detected infeasibility");
+   CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+   
    return SCIP_OKAY;
 }
 
@@ -487,6 +493,7 @@ RETCODE SCIPlpiFree(                    /**< deletes an LP problem object */
    freeMemoryArrayNull((*lpi)->senarray);
    freeMemoryArrayNull((*lpi)->rhsarray);
    freeMemoryArrayNull((*lpi)->rngarray);
+   freeMemoryArrayNull((*lpi)->rngindarray);
    freeMemory(*lpi);
 
    /* free environment */
@@ -602,6 +609,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    Real             infinity            /**< value used as infinity */
    )
 {
+   int rngcount;
    int i;
 
    assert(cpxenv != NULL);
@@ -613,6 +621,7 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
    CHECK_OKAY( ensureSidechgarrayMem(lpi, nrow) );
 
    /* convert lhs/rhs into rhs/range pairs */
+   rngcount = 0;
    for( i = 0; i < nrow; ++i )
    {
       assert(lhs[i] <= rhs[i]);
@@ -621,13 +630,13 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
       {
          lpi->senarray[i] = 'E';
          lpi->rhsarray[i] = rhs[i];
-         lpi->rngarray[i] = 0.0;
+         /*lpi->rngarray[i] = 0.0;*/
       }
       else if( lhs[i] <= -infinity )
       {
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhs[i];
-         lpi->rngarray[i] = 0.0;
+         /*lpi->rngarray[i] = 0.0;*/
       }
       else
       {
@@ -645,12 +654,14 @@ RETCODE SCIPlpiAddRows(                 /**< adds rows to the LP */
           */
          lpi->senarray[i] = 'R';
          lpi->rhsarray[i] = lhs[i];
-         lpi->rngarray[i] = rhs[i] - lhs[i];
+         lpi->rngarray[rngcount] = rhs[i] - lhs[i];
+         lpi->rngindarray[rngcount] = ind[i];
+         rngcount++;
       }
    }
 
    CHECK_ZERO( CPXaddrows(cpxenv, lpi->cpxlp, 0, nrow, nnonz, lpi->rhsarray, lpi->senarray, beg, ind, val, NULL, name) );
-   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, nrow, ind, lpi->rngarray) );
+   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
 
    return SCIP_OKAY;
 }
@@ -753,6 +764,7 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
    Real             infinity            /**< value used as infinity */
    )
 {
+   int rngcount;
    int i;
 
    assert(cpxenv != NULL);
@@ -764,6 +776,7 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
    CHECK_OKAY( ensureSidechgarrayMem(lpi, n) );
 
    /* convert lhs/rhs into rhs/range pairs */
+   rngcount = 0;
    for( i = 0; i < n; ++i )
    {
       assert(lhs[i] <= rhs[i]);
@@ -772,13 +785,13 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
       {
          lpi->senarray[i] = 'E';
          lpi->rhsarray[i] = rhs[i];
-         lpi->rngarray[i] = 0.0;
+         /*lpi->rngarray[i] = 0.0;*/
       }
       else if( lhs[i] <= -infinity )
       {
          lpi->senarray[i] = 'L';
          lpi->rhsarray[i] = rhs[i];
-         lpi->rngarray[i] = 0.0;
+         /*lpi->rngarray[i] = 0.0;*/
       }
       else
       {
@@ -796,13 +809,15 @@ RETCODE SCIPlpiChgSides(                /**< changes left and right hand sides o
           */
          lpi->senarray[i] = 'R';
          lpi->rhsarray[i] = lhs[i];
-         lpi->rngarray[i] = rhs[i] - lhs[i];
+         lpi->rngarray[rngcount] = rhs[i] - lhs[i];
+         lpi->rngindarray[rngcount] = ind[i];
+         rngcount++;
       }
    }
 
    CHECK_ZERO( CPXchgrhs(cpxenv, lpi->cpxlp, n, ind, lpi->rhsarray) );
    CHECK_ZERO( CPXchgsense(cpxenv, lpi->cpxlp, n, ind, lpi->senarray) );
-   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, n, ind, lpi->rngarray) );
+   CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
 
    return SCIP_OKAY;
 }
@@ -1064,7 +1079,8 @@ RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the L
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   debugMessage("calling CPLEX primal simplex\n");
+   debugMessage("calling CPLEX primal simplex: %d cols, %d rows\n",
+      CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    invalidateSolution(lpi);
 
@@ -1082,7 +1098,8 @@ RETCODE SCIPlpiSolvePrimal(             /**< calls primal simplex to solve the L
    }
 
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
-   
+   debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
    return SCIP_OKAY;
 }
 
@@ -1096,7 +1113,8 @@ RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   debugMessage("calling CPLEX dual simplex\n");
+   debugMessage("calling CPLEX dual simplex: %d cols, %d rows\n", 
+      CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
 
    invalidateSolution(lpi);
 
@@ -1114,7 +1132,22 @@ RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP 
    }
 
    lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
    
+   return SCIP_OKAY;
+}
+
+RETCODE SCIPlpiGetBasisFeasibility(     /**< gets information about primal and dual feasibility of the LP basis */
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            primalfeasible,     /**< stores primal feasibility status */
+   Bool*            dualfeasible        /**< stores dual feasibility status */
+   )
+{
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   CHECK_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, primalfeasible, dualfeasible) );
+
    return SCIP_OKAY;
 }
 
@@ -1330,7 +1363,7 @@ RETCODE SCIPlpiWriteLP(                 /**< writes LP to a file */
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   CHECK_ZERO( CPXlpwrite(cpxenv, lpi->cpxlp, (char*)fname) );
+   CHECK_ZERO( CPXwriteprob(cpxenv, lpi->cpxlp, (char*)fname, NULL) );
 
    return SCIP_OKAY;
 }

@@ -61,8 +61,9 @@ struct Cons
    CONSDATA*        consdata;           /**< data for this specific constraint */
    int              numuses;            /**< number of times, this constraint is referenced */
    unsigned int     model:1;            /**< TRUE iff constraint is necessary for feasibility */
+   unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
-   unsigned int     arraypos:30;        /**< position of constraint in the constraint array of the handler */
+   unsigned int     arraypos:29;        /**< position of constraint in the constraint array of the handler */
 };
 
 
@@ -398,7 +399,8 @@ RETCODE SCIPconsCreate(                 /**< creates a constraint */
    const char*      name,               /**< name of constraint */
    CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    CONSDATA*        consdata,           /**< data for this specific constraint */
-   Bool             model               /**< is constraint necessary for feasibility? */
+   Bool             model,              /**< is constraint necessary for feasibility? */
+   Bool             original            /**< is constraint belonging to the original problem? */
    )
 {
    assert(cons != NULL);
@@ -413,6 +415,7 @@ RETCODE SCIPconsCreate(                 /**< creates a constraint */
    (*cons)->consdata = consdata;
    (*cons)->numuses = 0;
    (*cons)->model = model;
+   (*cons)->original = original;
    (*cons)->active = FALSE;
    (*cons)->arraypos = 0;
 
@@ -525,7 +528,7 @@ RETCODE SCIPconsTransform(              /**< copies original constraint into tra
    }
 
    /* create new constraint with transformed data */
-   CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, consdata, origcons->model) );
+   CHECK_OKAY( SCIPconsCreate(transcons, memhdr, origcons->name, origcons->conshdlr, consdata, origcons->model, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -539,6 +542,15 @@ const char* SCIPconsGetName(            /**< returns the name of the constraint 
    return cons->name;
 }
 
+CONSHDLR* SCIPconsGetConsHdlr(          /**< returns the constraint handler of the constraint */
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->conshdlr;
+}
+
 CONSDATA* SCIPconsGetConsdata(          /**< returns the constraint data field of the constraint */
    CONS*            cons                /**< constraint */
    )
@@ -548,6 +560,15 @@ CONSDATA* SCIPconsGetConsdata(          /**< returns the constraint data field o
    return cons->consdata;
 }
 
+Bool SCIPconsIsOriginal(                /**< returns TRUE iff constraint is belonging to original problem */
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->original;
+}
+
 Bool SCIPconsIsModel(                   /**< returns TRUE iff constraint is necessary for feasibility */
    CONS*            cons                /**< constraint */
    )
@@ -555,6 +576,19 @@ Bool SCIPconsIsModel(                   /**< returns TRUE iff constraint is nece
    assert(cons != NULL);
 
    return cons->model;
+}
+
+
+/*
+ * Hash functions
+ */
+
+DECL_HASHGETKEY(SCIPhashGetKeyCons)     /**< gets the key (i.e. the name) of the given constraint */
+{
+   CONS* cons = (CONS*)elem;
+
+   assert(cons != NULL);
+   return cons->name;
 }
 
 

@@ -36,6 +36,7 @@ struct NodePQ
    int              len;                /**< number of used element slots */
    int              size;               /**< total number of available element slots */
    NODE**           slots;              /**< array of element slots */
+   Real             lowerboundsum;      /**< sum of lower bounds of all nodes in the queue */
    Real             lowerbound;         /**< minimal lower bound value of all nodes in the queue */
    int              nlowerbounds;       /**< number of nodes in the queue with minimal lower bound (0 if invalid) */
 };
@@ -112,6 +113,7 @@ RETCODE SCIPnodepqCreate(               /**< creates node priority queue */
    (*nodepq)->len = 0;
    (*nodepq)->size = 0;
    (*nodepq)->slots = NULL;
+   (*nodepq)->lowerboundsum = 0.0;
    (*nodepq)->lowerbound = SCIP_INVALID;
    (*nodepq)->nlowerbounds = 0;
 
@@ -178,6 +180,7 @@ RETCODE SCIPnodepqInsert(               /**< inserts node into node priority que
    /* insert node as leaf in the tree, move it towards the root as long it is better than its parent */
    pos = nodepq->len;
    nodepq->len++;
+   nodepq->lowerboundsum += node->lowerbound;
    while( pos > 0 && nodesel->nodeselcomp(nodesel, scip, node, nodepq->slots[PQ_PARENT(pos)]) < 0 )
    {
       nodepq->slots[pos] = nodepq->slots[PQ_PARENT(pos)];
@@ -241,6 +244,7 @@ Bool nodepqDelPos(                      /**< deletes node at given position from
     */
    lastnode = nodepq->slots[nodepq->len-1];
    nodepq->len--;
+   nodepq->lowerboundsum -= nodepq->slots[rempos]->lowerbound;
    freepos = rempos;
 
    /* try to move parents downwards to insert last node */
@@ -358,6 +362,15 @@ Real SCIPnodepqGetLowerbound(           /**< gets the minimal lower bound of all
    assert(nodepq->lowerbound < SCIP_INVALID);
 
    return nodepq->lowerbound;
+}
+
+Real SCIPnodepqGetLowerboundSum(        /**< gets the sum of lower bounds of all nodes in the queue */
+   NODEPQ*          nodepq              /**< pointer to a node priority queue */
+   )
+{
+   assert(nodepq != NULL);
+
+   return nodepq->lowerboundsum;
 }
 
 RETCODE SCIPnodepqBound(                /**< free all nodes from the queue that are cut off by the given upper bound */

@@ -82,6 +82,9 @@ void SCIPretcodePrint(                  /**< prints error message for return cod
    case SCIP_INVALIDCALL:
       fprintf(errout, "method cannot be called at this time in solution process");
       break;
+   case SCIP_INVALIDDATA:
+      fprintf(errout, "method cannot be called with this type of data");
+      break;
    default:
       fprintf(errout, "unknown error code");
       break;

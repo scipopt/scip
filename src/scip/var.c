@@ -927,6 +927,24 @@ RETCODE SCIPvarAggregate(               /**< converts variable into aggregated v
    return SCIP_OKAY;
 }
 
+RETCODE SCIPvarChgType(                 /**< changes type of variable */
+   VAR*             var,                /**< problem variable to change */
+   VARTYPE          vartype             /**< new type of variable */
+   )
+{
+   assert(var != NULL);
+
+   if( var->inprob )
+   {
+      errorMessage("cannot change type of variable already in the problem");
+      return SCIP_INVALIDDATA;
+   }
+   
+   var->vartype = vartype;
+
+   return SCIP_OKAY;
+}
+
 RETCODE SCIPvarChgLb(                   /**< changes lower bound of variable */
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
@@ -1090,6 +1108,26 @@ RETCODE SCIPvarChgBd(                   /**< changes bound of variable */
    }
 }
 
+RETCODE SCIPvarChgObj(                  /**< changes objective value of variable */
+   VAR*             var,                /**< variable to change, must not be member of the problem */
+   Real             newobj              /**< new objective value for variable */
+   )
+{
+   assert(var != NULL);
+
+   debugMessage("changing objective value of <%s> from %g to %g\n", var->name, var->obj, newobj);
+
+   if( var->inprob )
+   {
+      errorMessage("cannot change the objective value of a variable already in the problem");
+      return SCIP_INVALIDDATA;
+   }
+   
+   var->obj = newobj;
+      
+   return SCIP_OKAY;
+}
+
 const char* SCIPvarGetName(             /**< get name of variable */
    VAR*             var                 /**< problem variable */
    )
@@ -1214,7 +1252,9 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
    case SCIP_VARSTATUS_ORIGINAL:
       if( var->data.transvar == NULL )
       {
-         errorMessage("Cannot add untransformed original variable to LP row");
+         char s[255];
+         sprintf(s, "Cannot add untransformed original variable <%s> to LP row <%s>", var->name, row->name);
+         errorMessage(s);
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPvarAddToRow(var->data.transvar, memhdr, set, lp, stat, row, val) );
@@ -1248,5 +1288,19 @@ RETCODE SCIPvarAddToRow(                /**< resolves variable to columns and ad
       errorMessage("Unknown variable status");
       return SCIP_INVALIDDATA;
    }
+}
+
+
+
+/*
+ * Hash functions
+ */
+
+DECL_HASHGETKEY(SCIPhashGetKeyVar)      /**< gets the key (i.e. the name) of the given variable */
+{
+   VAR* var = (VAR*)elem;
+
+   assert(var != NULL);
+   return var->name;
 }
 

@@ -60,7 +60,6 @@ RETCODE probEnsureVarsMem(              /**< resizes vars array to be able to st
 
 
 
-
 /*
  * problem creation
  */
@@ -78,7 +77,11 @@ RETCODE SCIPprobCreate(                 /**< creates problem data structure */
 
    (*prob)->fixedvars = NULL;
    (*prob)->vars = NULL;
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, SCIP_HASHSIZE_NAMES,
+                  SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->conslist = NULL;
+   CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
+                  SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
    (*prob)->objoffset = 0.0;
    (*prob)->objlim = SCIP_INVALID;
@@ -120,6 +123,10 @@ RETCODE SCIPprobFree(                   /**< frees problem data structure */
 
    /* release constraints and free constraint list */
    CHECK_OKAY( SCIPconslistFree(&(*prob)->conslist, memhdr, set) );
+   
+   /* free hash tables for names */
+   SCIPhashtableFree(&(*prob)->varnames, memhdr);
+   SCIPhashtableFree(&(*prob)->consnames, memhdr);
 
    freeMemory(*prob);
    
@@ -153,7 +160,7 @@ RETCODE SCIPprobTransform(              /**< transform problem data into normali
    for( v = 0; v < source->nvars; ++v )
    {
       CHECK_OKAY( SCIPvarTransform(source->vars[v], memhdr, set, stat, source->objsense, &targetvar) );
-      CHECK_OKAY( SCIPprobAddVar(*target, set, targetvar) );
+      CHECK_OKAY( SCIPprobAddVar(*target, memhdr, set, targetvar) );
    }
    assert((*target)->nvars == source->nvars);
 
@@ -217,6 +224,7 @@ RETCODE SCIPprobDeactivate(             /**< deactivates constraints in the prob
 
 RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and captures it */
    PROB*            prob,               /**< problem data */
+   MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set,                /**< global SCIP settings */
    VAR*             var                 /**< variable to add */
    )
@@ -272,8 +280,15 @@ RETCODE SCIPprobAddVar(                 /**< adds variable to the problem and ca
 
    prob->vars[insertpos] = var;
 
+   /* capture variable and mark it to be in problem */
    SCIPvarCapture(var);
    var->inprob = TRUE;
+
+   /* add variable's name to the namespace */
+   CHECK_OKAY( SCIPhashtableInsert(prob->varnames, memhdr, (void*)var) );
+
+   debugMessage("added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continous)\n",
+      var->name, prob->nvars, prob->nbin, prob->nint, prob->nimpl, prob->ncont);
 
    return SCIP_OKAY;
 }
@@ -291,6 +306,9 @@ RETCODE SCIPprobAddCons(                /**< adds constraint to the problem and 
    /* add the constraint to the problem's constraint list and capture it */
    CHECK_OKAY( SCIPconslistAdd(&prob->conslist, memhdr, cons) );
    prob->ncons++;
+
+   /* add constraint's name to the namespace */
+   CHECK_OKAY( SCIPhashtableInsert(prob->consnames, memhdr, (void*)cons) );
 
    return SCIP_OKAY;
 }
@@ -336,10 +354,32 @@ Real SCIPprobExternObjval(              /**< returns the external value of the g
  */
 
 const char* SCIPprobGetName(            /**< gets problem name */
-   const PROB*      prob                /**< problem data */
+   PROB*            prob                /**< problem data */
    )
 {
    assert(prob != NULL);
    return prob->name;
+}
+
+VAR* SCIPprobFindVar(                   /**< returns variable of the problem with given name */
+   PROB*            prob,               /**< problem data */
+   const char*      name                /**< name of variable to find */
+   )
+{
+   assert(prob != NULL);
+   assert(name != NULL);
+
+   return (VAR*)(SCIPhashtableRetrieve(prob->varnames, (void*)name));
+}
+
+CONS* SCIPprobFindCons(                 /**< returns constraint of the problem with given name */
+   PROB*            prob,               /**< problem data */
+   const char*      name                /**< name of variable to find */
+   )
+{
+   assert(prob != NULL);
+   assert(name != NULL);
+
+   return (CONS*)(SCIPhashtableRetrieve(prob->consnames, (void*)name));
 }
 

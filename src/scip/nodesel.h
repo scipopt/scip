@@ -123,6 +123,11 @@ Real SCIPnodepqGetLowerbound(           /**< gets the minimal lower bound of all
    );
 
 extern
+Real SCIPnodepqGetLowerboundSum(        /**< gets the sum of lower bounds of all nodes in the queue */
+   NODEPQ*          nodepq              /**< pointer to a node priority queue */
+   );
+
+extern
 RETCODE SCIPnodepqBound(                /**< free all nodes from the queue that are cut off by the given upper bound */
    NODEPQ*          nodepq,             /**< pointer to a node priority queue */
    MEMHDR*          memhdr,             /**< block memory buffer */

@@ -289,6 +289,13 @@ RETCODE SCIPlpiSolveDual(               /**< calls dual simplex to solve the LP 
    );
 
 extern 
+RETCODE SCIPlpiGetBasisFeasibility(     /**< gets information about primal and dual feasibility of the LP basis */
+   LPI*             lpi,                /**< LP interface structure */
+   Bool*            primalfeasible,     /**< stores primal feasibility status */
+   Bool*            dualfeasible        /**< stores dual feasibility status */
+   );
+
+extern 
 Bool SCIPlpiIsPrimalUnbounded(          /**< returns TRUE iff LP is primal unbounded */
    LPI*             lpi                 /**< LP interface structure */
    );
