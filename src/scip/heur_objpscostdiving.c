@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.7 2004/07/07 18:06:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.8 2004/07/13 15:03:50 bzfpfend Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
@@ -523,7 +523,7 @@ DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    CHECK_OKAY( SCIPendDive(scip) );
 
    /* free temporary memory for remembering the current soft roundings */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &roundings) );
+   SCIPfreeBufferArray(scip, &roundings);
 
    debugMessage("objpscostdiving heuristic finished\n");
 

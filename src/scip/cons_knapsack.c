@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.56 2004/07/08 13:01:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.57 2004/07/13 15:03:49 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -502,7 +502,7 @@ RETCODE SCIPsolveKnapsack(
    if( solval != NULL )
       *solval = optvalues[IDX(nitems,capacity)];
 
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &optvalues) );
+   SCIPfreeBufferArray(scip, &optvalues);
 
    return SCIP_OKAY;
 }
@@ -598,8 +598,8 @@ RETCODE SCIPliftKnapsackCardinality(
          minweight[z] = MIN(minweight[z], minweight[z - liftcoefs[i]] + weight);
    }
 
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &sortedweights) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &minweight) );
+   SCIPfreeBufferArray(scip, &sortedweights);
+   SCIPfreeBufferArray(scip, &minweight);
 
    return SCIP_OKAY;
 }
@@ -877,15 +877,15 @@ RETCODE SCIPseparateKnapsackCardinality(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &liftcoefs) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &solvals) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &noncovervars) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedzeros) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedones) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &dpprofits) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &dpweights) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &items) );
+   SCIPfreeBufferArray(scip, &liftcoefs);
+   SCIPfreeBufferArray(scip, &solvals);
+   SCIPfreeBufferArray(scip, &noncovervars);
+   SCIPfreeBufferArray(scip, &covervars);
+   SCIPfreeBufferArray(scip, &fixedzeros);
+   SCIPfreeBufferArray(scip, &fixedones);
+   SCIPfreeBufferArray(scip, &dpprofits);
+   SCIPfreeBufferArray(scip, &dpweights);
+   SCIPfreeBufferArray(scip, &items);
 
    return SCIP_OKAY;
 }
@@ -1821,8 +1821,8 @@ RETCODE createNormalizedKnapsack(
          initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
+   SCIPfreeBufferArray(scip, &weights);
+   SCIPfreeBufferArray(scip, &transvars);
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.185 2004/07/07 09:52:43 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.186 2004/07/13 15:03:51 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9911,7 +9911,7 @@ RETCODE SCIPensureBlockMemoryArray_call(
 }
 
 /** gets a memory buffer with at least the given size */
-RETCODE SCIPallocBuffer(
+RETCODE SCIPallocBufferSize(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to store the buffer */
    int              size                /**< required size in bytes of buffer */
@@ -9919,7 +9919,7 @@ RETCODE SCIPallocBuffer(
 {
    assert(ptr != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPallocBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPallocBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetAllocBufferSize(scip->set, ptr, size) );
 
@@ -9927,7 +9927,7 @@ RETCODE SCIPallocBuffer(
 }
 
 /** allocates a memory buffer with at least the given size and copies the given memory into the buffer */
-RETCODE SCIPduplicateBuffer(
+RETCODE SCIPduplicateBufferSize(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to store the buffer */
    void*            source,             /**< memory block to copy into the buffer */
@@ -9936,7 +9936,7 @@ RETCODE SCIPduplicateBuffer(
 {
    assert(ptr != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPduplicateBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPduplicateBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetDuplicateBufferSize(scip->set, ptr, source, size) );
 
@@ -9944,7 +9944,7 @@ RETCODE SCIPduplicateBuffer(
 }
 
 /** reallocates a memory buffer to at least the given size */
-RETCODE SCIPreallocBuffer(
+RETCODE SCIPreallocBufferSize(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to the buffer */
    int              size                /**< required size in bytes of buffer */
@@ -9952,7 +9952,7 @@ RETCODE SCIPreallocBuffer(
 {
    assert(ptr != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPreallocBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPreallocBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPsetReallocBufferSize(scip->set, ptr, size) );
 
@@ -9960,19 +9960,17 @@ RETCODE SCIPreallocBuffer(
 }
 
 /** frees a memory buffer */
-RETCODE SCIPfreeBuffer(
+void SCIPfreeBufferSize(
    SCIP*            scip,               /**< SCIP data structure */
    void**           ptr,                /**< pointer to the buffer */
-   int              dummysize           /**< used to get a safer define for SCIPfreeBufferSize/Array */
+   int              dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
    )
 {  /*lint --e{715}*/
    assert(ptr != NULL);
 
-   CHECK_OKAY( checkStage(scip, "SCIPfreeBuffer", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPfreeBufferSize", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIPsetFreeBufferSize(scip->set, ptr);
-   
-   return SCIP_OKAY;
 }
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.24 2004/07/07 08:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.25 2004/07/13 15:03:50 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -149,7 +149,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
    printf("\n");
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &sorted) );
+   SCIPfreeBufferArray(scip, &sorted);
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -191,7 +191,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
    printf("\n");
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &sorted) );
+   SCIPfreeBufferArray(scip, &sorted);
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.3 2004/07/08 10:11:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.4 2004/07/13 15:03:50 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -400,8 +400,8 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    CHECK_OKAY( SCIPendDive(scip) );
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &softroundings) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &rootsol) );
+   SCIPfreeBufferArray(scip, &softroundings);
+   SCIPfreeBufferArray(scip, &rootsol);
 
    debugMessage("rootsoldiving heuristic finished\n");
 

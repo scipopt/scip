@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.101 2004/07/01 10:35:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.102 2004/07/13 15:03:52 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -55,6 +55,7 @@
 /* Message Output */
 
 #define SCIP_DEFAULT_VERBLEVEL    SCIP_VERBLEVEL_NORMAL
+#define SCIP_DEFAULT_LPINFO           FALSE /**< should the LP solver display status messages? */
 
 
 /* CTRL-C interrupt */
@@ -296,11 +297,16 @@ RETCODE SCIPsetCreate(
          "verbosity level of output",
          (int*)&(*set)->verblevel, (int)SCIP_DEFAULT_VERBLEVEL, (int)SCIP_VERBLEVEL_NONE, (int)SCIP_VERBLEVEL_FULL,
          NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+         "display/lpinfo",
+         "should the LP solver display status messages?",
+         &(*set)->lpinfo, SCIP_DEFAULT_LPINFO,
+         NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
          "display/dispwidth",
          "maximal number of characters in a node information line",
          &(*set)->dispwidth, SCIP_DEFAULT_DISPWIDTH, 0, INT_MAX,
-         SCIPparamChgdDispActive, NULL) );
+         NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, memhdr, 
          "display/dispfreq",
          "frequency for displaying node information lines",

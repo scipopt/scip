@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.18 2004/07/12 11:14:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.19 2004/07/13 15:03:52 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -223,6 +223,7 @@ struct Lp
    Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    Bool             lpifastmip;         /**< current FASTMIP setting in LPI */
    Bool             lpiscaling;         /**< current SCALING setting in LPI */
+   Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
    Bool             lastwasprimal;      /**< was the last simplex call a call to the primal simplex? */
 };
 

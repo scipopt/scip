@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.3 2004/06/01 16:40:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.4 2004/07/13 15:03:50 bzfpfend Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -25,7 +25,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <fenv.h>
 
 #include "message.h"
 #include "intervalarith.h"
@@ -37,6 +36,8 @@
 /*
  * Linux rounding operations
  */
+
+#include <fenv.h>
 
 /** Linux rounding mode settings */
 enum RoundMode
@@ -76,6 +77,8 @@ ROUNDMODE getRoundingMode(
 /*
  * OSF rounding operations
  */
+
+#include <float.h>
 
 /** OSF rounding mode settings */
 enum RoundMode

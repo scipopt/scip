@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.73 2004/05/24 17:46:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.74 2004/07/13 15:03:49 bzfpfend Exp $"
 
 /**@file   cmain.c
  * @brief  main file for C compilation
@@ -129,6 +129,7 @@ RETCODE runSCIP(
 
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
+
 
    /* include default SCIP plugins */
    CHECK_OKAY( SCIPincludeDefaultPlugins(scip) );

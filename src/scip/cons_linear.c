@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.110 2004/07/08 13:01:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.111 2004/07/13 15:03:49 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -75,6 +75,7 @@
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of separation rounds in the root node */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
+#define DEFAULT_MAXPRESOLAGGRROUNDS  -1 /**< maximal number of presolving aggregation rounds (-1: no limit) */
 
 
 /** constraint data for linear constraints */
@@ -126,6 +127,7 @@ struct ConshdlrData
    int              maxroundsroot;      /**< maximal number of separation rounds in the root node */
    int              maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int              maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
+   int              maxpresolaggrrounds;/**< maximal number of presolving aggregation rounds (-1: no limit) */
 };
 
 /** linear constraint update method */
@@ -1457,7 +1459,7 @@ RETCODE consdataSort(
 #endif
 
       /* free temporary memory */
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &perm) );
+      SCIPfreeBufferArray(scip, &perm);
    }
    assert(consdata->sorted);
 
@@ -2635,9 +2637,9 @@ RETCODE separateRelaxedKnapsack(
 
  TERMINATE:
    /* free data structures */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &binvals) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &consvals) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &consvars) );
+   SCIPfreeBufferArray(scip, &binvals);
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
 
    return SCIP_OKAY;
 }
@@ -3677,7 +3679,7 @@ RETCODE convertLongEquality(
             &infeasible) );
 
       /* free temporary memory */
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &scalars) );
+      SCIPfreeBufferArray(scip, &scalars);
 
       /* check for infeasible aggregation */
       if( infeasible )
@@ -4101,8 +4103,8 @@ RETCODE aggregateConstraints(
       CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
 
       /* free temporary memory */
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &newvals) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &newvars) );
+      SCIPfreeBufferArray(scip, &newvals);
+      SCIPfreeBufferArray(scip, &newvars);
    }
 
    return SCIP_OKAY;
@@ -4215,8 +4217,7 @@ RETCODE preprocessConstraintPairs(
       /* make sure, we have enough memory for the index set of V_1 \ V_0 */
       if( consdata1->nvars > diffidx1minus0size )
       {
-         CHECK_OKAY( SCIPfreeBufferArray(scip, &diffidx1minus0) );
-         CHECK_OKAY( SCIPallocBufferArray(scip, &diffidx1minus0, consdata1->nvars) );
+         CHECK_OKAY( SCIPreallocBufferArray(scip, &diffidx1minus0, consdata1->nvars) );
          diffidx1minus0size = consdata1->nvars;
       }
 
@@ -4478,10 +4479,10 @@ RETCODE preprocessConstraintPairs(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &diffidx1minus0) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &diffidx0minus1) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &commonidx1) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &commonidx0) );
+   SCIPfreeBufferArray(scip, &diffidx1minus0);
+   SCIPfreeBufferArray(scip, &diffidx0minus1);
+   SCIPfreeBufferArray(scip, &commonidx1);
+   SCIPfreeBufferArray(scip, &commonidx0);
 
    return SCIP_OKAY;
 }
@@ -4542,9 +4543,9 @@ DECL_CONSPRESOL(consPresolLinear)
          consdata->propagated = TRUE;
          consdata->boundstightened = TRUE;
 
-         /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving round
-          * to help detecting redundancy of other linear constraints, but we want to keep equalities until the end of
-          * presolving, because they may be used for aggregating other constraints
+         /* if inequality is already upgraded, delete it now; we only want to keep upgraded inequalities one presolving 
+          * round to help detecting redundancy of other linear constraints, but we want to keep equalities until the end
+          * of presolving, because they may be used for aggregating other constraints
           */
          if( consdata->upgraded && SCIPisLT(scip, consdata->lhs, consdata->rhs) )
          {
@@ -4698,26 +4699,35 @@ DECL_CONSPRESOL(consPresolLinear)
              */
             assert(!consdata->upgraded);
             consdata->upgraded = TRUE;
+
+            /* delete the constraint immediately, if we don't need it anymore for aggregation and redundancy checking */
+            if( conshdlrdata->maxpresolaggrrounds != -1 && nrounds > conshdlrdata->maxpresolaggrrounds )
+            {
+               CHECK_OKAY( SCIPdelCons(scip, cons) );
+            }
          }
       }
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them */
-   if( *result != SCIP_CUTOFF && firstchange != -1 )
+   if( conshdlrdata->maxpresolaggrrounds == -1 || nrounds < conshdlrdata->maxpresolaggrrounds )
    {
-      for( c = firstchange; c < nconss; ++c )
+      if( *result != SCIP_CUTOFF && firstchange != -1 )
       {
-         if( SCIPconsIsActive(conss[c]) )
+         for( c = firstchange; c < nconss; ++c )
          {
-            CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
-                  nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs, result) );
+            if( SCIPconsIsActive(conss[c]) )
+            {
+               CHECK_OKAY( preprocessConstraintPairs(scip, conss, firstchange, c, conshdlrdata->maxaggrnormscale,
+                     nfixedvars, naggrvars, ndelconss, nupgdconss, nchgsides, nchgcoefs, result) );
+            }
          }
-      }
-      for( c = firstchange; c < nconss; ++c )
-      {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-         consdata->changed = FALSE;
+         for( c = firstchange; c < nconss; ++c )
+         {
+            consdata = SCIPconsGetData(conss[c]);
+            assert(consdata != NULL);
+            consdata->changed = FALSE;
+         }
       }
    }
 
@@ -4877,7 +4887,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
          FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE) );
 
    /* release the vals buffer */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &vals) );
+   SCIPfreeBufferArray(scip, &vals);
 
    /** try to automatically convert a linear constraint into a more specific and more specialized constraint */
    CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
@@ -4964,6 +4974,10 @@ RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
+   CHECK_OKAY( SCIPaddIntParam(scip,
+         "constraints/linear/maxpresolaggrrounds",
+         "maximal number of presolving aggregation rounds (-1: no limit)",
+         &conshdlrdata->maxpresolaggrrounds, DEFAULT_MAXPRESOLAGGRROUNDS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

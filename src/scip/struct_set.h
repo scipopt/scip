@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.22 2004/07/01 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.23 2004/07/13 15:03:52 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -154,6 +154,7 @@ struct Set
    Bool             exactsolve;         /**< should the problem be solved exactly (with proven dual bounds)? */
    Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
    Bool             scaling;            /**< should scaling of LP solver be used? */
+   Bool             lpinfo;             /**< should the LP solver display status messages? */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */
    Bool             cleanuprows;        /**< should new basic rows be removed after LP solving? */
    Bool             clocksenabled;      /**< is timing enabled? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.129 2004/07/12 11:14:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.130 2004/07/13 15:03:50 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2028,6 +2028,26 @@ RETCODE lpSetIterationLimit(
 
       CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPITLIM, itlim) );
       lp->lpiitlim = itlim;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** sets the verbosity of the LP solver */
+static
+RETCODE lpSetLPInfo(
+   LP*              lp,                 /**< current LP data */
+   Bool             lpinfo              /**< should the LP solver display status messages? */
+   )
+{
+   assert(lp != NULL);
+
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_LPINFO, lp->lpilpinfo) );
+
+   if( lpinfo != lp->lpilpinfo )
+   {
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_LPINFO, lpinfo) );
+      lp->lpilpinfo = lpinfo;
    }
    
    return SCIP_OKAY;
@@ -5378,6 +5398,7 @@ RETCODE SCIPlpCreate(
    (*lp)->lpifromscratch = FALSE;
    (*lp)->lpifastmip = TRUE;
    (*lp)->lpiscaling = TRUE;
+   (*lp)->lpilpinfo = FALSE;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lastwasprimal = FALSE;
 
@@ -5392,8 +5413,8 @@ RETCODE SCIPlpCreate(
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_FASTMIP, (*lp)->lpifastmip) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPITLIM, (*lp)->lpiitlim) );
+   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, (*lp)->lpilpinfo) );
    CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_PRICING, SCIP_PRICING_AUTO) ); /*lint !e641*/
-   CHECK_OKAY( lpSetIntpar(*lp, SCIP_LPPAR_LPINFO, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -6868,6 +6889,7 @@ RETCODE lpSolveStable(
    CHECK_OKAY( lpSetFromscratch(lp, fromscratch) );
    CHECK_OKAY( lpSetFastmip(lp, fastmip) );
    CHECK_OKAY( lpSetScaling(lp, set->scaling) );
+   CHECK_OKAY( lpSetLPInfo(lp, set->lpinfo) );
    CHECK_OKAY( lpSimplex(lp, set, stat, useprimal) );
 
    /* check for stability */

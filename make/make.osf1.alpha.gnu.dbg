@@ -1,5 +1,5 @@
-#--- $Id: make.osf1.alpha.gnu.dbg,v 1.4 2004/05/03 11:26:55 bzfpfend Exp $
-FLAGS		+=	-DROUNDING_FP -O -g # -DWITH_READLINE
+#--- $Id: make.osf1.alpha.gnu.dbg,v 1.5 2004/07/13 15:03:48 bzfpfend Exp $
+FLAGS		+=	-O -g # -DWITH_READLINE
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.51 2004/07/07 09:52:41 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.52 2004/07/13 15:03:49 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1585,8 +1585,8 @@ RETCODE branchLP(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &uses) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &sortcands) );
+   SCIPfreeBufferArray(scip, &uses);
+   SCIPfreeBufferArray(scip, &sortcands);
 
    return SCIP_OKAY;
 }
@@ -1708,8 +1708,8 @@ RETCODE branchPseudo(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &canduses) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &branchcands) );
+   SCIPfreeBufferArray(scip, &canduses);
+   SCIPfreeBufferArray(scip, &branchcands);
 
    return SCIP_OKAY;
 }
@@ -2438,7 +2438,7 @@ RETCODE createNormalizedSetppc(
          initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* release temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
+   SCIPfreeBufferArray(scip, &transvars);
 
    return SCIP_OKAY;
 }

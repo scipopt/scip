@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.7 2004/07/07 18:06:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.8 2004/07/13 15:03:52 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -180,8 +180,8 @@ RETCODE addCut(
    }
    
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &cutvals) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &cutcols) );
+   SCIPfreeBufferArray(scip, &cutvals);
+   SCIPfreeBufferArray(scip, &cutcols);
 
    return SCIP_OKAY;   
 }
@@ -567,10 +567,10 @@ RETCODE aggregation(
    }
       
    /* free datastructures */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &testeddeltas) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &cutcoefs) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &rowweights) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &aggrcoefs) );
+   SCIPfreeBufferArray(scip, &testeddeltas);
+   SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &rowweights);
+   SCIPfreeBufferArray(scip, &aggrcoefs);
 
    return SCIP_OKAY; 
 }
@@ -747,11 +747,11 @@ DECL_SEPAEXEC(sepaExecCmir)
    }
 
    /* free data structure */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &varsol) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &roworder) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &rowscores) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &rowrhsscores) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &rowlhsscores) );
+   SCIPfreeBufferArray(scip, &varsol);
+   SCIPfreeBufferArray(scip, &roworder);
+   SCIPfreeBufferArray(scip, &rowscores);
+   SCIPfreeBufferArray(scip, &rowrhsscores);
+   SCIPfreeBufferArray(scip, &rowlhsscores);
 
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.48 2004/07/07 08:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.49 2004/07/13 15:03:49 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1383,8 +1383,8 @@ RETCODE branchLP(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &usescores) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &branchcands) );
+   SCIPfreeBufferArray(scip, &usescores);
+   SCIPfreeBufferArray(scip, &branchcands);
 
    return SCIP_OKAY;
 }
@@ -1528,8 +1528,8 @@ RETCODE branchPseudo(
    }
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &usescores) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &branchcands) );
+   SCIPfreeBufferArray(scip, &usescores);
+   SCIPfreeBufferArray(scip, &branchcands);
 
    return SCIP_OKAY;
 }
@@ -1633,7 +1633,7 @@ DECL_CONSENFOPS(consEnfopsLogicor)
    solvelp = FALSE;
 
    /* check all logic or constraints for feasibility */
-   for( c = 0; c < nconss && !cutoff && !reduceddom && !solvelp; ++c )
+   for( c = 0; c < nconss && !cutoff && !reduceddom && !solvelp && !infeasible; ++c )
    {
       CHECK_OKAY( enforcePseudo(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom, &solvelp) );
    }
@@ -2030,7 +2030,7 @@ RETCODE createNormalizedLogicor(
          initial, separate, enforce, check, propagate, local, modifiable, removeable) );
 
    /* free temporary memory */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &transvars) );
+   SCIPfreeBufferArray(scip, &transvars);
 
    return SCIP_OKAY;
 }

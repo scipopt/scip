@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.6 2004/07/07 18:06:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.7 2004/07/13 15:03:48 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -421,8 +421,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       }
 
       /* free buffer for the unreliable candidates */
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &initcandscores) );
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &initcands) );
+      SCIPfreeBufferArray(scip, &initcandscores);
+      SCIPfreeBufferArray(scip, &initcands);
    }
 
    /* if no domain could be reduced, create the branching */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.29 2004/06/08 20:55:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.30 2004/07/13 15:03:50 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -454,7 +454,6 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    Real obj;
    Real bestroundval;
    Real minobj;
-   Bool aborted;
    int nlpcands;
    int nlprows;
    int nfrac;
@@ -543,8 +542,7 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    }
 
    /* try to round remaining variables in order to become/stay feasible */
-   aborted = FALSE;
-   while( nfrac > 0 && !aborted )
+   while( nfrac > 0 )
    {
       VAR* roundvar;
       Real oldsolval;
@@ -593,39 +591,35 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       if( roundvar == NULL )
       {
          debugMessage("rounding heuristic:  -> didn't find a rounding variable\n");
-         aborted = TRUE;
+         break;
       }
-      else
-      {
-         debugMessage("rounding heuristic:  -> round var <%s>, oldval=%g, newval=%g, obj=%g\n",
-            SCIPvarGetName(roundvar), oldsolval, newsolval, SCIPvarGetObj(roundvar));
-         
-         /* update row activities of globally valid rows */
-         CHECK_OKAY( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
-                        roundvar, oldsolval, newsolval) );
-         
-         /* store new solution value and decrease fractionality counter */
-         CHECK_OKAY( SCIPsetSolVal(scip, sol, roundvar, newsolval) );
-         nfrac--;
 
-         /* update minimal objective value possible after rounding remaining variables */
-         obj = SCIPvarGetObj(roundvar);
-         if( obj > 0.0 && newsolval > oldsolval )
-            minobj += obj;
-         else if( obj < 0.0 && newsolval < oldsolval )
-            minobj -= obj;
+      debugMessage("rounding heuristic:  -> round var <%s>, oldval=%g, newval=%g, obj=%g\n",
+         SCIPvarGetName(roundvar), oldsolval, newsolval, SCIPvarGetObj(roundvar));
+         
+      /* update row activities of globally valid rows */
+      CHECK_OKAY( updateActivities(scip, activities, violrows, violrowpos, &nviolrows, nlprows, 
+            roundvar, oldsolval, newsolval) );
+         
+      /* store new solution value and decrease fractionality counter */
+      CHECK_OKAY( SCIPsetSolVal(scip, sol, roundvar, newsolval) );
+      nfrac--;
 
-         debugMessage("rounding heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
-            nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
-      }
+      /* update minimal objective value possible after rounding remaining variables */
+      obj = SCIPvarGetObj(roundvar);
+      if( obj > 0.0 && newsolval > oldsolval )
+         minobj += obj;
+      else if( obj < 0.0 && newsolval < oldsolval )
+         minobj -= obj;
+
+      debugMessage("rounding heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+         nfrac, nviolrows, SCIPretransformObj(scip, SCIPsolGetObj(sol)), SCIPretransformObj(scip, minobj));
    }
 
    /* check, if the new solution is feasible */
    if( nfrac == 0 && nviolrows == 0 )
    {
       Bool stored;
-
-      assert(!aborted);
 
       /* check solution for feasibility, and add it to solution store if possible
        * neither integrality nor feasibility of LP rows has to be checked, because this is already
@@ -644,9 +638,9 @@ DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    }
 
    /* free memory buffers */
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &violrowpos) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &violrows) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &activities) );
+   SCIPfreeBufferArray(scip, &violrowpos);
+   SCIPfreeBufferArray(scip, &violrows);
+   SCIPfreeBufferArray(scip, &activities);
    
    return SCIP_OKAY;
 }

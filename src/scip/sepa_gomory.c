@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.24 2004/07/09 15:31:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.25 2004/07/13 15:03:52 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -308,8 +308,8 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                   }
 
                   /* free temporary memory */
-                  CHECK_OKAY( SCIPfreeBufferArray(scip, &cutvals) );
-                  CHECK_OKAY( SCIPfreeBufferArray(scip, &cutcols) );
+                  SCIPfreeBufferArray(scip, &cutvals);
+                  SCIPfreeBufferArray(scip, &cutcols);
                }
             }
          }
@@ -317,13 +317,10 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
    }
 
    /* free temporary memory */
-   if( varsol != NULL )
-   {
-      CHECK_OKAY( SCIPfreeBufferArray(scip, &varsol) );
-   }
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &binvrow) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &basisind) );
-   CHECK_OKAY( SCIPfreeBufferArray(scip, &cutcoef) );
+   SCIPfreeBufferArrayNull(scip, &varsol);
+   SCIPfreeBufferArray(scip, &binvrow);
+   SCIPfreeBufferArray(scip, &basisind);
+   SCIPfreeBufferArray(scip, &cutcoef);
 
    debugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
 
