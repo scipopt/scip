@@ -188,7 +188,10 @@ RETCODE SCIPsepaExec(
       oldncutsfound = SCIPsepastoreGetNCutsFound(sepastore);
 
       CHECK_OKAY( sepa->sepaexec(set->scip, sepa, result) );
-      if( *result != SCIP_SEPARATED
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_SEPARATED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_CONSADDED
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN )
       {

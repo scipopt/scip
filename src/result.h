@@ -35,8 +35,8 @@ enum Result
    SCIP_UNBOUNDED   =   4,            /**< an unboundness was detected */
    SCIP_CUTOFF      =   5,            /**< the current node is infeasible and can be cut off */
    SCIP_SEPARATED   =   6,            /**< the method added a cutting plane */
-   SCIP_CONSADDED   =   7,            /**< the method added a constraint */
-   SCIP_REDUCEDDOM  =   8,            /**< the method reduced the domain of a variable */
+   SCIP_REDUCEDDOM  =   7,            /**< the method reduced the domain of a variable */
+   SCIP_CONSADDED   =   8,            /**< the method added a constraint */
    SCIP_BRANCHED    =   9,            /**< the method created a branching */
    SCIP_SOLVELP     =  10,            /**< the current node's LP must be solved */
    SCIP_FOUNDSOL    =  11,            /**< the method found a feasible primal solution */

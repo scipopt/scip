@@ -65,7 +65,10 @@ typedef struct SepaData SEPADATA;       /**< locally defined separator data */
  *    result          : pointer to store the result of the separation call
  *
  *  possible return values for *result:
+ *    SCIP_CUTOFF     : at least one unmodifiable row is infeasible in the variable's bounds -> node is infeasible
  *    SCIP_SEPARATED  : a cutting plane was generated
+ *    SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
+ *    SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
  *    SCIP_DIDNOTFIND : the separator searched, but didn't found a feasible cutting plane
  *    SCIP_DIDNOTRUN  : the separator was skipped
  */

@@ -191,6 +191,7 @@ struct Lp
    ROW**            rows;               /**< array with actual LP rows in correct order */
    LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    Real             objval;             /**< objective value of LP, or SCIP_INVALID */
+   Real             upperbound;         /**< upper objective limit of LP solver (copy of primal->upperbound) */
    int              lpicolssize;        /**< available slots in lpicols vector */
    int              nlpicols;           /**< number of columns in the LP solver */
    int              lpirowssize;        /**< available slots in lpirows vector */

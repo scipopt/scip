@@ -163,6 +163,7 @@ RETCODE selectRounding(
    COL** rowcols;
    Real* rowvals;
    Real solval;
+   VARTYPE vartype;
    int nrowcols;
    int nlocks;
    int minnlocks;
@@ -184,33 +185,37 @@ RETCODE selectRounding(
       col = rowcols[c];
       var = SCIPcolGetVar(col);
       
-      solval = SCIPgetSolVal(scip, sol, var);
-      
-      if( !SCIPisIntegral(scip, solval) )
+      vartype = SCIPvarGetType(var);
+      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
       {
-         val = rowvals[c];
+         solval = SCIPgetSolVal(scip, sol, var);
+      
+         if( !SCIPisIntegral(scip, solval) )
+         {
+            val = rowvals[c];
          
-         if( direction * val > 0.0 )
-         {
-            nlocks = SCIPvarGetNLocksUp(var);
-            if( nlocks < minnlocks )
+            if( direction * val > 0.0 )
             {
-               minnlocks = nlocks;
-               *roundvar = var;
-               *oldsolval = solval;
-               *newsolval = SCIPceil(scip, solval);
+               nlocks = SCIPvarGetNLocksUp(var);
+               if( nlocks < minnlocks )
+               {
+                  minnlocks = nlocks;
+                  *roundvar = var;
+                  *oldsolval = solval;
+                  *newsolval = SCIPceil(scip, solval);
+               }
             }
-         }
-         else
-         {
-            assert(direction * val < 0.0);
-            nlocks = SCIPvarGetNLocksDown(var);
-            if( nlocks < minnlocks )
+            else
             {
-               minnlocks = nlocks;
-               *roundvar = var;
-               *oldsolval = solval;
-               *newsolval = SCIPfloor(scip, solval);
+               assert(direction * val < 0.0);
+               nlocks = SCIPvarGetNLocksDown(var);
+               if( nlocks < minnlocks )
+               {
+                  minnlocks = nlocks;
+                  *roundvar = var;
+                  *oldsolval = solval;
+                  *newsolval = SCIPfloor(scip, solval);
+               }
             }
          }
       }
@@ -260,6 +265,7 @@ RETCODE selectEssentialRounding(
    )
 {
    VAR* var;
+   VARTYPE vartype;
    Real solval;
    int maxnlocks;
    int nlocks;
@@ -270,28 +276,34 @@ RETCODE selectEssentialRounding(
    assert(newsolval != NULL);
 
    maxnlocks = -1;
+   *roundvar = NULL;
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      solval = SCIPgetSolVal(scip, sol, var);
-      
-      if( !SCIPisIntegral(scip, solval) )
+
+      vartype = SCIPvarGetType(var);
+      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
       {
-         nlocks = SCIPvarGetNLocksDown(var);
-         if( nlocks > maxnlocks )
+         solval = SCIPgetSolVal(scip, sol, var);
+         
+         if( !SCIPisIntegral(scip, solval) )
          {
-            maxnlocks = nlocks;
-            *roundvar = var;
-            *oldsolval = solval;
-            *newsolval = SCIPceil(scip, solval);
-         }
-         nlocks = SCIPvarGetNLocksUp(var);
-         if( nlocks > maxnlocks )
-         {
-            maxnlocks = nlocks;
-            *roundvar = var;
-            *oldsolval = solval;
-            *newsolval = SCIPfloor(scip, solval);
+            nlocks = SCIPvarGetNLocksDown(var);
+            if( nlocks > maxnlocks )
+            {
+               maxnlocks = nlocks;
+               *roundvar = var;
+               *oldsolval = solval;
+               *newsolval = SCIPceil(scip, solval);
+            }
+            nlocks = SCIPvarGetNLocksUp(var);
+            if( nlocks > maxnlocks )
+            {
+               maxnlocks = nlocks;
+               *roundvar = var;
+               *oldsolval = solval;
+               *newsolval = SCIPfloor(scip, solval);
+            }
          }
       }
    }
@@ -362,6 +374,8 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    int nviolrows;
    int c;
    int r;
+
+   todoMessage("try to shift continous variables to stay feasible");
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);

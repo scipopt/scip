@@ -32,6 +32,7 @@
 #include "cons_integral.h"
 #include "cons_linear.h"
 #include "cons_setcover.h"
+#include "cons_setpack.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
 #include "branch_fullstrong.h"
@@ -330,6 +331,7 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrIntegral(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrSetcover(scip) );
+   CHECK_OKAY( SCIPincludeConsHdlrSetpack(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    /*CHECK_OKAY( SCIPincludeBranchruleFullstrong(scip) );*/
@@ -482,6 +484,7 @@ main(
    todoMessage("integrality check on objective function, abort if gap is below 1.0");
    todoMessage("numerical problems in tree->actpseudoobjval if variable's bounds are infinity");
    todoMessage("implement reduced cost fixing");
+   todoMessage("statistics: count domain reductions and constraint additions of constraint handlers");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

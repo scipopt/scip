@@ -98,7 +98,8 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *  possible return values for *result:
  *    SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds -> node is infeasible
  *    SCIP_SEPARATED  : at least one cutting plane was generated
- *    SCIP_CONSADDED  : at least one additional constraint was generated
+ *    SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced
+ *    SCIP_CONSADDED  : no cutting plane or domain reductions, but at least one additional constraint was generated
  *    SCIP_DIDNOTFIND : the separator searched, but didn't found a cutting plane
  *    SCIP_DIDNOTRUN  : the separator was skipped
  */
@@ -139,10 +140,10 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *
  *  possible return values for *result:
  *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
- *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
- *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
- *    SCIP_SEPARATED  : at least one constraint is infeasible, and a cutting plane was generated to resolve infeasibility
- *    SCIP_CONSADDED  : at least one constraint is infeasible, and a constraint was generated to resolve infeasibility
+ *    SCIP_SEPARATED  : a cutting plane was generated to resolve an infeasibility
+ *    SCIP_REDUCEDDOM : no cutting plane was generated, but at least one domain was reduced to resolve an infeasibility
+ *    SCIP_CONSADDED  : no cutting plane or domain reductions, but a constraint was generated to resolve an infeasibility
+ *    SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
@@ -175,9 +176,9 @@ typedef struct ConsSetChgDyn CONSSETCHGDYN; /**< dynamic size attachment for con
  *
  *  possible return values for *result:
  *    SCIP_CUTOFF     : at least one constraint is infeasible, and it cannot be resolved -> node is infeasible
- *    SCIP_BRANCHED   : at least one constraint is infeasible, and branching was applied to resolve infeasibility
- *    SCIP_REDUCEDDOM : at least one constraint is infeasible, and a domain was reduced to resolve infeasibility
- *    SCIP_CONSADDED  : at least one constraint is infeasible, and a constraint was generated to resolve infeasibility
+ *    SCIP_REDUCEDDOM : at least one domain was reduced to resolve an infeasibility
+ *    SCIP_CONSADDED  : no domain reductions, but a constraint was generated to resolve an infeasibility
+ *    SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
  *    SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *    SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *    SCIP_FEASIBLE   : all constraints of the handler are feasible

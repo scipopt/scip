@@ -788,9 +788,9 @@ RETCODE conshdlrProcessUpdates(
       assert(cons->updateactivate || cons->updatedeactivate || cons->updateenable || cons->updatedisable
          || cons->updateobsolete);
 
-      debugMessage(" -> constraint <%s>: activate=%d, deactivate=%d, enable=%d, disable=%d, obsolete=%d\n",
+      debugMessage(" -> constraint <%s>: activate=%d, deactivate=%d, enable=%d, disable=%d, obsolete=%d (consdata=%p)\n",
          cons->name, cons->updateactivate, cons->updatedeactivate, cons->updateenable, cons->updatedisable,
-         cons->updateobsolete);
+         cons->updateobsolete, cons->consdata);
 
       if( cons->updateactivate )
       {
@@ -912,8 +912,8 @@ RETCODE conshdlrAddUpdateCons(
 
    if( !cons->update )
    {
-      debugMessage("constraint <%s> of age %d has to be updated in constraint handler <%s>\n",
-         cons->name, cons->age, conshdlr->name);
+      debugMessage("constraint <%s> of age %d has to be updated in constraint handler <%s> (consdata=%p)\n",
+         cons->name, cons->age, conshdlr->name, cons->consdata);
       
       /* add constraint to the updateconss array */
       CHECK_OKAY( conshdlrEnsureUpdateconssMem(conshdlr, set, conshdlr->nupdateconss+1) );
@@ -1204,6 +1204,7 @@ RETCODE SCIPconshdlrSeparate(
 
          if( *result != SCIP_CUTOFF
             && *result != SCIP_SEPARATED
+            && *result != SCIP_REDUCEDDOM
             && *result != SCIP_CONSADDED
             && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN )
@@ -1799,12 +1800,18 @@ RETCODE SCIPconsFreeData(
    assert(memhdr != NULL);
    assert(set != NULL);
 
-   /* free constraint data */
-   if( cons->conshdlr->consdelete != NULL && cons->consdata != NULL )
+   /* the constraint data must not be deleted, if the constraint is member of the update queue, because the
+    * constraint handler method called in the update queue processing may use the constraint data
+    */
+   if( !cons->update )
    {
-      CHECK_OKAY( cons->conshdlr->consdelete(set->scip, cons->conshdlr, &cons->consdata) );
+      /* free constraint data */
+      if( cons->conshdlr->consdelete != NULL && cons->consdata != NULL )
+      {
+         CHECK_OKAY( cons->conshdlr->consdelete(set->scip, cons->conshdlr, &cons->consdata) );
+      }
+      assert(cons->consdata == NULL);
    }
-   assert(cons->consdata == NULL);
 
    return SCIP_OKAY;
 }
@@ -1820,11 +1827,13 @@ RETCODE SCIPconsFree(
    assert(*cons != NULL);
    assert((*cons)->nuses == 0);
    assert((*cons)->conshdlr != NULL);
+   assert(!(*cons)->update);
    assert(memhdr != NULL);
    assert(set != NULL);
 
    /* free constraint data */
    CHECK_OKAY( SCIPconsFreeData(*cons, memhdr, set) );
+   assert((*cons)->consdata == NULL);
 
    /* free constraint */
    freeBlockMemoryArray(memhdr, &(*cons)->name, strlen((*cons)->name)+1);
@@ -2293,6 +2302,8 @@ RETCODE SCIPconssetchgDelAddedCons(
 
    assert(conssetchg != NULL);
    assert(cons != NULL);
+
+   debugMessage("delete added constraint <%s> from constraint set change data\n", cons->name);
 
    /* deactivate constraint, if it is currently active */
    if( cons->active )

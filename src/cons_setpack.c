@@ -15,8 +15,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_setcover.c
- * @brief  constraint handler for setcover constraints
+/**@file   cons_setpack.c
+ * @brief  constraint handler for setpack constraints
  * @author Tobias Achterberg
  */
 
@@ -26,37 +26,37 @@
 #include <string.h>
 #include <limits.h>
 
-#include "cons_setcover.h"
+#include "cons_setpack.h"
 #include "cons_linear.h"
 
 
-#define CONSHDLR_NAME          "setcover"
-#define CONSHDLR_DESC          "set covering constraint"
-#define CONSHDLR_SEPAPRIORITY   +800000
-#define CONSHDLR_ENFOPRIORITY   +800000
-#define CONSHDLR_CHECKPRIORITY  -800000
+#define CONSHDLR_NAME          "setpack"
+#define CONSHDLR_DESC          "set packing constraint"
+#define CONSHDLR_SEPAPRIORITY   +900000
+#define CONSHDLR_ENFOPRIORITY   +900000
+#define CONSHDLR_CHECKPRIORITY  -700000
 #define CONSHDLR_SEPAFREQ             4
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define EVENTHDLR_NAME         "setcovering"
-#define EVENTHDLR_DESC         "bound change event handler for set covering constraints"
+#define EVENTHDLR_NAME         "setpacking"
+#define EVENTHDLR_DESC         "bound change event handler for set packing constraints"
 
 #define LINCONSUPGD_PRIORITY   +1000000
 
-#define MINBRANCHWEIGHT               0.4  /**< minimum weight of both sets in set covering branching */
-#define MAXBRANCHWEIGHT               0.8  /**< maximum weight of both sets in set covering branching */
+#define MINBRANCHWEIGHT               0.4  /**< minimum weight of both sets in set packing branching */
+#define MAXBRANCHWEIGHT               0.8  /**< maximum weight of both sets in set packing branching */
 #define MAXBRANCHACTIVITY             1.1  /**< maximum activity of constraint to check if branching is possible */
 
 
 /** constraint handler data */
 struct ConsHdlrData
 {
-   INTARRAY*        varuses;            /**< number of times a variable is used in the active set covering constraints */
+   INTARRAY*        varuses;            /**< number of times a variable is used in the active set packing constraints */
 };
 
-/** set covering constraint data */
-struct SetcoverCons
+/** set packing constraint data */
+struct SetpackCons
 {
    VAR**            vars;               /**< variables of the constraint */
    int              varssize;           /**< size of vars array */
@@ -68,12 +68,12 @@ struct SetcoverCons
    unsigned int     removeable:1;       /**< should the row be removed from the LP due to aging or cleanup? */
    unsigned int     transformed:1;      /**< does the constraint data belongs to the transformed problem? */
 };
-typedef struct SetcoverCons SETCOVERCONS; /**< set covering constraint data */
+typedef struct SetpackCons SETPACKCONS; /**< set packing constraint data */
 
-/** constraint data for set covering constraints */
+/** constraint data for set packing constraints */
 struct ConsData
 {
-   SETCOVERCONS*    setcovercons;       /**< set covering constraint data */
+   SETPACKCONS*     setpackcons;        /**< set packing constraint data */
    ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
 };
 
@@ -164,11 +164,11 @@ RETCODE conshdlrdataDecVaruses(
    return SCIP_OKAY;
 }
 
-/** creates a set covering constraint data object */
+/** creates a set packing constraint data object */
 static
-RETCODE setcoverconsCreate(
+RETCODE setpackconsCreate(
    SCIP*            scip,               /**< SCIP data structure */
-   SETCOVERCONS**   setcovercons,       /**< pointer to store the set covering constraint */
+   SETPACKCONS**    setpackcons,        /**< pointer to store the set packing constraint */
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< variables of the constraint */
    Bool             local,              /**< is constraint only locally valid? */
@@ -176,43 +176,43 @@ RETCODE setcoverconsCreate(
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   assert(setcovercons != NULL);
+   assert(setpackcons != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   CHECK_OKAY( SCIPallocBlockMemory(scip, setcovercons) );
+   CHECK_OKAY( SCIPallocBlockMemory(scip, setpackcons) );
    if( nvars > 0 )
    {
       VAR* var;
       int v;
 
-      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*setcovercons)->vars, vars, nvars) );
-      (*setcovercons)->varssize = nvars;
-      (*setcovercons)->nvars = nvars;
+      CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*setpackcons)->vars, vars, nvars) );
+      (*setpackcons)->varssize = nvars;
+      (*setpackcons)->nvars = nvars;
    }
    else
    {
-      (*setcovercons)->vars = NULL;
-      (*setcovercons)->varssize = 0;
-      (*setcovercons)->nvars = 0;
+      (*setpackcons)->vars = NULL;
+      (*setpackcons)->varssize = 0;
+      (*setpackcons)->nvars = 0;
    }
-   (*setcovercons)->nfixedzeros = 0;
-   (*setcovercons)->nfixedones = 0;
-   (*setcovercons)->local = local;
-   (*setcovercons)->modifiable = modifiable;
-   (*setcovercons)->removeable = removeable;
-   (*setcovercons)->transformed = FALSE;
+   (*setpackcons)->nfixedzeros = 0;
+   (*setpackcons)->nfixedones = 0;
+   (*setpackcons)->local = local;
+   (*setpackcons)->modifiable = modifiable;
+   (*setpackcons)->removeable = removeable;
+   (*setpackcons)->transformed = FALSE;
 
-   debugMessage("created setcover constraint %p, fixed zeros=%d, fixed ones=%d\n",
-      *setcovercons, (*setcovercons)->nfixedzeros, (*setcovercons)->nfixedones);
+   debugMessage("created setpack constraint %p, fixed zeros=%d, fixed ones=%d\n",
+      *setpackcons, (*setpackcons)->nfixedzeros, (*setpackcons)->nfixedones);
 
    return SCIP_OKAY;
 }   
 
-/** creates a transformed set covering constraint data object */
+/** creates a transformed set packing constraint data object */
 static
-RETCODE setcoverconsCreateTransformed(
+RETCODE setpackconsCreateTransformed(
    SCIP*            scip,               /**< SCIP data structure */
-   SETCOVERCONS**   setcovercons,       /**< pointer to store the set covering constraint */
+   SETPACKCONS**    setpackcons,        /**< pointer to store the set packing constraint */
    int              nvars,              /**< number of variables in the constraint */
    VAR**            vars,               /**< variables of the constraint */
    Bool             local,              /**< is constraint only locally valid? */
@@ -224,23 +224,23 @@ RETCODE setcoverconsCreateTransformed(
    VAR* var;
    int v;
 
-   assert(setcovercons != NULL);
+   assert(setpackcons != NULL);
    assert(nvars == 0 || vars != NULL);
 
-   CHECK_OKAY( setcoverconsCreate(scip, setcovercons, nvars, vars, local, modifiable, removeable) );
-   (*setcovercons)->transformed = TRUE;
+   CHECK_OKAY( setpackconsCreate(scip, setpackcons, nvars, vars, local, modifiable, removeable) );
+   (*setpackcons)->transformed = TRUE;
 
    /* find the bound change event handler */
    eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
    if( eventhdlr == NULL )
    {
-      errorMessage("event handler for processing bound change events on set covering constraints not found");
+      errorMessage("event handler for processing bound change events on set packing constraints not found");
       return SCIP_ERROR;
    }
 
-   for( v = 0; v < (*setcovercons)->nvars; ++v )
+   for( v = 0; v < (*setpackcons)->nvars; ++v )
    {
-      var = (*setcovercons)->vars[v];
+      var = (*setpackcons)->vars[v];
       assert(var != NULL);
       assert(SCIPisLE(scip, 0.0, SCIPvarGetLb(var)));
       assert(SCIPisLE(scip, SCIPvarGetLb(var), SCIPvarGetUb(var)));
@@ -252,35 +252,35 @@ RETCODE setcoverconsCreateTransformed(
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
 	 var = SCIPvarGetTransformed(var);
-         (*setcovercons)->vars[v] = var;
+         (*setpackcons)->vars[v] = var;
          assert(var != NULL);
       }
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
       
       /* catch bound change events on variables */
-      CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)(*setcovercons)) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)(*setpackcons)) );
 
       /* count the fixed variables */
       if( SCIPisEQ(scip, SCIPvarGetUb(var), 0.0) )
-	(*setcovercons)->nfixedzeros++;
+	(*setpackcons)->nfixedzeros++;
       else if( SCIPisEQ(scip, SCIPvarGetLb(var), 1.0) )
-	(*setcovercons)->nfixedones++;
+	(*setpackcons)->nfixedones++;
    }
 
    return SCIP_OKAY;
 }
 
-/** frees a set covering constraint data */
+/** frees a set packing constraint data */
 static
-RETCODE setcoverconsFree(
+RETCODE setpackconsFree(
    SCIP*            scip,               /**< SCIP data structure */
-   SETCOVERCONS**   setcovercons        /**< pointer to store the set covering constraint */
+   SETPACKCONS**   setpackcons        /**< pointer to store the set packing constraint */
    )
 {
-   assert(setcovercons != NULL);
-   assert(*setcovercons != NULL);
+   assert(setpackcons != NULL);
+   assert(*setpackcons != NULL);
 
-   if( (*setcovercons)->transformed )
+   if( (*setpackcons)->transformed )
    {
       EVENTHDLR* eventhdlr;
       int v;
@@ -289,43 +289,43 @@ RETCODE setcoverconsFree(
       eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
       if( eventhdlr == NULL )
       {
-         errorMessage("event handler for processing bound change events on set covering constraints not found");
+         errorMessage("event handler for processing bound change events on set packing constraints not found");
          return SCIP_ERROR;
       }
       
       /* drop bound change events on variables */
-      for( v = 0; v < (*setcovercons)->nvars; ++v )
+      for( v = 0; v < (*setpackcons)->nvars; ++v )
       {
-         CHECK_OKAY( SCIPdropVarEvent(scip, (*setcovercons)->vars[v], eventhdlr, (EVENTDATA*)(*setcovercons)) );
+         CHECK_OKAY( SCIPdropVarEvent(scip, (*setpackcons)->vars[v], eventhdlr, (EVENTDATA*)(*setpackcons)) );
       }
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*setcovercons)->vars, (*setcovercons)->varssize);
-   SCIPfreeBlockMemory(scip, setcovercons);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*setpackcons)->vars, (*setpackcons)->varssize);
+   SCIPfreeBlockMemory(scip, setpackcons);
 
    return SCIP_OKAY;
 }
 
-/** creates an LP row from a set covering constraint data object */
+/** creates an LP row from a set packing constraint data object */
 static
-RETCODE setcoverconsToRow(
+RETCODE setpackconsToRow(
    SCIP*            scip,               /**< SCIP data structure */
-   SETCOVERCONS*    setcovercons,       /**< set covering constraint data */
+   SETPACKCONS*     setpackcons,        /**< set packing constraint data */
    const char*      name,               /**< name of the constraint */
    ROW**            row                 /**< pointer to an LP row data object */
    )
 {
    int v;
 
-   assert(setcovercons != NULL);
+   assert(setpackcons != NULL);
    assert(row != NULL);
 
-   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, 1.0, SCIPinfinity(scip),
-                  setcovercons->local, setcovercons->modifiable, setcovercons->removeable) );
+   CHECK_OKAY( SCIPcreateRow(scip, row, name, 0, NULL, NULL, -SCIPinfinity(scip), 1.0,
+                  setpackcons->local, setpackcons->modifiable, setpackcons->removeable) );
    
-   for( v = 0; v < setcovercons->nvars; ++v )
+   for( v = 0; v < setpackcons->nvars; ++v )
    {
-      CHECK_OKAY( SCIPaddVarToRow(scip, *row, setcovercons->vars[v], 1.0) );
+      CHECK_OKAY( SCIPaddVarToRow(scip, *row, setpackcons->vars[v], 1.0) );
    }
 
    return SCIP_OKAY;
@@ -339,7 +339,7 @@ RETCODE setcoverconsToRow(
  */
 
 static
-DECL_CONSFREE(consFreeSetcover)
+DECL_CONSFREE(consFreeSetpack)
 {
    CONSHDLRDATA* conshdlrdata;
 
@@ -359,19 +359,19 @@ DECL_CONSFREE(consFreeSetcover)
 }
 
 static
-DECL_CONSDELETE(consDeleteSetcover)
+DECL_CONSDELETE(consDeleteSetpack)
 {
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   /* free LP row and setcover constraint */
+   /* free LP row and setpack constraint */
    if( (*consdata)->row != NULL )
    {
       CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
    }
-   CHECK_OKAY( setcoverconsFree(scip, &(*consdata)->setcovercons) );
+   CHECK_OKAY( setpackconsFree(scip, &(*consdata)->setpackcons) );
 
    /* free constraint data object */
    SCIPfreeBlockMemory(scip, consdata);
@@ -380,13 +380,13 @@ DECL_CONSDELETE(consDeleteSetcover)
 }
 
 static
-DECL_CONSTRANS(consTransSetcover)
+DECL_CONSTRANS(consTransSetpack)
 {
    CONSDATA* sourcedata;
    CONSDATA* targetdata;
-   SETCOVERCONS* setcovercons;
+   SETPACKCONS* setpackcons;
 
-   /*debugMessage("Trans method of setcover constraints\n");*/
+   /*debugMessage("Trans method of setpack constraints\n");*/
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -397,15 +397,15 @@ DECL_CONSTRANS(consTransSetcover)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
    assert(sourcedata->row == NULL);  /* in original problem, there cannot be LP rows */
-   assert(sourcedata->setcovercons != NULL);
+   assert(sourcedata->setpackcons != NULL);
 
    /* create constraint data for target constraint */
    CHECK_OKAY( SCIPallocBlockMemory(scip, &targetdata) );
 
-   setcovercons = sourcedata->setcovercons;
+   setpackcons = sourcedata->setpackcons;
 
-   CHECK_OKAY( setcoverconsCreateTransformed(scip, &targetdata->setcovercons, setcovercons->nvars, setcovercons->vars,
-                  setcovercons->local, setcovercons->modifiable, setcovercons->removeable) );
+   CHECK_OKAY( setpackconsCreateTransformed(scip, &targetdata->setpackcons, setpackcons->nvars, setpackcons->vars,
+                  setpackcons->local, setpackcons->modifiable, setpackcons->removeable) );
    targetdata->row = NULL;
 
    /* create target constraint */
@@ -421,14 +421,14 @@ DECL_CONSTRANS(consTransSetcover)
 static
 RETCODE separate(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< set covering constraint to be separated */
+   CONS*            cons,               /**< set packing constraint to be separated */
    Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    Bool*            separated,          /**< pointer to store whether a cut was found */
    Bool*            reduceddom          /**< pointer to store whether a domain reduction was found */
    )
 {
    CONSDATA* consdata;
-   SETCOVERCONS* setcovercons;
+   SETPACKCONS* setpackcons;
 
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
@@ -439,71 +439,77 @@ RETCODE separate(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   setcovercons = consdata->setcovercons;
-   assert(setcovercons != NULL);
-   assert(setcovercons->nvars == 0 || setcovercons->vars != NULL);
-   assert(0 <= setcovercons->nfixedzeros && setcovercons->nfixedzeros <= setcovercons->nvars);
-   assert(0 <= setcovercons->nfixedones && setcovercons->nfixedones <= setcovercons->nvars);
+   setpackcons = consdata->setpackcons;
+   assert(setpackcons != NULL);
+   assert(setpackcons->nvars == 0 || setpackcons->vars != NULL);
+   assert(0 <= setpackcons->nfixedzeros && setpackcons->nfixedzeros <= setpackcons->nvars);
+   assert(0 <= setpackcons->nfixedones && setpackcons->nfixedones <= setpackcons->nvars);
 
-   if( setcovercons->nfixedzeros == setcovercons->nvars )
+   if( setpackcons->nfixedones >= 2 )
    {
-      if( setcovercons->modifiable )
+      /* the constraint cannot be feasible, because two variables are already fixed to one */
+      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      *cutoff = TRUE;
+   }
+   else if( setpackcons->nfixedzeros >= setpackcons->nvars - 1 )
+   {
+      /* constraint is feasible anyway, because all except one of its variables are fixed to zero
+       * -> if constraint is not modifiable (i.e. if not more variables may appear), the constraint can be disabled
+       */
+      if( !setpackcons->modifiable )
       {
-         /* the constraint cannot be feasible with the active variable set, but due to additional pricing,
-          * it may be feasible after the next pricing loop -> just insert it as a cut
-          */
-
-         /* convert set covering constraint data into LP row */
-         CHECK_OKAY( setcoverconsToRow(scip, setcovercons, SCIPconsGetName(cons), &consdata->row) );
-         assert(consdata->row != NULL);
-         assert(!SCIProwIsInLP(consdata->row));
-         
-         /* insert LP row as cut */
-         CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(setcovercons->nvars+1)) );
-         *separated = TRUE;
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       }
       else
       {
-         /* the constraint cannot be feasible, because all variables are fixed to zero */
-         *cutoff = TRUE;
+         CHECK_OKAY( SCIPincConsAge(scip, cons) );
       }
-      CHECK_OKAY( SCIPresetConsAge(scip, cons) );
    }
-   else if( setcovercons->nfixedones >= 1 )
-   {
-      /* constraint is feasible anyway, because one of its variables is fixed to one -> constraint can be disabled */
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-   }
-   else if( setcovercons->nfixedzeros == setcovercons->nvars - 1 && !setcovercons->modifiable )
+   else if( setpackcons->nfixedones == 1 )
    {
       VAR** vars;
       VAR* var;
+      Bool fixedonefound;
       Bool fixed;
       int nvars;
       int v;
 
-      /* only one variable is not fixed to zero in an unmodifiable constraint
-       * -> this variable can be fixed to one, and the constraint can be disabled
+      /* all other variables except the fixed one must be zero, and if the constraint is not modifiable (i.e. if not
+       * more variables may appear), it can be disabled after the other variables are fixed to zero
        */
       
-      /* search the single variable that can be fixed */
-      vars = setcovercons->vars;
-      nvars = setcovercons->nvars;
+      /* check all variables, if fixings to zero can be applied */
+      vars = setpackcons->vars;
+      nvars = setpackcons->nvars;
+      fixedonefound = FALSE;
       fixed = FALSE;
-      for( v = 0; v < nvars && !fixed; ++v )
+      for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
-         assert(SCIPisZero(scip, SCIPvarGetLb(var)));
+         assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLb(var)));
          assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-         if( SCIPvarGetUb(var) > 0.5 )
+         if( SCIPvarGetLb(var) < 0.5 )
          {
-            CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
-            fixed = TRUE;
+            if( SCIPvarGetUb(var) > 0.5 )
+            {
+               CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
+               fixed = TRUE;
+            }
          }
+         else
+            fixedonefound = TRUE;
       }
-      assert(fixed);
+      /* at least one variable must have been unfixed, because otherwise we would have been in the other else if(..) part */
+      assert(fixedonefound && fixed);
 
-      CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      if( setpackcons->modifiable )
+      {
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+      }
+      else
+      {
+         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+      }
       *reduceddom = TRUE;
    }
    else
@@ -544,10 +550,10 @@ RETCODE separate(
          int v;
 
          /* calculate the constraint's activity */
-         vars = setcovercons->vars;
-         nvars = setcovercons->nvars;
+         vars = setpackcons->vars;
+         nvars = setpackcons->nvars;
          sum = 0.0;
-         for( v = 0; v < nvars && sum < 1.0; ++v )
+         for( v = 0; v < nvars; ++v )
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
             solval = SCIPgetSolVal(scip, NULL, vars[v]);
@@ -555,12 +561,12 @@ RETCODE separate(
             sum += solval;
          }
          
-         if( SCIPisFeasLT(scip, sum, 1.0) )
+         if( SCIPisFeasGT(scip, sum, 1.0) )
          {
-            /* because sum is smaller than 1.0, the constraint itself can be used as cut */
+            /* because sum is greater than 1.0, the constraint itself can be used as cut */
             
-            /* convert set covering constraint data into LP row */
-            CHECK_OKAY( setcoverconsToRow(scip, setcovercons, SCIPconsGetName(cons), &consdata->row) );
+            /* convert set packing constraint data into LP row */
+            CHECK_OKAY( setpackconsToRow(scip, setpackcons, SCIPconsGetName(cons), &consdata->row) );
             assert(consdata->row != NULL);
             assert(!SCIProwIsInLP(consdata->row));
 #ifndef NDEBUG
@@ -572,7 +578,7 @@ RETCODE separate(
 #endif
             
             /* insert LP row as cut */
-            CHECK_OKAY( SCIPaddCut(scip, consdata->row, (1.0-sum)/(nvars+1)) );
+            CHECK_OKAY( SCIPaddCut(scip, consdata->row, (sum-1.0)/(nvars+1)) );
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *separated = TRUE;
          }
@@ -588,7 +594,7 @@ RETCODE separate(
 }
 
 static
-DECL_CONSSEPA(consSepaSetcover)
+DECL_CONSSEPA(consSepaSetpack)
 {
    CONSDATA* consdata;
    Bool cutoff;
@@ -601,7 +607,7 @@ DECL_CONSSEPA(consSepaSetcover)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   debugMessage("separating %d/%d set covering constraints\n", nusefulconss, nconss);
+   debugMessage("separating %d/%d set packing constraints\n", nusefulconss, nconss);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -609,14 +615,14 @@ DECL_CONSSEPA(consSepaSetcover)
    separated = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: check all useful set covering constraints for feasibility */
+   /* step 1: check all useful set packing constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
       CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
-   /* step 2: combine set covering constraints to get more cuts */
-   todoMessage("further cuts of set covering constraints");
+   /* step 2: combine set packing constraints to get more cuts */
+   todoMessage("further cuts of set packing constraints");
 
    /* step 3: if no cuts were found and we are in the root node, check remaining constraints for feasibility */
    if( SCIPgetActDepth(scip) == 0 )
@@ -639,11 +645,13 @@ DECL_CONSSEPA(consSepaSetcover)
    return SCIP_OKAY;
 }
 
+#if 0  /* THIS IS FOR SET COVERING CONSTRAINTS! */
+
 /** if fractional variables exist, chooses a set S of them and branches on (i) x(S) >= 1, and (ii) x(S) == 0 */
 static
 RETCODE branchLP(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< set covering constraint handler */
+   CONSHDLR*        conshdlr,           /**< set packing constraint handler */
    RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
    )
 {
@@ -661,7 +669,7 @@ RETCODE branchLP(
    int i;
    int j;
 
-   todoMessage("use a better set covering branching on LP solution");
+   todoMessage("use a better set packing branching on LP solution");
 
    assert(conshdlr != NULL);
    assert(result != NULL);
@@ -680,7 +688,7 @@ RETCODE branchLP(
    /* get temporary memory */
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &sortcands, nlpcands) );
    
-   /* sort fractional variables by number of uses in enabled set covering constraints */
+   /* sort fractional variables by number of uses in enabled set packing constraints */
    nsortcands = 0;
    for( i = 0; i < nlpcands; ++i )
    {
@@ -699,7 +707,7 @@ RETCODE branchLP(
    }
    assert(nsortcands <= nlpcands);
 
-   /* if none of the fractional variables is member of a set covering constraint,
+   /* if none of the fractional variables is member of a set packing constraint,
     * we are not responsible for doing the branching
     */
    if( nsortcands > 0 )
@@ -734,7 +742,7 @@ RETCODE branchLP(
       {
          NODE* node;
 
-         /* perform the set covering branching on the selected variables */
+         /* perform the set packing branching on the selected variables */
          assert(nselcands <= nlpcands);
          
          /* create left child, fix x_i = 0 for all i \in S */
@@ -760,7 +768,7 @@ RETCODE branchLP(
             /* add constraint x(S) >= 1 */
             sprintf(name, "SCB%lld", SCIPgetNodenum(scip));
 
-            CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
+            CHECK_OKAY( SCIPcreateConsSetpack(scip, &newcons, name, nselcands, sortcands,
                            TRUE, TRUE, FALSE, TRUE, FALSE, TRUE) );
             CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
@@ -769,7 +777,7 @@ RETCODE branchLP(
          *result = SCIP_BRANCHED;
          
 #ifdef DEBUG
-         debugMessage("set covering branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
+         debugMessage("set packing branching: nselcands=%d/%d, weight(S)=%g, A={", nselcands, nlpcands, branchweight);
          for( i = 0; i < nselcands; ++i )
             printf(" %s[%g]", SCIPvarGetName(sortcands[i]), SCIPgetSolVal(scip, NULL, sortcands[i]));
          printf(" }\n");
@@ -786,7 +794,7 @@ RETCODE branchLP(
 static
 RETCODE branchPseudo(
    SCIP*            scip,               /**< SCIP data structure */
-   CONSHDLR*        conshdlr,           /**< set covering constraint handler */
+   CONSHDLR*        conshdlr,           /**< set packing constraint handler */
    RESULT*          result              /**< pointer to store the result SCIP_BRANCHED, if branching was applied */
    )
 {
@@ -803,7 +811,7 @@ RETCODE branchPseudo(
    int i;
    int j;
 
-   todoMessage("use a better set covering branching on pseudo solution");
+   todoMessage("use a better set packing branching on pseudo solution");
 
    assert(conshdlr != NULL);
    assert(result != NULL);
@@ -822,7 +830,7 @@ RETCODE branchPseudo(
    /* get temporary memory */
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &sortcands, npseudocands) );
    
-   /* sort fractional variables by number of uses in enabled set covering constraints */
+   /* sort fractional variables by number of uses in enabled set packing constraints */
    nsortcands = 0;
    for( i = 0; i < npseudocands; ++i )
    {
@@ -843,7 +851,7 @@ RETCODE branchPseudo(
 
    if( nsortcands == 0 )
    {
-      /* none of the fractional variables is member of a set covering constraint
+      /* none of the fractional variables is member of a set packing constraint
        * -> we are not responsible for doing the branching
        */
       return SCIP_OKAY;
@@ -887,11 +895,12 @@ RETCODE branchPseudo(
 
    return SCIP_OKAY;
 }
+#endif
 
 
 
 static
-DECL_CONSENFOLP(consEnfolpSetcover)
+DECL_CONSENFOLP(consEnfolpSetpack)
 {
    Bool cutoff;
    Bool separated;
@@ -903,7 +912,7 @@ DECL_CONSENFOLP(consEnfolpSetcover)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   debugMessage("enforcing %d set covering constraints\n", nconss);
+   debugMessage("enforcing %d set packing constraints\n", nconss);
 
    *result = SCIP_FEASIBLE;
 
@@ -911,7 +920,7 @@ DECL_CONSENFOLP(consEnfolpSetcover)
    separated = FALSE;
    reduceddom = FALSE;
 
-   /* step 1: check all useful set covering constraints for feasibility */
+   /* step 1: check all useful set packing constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
       CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
@@ -919,12 +928,15 @@ DECL_CONSENFOLP(consEnfolpSetcover)
 
    if( !cutoff && !separated && !reduceddom )
    {
+      todoMessage("set packing LP branching");
+#if 0
       /* step 2: if solution is not integral, choose a variable set to branch on */
       CHECK_OKAY( branchLP(scip, conshdlr, result) );
       if( *result != SCIP_FEASIBLE )
          return SCIP_OKAY;
-      
-      /* step 3: check all obsolete set covering constraints for feasibility */
+#endif
+
+      /* step 3: check all obsolete set packing constraints for feasibility */
       for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
       {
          CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
@@ -946,37 +958,40 @@ DECL_CONSENFOLP(consEnfolpSetcover)
 static
 Bool check(
    SCIP*            scip,               /**< SCIP data structure */
-   SETCOVERCONS*    setcovercons,       /**< set covering constraint to be checked */
+   SETPACKCONS*     setpackcons,        /**< set packing constraint to be checked */
    SOL*             sol                 /**< primal CIP solution */
    )
 {
    VAR** vars;
    Real solval;
-   Bool found;
    int nvars;
+   int nones;
    int v;
-   
-   /* search all variables of the constraint until one is found with solution value 1.0 */
-   vars = setcovercons->vars;
-   nvars = setcovercons->nvars;
-   found = FALSE;
-   for( v = 0; v < nvars && !found; ++v )
+
+   assert(setpackcons != NULL);
+
+   /* count the number of variables, that are set to one, and abort if this exceeds one variable */
+   vars = setpackcons->vars;
+   nvars = setpackcons->nvars;
+   nones = 0;
+   for( v = 0; v < nvars && nones <= 1; ++v )
    {
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       assert(SCIPisFeasEQ(scip, solval, 0.0) || SCIPisFeasEQ(scip, solval, 1.0));
-      found = SCIPisFeasEQ(scip, solval, 1.0);
+      if( SCIPisFeasEQ(scip, solval, 1.0) )
+         nones++;
    }
 
-   return found;
+   return (nones <= 1);
 }
 
 static
-DECL_CONSENFOPS(consEnfopsSetcover)
+DECL_CONSENFOPS(consEnfopsSetpack)
 {
    CONSDATA* consdata;
+   SETPACKCONS* setpackcons;
    CONS* cons;
-   SETCOVERCONS* setcovercons;
    int c;
 
    assert(conshdlr != NULL);
@@ -986,73 +1001,87 @@ DECL_CONSENFOPS(consEnfopsSetcover)
 
    *result = SCIP_FEASIBLE;
 
-   /* check all set covering constraints for feasibility */
+   /* check all set packing constraints for feasibility */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE); ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      setcovercons = consdata->setcovercons;
-      assert(setcovercons != NULL);
+      setpackcons = consdata->setpackcons;
+      assert(setpackcons != NULL);
       
-      if( setcovercons->nfixedzeros == setcovercons->nvars )
+      if( setpackcons->nfixedones >= 2 )
       {
-         if( setcovercons->modifiable )
+         /* the constraint cannot be feasible, because two variables are already fixed to one */
+         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         *result = SCIP_CUTOFF;
+      }
+      else if( setpackcons->nfixedzeros >= setpackcons->nvars - 1 )
+      {
+         /* constraint is feasible anyway, because all except one of its variables are fixed to zero
+          * -> if constraint is not modifiable (i.e. if not more variables may appear), the constraint can be disabled
+          */
+         if( !setpackcons->modifiable )
          {
-            /* the constraint is infeasible with the current variable set, but it may be feasible after pricing in
-             * additional variables -> the LP has to be solved to price in new variables
-             */
-            *result = SCIP_SOLVELP;
+            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
          }
          else
          {
-            /* the constraint cannot be feasible, because all variables are fixed to zero */
-            *result = SCIP_CUTOFF;
+            CHECK_OKAY( SCIPincConsAge(scip, cons) );
          }
-         CHECK_OKAY( SCIPresetConsAge(scip, cons) );
       }
-      else if( setcovercons->nfixedones >= 1 )
-      {
-         /* constraint is feasible anyway, because one of its variables if fixed to one -> constraint can be disabled */
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
-      }
-      else if( setcovercons->nfixedzeros == setcovercons->nvars-1 && !setcovercons->modifiable )
+      else if( setpackcons->nfixedones == 1 )
       {
          VAR** vars;
          VAR* var;
+         Bool fixedonefound;
          Bool fixed;
          int nvars;
          int v;
 
-         /* only one variable is not fixed to zero in an unmodifiable constraint
-          * -> this variable can be fixed to one, and the constraint can be disabled
+         /* all other variables except the fixed one must be zero, and if the constraint is not modifiable (i.e. if not
+          * more variables may appear), it can be disabled after the other variables are fixed to zero
           */
       
-         /* search the single variable that can be fixed */
-         vars = setcovercons->vars;
-         nvars = setcovercons->nvars;
+         /* check all variables, if fixings to zero can be applied */
+         vars = setpackcons->vars;
+         nvars = setpackcons->nvars;
+         fixedonefound = FALSE;
          fixed = FALSE;
-         for( v = 0; v < nvars && !fixed; ++v )
+         for( v = 0; v < nvars; ++v )
          {
             var = vars[v];
-            assert(SCIPisZero(scip, SCIPvarGetLb(var)));
+            assert(!fixedonefound || SCIPisZero(scip, SCIPvarGetLb(var)));
             assert(SCIPisZero(scip, SCIPvarGetUb(var)) || SCIPisEQ(scip, SCIPvarGetUb(var), 1.0));
-            if( SCIPvarGetUb(var) > 0.5 )
+            if( SCIPvarGetLb(var) < 0.5 )
             {
-               CHECK_OKAY( SCIPchgVarLb(scip, var, 1.0) );
-               fixed = TRUE;
+               if( SCIPvarGetUb(var) > 0.5 )
+               {
+                  CHECK_OKAY( SCIPchgVarUb(scip, var, 0.0) );
+                  fixed = TRUE;
+               }
             }
+            else
+               fixedonefound = TRUE;
          }
-         assert(fixed);
+         /* at least one variable must have been unfixed, because otherwise we would have been in the other else if part */
+         assert(fixedonefound && fixed);
 
-         CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         if( setpackcons->modifiable )
+         {
+            CHECK_OKAY( SCIPresetConsAge(scip, cons) );
+         }
+         else
+         {
+            CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
+         }
          *result = SCIP_REDUCEDDOM;
       }
       else if( *result == SCIP_FEASIBLE )
       {
-         if( !check(scip, setcovercons, NULL) )
+         if( !check(scip, setpackcons, NULL) )
          {
-            /* constraint is violated by pseudo solution */
+            /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
          }
@@ -1065,27 +1094,25 @@ DECL_CONSENFOPS(consEnfopsSetcover)
    
    if( *result == SCIP_INFEASIBLE )
    {
+      todoMessage("set packing pseudo branching");
+#if 0
       /* at least one constraint is violated by pseudo solution and we didn't find a better way to resolve this:
        * -> branch on pseudo solution
        */
       CHECK_OKAY( branchPseudo(scip, conshdlr, result) );
+#endif
    }
 
    return SCIP_OKAY;
 }
 
 static
-DECL_CONSCHECK(consCheckSetcover)
+DECL_CONSCHECK(consCheckSetpack)
 {
    CONSDATA* consdata;
    CONS* cons;
-   SETCOVERCONS* setcovercons;
-   VAR** vars;
-   Real solval;
-   int nvars;
+   SETPACKCONS* setpackcons;
    int c;
-   int v;
-   Bool found;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1094,17 +1121,17 @@ DECL_CONSCHECK(consCheckSetcover)
 
    *result = SCIP_FEASIBLE;
 
-   /* check all set covering constraints for feasibility */
+   /* check all set packing constraints for feasibility */
    for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      setcovercons = consdata->setcovercons;
-      assert(setcovercons != NULL);
+      setpackcons = consdata->setpackcons;
+      assert(setpackcons != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         if( !check(scip, setcovercons, sol) )
+         if( !check(scip, setpackcons, sol) )
          {
             /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );
@@ -1122,11 +1149,11 @@ DECL_CONSCHECK(consCheckSetcover)
 }
 
 static
-DECL_CONSENABLE(consEnableSetcover)
+DECL_CONSENABLE(consEnableSetpack)
 {
    CONSHDLRDATA* conshdlrdata;
    CONSDATA* consdata;
-   SETCOVERCONS* setcovercons;
+   SETPACKCONS* setpackcons;
    int v;
 
    assert(conshdlr != NULL);
@@ -1138,27 +1165,27 @@ DECL_CONSENABLE(consEnableSetcover)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   setcovercons = consdata->setcovercons;
-   assert(setcovercons != NULL);
+   setpackcons = consdata->setpackcons;
+   assert(setpackcons != NULL);
 
-   debugMessage("enabling information method of set covering constraint handler\n");
+   debugMessage("enabling information method of set packing constraint handler\n");
 
    /* increase the number of uses for each variable in the constraint */
-   for( v = 0; v < setcovercons->nvars; ++v )
+   for( v = 0; v < setpackcons->nvars; ++v )
    {
-      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, setcovercons->vars[v]) );
+      CHECK_OKAY( conshdlrdataIncVaruses(scip, conshdlrdata, setpackcons->vars[v]) );
    }
 
    return SCIP_OKAY;
 }
 
 static
-DECL_CONSDISABLE(consDisableSetcover)
+DECL_CONSDISABLE(consDisableSetpack)
 {
    CONSHDLRDATA* conshdlrdata;
    INTARRAY* varuses;
    CONSDATA* consdata;
-   SETCOVERCONS* setcovercons;
+   SETPACKCONS* setpackcons;
    int v;
 
    assert(conshdlr != NULL);
@@ -1172,36 +1199,36 @@ DECL_CONSDISABLE(consDisableSetcover)
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   setcovercons = consdata->setcovercons;
-   assert(setcovercons != NULL);
+   setpackcons = consdata->setpackcons;
+   assert(setpackcons != NULL);
 
-   debugMessage("disabling information method of set covering constraint handler\n");
+   debugMessage("disabling information method of set packing constraint handler\n");
 
    /* decrease the number of uses for each variable in the constraint */
-   for( v = 0; v < setcovercons->nvars; ++v )
+   for( v = 0; v < setpackcons->nvars; ++v )
    {
-      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, setcovercons->vars[v]) );
+      CHECK_OKAY( conshdlrdataDecVaruses(scip, conshdlrdata, setpackcons->vars[v]) );
    }
 
    return SCIP_OKAY;
 }
 
 static
-DECL_LINCONSUPGD(linconsUpgdSetcover)
+DECL_LINCONSUPGD(linconsUpgdSetpack)
 {
    assert(upgdcons != NULL);
    assert(upgraded != NULL);
 
-   /* check, if linear constraint can be upgraded to set covering constraint
-    * -> a set covering constraint consists only of binary variables with a coefficient of +1.0,
-    *    and has left hand side of +1.0, and infinite right hand side
+   /* check, if linear constraint can be upgraded to set packing constraint
+    * -> a set packing constraint consists only of binary variables with a coefficient of +1.0,
+    *    and has infinite left hand side, and a right hand side of +1.0
     */
-   if( nposbin == nvars && ncoeffspone == nvars && SCIPisEQ(scip, lhs, 1.0) && SCIPisInfinity(scip, rhs) )
+   if( nposbin == nvars && ncoeffspone == nvars && SCIPisEQ(scip, rhs, 1.0) && SCIPisInfinity(scip, -lhs) )
    {
-      debugMessage("upgrading constraint <%s> to set covering constraint\n", SCIPconsGetName(cons));
+      debugMessage("upgrading constraint <%s> to set packing constraint\n", SCIPconsGetName(cons));
 
-      /* create the set covering constraint (an automatically upgraded constraint is always unmodifiable) */
-      CHECK_OKAY( SCIPcreateConsSetcover(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
+      /* create the set packing constraint (an automatically upgraded constraint is always unmodifiable) */
+      CHECK_OKAY( SCIPcreateConsSetpack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars,
                      SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                      local, FALSE, removeable) );
       *upgraded = TRUE;
@@ -1220,9 +1247,9 @@ DECL_LINCONSUPGD(linconsUpgdSetcover)
  */
 
 static
-DECL_EVENTEXEC(eventExecSetcover)
+DECL_EVENTEXEC(eventExecSetpack)
 {
-   SETCOVERCONS* setcovercons;
+   SETPACKCONS* setpackcons;
    EVENTTYPE eventtype;
 
    assert(eventhdlr != NULL);
@@ -1230,35 +1257,35 @@ DECL_EVENTEXEC(eventExecSetcover)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
 
-   debugMessage("Exec method of bound change event handler for set covering constraints %p\n", eventdata);
+   debugMessage("Exec method of bound change event handler for set packing constraints %p\n", eventdata);
 
-   setcovercons = (SETCOVERCONS*)eventdata;
-   assert(setcovercons != NULL);
+   setpackcons = (SETPACKCONS*)eventdata;
+   assert(setpackcons != NULL);
 
    CHECK_OKAY( SCIPeventGetType(event, &eventtype) );
    switch( eventtype )
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
-      setcovercons->nfixedones++;
+      setpackcons->nfixedones++;
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
-      setcovercons->nfixedones--;
+      setpackcons->nfixedones--;
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
-      setcovercons->nfixedzeros++;
+      setpackcons->nfixedzeros++;
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
-      setcovercons->nfixedzeros--;
+      setpackcons->nfixedzeros--;
       break;
    default:
       errorMessage("invalid event type");
       abort();
    }
-   assert(0 <= setcovercons->nfixedzeros && setcovercons->nfixedzeros <= setcovercons->nvars);
-   assert(0 <= setcovercons->nfixedones && setcovercons->nfixedones <= setcovercons->nvars);
+   assert(0 <= setpackcons->nfixedzeros && setpackcons->nfixedzeros <= setpackcons->nvars);
+   assert(0 <= setpackcons->nfixedones && setpackcons->nfixedones <= setpackcons->nvars);
 
    debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
-      setcovercons->nfixedzeros, setcovercons->nfixedones, setcovercons->nvars);
+      setpackcons->nfixedzeros, setpackcons->nfixedones, setpackcons->nvars);
 
    return SCIP_OKAY;
 }
@@ -1270,17 +1297,20 @@ DECL_EVENTEXEC(eventExecSetcover)
  * constraint specific interface methods
  */
 
-/** creates the handler for set covering constraint and includes it in SCIP */
-RETCODE SCIPincludeConsHdlrSetcover(
+/** creates the handler for set packing constraint and includes it in SCIP */
+RETCODE SCIPincludeConsHdlrSetpack(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
    CONSHDLRDATA* conshdlrdata;
 
+   todoMessage("set packing propagator");
+   todoMessage("set packing LP/pseudo branching");
+
    /* create event handler for bound change events */
    CHECK_OKAY( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
                   NULL, NULL, NULL,
-                  NULL, eventExecSetcover,
+                  NULL, eventExecSetpack,
                   NULL) );
 
    /* create constraint handler data */
@@ -1291,20 +1321,20 @@ RETCODE SCIPincludeConsHdlrSetcover(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeSetcover, NULL, NULL,
-                  consDeleteSetcover, consTransSetcover, 
-                  consSepaSetcover, consEnfolpSetcover, consEnfopsSetcover, consCheckSetcover, NULL,
-                  consEnableSetcover, consDisableSetcover,
+                  consFreeSetpack, NULL, NULL,
+                  consDeleteSetpack, consTransSetpack, 
+                  consSepaSetpack, consEnfolpSetpack, consEnfopsSetpack, consCheckSetpack, NULL,
+                  consEnableSetpack, consDisableSetpack,
                   conshdlrdata) );
 
-   /* include the linear constraint to set covering constraint upgrade in the linear constraint handler */
-   CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetcover, LINCONSUPGD_PRIORITY) );
+   /* include the linear constraint to set packing constraint upgrade in the linear constraint handler */
+   CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetpack, LINCONSUPGD_PRIORITY) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a set covering constraint */
-RETCODE SCIPcreateConsSetcover(
+/** creates and captures a set packing constraint */
+RETCODE SCIPcreateConsSetpack(
    SCIP*            scip,               /**< SCIP data structure */
    CONS**           cons,               /**< pointer to hold the created constraint */
    const char*      name,               /**< name of constraint */
@@ -1313,7 +1343,7 @@ RETCODE SCIPcreateConsSetcover(
    Bool             separate,           /**< should the constraint be separated during LP processing? */
    Bool             enforce,            /**< should the constraint be enforced during node processing? */
    Bool             check,              /**< should the constraint be checked for feasibility? */
-   Bool             local,              /**< is set covering constraint only valid locally? */
+   Bool             local,              /**< is set packing constraint only valid locally? */
    Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
    Bool             removeable          /**< should the row be removed from the LP due to aging or cleanup? */
    )
@@ -1323,11 +1353,11 @@ RETCODE SCIPcreateConsSetcover(
 
    assert(scip != NULL);
 
-   /* find the set covering constraint handler */
+   /* find the set packing constraint handler */
    conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      errorMessage("set covering constraint handler not found");
+      errorMessage("set packing constraint handler not found");
       return SCIP_INVALIDCALL;
    }
 
@@ -1342,17 +1372,17 @@ RETCODE SCIPcreateConsSetcover(
       }
 
       /* create constraint in original problem */
-      CHECK_OKAY( setcoverconsCreate(scip, &consdata->setcovercons, nvars, vars, local, modifiable, removeable) );
+      CHECK_OKAY( setpackconsCreate(scip, &consdata->setpackcons, nvars, vars, local, modifiable, removeable) );
    }
    else
    {
       /* create constraint in transformed problem */
-      CHECK_OKAY( setcoverconsCreateTransformed(scip, &consdata->setcovercons, nvars, vars, 
+      CHECK_OKAY( setpackconsCreateTransformed(scip, &consdata->setpackcons, nvars, vars, 
                      local, modifiable, removeable) );
    }
    consdata->row = NULL;
 
-   /* create constraint (propagation is never used for set covering constraints) */
+   /* create constraint (propagation is never used for set packing constraints) */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, separate, enforce, check, FALSE) );
 
    return SCIP_OKAY;

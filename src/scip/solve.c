@@ -106,7 +106,7 @@ RETCODE SCIPsolveLP(
                debugMessage("remove obsoletes: resolve LP again\n");
                debugMessage("solving LP: %d rows, %d cols, primalfeasible=%d, dualfeasible=%d, solved=%d\n", 
                   lp->nrows, lp->ncols, lp->primalfeasible, lp->dualfeasible, lp->solved);
-               CHECK_OKAY( SCIPlpSolveDual(lp, memhdr, set, stat) );
+               CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat) );
                assert(lp->solved);
                assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
                CHECK_OKAY( SCIPlpGetSol(lp, memhdr, set, stat) );
@@ -339,23 +339,25 @@ RETCODE solveNodeLP(
          separateagain = TRUE;
          while( !cutoff && separateagain && !enoughcuts )
          {
-            separateagain = FALSE;
-            for( h = 0; h < set->nconshdlrs && !cutoff && !enoughcuts; ++h )
+            while( !cutoff && separateagain && !enoughcuts )
             {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, sepastore, tree->actnode->depth,
-                              &result) );
-               separateagain |= (result == SCIP_CONSADDED);
-               cutoff |= (result == SCIP_CUTOFF);
-               enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               separateagain = FALSE;
+               for( h = 0; h < set->nconshdlrs && !cutoff && !enoughcuts; ++h )
+               {
+                  CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], memhdr, set, prob, sepastore, tree->actnode->depth,
+                                 &result) );
+                  cutoff |= (result == SCIP_CUTOFF);
+                  separateagain |= (result == SCIP_CONSADDED);
+                  enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
+               }
             }
-         }
-         
-         /* separate LP, if the cut pool is less than half full */
-         if( !cutoff && !enoughcuts )
-         {
-            for( s = 0; s < set->nsepas && !enoughcuts; ++s )
+            
+            /* separate LP, if the cut pool is less than half full */
+            for( s = 0; s < set->nsepas && !cutoff && !separateagain && !enoughcuts; ++s )
             {
                CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, sepastore, tree->actnode->depth, &result) );
+               cutoff |= (result == SCIP_CUTOFF);
+               separateagain |= (result == SCIP_CONSADDED);
                enoughcuts |= (SCIPsepastoreGetNCuts(sepastore) >= SCIPsetGetMaxsepacuts(set, root)/2);
             }
          }
@@ -528,6 +530,14 @@ RETCODE enforceConstraints(
          else
          {
             CHECK_OKAY( SCIPconshdlrEnforcePseudoSol(conshdlrs_enfo[h], memhdr, set, prob, &result) );
+            if( SCIPsepastoreGetNCuts(sepastore) != 0 )
+            {
+               char s[255];
+               sprintf(s, "pseudo enforcing method of constraint handler <%s> separated cuts",
+                  SCIPconshdlrGetName(conshdlrs_enfo[h]));
+               errorMessage(s);
+               return SCIP_INVALIDRESULT;
+            }
          }
          assert(set->buffer->firstfree == 0);
          switch( result )
@@ -555,18 +565,19 @@ RETCODE enforceConstraints(
 
          case SCIP_SEPARATED:
             assert(tree->nchildren == 0);
-            if( !tree->actnodehaslp )
-            {
-               char s[255];
-               sprintf(s, "enforcing method of constraint handler <%s> separated cuts, but LP is not processed",
-                  SCIPconshdlrGetName(conshdlrs_enfo[h]));
-               errorMessage(s);
-               return SCIP_INVALIDRESULT;
-            }
+            assert(SCIPsepastoreGetNCuts(sepastore) > 0);
 
             /* apply found cuts */
             CHECK_OKAY( SCIPsepastoreApplyCuts(sepastore, memhdr, set, tree, lp) );
 
+            *infeasible = TRUE;
+            *solveagain = TRUE;
+            resolved = TRUE;
+            break;
+
+         case SCIP_REDUCEDDOM:
+            assert(tree->nchildren == 0);
+            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             *solveagain = TRUE;
             resolved = TRUE;
@@ -578,14 +589,6 @@ RETCODE enforceConstraints(
             *infeasible = TRUE;
             resolved = TRUE;
             enforceagain = TRUE; /* the newly added constraints have to be enforced themselves */
-            break;
-
-         case SCIP_REDUCEDDOM:
-            assert(tree->nchildren == 0);
-            assert(SCIPsepastoreGetNCuts(sepastore) == 0);
-            *infeasible = TRUE;
-            *solveagain = TRUE;
-            resolved = TRUE;
             break;
 
          case SCIP_BRANCHED:

@@ -3728,6 +3728,7 @@ RETCODE SCIPlpCreate(
    (*lp)->rows = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->objval = 0.0;
+   (*lp)->upperbound = set->infinity;
    (*lp)->lpicolssize = 0;
    (*lp)->nlpicols = 0;
    (*lp)->lpirowssize = 0;
@@ -4118,6 +4119,8 @@ RETCODE SCIPlpSumRows(
                *sumrhs += weights[r] * (row->lhs - row->constant);
          }
       }
+      else
+         weights[r] = 0.0;
    }
 
    *sumlhs = -set->infinity;
@@ -4208,6 +4211,8 @@ void sumMIRRow(
             }
          }
       }
+      else
+         slacksign[r] = 0;
    }
 }
 
@@ -4220,11 +4225,13 @@ void sumMIRRow(
  */
 static
 void transformMIRRow(
+   const SET*       set,                /**< global SCIP settings */
    int              nvars,              /**< number of active variables in the problem */
    VAR**            vars,               /**< active variables in the problem */
    Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
-   int*             varsign             /**< stores the sign of the transformed variable in summation */
+   int*             varsign,            /**< stores the sign of the transformed variable in summation */
+   Bool*            freevariable        /**< stores whether a free variable was found in MIR row -> invalid summation */
    )
 {
    VAR* var;
@@ -4235,6 +4242,9 @@ void transformMIRRow(
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(varsign != NULL);
+   assert(freevariable != NULL);
+
+   *freevariable = FALSE;
 
    for( v = 0; v < nvars; ++v )
    {
@@ -4243,7 +4253,9 @@ void transformMIRRow(
       idx = var->probindex;
       assert(0 <= idx && idx < nvars);
 
-      if( var->varstatus == SCIP_VARSTATUS_COLUMN && var->data.col->primsol > (var->dom.lb + var->dom.ub)/2 )
+      if( var->varstatus == SCIP_VARSTATUS_COLUMN
+         && !SCIPsetIsInfinity(set, var->dom.ub)
+         && var->data.col->primsol > (var->dom.lb + var->dom.ub)/2 )
       {
          varsign[idx] = -1;
          *mirrhs -= mircoef[idx] * var->dom.ub;
@@ -4251,7 +4263,16 @@ void transformMIRRow(
       else
       {
          varsign[idx] = +1;
-         *mirrhs -= mircoef[idx] * var->dom.lb;
+         if( !SCIPsetIsInfinity(set, -var->dom.lb) )
+            *mirrhs -= mircoef[idx] * var->dom.lb;
+         else if( !SCIPsetIsZero(set, mircoef[idx]) )
+         {
+            /* we found a free variable in the row with non-zero coefficient
+             *  -> the MIR row cannot be transformed in standard form
+             */
+            *freevariable = TRUE;
+            return;
+         }            
       }
    }
 }
@@ -4328,13 +4349,25 @@ void roundMIRRow(
          else
             cutaj = varsign[idx] * aj * onedivoneminusf0;
       }
-      mircoef[idx] = cutaj;
 
-      /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
-      if( varsign[idx] == +1 )
-         *mirrhs += cutaj * var->dom.lb;
+      if( SCIPsetIsZero(set, cutaj) )
+         mircoef[idx] = 0.0;
       else
-         *mirrhs += cutaj * var->dom.ub;
+      {
+         mircoef[idx] = cutaj;
+         
+         /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
+         if( varsign[idx] == +1 )
+         {
+            assert(!SCIPsetIsInfinity(set, -var->dom.lb));
+            *mirrhs += cutaj * var->dom.lb;
+         }
+         else
+         {
+            assert(!SCIPsetIsInfinity(set, var->dom.ub));
+            *mirrhs += cutaj * var->dom.ub;
+         }
+      }
    }
 }
 
@@ -4374,32 +4407,36 @@ void substituteMIRRow(
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    for( r = 0; r < lp->nrows; ++r )
    {
-      if( SCIPsetIsNegative(set, slacksign[r] * weights[r]) )
+      if( slacksign[r] != 0 )
       {
-         row = lp->rows[r];
-         assert(row != NULL);
-         assert(row->len == 0 || row->cols != NULL);
-         assert(row->len == 0 || row->cols_probindex != NULL);
-         assert(row->len == 0 || row->vals != NULL);
-
-         mul = weights[r] * onedivoneminusf0;
-
-         /* subtract the row coefficients multiplied with a起j from the cut */
-         for( i = 0; i < row->len; ++i )
+         assert(!SCIPsetIsZero(set, weights[r]));
+         if( SCIPsetIsNegative(set, slacksign[r] * weights[r]) )
          {
-            assert(row->cols[i] != NULL);
-            assert(row->cols[i]->var != NULL);
-            assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
-            assert(row->cols[i]->var->data.col == row->cols[i]);
-            assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
-            assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
-            idx = row->cols_probindex[i];
-            mircoef[idx] -= mul * row->vals[i];
+            row = lp->rows[r];
+            assert(row != NULL);
+            assert(row->len == 0 || row->cols != NULL);
+            assert(row->len == 0 || row->cols_probindex != NULL);
+            assert(row->len == 0 || row->vals != NULL);
+
+            mul = weights[r] * onedivoneminusf0;
+
+            /* subtract the row coefficients multiplied with a起j from the cut */
+            for( i = 0; i < row->len; ++i )
+            {
+               assert(row->cols[i] != NULL);
+               assert(row->cols[i]->var != NULL);
+               assert(row->cols[i]->var->varstatus == SCIP_VARSTATUS_COLUMN);
+               assert(row->cols[i]->var->data.col == row->cols[i]);
+               assert(row->cols[i]->var->probindex == row->cols[i]->var_probindex);
+               assert(row->cols[i]->var->probindex == row->cols_probindex[i]);
+               idx = row->cols_probindex[i];
+               mircoef[idx] -= mul * row->vals[i];
+            }
+            if( slacksign[r] == +1 )
+               *mirrhs -= mul * row->rhs;
+            else
+               *mirrhs -= mul * row->lhs;
          }
-         if( slacksign[r] == +1 )
-            *mirrhs -= mul * row->rhs;
-         else
-            *mirrhs -= mul * row->lhs;
       }
    }
 
@@ -4430,6 +4467,7 @@ RETCODE SCIPlpCalcMIR(
    Real downrhs;
    Real f0;
    Bool emptyrow;
+   Bool freevariable;
 
    assert(lp != NULL);
    assert(vars != NULL);
@@ -4458,7 +4496,9 @@ RETCODE SCIPlpCalcMIR(
     *   x'_j := ub_j - x_j,       x_j == ub_j - x'_j,       if x^_j is closer to ub
     * and move the constant terms "a_j * lb_j" and "a_j * ub_j" to the rhs.
     */
-   transformMIRRow(nvars, vars, mircoef, &rhs, varsign);
+   transformMIRRow(set, nvars, vars, mircoef, &rhs, varsign, &freevariable);
+   if( freevariable )
+      goto TERMINATE;
 
    /* Calculate fractionalities  f_0 := b - down(b), f_j := a_j - down(a_j) , and derive MIR cut
     *   a~*x' <= down(b)
@@ -4575,8 +4615,9 @@ RETCODE SCIPlpSetUpperbound(
 {
    assert(lp != NULL);
 
-   debugMessage("setting LP upper objective limit to %g\n", upperbound);
+   debugMessage("setting LP upper objective limit from %g to %g\n", lp->upperbound, upperbound);
    CHECK_OKAY( SCIPlpiSetRealpar(lp->lpi, SCIP_LPPAR_UOBJLIM, upperbound) );
+   lp->upperbound = upperbound;
 
    return SCIP_OKAY;
 }
@@ -4612,6 +4653,40 @@ RETCODE SCIPlpSolvePrimal(
    lp->primalfeasible = primalfeasible;
    lp->dualfeasible = dualfeasible;
 
+   /* check for stability */
+   if( !SCIPlpiIsStable(lp->lpi) )
+   {
+      /* reduce the feasibility tolerance of the LP solver */
+      CHECK_OKAY( SCIPlpSetFeastol(lp, 0.001*set->feastol) );
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, TRUE) );
+
+      /* solve again */
+      CHECK_OKAY( SCIPlpiSolvePrimal(lp->lpi) );
+      
+      /* check for primal and dual feasibility */
+      CHECK_OKAY( SCIPlpiGetBasisFeasibility(lp->lpi, &primalfeasible, &dualfeasible) );
+      lp->primalfeasible = primalfeasible;
+      lp->dualfeasible = dualfeasible;
+
+      /* reset the feasibility tolerance of the LP solver to its original value */
+      CHECK_OKAY( SCIPlpSetFeastol(lp, set->feastol) );
+      CHECK_OKAY( SCIPlpiSetIntpar(lp->lpi, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+
+      /* check again for stability */
+      if( !SCIPlpiIsStable(lp->lpi) )
+      {
+         char lpname[255];
+         char s[255];
+         sprintf(lpname, "lp%d.lp", stat->nlps);
+         sprintf(s, "numerical troubles in LP %d. Saved in file <%s>.", stat->nlps, lpname);
+         errorMessage(s);
+
+         CHECK_OKAY( SCIPlpiWriteLP(lp->lpi, lpname) );
+         
+         return SCIP_LPERROR;
+      }
+   }
+
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
    {
@@ -4619,6 +4694,12 @@ RETCODE SCIPlpSolvePrimal(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+      if( SCIPsetIsGT(set, lp->objval, lp->upperbound) )
+      {
+         /* the solver may return the optimal value, even if this is greater than the upper bound */
+         lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+         lp->objval = set->infinity;
+      }
    }
    else if( SCIPlpiIsPrimalInfeasible(lp->lpi) )
    {
@@ -4642,7 +4723,7 @@ RETCODE SCIPlpSolvePrimal(
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-      errorMessage("Objective limit exceeded in primal simplex - this should not happen");
+      errorMessage("Objective limit exceeded in primal simplex - this should not happen, because no lower limit exists");
       lp->lpsolstat = SCIP_LPSOLSTAT_ERROR;
       lp->objval = -set->infinity;
       return SCIP_LPERROR;
@@ -4744,6 +4825,12 @@ RETCODE SCIPlpSolveDual(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->objval) );
+      if( SCIPsetIsGT(set, lp->objval, lp->upperbound) )
+      {
+         /* the solver may return the optimal value, even if this is greater than the upper bound */
+         lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+         lp->objval = set->infinity;
+      }
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
@@ -5068,7 +5155,7 @@ RETCODE SCIPlpUpdateAges(
    for( c = 0; c < lp->nlpicols; ++c )
    {
       assert(lpicols[c] == lp->cols[c]);
-      if( SCIPsetIsZero(set, lpicols[c]->primsol) )
+      if( lpicols[c]->primsol == 0.0 )  /* non-basic columns to remove are exactly at 0.0 */
          lpicols[c]->age++;
       else
          lpicols[c]->age = 0;
