@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.3 2004/09/28 10:50:29 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.4 2004/10/21 09:55:59 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -57,7 +57,7 @@ BEGIN {
     pass     = 0;
 
     printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
-    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound |  Gap | Time |\n");
+    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound | Gap% | Time |\n");
     printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum

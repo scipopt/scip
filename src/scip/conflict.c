@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.67 2004/10/20 15:52:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.68 2004/10/21 09:55:59 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1361,13 +1361,13 @@ RETCODE conflictCreateReconvergenceClauses(
             
             /* check if we have to resolve the bound change in this depth level
              *  - a bound change on non-binary variables has to be resolved in any case,
-             *  - at least one resolution has to be performed (we have to resolve the starting uip)
+             *  - the starting uip has to be resolved
              *  - a bound change on binary variables should be resolved, if it is in the fuip's depth level and not the
              *    next uip (i.e., if it is not the last bound change in the fuip's depth level)
              */
             resolved = FALSE;
             if( SCIPvarGetType(actvar) != SCIP_VARTYPE_BINARY
-               || nresolutions == 0
+               || bdchginfo == uip
                || (bdchgdepth == firstuipdepth
                   && nextbdchginfo != NULL
                   && SCIPbdchginfoGetDepth(nextbdchginfo) == bdchgdepth) )
@@ -1396,9 +1396,12 @@ RETCODE conflictCreateReconvergenceClauses(
                /* if this is the first variable of the conflict set besides the current starting UIP, it is the next
                 * UIP (or the first unresolvable bound change)
                 */
-               if( conflict->nconflictvars == 1 )
+               if( bdchgdepth == firstuipdepth && conflict->nconflictvars == 1 )
+               {
+                  assert(nextuip == NULL);
                   nextuip = bdchginfo;
-               
+               }
+
                /* put variable into the conflict set, using the literal that is currently fixed to FALSE */
                CHECK_OKAY( conflictAddConflictVar(conflict, memhdr, set, stat, actvar, FALSE, FALSE) );
                assert(conflict->nconflictvars >= 2);

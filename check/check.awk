@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.10 2004/09/09 09:39:34 bzfpfend Exp $
+# $Id: check.awk,v 1.11 2004/10/21 09:55:59 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -65,7 +65,7 @@ BEGIN {
     settings = "default";
 
     printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
-    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound |  Gap | Time |\n");
+    printf("Name              | Conss | Vars | Nodes |   Dual Bound | Primal Bound | Gap% | Time |\n");
     printf("------------------+-------+------+-------+--------------+--------------+------+------+-------\n");
 }
 /=opt=/ { sol[$2] = $3; }  # get optimum
@@ -138,7 +138,7 @@ BEGIN {
    else {
       if (abs(db) > 1e-4)
       {
-	 gap = abs((pb-db)/db);
+	 gap = 100.0*abs((pb-db)/db);
       }
       else
       {

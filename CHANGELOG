@@ -26,6 +26,11 @@ fixed bugs:
 - removed bugs in CLP Solver interface
 - SCIP returned "gap limit reached" even if the problem was solved to optimality, if the
   optimal solution was found at a node with lower bound equal to the global lower bound
+- after conversion of the focus node into a junction (e.g. in case of numerical troubles while solving the node's LP),
+  the child nodes got the wrong LP fork attached (the common LP fork of the old and new focus node instead of the
+  old focus node's LP fork)
+- bug reconvergence clauses in conflict analysis if bounds on non-binary variables were the reason for the fixing of
+  the uip to create a reconvergence clause for
 
 known bugs (still not fixed):
 - air04 and air05 return wrong optimal value (1 too large): possibly due to strong branching or setppc propagation?

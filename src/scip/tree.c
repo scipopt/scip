@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.117 2004/10/19 18:36:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.118 2004/10/21 09:55:59 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -133,7 +133,7 @@ void forkCaptureLPIState(
    assert(nuses > 0);
 
    fork->nlpistateref += nuses;
-   debugMessage("captured fork's LPI state %d times -> new nlpistateref=%d\n", nuses, fork->nlpistateref);
+   debugMessage("captured LPI state of fork %p %d times -> new nlpistateref=%d\n", fork, nuses, fork->nlpistateref);
 }
 
 /** decreases the reference counter of the LP state in the fork */
@@ -156,7 +156,8 @@ RETCODE forkReleaseLPIState(
       CHECK_OKAY( SCIPlpFreeState(lp, memhdr, &(fork->lpistate)) );
    }
 
-   debugMessage("released fork's LPI state -> new nlpistateref=%d\n", fork->nlpistateref);
+   debugMessage("released LPI state of fork %p -> new nlpistateref=%d\n", fork, fork->nlpistateref);
+
    return SCIP_OKAY;
 }
 
@@ -173,7 +174,8 @@ void subrootCaptureLPIState(
    assert(nuses > 0);
 
    subroot->nlpistateref += nuses;
-   debugMessage("captured subroot's LPI state %d times -> new nlpistateref=%d\n", nuses, subroot->nlpistateref);
+   debugMessage("captured LPI state of subroot %p %d times -> new nlpistateref=%d\n", 
+      subroot, nuses, subroot->nlpistateref);
 }
 
 /** decreases the reference counter of the LP state in the subroot */
@@ -196,7 +198,8 @@ RETCODE subrootReleaseLPIState(
       CHECK_OKAY( SCIPlpFreeState(lp, memhdr, &(subroot->lpistate)) );
    }
    
-   debugMessage("released subroot's LPI state -> new nlpistateref=%d\n", subroot->nlpistateref);
+   debugMessage("released LPI state of subroot %p -> new nlpistateref=%d\n", subroot, subroot->nlpistateref);
+
    return SCIP_OKAY;
 }
 
@@ -210,6 +213,7 @@ void SCIPnodeCaptureLPIState(
 
    debugMessage("capture %d times LPI state of node %p at depth %d (current: %d)\n", nuses, node, node->depth, 
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
+
    switch( SCIPnodeGetType(node) )
    {  
    case SCIP_NODETYPE_FORK:
@@ -2272,6 +2276,20 @@ RETCODE nodeToLeaf(
    (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
    (*node)->data.leaf.lpfork = lpfork;
 
+#ifndef NDEBUG
+   /* check, if the LP fork is the first node with LP information on the path back to the root */
+   {
+      NODE* pathnode;
+      pathnode = (*node)->parent;
+      while( pathnode != NULL && pathnode != lpfork )
+      {
+         assert(SCIPnodeGetType(pathnode) == SCIP_NODETYPE_JUNCTION);
+         pathnode = pathnode->parent;
+      }
+      assert(pathnode == lpfork);
+   }
+#endif
+
    /* if node is good enough to keep, put it on the node queue */
    if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
    {
@@ -2759,7 +2777,7 @@ RETCODE SCIPnodeFocus(
    /* convert the old focus node into a fork or subroot node, if it has children;
     * otherwise, convert it into a deadend, which will be freed later in treeSwitchPath()
     */
-   childrenlpfork = lpfork;
+   childrenlpfork = tree->focuslpfork;
    if( tree->nchildren > 0 )
    {
       assert(tree->focusnode != NULL);
