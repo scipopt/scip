@@ -29,10 +29,11 @@
 /** verbosity levels of output */
 enum VerbLevel
 {
-   SCIP_VERBLEVEL_NONE   = 0,           /**< only error messages are displayed */
-   SCIP_VERBLEVEL_NORMAL = 1,           /**< standard messages are displayed */
-   SCIP_VERBLEVEL_HIGH   = 2,           /**< a lot of information is displayed */
-   SCIP_VERBLEVEL_FULL   = 3            /**< all messages are displayed */
+   SCIP_VERBLEVEL_NONE    = 0,           /**< only error messages are displayed */
+   SCIP_VERBLEVEL_MINIMAL = 1,           /**< only error and warning messages are displayed */
+   SCIP_VERBLEVEL_NORMAL  = 2,           /**< standard messages are displayed */
+   SCIP_VERBLEVEL_HIGH    = 3,           /**< a lot of information is displayed */
+   SCIP_VERBLEVEL_FULL    = 4            /**< all messages are displayed */
 };
 typedef enum VerbLevel VERBLEVEL;
 
@@ -61,6 +62,12 @@ void errorMessage_call(
    const char*      msg,                /**< message to print */
    const char*      filename,           /**< name of the file, where the error occured */
    int              line                /**< line of the file, where the error occured */
+   );
+
+/** prints a warning message */
+extern
+void warningMessage(
+   const char*      msg                 /**< message to print */
    );
 
 /** prints a todo message */

@@ -38,6 +38,14 @@ void errorMessage_call(
    fprintf(stderr, "[%s:%d] ERROR: %s\n", filename, line, msg);
 }
 
+/** prints a warning message */
+void warningMessage(
+   const char*      msg                 /**< message to print */
+   )
+{
+   fprintf(stderr, "Warning: %s\n", msg);
+}
+
 /** prints a todo message */
 void todoMessage_call(
    const char*      msg,                /**< message to print */

@@ -613,7 +613,7 @@ void reconvertSides(
  * Miscellaneous Methods
  */
 
-static char cpxname[255];
+static char cpxname[MAXSTRLEN];
 
 /**@name Miscellaneous Methods */
 /**@{ */

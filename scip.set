@@ -1,0 +1,93 @@
+# verbosity level of output
+global_VerbLevel = 4
+
+# values larger than this are considered infinity
+global_Infinity = 1.000000000000000e+20
+
+# absolute values smaller than this are considered zero
+global_Epsilon = 1.000000000000000e-09
+
+# absolute values of sums smaller than this are considered zero
+global_SumEpsilon = 1.000000000000000e-06
+
+# LP feasibility tolerance
+global_Feastol = 1.000000000000000e-06
+
+# epsilon for deciding if a cut is violated
+global_CutViolEps = 1.000000000000000e-03
+
+# memory growing factor for dynamically allocated arrays
+global_MemGrowFac = 1.200000000000000e+00
+
+# initial size of dynamically allocated arrays
+global_MemGrowInit = 4
+
+# memory growing factor for tree array
+global_TreeGrowFac = 2.000000000000000e+00
+
+# initial size of tree array
+global_TreeGrowInit = 65536
+
+# memory growing factor for path array
+global_PathGrowFac = 2.000000000000000e+00
+
+# initial size of path array
+global_PathGrowInit = 256
+
+# branching score factor to weigh downward and upward gain prediction
+global_BranchScoreFac = 1.670000000000000e-01
+
+# maximal number of characters in a node information line
+global_DispWidth = 138
+
+# frequency for displaying node information lines
+global_DispFreq = 1000
+
+# frequency for displaying header lines (every n'th node information line)
+global_DispHeaderFreq = 15
+
+# maximal number of variables priced in per pricing round
+global_MaxPriceVars = 128
+
+# maximal number of priced variables at the root node
+global_MaxPriceVarsRoot = 2048
+
+# pricing is aborted, if fac * maxpricevars pricing candidates were found
+global_AbortPriceVarsFac = 2.000000000000000e+00
+
+# maximal number of cuts separated per separation round
+global_MaxSepaCuts = 128
+
+# maximal number of separated cuts at the root node
+global_MaxSepaCutsRoot = 2048
+
+# maximum age a column can reach before it is deleted from the LP
+global_ColAgeLimit = 8
+
+# maximum age a row can reach before it is deleted from the LP
+global_RowAgeLimit = 8
+
+# maximum age a cut can reach before it is deleted from the global cut pool
+global_CutAgeLimit = 128
+
+# maximum age an unnecessary constraint can reach before it is deleted
+global_ConsAgeLimit = 128
+
+# maximal number of solutions to store in the solution storage
+global_MaxSol = 256
+
+# maximal number of nodes to process (-1: no limit)
+global_NodeLimit = -1
+
+# frequency for solving LP at the nodes (-1: never; 0: only root LP)
+global_LpSolveFreq = 4
+
+# maximal depth for solving LP at the nodes (-1: no depth limit)
+global_LpSolveDepth = -1
+
+# should new non-basic columns be removed after LP solving?
+global_CleanupCols = FALSE
+
+# should new basic rows be removed after LP solving?
+global_CleanupRows = TRUE
+

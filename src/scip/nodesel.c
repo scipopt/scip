@@ -556,7 +556,7 @@ RETCODE SCIPnodeselInit(
 
    if( nodesel->initialized )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "Node selector <%s> already initialized", nodesel->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
@@ -582,7 +582,7 @@ RETCODE SCIPnodeselExit(
 
    if( !nodesel->initialized )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "Node selector <%s> not initialized", nodesel->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;

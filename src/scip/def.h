@@ -27,12 +27,13 @@
 
 
 #include <limits.h>
+#include <float.h>
 
 #include "retcode.h"
 
 
 
-#define SCIP_VERSION                 20 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_VERSION                 30 /**< SCIP version number (multiplied by 100 to get integer number) */
 
 
 
@@ -116,7 +117,7 @@ typedef int Bool;                       /**< type used for boolean values */
 typedef long long Longint;              /**< type used for long integer values */
 #define LONGINT_MAX          LLONG_MAX
 #define LONGINT_MIN          LLONG_MIN
-
+#define LONGINT_FORMAT          "%lld"
 
 
 /*
@@ -124,11 +125,16 @@ typedef long long Longint;              /**< type used for long integer values *
  */
 
 typedef double Real;                    /**< type used for floating point values */
+#define REAL_MAX               DBL_MAX
+#define REAL_MIN               DBL_MIN
+#define REAL_FORMAT              "%lf"
+
 #define SCIP_DEFAULT_INFINITY  1.0E+20  /**< default value considered to be infinity */
 #define SCIP_DEFAULT_EPSILON     1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON  1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL     1e-06  /**< default LP feasibility tolerance */
 #define SCIP_DEFAULT_CUTVIOLEPS  1e-03  /**< default epsilon for deciding if a cut is violated */
+#define SCIP_MAXEPSILON          1e-03  /**< maximum value for any epsilon */
 #define SCIP_INVALID           1.0E+99  /**< floating point value is not valid */
 
 
@@ -139,6 +145,15 @@ typedef double Real;                    /**< type used for floating point values
 #ifndef NULL
 #define NULL ((void*)0)                 /**< zero pointer */
 #endif
+
+
+
+/*
+ * Strings
+ */
+
+#define MAXSTRLEN                 1024  /**< maximum string length in SCIP */
+
 
 
 /*

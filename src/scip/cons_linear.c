@@ -545,7 +545,7 @@ RETCODE linconsCreate(
 
    if( SCIPisGT(scip, lhs, rhs) )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       errorMessage("left hand side of linear constraint greater than right hand side");
       sprintf(s, "  (lhs=%f, rhs=%f)", lhs, rhs);
       errorMessage(s);

@@ -1131,7 +1131,7 @@ RETCODE branchLP(
    else if( setpartcons->modifiable )
    {
       CONS* newcons;
-      char name[255];
+      char name[MAXSTRLEN];
          
       /* for a modifiable constraint, add set partitioning constraint x(S) == 1, because this is stronger than
        * the original constraint with adding x(C\S) == 0 */
@@ -1266,7 +1266,7 @@ RETCODE branchLP(
          else
          {
             CONS* newcons;
-            char name[255];
+            char name[MAXSTRLEN];
          
             /* add set covering constraint x(S) >= 1 */
             sprintf(name, "SpB%lld", SCIPgetNodenum(scip));

@@ -125,7 +125,7 @@ RETCODE SCIPeventhdlrInit(
 
    if( eventhdlr->initialized )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "Event handler <%s> already initialized", eventhdlr->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
@@ -151,7 +151,7 @@ RETCODE SCIPeventhdlrExit(
 
    if( !eventhdlr->initialized )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "Event handler <%s> not initialized", eventhdlr->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
@@ -577,7 +577,7 @@ RETCODE SCIPeventProcess(
 
    default:
       {
-         char s[255];
+         char s[MAXSTRLEN];
          sprintf(s, "unknown event type <%d>", event->eventtype);
          errorMessage(s);
          return SCIP_INVALIDDATA;
@@ -806,7 +806,7 @@ RETCODE SCIPeventfilterDel(
    pos = eventfilterSearch(eventfilter, eventhdlr, eventdata);
    if( pos == -1 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "no event for event handler %p with data %p found in event filter %p\n",
          eventhdlr, eventdata, eventfilter);
       errorMessage(s);
@@ -1109,7 +1109,7 @@ RETCODE SCIPeventqueueAdd(
 
       default:
          {
-            char s[255];
+            char s[MAXSTRLEN];
             sprintf(s, "unknown event type <%d>", (*event)->eventtype);
             errorMessage(s);
             return SCIP_INVALIDDATA;

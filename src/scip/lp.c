@@ -725,7 +725,7 @@ RETCODE rowAddCoeff(
 
    if( row->nlocks > 0 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "cannot add a coefficient to the locked unmodifiable row <%s>", row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -780,7 +780,7 @@ RETCODE rowDelCoeffPos(
 
    if( row->nlocks > 0 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "cannot delete a coefficient from the locked unmodifiable row <%s>", row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -836,7 +836,7 @@ RETCODE rowChgCoeffPos(
 
    if( row->nlocks > 0 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "cannot change a coefficient of the locked unmodifiable row <%s>", row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -1240,7 +1240,7 @@ RETCODE SCIPcolDelCoeff(
    pos = colSearchCoeff(col, row);
    if( pos == -1 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "coefficient for row <%s> doesn't exist in column <%s>", row->name, col->var->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -2066,7 +2066,7 @@ RETCODE SCIProwLock(
    /* check, if row is modifiable */
    if( row->modifiable )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "cannot lock the modifiable row <%s>", row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -2089,7 +2089,7 @@ RETCODE SCIProwUnlock(
    /* check, if row is modifiable */
    if( row->modifiable )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "cannot unlock the modifiable row <%s>", row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -2098,7 +2098,7 @@ RETCODE SCIProwUnlock(
    /* check, if row is locked */
    if( row->nlocks == 0 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "row <%s> has no sealed lock", row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -2237,7 +2237,7 @@ RETCODE SCIProwDelCoeff(
    pos = rowSearchCoeff(row, col);
    if( pos == -1 )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "coefficient for column <%s> doesn't exist in row <%s>", col->var->name, row->name);
       errorMessage(s);
       return SCIP_INVALIDDATA;
@@ -4691,8 +4691,8 @@ RETCODE SCIPlpSolvePrimal(
       /* check again for stability */
       if( !SCIPlpiIsStable(lp->lpi) )
       {
-         char lpname[255];
-         char s[255];
+         char lpname[MAXSTRLEN];
+         char s[MAXSTRLEN];
          sprintf(lpname, "lp%d.lp", stat->nlps);
          sprintf(s, "numerical troubles in LP %d. Saved in file <%s>.", stat->nlps, lpname);
          errorMessage(s);
@@ -4822,8 +4822,8 @@ RETCODE SCIPlpSolveDual(
       /* check again for stability */
       if( !SCIPlpiIsStable(lp->lpi) )
       {
-         char lpname[255];
-         char s[255];
+         char lpname[MAXSTRLEN];
+         char s[MAXSTRLEN];
          sprintf(lpname, "lp%d.lp", stat->nlps);
          sprintf(s, "numerical troubles in LP %d. Saved in file <%s>.", stat->nlps, lpname);
          errorMessage(s);

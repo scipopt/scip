@@ -1212,7 +1212,7 @@ RETCODE readMPS(
    if (NULL == (fp = fopen(filename, "r")))
    {
       char s[1024];
-      sprintf(s, "cannot open file <%s>", filename);
+      sprintf(s, "cannot open file <%s> for reading", filename);
       errorMessage(s);
       perror(filename);
       return SCIP_NOFILE;
@@ -1268,7 +1268,7 @@ RETCODE readMPS(
    mpsinputFree(scip, &mpsi);
 
    if( error )
-      return SCIP_READERR;
+      return SCIP_READERROR;
    else
       return SCIP_OKAY;
 }

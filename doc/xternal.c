@@ -18,11 +18,11 @@
 
 /**@file   xternal.c
  * @brief  documentation outside the SCIP source files
- * @authod Tobias Achterberg
+ * @author Tobias Achterberg
  * @author Thorsten Koch
  */
 
-/* $Id: xternal.c,v 1.7 2003/06/04 14:41:49 bzfpfend Exp $
+/* $Id: xternal.c,v 1.8 2003/06/05 16:34:55 bzfpfend Exp $
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)

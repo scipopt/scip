@@ -103,7 +103,7 @@ DECL_EVENTEXEC(eventExecTest)
 
    /*???????????*/
    {
-      char lpname[255];
+      char lpname[MAXSTRLEN];
       sprintf(lpname, "lp%lld.lp", SCIPgetNodenum(scip));
       CHECK_OKAY( SCIPwriteLP(scip, lpname) );
    }
@@ -323,9 +323,6 @@ RETCODE runSCIP(
    /* initialize SCIP */
    CHECK_OKAY( SCIPcreate(&scip) );
 
-   /* change settings */
-   CHECK_OKAY( SCIPsetIntParam(scip, "global_VerbLevel", SCIP_VERBLEVEL_FULL) );
-
    /* include user defined callbacks */
    CHECK_OKAY( SCIPincludeReaderMPS(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
@@ -344,6 +341,21 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
    
    /*CHECK_OKAY( includeTestEventHdlr(scip) );*/
+
+
+
+   /**************
+    * Parameters *
+    **************/
+
+   if( SCIPfileExists("scip.set") )
+   {
+      printf("reading parameter file <scip.set>\n");
+      CHECK_OKAY( SCIPreadParams(scip, "scip.set") );
+   }
+   else
+      printf("parameter file <scip.set> not found - using default parameters\n");
+
 
 
    /********************

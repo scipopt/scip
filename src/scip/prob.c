@@ -189,7 +189,7 @@ RETCODE SCIPprobTransform(
 {
    VAR* targetvar;
    CONS* targetcons;
-   char transname[255];
+   char transname[MAXSTRLEN];
    int v;
    int c;
 

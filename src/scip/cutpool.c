@@ -419,7 +419,7 @@ RETCODE SCIPcutpoolDelRow(
    cut = (CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
    if( cut == NULL )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "row <%s> is not existing in cutpool %p", SCIProwGetName(row), cutpool);
       errorMessage(s);
       return SCIP_INVALIDDATA;

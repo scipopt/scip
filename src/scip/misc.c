@@ -34,6 +34,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "memory.h"
 #include "message.h"
@@ -410,6 +411,26 @@ RETCODE SCIPhashtableInsert(
 
    /* append element to the list at the hash position */
    CHECK_OKAY( hashlistAppend(&hashtable->lists[hashval], memhdr, element) );
+   
+   return SCIP_OKAY;
+}
+
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+RETCODE SCIPhashtableSafeInsert(
+   HASHTABLE*       hashtable,          /**< hash table */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to insert into the table */
+   )
+{
+   assert(hashtable != NULL);
+   assert(hashtable->hashgetkey != NULL);
+
+   /* check, if key is already existing */
+   if( SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(element)) != NULL )
+      return SCIP_KEYALREADYEXISTING;
+
+   /* insert element in hash table */
+   CHECK_OKAY( SCIPhashtableInsert(hashtable, memhdr, element) );
    
    return SCIP_OKAY;
 }
@@ -1913,4 +1934,56 @@ void SCIPbsortPtrDblIntInt(
       }
       firstpos = sortpos+1;
    }
+}
+
+
+
+
+/*
+ * Numerical methods
+ */
+
+/** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
+Real SCIPcalcMachineEpsilon(
+   void
+   )
+{
+   Real eps;
+   Real lasteps;
+   Real one;
+   Real onepluseps;
+
+   one = 1.0;
+   eps = 1.0;
+   do
+   {
+      lasteps = eps;
+      eps /= 2.0;
+      onepluseps = one + eps;
+   }
+   while( onepluseps > one );
+
+   return lasteps;
+}
+
+
+
+/*
+ * File methods
+ */
+
+/** returns, whether the given file exists */
+Bool SCIPfileExists(
+   const char*      filename            /**< file name */
+   )
+{
+   FILE* f;
+
+   f = fopen(filename, "r");
+   if( f == NULL )
+      return FALSE;
+
+   fclose(f);
+
+   return TRUE;
 }

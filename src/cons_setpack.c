@@ -1037,7 +1037,7 @@ RETCODE branchLP(
          else
          {
             CONS* newcons;
-            char name[255];
+            char name[MAXSTRLEN];
          
             /* add set covering constraint x(S) >= 1 */
             sprintf(name, "SPB%lld", SCIPgetNodenum(scip));

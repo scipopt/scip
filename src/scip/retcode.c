@@ -46,11 +46,17 @@ void SCIPretcodePrint(
    case SCIP_NOMEMORY:
       fprintf(file, "insufficient memory error");
       break;
-   case SCIP_READERR:
+   case SCIP_READERROR:
       fprintf(file, "file read error");
+      break;
+   case SCIP_WRITEERROR:
+      fprintf(file, "file write error");
       break;
    case SCIP_NOFILE:
       fprintf(file, "file not found error");
+      break;
+   case SCIP_FILECREATEERROR:
+      fprintf(file, "cannot create file");
       break;
    case SCIP_LPERROR:
       fprintf(file, "error in LP solver");
@@ -70,11 +76,20 @@ void SCIPretcodePrint(
    case SCIP_PLUGINNOTFOUND:
       fprintf(file, "a required plugin was not found");
       break;
-   case SCIP_UNKNOWNPARAMETER:
+   case SCIP_PARAMETERUNKNOWN:
       fprintf(file, "the parameter with the given name was not found");
       break;
-   case SCIP_WRONGPARAMETERTYPE:
+   case SCIP_PARAMETERWRONGTYPE:
       fprintf(file, "the parameter is not of the expected type");
+      break;
+   case SCIP_PARAMETERWRONGVAL:
+      fprintf(file, "the value is invalid for the given parameter");
+      break;
+   case SCIP_KEYALREADYEXISTING:
+      fprintf(file, "the given key is already existing in table");
+      break;
+   case SCIP_PARSEERROR:
+      fprintf(file, "invalid input given to the parser");
       break;
    default:
       fprintf(file, "unknown error code");

@@ -130,7 +130,7 @@ RETCODE SCIPdispInit(
 
    if( disp->initialized )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "display column <%s> already initialized", disp->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
@@ -156,7 +156,7 @@ RETCODE SCIPdispExit(
 
    if( !disp->initialized )
    {
-      char s[255];
+      char s[MAXSTRLEN];
       sprintf(s, "display column <%s> not initialized", disp->name);
       errorMessage(s);
       return SCIP_INVALIDCALL;
@@ -245,13 +245,16 @@ RETCODE SCIPdispPrintLine(
    )
 {
    assert(set != NULL);
+   assert(set->dispfreq >= -1);
+   assert(set->dispheaderfreq >= -1);
    assert(stat != NULL);
 
-   if( set->verblevel < SCIP_VERBLEVEL_NORMAL )
+   if( set->verblevel < SCIP_VERBLEVEL_NORMAL || set->dispfreq == -1 )
       return SCIP_OKAY;
 
    if( forcedisplay
       || (stat->nnodes != stat->lastdispnode
+         && set->dispfreq > 0
          && (stat->nnodes % set->dispfreq == 0 || stat->nnodes == 1)) )
    {
       int i;
@@ -259,7 +262,8 @@ RETCODE SCIPdispPrintLine(
       Bool stripline;
 
       /* display header line */
-      if( stat->ndisplines % set->dispheaderfreq == 0 )
+      if( (set->dispheaderfreq == 0 && stat->ndisplines == 0)
+         || (set->dispheaderfreq > 0 && stat->ndisplines % set->dispheaderfreq == 0) )
       {
          int fillspace;
 
@@ -373,7 +377,7 @@ void SCIPdispDecimal(
    }
    else
    {
-      char format[255];
+      char format[MAXSTRLEN];
       Longint maxval;
       int power;
       int i;

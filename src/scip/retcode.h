@@ -33,16 +33,21 @@ enum Retcode
    SCIP_OKAY               =   0,       /**< normal termination */
    SCIP_ERROR              =  -1,       /**< unspecified error */
    SCIP_NOMEMORY           =  -2,       /**< insufficient memory error */
-   SCIP_READERR            =  -3,       /**< file read error */
-   SCIP_NOFILE             =  -4,       /**< file not found error */
-   SCIP_LPERROR            =  -5,       /**< error in LP solver */
-   SCIP_NOPROBLEM          =  -6,       /**< no problem exists */
-   SCIP_INVALIDCALL        =  -7,       /**< method cannot be called at this time in solution process */
-   SCIP_INVALIDDATA        =  -8,       /**< error in input data */
-   SCIP_INVALIDRESULT      =  -9,       /**< method returned an invalid result code */
-   SCIP_PLUGINNOTFOUND     = -10,       /**< a required plugin was not found */
-   SCIP_UNKNOWNPARAMETER   = -11,       /**< the parameter with the given name was not found */
-   SCIP_WRONGPARAMETERTYPE = -12        /**< the parameter is not of the expected type */
+   SCIP_READERROR          =  -3,       /**< file read error */
+   SCIP_WRITEERROR         =  -4,       /**< file write error */
+   SCIP_NOFILE             =  -5,       /**< file not found error */
+   SCIP_FILECREATEERROR    =  -6,       /**< cannot create file */
+   SCIP_LPERROR            =  -7,       /**< error in LP solver */
+   SCIP_NOPROBLEM          =  -8,       /**< no problem exists */
+   SCIP_INVALIDCALL        =  -9,       /**< method cannot be called at this time in solution process */
+   SCIP_INVALIDDATA        = -10,       /**< error in input data */
+   SCIP_INVALIDRESULT      = -11,       /**< method returned an invalid result code */
+   SCIP_PLUGINNOTFOUND     = -12,       /**< a required plugin was not found */
+   SCIP_PARAMETERUNKNOWN   = -13,       /**< the parameter with the given name was not found */
+   SCIP_PARAMETERWRONGTYPE = -14,       /**< the parameter is not of the expected type */
+   SCIP_PARAMETERWRONGVAL  = -15,       /**< the value is invalid for the given parameter */
+   SCIP_KEYALREADYEXISTING = -16,       /**< the given key is already existing in table */
+   SCIP_PARSEERROR         = -17        /**< invalid input given to the parser */
 };
 typedef enum Retcode RETCODE;           /**< return code for SCIP method */
 

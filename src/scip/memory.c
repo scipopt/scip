@@ -30,6 +30,7 @@
 #include "message.h"
 #include "memory.h"
 
+#define MAXSTRLEN 1024
 
 
 
@@ -100,7 +101,7 @@ memListRemove(void *ptr, const char *filename, int line)
    }
    else
    {
-      char    s[255];
+      char    s[MAXSTRLEN];
 
       sprintf(s, "Error! Tried to free unknown pointer <%p>.", ptr);
       errorMessage_call(s, filename, line);
@@ -137,7 +138,7 @@ memoryDiagnostic(void)
    printf("Total:    %8ld\n", memused);
    if( used != memused )
    {
-      char    s[255];
+      char    s[MAXSTRLEN];
 
       sprintf(s, "Error! Used memory in list sums up to %ld instead of %ld",
 	 used, memused);
@@ -167,7 +168,7 @@ allocMemory_call(size_t size, const char *filename, int line)
 
    if( ptr == NULL )
    {
-      char    s[255];
+      char    s[MAXSTRLEN];
 
       sprintf(s, "Error! Insufficient memory for allocation of %ld bytes.",
 	 (long) size);
@@ -196,7 +197,7 @@ reallocMemory_call(void *ptr, size_t size, const char *filename, int line)
 
    if( newptr == NULL )
    {
-      char    s[255];
+      char    s[MAXSTRLEN];
 
       sprintf(s, "Error! Insufficient memory for reallocation of %ld bytes.", (long) size);
       errorMessage_call(s, filename, line);
@@ -1031,7 +1032,7 @@ freeBlockElement(BLKHDR * blk, void *ptr, const char *filename, int line)
    if( !isPtrInBlock(blk, ptr) )
    {
       BLKHDR *correctblk;
-      char    s[255];
+      char    s[MAXSTRLEN];
 
       sprintf(s, "pointer %p does not belong to block %p (size: %ld)", ptr,
 	 blk, (long) (blk->elemSize));
@@ -1285,7 +1286,7 @@ garbageCollection(BLKHDR * blk)
 #ifndef NDEBUG
       if( chk == NULL )
       {
-         char s[255];
+         char s[MAXSTRLEN];
          sprintf( s, "chunk for lazy free block %p not found in block %p", lazyFree, blk );
          errorMessage( s );
       }
@@ -1346,7 +1347,7 @@ freeBlockMemory_call(MEMHDR *mem, void **ptr, size_t size,
 	 blk = blk->next;
       if( blk == NULL )
       {
-	 char    s[255];
+	 char    s[MAXSTRLEN];
 
 	 sprintf(s, "Error! Tried to free pointer <%p> in block memory <%p> of unknown size %ld.", *ptr, mem, (long) size);
 	 errorMessage_call(s, filename, line);

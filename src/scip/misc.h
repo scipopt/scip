@@ -130,6 +130,14 @@ RETCODE SCIPhashtableInsert(
    void*            element             /**< element to append to the list */
    );
 
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
+extern
+RETCODE SCIPhashtableSafeInsert(
+   HASHTABLE*       hashtable,          /**< hash table */
+   MEMHDR*          memhdr,             /**< block memory */
+   void*            element             /**< element to insert into the table */
+   );
+
 /** retrieve element with key from hash table, returns NULL if not existing */
 extern
 void* SCIPhashtableRetrieve(
@@ -383,6 +391,30 @@ void SCIPbsortPtrDblIntInt(
    int*             intarray2,          /**< second int array to be permuted in the same way */
    int              len,                /**< length of both arrays */
    DECL_SORTPTRCOMP((*ptrcmp))          /**< data element comparator */
+   );
+
+
+
+
+/*
+ * Numerical methods
+ */
+
+/** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
+Real SCIPcalcMachineEpsilon(
+   void
+   );
+
+
+
+/*
+ * File methods
+ */
+
+/** returns, whether the given file exists */
+extern
+Bool SCIPfileExists(
+   const char*      filename            /**< file name */
    );
 
 #endif
