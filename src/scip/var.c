@@ -1101,9 +1101,9 @@ void varAddRoundLocks(
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          if( var->data.multaggr.scalars[i] > 0.0 )
-            varAddRoundLocks(var->data.aggregate.var, addnlocksdown, addnlocksup);
+            varAddRoundLocks(var->data.multaggr.vars[i], addnlocksdown, addnlocksup);
          else
-            varAddRoundLocks(var->data.aggregate.var, addnlocksup, addnlocksdown);
+            varAddRoundLocks(var->data.multaggr.vars[i], addnlocksup, addnlocksdown);
       }
       break;
 
