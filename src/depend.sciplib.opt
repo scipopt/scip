@@ -43,8 +43,8 @@ $(OBJDIR)/conflict.o: src/conflict.c src/def.h src/type_retcode.h src/message.h 
   src/type_disp.h src/type_heur.h src/type_nodesel.h src/type_tree.h \
   src/type_presol.h src/type_pricer.h src/type_reader.h src/type_sepa.h \
   src/struct_set.h src/stat.h src/type_mem.h src/struct_stat.h \
-  src/type_vbc.h src/type_history.h src/clock.h src/lpi.h src/type_lpi.h \
-  src/misc.h src/type_misc.h src/pub_misc.h src/paramset.h \
+  src/type_vbc.h src/type_history.h src/clock.h src/vbc.h src/lpi.h \
+  src/type_lpi.h src/misc.h src/type_misc.h src/pub_misc.h src/paramset.h \
   src/pub_paramset.h src/lp.h src/type_lp.h src/type_prob.h src/pub_lp.h \
   src/struct_lp.h src/var.h src/type_primal.h src/pub_var.h \
   src/struct_var.h src/history.h src/struct_history.h src/prob.h \

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.6 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.7 2004/09/21 12:14:15 bzfpfend Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -118,7 +118,7 @@ DECL_BRANCHEXECLP(branchExeclpObj)
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_execlp(scip, branchrule, result) );
+   CHECK_OKAY( branchruledata->objbranchrule->scip_execlp(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }
@@ -134,7 +134,7 @@ DECL_BRANCHEXECPS(branchExecpsObj)
    assert(branchruledata->objbranchrule != NULL);
 
    /* call virtual method of branchrule object */
-   CHECK_OKAY( branchruledata->objbranchrule->scip_execps(scip, branchrule, result) );
+   CHECK_OKAY( branchruledata->objbranchrule->scip_execps(scip, branchrule, allowaddcons, result) );
 
    return SCIP_OKAY;
 }

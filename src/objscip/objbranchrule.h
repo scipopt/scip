@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.9 2004/04/27 15:50:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.10 2004/09/21 12:14:15 bzfpfend Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -112,6 +112,7 @@ public:
    virtual RETCODE scip_execlp(
       SCIP*         scip,               /**< SCIP data structure */
       BRANCHRULE*   branchrule,         /**< the branching rule itself */
+      Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
       RESULT*       result              /**< pointer to store the result of the branching call */
       )
    {
@@ -131,6 +132,7 @@ public:
    virtual RETCODE scip_execps(
       SCIP*         scip,               /**< SCIP data structure */
       BRANCHRULE*   branchrule,         /**< the branching rule itself */
+      Bool          allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
       RESULT*       result              /**< pointer to store the result of the branching call */
       )
    {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.60 2004/09/21 12:07:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.61 2004/09/21 12:14:14 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -109,6 +109,7 @@
 #include "set.h"
 #include "stat.h"
 #include "clock.h"
+#include "vbc.h"
 #include "lpi.h"
 #include "misc.h"
 #include "paramset.h"
