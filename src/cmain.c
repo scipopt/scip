@@ -360,6 +360,11 @@ main(
    todoMessage("avoid addition of identical rows");
    todoMessage("avoid addition of identical constraints");
 
+   todoMessage("aging of non-check constraints (mark activation node in cons struct)");
+   todoMessage(" -> if too old, remove cons from addedconss array of node, free consdata immediately");
+   todoMessage(" -> it is now possible, that a constraint from disabledconss array is deactivated");
+   todoMessage("    -> in this case, remove cons from disabledconss array when this case is detected");
+
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )
       SCIPerror(stderr, retcode);

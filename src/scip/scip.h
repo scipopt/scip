@@ -407,6 +407,14 @@ RETCODE SCIPaddConsNode(
    CONS*            cons                /**< constraint to add */
    );
 
+/** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
+extern
+RETCODE SCIPdisableConsNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to add constraint to, or NULL for active node */
+   CONS*            cons                /**< constraint to add */
+   );
+
 /**@} */
 
 
@@ -1228,6 +1236,20 @@ extern
 RETCODE SCIPgetPlungeDepth(
    SCIP*            scip,               /**< SCIP data structure */
    int*             plungedepth         /**< pointer to store the depth */
+   );
+
+/** gets total number of active constraints at the current node */
+extern
+RETCODE SCIPgetNActiveConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             nactiveconss        /**< pointer to store the number of active constraints */
+   );
+
+/** gets total number of enabled constraints at the current node */
+extern
+RETCODE SCIPgetNEnabledConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             nenabledconss       /**< pointer to store the number of enabled constraints */
    );
 
 /** gets dual bound of active node */

@@ -937,6 +937,25 @@ RETCODE SCIPaddConsNode(
    return SCIP_OKAY;
 }
 
+/** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes) */
+RETCODE SCIPdisableConsNode(
+   SCIP*            scip,               /**< SCIP data structure */
+   NODE*            node,               /**< node to add constraint to, or NULL for active node */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(cons != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPdisableConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( node == NULL )
+      node = scip->tree->actnode;
+
+   CHECK_OKAY( SCIPnodeDisableCons(node, scip->mem->solvemem, scip->set, cons) );
+   
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -999,12 +1018,16 @@ RETCODE SCIPsolve(
       infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
 
       for( i = 0; i < scip->set->nconshdlrs; ++i )
-         if( SCIPconshdlrGetNConss(scip->set->conshdlrs[i]) > 0 )
+      {
+         int nactiveconss;
+
+         nactiveconss = SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[i]);
+         if( nactiveconss > 0 )
          {
-            sprintf(s, " %5d constraints of type <%s>", 
-               SCIPconshdlrGetNConss(scip->set->conshdlrs[i]), SCIPconshdlrGetName(scip->set->conshdlrs[i]));
+            sprintf(s, " %5d constraints of type <%s>", nactiveconss, SCIPconshdlrGetName(scip->set->conshdlrs[i]));
             infoMessage(SCIPverbLevel(scip), SCIP_VERBLEVEL_HIGH, s);
          }
+      }
 
       /* create branch-and-bound tree */
       CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->transprob) );
@@ -1054,12 +1077,14 @@ RETCODE SCIPfreeSolve(
       /* switch stage to FREESOLVE */
       scip->stage = SCIP_STAGE_FREESOLVE;
 
-      /* deactivate constraints in the problem */
-      CHECK_OKAY( SCIPprobDeactivate(scip->transprob) );
-
       /* deactivate the active node */
       CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
                      scip->branchcand, scip->eventqueue) );
+
+      /* deactivate constraints in the problem */
+      CHECK_OKAY( SCIPprobDeactivate(scip->transprob) );
+
+      /* clear the LP */
       CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
 
       /* free solution process data */
@@ -2774,6 +2799,44 @@ RETCODE SCIPgetPlungeDepth(
 
    *plungedepth = scip->stat->plungedepth;
    
+   return SCIP_OKAY;
+}
+
+/** gets total number of active constraints at the current node */
+RETCODE SCIPgetNActiveConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             nactiveconss        /**< pointer to store the number of active constraints */
+   )
+{
+   int h;
+
+   assert(nactiveconss != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetNActiveConss", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *nactiveconss = 0;
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+      *nactiveconss += SCIPconshdlrGetNActiveConss(scip->set->conshdlrs[h]);
+
+   return SCIP_OKAY;
+}
+
+/** gets total number of enabled constraints at the current node */
+RETCODE SCIPgetNEnabledConss(
+   SCIP*            scip,               /**< SCIP data structure */
+   int*             nenabledconss       /**< pointer to store the number of enabled constraints */
+   )
+{
+   int h;
+
+   assert(nenabledconss != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetNEnabledConss", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   *nenabledconss = 0;
+   for( h = 0; h < scip->set->nconshdlrs; ++h )
+      *nenabledconss += SCIPconshdlrGetNEnabledConss(scip->set->conshdlrs[h]);
+
    return SCIP_OKAY;
 }
 

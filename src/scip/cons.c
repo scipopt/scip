@@ -60,7 +60,8 @@ struct ConsHdlr
    CONS**           propconss;          /**< array with active constraints that must be propagated during node processing */
    int              propconsssize;      /**< size of propconss array */
    int              npropconss;         /**< number of active constraints that must be propagated during node processing */
-   int              nconss;             /**< total number of active constraints of the handler */
+   int              nactiveconss;       /**< total number of active constraints of the handler */
+   int              nenabledconss;      /**< total number of enabled constraints of the handler */
    int              lastnsepaconss;     /**< number of already separated constraints after last conshdlrResetSepa() call */
    int              lastnenfoconss;     /**< number of already enforced constraints after last conshdlrResetEnfo() call */
    unsigned int     needscons:1;        /**< should the constraint handler be skipped, if no constraints are available? */
@@ -84,6 +85,7 @@ struct Cons
    unsigned int     propagate:1;        /**< TRUE iff constraint should be propagated during node processing */
    unsigned int     original:1;         /**< TRUE iff constraint belongs to original problem */
    unsigned int     active:1;           /**< TRUE iff constraint is active in the active node */
+   unsigned int     enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in active node */
 };
 
 
@@ -195,9 +197,9 @@ RETCODE conshdlrEnsurePropconssMem(
  * Constraint handler methods
  */
 
-/** activates and adds constraint to constraint handler's constraint arrays */
+/** enables separation, enforcement, and propagation of constraint */
 static
-RETCODE conshdlrAddCons(
+RETCODE conshdlrEnableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    const SET*       set,                /**< global SCIP settings */
    CONS*            cons                /**< constraint to add */
@@ -207,17 +209,17 @@ RETCODE conshdlrAddCons(
    assert(set != NULL);
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
-   assert(!cons->active);
+   assert(cons->active);
+   assert(!cons->enabled);
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
-   assert(cons->chckconsspos == -1);
    assert(cons->propconsspos == -1);
 
-   debugMessage("add constraint <%s> to constraint handler <%s>\n", cons->name, conshdlr->name);
+   debugMessage("enable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
-   /* activate constraint */
-   cons->active = TRUE;
-   conshdlr->nconss++;
+   /* enable constraint */
+   cons->enabled = TRUE;
+   conshdlr->nenabledconss++;
 
    /* add constraint to the separation array */
    if( cons->separate )
@@ -237,15 +239,6 @@ RETCODE conshdlrAddCons(
       conshdlr->nenfoconss++;
    }
 
-   /* add constraint to the check array */
-   if( cons->check )
-   {
-      CHECK_OKAY( conshdlrEnsureChckconssMem(conshdlr, set, conshdlr->nchckconss+1) );
-      cons->chckconsspos = conshdlr->nchckconss;
-      conshdlr->chckconss[conshdlr->nchckconss] = cons;
-      conshdlr->nchckconss++;
-   }
-
    /* add constraint to the propagation array */
    if( cons->propagate )
    {
@@ -258,9 +251,9 @@ RETCODE conshdlrAddCons(
    return SCIP_OKAY;
 }
 
-/** deactivates and removes constraint from constraint handler's conss array */
+/** disables separation, enforcement, and propagation of constraint */
 static
-RETCODE conshdlrDelCons(
+RETCODE conshdlrDisableCons(
    CONSHDLR*        conshdlr,           /**< constraint handler */
    CONS*            cons                /**< constraint to remove */
    )
@@ -271,12 +264,12 @@ RETCODE conshdlrDelCons(
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(cons->active);
+   assert(cons->enabled);
    assert((cons->separate) ^ (cons->sepaconsspos == -1));
    assert((cons->enforce) ^ (cons->enfoconsspos == -1));
-   assert((cons->check) ^ (cons->chckconsspos == -1));
    assert((cons->propagate) ^ (cons->propconsspos == -1));
 
-   debugMessage("delete constraint <%s> from constraint handler <%s>\n", cons->name, conshdlr->name);
+   debugMessage("disable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* delete constraint from the separation array */
    if( cons->separate )
@@ -300,17 +293,6 @@ RETCODE conshdlrDelCons(
       cons->enfoconsspos = -1;
    }
 
-   /* delete constraint from the check array */
-   if( cons->check )
-   {
-      delpos = cons->chckconsspos;
-      assert(0 <= delpos && delpos < conshdlr->nchckconss);
-      conshdlr->chckconss[delpos] = conshdlr->chckconss[conshdlr->nchckconss-1];
-      conshdlr->chckconss[delpos]->chckconsspos = delpos;
-      conshdlr->nchckconss--;
-      cons->chckconsspos = -1;
-   }
-
    /* delete constraint from the propagation array */
    if( cons->propagate )
    {
@@ -324,12 +306,98 @@ RETCODE conshdlrDelCons(
 
    assert(cons->sepaconsspos == -1);
    assert(cons->enfoconsspos == -1);
+   assert(cons->propconsspos == -1);
+
+   /* disable constraint */
+   cons->enabled = FALSE;
+   conshdlr->nenabledconss--;
+
+   return SCIP_OKAY;
+}
+
+/** activates and adds constraint to constraint handler's constraint arrays */
+static
+RETCODE conshdlrAddCons(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(!cons->active);
+   assert(!cons->enabled);
+   assert(cons->sepaconsspos == -1);
+   assert(cons->enfoconsspos == -1);
+   assert(cons->chckconsspos == -1);
+   assert(cons->propconsspos == -1);
+
+   debugMessage("add constraint <%s> to constraint handler <%s>\n", cons->name, conshdlr->name);
+
+   /* activate constraint */
+   cons->active = TRUE;
+   conshdlr->nactiveconss++;
+
+   /* add constraint to the check array */
+   if( cons->check )
+   {
+      CHECK_OKAY( conshdlrEnsureChckconssMem(conshdlr, set, conshdlr->nchckconss+1) );
+      cons->chckconsspos = conshdlr->nchckconss;
+      conshdlr->chckconss[conshdlr->nchckconss] = cons;
+      conshdlr->nchckconss++;
+   }
+
+   /* enable separation, enforcement, and propagation of constraint */
+   CHECK_OKAY( conshdlrEnableCons(conshdlr, set, cons) );
+
+   return SCIP_OKAY;
+}
+
+/** deactivates and removes constraint from constraint handler's conss array */
+static
+RETCODE conshdlrDelCons(
+   CONSHDLR*        conshdlr,           /**< constraint handler */
+   CONS*            cons                /**< constraint to remove */
+   )
+{
+   int delpos;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(cons->conshdlr == conshdlr);
+   assert(cons->active);
+   assert((cons->check) ^ (cons->chckconsspos == -1));
+
+   debugMessage("delete constraint <%s> from constraint handler <%s>\n", cons->name, conshdlr->name);
+
+   /* disable constraint */
+   if( cons->enabled )
+   {
+      CHECK_OKAY( conshdlrDisableCons(conshdlr, cons) );
+   }
+   assert(!cons->enabled);
+
+   /* delete constraint from the check array */
+   if( cons->check )
+   {
+      delpos = cons->chckconsspos;
+      assert(0 <= delpos && delpos < conshdlr->nchckconss);
+      conshdlr->chckconss[delpos] = conshdlr->chckconss[conshdlr->nchckconss-1];
+      conshdlr->chckconss[delpos]->chckconsspos = delpos;
+      conshdlr->nchckconss--;
+      cons->chckconsspos = -1;
+   }
+
+   assert(cons->sepaconsspos == -1);
+   assert(cons->enfoconsspos == -1);
    assert(cons->chckconsspos == -1);
    assert(cons->propconsspos == -1);
 
    /* deactivate constraint */
    cons->active = FALSE;
-   conshdlr->nconss--;
+   conshdlr->nactiveconss--;
 
    return SCIP_OKAY;
 }
@@ -407,7 +475,8 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->propconss = NULL;
    (*conshdlr)->propconsssize = 0;
    (*conshdlr)->npropconss = 0;
-   (*conshdlr)->nconss = 0;
+   (*conshdlr)->nactiveconss = 0;
+   (*conshdlr)->nenabledconss = 0;
    (*conshdlr)->lastnsepaconss = 0;
    (*conshdlr)->lastnenfoconss = 0;
    (*conshdlr)->needscons = needscons;
@@ -777,13 +846,23 @@ void SCIPconshdlrSetData(
 }
 
 /** gets number of active constraints of constraint handler */
-int SCIPconshdlrGetNConss(
+int SCIPconshdlrGetNActiveConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {
    assert(conshdlr != NULL);
 
-   return conshdlr->nconss;
+   return conshdlr->nactiveconss;
+}
+
+/** gets number of enabled constraints of constraint handler */
+int SCIPconshdlrGetNEnabledConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nenabledconss;
 }
 
 /** gets checking priority of constraint handler */
@@ -862,6 +941,7 @@ RETCODE SCIPconsCreate(
    (*cons)->propagate = propagate;
    (*cons)->original = original;
    (*cons)->active = FALSE;
+   (*cons)->enabled = FALSE;
 
    /* capture constraint */
    SCIPconsCapture(*cons);
@@ -955,6 +1035,38 @@ RETCODE SCIPconsDeactivate(
    
    CHECK_OKAY( conshdlrDelCons(cons->conshdlr, cons) );
    assert(!cons->active);
+
+   return SCIP_OKAY;
+}
+
+/** enables constraint's separation, enforcing, and propagation capabilities */
+RETCODE SCIPconsEnable(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->active);
+   assert(!cons->enabled);
+   assert(set != NULL);
+   
+   CHECK_OKAY( conshdlrEnableCons(cons->conshdlr, set, cons) );
+   assert(cons->enabled);
+
+   return SCIP_OKAY;
+}
+
+/** disables constraint's separation, enforcing, and propagation capabilities */
+RETCODE SCIPconsDisable(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->active);
+   assert(cons->enabled);
+
+   CHECK_OKAY( conshdlrDisableCons(cons->conshdlr, cons) );
+   assert(!cons->enabled);
 
    return SCIP_OKAY;
 }
@@ -1107,3 +1219,65 @@ RETCODE SCIPconslistFree(
    return SCIPconslistFreePart(conslist, memhdr, set, NULL);
 }
 
+
+/** activates all constraints in the list */
+RETCODE SCIPconslistActivate(
+   CONSLIST*        conslist,           /**< constraint list */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   while( conslist != NULL )
+   {
+      CHECK_OKAY( SCIPconsActivate(conslist->cons, set) );
+      conslist = conslist->next;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deactivates all constraints in the list */
+RETCODE SCIPconslistDeactivate(
+   CONSLIST*        conslist            /**< constraint list */
+   )
+{
+   while( conslist != NULL )
+   {
+      CHECK_OKAY( SCIPconsDeactivate(conslist->cons) );
+      conslist = conslist->next;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** enables separation, enforcing, and propagation capabilities of all constraints in the list */
+RETCODE SCIPconslistEnable(
+   CONSLIST*        conslist,           /**< constraint list */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   todoMessage("remove deactivated constraints from conslist (may be deactivated due to aging)");
+
+   while( conslist != NULL )
+   {
+      CHECK_OKAY( SCIPconsEnable(conslist->cons, set) );
+      conslist = conslist->next;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** disables separation, enforcing, and propagation capabilities of all constraints in the list */
+RETCODE SCIPconslistDisable(
+   CONSLIST*        conslist            /**< constraint list */
+   )
+{
+   todoMessage("remove deactivated constraints from conslist (may be deactivated due to aging)");
+
+   while( conslist != NULL )
+   {
+      CHECK_OKAY( SCIPconsDisable(conslist->cons) );
+      conslist = conslist->next;
+   }
+
+   return SCIP_OKAY;
+}

@@ -376,7 +376,13 @@ void SCIPconshdlrSetData(
 
 /** gets number of active constraints of constraint handler */
 extern
-int SCIPconshdlrGetNConss(
+int SCIPconshdlrGetNActiveConss(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of enabled constraints of constraint handler */
+extern
+int SCIPconshdlrGetNEnabledConss(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -459,6 +465,19 @@ RETCODE SCIPconsDeactivate(
    CONS*            cons                /**< constraint */
    );
 
+/** enables constraint's separation, enforcing, and propagation capabilities */
+extern
+RETCODE SCIPconsEnable(
+   CONS*            cons,               /**< constraint */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** disables constraint's separation, enforcing, and propagation capabilities */
+extern
+RETCODE SCIPconsDisable(
+   CONS*            cons                /**< constraint */
+   );
+
 /** copies original constraint into transformed constraint, that is captured */
 extern
 RETCODE SCIPconsTransform(
@@ -532,6 +551,32 @@ RETCODE SCIPconslistFree(
    CONSLIST**       conslist,           /**< constraint list to delete from */
    MEMHDR*          memhdr,             /**< block memory buffer */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** activates all constraints in the list */
+extern
+RETCODE SCIPconslistActivate(
+   CONSLIST*        conslist,           /**< constraint list */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** deactivates all constraints in the list */
+extern
+RETCODE SCIPconslistDeactivate(
+   CONSLIST*        conslist            /**< constraint list */
+   );
+
+/** enables separation, enforcing, and propagation capabilities of all constraints in the list */
+extern
+RETCODE SCIPconslistEnable(
+   CONSLIST*        conslist,           /**< constraint list */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
+/** disables separation, enforcing, and propagation capabilities of all constraints in the list */
+extern
+RETCODE SCIPconslistDisable(
+   CONSLIST*        conslist            /**< constraint list */
    );
 
 

@@ -224,6 +224,15 @@ RETCODE SCIPnodeAddCons(
    CONS*            cons                /**< constraint to add */
    );
 
+/** disables constraint's separation, enforcing, and propagation capabilities at the node */
+extern
+RETCODE SCIPnodeDisableCons(
+   NODE*            node,               /**< node to add constraint to */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to add */
+   );
+
 /** adds bound change to actual node, child or sibling of actual node */
 extern
 RETCODE SCIPnodeAddBoundchg(

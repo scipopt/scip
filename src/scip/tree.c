@@ -835,6 +835,28 @@ RETCODE SCIPnodeAddCons(
    return SCIP_OKAY;
 }
 
+/** disables constraint's separation, enforcing, and propagation capabilities at the node */
+RETCODE SCIPnodeDisableCons(
+   NODE*            node,               /**< node to add constraint to */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   CONS*            cons                /**< constraint to add */
+   )
+{
+   assert(node != NULL);
+
+   /* add the constraint to the node's constraint list and capture it */
+   CHECK_OKAY( SCIPconslistAdd(&(node->disabledconss), memhdr, cons) );
+
+   /* if the node is on the active path, disable the constraint */
+   if( node->active )
+   {
+      CHECK_OKAY( SCIPconsDisable(cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds bound change to active node, child or sibling of active node */
 RETCODE SCIPnodeAddBoundchg(
    NODE*            node,               /**< node to add bound change to */
@@ -1081,7 +1103,7 @@ RETCODE treeShrinkPath(
    return SCIP_OKAY;
 }
 
-/** switches the active path to end at the given node, applies domain changes */
+/** switches the active path to end at the given node, applies domain and constraint set changes */
 static
 RETCODE treeSwitchPath(
    TREE*            tree,               /**< branch-and-bound tree */
@@ -1182,8 +1204,8 @@ RETCODE treeSwitchPath(
    subrootdepth = (subroot == NULL ? -1 : subroot->depth);
    debugMessage("switch path: subrootdepth=%d\n", subrootdepth);
    assert(subrootdepth <= lpforkdepth);
-
    debugMessage("switch path: old correctlpdepth=%d\n", tree->correctlpdepth);
+
    /* remember the depth of the common fork node for LP updates */
    if( subroot == tree->actsubroot )
    {
@@ -1199,13 +1221,17 @@ RETCODE treeSwitchPath(
       tree->correctlpdepth = -1;
    }
    debugMessage("switch path: new correctlpdepth=%d\n", tree->correctlpdepth);
-
    debugMessage("switch path: pathlen=%d\n", tree->pathlen);   
-   /* undo the domain changes of the old active path */
+
+   /* undo the domain and constraint set changes of the old active path */
    for( i = tree->pathlen-1; i > commonforkdepth; --i )
    {
       debugMessage("switch path: undo domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
+      debugMessage("switch path: undo constraint disablings in depth %d\n", i);
+      CHECK_OKAY( SCIPconslistEnable(tree->path[i]->disabledconss, set) );
+      debugMessage("switch path: undo constraint additions in depth %d\n", i);
+      CHECK_OKAY( SCIPconslistDeactivate(tree->path[i]->addedconss) );
    }
 
    /* shrink active path to the common fork and deactivate the corresponding nodes */
@@ -1226,9 +1252,13 @@ RETCODE treeSwitchPath(
    /* count the new LP sizes of the path */
    treeUpdatePathLPSize(tree, commonforkdepth+1);
 
-   /* apply domain changes of the new path */
+   /* apply domain and constraint set changes of the new path */
    for( i = commonforkdepth+1; i < tree->pathlen; ++i )
    {
+      debugMessage("switch path: apply constraint additions in depth %d\n", i);
+      CHECK_OKAY( SCIPconslistActivate(tree->path[i]->addedconss, set) );
+      debugMessage("switch path: apply constraint disablings in depth %d\n", i);
+      CHECK_OKAY( SCIPconslistDisable(tree->path[i]->disabledconss) );
       debugMessage("switch path: apply domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgApply(tree->path[i]->domchg, memhdr, set, stat, lp, tree, branchcand, eventqueue) );
    }

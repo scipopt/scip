@@ -92,12 +92,20 @@
 #define DISP_POSI_ACTROWS       3100
 #define DISP_STRI_ACTROWS       TRUE
 
+#define DISP_NAME_ACTCONSS      "actconss"
+#define DISP_DESC_ACTCONSS      "number of enabled constraints in actual node"
+#define DISP_HEAD_ACTCONSS      "cons"
+#define DISP_WIDT_ACTCONSS      6
+#define DISP_PRIO_ACTCONSS      120
+#define DISP_POSI_ACTCONSS      3200
+#define DISP_STRI_ACTCONSS      TRUE
+
 #define DISP_NAME_POOLSIZE      "poolsize"
 #define DISP_DESC_POOLSIZE      "number of LP rows in the cut pool"
 #define DISP_HEAD_POOLSIZE      "pool"
 #define DISP_WIDT_POOLSIZE      6
 #define DISP_PRIO_POOLSIZE      80
-#define DISP_POSI_POOLSIZE      3200
+#define DISP_POSI_POOLSIZE      3300
 #define DISP_STRI_POOLSIZE      TRUE
 
 #define DISP_NAME_ACTDUALBOUND  "actdualbound"
@@ -275,6 +283,21 @@ DECL_DISPOUTP(SCIPdispOutpActrows)
 }
 
 static
+DECL_DISPOUTP(SCIPdispOutpActconss)
+{
+   int actconss;
+
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCONSS) == 0);
+   assert(scip != NULL);
+
+   CHECK_OKAY( SCIPgetNEnabledConss(scip, &actconss) );
+   SCIPdispDecimal(file, actconss, DISP_WIDT_ACTCONSS);
+
+   return SCIP_OKAY;
+}
+
+static
 DECL_DISPOUTP(SCIPdispOutpPoolsize)
 {
    int poolsize;
@@ -417,6 +440,9 @@ RETCODE SCIPincludeDispDefault(
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTROWS, DISP_DESC_ACTROWS, DISP_HEAD_ACTROWS,
                   NULL, NULL, NULL, SCIPdispOutpActrows, NULL, 
                   DISP_WIDT_ACTROWS, DISP_PRIO_ACTROWS, DISP_POSI_ACTROWS, DISP_STRI_ACTROWS) );
+   CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_ACTCONSS, DISP_DESC_ACTCONSS, DISP_HEAD_ACTCONSS,
+                  NULL, NULL, NULL, SCIPdispOutpActconss, NULL, 
+                  DISP_WIDT_ACTCONSS, DISP_PRIO_ACTCONSS, DISP_POSI_ACTCONSS, DISP_STRI_ACTCONSS) );
    CHECK_OKAY( SCIPincludeDisp(scip, DISP_NAME_POOLSIZE, DISP_DESC_POOLSIZE, DISP_HEAD_POOLSIZE,
                   NULL, NULL, NULL, SCIPdispOutpPoolsize, NULL, 
                   DISP_WIDT_POOLSIZE, DISP_PRIO_POOLSIZE, DISP_POSI_POOLSIZE, DISP_STRI_POOLSIZE) );
