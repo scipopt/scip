@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.133 2004/09/09 13:59:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.134 2004/09/15 08:11:28 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -973,7 +973,7 @@ RETCODE priceAndCutLoop(
       }
    }
    debugMessage(" -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
-      SCIPnodeGetLowerbound(actnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
+      SCIPnodeGetLowerbound(actnode), SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set));
 
    return SCIP_OKAY;
 }
@@ -1022,7 +1022,7 @@ RETCODE solveNodeLP(
             branchcand, eventfilter, eventqueue, cutoff, lperror) );
       assert(*cutoff || *lperror || lp->solved);
       debugMessage("price-and-cut-loop: initial LP status: %d, LP obj: %g\n", 
-         SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
+         SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set));
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -1417,7 +1417,8 @@ RETCODE solveNode(
                cutpool, branchcand, conflict, eventfilter, eventqueue, conshdlrs_sepa,
                initiallpsolved, cutoff, &lperror) );
          initiallpsolved = TRUE;
-         debugMessage(" -> LP status: %d, LP obj: %g\n", SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
+         debugMessage(" -> LP status: %d, LP obj: %g\n", 
+            SCIPlpGetSolstat(lp), *cutoff ? set->infinity : SCIPlpGetObjval(lp, set));
 
          /* if an error occured during LP solving, switch to pseudo solution */
          if( lperror )
@@ -1700,70 +1701,51 @@ RETCODE SCIPsolveCIP(
 
       /* inform tree about the current node selector */
       CHECK_OKAY( SCIPtreeSetNodesel(tree, set, stat, nodesel) );
-
-      /* the next node was usually already selected in the previous solving loop before the primal heuristics were
-       * called, because they need to know, if the next node will be a child/sibling (plunging) or not;
-       * if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
-       * again, because the selected next node may be invalid due to cut off
-       */
-      if( nextnode == NULL )
+      
+      do
       {
-         /* select next node to process */
-         CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
+         /* the next node was usually already selected in the previous solving loop before the primal heuristics were
+          * called, because they need to know, if the next node will be a child/sibling (plunging) or not;
+          * if the heuristics found a new best solution that cut off some of the nodes, the node selector must be called
+          * again, because the selected next node may be invalid due to cut off
+          */
+         if( nextnode == NULL )
+         {
+            /* select next node to process */
+            CHECK_OKAY( SCIPnodeselSelect(nodesel, set, &nextnode) );
+         }
+         actnode = nextnode;
+         nextnode = NULL;
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
+         
+         /* start node activation timer */
+         SCIPclockStart(stat->nodeactivationtime, set);
+         
+         /* delay events in node activation */
+         CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
+         
+         /* activate selected node */
+         CHECK_OKAY( SCIPnodeActivate(&actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue, 
+               primal->cutoffbound, &cutoff) );
+         assert(actnode == NULL || (!cutoff && !actnode->cutoff));
+
+         /* process the delayed events */
+         CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
+         
+         /* stop node activation timer */
+         SCIPclockStop(stat->nodeactivationtime, set);
+         assert(SCIPbufferGetNUsed(set->buffer) == 0);
       }
-      actnode = nextnode;
-      nextnode = NULL;
-      assert(SCIPbufferGetNUsed(set->buffer) == 0);
+      while( cutoff ); /* select new node, if the current one was located in a cut off subtree */
 
-      /* update plunging and backtracking statistics */
-      if( actnode != NULL )
-      {
-         if( SCIPnodeGetType(actnode) == SCIP_NODETYPE_LEAF )
-         {
-            stat->plungedepth = 0;
-            stat->nbacktracks++;
-            debugMessage("selected leaf node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
-         }
-         else if( SCIPnodeGetType(actnode) == SCIP_NODETYPE_CHILD )
-         {
-            stat->plungedepth++;
-            debugMessage("selected child node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
-         }
-         else
-         {
-            assert(SCIPnodeGetType(actnode) == SCIP_NODETYPE_SIBLING);
-            debugMessage("selected sibling node, lowerbound=%g, plungedepth=%d\n", actnode->lowerbound, stat->plungedepth);
-         }
-      }
-
-      /* start node activation timer */
-      SCIPclockStart(stat->nodeactivationtime, set);
-
-      /* delay events in node activation */
-      CHECK_OKAY( SCIPeventqueueDelay(eventqueue) );
-
-      /* activate selected node */
-      CHECK_OKAY( SCIPnodeActivate(actnode, memhdr, set, stat, tree, lp, branchcand, eventqueue, primal->cutoffbound) );
       assert(SCIPtreeGetCurrentNode(tree) == actnode);
       assert(SCIPtreeGetActiveNode(tree) == actnode);
-
-      /* process the delayed events */
-      CHECK_OKAY( SCIPeventqueueProcess(eventqueue, memhdr, set, primal, lp, branchcand, eventfilter) );
-
-      /* stop node activation timer */
-      SCIPclockStop(stat->nodeactivationtime, set);
-      assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* if no more node was selected, we finished optimization */
       if( actnode == NULL )
          break;
 
-      /* if node was cut off due to SCIPnodeCutoff() call, continue with the next node */
-      if( actnode->cutoff )
-         continue;
-
       /* update maxdepth and node count statistics */
-      assert(SCIPnodeGetType(actnode) == SCIP_NODETYPE_ACTNODE);
       depth = SCIPnodeGetDepth(actnode);
       stat->maxdepth = MAX(stat->maxdepth, depth);
       stat->maxtotaldepth = MAX(stat->maxtotaldepth, depth);

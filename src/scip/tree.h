@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.63 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.64 2004/09/15 08:11:29 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -84,10 +84,11 @@ RETCODE SCIPnodeReleaseLPIState(
    LP*              lp                  /**< current LP data */
    );
 
-/** activates a leaf node */
+/** activates a child, a sibling, or a leaf node */
 extern
 RETCODE SCIPnodeActivate(
-   NODE*            node,               /**< leaf node to activate (or NULL to deactivate all nodes) */
+   NODE**           node,               /**< pointer to node to activate (or NULL to deactivate all nodes); the node
+                                         *   is freed, if it was cut off due to a cut off subtree */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
@@ -95,14 +96,17 @@ RETCODE SCIPnodeActivate(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
+   Real             cutoffbound,        /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
+   Bool*            cutoff              /**< pointer to store whether the given node can be cut off and no path switching
+                                         *   should be performed */
    );
 
 /** cuts off node and whole sub tree from branch and bound tree */
 extern
 void SCIPnodeCutoff(
    NODE*            node,               /**< node that should be cut off */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   TREE*            tree                /**< branch and bound tree */
    );
 
 /** adds constraint locally to the node and captures it; activates constraint, if node is active;

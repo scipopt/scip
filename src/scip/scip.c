@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.208 2004/09/13 15:11:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.209 2004/09/15 08:11:28 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -418,7 +418,7 @@ RETCODE SCIPfree(
 {
    assert(scip != NULL);
 
-   CHECK_OKAY( checkStage(*scip, "SCIPfree", TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(*scip, "SCIPfree", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPfreeProb(*scip) );
    assert((*scip)->stage == SCIP_STAGE_INIT);
@@ -3300,9 +3300,16 @@ RETCODE freeSolve(
    scip->stage = SCIP_STAGE_FREESOLVE;
 
    /* deactivate the current node */
-   CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-         scip->branchcand, scip->eventqueue, scip->primal->cutoffbound) );
-   
+   if( SCIPtreeGetActiveNode(scip->tree) != NULL )
+   {
+      NODE* node = NULL;
+      Bool cutoff;
+
+      CHECK_OKAY( SCIPnodeActivate(&node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
+            scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, &cutoff) );
+      assert(!cutoff);
+   }
+
    /* clear the LP, and flush the changes to clear the LP of the solver */
    CHECK_OKAY( SCIPlpClear(scip->lp, scip->mem->solvemem, scip->set) );
    CHECK_OKAY( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
@@ -8505,7 +8512,7 @@ RETCODE SCIPcutoffNode(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcutoffNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeCutoff(node, scip->set);
+   SCIPnodeCutoff(node, scip->set, scip->tree);
 
    return SCIP_OKAY;
 }
@@ -9486,6 +9493,7 @@ void printTreeStatistics(
    fprintf(file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
    fprintf(file, "  backtracks       : %10lld (%.1f%%)\n", scip->stat->nbacktracks, 
       scip->stat->nnodes > 0 ? 100.0 * (Real)scip->stat->nbacktracks / (Real)scip->stat->nnodes : 0.0);
+   fprintf(file, "  delayed cutoffs  : %10lld\n", scip->stat->ndelayedcutoffs);
    fprintf(file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.20 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.21 2004/09/15 08:11:28 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -50,6 +50,7 @@ struct Stat
    Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including active node) */
    Longint          ncreatednodes;      /**< number of nodes created */
    Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
+   Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    Longint          lastdispnode;       /**< last node for which an information line was displayed */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.12 2004/09/07 18:22:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.13 2004/09/15 08:11:28 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -121,8 +121,10 @@ struct Tree
    NODE*            probingnode;        /**< temporary probing child node, or NULL if current node is the active node */
    Real*            childrenprio;       /**< array with node selection priorities of children */
    Real*            siblingsprio;       /**< array with node selection priorities of children */
-   int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path */
-   int*             pathnlprows;        /**< array with number of LP rows for each problem in active path */
+   int*             pathnlpcols;        /**< array with number of LP columns for each problem in active path, except
+                                         *   the newly added columns of the active node */
+   int*             pathnlprows;        /**< array with number of LP rows for each problem in active path, except
+                                         *   the newly added rows of the active node */
    int              actlpforklpcount;   /**< LP number of last solved LP in current LP fork, or -1 if unknown */
    int              childrensize;       /**< available slots in children vector */
    int              nchildren;          /**< current number of children (number of used slots in children vector) */
@@ -131,6 +133,7 @@ struct Tree
    int              pathlen;            /**< length of the current path (== depth of the current node + 1) */
    int              pathsize;           /**< number of available slots in path arrays */
    int              correctlpdepth;     /**< depth to which current LP data corresponds to LP data of active path */
+   int              cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    Bool             actnodehaslp;       /**< is LP being processed in the active node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
 };
