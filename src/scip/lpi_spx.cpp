@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.10 2003/11/27 17:48:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.11 2003/11/27 18:04:14 bzfpfend Exp $"
 
-/**@file   lpi_spx.c
+/**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
  * @author Tobias Achterberg
  */
