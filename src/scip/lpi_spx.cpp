@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.39 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.40 2005/02/07 15:51:49 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.2 (optimized version)
@@ -1467,7 +1467,7 @@ RETCODE SCIPlpiStrongbranch(
 
    if( error )
    {
-      errorMessage("SOPLEX status %d returned SCIPlpiStrongbranch()\n", int(status));
+      errorMessage("SCIPlpiStrongbranch() returned SOPLEX status %d\n", int(status));
       return SCIP_LPERROR;
    }
 
