@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.7 2004/02/04 17:27:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.8 2004/03/03 17:07:57 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -45,7 +45,6 @@ RETCODE SCIPcreateConsKnapsack(
    int              len,                /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */

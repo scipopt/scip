@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.11 2004/02/04 17:27:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.12 2004/03/03 17:07:57 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
  * @author Tobias Achterberg
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,14 +35,14 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "knapsack"
 #define CONSHDLR_DESC          "knapsack constraint of the form  a^T x <= b, x binary"
-#define CONSHDLR_SEPAPRIORITY   +000000
-#define CONSHDLR_ENFOPRIORITY   +000000
-#define CONSHDLR_CHECKPRIORITY  +000000
+#define CONSHDLR_SEPAPRIORITY   +600000
+#define CONSHDLR_ENFOPRIORITY   +600000
+#define CONSHDLR_CHECKPRIORITY  -850000
 #define CONSHDLR_SEPAFREQ            -1
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
-#define LINCONSUPGD_PRIORITY    +000000
+#define LINCONSUPGD_PRIORITY    +100000
 
 
 
@@ -51,8 +52,143 @@
  */
 
 /* put your local methods here, and declare them static */
+struct ConsData
+{
+   int              nvars;              /**< number of variables in knapsack */
+   VAR**            vars;               /**< variables in knapsack */
+   Real*            weights;            /**< weights of knapsack items */
+   Real             capacity;           /**< capacity of knapsack */
+   ROW*             row;                /**< corresponding LP row */
+};
 
+/** creates knapsack constraint data */
+static
+RETCODE createConsdata(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA**       consdata,           /**< pointer to store constraint data */
+   int              nvars,              /**< number of variables in knapsack */
+   VAR**            vars,               /**< variables of knapsack */
+   Real*            weights,            /**< weights of knapsack items */
+   Real             capacity            /**< capacity of knapsack */
+   )
+{
+   int i;
 
+   assert(consdata != NULL);
+
+   CHECK_OKAY( SCIPallocBlockMemory(scip, consdata) );
+   (*consdata)->nvars = nvars;
+   CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
+   CHECK_OKAY( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->weights, weights, nvars) );
+   (*consdata)->capacity = capacity;
+   (*consdata)->row = NULL;
+
+   /* get transformed variables, if we are in the transformed problem */
+   if( SCIPisTransformed(scip) )
+   {
+      CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
+   } 
+        
+   return SCIP_OKAY;
+}
+
+/** frees knapsack constraint data */
+static
+RETCODE freeConsdata(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONSDATA**       consdata            /**< pointer to store constraint data */
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+   assert(*consdata != NULL);
+
+   if( (*consdata)->row != NULL )
+   {
+      CHECK_OKAY( SCIPreleaseRow(scip, &(*consdata)->row) );
+   }
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->nvars);
+
+   SCIPfreeBlockMemory(scip, consdata);
+ 
+   return SCIP_OKAY;
+}
+
+/** checks knapsack constraint for feasibility of given solution */
+static
+RETCODE checkCons(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to check */
+   SOL*             sol,                /**< solution to check, NULL for current solution */
+   Bool             checklprows,        /**< should LP rows be checked? */
+   Bool*            violated            /**< pointer to store whether constraint is violated */
+   )
+{
+   CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
+   {
+      Real sum;
+      int i;
+
+      sum = 0.0;
+      for( i = 0; i < consdata->nvars && sum <= consdata->capacity+0.1; i++ )
+      {
+         sum += consdata->weights[i] * SCIPgetSolVal(scip, sol, consdata->vars[i]);
+      }
+      *violated = !SCIPisFeasLE(scip, sum, consdata->capacity);
+   }
+   else
+      *violated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** creates LP row corresponding to knapsack constraint */
+static 
+RETCODE createRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to check */
+   )
+{
+   CONSDATA* consdata;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->row == NULL);
+
+   CHECK_OKAY( SCIPcreateEmptyRow(scip, &consdata->row, SCIPconsGetName(cons), -SCIPinfinity(scip), consdata->capacity,
+                  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
+   CHECK_OKAY( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->weights) );
+
+   return SCIP_OKAY;
+}  
+
+/** adds linear relaxation of knapsack constraint to the LP */
+static 
+RETCODE addRow(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons                /**< constraint to check */
+   )
+{
+   CONSDATA* consdata;
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->row == NULL )
+   {
+      CHECK_OKAY( createRow(scip, cons) );
+   }
+   CHECK_OKAY( SCIPaddCut(scip, consdata->row, 1.0/(SCIProwGetNNonz(consdata->row)+1)) );
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -122,48 +258,57 @@ DECL_CONSSOLSTART(consSolstartKnapsack)
 
 
 /** frees specific constraint data */
-#if 0
 static
 DECL_CONSDELETE(consDeleteKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
+   CHECK_OKAY( freeConsdata(scip, consdata) );
+   
    return SCIP_OKAY;
 }
-#else
-#define consDeleteKnapsack NULL
-#endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */ 
-#if 0
 static
 DECL_CONSTRANS(consTransKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   CONSDATA* sourcedata;
+   CONSDATA* targetdata;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   /* create target constraint data */
+   CHECK_OKAY( createConsdata(scip, &targetdata, sourcedata->nvars, sourcedata->vars, sourcedata->weights, 
+                  sourcedata->capacity) ); 
+
+   /* create target constraint */
+   CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
+                  SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+                  SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+                  SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), SCIPconsIsRemoveable(sourcecons)) );
+
 
    return SCIP_OKAY;
 }
-#else
-#define consTransKnapsack NULL
-#endif
 
 
 /** LP initialization method of constraint handler */
-#if 0
 static
 DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+
+   int i;
+
+   for( i = 0; i < nconss; i++ )
+   {
+      if( SCIPconsIsInitial(conss[i]) )
+      {
+         CHECK_OKAY( addRow(scip, conss[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consInitlpKnapsack NULL
-#endif
 
 
 /** separation method of constraint handler */
@@ -185,8 +330,19 @@ DECL_CONSSEPA(consSepaKnapsack)
 static
 DECL_CONSENFOLP(consEnfolpKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   Bool violated;
+   int i;
+
+   for( i = 0; i < nconss; i++ )
+   {
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      if( violated )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+   } 
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -196,10 +352,21 @@ DECL_CONSENFOLP(consEnfolpKnapsack)
 static
 DECL_CONSENFOPS(consEnfopsKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   Bool violated;
+   int i;
 
-   return SCIP_OKAY;
+   for( i = 0; i < nconss; i++ )
+   {
+      CHECK_OKAY( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      if( violated )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+   } 
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;  
 }
 
 
@@ -207,8 +374,19 @@ DECL_CONSENFOPS(consEnfopsKnapsack)
 static
 DECL_CONSCHECK(consCheckKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   Bool violated;
+   int i;
+
+   for( i = 0; i < nconss; i++ )
+   {
+      CHECK_OKAY( checkCons(scip, conss[i], sol, TRUE, &violated) );
+      if( violated )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+   } 
+   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -263,8 +441,16 @@ DECL_CONSRESCVAR(consRescvarKnapsack)
 static
 DECL_CONSLOCK(consLockKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   for( i = 0; i < consdata->nvars; i++)
+   {
+      SCIPvarLock(consdata->vars[i], nlocksneg, nlockspos);
+   }
 
    return SCIP_OKAY;
 }
@@ -274,8 +460,16 @@ DECL_CONSLOCK(consLockKnapsack)
 static
 DECL_CONSUNLOCK(consUnlockKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   for( i = 0; i < consdata->nvars; i++)
+   {
+      SCIPvarUnlock(consdata->vars[i], nunlocksneg, nunlockspos);
+   }   
 
    return SCIP_OKAY;
 }
@@ -370,7 +564,7 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
       
       /* create the bin Knapsack constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
-      CHECK_OKAY( SCIPcreateConsKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
+      CHECK_OKAY( SCIPcreateConsKnapsack(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, rhs,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
                      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemoveable(cons)) );
@@ -396,7 +590,6 @@ RETCODE SCIPincludeConshdlrKnapsack(
 
    /* create knapsack constraint handler data */
    conshdlrdata = NULL;
-   /* TODO: (optional) create constraint handler specific data here */
 
    /* include constraint handler */
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -416,9 +609,6 @@ RETCODE SCIPincludeConshdlrKnapsack(
    CHECK_OKAY( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY) );
 #endif
 
-   /* add knapsack constraint handler parameters */
-   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
-
    return SCIP_OKAY;
 }
 
@@ -430,7 +620,6 @@ RETCODE SCIPcreateConsKnapsack(
    int              len,                /**< number of nonzeros in the constraint */
    VAR**            vars,               /**< array with variables of constraint entries */
    Real*            vals,               /**< array with coefficients of constraint entries */
-   Real             lhs,                /**< left hand side of constraint */
    Real             rhs,                /**< right hand side of constraint */
    Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    Bool             separate,           /**< should the constraint be separated during LP processing? */
@@ -445,9 +634,6 @@ RETCODE SCIPcreateConsKnapsack(
    CONSHDLR* conshdlr;
    CONSDATA* consdata;
 
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527} --e{715}*/
-
    /* find the knapsack constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
@@ -457,9 +643,8 @@ RETCODE SCIPcreateConsKnapsack(
    }
 
    /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
-
+   CHECK_OKAY( createConsdata(scip, &consdata, len, vars, vals, rhs) );
+        
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
                   local, modifiable, removeable) );
