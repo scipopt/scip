@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.86 2004/10/05 16:08:06 bzfpfend Exp $
+# $Id: Makefile,v 1.87 2004/10/13 12:24:18 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -83,8 +83,8 @@ GXXWARN		=	-Wall -W -Wpointer-arith \
 			-Wstrict-prototypes -Wmissing-prototypes \
 			-Wno-unknown-pragmas \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
-			-Woverloaded-virtual -Wsign-promo -Wsynth -Wundef \
-			-Wcast-qual -Wno-unused # -Wold-style-cast -Wshadow
+			-Woverloaded-virtual -Wsign-promo -Wsynth \
+			-Wcast-qual -Wno-unused # -Wold-style-cast -Wshadow -Wundef
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
 OBJDIR		=	obj/O.$(BASE)
@@ -145,8 +145,8 @@ ifeq ($(LPS),spxdbg)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc 
 LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH)
-LPILIBOBJ	=	lpi_spxdbg.o bitencode.o memory.o
-LPILIBSRC	=	src/lpi_spxdbg.cpp src/bitencode.c
+LPILIBOBJ	=	lpi_spx.o bitencode.o memory.o
+LPILIBSRC	=	src/lpi_spx.cpp src/bitencode.c
 endif
 
 ifeq ($(LPS),spx121)
