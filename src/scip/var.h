@@ -472,6 +472,20 @@ RETCODE SCIPvarChgObj(
    Real             newobj              /**< new objective value for variable */
    );
 
+/** adds value to objective value of variable */
+extern
+RETCODE SCIPvarAddObj(
+   VAR*             var,                /**< variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             addobj              /**< additional objective value for variable */
+   );
+
 /** changes global lower bound of variable */
 extern
 RETCODE SCIPvarChgLbGlobal(

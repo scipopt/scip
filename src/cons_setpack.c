@@ -371,6 +371,36 @@ RETCODE setpackconsUnlockAllCoefs(
    return SCIP_OKAY;
 }
 
+/** deletes coefficient at given position from set packing constraint object */
+static
+RETCODE setpackconsDelCoefPos(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPACKCONS*     setpackcons,        /**< set packing constraint object */
+   int              pos                 /**< position of coefficient to delete */
+   )
+{
+   VAR* var;
+
+   assert(setpackcons != NULL);
+   assert(0 <= pos && pos < setpackcons->nvars);
+
+   var = setpackcons->vars[pos];
+   assert(var != NULL);
+   assert(setpackcons->transformed ^ (SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL));
+
+   if( setpackcons->transformed )
+   {
+      /* drop bound change events and unlock the rounding of variable */
+      CHECK_OKAY( setpackconsUnlockCoef(scip, setpackcons, NULL, pos) );
+   }
+
+   /* move the last variable to the free slot */
+   setpackcons->vars[pos] = setpackcons->vars[setpackcons->nvars-1];
+   setpackcons->nvars--;
+
+   return SCIP_OKAY;
+}
+
 /** creates a set packing constraint data object */
 static
 RETCODE setpackconsCreate(
@@ -1321,21 +1351,127 @@ DECL_CONSCHECK(consCheckSetpack)
    return SCIP_OKAY;
 }
 
+
+
+
+/*
+ * Presolving
+ */
+
+/** deletes all zero-fixed variables */
+static
+RETCODE setpackconsApplyFixings(
+   SCIP*            scip,               /**< SCIP data structure */
+   SETPACKCONS*     setpackcons         /**< set packing constraint object */
+   )
+{
+   VAR* var;
+   int v;
+
+   assert(setpackcons != NULL);
+
+   if( setpackcons->nfixedzeros >= 1 )
+   {
+      assert(setpackcons->vars != NULL);
+
+      v = 0;
+      while( v < setpackcons->nvars )
+      {
+         var = setpackcons->vars[v];
+         if( SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+         {
+            CHECK_OKAY( setpackconsDelCoefPos(scip, setpackcons, v) );
+         }
+         else
+            ++v;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 static
 DECL_CONSPRESOL(consPresolSetpack)
 {
+   CONS* cons;
+   CONSDATA* consdata;
+   SETPACKCONS* setpackcons;
+   int c;
+
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   /* process constraints */
    *result = SCIP_DIDNOTFIND;
 
-   todoMessage("set packing presolving");
+   /* process constraints */
+   for( c = 0; c < nconss && *result != SCIP_CUTOFF; ++c )
+   {
+      cons = conss[c];
+      assert(cons != NULL);
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      setpackcons = consdata->setpackcons;
+      assert(setpackcons != NULL);
+
+      debugMessage("presolving set packing constraint <%s>\n", SCIPconsGetName(cons));
+
+      /* remove all variables that are fixed to zero */
+      CHECK_OKAY( setpackconsApplyFixings(scip, setpackcons) );
+
+      /* check for infeasibility due to more than one variable fixed to one */
+      if( setpackcons->nfixedones >= 2 )
+      {
+         debugMessage("set packing constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      /* check, if we can fix all other variables to zero, because a variable fixed to one exists
+       *  -> if the constraint is not modifiable, we can delete it (which is done later)
+       */
+      if( setpackcons->nfixedones == 1 )
+      {
+         VAR* var;
+         int v;
+
+         debugMessage("set packing constraint <%s> has a variable fixed to 1.0\n", SCIPconsGetName(cons));
+         for( v = 0; v < setpackcons->nvars; ++v )
+         {
+            var = setpackcons->vars[v];
+            if( SCIPisZero(scip, SCIPvarGetLbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+            {
+               CHECK_OKAY( SCIPfixVar(scip, var, 0.0) );
+               (*nfixedvars)++;
+               *result = SCIP_SUCCESS;
+            }
+         }
+      }
+
+      if( !setpackcons->modifiable )
+      {
+         /* constaint is redundant, if it consists of not more than one non-fixed variable */
+         if( setpackcons->nfixedzeros >= setpackcons->nvars - 1 )
+         {
+            debugMessage("set packing constraint <%s> is redundant\n", SCIPconsGetName(cons));
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            (*ndelconss)++;
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
+   }
    
    return SCIP_OKAY;
 }
+
+
+
+
+/*
+ * variable usage counting
+ */
 
 static
 DECL_CONSENABLE(consEnableSetpack)

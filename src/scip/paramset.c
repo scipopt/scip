@@ -1016,7 +1016,34 @@ RETCODE paramWrite(
    assert(file != NULL);
 
    if( comments )
-      fprintf(file, "# %s\n", param->desc);
+   {
+      fprintf(file, "# %s", param->desc);
+      switch( param->paramtype )
+      {
+      case SCIP_PARAMTYPE_BOOL:
+         fprintf(file, " [default: %s]", param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
+         break;
+      case SCIP_PARAMTYPE_INT:
+         fprintf(file, " [default: %d]", param->data.intparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_LONGINT:
+         fprintf(file, " [default: %lld]", param->data.longintparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_REAL:
+         fprintf(file, " [default: %.15e]", param->data.realparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_CHAR:
+         fprintf(file, " [default: %c]", param->data.charparam.defaultvalue);
+         break;
+      case SCIP_PARAMTYPE_STRING:
+         fprintf(file, " [default: %s]", param->data.stringparam.defaultvalue);
+         break;
+      default:
+         errorMessage("unknown parameter type");
+         return SCIP_INVALIDDATA;
+      }
+      fprintf(file, "\n");
+   }
    fprintf(file, "%s = ", param->name);
    switch( param->paramtype )
    {

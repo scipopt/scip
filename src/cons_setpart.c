@@ -1684,6 +1684,7 @@ DECL_CONSPRESOL(consPresolSetpart)
          /* constraint is redundant, if one variable is fixed to one; the others are already fixed to zero */
          if( setpartcons->nfixedones == 1 )
          {
+            assert(setpartcons->nfixedzeros == setpartcons->nvars-1);
             debugMessage("set partitioning constraint <%s> is redundant\n", SCIPconsGetName(cons));
             CHECK_OKAY( SCIPdelCons(scip, cons) );
             (*ndelconss)++;
@@ -1746,14 +1747,28 @@ DECL_CONSPRESOL(consPresolSetpart)
                }
             }
             assert(var1 != NULL && var2 != NULL);
-            debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
-               SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
-            CHECK_OKAY( SCIPaggregateVar(scip, var1, var2, -1.0, 1.0) );
-            CHECK_OKAY( SCIPdelCons(scip, cons) );
-            (*naggrvars)++;
-            (*ndelconss)++;
-            *result = SCIP_SUCCESS;
-            continue;
+            if( SCIPvarGetStatus(var1) != SCIP_VARSTATUS_AGGREGATED )
+            {
+               debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+               CHECK_OKAY( SCIPaggregateVar(scip, var1, var2, -1.0, 1.0) );
+               CHECK_OKAY( SCIPdelCons(scip, cons) );
+               (*naggrvars)++;
+               (*ndelconss)++;
+               *result = SCIP_SUCCESS;
+               continue;
+            }
+            else if( SCIPvarGetStatus(var2) != SCIP_VARSTATUS_AGGREGATED )
+            {
+               debugMessage("set partitioning constraint <%s>: aggregate <%s> == 1 - <%s>\n",
+                  SCIPconsGetName(cons), SCIPvarGetName(var2), SCIPvarGetName(var1));
+               CHECK_OKAY( SCIPaggregateVar(scip, var2, var1, -1.0, 1.0) );
+               CHECK_OKAY( SCIPdelCons(scip, cons) );
+               (*naggrvars)++;
+               (*ndelconss)++;
+               *result = SCIP_SUCCESS;
+               continue;
+            }
          }
       }
    }

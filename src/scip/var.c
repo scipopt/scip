@@ -1125,6 +1125,8 @@ RETCODE SCIPvarFix(
    assert(SCIPsetIsLE(set, var->glbdom.lb, fixedval));
    assert(SCIPsetIsLE(set, fixedval, var->glbdom.ub));
 
+   debugMessage("fix variable <%s> to %g\n", var->name, fixedval);
+
    switch( var->varstatus )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -1206,7 +1208,7 @@ RETCODE SCIPvarAggregate(
    Real varub;
    Real aggvarlb;
    Real aggvarub;
-   Real aggvarobj;
+   Real obj;
 
    assert(var != NULL);
    assert(var->glbdom.lb == var->actdom.lb);
@@ -1214,6 +1216,8 @@ RETCODE SCIPvarAggregate(
    assert(aggvar->glbdom.lb == aggvar->actdom.lb);
    assert(aggvar->glbdom.ub == aggvar->actdom.ub);
    assert(!SCIPsetIsZero(set, scalar));
+
+   debugMessage("aggregate variable <%s> == %g*<%s> %+g\n", var->name, scalar, aggvar->name, constant);
 
    switch( var->varstatus )
    {
@@ -1230,10 +1234,8 @@ RETCODE SCIPvarAggregate(
    case SCIP_VARSTATUS_LOOSE:
       assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
 
-      /* move the objective value to the aggregation variable and the problem's objective offset */
-      aggvarobj = aggvar->obj + scalar * var->obj;
-      SCIPprobIncObjoffset(prob, set, var->obj * constant);
-      CHECK_OKAY( SCIPvarChgObj(aggvar, memhdr, set, tree, lp, branchcand, eventqueue, aggvarobj) );
+      /* set the aggregated variable's objective value to 0.0 */
+      obj = var->obj;
       CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, tree, lp, branchcand, eventqueue, 0.0) );
 
       /* convert variable into aggregated variable */
@@ -1247,6 +1249,11 @@ RETCODE SCIPvarAggregate(
 
       /* update the problem's vars array */
       CHECK_OKAY( SCIPprobVarFixed(prob, set, branchcand, var) );
+
+      /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
+       * variable and the problem's objective offset
+       */
+      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, prob, tree, lp, branchcand, eventqueue, obj) );
 
       /* update the bounds of the aggregation variable y in x = a*y + c  ->  y = x/a - c/a */
       if( scalar > 0.0 )
@@ -1873,14 +1880,76 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
-
-         CHECK_OKAY( varEventObjChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldobj, newobj) );
+         CHECK_OKAY( varEventObjChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldobj, var->obj) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
       case SCIP_VARSTATUS_AGGREGATED:
       case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("cannot change objective value of a fixed, aggregated or multi aggregated variable");
+         errorMessage("cannot change objective value of a fixed, aggregated, or multi aggregated variable");
+         return SCIP_INVALIDDATA;
+
+      default:
+         errorMessage("unknown variable status");
+         abort();
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds value to objective value of variable */
+RETCODE SCIPvarAddObj(
+   VAR*             var,                /**< variable to change */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Real             addobj              /**< additional objective value for variable */
+   )
+{
+   Real oldobj;
+
+   assert(var != NULL);
+
+   debugMessage("adding %g to objective value %g of <%s>\n", addobj, var->obj, var->name);
+
+   if( !SCIPsetIsZero(set, addobj) )
+   {
+      switch( var->varstatus )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.transvar != NULL )
+         {
+            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, memhdr, set, prob, tree, lp, branchcand, eventqueue, addobj) );
+         }
+         else
+         {
+            assert(SCIPstage(set->scip) == SCIP_STAGE_PROBLEM);
+            var->obj += addobj;
+         }
+         break;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         oldobj = var->obj;
+         var->obj += addobj;
+         CHECK_OKAY( varEventObjChanged(var, memhdr, set, tree, lp, branchcand, eventqueue, oldobj, var->obj) );
+         break;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
+         SCIPprobIncObjoffset(prob, set, var->data.aggregate.constant * addobj);
+         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, memhdr, set, prob, tree, lp, branchcand, eventqueue,
+                        var->data.aggregate.scalar * addobj) );
+         break;
+
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("cannot add value to objective value of a fixed or multi aggregated variable");
          return SCIP_INVALIDDATA;
 
       default:
