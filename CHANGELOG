@@ -30,6 +30,7 @@ fixed bugs:
 - removed bug in resolving an interrupted problem, after the last solved node was cut off
 - removed bug with infinite solving loop if LP solving is turned off
 - removed bug in knapsack presolver
+- removed bug with aborted solving in root node (e.g. due to time limit) that is tagged to be restarted
 
 
 SCIP version 0.77

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.228 2004/11/19 14:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.229 2004/11/24 17:36:02 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3845,12 +3845,23 @@ RETCODE SCIPsolve(
    }
 
    /* automatic restarting loop */
+   restart = FALSE;
    do
    {
-      restart = FALSE;
-
       /* start solving timer */
       SCIPclockStart(scip->stat->solvingtime, scip->set);
+
+      if( restart )
+      {
+         /* free the solving process data in order to restart */
+         assert(scip->stage == SCIP_STAGE_SOLVING);
+         SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
+            "(run %d) restarting after %d root node bound changes\n\n",
+            scip->stat->nruns, scip->stat->nrootboundchgsrun);
+         CHECK_OKAY( SCIPfreeSolve(scip) );
+         assert(scip->stage == SCIP_STAGE_TRANSFORMED);
+      }
+      restart = FALSE;
 
       switch( scip->stage )
       {
@@ -3896,18 +3907,10 @@ RETCODE SCIPsolve(
                || scip->stat->status == SCIP_STATUS_INFEASIBLE
                || scip->stat->status == SCIP_STATUS_UNBOUNDED
                || scip->stat->status == SCIP_STATUS_INFORUNBD);
+            assert(!restart);
 
             /* tree is empty, and no current node exists -> problem is solved */
             scip->stage = SCIP_STAGE_SOLVED;
-         }
-         else if( restart )
-         {
-            /* free the solving process data in order to restart */
-            SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
-               "(run %d) restarting after %d root node bound changes\n\n",
-               scip->stat->nruns, scip->stat->nrootboundchgsrun);
-            CHECK_OKAY( SCIPfreeSolve(scip) );
-            assert(scip->stage == SCIP_STAGE_TRANSFORMED);
          }
          break;
 
@@ -3927,7 +3930,7 @@ RETCODE SCIPsolve(
       SCIPclockStop(scip->stat->solvingtime, scip->set);
    }
    while( restart && !SCIPsolveIsStopped(scip->set, scip->stat) );
-
+      
    /* display most relevant statistics */
    if( scip->set->disp_verblevel >= SCIP_VERBLEVEL_NORMAL )
    {

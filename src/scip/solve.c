@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.151 2004/11/23 17:53:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.152 2004/11/24 17:36:02 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2043,7 +2043,8 @@ RETCODE SCIPsolveCIP(
    assert(eventqueue != NULL);
    assert(restart != NULL);
 
-   *restart = FALSE;
+   /* check for immediate restart (if problem solving marked to be restarted was aborted) */
+   *restart = (SCIPtreeGetCurrentDepth(tree) == 0 && set->presol_restartbdchgs >= 0 && stat->nrootboundchgsrun > 0);
 
    /* switch status to UNKNOWN */
    stat->status = SCIP_STATUS_UNKNOWN;
