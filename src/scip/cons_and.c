@@ -14,9 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.15 2004/03/08 18:05:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.16 2004/03/09 12:38:01 bzfpfend Exp $"
 
-#define DEBUG
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
  * @author Tobias Achterberg
@@ -1424,9 +1423,6 @@ RETCODE SCIPincludeConshdlrAnd(
                   consActiveAnd, consDeactiveAnd, 
                   consEnableAnd, consDisableAnd,
                   conshdlrdata) );
-
-   /* add and constraint handler parameters */
-   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }
