@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.34 2005/02/07 14:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.35 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -50,6 +50,7 @@ RETCODE SCIPsepaCreate(
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
+   Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -102,6 +103,7 @@ RETCODE SCIPsepaExec(
    STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              depth,              /**< depth of current node */
+   Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.5 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.6 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -52,17 +52,22 @@ public:
    /** frequency for calling propagator */
    const int scip_freq_;
 
+   /** should propagator be delayed, if other propagators found reductions? */
+   const Bool scip_delay_;
+
    /** default constructor */
    ObjProp(
       const char*   name,               /**< name of propagator */
       const char*   desc,               /**< description of propagator */
       int           priority,           /**< priority of the propagator */
-      int           freq                /**< frequency for calling propagator */
+      int           freq,               /**< frequency for calling propagator */
+      Bool          delay               /**< should propagator be delayed, if other propagators found reductions? */
       )
       : scip_name_(name),
         scip_desc_(desc),
         scip_priority_(priority),
-        scip_freq_(freq)
+        scip_freq_(freq),
+        scip_delay_(delay)
    {
    }
 
@@ -134,6 +139,7 @@ public:
     *  - SCIP_REDUCEDDOM : at least one domain reduction was found
     *  - SCIP_DIDNOTFIND : the propagator searched, but did not find a domain reduction
     *  - SCIP_DIDNOTRUN  : the propagator was skipped
+    *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
     */
    virtual RETCODE scip_exec(
       SCIP*         scip,               /**< SCIP data structure */

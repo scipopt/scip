@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_prop.h,v 1.3 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_prop.h,v 1.4 2005/02/08 14:22:29 bzfpfend Exp $"
 
 /**@file   pub_prop.h
  * @brief  public methods for propagators
@@ -95,6 +95,18 @@ Longint SCIPpropGetNCutoffs(
 /** gets total number of domain reductions found by this propagator */
 extern
 Longint SCIPpropGetNDomredsFound(
+   PROP*            prop                /**< propagator */
+   );
+
+/** should propagator be delayed, if other propagators found reductions? */
+extern
+Bool SCIPpropIsDelayed(
+   PROP*            prop                /**< propagator */
+   );
+
+/** was propagator delayed at the last call? */
+extern
+Bool SCIPpropWasDelayed(
    PROP*            prop                /**< propagator */
    );
 

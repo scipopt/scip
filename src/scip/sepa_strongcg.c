@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.7 2005/02/04 14:27:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.8 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -32,8 +32,9 @@
 
 #define SEPA_NAME              "strongcg"
 #define SEPA_DESC              "Strong CG cuts separator (Letchford and Lodi)"
-#define SEPA_PRIORITY               -10
+#define SEPA_PRIORITY             -2000
 #define SEPA_FREQ                    10
+#define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of strong CG separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
@@ -485,7 +486,7 @@ RETCODE SCIPincludeSepaStrongcg(
    CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
+   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
          sepaInitsolStrongcg, sepaExitsolStrongcg, sepaExecStrongcg,
          sepadata) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.9 2005/02/04 14:27:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.10 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -180,7 +180,7 @@ RETCODE SCIPincludeObjSepa(
 
    /* include cut separator */
    CHECK_OKAY( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
-         objsepa->scip_priority_, objsepa->scip_freq_,
+         objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_delay_,
          sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, sepaExecObj,
          sepadata) );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.16 2005/02/07 18:12:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.17 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -294,9 +294,39 @@ Bool SCIPconshdlrDoesPresolve(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** should separation method be delayed, if other separators found cuts? */
+extern
+Bool SCIPconshdlrIsSeparationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** should propagation method be delayed, if other propagators found reductions? */
+extern
+Bool SCIPconshdlrIsPropagationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** should presolving method be delayed, if other presolvers found reductions? */
+extern
+Bool SCIPconshdlrIsPresolvingDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** was separation method delayed at the last call? */
+extern
+Bool SCIPconshdlrWasSeparationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** was propagation method delayed at the last call? */
+extern
+Bool SCIPconshdlrWasPropagationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** was presolving method delayed at the last call? */
 extern
-Bool SCIPconshdlrWasPresolveDelayed(
+Bool SCIPconshdlrWasPresolvingDelayed(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 

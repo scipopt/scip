@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.7 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.8 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -69,6 +69,7 @@ RETCODE SCIPpropCreate(
    const char*      desc,               /**< description of propagator */
    int              priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
+   Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -105,6 +106,7 @@ RETCODE SCIPpropCreate(
    (*prop)->ncalls = 0;
    (*prop)->ncutoffs = 0;
    (*prop)->ndomredsfound = 0;
+   (*prop)->wasdelayed = FALSE;
    (*prop)->initialized = FALSE;
 
    /* add parameters */
@@ -113,10 +115,16 @@ RETCODE SCIPpropCreate(
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdPropPriority, (PARAMDATA*)(*prop)) ); /*lint !e740*/
+
    sprintf(paramname, "propagating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->freq, freq, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "propagating/%s/delay", name);
+   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should propagator be delayed, if other propagators found reductions?",
+         &(*prop)->delay, delay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -242,6 +250,7 @@ RETCODE SCIPpropExec(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    int              depth,              /**< depth of current node */
+   Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -254,38 +263,52 @@ RETCODE SCIPpropExec(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( (depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0) )
+   if( (depth == 0 && prop->freq == 0) || (prop->freq > 0 && depth % prop->freq == 0) || prop->wasdelayed )
    {
-      Longint oldndomchgs;
-
-      debugMessage("executing propagator <%s>\n", prop->name);
-
-      oldndomchgs = stat->nboundchgs + stat->nholechgs;
-
-      /* start timing */
-      SCIPclockStart(prop->clock, set);
-
-      /* call external propagation method */
-      CHECK_OKAY( prop->propexec(set->scip, prop, result) );
-
-      /* stop timing */
-      SCIPclockStop(prop->clock, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_REDUCEDDOM
-         && *result != SCIP_DIDNOTFIND
-         && *result != SCIP_DIDNOTRUN )
+      if( !prop->delay || execdelayed )
       {
-         errorMessage("execution method of propagator <%s> returned invalid result <%d>\n", 
-            prop->name, *result);
-         return SCIP_INVALIDRESULT;
+         Longint oldndomchgs;
+         
+         debugMessage("executing propagator <%s>\n", prop->name);
+         
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         
+         /* start timing */
+         SCIPclockStart(prop->clock, set);
+         
+         /* call external propagation method */
+         CHECK_OKAY( prop->propexec(set->scip, prop, result) );
+         
+         /* stop timing */
+         SCIPclockStop(prop->clock, set);
+         
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+            prop->ncalls++;
+         if( *result == SCIP_CUTOFF )
+            prop->ncutoffs++;
+         prop->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
+         {
+            errorMessage("execution method of propagator <%s> returned invalid result <%d>\n", 
+               prop->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
       }
-      if( *result != SCIP_DIDNOTRUN )
-         prop->ncalls++;
-      if( *result == SCIP_CUTOFF )
-         prop->ncutoffs++;
-      prop->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+      else
+      {
+         debugMessage("propagator <%s> was delayed\n", prop->name);
+         *result = SCIP_DELAYED;
+      }
+
+      /* remember whether propagator was delayed */
+      prop->wasdelayed = (*result == SCIP_DELAYED);
    }
    else
       *result = SCIP_DIDNOTRUN;
@@ -450,6 +473,26 @@ Longint SCIPpropGetNDomredsFound(
    assert(prop != NULL);
 
    return prop->ndomredsfound;
+}
+
+/** should propagator be delayed, if other propagators found reductions? */
+Bool SCIPpropIsDelayed(
+   PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->delay;
+}
+
+/** was propagator delayed at the last call? */
+Bool SCIPpropWasDelayed(
+   PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   return prop->wasdelayed;
 }
 
 /** is propagator initialized? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.6 2005/02/07 14:08:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.7 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -51,6 +51,7 @@ RETCODE SCIPpropCreate(
    const char*      desc,               /**< description of propagator */
    int              priority,           /**< priority of propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
+   Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -103,6 +104,7 @@ RETCODE SCIPpropExec(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
    int              depth,              /**< depth of current node */
+   Bool             execdelayed,        /**< execute propagator even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

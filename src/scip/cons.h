@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.85 2005/02/07 18:11:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.86 2005/02/08 14:22:25 bzfpfend Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -71,6 +71,8 @@ RETCODE SCIPconshdlrCreate(
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
@@ -170,6 +172,7 @@ RETCODE SCIPconshdlrSeparate(
    PROB*            prob,               /**< problem data */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              depth,              /**< depth of current node */
+   Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -226,6 +229,7 @@ RETCODE SCIPconshdlrPropagate(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
+   Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.26 2005/02/07 18:12:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.27 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -488,6 +488,16 @@ void SCIPpresolSetPriority(
    
    presol->priority = priority;
    set->presolssorted = FALSE;
+}
+
+/** should presolver be delayed, if other presolvers found reductions? */
+Bool SCIPpresolIsDelayed(
+   PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->delay;
 }
 
 /** was presolver delayed at the last call? */

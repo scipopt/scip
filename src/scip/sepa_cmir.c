@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.30 2005/02/04 14:27:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.31 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -31,8 +31,9 @@
 
 #define SEPA_NAME              "cmir"
 #define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
-#define SEPA_PRIORITY             -1000
+#define SEPA_PRIORITY             -3000
 #define SEPA_FREQ                    20
+#define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
@@ -557,6 +558,8 @@ RETCODE aggregation(
 
          /* try to divide the aggregation by this coefficient */
          delta = 1 / REALABS(aggrcoefs[c]);
+         if( SCIPisFeasZero(scip, delta) )
+            continue;
 
          /* check, if delta was already tested */
          tested = FALSE;
@@ -599,7 +602,7 @@ RETCODE aggregation(
          int j;
          int oldncuts;
 
-         assert(bestdelta != 0.0);
+         assert(!SCIPisFeasZero(scip, bestdelta));
 
          /* Try to improve efficacy by multiplying delta with 2, 4 and 8 */
          for( i = 0, delta = bestdelta; i < 3; i++, delta *= 2.0 )
@@ -1030,7 +1033,7 @@ RETCODE SCIPincludeSepaCmir(
    CHECK_OKAY( SCIPallocMemory(scip, &sepadata) );
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
+   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeCmir, sepaInitCmir, sepaExitCmir, 
          sepaInitsolCmir, sepaExitsolCmir, sepaExecCmir,
          sepadata) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.30 2005/02/07 18:12:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.31 2005/02/08 14:22:27 bzfpfend Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -69,6 +69,12 @@ public:
    /** maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    const Bool scip_maxprerounds_;
 
+   /** should separation method be delayed, if other separators found cuts? */
+   const Bool scip_delaysepa_;
+
+   /** should propagation method be delayed, if other propagators found reductions? */
+   const Bool scip_delayprop_;
+
    /** should presolving method be delayed, if other presolvers found reductions? */
    const Bool scip_delaypresol_;
 
@@ -87,6 +93,8 @@ public:
       int           eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
       int           maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+      Bool          delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+      Bool          delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
       Bool          delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
       Bool          needscons           /**< should the constraint handler be skipped, if no constraints are available? */
       )
@@ -99,6 +107,8 @@ public:
         scip_propfreq_(propfreq),
         scip_eagerfreq_(eagerfreq),
         scip_maxprerounds_(maxprerounds),
+        scip_delaysepa_(delaysepa),
+        scip_delayprop_(delayprop),
         scip_delaypresol_(delaypresol),
         scip_needscons_(needscons)
    {
@@ -281,6 +291,7 @@ public:
     *  - SCIP_SEPARATED  : a cutting plane was generated
     *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
     *  - SCIP_DIDNOTRUN  : the separator was skipped
+    *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
    virtual RETCODE scip_sepa(
       SCIP*         scip,               /**< SCIP data structure */
@@ -418,6 +429,7 @@ public:
     *  - SCIP_REDUCEDDOM : at least one domain reduction was found
     *  - SCIP_DIDNOTFIND : the propagator searched, but did not find any domain reductions
     *  - SCIP_DIDNOTRUN  : the propagator was skipped
+    *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
     */
    virtual RETCODE scip_prop(
       SCIP*         scip,               /**< SCIP data structure */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.4 2005/02/07 14:08:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.5 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   type_prop.h
  * @brief  type definitions for propagators
@@ -91,6 +91,7 @@ typedef struct PropData PROPDATA;       /**< locally defined propagator data */
  *  - SCIP_REDUCEDDOM : at least one domain reduction was found
  *  - SCIP_DIDNOTFIND : the propagator searched, but did not find a domain reduction
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
+ *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
 #define DECL_PROPEXEC(x) RETCODE x (SCIP* scip, PROP* prop, RESULT* result)
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.5 2005/01/21 09:17:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.6 2005/02/08 14:22:29 bzfpfend Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -101,6 +101,18 @@ Longint SCIPsepaGetNCutsFound(
 /** gets the number of cutting planes found by this separator at the current node */
 extern
 Longint SCIPsepaGetNCutsFoundAtNode(
+   SEPA*            sepa                /**< separator */
+   );
+
+/** should separator be delayed, if other separators found cuts? */
+extern
+Bool SCIPsepaIsDelayed(
+   SEPA*            sepa                /**< separator */
+   );
+
+/** was separator delayed at the last call? */
+extern
+Bool SCIPsepaWasDelayed(
    SEPA*            sepa                /**< separator */
    );
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.13 2005/02/07 14:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.14 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -32,6 +32,7 @@
 #define SEPA_DESC              "integer objective value separator"
 #define SEPA_PRIORITY              -100
 #define SEPA_FREQ                    -1
+#define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define EVENTHDLR_NAME         "intobj"
 #define EVENTHDLR_DESC         "objective change event handler for integer objective value separator"
@@ -361,7 +362,7 @@ RETCODE SCIPincludeSepaIntobj(
    CHECK_OKAY( sepadataCreate(scip, &sepadata) );
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
+   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
          sepaInitsolIntobj, sepaExitsolIntobj, sepaExecIntobj,
          sepadata) );

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.26 2005/02/07 18:12:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.27 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -192,8 +192,12 @@ struct Conshdlr
    int              nupgdconss;         /**< total number of upgraded constraints by this presolver */
    int              nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int              nchgsides;          /**< total number of changed left or right hand sides by this presolver */
+   Bool             delaysepa;          /**< should separation method be delayed, if other separators found cuts? */
+   Bool             delayprop;          /**< should propagation method be delayed, if other propagators found reductions? */
    Bool             delaypresol;        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
+   Bool             sepawasdelayed;     /**< was the separation method delayed at the last call? */
+   Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
    Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    Bool             initialized;        /**< is constraint handler initialized? */
    Bool             delayupdates;       /**< must the updates of the constraint arrays be delayed until processUpdates()? */

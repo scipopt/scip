@@ -354,6 +354,14 @@ constraints/linear/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/linear/maxprerounds = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/linear/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/linear/delayprop = FALSE
+
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/linear/delaypresol = FALSE
@@ -402,6 +410,14 @@ constraints/and/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/and/maxprerounds = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/and/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/and/delayprop = FALSE
+
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/delaypresol = FALSE
@@ -421,6 +437,14 @@ constraints/conjunction/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/conjunction/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/conjunction/delayprop = FALSE
 
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -442,6 +466,14 @@ constraints/integral/eagerfreq = -1
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/maxprerounds = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/integral/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/integral/delayprop = FALSE
+
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/integral/delaypresol = FALSE
@@ -461,6 +493,14 @@ constraints/knapsack/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/knapsack/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/knapsack/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/knapsack/delayprop = FALSE
 
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -506,6 +546,14 @@ constraints/logicor/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/logicor/maxprerounds = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/logicor/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/logicor/delayprop = FALSE
+
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/logicor/delaypresol = FALSE
@@ -525,6 +573,14 @@ constraints/or/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/or/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/or/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/or/delayprop = FALSE
 
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -550,6 +606,14 @@ constraints/setppc/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/setppc/maxprerounds = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/delayprop = FALSE
+
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/setppc/delaypresol = FALSE
@@ -574,6 +638,14 @@ constraints/varbound/eagerfreq = 100
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/varbound/maxprerounds = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/varbound/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/varbound/delayprop = FALSE
+
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/varbound/delaypresol = FALSE
@@ -593,6 +665,14 @@ constraints/xor/eagerfreq = 100
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/xor/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/xor/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/xor/delayprop = FALSE
 
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -1246,17 +1326,25 @@ propagating/pseudoobj/priority = 0
 # [type: int, range: [-1,2147483647], default: 1]
 propagating/pseudoobj/freq = 1
 
+# should propagator be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/pseudoobj/delay = FALSE
+
 # maximal number of variables to look at in a single propagation round (-1: process all variables)
 # [type: int, range: [-1,2147483647], default: 100]
 propagating/pseudoobj/maxcands = 100
 
 # priority of separator <cmir>
-# [type: int, range: [-2147483648,2147483647], default: -1000]
-separating/cmir/priority = -1000
+# [type: int, range: [-2147483648,2147483647], default: -3000]
+separating/cmir/priority = -3000
 
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 20]
 separating/cmir/freq = 0
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cmir/delay = FALSE
 
 # maximal number of cmir separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 3]
@@ -1331,12 +1419,16 @@ separating/cmir/maxcontsroot = 10
 separating/cmir/dynamiccuts = TRUE
 
 # priority of separator <gomory>
-# [type: int, range: [-2147483648,2147483647], default: 0]
-separating/gomory/priority = 0
+# [type: int, range: [-2147483648,2147483647], default: -1000]
+separating/gomory/priority = -1000
 
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 separating/gomory/freq = 0
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/gomory/delay = FALSE
 
 # maximal number of gomory separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -1363,12 +1455,16 @@ separating/gomory/maxweightrange = 10000
 separating/gomory/dynamiccuts = TRUE
 
 # priority of separator <strongcg>
-# [type: int, range: [-2147483648,2147483647], default: -10]
-separating/strongcg/priority = -10
+# [type: int, range: [-2147483648,2147483647], default: -2000]
+separating/strongcg/priority = -2000
 
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
 separating/strongcg/freq = 0
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/strongcg/delay = FALSE
 
 # maximal number of strong CG separation rounds per node (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: 5]
@@ -1401,6 +1497,10 @@ separating/intobj/priority = -100
 # frequency for calling separator <intobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/intobj/freq = -1
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/intobj/delay = FALSE
 
 # display activation status of display column <solfound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

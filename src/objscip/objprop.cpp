@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.5 2005/02/07 14:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.6 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -197,7 +197,7 @@ RETCODE SCIPincludeObjProp(
 
    /* include propagator */
    CHECK_OKAY( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
-         objprop->scip_priority_, objprop->scip_freq_,
+         objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
          propFreeObj, propInitObj, propExitObj, propExecObj, propRespropObj,
          propdata) );
 

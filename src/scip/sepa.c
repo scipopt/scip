@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.44 2005/02/07 14:08:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.45 2005/02/08 14:22:29 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -70,6 +70,7 @@ RETCODE SCIPsepaCreate(
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
+   Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -106,6 +107,7 @@ RETCODE SCIPsepaCreate(
    (*sepa)->ncutsfound = 0;
    (*sepa)->ncallsatnode = 0;
    (*sepa)->ncutsfoundatnode = 0;
+   (*sepa)->wasdelayed = FALSE;
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
@@ -114,10 +116,16 @@ RETCODE SCIPsepaCreate(
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->priority, priority, INT_MIN, INT_MAX, 
          paramChgdSepaPriority, (PARAMDATA*)(*sepa)) ); /*lint !e740*/
+
    sprintf(paramname, "separating/%s/freq", name);
    sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "separating/%s/delay", name);
+   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should separator be delayed, if other separators found cuts?",
+         &(*sepa)->delay, delay, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -246,6 +254,7 @@ RETCODE SCIPsepaExec(
    STAT*            stat,               /**< dynamic problem statistics */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              depth,              /**< depth of current node */
+   Bool             execdelayed,        /**< execute separator even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -258,53 +267,66 @@ RETCODE SCIPsepaExec(
    assert(depth >= 0);
    assert(result != NULL);
 
-   if( (depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) )
+   if( (depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->wasdelayed )
    {
-      int oldncutsstored;
-      int ncutsfound;
-
-      debugMessage("executing separator <%s>\n", sepa->name);
-
-      oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
-
-      /* reset the statistics for current node */
-      if( sepa->lastsepanode != stat->ntotalnodes )
+      if( !sepa->delay || execdelayed )
       {
-         sepa->lastsepanode = stat->ntotalnodes;
-         sepa->ncallsatnode = 0;
-         sepa->ncutsfoundatnode = 0;
+         int oldncutsstored;
+         int ncutsfound;
+
+         debugMessage("executing separator <%s>\n", sepa->name);
+
+         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+
+         /* reset the statistics for current node */
+         if( sepa->lastsepanode != stat->ntotalnodes )
+         {
+            sepa->ncallsatnode = 0;
+            sepa->ncutsfoundatnode = 0;
+         }
+
+         /* start timing */
+         SCIPclockStart(sepa->clock, set);
+
+         /* call external separation method */
+         CHECK_OKAY( sepa->sepaexec(set->scip, sepa, result) );
+
+         /* stop timing */
+         SCIPclockStop(sepa->clock, set);
+
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+         {
+            sepa->ncalls++;
+            sepa->ncallsatnode++;
+            sepa->lastsepanode = stat->ntotalnodes;
+         }
+         ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
+         sepa->ncutsfound += ncutsfound;
+         sepa->ncutsfoundatnode += ncutsfound;
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_DIDNOTFIND
+            && *result != SCIP_DIDNOTRUN
+            && *result != SCIP_DELAYED )
+         {
+            errorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
+               sepa->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+      }
+      else
+      {
+         debugMessage("separator <%s> was delayed\n", sepa->name);
+         *result = SCIP_DELAYED;
       }
 
-      /* start timing */
-      SCIPclockStart(sepa->clock, set);
-
-      /* call external separation method */
-      CHECK_OKAY( sepa->sepaexec(set->scip, sepa, result) );
-
-      /* stop timing */
-      SCIPclockStop(sepa->clock, set);
-
-      /* evaluate result */
-      if( *result != SCIP_CUTOFF
-         && *result != SCIP_CONSADDED
-         && *result != SCIP_REDUCEDDOM
-         && *result != SCIP_SEPARATED
-         && *result != SCIP_DIDNOTFIND
-         && *result != SCIP_DIDNOTRUN )
-      {
-         errorMessage("execution method of separator <%s> returned invalid result <%d>\n", 
-            sepa->name, *result);
-         return SCIP_INVALIDRESULT;
-      }
-      if( *result != SCIP_DIDNOTRUN )
-      {
-         sepa->ncalls++;
-         sepa->ncallsatnode++;
-      }
-
-      ncutsfound = SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored;
-      sepa->ncutsfound += ncutsfound;
-      sepa->ncutsfoundatnode += ncutsfound;
+      /* remember whether separator was delayed */
+      sepa->wasdelayed = (*result == SCIP_DELAYED);
    }
    else
       *result = SCIP_DIDNOTRUN;
@@ -435,6 +457,26 @@ Longint SCIPsepaGetNCutsFoundAtNode(
    assert(sepa != NULL);
 
    return sepa->ncutsfoundatnode;
+}
+
+/** should separator be delayed, if other separators found cuts? */
+Bool SCIPsepaIsDelayed(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->delay;
+}
+
+/** was separator delayed at the last call? */
+Bool SCIPsepaWasDelayed(
+   SEPA*            sepa                /**< separator */
+   )
+{
+   assert(sepa != NULL);
+
+   return sepa->wasdelayed;
 }
 
 /** is separator initialized? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.207 2005/02/07 18:12:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.208 2005/02/08 14:22:29 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -540,6 +540,8 @@ RETCODE SCIPincludeConshdlr(
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
@@ -727,6 +729,7 @@ RETCODE SCIPincludeSepa(
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
+   Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -771,6 +774,7 @@ RETCODE SCIPincludeProp(
    const char*      desc,               /**< description of propagator */
    int              priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
+   Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.44 2005/02/04 12:51:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.45 2005/02/08 14:22:27 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -467,7 +467,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
       printf(" %-20s ", SCIPpresolGetName(presols[i]));
       if( strlen(SCIPpresolGetName(presols[i])) > 20 )
          printf("\n %20s ", "-->");
-      printf("%8d  ", SCIPpresolGetPriority(presols[i]));
+      printf("%8d%c ", SCIPpresolGetPriority(presols[i]), SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
       printf(SCIPpresolGetDesc(presols[i]));
       printf("\n");
    }
@@ -506,14 +506,14 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
 
    /* display list of propagators */
    printf("\n");
-   printf(" propagator           priority freq  description\n");
-   printf(" ----------           -------- ----  -----------\n");
+   printf(" propagator           priority  freq  description\n");
+   printf(" ----------           --------  ----  -----------\n");
    for( i = 0; i < nprops; ++i )
    {
       printf(" %-20s ", SCIPpropGetName(props[i]));
       if( strlen(SCIPpropGetName(props[i])) > 20 )
          printf("\n %20s ", "-->");
-      printf("%8d ", SCIPpropGetPriority(props[i]));
+      printf("%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       printf("%4d  ", SCIPpropGetFreq(props[i]));
       printf(SCIPpropGetDesc(props[i]));
       printf("\n");
@@ -571,14 +571,14 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
 
    /* display list of separators */
    printf("\n");
-   printf(" separator            priority freq  description\n");
-   printf(" ---------            -------- ----  -----------\n");
+   printf(" separator            priority  freq  description\n");
+   printf(" ---------            --------  ----  -----------\n");
    for( i = 0; i < nsepas; ++i )
    {
       printf(" %-20s ", SCIPsepaGetName(sepas[i]));
       if( strlen(SCIPsepaGetName(sepas[i])) > 20 )
          printf("\n %20s ", "-->");
-      printf("%8d ", SCIPsepaGetPriority(sepas[i]));
+      printf("%8d%c ", SCIPsepaGetPriority(sepas[i]), SCIPsepaIsDelayed(sepas[i]) ? 'd' : ' ');
       printf("%4d  ", SCIPsepaGetFreq(sepas[i]));
       printf(SCIPsepaGetDesc(sepas[i]));
       printf("\n");

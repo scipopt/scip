@@ -24,7 +24,12 @@ interface:
   relaxators, separators, propagators, event handlers, node selectors, and display columns
 - new parameter delay for presolvers
 - new parameter delaypresol for constraint handlers
-- new possible result SCIP_DELAYED for EXEC method of presolvers and PRESOL method of constraint handlers
+- new possible result SCIP_DELAYED for EXEC method of separators, presolvers, and propagators,
+  and SEPA, PROP, and PRESOL methods of constraint handlers
+- new methods SCIPsepaIsDelayed(), SCIPsepaWasDelayed(), SCIPpropIsDelayed(), SCIPpropWasDelayed(), SCIPpresolIsDelayed(),
+  SCIPpresolWasDelayed(), SCIPconshdlrIsSeparationDelayed(), SCIPconshdlrIsPropagationDelayed(), 
+  SCIPconshdlrIsPresolvingDelayed(), SCIPconshdlrWasSeparationDelayed(), SCIPconshdlrWasPropagationDelayed(), and
+  SCIPconshdlrWasPresolvingDelayed()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -42,8 +47,15 @@ parameters:
 - changed default priority of primal heuristics
 - renamed parameter limits/sol to limits/solutions
 - changed default check priority of knapsack constraint handler to -600000
+- new parameters separating/.../delay
 - new parameters presolving/.../delay
+- new parameters propagating/.../delay
+- new parameters constraints/.../delaysepa
+- new parameters constraints/.../delayprop
 - new parameters constraints/.../delaypresol
+- changed default priority of Gomory cut separator to -1000 (will now be called after constraint handlers!)
+- changed default priority of strong CG cut separator to -2000
+- changed default priority of cmir cut separator to -3000
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex

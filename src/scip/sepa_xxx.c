@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.9 2005/02/04 14:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.10 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   sepa_xxx.c
  * @brief  xxx separator
@@ -32,6 +32,7 @@
 #define SEPA_DESC              "separator template"
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
+#define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 
 
@@ -170,7 +171,7 @@ RETCODE SCIPincludeSepaXxx(
    /* TODO: (optional) create separator specific data here */
 
    /* include separator */
-   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ,
+   CHECK_OKAY( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_DELAY,
          sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
          sepaInitsolXxx, sepaExitsolXxx, sepaExecXxx,
          sepadata) );

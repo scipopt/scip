@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.113 2005/02/07 18:11:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.114 2005/02/08 14:22:24 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1338,6 +1338,8 @@ RETCODE SCIPconshdlrCreate(
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
@@ -1477,6 +1479,8 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nchgcoefs = 0;
    (*conshdlr)->nchgsides = 0;
    (*conshdlr)->needscons = needscons;
+   (*conshdlr)->sepawasdelayed = FALSE;
+   (*conshdlr)->propwasdelayed = FALSE;
    (*conshdlr)->presolwasdelayed = FALSE;
    (*conshdlr)->initialized = FALSE;
    (*conshdlr)->delayupdates = FALSE;
@@ -1501,6 +1505,16 @@ RETCODE SCIPconshdlrCreate(
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, 
          "maximal number of presolving rounds the constraint handler participates in (-1: no limit)",
          &(*conshdlr)->maxprerounds, maxprerounds, -1, INT_MAX, NULL, NULL) );
+
+   sprintf(paramname, "constraints/%s/delaysepa", name);
+   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should separation method be delayed, if other separators found cuts?",
+         &(*conshdlr)->delaysepa, delaysepa, NULL, NULL) ); /*lint !e740*/
+
+   sprintf(paramname, "constraints/%s/delayprop", name);
+   CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
+         "should propagation method be delayed, if other propagators found reductions?",
+         &(*conshdlr)->delayprop, delayprop, NULL, NULL) ); /*lint !e740*/
 
    sprintf(paramname, "constraints/%s/delaypresol", name);
    CHECK_OKAY( SCIPsetAddBoolParam(set, blkmem, paramname,
@@ -1785,6 +1799,7 @@ RETCODE SCIPconshdlrSeparate(
    PROB*            prob,               /**< problem data */
    SEPASTORE*       sepastore,          /**< separation storage */
    int              depth,              /**< depth of current node */
+   Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -1802,102 +1817,123 @@ RETCODE SCIPconshdlrSeparate(
    *result = SCIP_DIDNOTRUN;
 
    if( conshdlr->conssepa != NULL
-      && ((depth == 0 && conshdlr->sepafreq == 0) || (conshdlr->sepafreq > 0 && depth % conshdlr->sepafreq == 0)) )
+      && ((depth == 0 && conshdlr->sepafreq == 0)
+         || (conshdlr->sepafreq > 0 && depth % conshdlr->sepafreq == 0)
+         || conshdlr->sepawasdelayed) )
    {
-      int nconss;
-      int nusefulconss;
-      int firstcons;
-
-      /* check, if this LP solution was already separated */
-      if( conshdlr->lastsepalpcount == stat->lpcount )
+      /* check, if separation method should be delayed */
+      if( !conshdlr->delaysepa || execdelayed )
       {
-         /* all constraints that were not yet separated on the new LP solution must be useful constraints, which means,
-          * that the new constraints are the last constraints of the useful ones
-          */
-         nconss = conshdlr->nusefulsepaconss - conshdlr->lastnusefulsepaconss;
-         nusefulconss = nconss;
-         firstcons = conshdlr->lastnusefulsepaconss;
+         int nconss;
+         int nusefulconss;
+         int firstcons;
+
+         /* check, if this LP solution was already separated */
+         if( conshdlr->lastsepalpcount == stat->lpcount )
+         {
+            /* all constraints that were not yet separated on the new LP solution must be useful constraints, which means,
+             * that the new constraints are the last constraints of the useful ones
+             */
+            nconss = conshdlr->nusefulsepaconss - conshdlr->lastnusefulsepaconss;
+            nusefulconss = nconss;
+            firstcons = conshdlr->lastnusefulsepaconss;
+         }
+         else
+         {
+            /* on a new LP solution, we want to separate all constraints */
+            nconss = conshdlr->nsepaconss;
+            nusefulconss = conshdlr->nusefulsepaconss;
+            firstcons = 0;
+         }
+         assert(firstcons >= 0);
+         assert(firstcons + nconss <= conshdlr->nsepaconss);
+         assert(nusefulconss <= nconss);
+
+         /* constraint handlers without constraints should only be called once */
+         if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastsepalpcount != stat->lpcount) )
+         {
+            CONS** conss;
+            Longint oldndomchgs;
+            int oldncutsstored;
+            int oldnactiveconss;
+            int lastsepalpcount;
+            int lastnusefulsepaconss;
+
+            debugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
+               firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name,
+               conshdlr->lastsepalpcount == stat->lpcount ? "old" : "new");
+
+            /* remember the number of processed constraints on the current LP solution */
+            lastsepalpcount = stat->lpcount;
+            lastnusefulsepaconss = conshdlr->nusefulsepaconss;
+
+            /* get the array of the constraints to be processed */
+            conss = &(conshdlr->sepaconss[firstcons]);
+         
+            oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
+            oldnactiveconss = stat->nactiveconss;
+
+            /* check, if we want to use eager evaluation */
+            if( (conshdlr->eagerfreq == 0 && conshdlr->nsepacalls == 0)
+               || (conshdlr->eagerfreq > 0 && conshdlr->nsepacalls % conshdlr->eagerfreq == 0) )
+               nusefulconss = nconss;
+
+            /* because during constraint processing, constraints of this handler may be activated, deactivated,
+             * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+             * external method; to avoid this, these changes will be buffered and processed after the method call
+             */
+            conshdlrDelayUpdates(conshdlr);
+
+            /* start timing */
+            SCIPclockStart(conshdlr->sepatime, set);
+
+            /* call external method */
+            CHECK_OKAY( conshdlr->conssepa(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+            debugMessage(" -> separating returned result <%d>\n", *result);
+
+            /* stop timing */
+            SCIPclockStop(conshdlr->sepatime, set);
+
+            /* perform the cached constraint updates */
+            CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
+
+            /* update statistics */
+            if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+            {
+               conshdlr->lastsepalpcount = lastsepalpcount;
+               conshdlr->lastnusefulsepaconss = MIN(lastnusefulsepaconss, conshdlr->nusefulsepaconss);
+               conshdlr->nsepacalls++;
+            }
+            if( *result == SCIP_CUTOFF )
+               conshdlr->ncutoffs++;
+            conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
+            conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
+            conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+
+            /* evaluate result */
+            if( *result != SCIP_CUTOFF
+               && *result != SCIP_CONSADDED
+               && *result != SCIP_REDUCEDDOM
+               && *result != SCIP_SEPARATED
+               && *result != SCIP_DIDNOTFIND
+               && *result != SCIP_DIDNOTRUN
+               && *result != SCIP_DELAYED )
+            {
+               errorMessage("separation method of constraint handler <%s> returned invalid result <%d>\n", 
+                  conshdlr->name, *result);
+               return SCIP_INVALIDRESULT;
+            }
+         }
       }
       else
       {
-         /* on a new LP solution, we want to separate all constraints */
-         nconss = conshdlr->nsepaconss;
-         nusefulconss = conshdlr->nusefulsepaconss;
-         firstcons = 0;
+         debugMessage("separation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         *result = SCIP_DELAYED;
       }
-      assert(firstcons >= 0);
-      assert(firstcons + nconss <= conshdlr->nsepaconss);
-      assert(nusefulconss <= nconss);
 
-      /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastsepalpcount != stat->lpcount) )
-      {
-         CONS** conss;
-         Longint oldndomchgs;
-         int oldncutsstored;
-         int oldnactiveconss;
-
-         debugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
-            firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name,
-            conshdlr->lastsepalpcount == stat->lpcount ? "old" : "new");
-
-         /* remember the number of processed constraints on the current LP solution */
-         conshdlr->lastsepalpcount = stat->lpcount;
-         conshdlr->lastnusefulsepaconss = conshdlr->nusefulsepaconss;
-
-         /* get the array of the constraints to be processed */
-         conss = &(conshdlr->sepaconss[firstcons]);
-         
-         oldndomchgs = stat->nboundchgs + stat->nholechgs;
-         oldncutsstored = SCIPsepastoreGetNCutsStored(sepastore);
-         oldnactiveconss = stat->nactiveconss;
-
-         /* check, if we want to use eager evaluation */
-         if( (conshdlr->eagerfreq == 0 && conshdlr->nsepacalls == 0)
-            || (conshdlr->eagerfreq > 0 && conshdlr->nsepacalls % conshdlr->eagerfreq == 0) )
-            nusefulconss = nconss;
-
-         /* because during constraint processing, constraints of this handler may be activated, deactivated,
-          * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
-          * external method; to avoid this, these changes will be buffered and processed after the method call
-          */
-         conshdlrDelayUpdates(conshdlr);
-
-         /* start timing */
-         SCIPclockStart(conshdlr->sepatime, set);
-
-         /* call external method */
-         CHECK_OKAY( conshdlr->conssepa(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
-         debugMessage(" -> separating returned result <%d>\n", *result);
-
-         /* stop timing */
-         SCIPclockStop(conshdlr->sepatime, set);
-
-         /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
-
-         /* evaluate result */
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_CONSADDED
-            && *result != SCIP_REDUCEDDOM
-            && *result != SCIP_SEPARATED
-            && *result != SCIP_DIDNOTFIND
-            && *result != SCIP_DIDNOTRUN )
-         {
-            errorMessage("separation method of constraint handler <%s> returned invalid result <%d>\n", 
-               conshdlr->name, *result);
-            return SCIP_INVALIDRESULT;
-         }
-
-         /* update statistics */
-         if( *result != SCIP_DIDNOTRUN )
-            conshdlr->nsepacalls++;
-         if( *result == SCIP_CUTOFF )
-            conshdlr->ncutoffs++;
-         conshdlr->ncutsfound += SCIPsepastoreGetNCutsStored(sepastore) - oldncutsstored; /*lint !e776*/
-         conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0);
-         conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-      }
+      /* remember whether separation method was delayed */
+      conshdlr->sepawasdelayed = (*result == SCIP_DELAYED);
    }
 
    return SCIP_OKAY;
@@ -2009,20 +2045,6 @@ RETCODE SCIPconshdlrEnforceLPSol(
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
 
-         /* evaluate result */
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_CONSADDED
-            && *result != SCIP_REDUCEDDOM
-            && *result != SCIP_SEPARATED
-            && *result != SCIP_BRANCHED
-            && *result != SCIP_INFEASIBLE
-            && *result != SCIP_FEASIBLE )
-         {
-            errorMessage("enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>\n", 
-               conshdlr->name, *result);
-            return SCIP_INVALIDRESULT;
-         }
-
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nenfolpcalls++;
@@ -2037,6 +2059,20 @@ RETCODE SCIPconshdlrEnforceLPSol(
          }
          else
             conshdlr->nchildren += tree->nchildren;
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_BRANCHED
+            && *result != SCIP_INFEASIBLE
+            && *result != SCIP_FEASIBLE )
+         {
+            errorMessage("enforcing method of constraint handler <%s> for LP solutions returned invalid result <%d>\n", 
+               conshdlr->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
       }
    }
 
@@ -2144,21 +2180,6 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          /* perform the cached constraint updates */
          CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
 
-         /* evaluate result */
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_CONSADDED
-            && *result != SCIP_REDUCEDDOM
-            && *result != SCIP_BRANCHED
-            && *result != SCIP_SOLVELP
-            && *result != SCIP_INFEASIBLE
-            && *result != SCIP_FEASIBLE
-            && *result != SCIP_DIDNOTRUN )
-         {
-            errorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n", 
-               conshdlr->name, *result);
-            return SCIP_INVALIDRESULT;
-         }
-
          /* update statistics */
          if( *result != SCIP_DIDNOTRUN )
             conshdlr->nenfopscalls++;
@@ -2177,6 +2198,21 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          }
          else
             conshdlr->nchildren += tree->nchildren;
+
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_BRANCHED
+            && *result != SCIP_SOLVELP
+            && *result != SCIP_INFEASIBLE
+            && *result != SCIP_FEASIBLE
+            && *result != SCIP_DIDNOTRUN )
+         {
+            errorMessage("enforcing method of constraint handler <%s> for pseudo solutions returned invalid result <%d>\n", 
+               conshdlr->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
       }
    }
 
@@ -2224,6 +2260,7 @@ RETCODE SCIPconshdlrCheck(
       /* perform the cached constraint updates */
       CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
 
+      /* evaluate result */
       if( *result != SCIP_INFEASIBLE
          && *result != SCIP_FEASIBLE )
       {
@@ -2244,6 +2281,7 @@ RETCODE SCIPconshdlrPropagate(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< problem data */
    int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
+   Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2262,94 +2300,118 @@ RETCODE SCIPconshdlrPropagate(
 
    if( conshdlr->consprop != NULL
       && (!conshdlr->needscons || conshdlr->npropconss > 0)
-      && (depth == -1 || (conshdlr->propfreq > 0 && depth % conshdlr->propfreq == 0)) )
+      && (depth == -1 || (conshdlr->propfreq > 0 && depth % conshdlr->propfreq == 0) || conshdlr->propwasdelayed) )
    {
-      int nconss;
-      int nusefulconss;
-      int firstcons;
-
-      /* check, if the current domains were already propagated */
-      if( conshdlr->lastpropdomchgcount == stat->domchgcount )
+      /* check, if propagation method should be delayed */
+      if( !conshdlr->delayprop || execdelayed )
       {
-         /* all constraints that were not yet propagated on the new domains must be useful constraints, which means,
-          * that the new constraints are the last constraints of the useful ones
-          */
-         nconss = conshdlr->nusefulpropconss - conshdlr->lastnusefulpropconss;
-         nusefulconss = nconss;
-         firstcons = conshdlr->lastnusefulpropconss;
+         int nconss;
+         int nusefulconss;
+         int firstcons;
+
+         /* check, if the current domains were already propagated */
+         if( conshdlr->lastpropdomchgcount == stat->domchgcount )
+         {
+            /* all constraints that were not yet propagated on the new domains must be useful constraints, which means,
+             * that the new constraints are the last constraints of the useful ones
+             */
+            nconss = conshdlr->nusefulpropconss - conshdlr->lastnusefulpropconss;
+            nusefulconss = nconss;
+            firstcons = conshdlr->lastnusefulpropconss;
+         }
+         else
+         {
+            /* on new domains, we want to proprate all constraints */
+            nconss = conshdlr->npropconss;
+            nusefulconss = conshdlr->nusefulpropconss;
+            firstcons = 0;
+         }
+         assert(firstcons >= 0);
+         assert(firstcons + nconss <= conshdlr->npropconss);
+         assert(nusefulconss <= nconss);
+
+         /* constraint handlers without constraints should only be called once */
+         if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastpropdomchgcount != stat->domchgcount) )
+         {
+            CONS** conss;
+            Longint oldndomchgs;
+            Longint lastpropdomchgcount;
+            int lastnusefulpropconss;
+         
+            debugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
+               firstcons, firstcons + nconss - 1, conshdlr->npropconss, conshdlr->name,
+               conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);
+
+            /* remember the number of processed constraints on the current domains */
+            lastpropdomchgcount = stat->domchgcount;
+            lastnusefulpropconss = conshdlr->nusefulpropconss;
+
+            /* get the array of the constraints to be processed */
+            conss = &(conshdlr->propconss[firstcons]);
+
+            oldndomchgs = stat->nboundchgs + stat->nholechgs;
+
+            /* check, if we want to use eager evaluation */
+            if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
+               || (conshdlr->eagerfreq > 0 && conshdlr->npropcalls % conshdlr->eagerfreq == 0) )
+               nusefulconss = nconss;
+
+            /* because during constraint processing, constraints of this handler may be activated, deactivated,
+             * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+             * external method; to avoid this, these changes will be buffered and processed after the method call
+             */
+            conshdlrDelayUpdates(conshdlr);
+
+            /* start timing */
+            SCIPclockStart(conshdlr->proptime, set);
+
+            /* call external method */
+            CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
+            debugMessage(" -> propagation returned result <%d>\n", *result);
+      
+            /* stop timing */
+            SCIPclockStop(conshdlr->proptime, set);
+
+            /* perform the cached constraint updates */
+            CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
+
+            /* update statistics */
+            if( *result != SCIP_DIDNOTRUN && *result != SCIP_DELAYED )
+            {
+               conshdlr->lastpropdomchgcount = lastpropdomchgcount;
+               conshdlr->lastnusefulpropconss = MIN(conshdlr->nusefulpropconss, lastnusefulpropconss);
+               conshdlr->npropcalls++;
+            }
+            else
+            {
+               assert(lastpropdomchgcount == stat->domchgcount);
+               assert(lastnusefulpropconss == conshdlr->nusefulpropconss);
+            }
+            if( *result == SCIP_CUTOFF )
+               conshdlr->ncutoffs++;
+            conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+
+            /* check result code of callback method */
+            if( *result != SCIP_CUTOFF
+               && *result != SCIP_REDUCEDDOM
+               && *result != SCIP_DIDNOTFIND
+               && *result != SCIP_DIDNOTRUN
+               && *result != SCIP_DELAYED )
+            {
+               errorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n", 
+                  conshdlr->name, *result);
+               return SCIP_INVALIDRESULT;
+            }
+         }
       }
       else
       {
-         /* on new domains, we want to proprate all constraints */
-         nconss = conshdlr->npropconss;
-         nusefulconss = conshdlr->nusefulpropconss;
-         firstcons = 0;
+         debugMessage("propagation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         *result = SCIP_DELAYED;
       }
-      assert(firstcons >= 0);
-      assert(firstcons + nconss <= conshdlr->npropconss);
-      assert(nusefulconss <= nconss);
 
-      /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastpropdomchgcount != stat->domchgcount) )
-      {
-         CONS** conss;
-         Longint oldndomchgs;
-         
-         debugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
-            firstcons, firstcons + nconss - 1, conshdlr->npropconss, conshdlr->name,
-            conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);
-
-         /* remember the number of processed constraints on the current domains */
-         conshdlr->lastpropdomchgcount = stat->domchgcount;
-         conshdlr->lastnusefulpropconss = conshdlr->nusefulpropconss;
-
-         /* get the array of the constraints to be processed */
-         conss = &(conshdlr->propconss[firstcons]);
-
-         oldndomchgs = stat->nboundchgs + stat->nholechgs;
-
-         /* check, if we want to use eager evaluation */
-         if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
-            || (conshdlr->eagerfreq > 0 && conshdlr->npropcalls % conshdlr->eagerfreq == 0) )
-            nusefulconss = nconss;
-
-         /* because during constraint processing, constraints of this handler may be activated, deactivated,
-          * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
-          * external method; to avoid this, these changes will be buffered and processed after the method call
-          */
-         conshdlrDelayUpdates(conshdlr);
-
-         /* start timing */
-         SCIPclockStart(conshdlr->proptime, set);
-
-         /* call external method */
-         CHECK_OKAY( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
-         debugMessage(" -> propagation returned result <%d>\n", *result);
-      
-         /* stop timing */
-         SCIPclockStop(conshdlr->proptime, set);
-
-         /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
-
-         /* check result code of callback method */
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_REDUCEDDOM
-            && *result != SCIP_DIDNOTFIND
-            && *result != SCIP_DIDNOTRUN )
-         {
-            errorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n", 
-               conshdlr->name, *result);
-            return SCIP_INVALIDRESULT;
-         }
-
-         /* update statistics */
-         if( *result != SCIP_DIDNOTRUN )
-            conshdlr->npropcalls++;
-         if( *result == SCIP_CUTOFF )
-            conshdlr->ncutoffs++;
-         conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
-      }
+      /* remember whether propagation method was delayed */
+      conshdlr->propwasdelayed = (*result == SCIP_DELAYED);
    }
 
    return SCIP_OKAY;
@@ -2455,6 +2517,9 @@ RETCODE SCIPconshdlrPresolve(
          /* stop timing */
          SCIPclockStop(conshdlr->presoltime, set);
 
+         /* perform the cached constraint updates */
+         CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
+
          /* count the new changes */
          conshdlr->nfixedvars += *nfixedvars - conshdlr->lastnfixedvars;
          conshdlr->naggrvars += *naggrvars - conshdlr->lastnaggrvars;
@@ -2465,9 +2530,6 @@ RETCODE SCIPconshdlrPresolve(
          conshdlr->nupgdconss += *nupgdconss - conshdlr->lastnupgdconss;
          conshdlr->nchgcoefs += *nchgcoefs - conshdlr->lastnchgcoefs;
          conshdlr->nchgsides += *nchgsides - conshdlr->lastnchgsides;
-
-         /* perform the cached constraint updates */
-         CHECK_OKAY( conshdlrForceUpdates(conshdlr, blkmem, set, stat, prob) );
 
          /* check result code of callback method */
          if( *result != SCIP_CUTOFF
@@ -2483,7 +2545,10 @@ RETCODE SCIPconshdlrPresolve(
          }
       }
       else
+      {
+         debugMessage("presolving method of constraint handler <%s> was delayed\n", conshdlr->name);
          *result = SCIP_DELAYED;
+      }
 
       /* remember whether presolving method was delayed */
       conshdlr->presolwasdelayed = (*result == SCIP_DELAYED);
@@ -2923,8 +2988,58 @@ Bool SCIPconshdlrDoesPresolve(
    return (conshdlr->conspresol != NULL);
 }
 
+/** should separation method be delayed, if other separators found cuts? */
+Bool SCIPconshdlrIsSeparationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->delaysepa;
+}
+
+/** should propagation method be delayed, if other propagators found reductions? */
+Bool SCIPconshdlrIsPropagationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->delayprop;
+}
+
+/** should presolving method be delayed, if other presolvers found reductions? */
+Bool SCIPconshdlrIsPresolvingDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->delaypresol;
+}
+
+/** was separation method delayed at the last call? */
+Bool SCIPconshdlrWasSeparationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->sepawasdelayed;
+}
+
+/** was propagation method delayed at the last call? */
+Bool SCIPconshdlrWasPropagationDelayed(
+   CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->propwasdelayed;
+}
+
 /** was presolving method delayed at the last call? */
-Bool SCIPconshdlrWasPresolveDelayed(
+Bool SCIPconshdlrWasPresolvingDelayed(
    CONSHDLR*        conshdlr            /**< constraint handler */
    )
 {

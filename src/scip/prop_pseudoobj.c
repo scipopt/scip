@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.7 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.8 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -32,6 +32,7 @@
 #define PROP_DESC              "pseudo objective function propagator"
 #define PROP_PRIORITY                 0
 #define PROP_FREQ                     1
+#define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define DEFAULT_MAXCANDS            100 /**< maximal number of variables to look at in a single propagation round
                                          *   (-1: process all variables) */
@@ -290,7 +291,7 @@ RETCODE SCIPincludePropPseudoobj(
    propdata->lastvarnum = -1;
 
    /* include propagator */
-   CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ,
+   CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
          propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, 
          propInitsolPseudoobj, propExitsolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
          propdata) );

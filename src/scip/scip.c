@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.260 2005/02/08 09:17:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.261 2005/02/08 14:22:29 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1188,6 +1188,8 @@ RETCODE SCIPincludeConshdlr(
    int              eagerfreq,          /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
    int              maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+   Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
+   Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
@@ -1221,8 +1223,9 @@ RETCODE SCIPincludeConshdlr(
    CHECK_OKAY( checkStage(scip, "SCIPincludeConshdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
-         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, delaypresol,
-         needscons, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
+         name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds, 
+         delaysepa, delayprop, delaypresol, needscons,
+         consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
          consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
          consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint,
          conshdlrdata) );
@@ -1501,6 +1504,7 @@ RETCODE SCIPincludeSepa(
    const char*      desc,               /**< description of separator */
    int              priority,           /**< priority of separator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling separator */
+   Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
    DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -1515,7 +1519,7 @@ RETCODE SCIPincludeSepa(
    CHECK_OKAY( checkStage(scip, "SCIPincludeSepa", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
-         name, desc, priority, freq,
+         name, desc, priority, freq, delay,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexec, sepadata) );
    CHECK_OKAY( SCIPsetIncludeSepa(scip->set, sepa) );
    
@@ -1578,6 +1582,7 @@ RETCODE SCIPincludeProp(
    const char*      desc,               /**< description of propagator */
    int              priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int              freq,               /**< frequency for calling propagator */
+   Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
    DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -1593,7 +1598,7 @@ RETCODE SCIPincludeProp(
    CHECK_OKAY( checkStage(scip, "SCIPincludeProp", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    CHECK_OKAY( SCIPpropCreate(&prop, scip->set, scip->mem->setmem,
-         name, desc, priority, freq,
+         name, desc, priority, freq, delay,
          propfree, propinit, propexit, propinitsol, propexitsol, propexec, propresprop, propdata) );
    CHECK_OKAY( SCIPsetIncludeProp(scip->set, prop) );
    
@@ -3618,7 +3623,7 @@ RETCODE presolveRound(
    /* call presolve methods of constraint handlers */
    for( i = 0; i < scip->set->nconshdlrs && !(*unbounded) && !(*infeasible); ++i )
    {
-      if( onlydelayed && !SCIPconshdlrWasPresolveDelayed(scip->set->conshdlrs[i]) )
+      if( onlydelayed && !SCIPconshdlrWasPresolvingDelayed(scip->set->conshdlrs[i]) )
          continue;
 
       CHECK_OKAY( SCIPconshdlrPresolve(scip->set->conshdlrs[i], scip->mem->solvemem, scip->set, scip->stat, 
@@ -3761,7 +3766,7 @@ RETCODE presolve(
          *unbounded, *infeasible);
 
       /* if the presolving will be terminated, call the delayed presolvers */
-      while( finished && delayed )
+      while( delayed && finished && !(*unbounded) && !(*infeasible) )
       {
          /* call the delayed presolvers and constraint handlers */
          CHECK_OKAY( presolveRound(scip, TRUE, &delayed, unbounded, infeasible) );

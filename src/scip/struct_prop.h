@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.4 2005/02/07 14:08:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.5 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -51,6 +51,8 @@ struct Prop
    CLOCK*           clock;              /**< propagation time */
    int              priority;           /**< priority of the propagator */
    int              freq;               /**< frequency for calling propagator */
+   Bool             delay;              /**< should propagator be delayed, if other propagators found reductions? */
+   Bool             wasdelayed;         /**< was the propagator delayed at the last call? */
    Bool             initialized;        /**< is propagator initialized? */
 };
 

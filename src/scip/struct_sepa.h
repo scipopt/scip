@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.8 2005/02/04 14:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.9 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -52,6 +52,8 @@ struct Sepa
    int              freq;               /**< frequency for calling separator */
    int              ncallsatnode;       /**< number of times, this separator was called at the current node */
    int              ncutsfoundatnode;   /**< number of cutting planes found at the current node */
+   Bool             delay;              /**< should separator be delayed, if other separators found cuts? */
+   Bool             wasdelayed;         /**< was the separator delayed at the last call? */
    Bool             initialized;        /**< is separator initialized? */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.165 2005/02/03 17:50:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.166 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -88,6 +88,79 @@ Bool SCIPsolveIsStopped(
    return (stat->status != SCIP_STATUS_UNKNOWN);
 }
 
+/** applies one round of propagation */
+static
+RETCODE propagationRound(
+   BLKMEM*          blkmem,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   int              depth,              /**< depth level to use for propagator frequency checks */
+   Bool             onlydelayed,        /**< should only delayed propagators be called? */
+   Bool*            delayed,            /**< pointer to store whether a propagator was delayed */
+   Bool*            propagain,          /**< pointer to store whether propagation should be applied again */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   RESULT result;
+   int i;
+
+   assert(set != NULL);
+   assert(delayed != NULL);
+   assert(propagain != NULL);
+   assert(cutoff != NULL);
+
+   *delayed = FALSE;
+   *propagain = FALSE;
+
+   /* sort propagators */
+   SCIPsetSortProps(set);
+
+   /* call additional propagators with nonnegative priority */
+   for( i = 0; i < set->nprops && !(*cutoff); ++i )
+   {
+      if( SCIPpropGetPriority(set->props[i]) < 0 )
+         continue;
+
+      if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
+      *delayed = *delayed || (result == SCIP_DELAYED);
+      *propagain = *propagain || (result == SCIP_REDUCEDDOM);
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+   }
+
+   /* propagate constraints */
+   for( i = 0; i < set->nconshdlrs && !(*cutoff); ++i )
+   {
+      if( onlydelayed && !SCIPconshdlrWasPropagationDelayed(set->conshdlrs[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[i], blkmem, set, stat, prob, depth, onlydelayed, &result) );
+      *delayed = *delayed || (result == SCIP_DELAYED);
+      *propagain = *propagain || (result == SCIP_REDUCEDDOM);
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+   }
+
+   /* call additional propagators with negative priority */
+   for( i = 0; i < set->nprops && !(*cutoff); ++i )
+   {
+      if( SCIPpropGetPriority(set->props[i]) >= 0 )
+         continue;
+
+      if( onlydelayed && !SCIPpropWasDelayed(set->props[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, &result) );
+      *delayed = *delayed || (result == SCIP_DELAYED);
+      *propagain = *propagain || (result == SCIP_REDUCEDDOM);
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** applies domain propagation on current node */
 RETCODE SCIPpropagateDomains(
    BLKMEM*          blkmem,             /**< block memory buffers */
@@ -101,11 +174,9 @@ RETCODE SCIPpropagateDomains(
    )
 {
    NODE* node;
-   RESULT result;
+   Bool delayed;
    Bool propagain;
    int propround;
-   int h;
-   int p;
 
    assert(set != NULL);
    assert(tree != NULL);
@@ -133,39 +204,15 @@ RETCODE SCIPpropagateDomains(
    do
    {
       propround++;
-      propagain = FALSE;
 
-      /* sort propagators */
-      SCIPsetSortProps(set);
+      /* perform the propagation round by calling the propagators and constraint handlers */
+      CHECK_OKAY( propagationRound(blkmem, set, stat, prob, depth, FALSE, &delayed, &propagain, cutoff) );
 
-      /* call additional propagators with nonnegative priority */
-      for( p = 0; p < set->nprops && !(*cutoff); ++p )
+      /* if the propagation will be terminated, call the delayed propagators */
+      while( delayed && !propagain && !(*cutoff) )
       {
-         if( SCIPpropGetPriority(set->props[p]) < 0 )
-            continue;
-
-         CHECK_OKAY( SCIPpropExec(set->props[p], set, stat, depth, &result) );
-         propagain = propagain || (result == SCIP_REDUCEDDOM);
-         *cutoff = *cutoff || (result == SCIP_CUTOFF);
-      }
-
-      /* propagate constraints */
-      for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
-      {
-         CHECK_OKAY( SCIPconshdlrPropagate(set->conshdlrs[h], blkmem, set, stat, prob, depth, &result) );
-         propagain = propagain || (result == SCIP_REDUCEDDOM);
-         *cutoff = *cutoff || (result == SCIP_CUTOFF);
-      }
-
-      /* call additional propagators with negative priority */
-      for( p = 0; p < set->nprops && !(*cutoff); ++p )
-      {
-         if( SCIPpropGetPriority(set->props[p]) >= 0 )
-            continue;
-
-         CHECK_OKAY( SCIPpropExec(set->props[p], set, stat, depth, &result) );
-         propagain = propagain || (result == SCIP_REDUCEDDOM);
-         *cutoff = *cutoff || (result == SCIP_CUTOFF);
+         /* call the delayed propagators and constraint handlers */
+         CHECK_OKAY( propagationRound(blkmem, set, stat, prob, depth, TRUE, &delayed, &propagain, cutoff) );
       }
    }
    while( propagain && !(*cutoff) && propround < maxproprounds );
@@ -665,6 +712,93 @@ RETCODE solveNodeInitialLP(
    return SCIP_OKAY;
 }
 
+/** applies one round of separation */
+static
+RETCODE separationRound(
+   BLKMEM*          blkmem,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   LP*              lp,                 /**< LP data */
+   SEPASTORE*       sepastore,          /**< separation storage */
+   CONSHDLR**       conshdlrs_sepa,     /**< constraint handlers sorted by separation priority */
+   int              actdepth,           /**< current depth in the tree */
+   Bool             onlydelayed,        /**< should only delayed separators be called? */
+   Bool*            delayed,            /**< pointer to store whether a separator was delayed */
+   Bool*            separateagain,      /**< pointer to store whether separation should be applied again */
+   Bool*            enoughcuts,         /**< pointer to store whether enough cuts have been found this round */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   RESULT result;
+   int i;
+   Bool root;
+
+   assert(set != NULL);
+   assert(lp != NULL);
+   assert(conshdlrs_sepa != NULL);
+   assert(delayed != NULL);
+   assert(separateagain != NULL);
+   assert(enoughcuts != NULL);
+   assert(cutoff != NULL);
+
+   *delayed = FALSE;
+   *separateagain = FALSE;
+   *enoughcuts = FALSE;
+   root = (actdepth == 0);
+
+   /* sort separators by priority */
+   SCIPsetSortSepas(set);
+
+   /* call LP separators with nonnegative priority */
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*separateagain) && !(*enoughcuts) && lp->flushed; ++i )
+   {
+      if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
+         continue;
+
+      if( onlydelayed && !SCIPsepaWasDelayed(set->sepas[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPsepaExec(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+      *separateagain = *separateagain || (result == SCIP_CONSADDED);
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *delayed = *delayed || (result == SCIP_DELAYED);
+   }
+
+   /* try separating constraints of the constraint handlers */
+   for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && lp->flushed; ++i )
+   {
+      if( onlydelayed && !SCIPconshdlrWasSeparationDelayed(set->conshdlrs[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[i], blkmem, set, stat, prob, sepastore, actdepth, onlydelayed, 
+            &result) );
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+      *separateagain = *separateagain || (result == SCIP_CONSADDED);
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *delayed = *delayed || (result == SCIP_DELAYED);
+   }
+
+   /* call LP separators with negative priority */
+   for( i = 0; i < set->nsepas && !(*cutoff) && !(*separateagain) && !(*enoughcuts) && lp->flushed; ++i )
+   {
+      if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
+         continue;
+
+      if( onlydelayed && !SCIPsepaWasDelayed(set->sepas[i]) )
+         continue;
+
+      CHECK_OKAY( SCIPsepaExec(set->sepas[i], set, stat, sepastore, actdepth, onlydelayed, &result) );
+      *cutoff = *cutoff || (result == SCIP_CUTOFF);
+      *separateagain = *separateagain || (result == SCIP_CONSADDED);
+      *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
+      *delayed = *delayed || (result == SCIP_DELAYED);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solve the current LP of a node with a price-and-cut loop */
 static
 RETCODE priceAndCutLoop(
@@ -696,15 +830,14 @@ RETCODE priceAndCutLoop(
    Real glblowerbound;
    Bool separate;
    Bool mustprice;
-   Bool mustsepar;
+   Bool mustsepa;
+   Bool delayedsepa;
    Bool root;
    int maxseparounds;
    int nsepastallrounds;
    int maxnsepastallrounds;
    int actdepth;
    int npricedcolvars;
-   int h;
-   int s;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -752,11 +885,12 @@ RETCODE priceAndCutLoop(
    /* price-and-cut loop */
    npricedcolvars = prob->ncolvars;
    mustprice = TRUE;
-   mustsepar = separate;
+   mustsepa = separate;
+   delayedsepa = FALSE;
    *cutoff = FALSE;
    *unbounded = FALSE;
    nsepastallrounds = 0;
-   while( !(*cutoff) && !(*lperror) && (mustprice || mustsepar) )
+   while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
       debugMessage("-------- node solving loop --------\n");
       assert(lp->flushed);
@@ -807,7 +941,7 @@ RETCODE priceAndCutLoop(
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          assert(!lp->flushed || lp->solved);
          mustprice = !lp->flushed || (prob->ncolvars != npricedcolvars);
-         mustsepar = mustsepar || !lp->flushed;
+         mustsepa = mustsepa || !lp->flushed;
          
          /* after adding columns, the LP should be primal feasible such that primal simplex is applicable;
           * if LP was infeasible, we have to use dual simplex
@@ -824,7 +958,7 @@ RETCODE priceAndCutLoop(
          assert(SCIPpricestoreGetNBoundResets(pricestore) == 0);
          assert(!lp->flushed || lp->solved);
          mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
-         mustsepar = mustsepar || !lp->flushed;
+         mustsepa = mustsepa || !lp->flushed;
 
          /* solve LP again after resetting bounds (with dual simplex) */
          debugMessage("pricing: solve LP after resetting bounds\n");
@@ -865,11 +999,18 @@ RETCODE priceAndCutLoop(
          CHECK_OKAY( SCIPdispPrintLine(set, stat, NULL, TRUE) );
       }
 
-      /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
-      mustsepar = mustsepar
-         && separate
+      /* check, if we exceeded the separation round limit */
+      mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
-         && nsepastallrounds < maxnsepastallrounds
+         && nsepastallrounds < maxnsepastallrounds;
+
+      /* if separators were delayed, we want to apply a final separation round with the delayed separators */
+      delayedsepa = delayedsepa && !mustsepa; /* if regular separation applies, we ignore delayed separators */
+      mustsepa = mustsepa || delayedsepa;
+
+      /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
+      mustsepa = mustsepa
+         && separate
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE)
          && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT)
          && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
@@ -877,7 +1018,7 @@ RETCODE priceAndCutLoop(
       /* separation and reduced cost strengthening
        * (needs not to be done completely, because we just want to increase the lower bound)
        */
-      if( !(*cutoff) && !(*lperror) && mustsepar )
+      if( !(*cutoff) && !(*lperror) && mustsepa )
       {
          Longint olddomchgcount;
          Real oldlpobjval;
@@ -891,11 +1032,11 @@ RETCODE priceAndCutLoop(
          olddomchgcount = stat->domchgcount;
          oldlpobjval = SCIPlpGetObjval(lp, set);
 
-         mustsepar = FALSE;
+         mustsepa = FALSE;
          enoughcuts = (SCIPsetGetSepaMaxcuts(set, root) == 0);
 
          /* global cut pool separation */
-         if( !enoughcuts )
+         if( !enoughcuts && !delayedsepa )
          {
             if( (set->sepa_poolfreq == 0 && actdepth == 0)
                || (set->sepa_poolfreq > 0 && actdepth % set->sepa_poolfreq == 0) )
@@ -920,47 +1061,9 @@ RETCODE priceAndCutLoop(
             && lp->solved
             && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY) )
          {
-            separateagain = FALSE;
-
-            /* sort separators by priority */
-            SCIPsetSortSepas(set);
-
-            /* call LP separators with nonnegative priority */
-            for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts && lp->flushed; ++s )
-            {
-               if( SCIPsepaGetPriority(set->sepas[s]) < 0 )
-                  continue;
-
-               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, actdepth, &result) );
-               *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               separateagain = separateagain || (result == SCIP_CONSADDED);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
-            }
-
-            /* try separating constraints of the constraint handlers until the cut pool is at least half full;
-             * we have to stop after a domain reduction was found, because they go directly into the LP and invalidate
-             * the current solution
-             */
-            for( h = 0; h < set->nconshdlrs && !(*cutoff) && !enoughcuts && lp->flushed; ++h )
-            {
-               CHECK_OKAY( SCIPconshdlrSeparate(conshdlrs_sepa[h], blkmem, set, stat, prob, sepastore, actdepth,
-                     &result) );
-               *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               separateagain = separateagain || (result == SCIP_CONSADDED);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
-            }
-
-            /* call LP separators with negative priority */
-            for( s = 0; s < set->nsepas && !(*cutoff) && !separateagain && !enoughcuts && lp->flushed; ++s )
-            {
-               if( SCIPsepaGetPriority(set->sepas[s]) >= 0 )
-                  continue;
-
-               CHECK_OKAY( SCIPsepaExec(set->sepas[s], set, stat, sepastore, actdepth, &result) );
-               *cutoff = *cutoff || (result == SCIP_CUTOFF);
-               separateagain = separateagain || (result == SCIP_CONSADDED);
-               enoughcuts = enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
-            }
+            /* apply a separation round */
+            CHECK_OKAY( separationRound(blkmem, set, stat, prob, lp, sepastore, conshdlrs_sepa, actdepth, delayedsepa, 
+                  &delayedsepa, &separateagain, &enoughcuts, cutoff) );
 
             if( !(*cutoff) && !lp->flushed )
             {
@@ -968,8 +1071,9 @@ RETCODE priceAndCutLoop(
                debugMessage("separation: solve LP\n");
                CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
                assert(lp->flushed);
-               assert(lp->solved || lperror);
+               assert(lp->solved || *lperror);
                separateagain = TRUE;
+               delayedsepa = FALSE;
             }
          }
          assert(*cutoff || *lperror || (lp->flushed && lp->solved));
@@ -1010,7 +1114,7 @@ RETCODE priceAndCutLoop(
                }
                
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
-               mustsepar = !lp->flushed;
+               mustsepa = !lp->flushed;
                
                if( !(*cutoff) )
                {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.25 2005/02/07 18:12:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.26 2005/02/08 14:22:30 bzfpfend Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -199,6 +199,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_SEPARATED  : a cutting plane was generated
  *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
  *  - SCIP_DIDNOTRUN  : the separator was skipped
+ *  - SCIP_DELAYED    : the separator was skipped, but should be called again
  */
 #define DECL_CONSSEPA(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
       RESULT* result)
@@ -339,6 +340,7 @@ typedef struct ConsSetChg CONSSETCHG;   /**< tracks additions and removals of th
  *  - SCIP_REDUCEDDOM : at least one domain reduction was found
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
+ *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
  */
 #define DECL_CONSPROP(x) RETCODE x (SCIP* scip, CONSHDLR* conshdlr, CONS** conss, int nconss, int nusefulconss, \
       RESULT* result)

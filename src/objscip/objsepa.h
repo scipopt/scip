@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.11 2005/02/04 14:27:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.12 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -52,17 +52,22 @@ public:
    /** frequency for calling separator */
    const int scip_freq_;
 
+   /** should separator be delayed, if other separators found cuts? */
+   const Bool scip_delay_;
+
    /** default constructor */
    ObjSepa(
       const char*   name,               /**< name of cut separator */
       const char*   desc,               /**< description of cut separator */
       int           priority,           /**< priority of the cut separator */
-      int           freq                /**< frequency for calling separator */
+      int           freq,               /**< frequency for calling separator */
+      Bool          delay               /**< should separator be delayed, if other separators found cuts? */
       )
       : scip_name_(name),
         scip_desc_(desc),
         scip_priority_(priority),
-        scip_freq_(freq)
+        scip_freq_(freq),
+        scip_delay_(delay)
    {
    }
 
@@ -135,6 +140,7 @@ public:
     *  - SCIP_CONSADDED  : no cutting plane or domain reduction, but an additional constraint was generated
     *  - SCIP_DIDNOTFIND : the separator searched, but did not find domain reductions, cutting planes, or cut constraints
     *  - SCIP_DIDNOTRUN  : the separator was skipped
+    *  - SCIP_DELAYED    : the separator was skipped, but should be called again
     */
    virtual RETCODE scip_exec(
       SCIP*         scip,               /**< SCIP data structure */

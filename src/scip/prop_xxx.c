@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.c,v 1.4 2005/02/07 14:08:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_xxx.c,v 1.5 2005/02/08 14:22:28 bzfpfend Exp $"
 
 /**@file   prop_xxx.c
  * @brief  xxx propagator
@@ -32,6 +32,7 @@
 #define PROP_DESC              "propagator template"
 #define PROP_PRIORITY                 0
 #define PROP_FREQ                    10
+#define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
 
 
@@ -180,7 +181,7 @@ RETCODE SCIPincludePropXxx(
    /* TODO: (optional) create propagator specific data here */
 
    /* include propagator */
-   CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ,
+   CHECK_OKAY( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
          propFreeXxx, propInitXxx, propExitXxx, 
          propInitsolXxx, propExitsolXxx, propExecXxx, propRespropXxx,
          propdata) );
