@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.24 2004/03/15 14:54:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.25 2004/03/15 15:26:05 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -713,7 +713,17 @@ RETCODE propagateCons(
    /* check, if weights of fixed variables already exceeds knapsack capacity */
    if( consdata->capacity < consdata->onesweightsum )
    {
-      /**@todo start conflict analysis with the fixed-to-one variables */
+      /* start conflict analysis with the fixed-to-one variables */
+      CHECK_OKAY( SCIPinitConflictAnalysis(scip) );
+      for( i = 0; i < consdata->nvars; i++ )
+      {
+         if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+         {
+            CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
+         }
+      }
+
+      CHECK_OKAY( SCIPanalyzeConflict(scip, NULL) );
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
@@ -730,7 +740,7 @@ RETCODE propagateCons(
          if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 && SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
          {
             /**@todo provide cons for conflict analysis */
-            CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, /*cons*/NULL, 0, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
             assert(!infeasible);
             assert(tightened);
             (*nfixedvars)++;
@@ -1111,18 +1121,26 @@ DECL_CONSPRESOL(consPresolKnapsack)
 
 
 /** conflict variable resolving method of constraint handler */
-#if 0
 static
 DECL_CONSRESCVAR(consRescvarKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
+   CONSDATA* consdata;
+   int i;
+   consdata = SCIPconsGetData(cons);
+ 
+   assert(SCIPvarGetUbLocal(infervar) < 0.5);
+   assert(consdata != NULL);
+
+   for( i = 0; i < consdata->nvars; i++ )
+   {
+      if( SCIPvarWasFixedEarlier(consdata->vars[i], infervar) && SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
+      {
+         CHECK_OKAY( SCIPaddConflictVar(scip, consdata->vars[i]) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consRescvarKnapsack NULL
-#endif
 
 
 /** variable rounding lock method of constraint handler */
