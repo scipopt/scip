@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.95 2004/01/26 15:10:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.96 2004/01/27 14:38:31 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5576,7 +5576,7 @@ RETCODE lpSolve(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       CHECK_OKAY( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      if( SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
+      if( SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;

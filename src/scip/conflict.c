@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.25 2004/01/26 15:10:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.26 2004/01/27 14:38:30 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1205,7 +1205,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
       assert(row->vals != NULL);
       
       /* ignore local rows and rows with farkas value 0.0 */
-      if( !row->local && !SCIPsetIsZero(set, row->dualfarkas) )
+      if( !row->local && !SCIPsetIsFeasZero(set, row->dualfarkas) )
       {
          /* add row coefficients to farkas row */
          for( i = 0; i < row->len; ++i )
@@ -1266,7 +1266,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
    debugMessage("farkaslhs=%g, farkasact=%g\n", farkaslhs, farkasact);
 
    /* check, if the farkas row is still violated (using global bounds for non-binary variables and ignoring local rows) */
-   if( SCIPsetIsLT(set, farkasact, farkaslhs) )
+   if( SCIPsetIsFeasLT(set, farkasact, farkaslhs) )
    {
       /* initialize conflict data */
       CHECK_OKAY( SCIPconflictInit(conflict) );
@@ -1292,7 +1292,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
             /* variable is fixed to 0.0 */
             if( SCIPsetIsPositive(set, farkascoef[v]) )
             {
-               if( SCIPsetIsLT(set, farkasact + farkascoef[v], farkaslhs) )
+               if( SCIPsetIsFeasLT(set, farkasact + farkascoef[v], farkaslhs) )
                {
                   /* we can unfix the variable but have to increase the farkas activity */
                   farkasact += farkascoef[v];
@@ -1314,7 +1314,7 @@ RETCODE lpconflictAnalyzeDualfarkas(
             /* variable is fixed to 1.0 */
             if( SCIPsetIsNegative(set, farkascoef[v]) )
             {
-               if( SCIPsetIsLT(set, farkasact - farkascoef[v], farkaslhs) )
+               if( SCIPsetIsFeasLT(set, farkasact - farkascoef[v], farkaslhs) )
                {
                   /* we can unfix the variable but have to increase the farkas activity */
                   farkasact -= farkascoef[v];
@@ -1427,7 +1427,7 @@ RETCODE lpconflictAnalyzeDualsol(
       assert(row->vals != NULL);
       
       /* ignore dual solution values of 0.0 */
-      if( SCIPsetIsZero(set, row->dualsol) )
+      if( SCIPsetIsFeasZero(set, row->dualsol) )
          continue;
 
       /* local rows add up (negatively) to the dual row, global rows add up to the left hand side */
@@ -1469,7 +1469,7 @@ RETCODE lpconflictAnalyzeDualsol(
       var = SCIPcolGetVar(col);
 
       /* add column's bound to dual row lhs: redcost > 0 -> lb, redcost < 0 -> ub */
-      if( SCIPsetIsPositive(set, col->redcost) )
+      if( SCIPsetIsFeasPositive(set, col->redcost) )
       {
          if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          {
@@ -1481,12 +1481,13 @@ RETCODE lpconflictAnalyzeDualsol(
          else
          {
             /* local bounds of non-binary variables cannot be used: use global bound */
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
             duallhs += col->redcost * SCIPvarGetLbGlobal(var);
             debugMessage(" col <%s>: llb=%g, glb=%g, redcost=%g -> %g\n", 
                SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var), col->redcost, duallhs);
          }
       }
-      else if( SCIPsetIsNegative(set, col->redcost) )
+      else if( SCIPsetIsFeasNegative(set, col->redcost) )
       {
          if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          {
@@ -1498,6 +1499,7 @@ RETCODE lpconflictAnalyzeDualsol(
          else
          {
             /* local bounds of non-binary variables cannot be used: use global bound */
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
             duallhs += col->redcost * SCIPvarGetUbGlobal(var);
             debugMessage(" col <%s>: lub=%g, gub=%g, redcost=%g -> %g\n", 
                SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var), col->redcost, duallhs);
@@ -1547,7 +1549,7 @@ RETCODE lpconflictAnalyzeDualsol(
    debugMessage("duallhs=%g, dualact=%g, cutoffbound=%g\n", duallhs, dualact, lp->cutoffbound);
 
    /* check, if the dual row is still violated (using global bounds for non-binary variables and ignoring local rows) */
-   if( SCIPsetIsLT(set, dualact, duallhs) )
+   if( SCIPsetIsFeasLT(set, dualact, duallhs) )
    {
       /* initialize conflict data */
       CHECK_OKAY( SCIPconflictInit(conflict) );
@@ -1603,7 +1605,7 @@ RETCODE lpconflictAnalyzeDualsol(
          dualactdelta = MAX(sign * dualcoef[v], 0.0);
 
          /* check, if variable can be unfixed */
-         if( SCIPsetIsGT(set, duallhs + duallhsdelta, dualact + dualactdelta) )
+         if( SCIPsetIsFeasGT(set, duallhs + duallhsdelta, dualact + dualactdelta) )
          {
             /* we can unfix the variable and have to update the dual row's left hand side and activity */
             duallhs += duallhsdelta;

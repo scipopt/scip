@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.85 2004/01/24 17:21:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.86 2004/01/27 14:38:31 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -798,12 +798,17 @@ RETCODE redcostStrengthening(
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &cstat);
 
+   /**@todo check, if the resolve in next solveNodeLP() call is too expensive in contrast to resolving directly
+    *       after reduced cost fixing
+    */
+#if 0 /* resolving is done in the next solveNodeLP() call */
    /* resolve the LP (the optimal solution should stay the same) */
    CHECK_OKAY( SCIPlpSolveAndEval(lp, memhdr, set, stat, prob, FALSE) );
    assert(lp->solved);
    assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
    assert(EPSZ(SCIPsetRelDiff(set, SCIPlpGetObjval(lp, set), lpobjval), 100.0*(set)->feastol));
    /*assert(SCIPsetIsFeasEQ(set, SCIPlpGetObjval(lp, set), lpobjval));*/
+#endif
 
    /* stop redcost strengthening activation timer */
    SCIPclockStop(stat->redcoststrtime, set);
@@ -884,6 +889,8 @@ RETCODE enforceConstraints(
 
          if( tree->actnodehaslp )
          {
+            assert(lp->solved);
+            assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
             CHECK_OKAY( SCIPconshdlrEnforceLPSol(conshdlrs_enfo[h], memhdr, set, prob, sepastore, &result) );
          }
          else
@@ -902,6 +909,7 @@ RETCODE enforceConstraints(
          {  
          case SCIP_DIDNOTRUN:
             assert(tree->nchildren == 0);
+            assert(!tree->actnodehaslp || lp->solved);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             assert(objinfeasible);
             *infeasible = TRUE;
@@ -909,17 +917,20 @@ RETCODE enforceConstraints(
 
          case SCIP_FEASIBLE:
             assert(tree->nchildren == 0);
+            assert(!tree->actnodehaslp || lp->solved);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             break;
 
          case SCIP_INFEASIBLE:
             assert(tree->nchildren == 0);
+            assert(!tree->actnodehaslp || lp->solved);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             break;
 
          case SCIP_CUTOFF:
             assert(tree->nchildren == 0);
+            assert(!tree->actnodehaslp || lp->solved);
 
             /* the found cuts are of no use, because the node is infeasible anyway */
             CHECK_OKAY( SCIPsepastoreClearCuts(sepastore, memhdr, set, lp) );
@@ -950,6 +961,7 @@ RETCODE enforceConstraints(
 
          case SCIP_CONSADDED:
             assert(tree->nchildren == 0);
+            assert(!tree->actnodehaslp || lp->solved);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             resolved = TRUE;
@@ -958,6 +970,7 @@ RETCODE enforceConstraints(
 
          case SCIP_BRANCHED:
             assert(tree->nchildren >= 1);
+            assert(!tree->actnodehaslp || lp->solved);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             *infeasible = TRUE;
             resolved = TRUE;
@@ -1283,7 +1296,6 @@ RETCODE SCIPsolveCIP(
 
                      /* apply reduced cost bound strengthening */
                      CHECK_OKAY( redcostStrengthening(memhdr, set, stat, prob, tree, lp, branchcand, primal, eventqueue) );
-                     assert(lp->solved);
 
                      /* apply further domain propagation, if addional bounds have been changed */
                      if( stat->nboundchanges != oldnboundchanges )
