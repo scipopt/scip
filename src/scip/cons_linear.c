@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.137 2004/12/08 14:02:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.138 2004/12/09 10:36:34 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2461,7 +2461,7 @@ RETCODE tightenVarBounds(
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
 
                /* analyze conflict */
-               CHECK_OKAY( analyzeConflict(scip, cons, TRUE) );
+               CHECK_OKAY( analyzeConflict(scip, cons, FALSE) );
 
                *cutoff = TRUE;
                return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.102 2004/11/29 12:17:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.103 2004/12/09 10:36:34 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -307,8 +307,9 @@ RETCODE conshdlrMarkConsObsolete(
              * enforcement call;
              * this reset is not performed for separation and propagation, because they are not vital for correctness
              */
-            conshdlr->lastenfolpcount = -1;
-            conshdlr->lastenfodomchgcount = -1;
+            conshdlr->lastenfolplpcount = -1;
+            conshdlr->lastenfolpdomchgcount = -1;
+            conshdlr->lastenfopsdomchgcount = -1;
          }
 
          /* switch the last useful (non-obsolete) enfo constraint with this constraint */
@@ -556,8 +557,9 @@ RETCODE conshdlrAddEnfocons(
        * enforced; thus, we have to reset the enforcement counters and force all constraints to be 
        * enforced again; this is not needed for separation and propagation, because they are not vital for correctness
        */
-      conshdlr->lastenfolpcount = -1;
-      conshdlr->lastenfodomchgcount = -1;
+      conshdlr->lastenfolplpcount = -1;
+      conshdlr->lastenfolpdomchgcount = -1;
+      conshdlr->lastenfopsdomchgcount = -1;
    }
    conshdlr->enfoconss[insertpos] = cons;
    cons->enfoconsspos = insertpos;
@@ -1459,8 +1461,9 @@ RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nchildren = 0;
    (*conshdlr)->lastpropdomchgcount = -1;
    (*conshdlr)->lastsepalpcount = -1;
-   (*conshdlr)->lastenfolpcount = -1;
-   (*conshdlr)->lastenfodomchgcount = -1;
+   (*conshdlr)->lastenfolplpcount = -1;
+   (*conshdlr)->lastenfolpdomchgcount = -1;
+   (*conshdlr)->lastenfopsdomchgcount = -1;
    (*conshdlr)->lastnfixedvars = 0;
    (*conshdlr)->lastnaggrvars = 0;
    (*conshdlr)->lastnchgvartypes = 0;
@@ -1573,11 +1576,12 @@ RETCODE SCIPconshdlrInit(
    conshdlr->ndomredsfound = 0;
    conshdlr->nchildren = 0;
    conshdlr->lastpropdomchgcount = -1;
-   conshdlr->lastenfodomchgcount = -1;
+   conshdlr->lastenfolpdomchgcount = -1;
+   conshdlr->lastenfopsdomchgcount = -1;
    conshdlr->maxnconss = conshdlr->nconss;
    conshdlr->startnconss = 0;
    conshdlr->lastsepalpcount = -1;
-   conshdlr->lastenfolpcount = -1;
+   conshdlr->lastenfolplpcount = -1;
    conshdlr->lastnusefulpropconss = 0;
    conshdlr->lastnusefulsepaconss = 0;
    conshdlr->lastnusefulenfoconss = 0;
@@ -1912,7 +1916,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
-   assert(conshdlr->lastenfolpcount != stat->lpcount
+   assert(conshdlr->lastenfolplpcount != stat->lpcount || conshdlr->lastenfolpdomchgcount != stat->domchgcount
       || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
    assert(set != NULL);
    assert(stat != NULL);
@@ -1927,9 +1931,10 @@ RETCODE SCIPconshdlrEnforceLPSol(
       int nconss;
       int nusefulconss;
       int firstcons;
+      Bool lpchanged;
 
       /* check, if this LP solution was already enforced */
-      if( conshdlr->lastenfolpcount == stat->lpcount )
+      if( conshdlr->lastenfolplpcount == stat->lpcount && conshdlr->lastenfolpdomchgcount == stat->domchgcount )
       {
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -1937,6 +1942,7 @@ RETCODE SCIPconshdlrEnforceLPSol(
          nconss = conshdlr->nusefulenfoconss - conshdlr->lastnusefulenfoconss;
          nusefulconss = nconss;
          firstcons = conshdlr->lastnusefulenfoconss;
+         lpchanged = FALSE;
       }
       else
       {
@@ -1944,13 +1950,14 @@ RETCODE SCIPconshdlrEnforceLPSol(
          nconss = conshdlr->nenfoconss;
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
+         lpchanged = TRUE;
       }
       assert(firstcons >= 0);
       assert(firstcons + nconss <= conshdlr->nenfoconss);
       assert(nusefulconss <= nconss);
 
       /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastenfolpcount != stat->lpcount) )
+      if( nconss > 0 || (!conshdlr->needscons && lpchanged) )
       {
          CONS** conss;
          Longint oldndomchgs;
@@ -1958,11 +1965,11 @@ RETCODE SCIPconshdlrEnforceLPSol(
          int oldnactiveconss;
 
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
-            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name,
-            conshdlr->lastenfolpcount == stat->lpcount ? "old" : "new");
+            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, lpchanged ? "new" : "old");
 
          /* remember the number of processed constraints on the current LP solution */
-         conshdlr->lastenfolpcount = stat->lpcount;
+         conshdlr->lastenfolplpcount = stat->lpcount;
+         conshdlr->lastenfolpdomchgcount = stat->domchgcount;
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */
@@ -2049,7 +2056,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
    assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
-   assert(conshdlr->lastenfodomchgcount != stat->domchgcount
+   assert(conshdlr->lastenfopsdomchgcount != stat->domchgcount
       || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
    assert(set != NULL);
    assert(stat != NULL);
@@ -2064,9 +2071,10 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
       int nconss;
       int nusefulconss;
       int firstcons;
+      Bool pschanged;
 
       /* check, if this LP solution was already enforced */
-      if( conshdlr->lastenfodomchgcount == stat->domchgcount )
+      if( conshdlr->lastenfopsdomchgcount == stat->domchgcount )
       {
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -2074,6 +2082,7 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          nconss = conshdlr->nusefulenfoconss - conshdlr->lastnusefulenfoconss;
          nusefulconss = nconss;
          firstcons = conshdlr->lastnusefulenfoconss;
+         pschanged = FALSE;
       }
       else
       {
@@ -2081,23 +2090,23 @@ RETCODE SCIPconshdlrEnforcePseudoSol(
          nconss = conshdlr->nenfoconss;
          nusefulconss = conshdlr->nusefulenfoconss;
          firstcons = 0;
+         pschanged = TRUE;
       }
       assert(firstcons >= 0);
       assert(firstcons + nconss <= conshdlr->nenfoconss);
       assert(nusefulconss <= nconss);
 
       /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && conshdlr->lastenfodomchgcount != stat->domchgcount) )
+      if( nconss > 0 || (!conshdlr->needscons && pschanged) )
       {
          CONS** conss;
          Longint oldndomchgs;
          
          debugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution)\n",
-            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name,
-            conshdlr->lastenfodomchgcount == stat->domchgcount ? "old" : "new");
+            firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old");
 
          /* remember the number of processed constraints on the current pseudo solution */
-         conshdlr->lastenfodomchgcount = stat->domchgcount;
+         conshdlr->lastenfopsdomchgcount = stat->domchgcount;
          conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
 
          /* get the array of the constraints to be processed */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.21 2004/10/26 07:30:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.22 2004/12/09 10:36:34 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -103,7 +103,8 @@ struct Conshdlr
    Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    Longint          nchildren;          /**< number of children the constraint handler created during branching */
    Longint          lastpropdomchgcount;/**< last bound change number, where the domain propagation was called */
-   Longint          lastenfodomchgcount;/**< last bound change number, where the pseudo enforcement was called */
+   Longint          lastenfolpdomchgcount;/**< last bound change number, where the LP enforcement was called */
+   Longint          lastenfopsdomchgcount;/**< last bound change number, where the pseudo enforcement was called */
    char*            name;               /**< name of constraint handler */
    char*            desc;               /**< description of constraint handler */
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
@@ -170,7 +171,7 @@ struct Conshdlr
    int              nupdateconss;       /**< number of update constraints */
    int              nenabledconss;      /**< total number of enabled constraints of the handler */
    int              lastsepalpcount;    /**< last LP number, where the separations was called */
-   int              lastenfolpcount;    /**< last LP number, where the LP enforcement was called */
+   int              lastenfolplpcount;  /**< last LP number, where the LP enforcement was called */
    int              lastnusefulpropconss;/**< number of already propagated useful constraints on current domains */
    int              lastnusefulsepaconss;/**< number of already separated useful constraints on current solution */
    int              lastnusefulenfoconss;/**< number of already enforced useful constraints on current solution */
