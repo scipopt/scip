@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.229 2004/11/24 17:36:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.230 2004/11/24 17:46:20 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3508,8 +3508,9 @@ RETCODE presolve(
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
     */
-   CHECK_OKAY( SCIPprobExitPresolve(scip->transprob, scip->set) );
-
+   CHECK_OKAY( SCIPprobExitPresolve(scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
+         scip->branchcand, scip->eventqueue, infeasible) );
+ 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
    
@@ -5311,37 +5312,55 @@ RETCODE SCIPaddVarVub(
    return SCIP_OKAY;
 }
 
-/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
-RETCODE SCIPaddVarLbimpl(
+/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b 
+ *  if y is binary variable the corresponding valid implication for y is allso added */    
+RETCODE SCIPaddVarImplic(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   Real             bound,              /**< bound b       bounding information    x >= b */
-   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
-   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   Bool             i,                  /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddVarLbimplic", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   Bool conflict;
+   Bool fixed;
 
-   CHECK_OKAY( SCIPvarAddLbimplic(var, scip->mem->solvemem, scip->set, bound, infervar, infertype, inferbound) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddVarImplic", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   *infeasible = FALSE;
+    
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   {
+      errorMessage("can't add implication for nonbinary variable\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, i, implvar, impltype, implbound, &conflict) );
+   if( conflict )
+   {
+      CHECK_OKAY( SCIPfixVar(scip, var, i ? 0.0 : 1.0, infeasible, &fixed) );
+      return SCIP_OKAY;
+   }
+
+   /* if y is binary variable the corresponding valid implication for y is allso added: 
+    *    if x <= 0  ==>  y <= 0    add y >= 1  ==>  x >= 1 (i=0->1, impltype=1(upper)->0, implbound=0->1)
+    *    if x <= 0  ==>  y >= 1    add y <= 0  ==>  x >= 1 (i=0->0, impltype=0(lower)->0, implbound=1->1)
+    *    if x >= 1  ==>  y <= 0    add y >= 1  ==>  x <= 0 (i=1->1, impltype=1(upper)->1, implbound=0->0)
+    *    if x >= 1  ==>  y >= 1    add y <= 0  ==>  x <= 0 (i=1->0, impltype=0(lower)->1, implbound=1->0)
+    */    
+   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+   {
+      CHECK_OKAY( SCIPvarAddImplic(implvar, scip->mem->solvemem, scip->set,
+            impltype == SCIP_BOUNDTYPE_UPPER, var, i ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
+            i ? 0.0 : 1.0, &conflict) );
+      if( conflict )
+      {
+         CHECK_OKAY( SCIPfixVar(scip, implvar, impltype == SCIP_BOUNDTYPE_UPPER ? 0.0 : 1.0, infeasible, &fixed) );
+         return SCIP_OKAY;
+      }
+   }
    
-   return SCIP_OKAY;
-}
-
-/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
-RETCODE SCIPaddVarUbimpl(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             bound,              /**< bound b       bounding information    x <= b */
-   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
-   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPaddVarUbimplic", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   CHECK_OKAY( SCIPvarAddUbimplic(var, scip->mem->solvemem, scip->set, bound, infervar, infertype, inferbound) );
-
    return SCIP_OKAY;
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.183 2004/11/19 14:45:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.184 2004/11/24 17:46:21 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1901,26 +1901,15 @@ RETCODE SCIPaddVarVub(
    Real             vubconstant         /**< constant d    in x <= b*z + d */
    );
 
-/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
-extern
-RETCODE SCIPaddVarLbimpl(
+/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b */
+RETCODE SCIPaddVarImplic(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   Real             bound,              /**< bound b       bounding information    x >= b */
-   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
-   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
-   );
-
-/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
-extern
-RETCODE SCIPaddVarUbimpl(
-   SCIP*            scip,               /**< SCIP data structure */
-   VAR*             var,                /**< problem variable */
-   Real             bound,              /**< bound b       bounding information    x <= b */
-   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
-   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   Bool             i,                  /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

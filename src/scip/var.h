@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.80 2004/10/29 10:39:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.81 2004/11/24 17:46:21 bzfwolte Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -540,32 +540,29 @@ RETCODE SCIPvarUseActiveVbds(
    VAR*             var                 /**< problem variable */
    );
 
-/** informs variable x about a globally valid implication:  x >= b   =>   z <= c  or  z >= c */
-RETCODE SCIPvarAddLbimplic(
-   VAR*             var,                /**< problem variable */
+/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b */
+RETCODE SCIPvarAddImplic(
+   VAR*             var,                /**< problem variable  */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   Real             bound,              /**< bound b       in bounding information x >= b */
-   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
-   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
+   Bool             i,                  /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Real             implbound,          /**< bound b    in implication y <= b or y >= b */
+   Bool*            conflict            /**< pointer to store whether fixing variable to given value results in conflict */ 
    );
 
-/** informs variable x about a globally valid implication:  x <= b   =>   z <= c  or  z >= c */
-RETCODE SCIPvarAddUbimplic(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   Real             bound,              /**< bound b       in bounding information x <= b */
-   VAR*             infervar,           /**< variable z    in inference            z <= c  or  z >= c */
-   Bool             infertype,          /**< type          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real             inferbound          /**< bound c       in inference            z <= c  or  z >= c */
-   );
-
-/** replaces variables in implications of variable by their active problem variable counterparts */
+/** replaces variables in implications of binary variable by their active problem variable counterparts */
 extern
 RETCODE SCIPvarUseActiveImplics(
-   VAR*             var                 /**< problem variable */
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            infeasible          /**< pointer to store TRUE, if an infeasibility was detected */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

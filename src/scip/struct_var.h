@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.22 2004/10/22 13:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.23 2004/11/24 17:46:21 bzfwolte Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -165,15 +165,20 @@ struct VBounds
    int              size;               /**< size of vars, coefs, and constants arrays */
 };
 
-/** implications in the form z <= c or z >= c from bounding information of a variable in the form x <= b or x >= b */
+/** implications for binary variable x in the form 
+ *    x  <= 0  ==>  y <= b or y >= b (stored in arrays[0]) 
+ *    x  >= 1  ==>  y <= b or y >= b (stored in arrays[1]) 
+ *  implications with    binary variable y are stored at the beginning of arrays (sorted by pointer of y)
+ *  implications with nonbinary variable y are stored at the end       of arrays (sorted by pointer of y)
+ */
 struct Implics
 {
-   Real*            bounds;             /**< bounds b       in bounding information x <= b  or  x >= b */
-   VAR**            infervars;          /**< variables z    in inference            z <= c  or  z >= c */
-   Bool*            infertypes;         /**< types          of inference    TRUE if z <= c, FALSE if z >= c */
-   Real*            inferbounds;        /**< bounds c       in inference            z <= c  or  z >= c */
-   int              len;                /**< number of existing implications (used slots in arrays) */
-   int              size;               /**< size of bounds, infervars, infertypes and inferbounds arrays */
+   VAR**            implvars[2];        /**< variables y  in implications y <= b or y >= b */
+   BOUNDTYPE*       impltypes[2];       /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Real*            implbounds[2];      /**< bounds b     in implications y <= b or y >= b */
+   int              implsize[2];        /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
+   int              nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
+   int              nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */
 };
 
 /** aggregation information: x = a*y + c */
@@ -226,8 +231,7 @@ struct Var
    VAR*             negatedvar;         /**< pointer to the variables negation: x' = lb + ub - x, or NULL if not created */
    VBOUNDS*         vlbs;               /**< variable lower bounds x >= b*y + d */
    VBOUNDS*         vubs;               /**< variable upper bounds x <= b*y + d */
-   IMPLICS*         lbimplics;          /**< implications z >=/<= c from lower bound information x >= b */
-   IMPLICS*         ubimplics;          /**< implications z >=/<= c from upper bound information x <= b */
+   IMPLICS*         implics;            /**< implications y >=/<= b following from x <= 0 and x >= 1 (x binary), or NULL if x is not binary */
    EVENTFILTER*     eventfilter;        /**< event filter for events concerning this variable; not for ORIGINAL vars */
    BDCHGINFO*       lbchginfos;         /**< bound change informations for lower bound changes from root to current node */
    BDCHGINFO*       ubchginfos;         /**< bound change informations for upper bound changes from root to current node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.72 2004/11/24 15:29:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.73 2004/11/24 17:46:19 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1515,47 +1515,7 @@ DECL_CONSFREE(consFreeKnapsack)
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #define consExitpreKnapsack NULL
-#if 0
-/**@TODO enable implication detection */
-static
-DECL_CONSEXITPRE(consExitpreKnapsack)
-{
-   CONSDATA* consdata;
-   int c;
-   int i;
-   int j;
-   int f;
 
-   for( c = 0; c < nconss; ++c )
-   {
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-      sortItems(consdata);
-
-
-#ifdef DEBUG
-      debugMessage("\n knapsack constraint <%s>:\n", SCIPconsGetName(conss[c]));
-      for( i = 0; i < consdata->nvars; i++ )
-         debugMessage("%lld<%s> + ", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
-      debugMessage(" <= %lld\n", consdata->capacity);
-#endif
-
-      for( i = consdata->nvars - 1; i >= 1 && consdata->weights[i] + consdata->weights[i-1] > consdata->capacity; i--)
-      {
-         for( j = i-1; j >= 0 && consdata->weights[i] + consdata->weights[j] > consdata->capacity; j-- )
-         {
-            /* add lower bound implication (x_i >= 1  ==> x_j <= 0) to x_i */
-            CHECK_OKAY( SCIPaddVarLbimpl(scip, consdata->vars[i], 1, consdata->vars[j], TRUE, 0) );
-
-            /* add lower bound implication (x_j >= 1  ==> x_i <= 0) to x_j */
-            CHECK_OKAY( SCIPaddVarLbimpl(scip, consdata->vars[j], 1, consdata->vars[i], TRUE, 0) );
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolKnapsack NULL
