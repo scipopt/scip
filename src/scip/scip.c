@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.202 2004/09/01 16:53:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.203 2004/09/02 09:55:16 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7818,7 +7818,7 @@ RETCODE SCIPprintSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPprintSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( file == NULL )
       file = stdout;
@@ -7840,7 +7840,7 @@ RETCODE SCIPprintTransSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPprintSolTrans", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintSolTrans", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( file == NULL )
       file = stdout;
@@ -7854,38 +7854,40 @@ RETCODE SCIPprintTransSol(
    return SCIP_OKAY;
 }
 
+/** gets number of feasible primal solutions stored in the solution storage */
+Longint SCIPgetNSols(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->primal->nsols;
+}
+
+/** gets array of feasible primal solutions stored in the solution storage */
+SOL** SCIPgetSols(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->primal->sols;
+}
+
 /** gets best feasible primal solution found so far, or NULL if no solution has been found */
 SOL* SCIPgetBestSol(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetBestSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   switch( scip->stage )
+   if( scip->primal->nsols > 0 ) 
    {
-   case SCIP_STAGE_INIT:
-   case SCIP_STAGE_PROBLEM:
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_FREESOLVE:
-   case SCIP_STAGE_FREETRANS:
-      return NULL;
-
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-      if( scip->primal->nsols > 0 ) 
-      {
-         assert(scip->primal->sols != NULL);
-         assert(scip->primal->sols[0] != NULL);
-         return scip->primal->sols[0];
-      }
-      return NULL;
-
-   default:
-      errorMessage("invalid SCIP stage\n");
-      abort();
+      assert(scip->primal->sols != NULL);
+      assert(scip->primal->sols[0] != NULL);
+      return scip->primal->sols[0];
    }
+   return NULL;
 }
 
 /** outputs best feasible primal solution found so far to file stream */
@@ -7896,7 +7898,7 @@ RETCODE SCIPprintBestSol(
 {
    SOL* sol;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBestSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 
@@ -7921,7 +7923,7 @@ RETCODE SCIPprintBestTransSol(
 {
    SOL* sol;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBestTransSol", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBestTransSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 
@@ -8736,6 +8738,18 @@ Real SCIPgetCutoffbound(
    return scip->primal->cutoffbound;
 }
 
+/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
+ *  was set from the user as objective limit
+ */
+Bool SCIPisPrimalboundSol(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPisPrimalboundSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPprimalUpperboundIsSol(scip->primal);
+}
+
 /** gets current gap |(primalbound - dualbound)/dualbound| */
 Real SCIPgetGap(
    SCIP*            scip                /**< SCIP data structure */
@@ -8797,28 +8811,6 @@ Longint SCIPgetNBestSolsFound(
    CHECK_ABORT( checkStage(scip, "SCIPgetNBestSolsFound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->nbestsolsfound;
-}
-
-/** gets number of primal solutions stored in the solution storage */
-Longint SCIPgetNSols(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPgetNSols", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return scip->primal->nsols;
-}
-
-/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
- *  was set from the user as objective limit
- */
-Bool SCIPisPrimalboundSol(
-   SCIP*            scip                /**< SCIP data structure */
-   )
-{
-   CHECK_ABORT( checkStage(scip, "SCIPisPrimalboundSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-
-   return SCIPprimalUpperboundIsSol(scip->primal);
 }
 
 /** outputs original problem to file stream */

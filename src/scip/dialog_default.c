@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.27 2004/08/10 14:19:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.28 2004/09/02 09:55:15 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -124,7 +124,11 @@ DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   sol = SCIPgetBestSol(scip);
+   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+      sol = SCIPgetBestSol(scip);
+   else
+      sol = NULL;
+
    if( sol == NULL )
       printf("no feasible solution available\n");
    else
@@ -506,7 +510,12 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
+   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
+   }
+   else
+      printf("no solution available\n");
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -551,7 +560,12 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
    Real solval;
 
    printf("\n");
-   sol = SCIPgetBestSol(scip);
+
+   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+      sol = SCIPgetBestSol(scip);
+   else
+      sol = NULL;
+
    if( sol == NULL )
    {
       printf("no feasible solution available\n");
@@ -623,7 +637,12 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayTranssolution)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
+   if( SCIPstage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      CHECK_OKAY( SCIPprintBestTransSol(scip, NULL) );
+   }
+   else
+      printf("no solution available\n");
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);

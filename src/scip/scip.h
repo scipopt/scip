@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.160 2004/08/31 16:53:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.161 2004/09/02 09:55:16 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3184,6 +3184,18 @@ RETCODE SCIPprintTransSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
+/** gets number of primal solutions stored in the solution storage */
+extern
+Longint SCIPgetNSols(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets array of feasible primal solutions stored in the solution storage */
+extern
+SOL** SCIPgetSols(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets best feasible primal solution found so far, or NULL if no solution has been found */
 extern
 SOL* SCIPgetBestSol(
@@ -3659,6 +3671,14 @@ Real SCIPgetCutoffbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
+ *  was set from the user as objective limit
+ */
+extern
+Bool SCIPisPrimalboundSol(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets current gap |(primalbound - dualbound)/dualbound| */
 extern
 Real SCIPgetGap(
@@ -3680,20 +3700,6 @@ Longint SCIPgetNSolsFound(
 /** gets number of feasible primal solutions found so far, that improved the primal bound at the time they were found */
 extern
 Longint SCIPgetNBestSolsFound(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** gets number of primal solutions stored in the solution storage */
-extern
-Longint SCIPgetNSols(
-   SCIP*            scip                /**< SCIP data structure */
-   );
-
-/** returns whether the current primal bound is justified with a feasible primal solution; if not, the primal bound
- *  was set from the user as objective limit
- */
-extern
-Bool SCIPisPrimalboundSol(
    SCIP*            scip                /**< SCIP data structure */
    );
 
