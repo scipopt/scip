@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.58 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.59 2004/10/26 18:24:27 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -87,6 +87,8 @@ struct ConsData
    int              nvars;              /**< number of variables in the constraint */
    int              watchedvar1;        /**< position of the first watched variable */
    int              watchedvar2;        /**< position of the second watched variable */
+   int              filterpos1;         /**< event filter position of first watched variable */
+   int              filterpos2;         /**< event filter position of second watched variable */
    int              watchedfeasvar;     /**< position of the feasible watched variable (a variable fixed to one) */
    int              watchedsolvar;      /**< position of the variable making the last solution feasible */
 };
@@ -298,6 +300,8 @@ RETCODE consdataCreate(
    }
    (*consdata)->watchedvar1 = -1;
    (*consdata)->watchedvar2 = -1;
+   (*consdata)->filterpos1 = -1;
+   (*consdata)->filterpos2 = -1;
    (*consdata)->watchedfeasvar = -1;
    (*consdata)->watchedsolvar = -1;
 
@@ -359,52 +363,6 @@ void consdataPrint(
    fprintf(file, ")\n");
 }
 
-/** catches events for variable at given position */
-static
-RETCODE catchEvent(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< logic or constraint */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos                 /**< array position of variable to catch bound change events for */
-   )
-{
-   CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < consdata->nvars);
-
-   /* catch bound tighten events on variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)cons) );
-
-   return SCIP_OKAY;
-}
-
-/** drops events for variable at given position */
-static
-RETCODE dropEvent(
-   SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons,               /**< logic or constraint */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   int              pos                 /**< array position of variable to catch bound change events for */
-   )
-{
-   CONSDATA* consdata;
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->vars != NULL);
-   assert(eventhdlr != NULL);
-   assert(0 <= pos && pos < consdata->nvars);
-
-   /* drop events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)cons) );
-
-   return SCIP_OKAY;
-}
-
 /** stores the given variable numbers as watched variables, and updates the event processing */
 static
 RETCODE switchWatchedvars(
@@ -424,24 +382,45 @@ RETCODE switchWatchedvars(
    assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
 
-   /* drop events on old watched variables */
-   if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
+   /* if one watched variable is equal to the old other watched variable, just switch positions */
+   if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
-      CHECK_OKAY( dropEvent(scip, cons, eventhdlr, consdata->watchedvar1) );
+      int tmp;
+      
+      tmp = consdata->watchedvar1;
+      consdata->watchedvar1 = consdata->watchedvar2;
+      consdata->watchedvar2 = tmp;
+      tmp = consdata->filterpos1;
+      consdata->filterpos1 = consdata->filterpos2;
+      consdata->filterpos2 = tmp;
    }
-   if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar1 && consdata->watchedvar2 != watchedvar2 )
+   assert(watchedvar1 != consdata->watchedvar2);
+   assert(watchedvar2 != consdata->watchedvar1);
+
+   /* drop events on old watched variables */
+   if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
    {
-      CHECK_OKAY( dropEvent(scip, cons, eventhdlr, consdata->watchedvar2) );
+      assert(consdata->filterpos1 != -1);
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)cons, consdata->filterpos1) );
+   }
+   if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
+   {
+      assert(consdata->filterpos2 != -1);
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)cons, consdata->filterpos2) );
    }
 
    /* catch events on new watched variables */
-   if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 && watchedvar1 != consdata->watchedvar2 )
+   if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
-      CHECK_OKAY( catchEvent(scip, cons, eventhdlr, watchedvar1) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar1],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)cons, &consdata->filterpos1) );
    }
-   if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar1 && watchedvar2 != consdata->watchedvar2 )
+   if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
-      CHECK_OKAY( catchEvent(scip, cons, eventhdlr, watchedvar2) );
+      CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar2],
+            SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)cons, &consdata->filterpos2) );
    }
 
    /* set the new watched variables */

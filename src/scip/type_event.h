@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.8 2004/09/21 12:08:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.9 2004/10/26 18:24:29 bzfpfend Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -81,8 +81,8 @@
 #define SCIP_EVENTTYPE_SOLFOUND       (SCIP_EVENTTYPE_POORSOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND)
 #define SCIP_EVENTTYPE_SOLEVENT       (SCIP_EVENTTYPE_SOLFOUND)
 
-
 typedef unsigned int EVENTTYPE;         /**< type of event (bit field) */
+
 
 typedef struct Eventhdlr EVENTHDLR;     /**< event handler for a specific events */
 typedef struct EventhdlrData EVENTHDLRDATA; /**< event handler data */
@@ -94,7 +94,6 @@ typedef struct EventBdChg EVENTBDCHG;   /**< data for bound change events */
 typedef struct EventData EVENTDATA;     /**< locally defined event specific data */
 typedef struct EventFilter EVENTFILTER; /**< event filter to select events to be processed by an event handler */
 typedef struct EventQueue EVENTQUEUE;   /**< event queue to cache events and process them later */
-
 
 
 /** destructor of event handler to free user data (called when SCIP is exiting)

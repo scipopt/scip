@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.123 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.124 2004/10/26 18:24:27 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -356,7 +356,7 @@ RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->varpos = pos;
 
    CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED,
-         eventhdlr, consdata->eventdatas[pos]) );
+         eventhdlr, consdata->eventdatas[pos], NULL) );
 
    return SCIP_OKAY;
 }
@@ -379,7 +379,7 @@ RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->varpos == pos);
    
    CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED,
-         eventhdlr, consdata->eventdatas[pos]) );
+         eventhdlr, consdata->eventdatas[pos], -1) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
 
@@ -5016,12 +5016,11 @@ DECL_EVENTEXEC(eventExecLinear)
          assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
          consdataUpdateChgUb(scip, consdata, var, oldbound, newbound, consdata->vals[varpos]);
       }
+      /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
    }
 
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
-
-   /*debug(printf(" -> [%g,%g]\n", consdatadata->minactivity, consdatadata->maxactivity));*/
 
    return SCIP_OKAY;
 }

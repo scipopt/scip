@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.66 2004/10/22 13:02:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.67 2004/10/26 18:24:27 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -184,7 +184,7 @@ RETCODE catchEvents(
    {
       CHECK_OKAY( eventdataCreate(scip, &consdata->eventdatas[i], consdata, consdata->weights[i]) );
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-            consdata->eventdatas[i]) );
+            consdata->eventdatas[i], NULL) );
    }
 
    return SCIP_OKAY;
@@ -207,7 +207,8 @@ RETCODE dropEvents(
 
    for( i = 0; i < consdata->nvars; i++)
    {
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, consdata->eventdatas[i]) );
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[i], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
+            consdata->eventdatas[i], -1) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
 
@@ -1052,7 +1053,7 @@ RETCODE delCoefPos(
    {
       /* drop bound tighten events */
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[pos], SCIP_EVENTTYPE_LBCHANGED, eventhdlr, 
-            consdata->eventdatas[pos]) );
+            consdata->eventdatas[pos], -1) );
       CHECK_OKAY( eventdataFree(scip, &consdata->eventdatas[pos]) );
    }
 

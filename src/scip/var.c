@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.117 2004/10/22 13:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.118 2004/10/26 18:24:29 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6436,6 +6436,53 @@ Real* SCIPvarGetUbimplInferbounds(
    return var->ubimplics != NULL ? var->ubimplics->inferbounds : NULL;
 }
 
+/** includes event handler with given data in variable's event filter */
+RETCODE SCIPvarCatchEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   assert(var->eventfilter != NULL);
+   assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
+   assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
+
+   debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
+      eventtype, var->name, eventhdlr, eventdata);
+
+   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
+
+   return SCIP_OKAY;
+}
+
+/** deletes event handler with given data from variable's event filter */
+RETCODE SCIPvarDropEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int              filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
+   assert(var->eventfilter != NULL);
+
+   debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
+
+   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos) );
+
+   return SCIP_OKAY;
+}
+
 #endif
 
 /** gets objective value of variable in current LP; the value can be different from the bound stored in the variable's own
@@ -6966,51 +7013,6 @@ RETCODE SCIPvarAddToRow(
       errorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
-}
-
-/** includes event handler with given data in variable's event filter */
-RETCODE SCIPvarCatchEvent(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   EVENTTYPE        eventtype,          /**< event type to catch */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
-   assert(var->eventfilter != NULL);
-   assert((eventtype & ~SCIP_EVENTTYPE_VARCHANGED) == 0);
-   assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
-
-   debugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
-      eventtype, var->name, eventhdlr, eventdata);
-
-   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata) );
-
-   return SCIP_OKAY;
-}
-
-/** deletes event handler with given data from variable's event filter */
-RETCODE SCIPvarDropEvent(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
-   assert(var->eventfilter != NULL);
-
-   debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
-
-   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata) );
-
-   return SCIP_OKAY;
 }
 
 /** resets history of current run for given variable */

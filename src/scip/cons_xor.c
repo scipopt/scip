@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.9 2004/09/23 15:46:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.10 2004/10/26 18:24:28 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -60,6 +60,8 @@ struct ConsData
    int              varssize;           /**< size of vars array */
    int              watchedvar1;        /**< position of first watched operator variable */
    int              watchedvar2;        /**< position of second watched operator variable */
+   int              filterpos1;         /**< event filter position of first watched operator variable */
+   int              filterpos2;         /**< event filter position of second watched operator variable */
    unsigned int     propagated:1;       /**< is constraint already preprocessed/propagated? */
 };
 
@@ -209,28 +211,45 @@ RETCODE consdataSwitchWatchedvars(
    assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
 
-   /* drop bound tighten events on old watched variables */
-   if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 && consdata->watchedvar1 != watchedvar2 )
+   /* if one watched variable is equal to the old other watched variable, just switch positions */
+   if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
-      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-            (EVENTDATA*)consdata) );
+      int tmp;
+      
+      tmp = consdata->watchedvar1;
+      consdata->watchedvar1 = consdata->watchedvar2;
+      consdata->watchedvar2 = tmp;
+      tmp = consdata->filterpos1;
+      consdata->filterpos1 = consdata->filterpos2;
+      consdata->filterpos2 = tmp;
    }
-   if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar1 && consdata->watchedvar2 != watchedvar2 )
+   assert(watchedvar1 != consdata->watchedvar2);
+   assert(watchedvar2 != consdata->watchedvar1);
+
+   /* drop bound tighten events on old watched variables */
+   if( consdata->watchedvar1 != -1 && consdata->watchedvar1 != watchedvar1 )
    {
+      assert(consdata->filterpos1 != -1);
+      CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar1], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+            (EVENTDATA*)consdata, consdata->filterpos1) );
+   }
+   if( consdata->watchedvar2 != -1 && consdata->watchedvar2 != watchedvar2 )
+   {
+      assert(consdata->filterpos2 != -1);
       CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vars[consdata->watchedvar2], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-            (EVENTDATA*)consdata) );
+            (EVENTDATA*)consdata, consdata->filterpos2) );
    }
 
    /* catch bound tighten events on new watched variables */
-   if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 && watchedvar1 != consdata->watchedvar2 )
+   if( watchedvar1 != -1 && watchedvar1 != consdata->watchedvar1 )
    {
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar1], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-            (EVENTDATA*)consdata) );
+            (EVENTDATA*)consdata, &consdata->filterpos1) );
    }
-   if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar1 && watchedvar2 != consdata->watchedvar2 )
+   if( watchedvar2 != -1 && watchedvar2 != consdata->watchedvar2 )
    {
       CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vars[watchedvar2], SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
-            (EVENTDATA*)consdata) );
+            (EVENTDATA*)consdata, &consdata->filterpos2) );
    }
 
    /* set the new watched variables */
@@ -268,6 +287,8 @@ RETCODE consdataCreate(
    (*consdata)->varssize = nvars+1;
    (*consdata)->watchedvar1 = -1;
    (*consdata)->watchedvar2 = -1;
+   (*consdata)->filterpos1 = -1;
+   (*consdata)->filterpos2 = -1;
    (*consdata)->propagated = FALSE;
 
    /* get transformed variables, if we are in the transformed problem */

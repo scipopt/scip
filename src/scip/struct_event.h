@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.8 2004/06/30 14:17:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.9 2004/10/26 18:24:29 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -81,16 +81,16 @@ struct Event
 /** event filter to select events to be processed by an event handler */
 struct EventFilter
 {
-   EVENTTYPE*       eventtypes;         /**< array with types of event to process */
+   EVENTTYPE*       eventtypes;         /**< array with types of event to process; 0 marks a deleted event catch entry */
    EVENTHDLR**      eventhdlrs;         /**< array with event handlers to process the event */
    EVENTDATA**      eventdatas;         /**< array with user data for the issued event */
-   int*             eventnuses;         /**< array with number of times, the eventhandler/data was added to the filter;
-                                         *   in update range: -1 if event should be added, -2 if event should be deleted
-                                         */
+   int*             nextpos;            /**< linked lists for free, delayed added and delayed deleted slot positions */
    int              size;               /**< size of filter arrays (available slots in arrays) */
-   int              len;                /**< number entries in filter arrays */
-   int              updatelen;          /**< number of additional entries representing delayed changes to the filter */
+   int              len;                /**< number entries in filter arrays (used and deleted) */
+   int              firstfreepos;       /**< first deleted slot; remaining slots are in poslist */
+   int              firstdeletedpos;    /**< first delayed deleted slot; remaining slots are in poslist */
    unsigned int     eventmask;          /**< mask for events that are handled by any event handler in the filter */
+   unsigned int     delayedeventmask;   /**< mask for delayed added events */
    Bool             delayupdates;       /**< should additions and deletions to the filter be delayed? */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.64 2004/10/26 07:30:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.65 2004/10/26 18:24:28 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -507,7 +507,7 @@ RETCODE catchEvent(
    assert(var != NULL);
 
    /* catch bound change events on variable */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)cons) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)consdata, NULL) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
@@ -540,7 +540,7 @@ RETCODE dropEvent(
    assert(var != NULL);
    
    /* drop events on variable */
-   CHECK_OKAY( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)cons) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)consdata, -1) );
 
    /* update the fixed variables counters for this variable */
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
@@ -659,8 +659,6 @@ RETCODE addCoef(
       consdataLockRounding(consdata, var, (int)SCIPconsIsLockedPos(cons), (int)SCIPconsIsLockedNeg(cons));
    }
 
-   CHECK_OKAY( SCIPenableConsPropagation(scip, cons) );
-
    /* add the new coefficient to the LP row */
    if( consdata->row != NULL )
    {
@@ -714,8 +712,6 @@ RETCODE delCoefPos(
    /* move the last variable to the free slot */
    consdata->vars[pos] = consdata->vars[consdata->nvars-1];
    consdata->nvars--;
-
-   CHECK_OKAY( SCIPenableConsPropagation(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -2053,15 +2049,6 @@ DECL_CONSPRESOL(consPresolSetppc)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      /* force presolving the constraint in the initial round */
-      if( nrounds == 0 )
-      {
-         CHECK_OKAY( SCIPenableConsPropagation(scip, cons) );
-      }
-
-      if( !SCIPconsIsPropagationEnabled(cons) )
-         continue;
-
       debugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));
 
       /* remove all variables that are fixed to zero */
@@ -2302,8 +2289,6 @@ DECL_CONSPRESOL(consPresolSetppc)
             continue;
          }
       }
-
-      CHECK_OKAY( SCIPdisableConsPropagation(scip, cons) );
    }
    
    return SCIP_OKAY;
@@ -2662,7 +2647,6 @@ DECL_LINCONSUPGD(linconsUpgdSetppc)
 static
 DECL_EVENTEXEC(eventExecSetppc)
 {  /*lint --e{715}*/
-   CONS* cons;
    CONSDATA* consdata;
    EVENTTYPE eventtype;
 
@@ -2673,8 +2657,7 @@ DECL_EVENTEXEC(eventExecSetppc)
 
    debugMessage("Exec method of bound change event handler for set partitioning / packing / covering constraints\n");
 
-   cons = (CONS*)eventdata;
-   consdata = SCIPconsGetData(cons);
+   consdata = (CONSDATA*)eventdata;
    assert(consdata != NULL);
 
    eventtype = SCIPeventGetType(event);
@@ -2694,19 +2677,10 @@ DECL_EVENTEXEC(eventExecSetppc)
       break;
   default:
       errorMessage("invalid event type\n");
-      abort();
+      return SCIP_INVALIDDATA;
    }
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
-
-   if( consdata->nfixedones == 0 && consdata->nfixedzeros < consdata->nvars )
-   {
-      CHECK_OKAY( SCIPenableConsPropagation(scip, cons) );
-   }
-   else
-   {
-      CHECK_OKAY( SCIPdisableConsPropagation(scip, cons) );
-   }
 
    debugMessage(" -> constraint has %d zero-fixed and %d one-fixed of %d variables\n", 
       consdata->nfixedzeros, consdata->nfixedones, consdata->nvars);

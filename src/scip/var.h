@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.78 2004/10/22 13:02:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.79 2004/10/26 18:24:30 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -45,6 +45,8 @@
 
 #ifndef NDEBUG
 #include "struct_var.h"
+#else
+#include "event.h"
 #endif
 
 
@@ -632,28 +634,6 @@ RETCODE SCIPvarAddToRow(
    Real             val                 /**< value of coefficient */
    );
 
-/** includes event handler with given data in variable's event filter */
-extern
-RETCODE SCIPvarCatchEvent(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   EVENTTYPE        eventtype,          /**< event type to catch */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
-   );
-
-/** deletes event handler with given data from variable's event filter */
-extern
-RETCODE SCIPvarDropEvent(
-   VAR*             var,                /**< problem variable */
-   MEMHDR*          memhdr,             /**< block memory */
-   SET*             set,                /**< global SCIP settings */
-   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
-   );
-
 /** resets history of current run for given variable */
 extern
 void SCIPvarResetHistoryCurrentRun(
@@ -773,6 +753,49 @@ void SCIPvarPrint(
    SET*             set,                /**< global SCIP settings */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** includes event handler with given data in variable's event filter */
+extern
+RETCODE SCIPvarCatchEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type to catch */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
+   );
+
+/** deletes event handler with given data from variable's event filter */
+extern
+RETCODE SCIPvarDropEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTTYPE        eventtype,          /**< event type mask of dropped event */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int              filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPvarCatchEvent(var,memhdr,set,eventtype,eventhdlr,eventdata,filterpos) \
+   SCIPeventfilterAdd((var)->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos)
+#define SCIPvarDropEvent(var,memhdr,set,eventtype,eventhdlr,eventdata,filterpos) \
+   SCIPeventfilterDel((var)->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata, filterpos)
+
+#endif
 
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.13 2004/09/23 15:46:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.14 2004/10/26 18:24:28 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -100,8 +100,10 @@ RETCODE catchEvents(
    assert(eventhdlr != NULL);
 
    /* catch bound tighten events on variables */
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, 
+         (EVENTDATA*)consdata, NULL) );
+   CHECK_OKAY( SCIPcatchVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, 
+         (EVENTDATA*)consdata, NULL) );
    
    return SCIP_OKAY;
 }
@@ -121,8 +123,10 @@ RETCODE dropEvents(
    assert(eventhdlr != NULL);
 
    /* drop events on variables */
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
-   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, (EVENTDATA*)consdata) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->var, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr, 
+         (EVENTDATA*)consdata, -1) );
+   CHECK_OKAY( SCIPdropVarEvent(scip, consdata->vbdvar, SCIP_EVENTTYPE_BOUNDTIGHTENED, eventhdlr,
+         (EVENTDATA*)consdata, -1) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.218 2004/10/26 07:30:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.219 2004/10/26 18:24:28 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8815,12 +8815,14 @@ RETCODE SCIPcatchEvent(
    SCIP*            scip,               /**< SCIP data structure */
    EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPeventfilterAdd(scip->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPeventfilterAdd(scip->eventfilter, scip->mem->solvemem, scip->set, 
+         eventtype, eventhdlr, eventdata, filterpos) );
 
    return SCIP_OKAY;
 }
@@ -8830,12 +8832,14 @@ RETCODE SCIPdropEvent(
    SCIP*            scip,               /**< SCIP data structure */
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int              filterpos           /**< position of event filter entry returned by SCIPcatchEvent(), or -1 */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPdropEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPeventfilterDel(scip->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPeventfilterDel(scip->eventfilter, scip->mem->solvemem, scip->set, 
+         eventtype, eventhdlr, eventdata, filterpos) );
    
    return SCIP_OKAY;
 }
@@ -8846,7 +8850,8 @@ RETCODE SCIPcatchVarEvent(
    VAR*             var,                /**< variable to catch event for */
    EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcatchVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -8863,7 +8868,7 @@ RETCODE SCIPcatchVarEvent(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarCatchEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPvarCatchEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata, filterpos) );
 
    return SCIP_OKAY;
 }
@@ -8874,7 +8879,8 @@ RETCODE SCIPdropVarEvent(
    VAR*             var,                /**< variable to drop event for */
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int              filterpos           /**< position of event filter entry returned by SCIPcatchVarEvent(), or -1 */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPdropVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
@@ -8885,7 +8891,7 @@ RETCODE SCIPdropVarEvent(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata, filterpos) );
    
    return SCIP_OKAY;
 }

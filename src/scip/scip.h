@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.175 2004/10/26 07:30:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.176 2004/10/26 18:24:29 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3583,7 +3583,8 @@ RETCODE SCIPcatchEvent(
    SCIP*            scip,               /**< SCIP data structure */
    EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
    );
 
 /** drops a global event (stops to track event) */
@@ -3592,7 +3593,8 @@ RETCODE SCIPdropEvent(
    SCIP*            scip,               /**< SCIP data structure */
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int              filterpos           /**< position of event filter entry returned by SCIPcatchEvent(), or -1 */
    );
 
 /** catches an objective value or domain change event on the given variable */
@@ -3602,7 +3604,8 @@ RETCODE SCIPcatchVarEvent(
    VAR*             var,                /**< variable to catch event for */
    EVENTTYPE        eventtype,          /**< event type mask to select events to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
    );
 
 /** drops an objective value or domain change event (stops to track event) on the given variable */
@@ -3612,7 +3615,8 @@ RETCODE SCIPdropVarEvent(
    VAR*             var,                /**< variable to drop event for */
    EVENTTYPE        eventtype,          /**< event type mask of dropped event */
    EVENTHDLR*       eventhdlr,          /**< event handler to process events with */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler when processing this event */
+   int              filterpos           /**< position of event filter entry returned by SCIPcatchVarEvent(), or -1 */
    );
 
 /**@} */

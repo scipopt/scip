@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.4 2004/10/21 20:56:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.5 2004/10/26 18:24:28 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -2420,7 +2420,6 @@ RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
-      std::cerr << "Set scaling: " << lpi->clp->scalingFlag() << std::endl;
       break;
    case SCIP_LPPAR_PRICING:
       abort();

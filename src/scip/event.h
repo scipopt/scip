@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.27 2004/06/29 17:55:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.28 2004/10/26 18:24:28 bzfpfend Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -213,7 +213,8 @@ RETCODE SCIPeventfilterAdd(
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type to catch */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int*             filterpos           /**< pointer to store position of event filter entry, or NULL */
    );
 
 /** deletes element from event filter */
@@ -224,7 +225,8 @@ RETCODE SCIPeventfilterDel(
    SET*             set,                /**< global SCIP settings */
    EVENTTYPE        eventtype,          /**< event type */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
+   EVENTDATA*       eventdata,          /**< event data to pass to the event handler for the event processing */
+   int              filterpos           /**< position of event filter entry, or -1 if unknown */
    );
 
 /** processes the event with all event handlers with matching filter setting */

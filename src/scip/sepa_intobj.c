@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.7 2004/10/12 14:06:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.8 2004/10/26 18:24:29 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -266,7 +266,7 @@ DECL_SEPAEXEC(sepaExecIntobj)
 static
 DECL_EVENTINIT(eventInitIntobj)
 {
-   CHECK_OKAY( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL) );
+   CHECK_OKAY( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -275,7 +275,7 @@ DECL_EVENTINIT(eventInitIntobj)
 static
 DECL_EVENTEXIT(eventExitIntobj)
 {
-   CHECK_OKAY( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL) );
+   CHECK_OKAY( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
