@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.72 2003/12/01 14:41:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.73 2003/12/01 16:14:31 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -346,7 +346,7 @@ RETCODE solveNodeLP(
          }
 
          /* apply the priced variables to the LP */
-         CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp, branchcand, eventqueue) );
+         CHECK_OKAY( SCIPpricestoreApplyVars(pricestore, memhdr, set, stat, prob, tree, lp) );
          assert(SCIPpricestoreGetNVars(pricestore) == 0);
          mustprice = !lp->solved;
          mustsepar = mustsepar || !lp->solved;
@@ -742,7 +742,7 @@ RETCODE enforceConstraints(
          debugMessage("enforcing of <%s> returned result %d\n", SCIPconshdlrGetName(conshdlrs_enfo[h]), result);
 
          switch( result )
-         {  /*lint --e{788}*/
+         {  
          case SCIP_DIDNOTRUN:
             assert(tree->nchildren == 0);
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -821,7 +821,7 @@ RETCODE enforceConstraints(
             errorMessage("invalid result code <%d> from enforcing method of constraint handler <%s>\n",
                result, SCIPconshdlrGetName(conshdlrs_enfo[h]));
             return SCIP_INVALIDRESULT;
-         }
+         }  /*lint !e788*/
          assert(!(*solveagain) || (resolved && *infeasible));
       }
       assert(!objinfeasible || *infeasible);
@@ -848,7 +848,7 @@ RETCODE enforceConstraints(
       CHECK_OKAY( SCIPbranchPseudo(set->scip, &result) );
 
       switch( result )
-      {  /*lint --e{788}*/
+      {  
       case SCIP_CUTOFF:
          assert(tree->nchildren == 0);
          resolved = TRUE;
@@ -886,7 +886,7 @@ RETCODE enforceConstraints(
       default:
          errorMessage("invalid result code <%d> from SCIPbranchPseudo()\n", result);
          abort();
-      }
+      }  /*lint !e788*/
    }
    assert(*infeasible || !resolved);
 

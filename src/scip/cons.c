@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.59 2003/12/01 14:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.60 2003/12/01 16:14:27 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -948,19 +948,19 @@ RETCODE conshdlrAddUpdateCons(
 
 /** compares two constraint handlers w. r. to their separation priority */
 DECL_SORTPTRCOMP(SCIPconshdlrCompSepa)
-{
+{  /*lint --e{715}*/
    return ((CONSHDLR*)elem2)->sepapriority - ((CONSHDLR*)elem1)->sepapriority;
 }
 
 /** compares two constraint handlers w. r. to their enforcing priority */
 DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo)
-{
+{  /*lint --e{715}*/
    return ((CONSHDLR*)elem2)->enfopriority - ((CONSHDLR*)elem1)->enfopriority;
 }
 
 /** compares two constraint handlers w. r. to their feasibility check priority */
 DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
-{
+{  /*lint --e{715}*/
    return ((CONSHDLR*)elem2)->checkpriority - ((CONSHDLR*)elem1)->checkpriority;
 }
 
@@ -3547,7 +3547,7 @@ Bool SCIPconsIsLocked(
 
 /** gets the key (i.e. the name) of the given constraint */
 DECL_HASHGETKEY(SCIPhashGetKeyCons)
-{
+{  /*lint --e{715}*/
    CONS* cons = (CONS*)elem;
 
    assert(cons != NULL);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.8 2003/12/01 14:41:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.9 2003/12/01 16:14:28 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -60,7 +60,8 @@ RETCODE readLine(
    char* s;
 
    s = readline(prompt);
-   (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], s, dialoghdlr->buffersize - dialoghdlr->bufferpos);
+   (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], s,
+      (unsigned int)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
    free(s);
 
    return SCIP_OKAY;
@@ -248,6 +249,8 @@ const char* SCIPdialoghdlrGetWord(
    const char*      prompt              /**< prompt to display, or NULL to display the current dialog's path */
    )
 {
+   char path[MAXSTRLEN];
+   char p[MAXSTRLEN];
    char* firstword;
 
    assert(dialoghdlr != NULL);
@@ -257,9 +260,6 @@ const char* SCIPdialoghdlrGetWord(
    /* get input from the user, if the buffer is empty */
    if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
    {
-      char path[MAXSTRLEN];
-      char p[MAXSTRLEN];
-
       /* clear the buffer */
       SCIPdialoghdlrClearBuffer(dialoghdlr);
 
@@ -557,8 +557,8 @@ int SCIPdialogFindEntry(
    )
 {
    DIALOG** subdialogs;
+   unsigned int namelen;
    int nsubdialogs;
-   int namelen;
    int nfound;
    int i;
 
@@ -582,7 +582,7 @@ int SCIPdialogFindEntry(
          nfound++;
 
          /* if entryname exactly matches the subdialog's name, use this subdialog */
-         if( namelen == (int)strlen(SCIPdialogGetName(subdialogs[i])) )
+         if( namelen == strlen(SCIPdialogGetName(subdialogs[i])) )
             return 1;
       }
    }
@@ -669,8 +669,8 @@ RETCODE SCIPdialogDisplayCompletions(
    )
 {
    DIALOG** subdialogs;
+   unsigned int namelen;
    int nsubdialogs;
-   int namelen;
    int i;
 
    assert(dialog != NULL);

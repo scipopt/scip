@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.59 2003/12/01 14:41:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.60 2003/12/01 16:14:31 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -920,7 +920,7 @@ RETCODE varFreeParents(
       assert(parentvar != NULL);
 
       switch( SCIPvarGetStatus(parentvar) )
-      {  /*lint --e{788}*/
+      {
       case SCIP_VARSTATUS_ORIGINAL:
          assert(parentvar->data.transvar == *var);
          assert(&parentvar->data.transvar != var);
@@ -958,7 +958,7 @@ RETCODE varFreeParents(
       default:
          errorMessage("parent variable is neither ORIGINAL, AGGREGATED nor NEGATED\n");
          return SCIP_INVALIDDATA;
-      }
+      }  /*lint !e788*/
 
       CHECK_OKAY( SCIPvarRelease(&(*var)->parentvars[i], memhdr, set, lp) );
    }
@@ -4562,7 +4562,7 @@ RETCODE SCIPvarDropEvent(
 
 /** gets the key (i.e. the name) of the given variable */
 DECL_HASHGETKEY(SCIPhashGetKeyVar)
-{
+{  /*lint --e{715}*/
    VAR* var = (VAR*)elem;
 
    assert(var != NULL);

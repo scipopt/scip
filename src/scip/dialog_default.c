@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.8 2003/11/26 16:08:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.9 2003/12/01 16:14:28 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -92,7 +92,7 @@ RETCODE dialogExecMenu(
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 DECL_DIALOGEXEC(SCIPdialogExecMenu)
-{
+{  /*lint --e{715}*/
    /* if remaining command string is empty, display menu of available options */
    if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
    {
@@ -108,7 +108,7 @@ DECL_DIALOGEXEC(SCIPdialogExecMenu)
 
 /** standard menu dialog execution method, that doesn't display it's help screen */
 DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
 
    return SCIP_OKAY;
@@ -116,7 +116,7 @@ DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 
 /** dialog execution method for the display branching command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
-{
+{  /*lint --e{715}*/
    BRANCHRULE** branchrules;
    BRANCHRULE** sorted;
    int nbranchrules;
@@ -158,7 +158,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
 
 /** dialog execution method for the display conshdlrs command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
-{
+{  /*lint --e{715}*/
    CONSHDLR** conshdlrs;
    int nconshdlrs;
    int i;
@@ -195,7 +195,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
 
 /** dialog execution method for the display displaycols command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
-{
+{  /*lint --e{715}*/
    DISP** disps;
    int ndisps;
    int i;
@@ -247,7 +247,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
 
 /** dialog execution method for the display heuristics command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
-{
+{  /*lint --e{715}*/
    HEUR** heurs;
    int nheurs;
    int i;
@@ -281,7 +281,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
 
 /** dialog execution method for the display nodeselectors command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors)
-{
+{  /*lint --e{715}*/
    NODESEL** nodesels;
    int nnodesels;
    int i;
@@ -314,7 +314,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayNodeselectors)
 
 /** dialog execution method for the display presolvers command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
-{
+{  /*lint --e{715}*/
    PRESOL** presols;
    int npresols;
    int i;
@@ -346,7 +346,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
 
 /** dialog execution method for the display readers command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
-{
+{  /*lint --e{715}*/
    READER** readers;
    int nreaders;
    int i;
@@ -378,7 +378,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
 
 /** dialog execution method for the display separators command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
-{
+{  /*lint --e{715}*/
    SEPA** sepas;
    int nsepas;
    int i;
@@ -411,7 +411,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
 
 /** dialog execution method for the display solution command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
@@ -425,7 +425,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 
 /** dialog execution method for the display statistics command */
 DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
@@ -439,7 +439,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 
 /** dialog execution method for the help command */
 DECL_DIALOGEXEC(SCIPdialogExecHelp)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
@@ -453,7 +453,7 @@ DECL_DIALOGEXEC(SCIPdialogExecHelp)
 
 /** dialog execution method for the free command */
 DECL_DIALOGEXEC(SCIPdialogExecFree)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    CHECK_OKAY( SCIPfreeProb(scip) );
@@ -465,7 +465,7 @@ DECL_DIALOGEXEC(SCIPdialogExecFree)
 
 /** dialog execution method for the optimize command */
 DECL_DIALOGEXEC(SCIPdialogExecOptimize)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
@@ -501,7 +501,7 @@ DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 
 /** dialog execution method for the presolve command */
 DECL_DIALOGEXEC(SCIPdialogExecPresolve)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
@@ -540,7 +540,7 @@ DECL_DIALOGEXEC(SCIPdialogExecPresolve)
 
 /** dialog execution method for the quit command */
 DECL_DIALOGEXEC(SCIPdialogExecQuit)
-{
+{  /*lint --e{715}*/
    printf("\n");
 
    *nextdialog = NULL;
@@ -550,7 +550,7 @@ DECL_DIALOGEXEC(SCIPdialogExecQuit)
 
 /** dialog execution method for the read command */
 DECL_DIALOGEXEC(SCIPdialogExecRead)
-{
+{  /*lint --e{715}*/
    RETCODE retcode;
    const char* filename;
 
@@ -588,7 +588,7 @@ DECL_DIALOGEXEC(SCIPdialogExecRead)
 
 /** dialog execution method for the set load command */
 DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
-{
+{  /*lint --e{715}*/
    const char* filename;
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
@@ -616,7 +616,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLoad)
 
 /** dialog execution method for the set save command */
 DECL_DIALOGEXEC(SCIPdialogExecSetSave)
-{
+{  /*lint --e{715}*/
    const char* filename;
 
    filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
@@ -636,7 +636,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
 /** dialog execution method for the set parameter command */
 DECL_DIALOGEXEC(SCIPdialogExecSetParam)
-{
+{  /*lint --e{715}*/
    RETCODE retcode;
    PARAM* param;
    char prompt[MAXSTRLEN];
@@ -794,7 +794,7 @@ DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
 /** dialog description method for the set parameter command */
 DECL_DIALOGDESC(SCIPdialogDescSetParam)
-{
+{  /*lint --e{715}*/
    PARAM* param;
    char valuestr[MAXSTRLEN];
 
@@ -851,7 +851,7 @@ DECL_DIALOGDESC(SCIPdialogDescSetParam)
 #ifndef NDEBUG
 /** dialog execution method for the debug memory command */
 DECL_DIALOGEXEC(SCIPdialogExecDebugMemory)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");

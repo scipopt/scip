@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.76 2003/12/01 14:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.77 2003/12/01 16:14:30 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -174,7 +174,7 @@ int calcGrowSize(
 /** information method for a parameter change of feastol */
 static
 DECL_PARAMCHGD(paramChgdFeastol)
-{
+{  /*lint --e{715}*/
    Real newfeastol;
 
    newfeastol = SCIPparamGetReal(param);

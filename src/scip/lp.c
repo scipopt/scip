@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.83 2003/12/01 14:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.84 2003/12/01 16:14:29 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1824,7 +1824,7 @@ RETCODE SCIPcolGetStrongbranch(
       if( iter == -1 )
       {
          /* calculate avergate iteration number */
-         iter = stat->nlps > 0 ? 2*stat->nlpiterations / stat->nlps : 0;
+         iter = stat->nlps > 0 ? (int)(2*stat->nlpiterations / stat->nlps) : 0;
          if( iter/2 >= itlim )
             iter = 2*itlim;
       }

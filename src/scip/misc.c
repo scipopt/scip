@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.16 2003/12/01 14:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.17 2003/12/01 16:14:29 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -531,7 +531,7 @@ void SCIPhashtablePrintStatistics(
 
 /** returns TRUE iff both keys (i.e. strings) are equal */
 DECL_HASHKEYEQ(SCIPhashKeyEqString)
-{
+{  /*lint --e{715}*/
    const char* string1 = (const char*)key1;
    const char* string2 = (const char*)key2;
 
@@ -548,7 +548,7 @@ const int strhashshift[28] = {
 
 /** returns the hash value of the key (i.e. string) */
 DECL_HASHKEYVAL(SCIPhashKeyValString)
-{
+{  /*lint --e{715}*/
    const char* string = (const char*)key;
    unsigned int sum;
    unsigned int val;
@@ -559,7 +559,7 @@ DECL_HASHKEYVAL(SCIPhashKeyValString)
    while( *string != '\0' )
    {
       assert(0 <= i && i < 28);
-      val = (unsigned int)(*string);
+      val = (unsigned int)(*string); /*lint !e571*/
       val <<= strhashshift[i];
       sum += val;
       i++;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.24 2003/11/27 17:48:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.25 2003/12/01 16:14:29 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -29,11 +29,6 @@
 #include <string.h>
 
 #include "memory.h"
-
-#ifndef MAXSTRLEN
-#define MAXSTRLEN 1024
-#endif
-
 
 
 #ifdef DEBUG

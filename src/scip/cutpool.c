@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.20 2003/12/01 14:41:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.21 2003/12/01 16:14:28 bzfpfend Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -46,7 +46,7 @@
 /** gets the hash key of a cut */
 static
 DECL_HASHGETKEY(hashGetKeyCut)
-{
+{  /*lint --e{715}*/
    CUT* cut;
 
    cut = (CUT*)elem;
@@ -60,7 +60,7 @@ DECL_HASHGETKEY(hashGetKeyCut)
 /** returns TRUE iff both cuts are identical */
 static
 DECL_HASHKEYEQ(hashKeyEqCut)
-{
+{  /*lint --e{715}*/
    /* Warning: The comparison of real values is made against default epsilon.
     *          This is ugly, but we have no settings at hand.
     */
@@ -114,7 +114,7 @@ DECL_HASHKEYEQ(hashKeyEqCut)
 
 static
 DECL_HASHKEYVAL(hashKeyValCut)
-{
+{  /*lint --e{715}*/
    ROW* row;
    unsigned int keyval;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.3 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.4 2003/12/01 16:14:30 bzfpfend Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -42,14 +42,14 @@
 
 /** compares two pricers w. r. to their priority */
 DECL_SORTPTRCOMP(SCIPpricerComp)
-{
+{  /*lint --e{715}*/
    return ((PRICER*)elem2)->priority - ((PRICER*)elem1)->priority;
 }
 
 /** method to call, when the priority of a pricer was changed */
 static
 DECL_PARAMCHGD(paramChgdPricerPriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);

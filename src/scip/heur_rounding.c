@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.14 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.15 2003/12/01 16:14:29 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  simple LP rounding heuristic
@@ -321,7 +321,7 @@ RETCODE selectEssentialRounding(
 
 static
 DECL_HEURINIT(SCIPheurInitRounding) /*lint --e{715}*/
-{
+{  /*lint --e{715}*/
    HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -339,7 +339,7 @@ DECL_HEURINIT(SCIPheurInitRounding) /*lint --e{715}*/
 
 static
 DECL_HEUREXIT(SCIPheurExitRounding) /*lint --e{715}*/
-{
+{  /*lint --e{715}*/
    HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -358,7 +358,7 @@ DECL_HEUREXIT(SCIPheurExitRounding) /*lint --e{715}*/
 
 static
 DECL_HEUREXEC(SCIPheurExecRounding) /*lint --e{715}*/
-{
+{  /*lint --e{715}*/
    HEURDATA* heurdata;
    SOL* sol;
    VAR** lpcands;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_diving.c,v 1.10 2003/11/21 10:35:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_diving.c,v 1.11 2003/12/01 16:14:29 bzfpfend Exp $"
 
 /**@file   heur_diving.c
  * @brief  LP diving heuristic
@@ -83,7 +83,7 @@ struct HeurData
 
 static
 DECL_HEURFREE(SCIPheurFreeDiving) /*lint --e{715}*/
-{
+{  /*lint --e{715}*/
    HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -101,7 +101,7 @@ DECL_HEURFREE(SCIPheurFreeDiving) /*lint --e{715}*/
 
 static
 DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
-{
+{  /*lint --e{715}*/
    HEURDATA* heurdata;
    LPSOLSTAT lpsolstat;
    VAR* var;

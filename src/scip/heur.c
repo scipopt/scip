@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.27 2003/12/01 14:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.28 2003/12/01 16:14:29 bzfpfend Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -41,14 +41,14 @@
 
 /** compares two heuristics w. r. to their priority */
 DECL_SORTPTRCOMP(SCIPheurComp)
-{
+{  /*lint --e{715}*/
    return ((HEUR*)elem2)->priority - ((HEUR*)elem1)->priority;
 }
 
 /** method to call, when the priority of a heuristic was changed */
 static
 DECL_PARAMCHGD(paramChgdHeurPriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.29 2003/12/01 14:41:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.30 2003/12/01 16:14:30 bzfpfend Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -42,14 +42,14 @@
 
 /** compares two separators w. r. to their priority */
 DECL_SORTPTRCOMP(SCIPsepaComp)
-{
+{  /*lint --e{715}*/
    return ((SEPA*)elem2)->priority - ((SEPA*)elem1)->priority;
 }
 
 /** method to call, when the priority of a separator was changed */
 static
 DECL_PARAMCHGD(paramChgdSepaPriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);

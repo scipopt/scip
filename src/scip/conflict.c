@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.16 2003/12/01 14:41:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.17 2003/12/01 16:14:27 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -173,14 +173,14 @@ RETCODE lpconflictEnsureConflictvarsMem(
 
 /** compares two conflict handlers w. r. to their priority */
 DECL_SORTPTRCOMP(SCIPconflicthdlrComp)
-{
+{  /*lint --e{715}*/
    return ((CONFLICTHDLR*)elem2)->priority - ((CONFLICTHDLR*)elem1)->priority;
 }
 
 /** method to call, when the priority of a conflict handler was changed */
 static
 DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
@@ -417,7 +417,7 @@ Bool SCIPconflicthdlrIsInitialized(
  */
 static
 DECL_SORTPTRCOMP(conflictVarCmp)
-{
+{  /*lint --e{715}*/
    VAR* var1;
    VAR* var2;
    

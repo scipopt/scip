@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.20 2003/12/01 14:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.21 2003/12/01 16:14:27 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -156,12 +156,6 @@ void SCIPbranchruleSetPriority(
    BRANCHRULE*      branchrule,         /**< branching rule */
    SET*             set,                /**< global SCIP settings */
    int              priority            /**< new priority of the branching rule */
-   );
-
-/** is branching rule initialized? */
-extern
-Bool SCIPbranchruleIsInitialized(
-   BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 

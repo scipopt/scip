@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.22 2003/12/01 14:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.23 2003/12/01 16:14:28 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -345,7 +345,7 @@ VAR* SCIPeventGetVar(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  /*lint --e{788}*/
+   {  
    case SCIP_EVENTTYPE_VARCREATED:
       errorMessage("VARCREATED event not implemented yet\n");
       abort();
@@ -375,7 +375,7 @@ VAR* SCIPeventGetVar(
    default:
       errorMessage("event does not belong to a variable\n");
       abort();
-   }
+   }  /*lint !e788*/
 }
 
 /** gets old objective value for an objective value change event */
@@ -418,7 +418,7 @@ Real SCIPeventGetOldbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  /*lint --e{788}*/
+   {  
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -428,7 +428,7 @@ Real SCIPeventGetOldbound(
    default:
       errorMessage("event is not a bound change event\n");
       abort();
-   }
+   }  /*lint !e788*/
 }
 
 /** gets new bound for a bound change event */
@@ -439,7 +439,7 @@ Real SCIPeventGetNewbound(
    assert(event != NULL);
 
    switch( event->eventtype )
-   {  /*lint --e{788}*/
+   {  
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
@@ -449,7 +449,7 @@ Real SCIPeventGetNewbound(
    default:
       errorMessage("event is not a bound change event\n");
       abort();
-   }
+   }  /*lint !e788*/
 }
 
 /** gets node for a node or LP event */

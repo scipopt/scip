@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.3 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.4 2003/12/01 16:14:30 bzfpfend Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -103,9 +103,7 @@ RETCODE SCIPpricestoreApplyVars(
    STAT*            stat,               /**< dynamic problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   EVENTQUEUE*      eventqueue          /**< event queue */
+   LP*              lp                  /**< LP data */
    );
 
 /** reset variables' bounds violated by zero to its original value */
@@ -123,13 +121,13 @@ RETCODE SCIPpricestoreResetBounds(
 
 /** gets number of variables in pricing storage */
 extern
-RETCODE SCIPpricestoreGetNVars(
+int SCIPpricestoreGetNVars(
    PRICESTORE*      pricestore          /**< pricing storage */
    );
 
 /** gets number of variables in pricing storage whose bounds must be reset */
 extern
-RETCODE SCIPpricestoreGetNBoundResets(
+int SCIPpricestoreGetNBoundResets(
    PRICESTORE*      pricestore          /**< pricing storage */
    );
 

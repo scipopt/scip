@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.24 2003/12/01 14:41:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.25 2003/12/01 16:14:28 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -362,7 +362,7 @@ RETCODE SCIPdispPrintLine(
 /** comparison method for display colums */
 static
 DECL_SORTPTRCOMP(dispCmp)
-{
+{  /*lint --e{715}*/
    return ((DISP*)elem2)->priority - ((DISP*)elem1)->priority;
 }
 

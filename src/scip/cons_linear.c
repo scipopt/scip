@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.75 2003/11/27 17:48:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.76 2003/12/01 16:14:27 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1344,7 +1344,7 @@ RETCODE consdataTightenVarBounds(
 /** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
 static
 DECL_SORTINDCOMP(consdataCmpVar)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata = (CONSDATA*)dataptr;
 
    assert(consdata != NULL);

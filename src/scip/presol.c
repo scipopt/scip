@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.15 2003/12/01 14:41:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.16 2003/12/01 16:14:30 bzfpfend Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -44,14 +44,14 @@
 
 /** compares two presolvers w. r. to their priority */
 DECL_SORTPTRCOMP(SCIPpresolComp)
-{
+{  /*lint --e{715}*/
    return ((PRESOL*)elem2)->priority - ((PRESOL*)elem1)->priority;
 }
 
 /** method to call, when the priority of a presolver was changed */
 static
 DECL_PARAMCHGD(paramChgdPresolPriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);

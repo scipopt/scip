@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.28 2003/12/01 14:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.29 2003/12/01 16:14:30 bzfpfend Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -637,7 +637,7 @@ RETCODE SCIPnodepqBound(
 /** method to call, when the standard mode priority of a node selector was changed */
 static
 DECL_PARAMCHGD(paramChgdNodeselStdPriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
@@ -652,7 +652,7 @@ DECL_PARAMCHGD(paramChgdNodeselStdPriority)
 /** method to call, when the memory saving mode priority of a node selector was changed */
 static
 DECL_PARAMCHGD(paramChgdNodeselMemsavePriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);

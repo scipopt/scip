@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.65 2003/12/01 14:41:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.66 2003/12/01 16:14:31 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -103,7 +103,7 @@ RETCODE treeEnsurePathMem(
 
 /** node comparator for best lower bound */
 DECL_SORTPTRCOMP(SCIPnodeCmpLowerbound)
-{
+{  /*lint --e{715}*/
    assert(elem1 != NULL);
    assert(elem2 != NULL);
 
@@ -201,7 +201,7 @@ void SCIPnodeCaptureLPIState(
 
    debugMessage("capture %d times node's LPI state at depth %d\n", nuses, node->depth);
    switch( SCIPnodeGetType(node) )
-   {  /*lint --e{788}*/
+   {  
    case SCIP_NODETYPE_FORK:
       forkCaptureLPIState(node->data.fork, nuses);
       break;
@@ -211,7 +211,7 @@ void SCIPnodeCaptureLPIState(
    default:
       errorMessage("node for capturing the LPI state is neither fork nor subroot\n");
       abort();
-   }
+   }  /*lint !e788*/
 }
 
 /** decreases the reference counter of the LP state in the fork or subroot node */
@@ -225,7 +225,7 @@ RETCODE SCIPnodeReleaseLPIState(
 
    debugMessage("release node's LPI state at depth %d\n", node->depth);
    switch( SCIPnodeGetType(node) )
-   {  /*lint --e{788}*/
+   {  
    case SCIP_NODETYPE_FORK:
       return forkReleaseLPIState(node->data.fork, memhdr, lp);
    case SCIP_NODETYPE_SUBROOT:
@@ -233,7 +233,7 @@ RETCODE SCIPnodeReleaseLPIState(
    default:
       errorMessage("node for releasing the LPI state is neither fork nor subroot\n");
       return SCIP_INVALIDDATA;
-   }
+   }  /*lint !e788*/
 }
 
 /** initializes junction data */
@@ -1403,7 +1403,7 @@ void treeCheckPath(
       assert(node != NULL);
       assert((int)(node->depth) == d);
       switch( SCIPnodeGetType(node) )
-      {  /*lint --e{788}*/
+      {  
       case SCIP_NODETYPE_JUNCTION:
          break;
       case SCIP_NODETYPE_FORK:
@@ -1421,7 +1421,7 @@ void treeCheckPath(
          errorMessage("node in depth %d on active path has to be of type FORK, SUBROOT, or ACTNODE, but is %d\n",
             d, SCIPnodeGetType(node));
          abort();
-      }
+      }  /*lint !e788*/
       assert(tree->pathnlpcols[d] == ncols);
       assert(tree->pathnlprows[d] == nrows);
    }
@@ -1949,7 +1949,7 @@ RETCODE SCIPnodeActivate(
    else
    {
       switch( SCIPnodeGetType(node) )
-      {  /*lint --e{788}*/
+      {  
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
          CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, tree->children, &tree->nchildren, newlpfork) );
@@ -1988,7 +1988,7 @@ RETCODE SCIPnodeActivate(
       default:
          errorMessage("Selected node is neither sibling, child, nor leaf\n");
          return SCIP_INVALIDDATA;
-      }
+      }  /*lint !e788*/
 
       /* convert node into the active node */
       node->nodetype = SCIP_NODETYPE_ACTNODE; /*lint !e641*/

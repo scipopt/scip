@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.29 2003/12/01 14:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.30 2003/12/01 16:14:27 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -429,14 +429,14 @@ RETCODE SCIPbranchcandUpdateVar(
 
 /** compares two branching rules w. r. to their priority */
 DECL_SORTPTRCOMP(SCIPbranchruleComp)
-{
+{  /*lint --e{715}*/
    return ((BRANCHRULE*)elem2)->priority - ((BRANCHRULE*)elem1)->priority;
 }
 
 /** method to call, when the priority of a branching rule was changed */
 static
 DECL_PARAMCHGD(paramChgdBranchrulePriority)
-{
+{  /*lint --e{715}*/
    PARAMDATA* paramdata;
 
    paramdata = SCIPparamGetData(param);
