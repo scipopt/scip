@@ -32,7 +32,7 @@
 
 
 static volatile
-Bool                interrupted = FALSE;/**< static variable set to TRUE in case of an CTRL-C interrupt */
+int                 ninterrupts = 0;    /**< static variable counting the number of CTRL-C interrupts */
 
 
 /** CTRL-C interrupt data */
@@ -49,7 +49,11 @@ void interruptHandler(
    int              signum              /**< interrupt signal number */
    )
 {
-   interrupted = TRUE;
+   ninterrupts++;
+   if( ninterrupts >= 5 )
+      abort();
+   else
+      printf("pressed CTRL-C %d times (5 times for forcing abort)\n", ninterrupts);
 }
 
 /** creates a CTRL-C interrupt data */
@@ -98,7 +102,7 @@ void SCIPinterruptCapture(
       
          /* set new signal action, and remember old one */
          sigaction(SIGINT, &newaction, &interrupt->oldsigaction);
-         interrupted = FALSE;
+         ninterrupts = 0;
       }
       interrupt->nuses++;
    }
@@ -126,6 +130,6 @@ Bool SCIPinterrupted(
    void
    )
 {
-   return interrupted;
+   return (ninterrupts > 0);
 }
 

@@ -70,6 +70,7 @@ RETCODE SCIPheurCreate(
    )
 {
    char paramname[MAXSTRLEN];
+   char paramdesc[MAXSTRLEN];
 
    assert(heur != NULL);
    assert(name != NULL);
@@ -96,8 +97,8 @@ RETCODE SCIPheurCreate(
 
    /* add parameters */
    sprintf(paramname, "heuristic/%s/freq", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
-                  paramname, "frequency for calling primal heuristic (-1: never, 0: only in root node)",
+   sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only in root node)", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*heur)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -145,15 +146,15 @@ RETCODE SCIPheurInit(
       return SCIP_INVALIDCALL;
    }
 
-   if( heur->heurinit != NULL )
-   {
-      CHECK_OKAY( heur->heurinit(scip, heur) );
-   }
-
    SCIPclockReset(heur->clock);
 
    heur->ncalls = 0;
    heur->nsolsfound = 0;
+
+   if( heur->heurinit != NULL )
+   {
+      CHECK_OKAY( heur->heurinit(scip, heur) );
+   }
    heur->initialized = TRUE;
 
    return SCIP_OKAY;
@@ -223,7 +224,7 @@ RETCODE SCIPheurExec(
 
    if( execute )
    {
-      int oldnsolsfound;
+      Longint oldnsolsfound;
 
       debugMessage("executing primal heuristic <%s>\n", heur->name);
 

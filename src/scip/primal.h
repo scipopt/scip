@@ -46,7 +46,7 @@ struct Primal
    SOL**            sols;               /**< primal CIP solutions */
    int              solssize;           /**< size of sols array */
    int              nsols;              /**< number of primal CIP solutions stored in sols array */
-   int              nsolsfound;         /**< number of primal CIP solutions found up to now */
+   Longint          nsolsfound;         /**< number of primal CIP solutions found up to now */
    Real             upperbound;         /**< upper (primal) bound of CIP: objective value of best solution or user bound */
 };
 

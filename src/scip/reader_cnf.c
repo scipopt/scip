@@ -52,6 +52,18 @@ void readError(
    errorMessage(s);
 }
 
+static
+void readWarning(
+   int              linecount,          /**< line number of error */
+   const char*      warningmsg          /**< warning message */
+   )
+{
+   char s[MAXSTRLEN];
+
+   sprintf(s, "warning in line <%d>: %s", linecount, warningmsg);
+   warningMessage(s);
+}
+
 /** reads the next non-empty non-comment line of a CNF file */
 static
 RETCODE readCNFLine(
@@ -126,8 +138,8 @@ RETCODE readCNF(
    char format[MAXSTRLEN];
    char varname[MAXSTRLEN];
    char s[MAXSTRLEN];
-   Bool dynamicvars;
-   Bool dynamicconss;
+   Bool dynamiccols;
+   Bool dynamicrows;
    Bool negative;
    int linecount;
    int clauselen;
@@ -170,15 +182,14 @@ RETCODE readCNF(
    }
    if( nclauses <= 0 )
    {
-      char s[MAXSTRLEN];
       sprintf(s, "invalid number of clauses <%d> (must be positive)", nclauses);
       readError(linecount, s);
       return SCIP_PARSEERROR;
    }
 
    /* get parameter values */
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reader/cnf/dynamicvars", &dynamicvars) );
-   CHECK_OKAY( SCIPgetBoolParam(scip, "reader/cnf/dynamicconss", &dynamicconss) );
+   CHECK_OKAY( SCIPgetBoolParam(scip, "reader/cnf/dynamiccols", &dynamiccols) );
+   CHECK_OKAY( SCIPgetBoolParam(scip, "reader/cnf/dynamicrows", &dynamicrows) );
 
    /* get temporary memory */
    CHECK_OKAY( SCIPcaptureBufferArray(scip, &vars, nvars) );
@@ -189,13 +200,14 @@ RETCODE readCNF(
    for( v = 0; v < nvars; ++v )
    {
       sprintf(varname, "x%d", v+1);
-      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, dynamicvars) );
+      CHECK_OKAY( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, dynamiccols) );
       CHECK_OKAY( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }
 
    /* read clauses */
    clausenum = 0;
+   clauselen = 0;
    do
    {
       retcode = readCNFLine(file, line, sizeof(line), &linecount);
@@ -204,8 +216,7 @@ RETCODE readCNF(
 
       if( *line != '\0' && *line != '%' )
       {
-         clauselen = 0;
-         tok = strtok_r(line, " ", &nexttok);
+         tok = strtok_r(line, " \f\n\r\t", &nexttok);
          while( tok != NULL )
          {
             /* parse literal and check for errors */
@@ -216,26 +227,24 @@ RETCODE readCNF(
                retcode = SCIP_PARSEERROR;
                goto TERMINATE;
             }
+
+            /* interpret literal number: v == 0: end of clause, v < 0: negated literal, v > 0: positive literal */
             if( v == 0 )
             {
-               /* zero is used as terminator */
-               tok = strtok_r(NULL, " ", &nexttok);
-               if( tok != NULL )
-               {
-                  readError(linecount, "additional characters after terminating zero");
-                  retcode = SCIP_PARSEERROR;
-                  goto TERMINATE;
-               }
+               /* end of clause: construct clause and add it to SCIP */
+               if( clauselen == 0 )
+                  readWarning(linecount, "empty clause detected in line -- problem infeasible");
+
+               clausenum++;
+               sprintf(s, "c%d", clausenum);
+               CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, s, clauselen, clausevars, 
+                              TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicrows) );
+               CHECK_OKAY( SCIPaddCons(scip, cons) );
+               CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+               clauselen = 0;
             }
-            else
+            else if( v >= -nvars && v <= nvars )
             {
-               if( v < -nvars || v > nvars )
-               {
-                  sprintf(s, "invalid variable number <%d>", ABS(v));
-                  readError(linecount, s);
-                  retcode = SCIP_PARSEERROR;
-                  goto TERMINATE;
-               }
                if( clauselen >= nvars )
                {
                   readError(linecount, "too many literals in clause");
@@ -256,25 +265,28 @@ RETCODE readCNF(
                   varsign[varnum]++;
                }
                clauselen++;
-
-               /* get next literal */
-               tok = strtok_r(NULL, " ", &nexttok);
             }
-         }
+            else
+            {
+               sprintf(s, "invalid variable number <%d>", ABS(v));
+               readError(linecount, s);
+               retcode = SCIP_PARSEERROR;
+               goto TERMINATE;
+            }
 
-         /* add clause to problem */
-         if( clauselen > 0 )
-         {
-            clausenum++;
-            sprintf(s, "c%d", clausenum);
-            CHECK_OKAY( SCIPcreateConsLogicOr(scip, &cons, s, clauselen, clausevars, 
-                           TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss) );
-            CHECK_OKAY( SCIPaddCons(scip, cons) );
-            CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
+            /* get next token */
+            tok = strtok_r(NULL, " \f\n\r\t", &nexttok);
          }
       }
    }
    while( *line != '\0' && *line != '%' );
+
+   /* check for additional literals */
+   if( clauselen > 0 )
+   {
+      sprintf(s, "found %d additional literals after last clause", clauselen);
+      warningMessage(s);
+   }
 
    /* check number of clauses */
    if( clausenum != nclauses )
@@ -364,10 +376,10 @@ RETCODE SCIPincludeReaderCNF(
 
    /* add CNF reader parameters */
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader/cnf/dynamicvars", "should variables be added and removed dynamically to the problem?",
-                  NULL, TRUE, NULL, NULL) );
+                  "reader/cnf/dynamiccols", "should columns be added and removed dynamically to the LP?",
+                  NULL, FALSE, NULL, NULL) );
    CHECK_OKAY( SCIPaddBoolParam(scip,
-                  "reader/cnf/dynamicconss", "should constraints be added and removed dynamically to the problem?",
+                  "reader/cnf/dynamicrows", "should rows be added and removed dynamically to the LP?",
                   NULL, TRUE, NULL, NULL) );
    
    return SCIP_OKAY;

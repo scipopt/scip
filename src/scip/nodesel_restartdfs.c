@@ -37,7 +37,7 @@
  * Default parameter settings
  */
 
-#define SELECTBESTFREQ            10000 /**< frequency for selecting the best node instead of the deepest one */
+#define SELECTBESTFREQ             1000 /**< frequency for selecting the best node instead of the deepest one */
 
 
 

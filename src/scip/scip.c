@@ -1842,6 +1842,7 @@ RETCODE SCIPdisableConsLocal(
 
    case SCIP_STAGE_SOLVING:
       assert(scip->tree->actnode != NULL);
+      assert(scip->tree->actnode->nodetype == SCIP_NODETYPE_ACTNODE);
       if( cons->node == NULL && scip->tree->actnode == scip->tree->root )
       {
          assert(scip->tree->actnode->depth == 0);
@@ -4361,7 +4362,7 @@ RETCODE SCIPcatchEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPcatchEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPeventfilterAdd(scip->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
 
@@ -4375,7 +4376,7 @@ RETCODE SCIPdropEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPdropEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPdropEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    CHECK_OKAY( SCIPeventfilterDel(scip->eventfilter, scip->mem->solvemem, scip->set, eventhdlr, eventdata) );
    
@@ -4391,9 +4392,7 @@ RETCODE SCIPcatchVarEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
 {
-   assert(var != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPcatchVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPcatchVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( !SCIPvarIsTransformed(var) )
    {
@@ -4407,7 +4406,7 @@ RETCODE SCIPcatchVarEvent(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPvarCatchEvent(var, scip->mem->solvemem, scip->set, eventtype, eventhdlr, eventdata) );
 
    return SCIP_OKAY;
 }
@@ -4420,9 +4419,7 @@ RETCODE SCIPdropVarEvent(
    EVENTDATA*       eventdata           /**< event data to pass to the event handler when processing this event */
    )
 {
-   assert(var != NULL);
-
-   CHECK_OKAY( checkStage(scip, "SCIPdropVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE) );
+   CHECK_OKAY( checkStage(scip, "SCIPdropVarEvent", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( !SCIPvarIsTransformed(var) )
    {
@@ -4430,7 +4427,7 @@ RETCODE SCIPdropVarEvent(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, scip->mem->solvemem, scip->set, eventhdlr, eventdata) );
+   CHECK_OKAY( SCIPvarDropEvent(var, scip->mem->solvemem, scip->set, eventhdlr, eventdata) );
    
    return SCIP_OKAY;
 }
@@ -4875,7 +4872,7 @@ Real SCIPgetTransGap(
 }
 
 /** gets number of feasible primal solutions found so far */
-int SCIPgetNSolsFound(
+Longint SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
@@ -5210,7 +5207,7 @@ void printSolutionStatistics(
    gap = SCIPgetGap(scip);
 
    fprintf(file, "Solution           :\n");
-   fprintf(file, "  Solutions found  : %12d\n", scip->primal->nsolsfound);
+   fprintf(file, "  Solutions found  : %12lld\n", scip->primal->nsolsfound);
    if( SCIPsetIsInfinity(scip->set, ABS(primalbound)) )
    {
       if( scip->stage == SCIP_STAGE_SOLVED )

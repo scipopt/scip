@@ -3085,6 +3085,8 @@ void SCIPvarAdjustLb(
       /* adjust new bound to integral value */
       *lb = SCIPsetCeil(set, *lb);
    }
+   if( SCIPsetIsInfinity(set, -(*lb)) )
+      *lb = -set->infinity;
 }
 
 /** adjust upper bound to integral value, if variable is integral */
@@ -3104,6 +3106,8 @@ void SCIPvarAdjustUb(
       /* adjust new bound to integral value */
       *ub = SCIPsetFloor(set, *ub);
    }
+   if( SCIPsetIsInfinity(set, *ub) )
+      *ub = set->infinity;
 }
 
 /** changes lower bound of variable in current dive */
@@ -3968,7 +3972,7 @@ RETCODE SCIPvarAddToRow(
    }
 }
 
-/** includes event handler in variable's event filter */
+/** includes event handler with given data in variable's event filter */
 RETCODE SCIPvarCatchEvent(
    VAR*             var,                /**< problem variable */
    MEMHDR*          memhdr,             /**< block memory */
@@ -3984,12 +3988,35 @@ RETCODE SCIPvarCatchEvent(
    assert((eventtype & !SCIP_EVENTTYPE_VARCHANGED) == 0);
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
 
-   debugMessage("catch event %d of variable <%s>\n", eventtype, var->name);
+   debugMessage("catch event of type %x of variable <%s> with handler %p and data %p\n", 
+      eventtype, var->name, eventhdlr, eventdata);
 
    CHECK_OKAY( SCIPeventfilterAdd(var->eventfilter, memhdr, set, eventtype, eventhdlr, eventdata) );
 
    return SCIP_OKAY;
 }
+
+/** deletes event handler with given data from variable's event filter */
+RETCODE SCIPvarDropEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
+   )
+{
+   assert(var != NULL);
+   assert(var->varstatus != SCIP_VARSTATUS_ORIGINAL);
+   assert(var->eventfilter != NULL);
+
+   debugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
+
+   CHECK_OKAY( SCIPeventfilterDel(var->eventfilter, memhdr, set, eventhdlr, eventdata) );
+
+   return SCIP_OKAY;
+}
+
+
 
 
 /*

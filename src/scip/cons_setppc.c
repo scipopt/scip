@@ -193,7 +193,7 @@ RETCODE conshdlrdataDecVaruses(
    return SCIP_OKAY;
 }
 
-/** creates event data for variable at given position, and catches events */
+/** catches events for variable at given position */
 static
 RETCODE setppcconsCatchEvent(
    SCIP*            scip,               /**< SCIP data structure */
@@ -212,7 +212,7 @@ RETCODE setppcconsCatchEvent(
    var = setppccons->vars[pos];
    assert(var != NULL);
 
-   /* catch bound change events on variables */
+   /* catch bound change events on variable */
    CHECK_OKAY( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (EVENTDATA*)setppccons) );
    
    /* update the fixed variables counters for this variable */
@@ -224,7 +224,7 @@ RETCODE setppcconsCatchEvent(
    return SCIP_OKAY;
 }
 
-/** deletes event data for variable at given position, and drops events */
+/** drops events for variable at given position */
 static
 RETCODE setppcconsDropEvent(
    SCIP*            scip,               /**< SCIP data structure */
@@ -243,6 +243,7 @@ RETCODE setppcconsDropEvent(
    var = setppccons->vars[pos];
    assert(var != NULL);
    
+   /* drop events on variable */
    CHECK_OKAY( SCIPdropVarEvent(scip, var, eventhdlr, (EVENTDATA*)setppccons) );
 
    /* update the fixed variables counters for this variable */
@@ -276,7 +277,7 @@ RETCODE setppcconsLockCoef(
 
    if( eventhdlr == NULL )
    {
-      /* get event handler for updating set partitioning / packing / covering constraint activity bounds */
+      /* get event handler for bound change events */
       eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
       if( eventhdlr == NULL )
       {

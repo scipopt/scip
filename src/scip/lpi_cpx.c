@@ -1429,7 +1429,7 @@ RETCODE SCIPlpiSolvePrimal(
 
    setParameterValues(&(lpi->cpxparam));
 
-   retval = CPXprimopt( cpxenv, lpi->cpxlp );
+   retval = CPXprimopt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -1449,7 +1449,7 @@ RETCODE SCIPlpiSolvePrimal(
       debugMessage("CPLEX returned INForUNBD -> calling CPLEX primal simplex again without presolve\n");
       
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
-      retval = CPXprimopt( cpxenv, lpi->cpxlp );
+      retval = CPXprimopt(cpxenv, lpi->cpxlp);
       switch( retval  )
       {
       case 0:
@@ -1493,7 +1493,7 @@ RETCODE SCIPlpiSolveDual(
 
    setParameterValues(&(lpi->cpxparam));
 
-   retval = CPXdualopt( cpxenv, lpi->cpxlp );
+   retval = CPXdualopt(cpxenv, lpi->cpxlp);
    switch( retval  )
    {
    case 0:
@@ -1513,7 +1513,7 @@ RETCODE SCIPlpiSolveDual(
       debugMessage("CPLEX returned INForUNBD -> calling CPLEX dual simplex again without presolve\n");
       
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
-      retval = CPXdualopt( cpxenv, lpi->cpxlp );
+      retval = CPXdualopt(cpxenv, lpi->cpxlp);
       switch( retval  )
       {
       case 0:
@@ -1531,6 +1531,70 @@ RETCODE SCIPlpiSolveDual(
       {
          /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
          errorMessage("CPLEX dual simplex returned CPX_STAT_INForUNBD after presolving was turned off");
+      }
+
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
+RETCODE SCIPlpiSolveBarrier(
+   LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   int retval;
+
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+
+   debugMessage("calling CPLEX barrier: %d cols, %d rows\n",
+      CPXgetnumcols(cpxenv, lpi->cpxlp), CPXgetnumrows(cpxenv, lpi->cpxlp));
+
+   invalidateSolution(lpi);
+
+   setParameterValues(&(lpi->cpxparam));
+
+   retval = CPXhybbaropt(cpxenv, lpi->cpxlp, 0);
+   switch( retval  )
+   {
+   case 0:
+      break;
+   case CPXERR_NO_MEMORY:
+      return SCIP_NOMEMORY;
+   default:
+      return SCIP_LPERROR;
+   }
+
+   lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+   debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
+   if( lpi->solstat == CPX_STAT_INForUNBD )
+   {
+      /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+      debugMessage("CPLEX returned INForUNBD -> calling CPLEX barrier again without presolve\n");
+      
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+      retval = CPXhybbaropt(cpxenv, lpi->cpxlp, 0);
+      switch( retval  )
+      {
+      case 0:
+         break;
+      case CPXERR_NO_MEMORY:
+         return SCIP_NOMEMORY;
+      default:
+         return SCIP_LPERROR;
+      }
+
+      lpi->solstat = CPXgetstat(cpxenv, lpi->cpxlp);
+      debugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
+
+      if( lpi->solstat == CPX_STAT_INForUNBD )
+      {
+         /* preprocessing was not the problem; issue a warning message and treat LP as infeasible */
+         errorMessage("CPLEX barrier returned CPX_STAT_INForUNBD after presolving was turned off");
       }
 
       CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_PREIND, CPX_ON) );

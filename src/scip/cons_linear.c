@@ -861,6 +861,7 @@ RETCODE linconsAddCoef(
    assert(lincons != NULL);
    assert(scip != NULL);
    assert(var != NULL);
+   assert(!SCIPisZero(scip, val));
 
    if( lincons->transformed && !SCIPvarIsTransformed(var) )
    {
@@ -1927,7 +1928,7 @@ DECL_CONSDELETE(consDeleteLinear)
 
 /** scales a linear constraint with a constant scalar */
 static
-void linconsScale(
+RETCODE linconsScale(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS*         lincons,            /**< linear constraint to scale */
    Real             scalar              /**< value to scale constraint with */
@@ -1937,6 +1938,26 @@ void linconsScale(
    int i;
 
    assert(lincons != NULL);
+
+   /* scale the coefficients */
+   for( i = 0; i < lincons->nvars; ++i )
+   {
+      Real oldval;
+      
+      oldval = lincons->vals[i];
+      lincons->vals[i] *= scalar;
+      if( SCIPisIntegral(scip, lincons->vals[i]) )
+         lincons->vals[i] = SCIPfloor(scip, lincons->vals[i]);
+      if( SCIPisZero(scip, lincons->vals[i]) )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "coefficient of variable <%s> in linear constraint scaled to zero", SCIPvarGetName(lincons->vars[i]));
+         warningMessage(s);
+         lincons->vals[i] = oldval;
+         CHECK_OKAY( linconsDelCoefPos(scip, lincons, i) );
+         --i;
+      }
+   }
 
    /* scale the sides */
    if( scalar < 0.0 )
@@ -1959,15 +1980,9 @@ void linconsScale(
          lincons->rhs = SCIPfloor(scip, lincons->rhs);
    }
 
-   /* scale the coefficients */
-   for( i = 0; i < lincons->nvars; ++i )
-   {
-      lincons->vals[i] *= scalar;
-      if( SCIPisIntegral(scip, lincons->vals[i]) )
-         lincons->vals[i] = SCIPfloor(scip, lincons->vals[i]);
-   }
-
    lincons->validactivities = FALSE;
+
+   return SCIP_OKAY;
 }
 
 /** normalizes a linear constraint with the following rules:
@@ -2090,7 +2105,7 @@ RETCODE linconsNormalize(
       /* scale the constraint with -1 */
       debugMessage("multiply linear constraint with -1.0\n");
       debug(linconsPrint(scip, lincons, NULL));
-      linconsScale(scip, lincons, -1.0);
+      CHECK_OKAY( linconsScale(scip, lincons, -1.0) );
    }
 
    /*
@@ -2114,7 +2129,7 @@ RETCODE linconsNormalize(
       /* scale the constraint with the smallest common multiple of all denominators */
       debugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
       debug(linconsPrint(scip, lincons, NULL));
-      linconsScale(scip, lincons, (Real)scm);
+      CHECK_OKAY( linconsScale(scip, lincons, (Real)scm) );
    }
 
    /*
@@ -2137,7 +2152,7 @@ RETCODE linconsNormalize(
          /* divide the constaint by the greatest common divisor of the coefficients */
          debugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
          debug(linconsPrint(scip, lincons, NULL));
-         linconsScale(scip, lincons, 1.0/(Real)gcd);
+         CHECK_OKAY( linconsScale(scip, lincons, 1.0/(Real)gcd) );
       }
    }
    

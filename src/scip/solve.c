@@ -42,7 +42,9 @@ Bool SCIPsolveIsStopped(
       || (set->nodelimit >= 0 && stat->nnodes >= set->nodelimit)
       || SCIPclockGetTime(stat->solvingtime) >= set->timelimit
       || (set->memlimit >= 0 && SCIPgetMemUsed(set->scip) >= set->memlimit)
-      || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit)));
+      || (SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit))
+      || (set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_SOLVING &&
+         SCIPgetNSolsFound(set->scip) >= set->sollimit));
 }
 
 /** outputs the reason for termination */
@@ -65,6 +67,9 @@ void SCIPsolvePrintStopReason(
       fprintf(file, "memory limit reached");
    else if( SCIPstage(set->scip) >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->gaplimit) )
       fprintf(file, "gap limit reached");
+   else if( set->sollimit >= 0 && SCIPstage(set->scip) >= SCIP_STAGE_SOLVING
+      && SCIPgetNSolsFound(set->scip) >= set->sollimit )
+      fprintf(file, "solution limit reached");
 }
 
 /** constructs the LP of the root node */
@@ -684,8 +689,6 @@ RETCODE SCIPsolveCIP(
    {
       assert(set->buffer->firstfree == 0);
 
-      stat->nseparounds = 0;
-
       /* update the memory saving flag, switch algorithms respectively */
       SCIPstatUpdateMemsaveMode(stat, set);
 
@@ -810,6 +813,8 @@ RETCODE SCIPsolveCIP(
             solveagain = FALSE;
             infeasible = FALSE;
             
+            stat->nseparounds = 0;
+
             /* check, if we want to solve the LP at this node */
             if( tree->actnodehaslp )
             {
@@ -856,7 +861,7 @@ RETCODE SCIPsolveCIP(
          if( !infeasible )
          {
             SOL* sol;
-            int oldnsolsfound;
+            Longint oldnsolsfound;
 
             assert(!tree->actnodehaslp || lp->solved);
 

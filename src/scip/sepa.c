@@ -69,6 +69,7 @@ RETCODE SCIPsepaCreate(
    )
 {
    char paramname[MAXSTRLEN];
+   char paramdesc[MAXSTRLEN];
 
    assert(sepa != NULL);
    assert(name != NULL);
@@ -96,8 +97,8 @@ RETCODE SCIPsepaCreate(
 
    /* add parameters */
    sprintf(paramname, "separator/%s/freq", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
-                  paramname, "frequency for calling separator (-1: never, 0: only in root node)",
+   sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*sepa)->freq, freq, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -145,11 +146,6 @@ RETCODE SCIPsepaInit(
       return SCIP_INVALIDCALL;
    }
 
-   if( sepa->sepainit != NULL )
-   {
-      CHECK_OKAY( sepa->sepainit(scip, sepa) );
-   }
-
    SCIPclockReset(sepa->clock);
 
    sepa->lastsepanode = -1;
@@ -157,6 +153,11 @@ RETCODE SCIPsepaInit(
    sepa->ncutsfound = 0;
    sepa->ncallsatnode = 0;
    sepa->ncutsfoundatnode = 0;
+
+   if( sepa->sepainit != NULL )
+   {
+      CHECK_OKAY( sepa->sepainit(scip, sepa) );
+   }
    sepa->initialized = TRUE;
 
    return SCIP_OKAY;

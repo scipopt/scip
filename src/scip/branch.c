@@ -390,6 +390,7 @@ RETCODE SCIPbranchruleCreate(
    )
 {
    char paramname[MAXSTRLEN];
+   char paramdesc[MAXSTRLEN];
 
    assert(branchrule != NULL);
    assert(name != NULL);
@@ -409,8 +410,8 @@ RETCODE SCIPbranchruleCreate(
 
    /* add parameters */
    sprintf(paramname, "branchrule/%s/priority", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
-                  paramname, "priority of branching rule",
+   sprintf(paramdesc, "priority of branching rule <%s>", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*branchrule)->priority, priority, INT_MIN, INT_MAX, 
                   paramChgdBranchrulePriority, (PARAMDATA*)(*branchrule)) );
 

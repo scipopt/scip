@@ -387,6 +387,12 @@ RETCODE SCIPlpiSolveDual(
    LPI*             lpi                 /**< LP interface structure */
    );
 
+/** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
+extern 
+RETCODE SCIPlpiSolveBarrier(
+   LPI*             lpi                 /**< LP interface structure */
+   );
+
 /** performs strong branching iterations on all candidates */
 extern 
 RETCODE SCIPlpiStrongbranch(

@@ -74,6 +74,7 @@ RETCODE SCIPdispCreate(
    )
 {
    char paramname[MAXSTRLEN];
+   char paramdesc[MAXSTRLEN];
 
    assert(disp != NULL);
    assert(name != NULL);
@@ -101,8 +102,8 @@ RETCODE SCIPdispCreate(
 
    /* add parameters */
    sprintf(paramname, "display/%s/active", name);
-   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, 
-                  paramname, "display activation status of display column (0: off, 1: auto, 2:on)",
+   sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
+   CHECK_OKAY( SCIPsetAddIntParam(set, memhdr, paramname, paramdesc,
                   &(*disp)->dispstatus, dispstatus, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;

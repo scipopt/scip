@@ -845,7 +845,7 @@ RETCODE SCIPvarAddToRow(
    Real             val                 /**< value of coefficient */
    );
 
-/** includes event handler in variable's event filter */
+/** includes event handler with given data in variable's event filter */
 extern
 RETCODE SCIPvarCatchEvent(
    VAR*             var,                /**< problem variable */
@@ -855,6 +855,17 @@ RETCODE SCIPvarCatchEvent(
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
    );
+
+/** deletes event handler with given data from variable's event filter */
+extern
+RETCODE SCIPvarDropEvent(
+   VAR*             var,                /**< problem variable */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   EVENTDATA*       eventdata           /**< event data to pass to the event handler for the event processing */
+   );
+
 
 
 /*

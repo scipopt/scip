@@ -239,6 +239,14 @@ RETCODE paramCheckChar(
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
 
+   if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
+   {
+      char s[MAXSTRLEN];
+      sprintf(s, "Invalid char parameter value <%x>.", (int)value);
+      warningMessage(s);
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    if( param->data.charparam.allowedvalues != NULL )
    {
       Bool found;
@@ -269,6 +277,8 @@ RETCODE paramCheckString(
    const char*      value               /**< value to check */
    )
 {
+   unsigned int i;
+
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_STRING);
 
@@ -276,6 +286,17 @@ RETCODE paramCheckString(
    {
       warningMessage("Cannot assign a NULL string to a string parameter.");
       return SCIP_PARAMETERWRONGVAL;
+   }
+
+   for( i = 0; i < strlen(value); ++i )
+   {
+      if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
+      {
+         char s[MAXSTRLEN];
+         sprintf(s, "Invalid character <%x> in string parameter at position %d.", (int)value[i], i);
+         warningMessage(s);
+         return SCIP_PARAMETERWRONGVAL;
+      }
    }
 
    return SCIP_OKAY;
@@ -1021,22 +1042,28 @@ RETCODE paramWrite(
       switch( param->paramtype )
       {
       case SCIP_PARAMTYPE_BOOL:
-         fprintf(file, "# [default: %s]\n", param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
+         fprintf(file, "# [type: bool, range: {TRUE,FALSE}, default: %s]\n",
+            param->data.boolparam.defaultvalue ? "TRUE" : "FALSE");
          break;
       case SCIP_PARAMTYPE_INT:
-         fprintf(file, "# [default: %d]\n", param->data.intparam.defaultvalue);
+         fprintf(file, "# [type: int, range: [%d,%d], default: %d]\n", 
+            param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_LONGINT:
-         fprintf(file, "# [default: %lld]\n", param->data.longintparam.defaultvalue);
+         fprintf(file, "# [type: longint, range: [%lld,%lld], default: %lld]\n", 
+            param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_REAL:
-         fprintf(file, "# [default: %.15g]\n", param->data.realparam.defaultvalue);
+         fprintf(file, "# [type: real, range: [%.15g,%.15g], default: %.15g]\n",
+            param->data.realparam.minvalue, param->data.realparam.maxvalue, param->data.realparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_CHAR:
-         fprintf(file, "# [default: %c]\n", param->data.charparam.defaultvalue);
+         fprintf(file, "# [type: char, range: {%s}, default: %c]\n",
+            param->data.charparam.allowedvalues != NULL ? param->data.charparam.allowedvalues : "all chars",
+            param->data.charparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_STRING:
-         fprintf(file, "# [default: \"%s\"]\n", param->data.stringparam.defaultvalue);
+         fprintf(file, "# [type: string, default: \"%s\"]\n", param->data.stringparam.defaultvalue);
          break;
       default:
          errorMessage("unknown parameter type");

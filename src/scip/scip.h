@@ -2138,7 +2138,7 @@ Real SCIPgetTransGap(
 
 /** gets number of feasible primal solutions found so far */
 extern
-int SCIPgetNSolsFound(
+Longint SCIPgetNSolsFound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

@@ -773,6 +773,7 @@ RETCODE SCIPconssetchgApply(
 extern
 RETCODE SCIPconssetchgUndo(
    CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
+   MEMHDR*          memhdr,             /**< block memory */
    const SET*       set                 /**< global SCIP settings */
    );
 

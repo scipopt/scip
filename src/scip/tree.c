@@ -864,6 +864,8 @@ RETCODE SCIPnodeDisableCons(
    assert(node != NULL);
    assert(tree != NULL);
    assert(cons != NULL);
+   assert(cons->active);
+   assert(cons->enabled);
 
    debugMessage("disabling constraint <%s> at node in depth %d\n", cons->name, node->depth);
 
@@ -1334,7 +1336,7 @@ RETCODE treeSwitchPath(
       debugMessage("switch path: undo domain changes in depth %d\n", i);
       CHECK_OKAY( SCIPdomchgUndo(tree->path[i]->domchg, memhdr, set, stat, tree, lp, branchcand, eventqueue) );
       debugMessage("switch path: undo constraint set changed in depth %d\n", i);
-      CHECK_OKAY( SCIPconssetchgUndo(tree->path[i]->conssetchg, set) );
+      CHECK_OKAY( SCIPconssetchgUndo(tree->path[i]->conssetchg, memhdr, set) );
    }
 
    /* shrink active path to the common fork and deactivate the corresponding nodes */
