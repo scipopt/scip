@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.167 2005/02/09 13:44:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.168 2005/02/11 09:57:57 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -132,6 +132,13 @@ RETCODE propagationRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
+
+      /* if we work off the delayed propagators, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_REDUCEDDOM )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* propagate constraints */
@@ -144,6 +151,13 @@ RETCODE propagationRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
+
+      /* if we work off the delayed propagators, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_REDUCEDDOM )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* call additional propagators with negative priority */
@@ -159,6 +173,13 @@ RETCODE propagationRound(
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
+
+      /* if we work off the delayed propagators, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_REDUCEDDOM )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
@@ -767,6 +788,13 @@ RETCODE separationRound(
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* if we work off the delayed separators, we stop immediately if a cut was found */
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* try separating constraints of the constraint handlers */
@@ -781,6 +809,13 @@ RETCODE separationRound(
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* if we work off the delayed separators, we stop immediately if a cut was found */
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* call LP separators with negative priority */
@@ -797,6 +832,13 @@ RETCODE separationRound(
       *separateagain = *separateagain || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCutsStored(sepastore) >= 2*SCIPsetGetSepaMaxcuts(set, root));
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* if we work off the delayed separators, we stop immediately if a cut was found */
+      if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.265 2005/02/09 16:33:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.266 2005/02/11 09:57:56 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3618,6 +3618,13 @@ RETCODE presolveRound(
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_SUCCESS )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* call presolve methods of constraint handlers */
@@ -3645,6 +3652,13 @@ RETCODE presolveRound(
             SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_SUCCESS )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* call included presolvers with negative priority */
@@ -3673,6 +3687,13 @@ RETCODE presolveRound(
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
+      if( onlydelayed && result == SCIP_SUCCESS )
+      {
+         *delayed = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    return SCIP_OKAY;
@@ -11428,6 +11449,9 @@ RETCODE SCIPprintStatistics(
       SCIPprobPrintStatistics(scip->transprob, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
+      printConstraintTimingStatistics(scip, file);
+      printPropagatorStatistics(scip, file);
+      printConflictStatistics(scip, file);
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:

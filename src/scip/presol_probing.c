@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.8 2005/02/09 10:10:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.9 2005/02/11 09:57:56 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -117,20 +117,7 @@ RETCODE applyProbing(
       {
          lbs[i] = SCIPvarGetLbLocal(vars[i]);
          ubs[i] = SCIPvarGetUbLocal(vars[i]);
-#if 0
-#ifdef DEBUG
-         if( !SCIPisEQ(scip, lbs[i], SCIPvarGetLbGlobal(vars[i]))
-            || !SCIPisEQ(scip, ubs[i], SCIPvarGetUbGlobal(vars[i])) )
-         {
-            debugMessage("  -> <%s>[%g,%g]\n", SCIPvarGetName(vars[i]), lbs[i], ubs[i]);
-         }
-#endif
-#endif
       }
-   }
-   else
-   {
-      /*debugMessage("  -> probing determined a cutoff\n");*/
    }
 
    /* exit probing mode */
