@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.8 2004/09/28 11:46:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.9 2004/09/28 11:49:54 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -53,7 +53,6 @@
 #endif
 
 #include <cassert>
-#include <fstream>
 
 
 /********************************************************************/
@@ -2452,6 +2451,23 @@ Bool SCIPlpiIsInfinity(
 /**@name File Interface Methods */
 /**@{ */
 
+/** returns, whether the given file exists */
+static
+Bool fileExists(
+   const char*      filename            /**< file name */
+   )
+{
+   FILE* f;
+
+   f = fopen(filename, "r");
+   if( f == NULL )
+      return FALSE;
+
+   fclose(f);
+
+   return TRUE;
+}
+
 /** reads LP from a file */
 RETCODE SCIPlpiReadLP(
    LPI*             lpi,                /**< LP interface structure */
@@ -2463,11 +2479,10 @@ RETCODE SCIPlpiReadLP(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   std::ifstream file(fname);
-   if( !file )
+   if( !fileExists(fname) )
       return SCIP_NOFILE;
 
-   if( !lpi->spx->read(file) )
+   if( !lpi->spx->readFile(fname) )
       return SCIP_READERROR;
    
    return SCIP_OKAY;
