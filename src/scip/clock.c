@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2003 Konrad-Zuse-Zentrum                            */
+/*                  2002-2004 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.7 2003/12/01 14:41:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.8 2004/02/04 17:27:17 bzfpfend Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues

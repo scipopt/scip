@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2003 Konrad-Zuse-Zentrum                            */
+/*                  2002-2004 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.2 2003/12/08 13:24:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.3 2004/02/04 17:27:31 bzfpfend Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -45,7 +45,7 @@ public:
    {
    }
 
-   /** destructor of user problem data to free user data (called when problem is freed)
+   /** destructor of user problem data to free original user data (called when original problem is freed)
     *
     *  If the "deleteobject" flag in the SCIPcreateObjProb() method was set to TRUE, this method is not needed,
     *  because all the work to delete the user problem data can be done in the destructor of the user problem
@@ -53,13 +53,59 @@ public:
     *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
     *  longer needed.
     */
-   virtual RETCODE scip_delete(
+   virtual RETCODE scip_delorig(
       SCIP*         scip                /**< SCIP data structure */
       )
    {
       return SCIP_OKAY;
    }
-   
+
+   /** creates user data of transformed problem by transforming the original user problem data
+    *  (called when problem solving starts)
+    *
+    *  The user has two possibilities to implement this method:
+    *   1. Return the pointer to the original problem data object as pointer to the transformed problem data object.
+    *      The user may modify some internal attributes, but he has to make sure, that these modifications are
+    *      reversed in the scip_deltrans() method, such that the original problem data is restored. In this case,
+    *      he should set *deleteobject to FALSE, because the problem data must not be destructed by SCIP after the
+    *      solving process is terminated.
+    *   2. Call the copy constructor of the problem data object and return the created copy as transformed problem
+    *      data object. In this case, he probably wants to set *deleteobject to TRUE, thus letting SCIP call the
+    *      destructor of the object if the transformed problem data is no longer needed.
+    */
+   virtual RETCODE scip_trans(
+      SCIP*         scip,               /**< SCIP data structure */
+      ObjProbData** objprobdata,        /**< pointer to store the transformed problem data object */
+      Bool*         deleteobject        /**< pointer to store whether SCIP should delete the object after solving */
+      )
+   {
+      assert(objprobdata != NULL);
+      assert(deleteobject != NULL);
+
+      /* the default implementation just copies the pointer to the problem data object;
+       * SCIP must not destruct the transformed problem data object, because the original problem data must stay alive
+       */
+      *objprobdata = this;
+      *deleteobject = FALSE;
+
+      return SCIP_OKAY;
+   }      
+
+   /** destructor of user problem data to free transformed user data (called when transformed problem is freed)
+    *
+    *  If the "*deleteobject" flag in the scip_trans() method was set to TRUE, this method is not needed,
+    *  because all the work to delete the user problem data can be done in the destructor of the user problem
+    *  data object. If the "*deleteobject" flag was set to FALSE, and the user problem data object stays alive
+    *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
+    *  longer needed.
+    */
+   virtual RETCODE scip_deltrans(
+      SCIP*         scip                /**< SCIP data structure */
+      )
+   {
+      return SCIP_OKAY;
+   }
+
 };
 
 } /* namespace scip */

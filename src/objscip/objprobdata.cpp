@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2003 Konrad-Zuse-Zentrum                            */
+/*                  2002-2004 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.1 2003/12/08 11:51:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.2 2004/02/04 17:27:31 bzfpfend Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -57,7 +57,7 @@ DECL_PROBDELORIG(probDelorigObj)
    assert((*probdata)->objprobdata != NULL);
 
    /* call virtual method of probdata object */
-   CHECK_OKAY( (*probdata)->objprobdata->scip_delete(scip) );
+   CHECK_OKAY( (*probdata)->objprobdata->scip_delorig(scip) );
 
    /* free probdata object */
    if( (*probdata)->deleteobject )
@@ -74,11 +74,50 @@ DECL_PROBDELORIG(probDelorigObj)
 /** creates user data of transformed problem by transforming the original user problem data
  *  (called when problem solving starts)
  */
-#define probTransObj NULL
+static
+DECL_PROBTRANS(probTransObj)
+{  /*lint --e{715}*/
+   scip::ObjProbData* objprobdata;
+   Bool deleteobject;
+
+   assert(sourcedata != NULL);
+   assert(sourcedata->objprobdata != NULL);
+   assert(targetdata != NULL);
+   assert(*targetdata == NULL);
+
+   /* call virtual method of probdata object */
+   CHECK_OKAY( sourcedata->objprobdata->scip_trans(scip, &objprobdata, &deleteobject) );
+
+   /* create transformed user problem data */
+   *targetdata = new PROBDATA;
+   (*targetdata)->objprobdata = objprobdata;
+   (*targetdata)->deleteobject = deleteobject;
+
+   return SCIP_OKAY;
+}
 
 
 /** frees user data of transformed problem (called when the transformed problem is freed) */
-#define probDeltransObj NULL
+static
+DECL_PROBDELTRANS(probDeltransObj)
+{  /*lint --e{715}*/
+   assert(probdata != NULL);
+   assert(*probdata != NULL);
+   assert((*probdata)->objprobdata != NULL);
+
+   /* call virtual method of probdata object */
+   CHECK_OKAY( (*probdata)->objprobdata->scip_deltrans(scip) );
+
+   /* free probdata object */
+   if( (*probdata)->deleteobject )
+      delete (*probdata)->objprobdata;
+
+   /* free probdata data */
+   delete *probdata;
+   *probdata = NULL;
+   
+   return SCIP_OKAY;
+}
 
 
 

@@ -3,9 +3,9 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2003 Tobias Achterberg                              */
+/*    Copyright (C) 2002-2004 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2002-2003 Konrad-Zuse-Zentrum                            */
+/*                  2002-2004 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the SCIP Academic Licence.        */
@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.8 2003/11/24 12:12:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.9 2004/02/04 17:27:32 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
