@@ -358,7 +358,28 @@ RETCODE SCIPlpiFreeState(
  * LP interface methods needed by external SCIP features
  */
 
-/** gets columns from LP problem object; the arrays have to be large enough to store all values
+/** gets the number of rows in the LP */
+extern
+RETCODE SCIPlpiGetNRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nrows               /**< pointer to store the number of rows */
+   );
+
+/** gets the number of columns in the LP */
+extern
+RETCODE SCIPlpiGetNCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             ncols               /**< pointer to store the number of cols */
+   );
+
+/** gets the number of nonzero elements in the LP constraint matrix */
+extern
+RETCODE SCIPlpiGetNNonzeros(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nnonzeros           /**< pointer to store the number of nonzeros */
+   );
+
+/** gets columns from LP problem object; the arrays have to be large enough to store all values;
  *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
  *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
  */
@@ -408,6 +429,15 @@ RETCODE SCIPlpiDelRowset(
    int*             dstat               /**< deletion status of rows
                                          *   input:  1 if row should be deleted, 0 if not
                                          *   output: new position of row, -1 if row was deleted */
+   );
+
+/** changes objective values of columns in the LP */
+extern
+RETCODE SCIPlpiChgObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncols,              /**< number of columns to change objective value for */
+   int*             cols,               /**< column indices to change objective value for */
+   Real*            vals                /**< new objective values for columns */
    );
 
 /** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */

@@ -1470,6 +1470,51 @@ RETCODE SCIPlpiFreeState(
  * LP interface methods needed by external SCIP features
  */
 
+/** gets the number of rows in the LP */
+RETCODE SCIPlpiGetNRows(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nrows               /**< pointer to store the number of rows */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(nrows != NULL);
+
+   *nrows = CPXgetnumrows(cpxenv, lpi->cpxlp);
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of columns in the LP */
+RETCODE SCIPlpiGetNCols(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             ncols               /**< pointer to store the number of cols */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(ncols != NULL);
+
+   *ncols = CPXgetnumcols(cpxenv, lpi->cpxlp);
+
+   return SCIP_OKAY;
+}
+
+/** gets the number of nonzero elements in the LP constraint matrix */
+RETCODE SCIPlpiGetNNonzeros(
+   LPI*             lpi,                /**< LP interface structure */
+   int*             nnonzeros           /**< pointer to store the number of nonzeros */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(nnonzeros != NULL);
+
+   *nnonzeros = CPXgetnumnz(cpxenv, lpi->cpxlp);
+
+   return SCIP_OKAY;
+}
+
 /** gets columns from LP problem object; the arrays have to be large enough to store all values
  *  Either both, lb and ub, have to be NULL, or both have to be non-NULL,
  *  either nnonz, beg, ind, and val have to be NULL, or all of them have to be non-NULL.
@@ -1620,6 +1665,25 @@ RETCODE SCIPlpiDelRowset(
    CHECK_ZERO( CPXdelsetrows(cpxenv, lpi->cpxlp, dstat) );
 
    return SCIP_OKAY;   
+}
+
+/** changes objective values of columns in the LP */
+RETCODE SCIPlpiChgObj(
+   LPI*             lpi,                /**< LP interface structure */
+   int              ncols,              /**< number of columns to change objective value for */
+   int*             cols,               /**< column indices to change objective value for */
+   Real*            vals                /**< new objective values for columns */
+   )
+{
+   assert(cpxenv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->cpxlp != NULL);
+   assert(ncols == 0 || cols != NULL);
+   assert(ncols == 0 || vals != NULL);
+
+   CHECK_ZERO( CPXchgobj(cpxenv, lpi->cpxlp, ncols, cols, vals) );
+
+   return SCIP_OKAY;
 }
 
 /** gets actual basis status for columns and rows; arrays must be large enough to store the basis status */
