@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.18 2004/02/04 17:27:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.19 2004/03/09 18:03:52 bzfwolte Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -240,6 +240,8 @@ long long getBlockMemoryUsed(MEMHDR *mem);
 #define clearBlockMemoryNull(mem)            /**/
 #define destroyBlockMemory(mem)              /**/
 #define destroyBlockMemoryNull(mem)          /**/
+#define freeAllBlockMemory(mem)              /**/
+#define freeAllBlockMemoryNull(mem)          /**/
 
 #define allocBlockMemory(mem,ptr)                         allocMemory(ptr)
 #define allocBlockMemoryArray(mem,ptr,num)                allocMemoryArray(ptr,num)

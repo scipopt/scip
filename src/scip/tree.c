@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.82 2004/03/08 18:05:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.83 2004/03/09 18:03:53 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -162,7 +162,7 @@ void subrootCaptureLPIState(
 {
    assert(subroot != NULL);
    assert(subroot->nlpistateref >= 0);
-   assert(subroot->lpistate != NULL);
+   assert(subroot->lpistate != NULL || subroot->nrows == 0 || subroot->ncols == 0);
    assert(nuses > 0);
 
    subroot->nlpistateref += nuses;
@@ -179,7 +179,7 @@ RETCODE subrootReleaseLPIState(
 {
    assert(subroot != NULL);
    assert(subroot->nlpistateref > 0);
-   assert(subroot->lpistate != NULL);
+   assert(subroot->lpistate != NULL || subroot->nrows == 0 || subroot->ncols == 0);
    assert(memhdr != NULL);
    assert(lp != NULL);
 
@@ -366,15 +366,26 @@ RETCODE subrootCreate(
    assert(tree->nchildren > 0);
 
    ALLOC_OKAY( allocBlockMemory(memhdr, subroot) );
-
-   CHECK_OKAY( SCIPlpGetState(lp, memhdr, &((*subroot)->lpistate)) );
+   
    (*subroot)->nlpistateref = 0;
    (*subroot)->ncols = SCIPlpGetNCols(lp);
    (*subroot)->nrows = SCIPlpGetNRows(lp);
    (*subroot)->nchildren = tree->nchildren;
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->cols, SCIPlpGetCols(lp), (*subroot)->ncols) );
-   ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->rows, SCIPlpGetRows(lp), (*subroot)->nrows) );
+   CHECK_OKAY( SCIPlpGetState(lp, memhdr, &((*subroot)->lpistate)) );
 
+   if( (*subroot)->ncols != 0 )
+   {
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->cols, SCIPlpGetCols(lp), (*subroot)->ncols) );
+   }
+   else
+      (*subroot)->cols = NULL;
+   if( (*subroot)->nrows != 0 )
+   {
+      ALLOC_OKAY( duplicateBlockMemoryArray(memhdr, &(*subroot)->rows, SCIPlpGetRows(lp), (*subroot)->nrows) );
+   }
+   else
+      (*subroot)->rows = NULL;
+  
    /* capture the rows of the subroot */
    for( i = 0; i < (*subroot)->nrows; ++i )
       SCIProwCapture((*subroot)->rows[i]);

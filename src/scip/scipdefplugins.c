@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.13 2004/03/08 18:05:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.14 2004/03/09 18:03:52 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -72,9 +72,9 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeConshdlrLinear(scip) );
    CHECK_OKAY( SCIPincludeConshdlrLogicor(scip) );
    CHECK_OKAY( SCIPincludeConshdlrSetppc(scip) );
+   CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
 
 #if 0
-   CHECK_OKAY( SCIPincludeConshdlrKnapsack(scip) );
    CHECK_OKAY( SCIPincludeConshdlrEqknapsack(scip) );
    CHECK_OKAY( SCIPincludeConshdlrInvarknapsack(scip) );
    CHECK_OKAY( SCIPincludeConshdlrBinpack(scip) );

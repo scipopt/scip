@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.56 2004/02/26 13:53:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.57 2004/03/09 18:03:52 bzfwolte Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -2157,6 +2157,9 @@ RETCODE SCIPlpiSetState(
    assert(lpistate != NULL);
    assert(lpistate->ncols == CPXgetnumcols(cpxenv, lpi->cpxlp));
    assert(lpistate->nrows == CPXgetnumrows(cpxenv, lpi->cpxlp));
+ 
+   if( lpistate->ncols == 0 || lpistate->nrows == 0 )
+      return SCIP_OKAY;   
 
    /* allocate enough memory for storing uncompressed basis information */
    CHECK_OKAY( ensureCstatMem(lpi, lpistate->ncols) );

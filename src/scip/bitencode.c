@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.6 2004/02/04 17:27:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.7 2004/03/09 18:03:52 bzfwolte Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values
@@ -74,8 +74,8 @@ void SCIPencodeSingleBit(
    int rest = count % SINGLEPACKETSIZE;
    int nfull = count - rest;
 
-   assert(inp != NULL);
-   assert(out != NULL);
+   assert(inp != NULL || count == 0);
+   assert(out != NULL || count == 0);
    assert(count >= 0);
    assert(SINGLEPACKETSIZE == 32);
 
@@ -120,8 +120,8 @@ void SCIPdecodeSingleBit(
    int nfull = count - rest;
    int i;
 
-   assert(inp != NULL);
-   assert(out != NULL);
+   assert(inp != NULL || count == 0);
+   assert(out != NULL || count == 0);
    assert(count >= 0);
    assert(SINGLEPACKETSIZE == 32);
 
@@ -235,8 +235,8 @@ void SCIPencodeDualBit(
    int rest = count % DUALPACKETSIZE;
    int nfull = count - rest;
 
-   assert(inp != NULL);
-   assert(out != NULL);
+   assert(inp != NULL || count == 0);
+   assert(out != NULL || count == 0);
    assert(count >= 0);
    assert(DUALPACKETSIZE == 16);
 
@@ -277,8 +277,8 @@ void SCIPdecodeDualBit(
    int nfull = count - rest;
    int i;
 
-   assert(inp != NULL);
-   assert(out != NULL);
+   assert(inp != NULL || count == 0);
+   assert(out != NULL || count == 0);
    assert(count >= 0);
    assert(DUALPACKETSIZE == 16);
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.13 2004/03/08 18:05:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.14 2004/03/09 18:03:52 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -38,7 +38,7 @@
 #define CONSHDLR_SEPAPRIORITY   +600000
 #define CONSHDLR_ENFOPRIORITY   +600000
 #define CONSHDLR_CHECKPRIORITY  -850000
-#define CONSHDLR_SEPAFREQ            -1
+#define CONSHDLR_SEPAFREQ             5
 #define CONSHDLR_PROPFREQ            -1
 #define CONSHDLR_NEEDSCONS         TRUE
 
@@ -185,8 +185,184 @@ Bool checkCons(
       return TRUE;
 }
 
+#define IDX(j,d) ((j)*(capacity+1)+(d))
+
+/** solves knapsack problem with dynamic programming;
+ *  the solution in covervars consists of all items that are NOT selected
+ */
+static
+RETCODE dynProgKnapsack(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              nitems,             /**< number of available items */
+   VAR**            items,              /**< knapsack item variables */
+   int*             weights,            /**< item weights */
+   Real*            profits,            /**< item profits */
+   int              capacity,           /**< capacity of knapsack */
+   VAR**            covervars,          /**< array to store negated solution */
+   int*             ncovervars,         /**< pointer to store number of items in negated solution */
+   Real*            solval              /**< pointer to store optimal solution value */
+) 
+{
+   Real* optvalues;
+   int d;
+   int j;
+
+   assert(items!=NULL);
+   assert(weights!=NULL);
+   assert(profits!=NULL);
+   assert(covervars!=NULL);
+   assert(ncovervars!=NULL);
+   assert(solval!=NULL);
+
+   CHECK_OKAY( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(capacity+1)) );
+   
+   /* fill dynamic programming table with optimal values */
+   for( d=0; d<=capacity; d++)
+      optvalues[IDX(0,d)] = 0.0;
+   for( j=1; j<=nitems; j++ )
+   {
+      for( d=0; d<weights[j-1]; d++)
+         optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
+      for( d=weights[j-1]; d<=capacity; d++ )
+      {
+         if( optvalues[IDX(j-1,d-weights[j-1])]+profits[j-1] > optvalues[IDX(j-1,d)] )
+            optvalues[IDX(j,d)] = optvalues[IDX(j-1,d-weights[j-1])] + profits[j-1];
+         else
+            optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
+      } 
+   }
+
+   /* produce (negated) optimal solution by following the table */
+   *ncovervars = 0;
+   d = capacity;
+ 
+   for( j = nitems; j > 0; j-- )
+   {
+      if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
+         d -= weights[j-1];
+      else
+      { 
+         covervars[*ncovervars] = items[j-1];
+         (*ncovervars)++;
+      }
+      assert(d>=0);
+   }
+ 
+   *solval = optvalues[IDX(nitems,capacity)];
+
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &optvalues) );
+   return SCIP_OKAY;
+}
 
 
+/** separates cover inequalities for given knapsack constraint */
+static
+RETCODE separateCovers(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS*            cons,               /**< constraint to check */
+   Bool*            separated           /**< pointer to store whether a cut was found */
+   )
+{
+   VAR** items;
+   int*  weights;
+   Real* profits;
+   CONSDATA* consdata;
+   int i;
+   int nitems;
+   VAR** fixedones;
+   int nfixedones;
+   int capacity;
+   VAR** covervars;
+   int ncovervars;
+   Real infeasibility;
+   Real solvalsum;
+   Real transsol;
+
+   assert(separated!=NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata!=NULL);
+
+   *separated = FALSE;
+   
+   /* solve the following knapsack problem with dynamic programming:
+    * max SUM (1-x_i^*)z_i
+    *     SUM w_i z_i >= SUM w_i - capacity -1
+    */
+   
+   /* set up datastructures */
+   CHECK_OKAY( SCIPallocBufferArray(scip, &items, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &weights, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &profits, consdata->nvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &fixedones, consdata->nvars) );
+   
+   /* use all variables with fractional LP value */
+   nitems = 0;
+   nfixedones = 0;
+   solvalsum = 0.0;
+   capacity = -(int)(consdata->capacity+0.5)-1;
+
+   for( i=0; i < consdata->nvars; i++ )
+   {
+      Real solval;
+      solval = SCIPgetVarSol(scip, consdata->vars[i]);
+      solvalsum += solval;
+      printf("<%s>: sol = %g, sum = %g\n", SCIPvarGetName(consdata->vars[i]), solval, solvalsum); /* ??????????????????*/
+      if( !SCIPisIntegral(scip, solval) )
+      {
+         items[nitems] = consdata->vars[i];
+         weights[nitems] = (int)(consdata->weights[i]+0.5);
+         profits[nitems] = 1.0 - solval;
+         printf("  weight = %d, profit = %g\n", weights[nitems], profits[nitems]);
+         nitems++;
+         capacity += (int)(consdata->weights[i]+0.5);
+      }
+      else if( solval > 0.5 )
+      {
+         fixedones[nfixedones] = consdata->vars[i];
+         nfixedones++;
+         capacity += (int)(consdata->weights[i]+0.5);
+      }
+   }
+   printf("capacity = %d\n", capacity);
+
+   /* solve separation knapsack with dynamic programming */
+   CHECK_OKAY( SCIPallocBufferArray(scip, &covervars, nitems+nfixedones) );
+   CHECK_OKAY( dynProgKnapsack(scip, nitems, items, weights, profits, capacity, 
+                  covervars, &ncovervars, &transsol) ); 
+   printf("ncovervars = %d, transsol = %g\n", ncovervars, transsol); 
+   /* generate cutting plane */
+   infeasibility = transsol - nitems - nfixedones + 1.0 + solvalsum;
+   if( SCIPisFeasPositive(scip, infeasibility) ) 
+   {
+      ROW* row;
+      char name[MAXSTRLEN];
+      sprintf(name, "%s_%lld", SCIPconsGetName(cons), SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+      CHECK_OKAY( SCIPcreateEmptyRow (scip, &row, name, -SCIPinfinity(scip), ncovervars+nfixedones-1.0, 
+                     SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemoveable(cons)) );
+      for( i = 0; i < ncovervars; i++)
+      {
+         CHECK_OKAY( SCIPaddVarToRow(scip, row, covervars[i], 1.0) );
+      }
+      for( i = 0; i < nfixedones; i++)
+      {
+         CHECK_OKAY( SCIPaddVarToRow(scip, row, fixedones[i], 1.0) );
+      }
+
+      CHECK_OKAY( SCIPprintRow(scip, row, NULL) );
+      CHECK_OKAY( SCIPaddCut(scip, row, infeasibility/(SCIProwGetNNonz(row)+1)) );
+      CHECK_OKAY( SCIPreleaseRow(scip, &row) );
+   }
+
+   /* free temporary data */
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &covervars) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &fixedones) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &profits) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &weights) );
+   CHECK_OKAY( SCIPfreeBufferArray(scip, &items) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -307,18 +483,22 @@ DECL_CONSINITLP(consInitlpKnapsack)
 
 
 /** separation method of constraint handler */
-#if 0
 static
 DECL_CONSSEPA(consSepaKnapsack)
 {  /*lint --e{715}*/
-   errorMessage("method of knapsack constraint handler not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
+   int i;
+   Bool separated;
+   *result=SCIP_DIDNOTFIND;
+   
+   for(i=0; i<nusefulconss; i++)
+   {
+      CHECK_OKAY( separateCovers(scip, conss[i], &separated) );
+      if( separated ) 
+         *result=SCIP_SEPARATED;
+   }
+   
    return SCIP_OKAY;
 }
-#else
-#define consSepaKnapsack NULL
-#endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
