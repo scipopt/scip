@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.34 2004/03/30 12:51:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.35 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1406,7 +1406,7 @@ RETCODE branchPseudo(
    assert(result != NULL);
 
    /* get fractional variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands) );
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
    if( npseudocands == 0 )
       return SCIP_OKAY;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.95 2004/03/30 12:51:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.96 2004/03/31 13:41:08 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -691,7 +691,7 @@ RETCODE solveNodeLP(
          stat->nseparounds++;
 
          /* display node information line for root node */
-         if( SCIPnodeGetDepth(tree->actnode) == 0 )
+         if( SCIPnodeGetDepth(tree->actnode) == 0 && mustsepar )
          {
             CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );
          }

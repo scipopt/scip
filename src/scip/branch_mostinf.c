@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.10 2004/03/30 12:51:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.11 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   branch_mostinf.c
  * @brief  most infeasible LP branching rule
@@ -63,7 +63,7 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
    debugMessage("Execlp method of mostinf branching\n");
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    /* search the most infeasible candidate */
@@ -77,7 +77,7 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
       infeasibility = lpcandsfrac[i];
       infeasibility = MIN(infeasibility, 1.0-infeasibility);
       score = infeasibility;
-      score *= SCIPvarGetBranchingPriority(lpcands[i]);
+      score *= SCIPvarGetBranchFactor(lpcands[i]);
       obj = SCIPvarGetObj(lpcands[i]);
       obj = ABS(obj);
       if( SCIPisGT(scip, score, bestscore)
@@ -90,9 +90,9 @@ DECL_BRANCHEXECLP(branchExeclpMostinf)
    }
    assert(bestcand >= 0);
 
-   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, prio=%g, score=%g)\n",
+   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], bestobj,
-      SCIPvarGetBranchingPriority(lpcands[bestcand]), bestscore);
+      SCIPvarGetBranchFactor(lpcands[bestcand]), bestscore);
 
    /* perform the branching */
    CHECK_OKAY( SCIPbranchVar(scip, lpcands[bestcand]) );

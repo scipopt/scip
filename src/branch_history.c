@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.11 2004/03/30 12:51:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.12 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -132,7 +132,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    allcolsinlp = SCIPallColsInLP(scip);
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    bestcand = -1;
@@ -231,8 +231,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
             upgain = MAX(up - lowerbound, 0.0) * (1.0-lpcandsfrac[c])/(1.0-frac);
 
             /* calculate score out of old strong branching values */
-            score = SCIPgetBranchScore(scip, downgain, upgain);
-            score *= SCIPvarGetBranchingPriority(lpcands[c]);
+            score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
 
             /* don't use strong branching on variables that have already been initialized at the current node */
             usesb = FALSE;
@@ -241,7 +240,6 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          {
             /* get history score of candidate */
             score = SCIPgetVarLPHistoryScore(scip, lpcands[c], lpcandssol[c]);
-            score *= SCIPvarGetBranchingPriority(lpcands[c]);
 
             /* check, if the history score of the variable is reliable */
             downsize = SCIPgetVarLPHistoryCount(scip, lpcands[c], 0);
@@ -364,8 +362,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          /* check for a better score */
          downscore = downgain + FRACSCORE * lpcandsfrac[c];
          upscore = upgain + FRACSCORE * (1.0-lpcandsfrac[c]);
-         score = SCIPgetBranchScore(scip, downscore, upscore);
-         score *= SCIPvarGetBranchingPriority(lpcands[c]);
+         score = SCIPgetBranchScore(scip, lpcands[c], downscore, upscore);
          if( score > bestsbscore )
          {
             bestinitcand = c;
@@ -381,9 +378,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       
-         debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), prio=%g, score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
-            SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, SCIPvarGetBranchingPriority(lpcands[c]), 
-            score, SCIPvarGetName(lpcands[bestinitcand]), bestsbscore, lookahead, maxlookahead);
+         debugMessage(" -> var <%s> (solval=%g, down=%g (%+g), up=%g (%+g), score=%g) -- best: <%s> (%g), lookahead=%d/%d\n",
+            SCIPvarGetName(lpcands[c]), lpcandssol[c], down, downgain, up, upgain, score, 
+            SCIPvarGetName(lpcands[bestinitcand]), bestsbscore, lookahead, maxlookahead);
       }
 
       /* get the score of the best uninitialized strong branching candidate */
@@ -430,9 +427,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       assert(!SCIPisIntegral(scip, lpcandssol[bestcand]));
 
       /* perform the branching */
-      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, down=%g, up=%g, prio=%g, sb=%d)\n",
+      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, down=%g, up=%g, sb=%d)\n",
          nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestsbdown, bestsbup, 
-         SCIPvarGetBranchingPriority(lpcands[bestcand]), bestisstrongbranch);
+         bestisstrongbranch);
 
       /* create child node with x <= floor(x') */
       debugMessage(" -> creating child: <%s> <= %g\n",

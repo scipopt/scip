@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.25 2004/03/30 12:51:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.26 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -72,7 +72,8 @@ RETCODE SCIPbranchcandGetLPCands(
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
    Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
-   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
 /** gets branching candidates for pseudo solution branching (nonfixed variables) */
@@ -82,12 +83,19 @@ RETCODE SCIPbranchcandGetPseudoCands(
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
-   int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npseudocands,       /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
 /** gets number of branching candidates for pseudo solution branching (nonfixed variables) */
 extern
 int SCIPbranchcandGetNPseudoCands(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPbranchcandGetNPrioPseudoCands(
    BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
 
@@ -192,6 +200,7 @@ void SCIPbranchruleSetMaxdepth(
 extern
 Real SCIPbranchGetScore(
    const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    Real             downgain,           /**< prediction of objective gain for branching downwards */
    Real             upgain              /**< prediction of objective gain for branching upwards */
    );

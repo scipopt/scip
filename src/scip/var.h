@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.54 2004/03/08 18:05:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.55 2004/03/31 13:41:09 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -530,14 +530,24 @@ RETCODE SCIPvarAddHoleLocal(
    Real             right               /**< right bound of open interval in new hole */
    );
 
-/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
- *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+/** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
 extern
-void SCIPvarChgBranchingPriority(
+void SCIPvarChgBranchFactor(
    VAR*             var,                /**< problem variable */
    const SET*       set,                /**< global SCIP settings */
-   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   Real             branchfactor        /**< factor to weigh variable's branching score with */
+   );
+
+/** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
+ *  with lower priority in selection of branching variable
+ */
+extern
+void SCIPvarChgBranchPriority(
+   VAR*             var,                /**< problem variable */
+   const SET*       set,                /**< global SCIP settings */
+   int              branchpriority      /**< branching priority of the variable */
    );
 
 /** gets objective value of variable in current dive */

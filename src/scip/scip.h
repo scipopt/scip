@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.114 2004/03/30 12:51:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.115 2004/03/31 13:41:08 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1587,14 +1587,24 @@ RETCODE SCIPinferBinVar(
    Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
- *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+/** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
 extern
-RETCODE SCIPchgVarBranchingPriority(
+RETCODE SCIPchgVarBranchFactor(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   Real             branchfactor        /**< factor to weigh variable's branching score with */
+   );
+
+/** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
+ *  with lower priority in selection of branching variable
+ */
+extern
+RETCODE SCIPchgVarBranchPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              branchpriority      /**< branching priority of the variable */
    );
 
 /** changes type of variable in the problem; this changes the vars array returned from
@@ -2340,7 +2350,9 @@ int SCIPgetPoolsize(
 /**@{ */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates
+ *  fractionalities, and number of branching candidates;
+ *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
+ *  list
  */
 extern
 RETCODE SCIPgetLPBranchCands(
@@ -2348,7 +2360,8 @@ RETCODE SCIPgetLPBranchCands(
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
    Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
-   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
 /** gets number of branching candidates for LP solution branching (number of fractional variables) */
@@ -2357,12 +2370,19 @@ int SCIPgetNLPBranchCands(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets number of branching candidates with maximal priority for LP solution branching */
+extern
+int SCIPgetNPrioLPBranchCands(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** gets branching candidates for pseudo solution branching (nonfixed variables) along with the number of candidates */
 extern
 RETCODE SCIPgetPseudoBranchCands(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
-   int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npseudocands,       /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    );
 
 /** gets branching candidates for pseudo solution branching (nonfixed variables) */
@@ -2371,10 +2391,17 @@ int SCIPgetNPseudoBranchCands(
    SCIP*            scip                /**< SCIP data structure */
    );
 
+/** gets number of branching candidates with maximal branch priority for pseudo solution branching */
+extern
+int SCIPgetNPrioPseudoBranchCands(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
 /** calculates the branching score out of the downward and upward gain prediction */
 extern
 Real SCIPgetBranchScore(
    SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    Real             downgain,           /**< prediction of objective gain for branching downwards */
    Real             upgain              /**< prediction of objective gain for branching upwards */
    );

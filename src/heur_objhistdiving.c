@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objhistdiving.c,v 1.5 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objhistdiving.c,v 1.6 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   heur_objhistdiving.c
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using history values as guide
@@ -277,7 +277,7 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
 
    /* get LP objective value, and fractional variables, that should be integral */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
    debugMessage("(node %lld) executing objhistdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%lld, maxdivedepth=%d\n", 
       SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
@@ -475,7 +475,7 @@ DECL_HEUREXEC(heurExecObjhistdiving) /*lint --e{715}*/
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
          /* get new fractional variables */
-         CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+         CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
       }
       debugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
    }

@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.39 2004/03/30 12:51:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.40 2004/03/31 13:41:06 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -116,11 +116,14 @@ RETCODE SCIPbranchcandCreate(
    (*branchcand)->pseudocands = NULL;
    (*branchcand)->lpcandssize = 0;
    (*branchcand)->nlpcands = 0;
+   (*branchcand)->npriolpcands = 0;
+   (*branchcand)->npriolpbins = 0;
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
-   (*branchcand)->npseudobins = 0;
-   (*branchcand)->npseudoints = 0;
-   (*branchcand)->npseudoimpls = 0;
+   (*branchcand)->npriopseudocands = 0;
+   (*branchcand)->npriopseudobins = 0;
+   (*branchcand)->npriopseudoints = 0;
+   (*branchcand)->pseudomaxpriority = INT_MIN;
    (*branchcand)->validlpcandslp = -1;
    
    return SCIP_OKAY;
@@ -170,18 +173,25 @@ RETCODE branchcandCalcLPCands(
       COL* col;
       Real primsol;
       Real frac;
+      VARTYPE vartype;
+      int maxbranchpriority;
+      int branchpriority;
       int ncols;
       int c;
+      int insertpos;
 
       debugMessage(" -> recalculating LP branching candidates\n");
 
       cols = SCIPlpGetCols(lp);
       ncols = SCIPlpGetNCols(lp);
 
-      /* construct the LP branching candidate set */
+      /* construct the LP branching candidate set, moving the candidates with maximal priority to the front */
       CHECK_OKAY( ensureLpcandsSize(branchcand, set, ncols) );
 
+      maxbranchpriority = INT_MIN;
       branchcand->nlpcands = 0;
+      branchcand->npriolpcands = 0;
+      branchcand->npriolpbins = 0;
       for( c = 0; c < ncols; ++c )
       {
          col = cols[c];
@@ -200,27 +210,75 @@ RETCODE branchcandCalcLPCands(
          assert(SCIPvarGetCol(var) == col);
          
          /* LP branching candidates are fractional binary and integer variables */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         vartype = SCIPvarGetType(var);
+         if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
          {
             frac = SCIPsetFrac(set, primsol);
             if( !SCIPsetIsFracIntegral(set, frac) )
             {
-               debugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g\n", 
-                  branchcand->nlpcands, SCIPvarGetName(var), primsol, frac);
-
                assert(branchcand->nlpcands < branchcand->lpcandssize);
-               branchcand->lpcands[branchcand->nlpcands] = var;
-               branchcand->lpcandssol[branchcand->nlpcands] = primsol;
-               branchcand->lpcandsfrac[branchcand->nlpcands] = frac;
+
+               /* insert candidate in candidate list */
+               branchpriority = SCIPvarGetBranchPriority(var);
+               insertpos = branchcand->nlpcands;
                branchcand->nlpcands++;
+               if( branchpriority > maxbranchpriority )
+               {
+                  /* candidate has higher priority than the current maximum:
+                   * move it to the front and declare it to be the single best candidate
+                   */
+                  if( insertpos != 0 )
+                  {
+                     branchcand->lpcands[insertpos] = branchcand->lpcands[0];
+                     branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[0];
+                     branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[0];
+                     insertpos = 0;
+                  }
+                  branchcand->npriolpcands = 1;
+                  branchcand->npriolpbins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
+                  maxbranchpriority = branchpriority;
+               }
+               else if( branchpriority == maxbranchpriority )
+               {
+                  /* candidate has equal priority as the current maximum:
+                   * move away the first non-maximal priority candidate, move the current candidate to the correct
+                   * slot (binaries first) and increase the number of maximal priority candidates
+                   */
+                  if( insertpos != branchcand->npriolpcands )
+                  {
+                     branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->npriolpcands];
+                     branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->npriolpcands];
+                     branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->npriolpcands];
+                     insertpos = branchcand->npriolpcands;
+                  }
+                  branchcand->npriolpcands++;
+                  if( vartype == SCIP_VARTYPE_BINARY )
+                  {
+                     if( insertpos != branchcand->npriolpbins )
+                     {
+                        branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->npriolpbins];
+                        branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->npriolpbins];
+                        branchcand->lpcandsfrac[insertpos] = branchcand->lpcandsfrac[branchcand->npriolpbins];
+                        insertpos = branchcand->npriolpbins;
+                     }
+                     branchcand->npriolpbins++;
+                  }
+               }
+               branchcand->lpcands[insertpos] = var;
+               branchcand->lpcandssol[insertpos] = primsol;
+               branchcand->lpcandsfrac[insertpos] = frac;
+
+               debugMessage(" -> candidate %d: var=<%s>, sol=%g, frac=%g, prio=%d (max: %d) -> pos %d\n", 
+                  branchcand->nlpcands, SCIPvarGetName(var), primsol, frac, branchpriority, maxbranchpriority, insertpos);
             }
          }
       }
 
       branchcand->validlpcandslp = stat->lpcount;
    }
+   assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
 
-   debugMessage(" -> %d fractional variables\n", branchcand->nlpcands);
+   debugMessage(" -> %d fractional variables (%d of maximal priority)\n", branchcand->nlpcands, branchcand->npriolpcands);
 
    return SCIP_OKAY;
 }
@@ -234,7 +292,8 @@ RETCODE SCIPbranchcandGetLPCands(
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
    Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
-   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    )
 {
    /* calculate branching candidates */
@@ -249,6 +308,8 @@ RETCODE SCIPbranchcandGetLPCands(
       *lpcandsfrac = branchcand->lpcandsfrac;
    if( nlpcands != NULL )
       *nlpcands = branchcand->nlpcands;
+   if( npriolpcands != NULL )
+      *npriolpcands = branchcand->npriolpcands;
 
    return SCIP_OKAY;
 }
@@ -259,7 +320,8 @@ RETCODE SCIPbranchcandGetPseudoCands(
    const SET*       set,                /**< global SCIP settings */
    PROB*            prob,               /**< problem data */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
-   int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npseudocands,       /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    )
 {
    assert(branchcand != NULL);
@@ -307,6 +369,8 @@ RETCODE SCIPbranchcandGetPseudoCands(
       *pseudocands = branchcand->pseudocands;
    if( npseudocands != NULL )
       *npseudocands = branchcand->npseudocands;
+   if( npriopseudocands != NULL )
+      *npriopseudocands = branchcand->npriopseudocands;
 
    return SCIP_OKAY;
 }
@@ -321,6 +385,229 @@ int SCIPbranchcandGetNPseudoCands(
    return branchcand->npseudocands;
 }
 
+/** gets number of branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPbranchcandGetNPrioPseudoCands(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriopseudocands;
+}
+
+/** insert pseudocand at given position, or to the first positions of the maximal priority candidates, using the
+ *  given position as free slot for the other candidates
+ */
+static
+void branchcandInsertPseudoCand(
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   VAR*             var,                /**< variable to insert */
+   int              insertpos           /**< free position to insert the variable */
+   )
+{
+   VARTYPE vartype;
+   int branchpriority;
+
+   assert(branchcand != NULL);
+   assert(var != NULL);
+   assert(branchcand->npriopseudocands <= insertpos && insertpos < branchcand->npseudocands);
+   assert(branchcand->npseudocands <= branchcand->pseudocandssize);
+
+   vartype = SCIPvarGetType(var);
+   branchpriority = SCIPvarGetBranchPriority(var);
+
+   debugMessage("inserting pseudo candidate <%s> of type %d and priority %d into candidate set at position %d (maxprio: %d)\n",
+      SCIPvarGetName(var), vartype, branchpriority, insertpos, branchcand->pseudomaxpriority);
+
+   /* insert the variable into pseudocands, making sure, that the highest priority candidates are at the front
+    * and ordered binaries, integers, implicit integers
+    */
+   if( branchpriority > branchcand->pseudomaxpriority )
+   {
+      /* candidate has higher priority than the current maximum:
+       * move it to the front and declare it to be the single best candidate
+       */
+      if( insertpos != 0 )
+      {
+         branchcand->pseudocands[insertpos] = branchcand->pseudocands[0];
+         branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
+         insertpos = 0;
+      }
+      branchcand->npriopseudocands = 1;
+      branchcand->npriopseudobins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
+      branchcand->npriopseudoints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
+      branchcand->pseudomaxpriority = branchpriority;
+   }
+   else if( branchpriority == branchcand->pseudomaxpriority )
+   {
+      /* candidate has equal priority as the current maximum:
+       * move away the first non-maximal priority candidate, move the current candidate to the correct
+       * slot (binaries first, integers next, implicits last) and increase the number of maximal priority candidates
+       */
+      if( insertpos != branchcand->npriopseudocands )
+      {
+         branchcand->pseudocands[insertpos] = branchcand->pseudocands[branchcand->npriopseudocands];
+         branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
+         insertpos = branchcand->npriopseudocands;
+      }
+      branchcand->npriopseudocands++;
+      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+      {
+         if( insertpos != branchcand->npriopseudobins + branchcand->npriopseudoints )
+         {
+            branchcand->pseudocands[insertpos] =
+               branchcand->pseudocands[branchcand->npriopseudobins + branchcand->npriopseudoints];
+            branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
+            insertpos = branchcand->npriopseudobins + branchcand->npriopseudoints;
+         }
+         branchcand->npriopseudoints++;
+
+         if( vartype == SCIP_VARTYPE_BINARY )
+         {
+            if( insertpos != branchcand->npriopseudobins )
+            {
+               branchcand->pseudocands[insertpos] = branchcand->pseudocands[branchcand->npriopseudobins];
+               branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
+               insertpos = branchcand->npriopseudobins;
+            }
+            branchcand->npriopseudobins++;
+            branchcand->npriopseudoints--;
+         }
+      }
+   }
+   branchcand->pseudocands[insertpos] = var;
+   var->pseudocandindex = insertpos;
+
+   debugMessage(" -> inserted at position %d (npriopseudocands=%d)\n", insertpos, branchcand->npriopseudocands);
+
+   assert(0 <= branchcand->npriopseudocands && branchcand->npriopseudocands <= branchcand->npseudocands);
+   assert(0 <= branchcand->npriopseudobins && branchcand->npriopseudobins <= branchcand->npriopseudocands);
+   assert(0 <= branchcand->npriopseudoints && branchcand->npriopseudoints <= branchcand->npriopseudocands);
+}
+
+/** sorts the pseudo branching candidates, such that the candidates of maximal priority are at the front,
+ *  ordered by binaries, integers, implicit integers
+ */
+static
+void branchcandSortPseudoCands(
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   VAR* var;
+   int i;
+
+   assert(branchcand != NULL);
+   assert(branchcand->npriopseudocands == 0); /* is only be called after removal of last maximal candidate */
+   assert(branchcand->npriopseudobins == 0);
+   assert(branchcand->npriopseudoints == 0);
+
+   debugMessage("resorting pseudo candidates\n");
+
+   branchcand->pseudomaxpriority = INT_MIN;
+   
+   for( i = 0; i < branchcand->npseudocands; ++i )
+   {
+      var = branchcand->pseudocands[i];
+      assert(var->pseudocandindex == i);
+
+      if( SCIPvarGetBranchPriority(var) >= branchcand->pseudomaxpriority )
+         branchcandInsertPseudoCand(branchcand, var, i);
+   }
+
+   assert(0 <= branchcand->npriopseudocands && branchcand->npriopseudocands <= branchcand->npseudocands);
+   assert(0 <= branchcand->npriopseudobins && branchcand->npriopseudobins <= branchcand->npriopseudocands);
+   assert(0 <= branchcand->npriopseudoints && branchcand->npriopseudoints <= branchcand->npriopseudocands);
+}
+
+/** removes pseudo candidate from pseudocands array
+ */
+static
+void branchcandRemovePseudoCand(
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   VAR*             var                 /**< variable to remove */
+   )
+{
+   VARTYPE vartype;
+   int branchpriority;
+   int freepos;
+
+   assert(branchcand != NULL);
+   assert(var != NULL);
+   assert(var->pseudocandindex < branchcand->npseudocands);
+   assert(branchcand->pseudocands[var->pseudocandindex] == var);
+   assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
+
+   vartype = SCIPvarGetType(var);
+   branchpriority = SCIPvarGetBranchPriority(var);
+
+   debugMessage("removing pseudo candidate <%s> of type %d and priority %d at %d from candidate set (maxprio: %d)\n",
+      SCIPvarGetName(var), vartype, branchpriority, var->pseudocandindex, branchcand->pseudomaxpriority);
+
+   /* delete the variable from pseudocands, making sure, that the highest priority candidates are at the front
+    * and ordered binaries, integers, implicit integers
+    */
+   freepos = var->pseudocandindex;
+   var->pseudocandindex = -1;
+   assert(0 <= freepos && freepos < branchcand->npseudocands);
+
+   if( freepos < branchcand->npriopseudobins )
+   {
+      /* a binary candidate of maximal priority was removed */
+      assert(vartype == SCIP_VARTYPE_BINARY);
+      assert(branchpriority == branchcand->pseudomaxpriority);
+      if( freepos != branchcand->npriopseudobins - 1 )
+      {
+         branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudobins - 1];
+         branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+         freepos = branchcand->npriopseudobins - 1;
+      }
+      branchcand->npriopseudobins--;
+      branchcand->npriopseudoints++;
+   }
+   if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
+   {
+      /* a binary or integer candidate of maximal priority was removed */
+      assert(vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER);
+      assert(branchpriority == branchcand->pseudomaxpriority);
+      if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
+      {
+         branchcand->pseudocands[freepos] =
+            branchcand->pseudocands[branchcand->npriopseudobins + branchcand->npriopseudoints - 1];
+         branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+         freepos = branchcand->npriopseudobins + branchcand->npriopseudoints - 1;
+      }
+      branchcand->npriopseudoints--;
+   }
+   if( freepos < branchcand->npriopseudocands )
+   {
+      /* a candidate of maximal priority was removed */
+      assert(branchpriority == branchcand->pseudomaxpriority);
+      if( freepos != branchcand->npriopseudocands - 1 )
+      {
+         branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudocands - 1];
+         branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+         freepos = branchcand->npriopseudocands - 1;
+      }
+      branchcand->npriopseudocands--;
+   }
+   if( freepos != branchcand->npseudocands - 1 )
+   {
+      branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npseudocands - 1];
+      branchcand->pseudocands[freepos]->pseudocandindex = freepos;
+   }
+   branchcand->npseudocands--;
+
+   assert(0 <= branchcand->npriopseudocands && branchcand->npriopseudocands <= branchcand->npseudocands);
+   assert(0 <= branchcand->npriopseudobins && branchcand->npriopseudobins <= branchcand->npriopseudocands);
+   assert(0 <= branchcand->npriopseudoints && branchcand->npriopseudoints <= branchcand->npriopseudocands);
+
+   /* if all maximal priority candidates were removed, resort the array s.t. the new maximal priority candidates
+    * are at the front
+    */
+   if( branchcand->npriopseudocands == 0 )
+      branchcandSortPseudoCands(branchcand);
+}
+
 /** updates branching candidate list for a given variable */
 RETCODE SCIPbranchcandUpdateVar(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -332,129 +619,33 @@ RETCODE SCIPbranchcandUpdateVar(
    assert(var != NULL);
    assert(SCIPsetIsFeasLE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
    
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
-      || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-      || SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)
+      && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+      && SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
-      /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
-      if( var->pseudocandindex >= 0 )
+      /* variable is neither continuous nor fixed: make sure it is member of the pseudo branching candidate list */
+      if( var->pseudocandindex == -1 )
       {
-         int freepos;
-         int intstart;
-         int implstart;
+         CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
 
-         assert(var->pseudocandindex < branchcand->npseudocands);
-         assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
-
-         debugMessage("deleting pseudo candidate <%s> of type %d at %d from candidate set (%d/%d/%d)\n",
-            SCIPvarGetName(var), SCIPvarGetType(var), var->pseudocandindex, 
-            branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
-
-         /* delete the variable from pseudocands, retaining the ordering binaries, integers, implicit integers */
-         intstart = branchcand->npseudobins;
-         implstart = intstart + branchcand->npseudoints;
-         freepos = var->pseudocandindex;
-         assert(0 <= freepos && freepos < branchcand->npseudocands);
-
-         if( freepos < intstart )
-            branchcand->npseudobins--;
-         else if( freepos < implstart )
-            branchcand->npseudoints--;
-         else
-            branchcand->npseudoimpls--;
-
-         if( freepos < intstart-1 )
-         {
-            /* move last binary to free slot */
-            branchcand->pseudocands[freepos] = branchcand->pseudocands[intstart-1];
-            branchcand->pseudocands[freepos]->pseudocandindex = freepos;
-            freepos = intstart-1;
-         }
-         if( freepos < implstart-1 )
-         {
-            /* move last integer to free slot */
-            branchcand->pseudocands[freepos] = branchcand->pseudocands[implstart-1];
-            branchcand->pseudocands[freepos]->pseudocandindex = freepos;
-            freepos = implstart-1;
-         }
-         if( freepos < branchcand->npseudocands-1 )
-         {
-            /* move last integer to free slot */
-            branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npseudocands-1];
-            branchcand->pseudocands[freepos]->pseudocandindex = freepos;
-            freepos = branchcand->npseudocands-1;
-         }
-         assert(freepos == branchcand->npseudocands-1);
-
-         branchcand->npseudocands--;
-         var->pseudocandindex = -1;
-
-         assert(branchcand->npseudocands == branchcand->npseudobins + branchcand->npseudoints + branchcand->npseudoimpls);
+         branchcand->npseudocands++;
+         branchcandInsertPseudoCand(branchcand, var, branchcand->npseudocands-1);
       }
    }
    else
    {
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
+         || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+         || SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      /* variable is not fixed: make sure it is member of the pseudo branching candidate list */
-      if( var->pseudocandindex == -1 )
+      /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
+      if( var->pseudocandindex >= 0 )
       {
-         int insertpos;
-         int intstart;
-         int implstart;
-
-         debugMessage("adding pseudo candidate <%s> of type %d to candidate set (%d/%d/%d)\n",
-            SCIPvarGetName(var), SCIPvarGetType(var),
-            branchcand->npseudobins, branchcand->npseudoints, branchcand->npseudoimpls);
-
-         CHECK_OKAY( ensurePseudocandsSize(branchcand, set, branchcand->npseudocands+1) );
-
-         /* insert the variable into pseudocands, retaining the ordering binaries, integers, implicit integers */
-         intstart = branchcand->npseudobins;
-         implstart = intstart + branchcand->npseudoints;
-         insertpos = branchcand->npseudocands;
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-            branchcand->npseudoimpls++;
-         else
-         {
-            if( insertpos > implstart )
-            {
-               branchcand->pseudocands[insertpos] = branchcand->pseudocands[implstart];
-               branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
-               insertpos = implstart;
-            }
-            assert(insertpos == implstart);
-
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-               branchcand->npseudoints++;
-            else
-            {
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-               if( insertpos > intstart )
-               {
-                  branchcand->pseudocands[insertpos] = branchcand->pseudocands[intstart];
-                  branchcand->pseudocands[insertpos]->pseudocandindex = insertpos;
-                  insertpos = intstart;
-               }
-               assert(insertpos == intstart);
-
-               branchcand->npseudobins++;
-            }
-         }
-         branchcand->npseudocands++;
-
-         assert(branchcand->npseudocands == branchcand->npseudobins + branchcand->npseudoints + branchcand->npseudoimpls);
-         assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && insertpos == branchcand->npseudobins - 1)
-            || (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
-               && insertpos == branchcand->npseudobins + branchcand->npseudoints - 1)
-            || (SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && insertpos == branchcand->npseudocands - 1));
-         
-         branchcand->pseudocands[insertpos] = var;
-         var->pseudocandindex = insertpos;
+         branchcandRemovePseudoCand(branchcand, var);
       }
    }
 
@@ -939,16 +1130,28 @@ Bool SCIPbranchruleIsInitialized(
 /** calculates the branching score out of the downward and upward gain prediction */
 Real SCIPbranchGetScore(
    const SET*       set,                /**< global SCIP settings */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    Real             downgain,           /**< prediction of objective gain for branching downwards */
    Real             upgain              /**< prediction of objective gain for branching upwards */
    )
 {
+   Real score;
+
    assert(set != NULL);
 
+   /* slightly increase gains, such that for zero gains, the branch factor comes into account */
+   downgain += set->sumepsilon;
+   upgain += set->sumepsilon;
+
    if( downgain > upgain )
-      return set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
+      score = set->branchscorefac * downgain + (1.0-set->branchscorefac) * upgain;
    else
-      return set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;
+      score = set->branchscorefac * upgain + (1.0-set->branchscorefac) * downgain;
+
+   if( var != NULL )
+      score *= SCIPvarGetBranchFactor(var);
+
+   return score;
 }
 
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN */
@@ -973,8 +1176,11 @@ RETCODE SCIPbranchExecLP(
 
    /* calculate branching candidates */
    CHECK_OKAY( branchcandCalcLPCands(branchcand, set, stat, lp) );
+   assert(0 <= branchcand->npriolpcands && branchcand->npriolpcands <= branchcand->nlpcands);
+   assert((branchcand->npriolpcands == 0) == (branchcand->nlpcands == 0));
 
-   debugMessage("branching on LP solution with %d fractional variables\n", branchcand->nlpcands);
+   debugMessage("branching on LP solution with %d fractional variables (%d of maximal priority)\n",
+      branchcand->nlpcands, branchcand->npriolpcands);
 
    /* do nothing, if no fractional variables exist */
    if( branchcand->nlpcands == 0 )
@@ -992,22 +1198,27 @@ RETCODE SCIPbranchExecLP(
    if( *result == SCIP_DIDNOTRUN )
    {
       VAR* var;
-      Real priority;
-      Real bestpriority;
+      Real factor;
+      Real bestfactor;
+      int priority;
+      int bestpriority;
       int bestcand;
 
       /* no branching method succeeded in choosing a branching: just branch on the first fractional variable with maximal
-       * priority
+       * priority, and out of these on the one with maximal branch factor
        */
       bestcand = -1;
-      bestpriority = REAL_MIN;
+      bestpriority = INT_MIN;
+      bestfactor = REAL_MIN;
       for( i = 0; i < branchcand->nlpcands; ++i )
       {
-         priority = SCIPvarGetBranchingPriority(branchcand->lpcands[i]);
-         if( priority > bestpriority )
+         priority = SCIPvarGetBranchPriority(branchcand->lpcands[i]);
+         factor = SCIPvarGetBranchFactor(branchcand->lpcands[i]);
+         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) )
          {
             bestcand = i;
             bestpriority = priority;
+            bestfactor = factor;
          }
       }
       assert(0 <= bestcand && bestcand < branchcand->nlpcands);
@@ -1061,22 +1272,27 @@ RETCODE SCIPbranchExecPseudo(
    if( *result == SCIP_DIDNOTRUN )
    {
       VAR* var;
-      Real priority;
-      Real bestpriority;
+      Real factor;
+      Real bestfactor;
+      int priority;
+      int bestpriority;
       int bestcand;
 
-      /* no branching method succeeded in choosing a branching: just branch on the first unfixed variable with maximal
-       * priority
+      /* no branching method succeeded in choosing a branching: just branch on the first fractional variable with maximal
+       * priority, and out of these on the one with maximal branch factor
        */
       bestcand = -1;
-      bestpriority = REAL_MIN;
+      bestpriority = INT_MIN;
+      bestfactor = REAL_MIN;
       for( i = 0; i < branchcand->npseudocands; ++i )
       {
-         priority = SCIPvarGetBranchingPriority(branchcand->pseudocands[i]);
-         if( priority > bestpriority )
+         priority = SCIPvarGetBranchPriority(branchcand->pseudocands[i]);
+         factor = SCIPvarGetBranchFactor(branchcand->pseudocands[i]);
+         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) )
          {
             bestcand = i;
             bestpriority = priority;
+            bestfactor = factor;
          }
       }
       assert(0 <= bestcand && bestcand < branchcand->npseudocands);

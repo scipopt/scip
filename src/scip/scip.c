@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.136 2004/03/30 12:51:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.137 2004/03/31 13:41:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3989,18 +3989,34 @@ RETCODE SCIPinferBinVar(
    return SCIP_OKAY;
 }
 
-/** sets the branching priority of the variable; this value can be used in the branching methods to scale the score
- *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+/** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
-RETCODE SCIPchgVarBranchingPriority(
+RETCODE SCIPchgVarBranchFactor(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   Real             branchingpriority   /**< priority of the variable to choose as branching variable */
+   Real             branchfactor        /**< factor to weigh variable's branching score with */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchingPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchFactor", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   SCIPvarChgBranchingPriority(var, scip->set, branchingpriority);
+   SCIPvarChgBranchFactor(var, scip->set, branchfactor);
+
+   return SCIP_OKAY;
+}
+
+/** sets the branch priority of the variable; variables with higher branch priority are always prefered to variables
+ *  with lower priority in selection of branching variable
+ */
+RETCODE SCIPchgVarBranchPriority(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< problem variable */
+   int              branchpriority      /**< branching priority of the variable */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPchgVarBranchPriority", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIPvarChgBranchPriority(var, scip->set, branchpriority);
 
    return SCIP_OKAY;
 }
@@ -5813,14 +5829,17 @@ int SCIPgetPoolsize(
  */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
- *  fractionalities, and number of branching candidates
+ *  fractionalities, and number of branching candidates;
+ *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
+ *  list
  */
 RETCODE SCIPgetLPBranchCands(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           lpcands,            /**< pointer to store the array of LP branching candidates, or NULL */
    Real**           lpcandssol,         /**< pointer to store the array of LP candidate solution values, or NULL */
    Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
-   int*             nlpcands            /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
+   int*             npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
@@ -5833,7 +5852,7 @@ RETCODE SCIPgetLPBranchCands(
    }
 
    CHECK_OKAY( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-                  lpcands, lpcandssol, lpcandsfrac, nlpcands) );
+                  lpcands, lpcandssol, lpcandsfrac, nlpcands, npriolpcands) );
    
    return SCIP_OKAY;
 }
@@ -5854,21 +5873,44 @@ int SCIPgetNLPBranchCands(
    }
 
    CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
-                   NULL, NULL, NULL, &nlpcands) );
+                   NULL, NULL, NULL, &nlpcands, NULL) );
    
    return nlpcands;
+}
+
+/** gets number of branching candidates with maximal priority for LP solution branching */
+int SCIPgetNPrioLPBranchCands(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   int npriolpcands;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrioLPBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   if( SCIPlpGetSolstat(scip->lp) != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      errorMessage("LP not solved to optimality\n");
+      abort();
+   }
+
+   CHECK_ABORT( SCIPbranchcandGetLPCands(scip->branchcand, scip->set, scip->stat, scip->lp,
+                   NULL, NULL, NULL, NULL, &npriolpcands) );
+   
+   return npriolpcands;
 }
 
 /** gets branching candidates for pseudo solution branching (nonfixed variables) along with the number of candidates */
 RETCODE SCIPgetPseudoBranchCands(
    SCIP*            scip,               /**< SCIP data structure */
    VAR***           pseudocands,        /**< pointer to store the array of pseudo branching candidates, or NULL */
-   int*             npseudocands        /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npseudocands,       /**< pointer to store the number of pseudo branching candidates, or NULL */
+   int*             npriopseudocands    /**< pointer to store the number of candidates with maximal priority, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPgetPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->transprob, pseudocands, npseudocands) );
+   CHECK_OKAY( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->transprob, 
+                  pseudocands, npseudocands, npriopseudocands) );
 
    return SCIP_OKAY;
 }
@@ -5878,25 +5920,34 @@ int SCIPgetNPseudoBranchCands(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   int npseudocands;
-
    CHECK_ABORT( checkStage(scip, "SCIPgetNPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_ABORT( SCIPbranchcandGetPseudoCands(scip->branchcand, scip->set, scip->transprob, NULL, &npseudocands) );
+   return SCIPbranchcandGetNPseudoCands(scip->branchcand);
+}
 
-   return npseudocands;
+/** gets number of branching candidates with maximal branch priority for pseudo solution branching */
+int SCIPgetNPrioPseudoBranchCands(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   int npriopseudocands;
+
+   CHECK_ABORT( checkStage(scip, "SCIPgetNPrioPseudoBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioPseudoCands(scip->branchcand);
 }
 
 /** calculates the branching score out of the downward and upward gain prediction */
 Real SCIPgetBranchScore(
    SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var,                /**< variable, of which the branching factor should be applied, or NULL */
    Real             downgain,           /**< prediction of objective gain for branching downwards */
    Real             upgain              /**< prediction of objective gain for branching upwards */
    )
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetBranchScore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   return SCIPbranchGetScore(scip->set, downgain, upgain);
+   return SCIPbranchGetScore(scip->set, var, downgain, upgain);
 }
 
 /** creates a child node of the active node */
@@ -6687,7 +6738,7 @@ Real SCIPgetVarLPHistoryScore(
    histdown = SCIPvarGetLPHistory(var, scip->stat, -frac);
    histup = SCIPvarGetLPHistory(var, scip->stat, 1.0-frac);
 
-   return SCIPbranchGetScore(scip->set, histdown, histup);
+   return SCIPbranchGetScore(scip->set, var, histdown, histup);
 }
 
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.30 2004/03/30 12:51:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.31 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -383,6 +383,9 @@ Bool checkCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   debugMessage("checking knapsack constraint <%s> for feasibility of solution %p (lprows=%d)\n",
+      SCIPconsGetName(cons), sol, checklprows);
+
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
       Real sum;
@@ -610,6 +613,8 @@ RETCODE separateCovers(
 
    assert(separated != NULL);
 
+   debugMessage("separating knapsack constraint <%s>\n", SCIPconsGetName(cons));
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -766,6 +771,8 @@ RETCODE propagateCons(
    assert(redundant != NULL);
    assert(nfixedvars != NULL);
 
+   debugMessage("propagating knapsack constraint <%s>\n", SCIPconsGetName(cons));
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -804,14 +811,17 @@ RETCODE propagateCons(
    {
       if( consdata->weights[i] > consdata->capacity - consdata->onesweightsum )
       {
-         if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 && SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
+         if( SCIPvarGetLbLocal(consdata->vars[i]) < 0.5 )
          {
-            CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
-            assert(!infeasible);
-            assert(tightened);
-            (*nfixedvars)++;
+            if( SCIPvarGetUbLocal(consdata->vars[i]) > 0.5 )
+            {
+               CHECK_OKAY( SCIPinferBinVar(scip, consdata->vars[i], FALSE, cons, 0, &infeasible, &tightened) );
+               assert(!infeasible);
+               assert(tightened);
+               (*nfixedvars)++;
+            }
+            zerosweightsum += consdata->weights[i];
          }
-         zerosweightsum += consdata->weights[i];
       }
       else
          break;
@@ -820,6 +830,8 @@ RETCODE propagateCons(
    /* if the remaining (potentially unfixed) variables would fit all into the knapsack, the knapsack is now redundant */
    if( consdata->weightsum - zerosweightsum <= consdata->capacity )
    {
+      debugMessage("knapsack constraint <%s> is redundant: weightsum=%lld, zerosweightsum=%lld, capacity=%lld\n",
+         SCIPconsGetName(cons), consdata->weightsum, zerosweightsum, consdata->capacity);
       CHECK_OKAY( SCIPdisableConsLocal(scip, cons) );
       *redundant = TRUE;
    }

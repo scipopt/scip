@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.6 2004/03/30 12:51:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.7 2004/03/31 13:41:09 bzfpfend Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -40,11 +40,14 @@ struct BranchCand
    VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
    int              lpcandssize;        /**< number of available slots in lpcands array */
    int              nlpcands;           /**< number of candidates for branching on LP solution */
+   int              npriolpcands;       /**< number of LP candidates with largest branch priority value */
+   int              npriolpbins;        /**< number of binary LP candidates with largest branch priority value */
    int              pseudocandssize;    /**< number of available slots in pseudocands array */
    int              npseudocands;       /**< number of candidates for branching on pseudo solution */
-   int              npseudobins;        /**< number of binary candidates for branching on pseudo solution */
-   int              npseudoints;        /**< number of integer candidates for branching on pseudo solution */
-   int              npseudoimpls;       /**< number of implicit integer candidates for branching on pseudo solution */
+   int              npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */
+   int              npriopseudobins;    /**< number of binary pseudo candidates with largest branch priority value */
+   int              npriopseudoints;    /**< number of integer pseudo candidates with largest branch priority value */
+   int              pseudomaxpriority;  /**< maximal branch priority of all pseudo candidates */
    int              validlpcandslp;     /**< lp number for which lpcands are valid */
 };
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.8 2004/03/08 18:05:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.9 2004/03/31 13:41:08 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -426,11 +426,19 @@ BOUNDCHGTYPE SCIPvarGetBoundchgType(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets the branching priority of the variable; this value can be used in the branching methods to scale the score
- *  values of the variables; higher priority leads to a higher probability that this variable is chosen for branching
+/** gets the branch factor of the variable; this value can be used in the branching methods to scale the score
+ *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
 extern
-Real SCIPvarGetBranchingPriority(
+Real SCIPvarGetBranchFactor(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** gets the branch priority of the variable; variables with higher priority should always be prefered to variables
+ *  with lower priority
+ */
+extern
+int SCIPvarGetBranchPriority(
    VAR*             var                 /**< problem variable */
    );
 
@@ -480,7 +488,8 @@ Real SCIPvarGetBranchingPriority(
                                               || ((var1)->inferdepth == (var2)->inferdepth    \
                                                 && (var1)->inferindex < (var2)->inferindex)))
 #define SCIPvarGetBoundchgType(var)     (var)->boundchgtype
-#define SCIPvarGetBranchingPriority(var) (var)->branchingpriority
+#define SCIPvarGetBranchFactor(var)     (var)->branchfactor
+#define SCIPvarGetBranchPriority(var)   (var)->branchpriority
 
 #endif
 

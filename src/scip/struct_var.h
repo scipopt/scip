@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.8 2004/03/08 18:05:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.9 2004/03/31 13:41:09 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -159,7 +159,7 @@ struct Negate
 struct Var
 {
    Real             obj;                /**< objective function value of variable */
-   Real             branchingpriority;  /**< priority of the variable to choose as branching variable */
+   Real             branchfactor;       /**< factor to weigh variable's branching score with */
    DOM              glbdom;             /**< domain of variable in global problem */
    DOM              locdom;             /**< domain of variable in current subproblem */
    union
@@ -188,6 +188,7 @@ struct Var
    int              nuses;              /**< number of times, this variable is referenced */
    int              nlocksdown;         /**< number of locks for rounding down; if zero, rounding down is always feasible */
    int              nlocksup;           /**< number of locks for rounding up; if zero, rounding up is always feasible */
+   int              branchpriority;     /**< priority of the variable for branching */
    int              inferinfo;          /**< user information for inference to help resolving the conflict */
    int              inferdepth;         /**< depth in the tree, where the binary variable was fixed, or -1 */
    int              inferindex;         /**< index of the binary variable's fixing in its depth level, or -1 */

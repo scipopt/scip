@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.4 2004/02/05 14:12:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.5 2004/03/31 13:41:08 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -120,7 +120,7 @@ DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* get fractional variables, that should be integral */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
 
    /* only call heuristic, if LP solution is fractional */
    if( nlpcands == 0 )

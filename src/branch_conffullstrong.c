@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_conffullstrong.c,v 1.3 2004/03/30 12:51:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_conffullstrong.c,v 1.4 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   branch_conffullstrong.c
  * @brief  full strong LP branching rule, that creates infeasible children to give input to conflict analysis
@@ -87,7 +87,7 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
    allcolsinlp = SCIPallColsInLP(scip);
 
    /* get branching candidates */
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    /* if only one candidate exists, choose this one without applying strong branching */
@@ -148,8 +148,7 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
          }
 
          /* check for a better score */
-         score = SCIPgetBranchScore(scip, downgain, upgain) + 1e-4; /* no gain -> use fractionalities */
-         score *= SCIPvarGetBranchingPriority(lpcands[c]);
+         score = SCIPgetBranchScore(scip, lpcands[c], downgain, upgain);
          if( score > bestscore )
          {
             bestlpcand = c;
@@ -162,8 +161,8 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
          CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
 
-         debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, prio=%g, score=%g) -- best: <%s> (%g)\n",
-            SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, SCIPvarGetBranchingPriority(lpcands[c]), score,
+         debugMessage(" -> var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
+            SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,
             SCIPvarGetName(lpcands[bestlpcand]), bestscore);
       }
    }
@@ -172,9 +171,8 @@ DECL_BRANCHEXECLP(branchExeclpConffullstrong)
    assert(0 <= bestlpcand && bestlpcand < nlpcands);
    
    /* perform the branching */
-   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
-      nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, 
-      SCIPvarGetBranchingPriority(lpcands[bestlpcand]), bestscore);
+   debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
+      nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, bestscore);
    
    /* create child node with x <= floor(x') */
    debugMessage(" -> creating child: <%s> <= %g\n",

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_histdiving.c,v 1.6 2004/03/16 13:41:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_histdiving.c,v 1.7 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   heur_histdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the history values
@@ -301,7 +301,7 @@ DECL_HEUREXEC(heurExecHistdiving) /*lint --e{715}*/
    /* get LP objective value, and fractional variables, that should be integral */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    objval = SCIPgetLPObjval(scip);
-   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
 
    debugMessage("(node %lld) executing histdiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n", 
       SCIPgetNodenum(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
@@ -477,7 +477,7 @@ DECL_HEUREXEC(heurExecHistdiving) /*lint --e{715}*/
          }
 
          /* get new fractional variables */
-         CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+         CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL) );
       }
       debugMessage("   -> lpsolstat=%d, objval=%g, nfrac=%d\n", lpsolstat, objval, nlpcands);
    }

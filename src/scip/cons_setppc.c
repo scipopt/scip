@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.38 2004/03/30 12:51:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.39 2004/03/31 13:41:07 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1549,7 +1549,7 @@ RETCODE branchPseudo(
    assert(varuses != NULL);
 
    /* get fractional variables */
-   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, &npseudocands) );
+   CHECK_OKAY( SCIPgetPseudoBranchCands(scip, &pseudocands, NULL, &npseudocands) );
    if( npseudocands == 0 )
       return SCIP_OKAY;
 
