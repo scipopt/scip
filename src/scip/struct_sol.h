@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sol.h,v 1.5 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_sol.h,v 1.6 2004/04/30 11:16:26 bzfpfend Exp $"
 
 /**@file   struct_sol.h
  * @brief  datastructures for storing primal CIP solutions
@@ -53,6 +53,7 @@ struct Sol
    HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
    int              runnum;             /**< branch and bound run number in which the solution was found */
    int              depth;              /**< depth at which the solution was found */
+   int              primalindex;        /**< index of solution in array of existing solutions of primal data */
    SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
 };
 

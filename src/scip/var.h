@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.63 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.64 2004/04/30 11:16:26 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -257,9 +257,9 @@ RETCODE SCIPvarFix(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             fixedval,           /**< value to fix variable at */
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
@@ -273,9 +273,9 @@ RETCODE SCIPvarAggregate(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
@@ -291,9 +291,9 @@ RETCODE SCIPvarMultiaggregate(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -328,8 +328,8 @@ RETCODE SCIPvarChgObj(
    VAR*             var,                /**< variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newobj              /**< new objective value for variable */
    );
@@ -342,9 +342,8 @@ RETCODE SCIPvarAddObj(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PRIMAL*          primal,             /**< primal data */
+   LP*              lp,                 /**< current LP data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             addobj              /**< additional objective value for variable */
    );

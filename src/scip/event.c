@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.30 2004/04/29 15:20:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.31 2004/04/30 11:16:25 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -32,6 +32,7 @@
 #include "event.h"
 #include "lp.h"
 #include "var.h"
+#include "primal.h"
 #include "branch.h"
 
 
@@ -565,8 +566,9 @@ RETCODE SCIPeventChgSol(
 RETCODE SCIPeventProcess(
    EVENT*           event,              /**< event */
    SET*             set,                /**< global SCIP settings */
-   LP*              lp,                 /**< current LP data; only needed for variable specific events */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for variable specific events */
+   PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
+   LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
    EVENTFILTER*     eventfilter         /**< event filter for global events; not needed for variable specific events */
    )
 {
@@ -605,17 +607,20 @@ RETCODE SCIPeventProcess(
       var = event->data.eventobjchg.var;
       assert(var != NULL);
       assert(var->eventqueueindexobj == -1);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
       /* inform LP about the objective change */
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      if( SCIPvarGetProbindex(var) >= 0 )
       {
-         assert(SCIPvarGetProbindex(var) >= 0);
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
          {
             CHECK_OKAY( SCIPcolChgObj(SCIPvarGetCol(var), set, lp, event->data.eventobjchg.newobj) );
          }
          CHECK_OKAY( SCIPlpUpdateVarObj(lp, set, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj) );
       }
+
+      /* inform all existing primal solutions about the objective change */
+      SCIPprimalUpdateVarObj(primal, var, event->data.eventobjchg.oldobj, event->data.eventobjchg.newobj);
 
       /* process variable's event filter */
       CHECK_OKAY( SCIPeventfilterProcess(var->eventfilter, set, event) );
@@ -1095,8 +1100,9 @@ RETCODE SCIPeventqueueAdd(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
-   LP*              lp,                 /**< current LP data; only needed for variable specific events */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for variable specific events */
+   PRIMAL*          primal,             /**< primal data; only needed for objchanged events */
+   LP*              lp,                 /**< current LP data; only needed for obj/boundchanged events */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage; only needed for boundchange events */
    EVENTFILTER*     eventfilter,        /**< event filter for global events; not needed for variable specific events */
    EVENT**          event               /**< pointer to event to add to the queue; will be NULL after queue addition */
    )
@@ -1112,7 +1118,7 @@ RETCODE SCIPeventqueueAdd(
    if( !eventqueue->delayevents )
    {
       /* immediately process event */
-      CHECK_OKAY( SCIPeventProcess(*event, set, lp, branchcand, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(*event, set, primal, lp, branchcand, eventfilter) );
       CHECK_OKAY( SCIPeventFree(event, memhdr) );
    }
    else
@@ -1321,6 +1327,7 @@ RETCODE SCIPeventqueueProcess(
    EVENTQUEUE*      eventqueue,         /**< event queue */
    MEMHDR*          memhdr,             /**< block memory buffer */
    SET*             set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTFILTER*     eventfilter         /**< event filter for global (not variable dependent) events */
@@ -1365,7 +1372,7 @@ RETCODE SCIPeventqueueProcess(
       }
 
       /* process event */
-      CHECK_OKAY( SCIPeventProcess(event, set, lp, branchcand, eventfilter) );
+      CHECK_OKAY( SCIPeventProcess(event, set, primal, lp, branchcand, eventfilter) );
 
       /* free the event immediately, because additionally raised events during event processing
        * can lead to a large event queue

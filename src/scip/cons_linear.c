@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.92 2004/04/27 15:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.93 2004/04/30 11:16:24 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3353,31 +3353,34 @@ RETCODE convertLongEquality(
       assert(vals != NULL);
       var = vars[v];
       val = vals[v];
-            
-      slacktype = SCIPvarGetType(var);
-      integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
 
       assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
       assert(SCIPvarGetNLocksUp(var) >= 1);
-      if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 1 )
+
+      /* check, if variable is already fixed or aggregated */
+      if( !SCIPvarIsActive(var) )
+         continue;
+
+      /* check, if variable is used in other constraints than this one */
+      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 1 )
+         continue;
+
+      /* check, if variable can be used as a slack variable */
+      slacktype = SCIPvarGetType(var);
+      integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
+      if( slacktype == SCIP_VARTYPE_CONTINUOUS
+         || slacktype == SCIP_VARTYPE_IMPLINT
+         || (integral && SCIPisEQ(scip, ABS(val), 1.0))
+          )
       {
-         /* variable is only locked in this equality: if variable is continuous or if the value is 1.0,
-          * it is a candidate for being a slack variable
-          */
-         if( slacktype == SCIP_VARTYPE_CONTINUOUS
-            || slacktype == SCIP_VARTYPE_IMPLINT
-            || (integral && SCIPisEQ(scip, ABS(val), 1.0))
-             )
+         slackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
+         if( bestslackpos == -1
+            || slacktype > bestslacktype
+            || (slacktype == bestslacktype && slackdomrng > bestslackdomrng) )
          {
-            slackdomrng = SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var);
-            if( bestslackpos == -1
-               || slacktype > bestslacktype
-               || (slacktype == bestslacktype && slackdomrng > bestslackdomrng) )
-            {
-               bestslackpos = v;
-               bestslacktype = slacktype;
-               bestslackdomrng = slackdomrng;
-            }
+            bestslackpos = v;
+            bestslacktype = slacktype;
+            bestslackdomrng = slackdomrng;
          }
       }
    }
@@ -3394,8 +3397,8 @@ RETCODE convertLongEquality(
    /* if the slack variable is of integer type, and the constraint itself may take fractional values,
     * we cannot aggregate the variable, because the integrality condition would get lost
     */
-   if( bestslackpos >= 0 &&
-      (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
+   if( bestslackpos >= 0
+      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT || integral) )
    {
       VAR* slackvar;
       Real* scalars;
@@ -3451,15 +3454,13 @@ RETCODE convertLongEquality(
       CHECK_OKAY( SCIPallocBufferArray(scip, &scalars, consdata->nvars) );
 
       /* set up the multi-aggregation */
-      debugMessage("linear constraint <%s>: multi-aggregate <%s> ==",
-         SCIPconsGetName(cons), SCIPvarGetName(slackvar));
+      debugMessage("linear constraint <%s>: multi-aggregate <%s> ==", SCIPconsGetName(cons), SCIPvarGetName(slackvar));
       for( v = 0; v < consdata->nvars; ++v )
       {
          scalars[v] = -consdata->vals[v]/slackcoef;
          debug(printf(" %+g<%s>", scalars[v], SCIPvarGetName(consdata->vars[v])));
       }
-      debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", 
-               aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
+      debug(printf(" %+g, bounds of <%s>: [%g,%g]\n", aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub));
 
       /* perform the multi-aggregation */
       CHECK_OKAY( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, consdata->vars, scalars, aggrconst,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.86 2004/04/29 15:20:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.87 2004/04/30 11:16:26 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1876,9 +1876,9 @@ RETCODE SCIPvarFix(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             fixedval,           /**< value to fix variable at */
    Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
@@ -1922,7 +1922,7 @@ RETCODE SCIPvarFix(
          errorMessage("Cannot fix an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, 
+      CHECK_OKAY( SCIPvarFix(var->data.transvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
                      fixedval, infeasible) );
       break;
 
@@ -1931,7 +1931,7 @@ RETCODE SCIPvarFix(
 
       /* set the fixed variable's objective value to 0.0 */
       obj = var->obj;
-      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, lp, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, primal, lp, eventqueue, 0.0) );
 
       /* change variable's bounds to fixed value */
       holelistFree(&var->glbdom.holelist, memhdr);
@@ -1961,10 +1961,10 @@ RETCODE SCIPvarFix(
 
       /* issue VARFIXED event */
       CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, NULL, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
 
       /* reset the objective value of the fixed variable, thus adjusting the problem's objective offset */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, obj) );
+      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
       break;
 
    case SCIP_VARSTATUS_COLUMN:
@@ -1979,7 +1979,7 @@ RETCODE SCIPvarFix(
       /* fix aggregation variable y in x = a*y + c, instead of fixing x directly */
       assert(SCIPsetIsZero(set, var->obj));
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-      CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+      CHECK_OKAY( SCIPvarFix(var->data.aggregate.var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
                      (fixedval - var->data.aggregate.constant)/var->data.aggregate.scalar, infeasible) );
       break;
 
@@ -1993,7 +1993,7 @@ RETCODE SCIPvarFix(
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
-      CHECK_OKAY( SCIPvarFix(var->negatedvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+      CHECK_OKAY( SCIPvarFix(var->negatedvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
                      var->data.negate.constant - fixedval, infeasible) );
       break;
 
@@ -2082,10 +2082,10 @@ RETCODE varUpdateAggregationBounds(
       else if( SCIPsetIsEQ(set, varlb, varub) )
       {
          /* the aggregated variable is fixed -> fix both variables */
-         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, varlb, infeasible) );
+         CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, varlb, infeasible) );
          if( !(*infeasible) )
          {
-            CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, 
+            CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
                            (varlb-constant)/scalar, infeasible) );
          }
          return SCIP_OKAY;
@@ -2145,11 +2145,11 @@ RETCODE varUpdateAggregationBounds(
       else if( SCIPsetIsEQ(set, aggvarlb, aggvarub) )
       {
          /* the aggregation variable is fixed -> fix both variables */
-         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, aggvarlb, 
+         CHECK_OKAY( SCIPvarFix(aggvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, aggvarlb, 
                         infeasible) );
          if( !(*infeasible) )
          {
-            CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, 
+            CHECK_OKAY( SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
                            aggvarlb * scalar + constant, infeasible) );
          }
          return SCIP_OKAY;
@@ -2188,9 +2188,9 @@ RETCODE SCIPvarAggregate(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
@@ -2218,7 +2218,7 @@ RETCODE SCIPvarAggregate(
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
-      return SCIPvarFix(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, constant, infeasible);
+      return SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, constant, infeasible);
 
    assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
@@ -2240,7 +2240,7 @@ RETCODE SCIPvarAggregate(
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
-   CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, lp, branchcand, eventqueue, 0.0) );
+   CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, primal, lp, eventqueue, 0.0) );
 
    /* unlock all rounding locks */
    nlocksdown = var->nlocksdown;
@@ -2310,12 +2310,12 @@ RETCODE SCIPvarAggregate(
 
    /* issue VARFIXED event */
    CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, NULL, &event) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
 
    /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
     * variable and the problem's objective offset
     */
-   CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, obj) );
+   CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
 
    return SCIP_OKAY;
 }
@@ -2327,9 +2327,9 @@ RETCODE SCIPvarMultiaggregate(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< problem data */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   PRIMAL*          primal,             /**< primal data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    int              naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
@@ -2359,9 +2359,9 @@ RETCODE SCIPvarMultiaggregate(
 
    /* check, if we are in one of the simple cases */
    if( naggvars == 0 )
-      return SCIPvarFix(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, constant, infeasible);
+      return SCIPvarFix(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, constant, infeasible);
    else if( naggvars == 1)
-      return SCIPvarAggregate(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, 
+      return SCIPvarAggregate(var, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue, 
          aggvars[0], scalars[0], constant, infeasible);
 
    switch( SCIPvarGetStatus(var) )
@@ -2372,7 +2372,7 @@ RETCODE SCIPvarMultiaggregate(
          errorMessage("Cannot multi-aggregate an untransformed original variable\n");
          return SCIP_INVALIDDATA;
       }
-      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+      CHECK_OKAY( SCIPvarMultiaggregate(var->data.transvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
                      naggvars, aggvars, scalars, constant, infeasible) );
       break;
 
@@ -2381,7 +2381,7 @@ RETCODE SCIPvarMultiaggregate(
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
-      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, lp, branchcand, eventqueue, 0.0) );
+      CHECK_OKAY( SCIPvarChgObj(var, memhdr, set, primal, lp, eventqueue, 0.0) );
 
       /* unlock all rounding locks */
       nlocksdown = var->nlocksdown;
@@ -2424,12 +2424,12 @@ RETCODE SCIPvarMultiaggregate(
 
       /* issue VARFIXED event */
       CHECK_OKAY( SCIPeventCreateVarFixed(&event, memhdr, var) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, NULL, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, NULL, &event) );
 
       /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
        * variables and the problem's objective offset
        */
-      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue, obj) );
+      CHECK_OKAY( SCIPvarAddObj(var, memhdr, set, stat, prob, primal, lp, eventqueue, obj) );
 
       break;
 
@@ -2463,7 +2463,7 @@ RETCODE SCIPvarMultiaggregate(
          scalars[v] *= -1.0;
          
       /* perform the multi aggregation on the negation variable */
-      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+      CHECK_OKAY( SCIPvarMultiaggregate(var->negatedvar, memhdr, set, stat, prob, primal, lp, branchcand, eventqueue,
                      naggvars, aggvars, scalars, var->data.negate.constant - constant, infeasible) );
 
       /* switch the signs of the aggregation scalars again, to reset them to their original values */
@@ -2590,30 +2590,23 @@ RETCODE varEventObjChanged(
    VAR*             var,                /**< problem variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             oldobj,             /**< old objective value for variable */
    Real             newobj              /**< new objective value for variable */
    )
 {
+   EVENT* event;
+
    assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
    assert(var->eventfilter != NULL);
    assert(!SCIPsetIsEQ(set, oldobj, newobj));
 
-   /* check, if the variable is being tracked for objective changes
-    * COLUMN and LOOSE variables are tracked always, because the pseudo objective value has to be updated
-    */
-   if( (var->eventfilter->len > 0 && (var->eventfilter->eventmask & SCIP_EVENTTYPE_OBJCHANGED) != 0)
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
-   {
-      EVENT* event;
-
-      CHECK_OKAY( SCIPeventCreateObjChanged(&event, memhdr, var, oldobj, newobj) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, NULL, &event) );
-   }
+   CHECK_OKAY( SCIPeventCreateObjChanged(&event, memhdr, var, oldobj, newobj) );
+   CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, primal, lp, NULL, NULL, &event) );
 
    return SCIP_OKAY;
 }
@@ -2623,8 +2616,8 @@ RETCODE SCIPvarChgObj(
    VAR*             var,                /**< variable to change */
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newobj              /**< new objective value for variable */
    )
@@ -2642,7 +2635,7 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarChgObj(var->data.transvar, memhdr, set, lp, branchcand, eventqueue, newobj) );
+            CHECK_OKAY( SCIPvarChgObj(var->data.transvar, memhdr, set, primal, lp, eventqueue, newobj) );
          }
          else
          {
@@ -2655,7 +2648,7 @@ RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
-         CHECK_OKAY( varEventObjChanged(var, memhdr, set, lp, branchcand, eventqueue, oldobj, var->obj) );
+         CHECK_OKAY( varEventObjChanged(var, memhdr, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -2681,9 +2674,8 @@ RETCODE SCIPvarAddObj(
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
    PROB*            prob,               /**< transformed problem after presolve */
-   LP*              lp,                 /**< current LP data */
-   BRANCHCAND*      branchcand,         /**< branching candidate storage */
    PRIMAL*          primal,             /**< primal data */
+   LP*              lp,                 /**< current LP data */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             addobj              /**< additional objective value for variable */
    )
@@ -2704,8 +2696,7 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.transvar != NULL )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
-                           addobj) );
+            CHECK_OKAY( SCIPvarAddObj(var->data.transvar, memhdr, set, stat, prob, primal, lp, eventqueue, addobj) );
          }
          else
          {
@@ -2718,7 +2709,7 @@ RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj += addobj;
-         CHECK_OKAY( varEventObjChanged(var, memhdr, set, lp, branchcand, eventqueue, oldobj, var->obj) );
+         CHECK_OKAY( varEventObjChanged(var, memhdr, set, primal, lp, eventqueue, oldobj, var->obj) );
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -2731,7 +2722,7 @@ RETCODE SCIPvarAddObj(
          /* x = a*y + c  ->  add a*addobj to obj. val. of y, and c*addobj to obj. offset of problem */
          SCIPprobAddObjoffset(prob, var->data.aggregate.constant * addobj);
          CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
-         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+         CHECK_OKAY( SCIPvarAddObj(var->data.aggregate.var, memhdr, set, stat, prob, primal, lp, eventqueue,
                         var->data.aggregate.scalar * addobj) );
          break;
 
@@ -2741,7 +2732,7 @@ RETCODE SCIPvarAddObj(
          CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
-            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], memhdr, set, stat, prob, lp, branchcand, primal, 
+            CHECK_OKAY( SCIPvarAddObj(var->data.multaggr.vars[i], memhdr, set, stat, prob, primal, lp, 
                            eventqueue, var->data.multaggr.scalars[i] * addobj) );
          }
          break;
@@ -2753,7 +2744,7 @@ RETCODE SCIPvarAddObj(
          assert(var->negatedvar->negatedvar == var);
          SCIPprobAddObjoffset(prob, var->data.negate.constant * addobj);
          CHECK_OKAY( SCIPprimalUpdateUpperbound(primal, memhdr, set, stat, prob, NULL, lp) );
-         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, memhdr, set, stat, prob, lp, branchcand, primal, eventqueue,
+         CHECK_OKAY( SCIPvarAddObj(var->negatedvar, memhdr, set, stat, prob, primal, lp, eventqueue,
                         -addobj) );
          break;
 
@@ -3267,7 +3258,7 @@ RETCODE varEventLbChanged(
       debugMessage("issue LBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       CHECK_OKAY( SCIPeventCreateLbChanged(&event, memhdr, var, oldbound, newbound) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, NULL, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, lp, branchcand, NULL, &event) );
    }
 
    return SCIP_OKAY;
@@ -3303,7 +3294,7 @@ RETCODE varEventUbChanged(
       debugMessage("issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
       CHECK_OKAY( SCIPeventCreateUbChanged(&event, memhdr, var, oldbound, newbound) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, NULL, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, lp, branchcand, NULL, &event) );
    }
 
    return SCIP_OKAY;
@@ -4803,6 +4794,16 @@ Bool SCIPvarIsRemoveable(
    assert(var != NULL);
 
    return var->removeable;
+}
+
+/** returns whether variable is an active (neither fixed nor aggregated) variable */
+Bool SCIPvarIsActive(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->probindex >= 0);
 }
 
 /** gets unique index of variable */

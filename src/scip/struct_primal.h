@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_primal.h,v 1.4 2004/02/25 16:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_primal.h,v 1.5 2004/04/30 11:16:26 bzfpfend Exp $"
 
 /**@file   struct_primal.h
  * @brief  datastructures for collecting primal CIP solutions and primal informations
@@ -41,8 +41,11 @@ struct Primal
    Real             cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
                                          *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */
    SOL**            sols;               /**< primal CIP solutions */
+   SOL**            existingsols;       /**< all existing primal solutions (feasible and infeasible) */
    int              solssize;           /**< size of sols array */
    int              nsols;              /**< number of primal CIP solutions stored in sols array */
+   int              existingsolssize;   /**< size of existingsols array */
+   int              nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
 };
 
 

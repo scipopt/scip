@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.156 2004/04/29 15:20:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.157 2004/04/30 11:16:25 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3109,6 +3109,10 @@ RETCODE initSolve(
    assert(scip->stat != NULL);
    assert(scip->stage == SCIP_STAGE_PRESOLVED);
 
+   /* update upper bound (e.g. objective limit) in primal data */
+   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+                  scip->tree, scip->lp) );
+
    /* switch stage to INITSOLVE */
    scip->stage = SCIP_STAGE_INITSOLVE;
 
@@ -3122,10 +3126,6 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPconflictCreate(&scip->conflict, scip->set) );
    CHECK_OKAY( SCIPtreeCreate(&scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, 
                   SCIPsetGetNodesel(scip->set, scip->stat)) );
-
-   /* update upper bound (e.g. objective limit) in primal data */
-   CHECK_OKAY( SCIPprimalUpdateUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->tree, scip->lp) );
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
@@ -3435,9 +3435,9 @@ RETCODE SCIPsolve(
       SCIPstatResetDisplay(scip->stat);
 
       /* continue solution process */
-      CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob, scip->tree, 
-                     scip->lp, scip->pricestore, scip->sepastore, scip->branchcand, scip->cutpool, 
-                     scip->conflict, scip->primal, scip->eventfilter, scip->eventqueue) );
+      CHECK_OKAY( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob,
+                     scip->primal, scip->tree, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
+                     scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
 
       /* detect, whether problem is solved */
       if( SCIPtreeGetNNodes(scip->tree) == 0 && scip->tree->actnode == NULL )
@@ -3923,14 +3923,12 @@ RETCODE SCIPchgVarObj(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      CHECK_OKAY( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->lp, scip->branchcand,
-                     scip->eventqueue, newobj) );
+      CHECK_OKAY( SCIPvarChgObj(var, scip->mem->probmem, scip->set, scip->primal, scip->lp, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarChgObj(var, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand,
-                     scip->eventqueue, newobj) );
+      CHECK_OKAY( SCIPvarChgObj(var, scip->mem->solvemem, scip->set, scip->primal, scip->lp, scip->eventqueue, newobj) );
       return SCIP_OKAY;
 
    default:
@@ -3952,14 +3950,14 @@ RETCODE SCIPaddVarObj(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
-      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->lp,
-                     scip->branchcand, scip->primal, scip->eventqueue, addobj) );
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->primal, scip->lp,
+                     scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->primal, scip->eventqueue, addobj) );
+      CHECK_OKAY( SCIPvarAddObj(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                     scip->eventqueue, addobj) );
       return SCIP_OKAY;
 
    default:
@@ -4309,8 +4307,8 @@ RETCODE SCIPinferBinVar(
       break;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->primal, scip->eventqueue, (Real)fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                     scip->branchcand, scip->eventqueue, (Real)fixedval, infeasible) );
       break;
 
    case SCIP_STAGE_PRESOLVED:
@@ -4549,8 +4547,8 @@ RETCODE SCIPfixVar(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
-      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->primal, scip->eventqueue, fixedval, infeasible) );
+      CHECK_OKAY( SCIPvarFix(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                     scip->branchcand, scip->eventqueue, fixedval, infeasible) );
       *fixed = TRUE;
       return SCIP_OKAY;
       
@@ -4649,7 +4647,7 @@ RETCODE aggregateActiveIntVars(
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, 
+                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
                      vary, (Real)(-b/a), (Real)(c/a), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
@@ -4659,7 +4657,7 @@ RETCODE aggregateActiveIntVars(
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, 
+                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
                      varx, (Real)(-a/b), (Real)(c/b), infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
@@ -4716,12 +4714,12 @@ RETCODE aggregateActiveIntVars(
    CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
                   scip->branchcand, scip->eventfilter, scip->eventqueue, aggvar) );
    CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                  scip->lp, scip->branchcand, scip->primal, scip->eventqueue,
+                  scip->primal, scip->lp, scip->branchcand, scip->eventqueue,
                   aggvar, (Real)(-b), (Real)xsol, infeasible) );
    if( !(*infeasible) )
    {
       CHECK_OKAY( SCIPvarAggregate(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, 
+                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, 
                      aggvar, (Real)a, (Real)ysol, infeasible) );
    }
    *aggregated = TRUE;
@@ -4823,7 +4821,7 @@ RETCODE aggregateActiveVars(
 
       /* aggregate the variable */
       CHECK_OKAY( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
-                     scip->lp, scip->branchcand, scip->primal, scip->eventqueue, vary, scalar, constant, infeasible) );
+                     scip->primal, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant, infeasible) );
       *aggregated = TRUE;
       return SCIP_OKAY;
    }
@@ -4909,8 +4907,8 @@ RETCODE SCIPaggregateVars(
       assert(!SCIPsetIsZero(scip->set, scalary));
       
       /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
-      CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->primal, scip->eventqueue, rhs/scalary, infeasible) );
+      CHECK_OKAY( SCIPvarFix(vary, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                     scip->branchcand, scip->eventqueue, rhs/scalary, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -4920,8 +4918,8 @@ RETCODE SCIPaggregateVars(
       assert(!SCIPsetIsZero(scip->set, scalarx));
       
       /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
-      CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                     scip->branchcand, scip->primal, scip->eventqueue, rhs/scalarx, infeasible) );
+      CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                     scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
       *aggregated = TRUE;
       *redundant = TRUE;
    }
@@ -4937,8 +4935,8 @@ RETCODE SCIPaggregateVars(
       else
       {
          /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
-         CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                        scip->branchcand, scip->primal, scip->eventqueue, rhs/scalarx, infeasible) );
+         CHECK_OKAY( SCIPvarFix(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->lp,
+                        scip->branchcand, scip->eventqueue, rhs/scalarx, infeasible) );
          *aggregated = TRUE;
       }
       *redundant = TRUE;
@@ -4968,8 +4966,8 @@ RETCODE SCIPmultiaggregateVar(
 {
    CHECK_OKAY( checkStage(scip, "SCIPmultiaggregateVar", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
-                  scip->branchcand, scip->primal, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
+   CHECK_OKAY( SCIPvarMultiaggregate(var, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, 
+                  scip->lp, scip->branchcand, scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -6617,7 +6615,7 @@ RETCODE SCIPcreateSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreate(sol, scip->mem->solvemem, scip->stat, scip->tree, heur) );
+   CHECK_OKAY( SCIPsolCreate(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
 
    return SCIP_OKAY;
 }
@@ -6637,7 +6635,8 @@ RETCODE SCIPcreateLPSol(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPsolCreateLPSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, heur) );
+   CHECK_OKAY( SCIPsolCreateLPSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
+                  heur) );
 
    return SCIP_OKAY;
 }
@@ -6651,7 +6650,8 @@ RETCODE SCIPcreatePseudoSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreatePseudoSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreatePseudoSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, heur) );
+   CHECK_OKAY( SCIPsolCreatePseudoSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
+                  heur) );
 
    return SCIP_OKAY;
 }
@@ -6665,7 +6665,8 @@ RETCODE SCIPcreateCurrentSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateCurrentSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPsolCreateCurrentSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, heur) );
+   CHECK_OKAY( SCIPsolCreateCurrentSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->lp,
+                  heur) );
 
    return SCIP_OKAY;
 }
@@ -6678,7 +6679,7 @@ RETCODE SCIPfreeSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPfreeSol", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   CHECK_OKAY( SCIPsolFree(sol, scip->mem->solvemem) );
+   CHECK_OKAY( SCIPsolFree(sol, scip->mem->solvemem, scip->primal) );
 
    return SCIP_OKAY;
 }
@@ -6819,7 +6820,7 @@ Real SCIPgetSolVal(
    CHECK_ABORT( checkStage(scip, "SCIPgetSolVal", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    if( sol != NULL )
-      return SCIPsolGetVal(sol, scip->set, scip->stat, var);
+      return SCIPsolGetVal(sol, scip->stat, var);
    else
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -6846,7 +6847,7 @@ RETCODE SCIPgetSolVals(
    if( sol != NULL )
    {
       for( v = 0; v < nvars; ++v )
-         vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
+         vals[v] = SCIPsolGetVal(sol, scip->stat, vars[v]);
    }
    else
    {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.22 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.23 2004/04/30 11:16:25 bzfpfend Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -152,5 +152,31 @@ RETCODE SCIPprimalTrySolFree(
    Bool             checklprows,        /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
+
+/** inserts solution into the global array of all existing primal solutions */
+extern
+RETCODE SCIPprimalSolCreated(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** removes solution from the global array of all existing primal solutions */
+extern
+void SCIPprimalSolFreed(
+   PRIMAL*          primal,             /**< primal data */
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** updates all existing primal solutions after a change in a variable's objective value */
+extern
+void SCIPprimalUpdateVarObj(
+   PRIMAL*          primal,             /**< primal data */
+   VAR*             var,                /**< problem variable */
+   Real             oldobj,             /**< old objective value */
+   Real             newobj              /**< new objective value */
+   );
+
 
 #endif

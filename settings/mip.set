@@ -134,6 +134,10 @@ conflict/usepropconflict = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 conflict/uselpconflict = FALSE
 
+# should infeasible strong branching conflict analysis be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+conflict/usesbconflict = FALSE
+
 # should pseudo solution conflict analysis be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/usepseudoconflict = TRUE
@@ -726,9 +730,9 @@ display/solfound/active = 1
 # [type: int, range: [0,2], default: 1]
 display/time/active = 1
 
-# display activation status of display column <nodenum> (0: off, 1: auto, 2:on)
+# display activation status of display column <nnodes> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/nodenum/active = 1
+display/nnodes/active = 1
 
 # display activation status of display column <nodesleft> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

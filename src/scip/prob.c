@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.45 2004/04/29 15:20:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.46 2004/04/30 11:16:25 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -554,7 +554,7 @@ RETCODE SCIPprobAddVar(
    {
       /* issue VARADDED event */
       CHECK_OKAY( SCIPeventCreateVarAdded(&event, memhdr, var) );
-      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, lp, branchcand, eventfilter, &event) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, memhdr, set, NULL, NULL, NULL, eventfilter, &event) );
    }
 
    return SCIP_OKAY;

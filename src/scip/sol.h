@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.25 2004/04/29 15:20:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.26 2004/04/30 11:16:26 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -38,9 +38,11 @@
 #include "type_var.h"
 #include "type_prob.h"
 #include "type_sol.h"
+#include "type_primal.h"
 #include "type_tree.h"
 #include "type_heur.h"
 #include "pub_sol.h"
+
 
 
 
@@ -49,7 +51,9 @@ extern
 RETCODE SCIPsolCreate(
    SOL**            sol,                /**< pointer to primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree, or NULL */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
@@ -59,6 +63,8 @@ extern
 RETCODE SCIPsolCopy(
    SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
    MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   PRIMAL*          primal,             /**< primal data */
    SOL*             sourcesol           /**< primal CIP solution to copy */
    );
 
@@ -69,6 +75,7 @@ RETCODE SCIPsolCreateLPSol(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -81,6 +88,7 @@ RETCODE SCIPsolCreatePseudoSol(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -93,6 +101,7 @@ RETCODE SCIPsolCreateCurrentSol(
    MEMHDR*          memhdr,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
+   PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -102,7 +111,8 @@ RETCODE SCIPsolCreateCurrentSol(
 extern
 RETCODE SCIPsolFree(
    SOL**            sol,                /**< pointer to primal CIP solution */
-   MEMHDR*          memhdr              /**< block memory */
+   MEMHDR*          memhdr,             /**< block memory */
+   PRIMAL*          primal              /**< primal data */
    );
 
 /** copies current LP solution into CIP solution by linking */
@@ -180,9 +190,17 @@ RETCODE SCIPsolIncVal(
 extern
 Real SCIPsolGetVal(
    SOL*             sol,                /**< primal CIP solution */
-   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var                 /**< variable to get value for */
+   );
+
+/** updates primal solutions after a change in a variable's objective value */
+extern
+void SCIPsolUpdateVarObj(
+   SOL*             sol,                /**< primal CIP solution */
+   VAR*             var,                /**< problem variable */
+   Real             oldobj,             /**< old objective value */
+   Real             newobj              /**< new objective value */
    );
 
 /** checks primal CIP solution for feasibility */
@@ -217,6 +235,37 @@ RETCODE SCIPsolPrint(
    PROB*            prob,               /**< problem data */
    FILE*            file                /**< output file (or NULL for standard output) */
    );
+
+
+#ifndef NDEBUG
+
+/* In debug mode, the following methods are implemented as function calls to ensure
+ * type validity.
+ */
+
+/** gets current position of solution in array of existing solutions of primal data */
+extern
+int SCIPsolGetPrimalIndex(
+   SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** sets current position of solution in array of existing solutions of primal data */
+extern
+void SCIPsolSetPrimalIndex(
+   SOL*             sol,                /**< primal CIP solution */
+   int              primalindex         /**< new primal index of solution */
+   );
+
+#else
+
+/* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPsolGetPrimalIndex(sol)      ((sol)->primalindex)
+#define SCIPsolSetPrimalIndex(sol,idx)  { (sol)->primalindex = idx; }
+
+#endif
 
 
 #endif

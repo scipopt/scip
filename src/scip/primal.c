@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.36 2004/04/29 15:20:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.37 2004/04/30 11:16:25 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -68,6 +68,29 @@ RETCODE ensureSolsSize(
    return SCIP_OKAY;
 }
 
+/** ensures, that existingsols array can store at least num entries */
+static
+RETCODE ensureExistingsolsSize(
+   PRIMAL*          primal,             /**< primal data */
+   SET*             set,                /**< global SCIP settings */
+   int              num                 /**< minimum number of entries to store */
+   )
+{
+   assert(primal->nexistingsols <= primal->existingsolssize);
+   
+   if( num > primal->existingsolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&primal->existingsols, newsize) );
+      primal->existingsolssize = newsize;
+   }
+   assert(num <= primal->existingsolssize);
+
+   return SCIP_OKAY;
+}
+
 
 
 
@@ -80,8 +103,11 @@ RETCODE SCIPprimalCreate(
 
    ALLOC_OKAY( allocMemory(primal) );
    (*primal)->sols = NULL;
+   (*primal)->existingsols = NULL;
    (*primal)->solssize = 0;
    (*primal)->nsols = 0;
+   (*primal)->existingsolssize = 0;
+   (*primal)->nexistingsols = 0;
    (*primal)->nsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
    (*primal)->cutoffbound = SCIP_INVALID;
@@ -98,13 +124,17 @@ RETCODE SCIPprimalFree(
    int s;
 
    assert(primal != NULL);
+   assert(*primal != NULL);
 
-   /* free primal CIP solutions */
+   /* free feasible primal CIP solutions */
    for( s = 0; s < (*primal)->nsols; ++s )
    {
-      CHECK_OKAY( SCIPsolFree(&(*primal)->sols[s], memhdr) );
+      CHECK_OKAY( SCIPsolFree(&(*primal)->sols[s], memhdr, *primal) );
    }
+   assert((*primal)->nexistingsols == 0);
+
    freeMemoryArrayNull(&(*primal)->sols);
+   freeMemoryArrayNull(&(*primal)->existingsols);
    freeMemory(primal);
 
    return SCIP_OKAY;
@@ -221,7 +251,7 @@ RETCODE SCIPprimalUpdateUpperbound(
    /* delete all solutions worse than the current objective limit */
    for( ; primal->nsols > 0 && SCIPsolGetObj(primal->sols[primal->nsols-1]) > upperbound; primal->nsols-- )
    {
-      CHECK_OKAY( SCIPsolFree(&primal->sols[primal->nsols-1], memhdr) );
+      CHECK_OKAY( SCIPsolFree(&primal->sols[primal->nsols-1], memhdr, primal) );
    }
 
    /* compare objective limit to currently best solution */
@@ -304,7 +334,7 @@ RETCODE primalAddSol(
     */
    for( pos = set->maxsol-1; pos < primal->nsols; ++pos )
    {
-      CHECK_OKAY( SCIPsolFree(&primal->sols[pos], memhdr) );
+      CHECK_OKAY( SCIPsolFree(&primal->sols[pos], memhdr, primal) );
    }
 
    /* insert solution at correct position */
@@ -330,7 +360,7 @@ RETCODE primalAddSol(
       CHECK_OKAY( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
    }
    CHECK_OKAY( SCIPeventChgSol(&event, sol) );
-   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
+   CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
    /* change color of node in VBC output */
    SCIPvbcFoundSolution(stat->vbc, stat, tree->actnode);
@@ -409,7 +439,7 @@ RETCODE SCIPprimalAddSol(
       SOL* solcopy;
 
       /* create a copy of the solution */
-      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
+      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, set, primal, sol) );
       
       /* insert copied solution into solution storage */
       CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
@@ -459,7 +489,7 @@ RETCODE SCIPprimalAddSolFree(
    else
    {
       /* the solution is too bad -> free it immediately */
-      CHECK_OKAY( SCIPsolFree(sol, memhdr) );
+      CHECK_OKAY( SCIPsolFree(sol, memhdr, primal) );
 
       *stored = FALSE;
    }
@@ -511,7 +541,7 @@ RETCODE SCIPprimalTrySol(
       SOL* solcopy;
       
       /* create a copy of the solution */
-      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
+      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, set, primal, sol) );
       
       /* insert copied solution into solution storage */
       CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
@@ -573,7 +603,7 @@ RETCODE SCIPprimalTrySolFree(
    else
    {
       /* the solution is too bad or infeasible -> free it immediately */
-      CHECK_OKAY( SCIPsolFree(sol, memhdr) );
+      CHECK_OKAY( SCIPsolFree(sol, memhdr, primal) );
       *stored = FALSE;
    }
    assert(*sol == NULL);
@@ -581,3 +611,65 @@ RETCODE SCIPprimalTrySolFree(
    return SCIP_OKAY;
 }
 
+/** inserts solution into the global array of all existing primal solutions */
+RETCODE SCIPprimalSolCreated(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(primal != NULL);
+   assert(sol != NULL);
+   assert(SCIPsolGetPrimalIndex(sol) == -1);
+
+   /* allocate memory for solution storage */
+   CHECK_OKAY( ensureExistingsolsSize(primal, set, primal->nexistingsols+1) );
+
+   /* append solution */
+   SCIPsolSetPrimalIndex(sol, primal->nexistingsols);
+   primal->existingsols[primal->nexistingsols] = sol;
+   primal->nexistingsols++;
+
+   return SCIP_OKAY;
+}
+
+/** removes solution from the global array of all existing primal solutions */
+void SCIPprimalSolFreed(
+   PRIMAL*          primal,             /**< primal data */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   int idx;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+
+   /* remove solution */
+   idx = SCIPsolGetPrimalIndex(sol);
+   assert(0 <= idx && idx < primal->nexistingsols);
+   if( idx < primal->nexistingsols-1 )
+   {
+      primal->existingsols[idx] = primal->existingsols[primal->nexistingsols-1];
+      SCIPsolSetPrimalIndex(primal->existingsols[idx], idx);
+   }
+   primal->nexistingsols--;
+}
+
+/** updates all existing primal solutions after a change in a variable's objective value */
+void SCIPprimalUpdateVarObj(
+   PRIMAL*          primal,             /**< primal data */
+   VAR*             var,                /**< problem variable */
+   Real             oldobj,             /**< old objective value */
+   Real             newobj              /**< new objective value */
+   )
+{
+   int i;
+
+   assert(primal != NULL);
+
+   for( i = 0; i < primal->nexistingsols; ++i )
+   {
+      SCIPsolUpdateVarObj(primal->existingsols[i], var, oldobj, newobj);
+   }
+}
