@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.143 2005/02/04 14:27:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.144 2005/02/07 10:21:24 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -5392,7 +5392,7 @@ RETCODE SCIPvarAddImplic(
       if( (implbound == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.ub, implbound))
          || (implbound == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.lb, implbound)) )
          *conflict = TRUE;
-      else
+      else if( implvar->varstatus != SCIP_VARSTATUS_FIXED )
       {
          assert(var != implvar);
          CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, varfixing, implvar, impltype, implbound, conflict) );
