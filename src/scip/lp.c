@@ -18,17 +18,6 @@
 /**@file   lp.c
  * @brief  LP management datastructures and methods
  * @author Tobias Achterberg
- */
-
-/** The main datastructures for storing an LP are the rows and the columns.
- *  A row can live on its own (if it was created by a separator), or as LP
- *  relaxation of a constraint. Thus, it has a nuses-counter, and is
- *  deleted, if not needed any more.
- *  A column cannot live on its own. It is always connected to a problem
- *  variable. Because pricing is always problem specific, it cannot create
- *  LP columns without introducing new variables. Thus, each column is
- *  connected to exactly one variable, and is deleted, if the variable
- *  is deleted.
  *
  *  In LP management, we have to differ between the actual LP and the LP
  *  stored in the LP solver. All LP methods affect the actual LP only. 

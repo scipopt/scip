@@ -22,16 +22,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** priority queue data structure
- *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
- *  The ordering is done through a pointer comparison function.
- *  The array is organized as follows. The root element (that is the "best" element $r$ with $r <= x$ for all $x$)
- *  is stored in position 0. The children of an element at position $p$ are stored at positions $q_1 = 2*p+1$ and
- *  $q_2 = 2*p+2$. That means, the parent of the element at position $q$ is at position $p = \lfloor (q-1)/2 \rfloor$.
- *  At any time, the condition holds that $p <= q$ for each parent $p$ and its children $q$.
- *  Insertion and removal of single elements needs time $\mathcal{O}(\log n)$.
- */
-
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -49,7 +39,15 @@
 #define PQ_RIGHTCHILD(p) (2*(p)+2)
 
 
-/** priority queue data structure */
+/** priority queue data structure
+ *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
+ *  The ordering is done through a pointer comparison function.
+ *  The array is organized as follows. The root element (that is the "best" element $r$ with $r <= x$ for all $x$)
+ *  is stored in position 0. The children of an element at position $p$ are stored at positions $q_1 = 2*p+1$ and
+ *  $q_2 = 2*p+2$. That means, the parent of the element at position $q$ is at position $p = \lfloor (q-1)/2 \rfloor$.
+ *  At any time, the condition holds that $p <= q$ for each parent $p$ and its children $q$.
+ *  Insertion and removal of single elements needs time $\mathcal{O}(\log n)$.
+ */
 struct PQueue
 {
    int              len;                /**< number of used element slots */

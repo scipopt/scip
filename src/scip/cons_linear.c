@@ -18,9 +18,8 @@
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
  * @author Tobias Achterberg
- */
-
-/** Linear constraints are separated with a high priority, because they are easy
+ *
+ *  Linear constraints are separated with a high priority, because they are easy
  *  to separate. Instead of using the global cut pool, the same effect can be
  *  implemented by adding linear constraints to the root node, such that they are
  *  separated each time, the linear constraints are separated. A constraint
