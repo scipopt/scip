@@ -65,23 +65,9 @@ RETCODE SCIPprimalFree(
    MEMHDR*          memhdr              /**< block memory */
    );
 
-/** adds primal solution to solution storage by moving it */
-extern
-RETCODE SCIPprimalAddSolMove(
-   PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
-   );
-
 /** adds primal solution to solution storage by copying it */
 extern
-RETCODE SCIPprimalAddSolCopy(
+RETCODE SCIPprimalAddSol(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -93,9 +79,9 @@ RETCODE SCIPprimalAddSolCopy(
    SOL*             sol                 /**< primal CIP solution */
    );
 
-/** checks primal solution; if feasible, adds it to storage by moving it */
+/** adds primal solution to solution storage, frees the solution afterwards */
 extern
-RETCODE SCIPprimalTrySolMove(
+RETCODE SCIPprimalAddSolFree(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -104,15 +90,12 @@ RETCODE SCIPprimalTrySolMove(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
-   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
    );
 
 /** checks primal solution; if feasible, adds it to storage by copying it */
 extern
-RETCODE SCIPprimalTrySolCopy(
+RETCODE SCIPprimalTrySol(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -122,6 +105,23 @@ RETCODE SCIPprimalTrySolCopy(
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   );
+
+/** checks primal solution; if feasible, adds it to storage; solution is freed afterwards */
+extern
+RETCODE SCIPprimalTrySolFree(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */

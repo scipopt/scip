@@ -333,9 +333,11 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPsolve(scip) );
 #endif
 
+#if 0
    printf("\nprimal solution:\n");
    printf("================\n\n");
    CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
+#endif
 
 #ifndef NDEBUG
    /*SCIPdebugMemory(scip);*/
@@ -381,6 +383,7 @@ main(
    todoMessage("avoid addition of identical constraints");
    todoMessage("cuts created at the current node, that are not sharp at the end of the node's solving loop can be removed");
    todoMessage("pricing for pseudo solutions");
+   todoMessage("integrality check on objective function, abort if gap is below 1.0");
 
    retcode = runSCIP(argc, argv);
    if( retcode != SCIP_OKAY )

@@ -176,9 +176,6 @@ RETCODE SCIPreaderRead(
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) )
    {
-      /* create new problem */
-      CHECK_OKAY( SCIPcreateProb(scip, name) );
-
       /* call reader to read problem */
       CHECK_OKAY( reader->readerread(scip, reader, filename, result) );
    }

@@ -85,7 +85,7 @@
 
 /* Tree */
 
-#define SCIP_DEFAULT_NODELIMIT LONGINT_MAX /**< maximal number of nodes to create */
+#define SCIP_DEFAULT_NODELIMIT  10000 /*LONGINT_MAX*/ /**< maximal number of nodes to create */
 
 
 /* Display */

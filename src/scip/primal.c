@@ -245,8 +245,43 @@ int primalSearchSolPos(
    return right;
 }
 
-/** adds primal solution to solution storage by moving it */
-RETCODE SCIPprimalAddSolMove(
+/** adds primal solution to solution storage by copying it */
+RETCODE SCIPprimalAddSol(
+   PRIMAL*          primal,             /**< primal data */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics data */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(sol != NULL);
+
+   /* search the position to insert solution in storage */
+   insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
+
+   if( insertpos < set->maxsol )
+   {
+      SOL* solcopy;
+
+      /* create a copy of the solution */
+      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
+      
+      /* insert copied solution into solution storage */
+      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds primal solution to solution storage, frees the solution afterwards */
+RETCODE SCIPprimalAddSolFree(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -285,8 +320,8 @@ RETCODE SCIPprimalAddSolMove(
    return SCIP_OKAY;
 }
 
-/** adds primal solution to solution storage by copying it */
-RETCODE SCIPprimalAddSolCopy(
+/** checks primal solution; if feasible, adds it to storage by copying it */
+RETCODE SCIPprimalTrySol(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -295,18 +330,31 @@ RETCODE SCIPprimalAddSolCopy(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL*             sol                 /**< primal CIP solution */
+   SOL*             sol,                /**< primal CIP solution */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
+   Bool feasible;
    int insertpos;
 
    assert(primal != NULL);
    assert(sol != NULL);
+   assert(stored != NULL);
 
    /* search the position to insert solution in storage */
    insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
 
    if( insertpos < set->maxsol )
+   {
+      /* check solution for feasibility */
+      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, chckintegrality, chcklprows, &feasible) );
+   }
+   else
+      feasible = FALSE;
+
+   if( feasible )
    {
       SOL* solcopy;
 
@@ -315,13 +363,17 @@ RETCODE SCIPprimalAddSolCopy(
       
       /* insert copied solution into solution storage */
       CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
+
+      *stored = TRUE;
    }
+   else
+      *stored = FALSE;
 
    return SCIP_OKAY;
 }
 
-/** checks primal solution; if feasible, adds it to storage by moving it */
-RETCODE SCIPprimalTrySolMove(
+/** checks primal solution; if feasible, adds it to storage; solution is freed afterwards */
+RETCODE SCIPprimalTrySolFree(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
@@ -375,54 +427,3 @@ RETCODE SCIPprimalTrySolMove(
    return SCIP_OKAY;
 }
 
-/** checks primal solution; if feasible, adds it to storage by copying it */
-RETCODE SCIPprimalTrySolCopy(
-   PRIMAL*          primal,             /**< primal data */
-   MEMHDR*          memhdr,             /**< block memory */
-   const SET*       set,                /**< global SCIP settings */
-   STAT*            stat,               /**< problem statistics data */
-   PROB*            prob,               /**< transformed problem after presolve */
-   TREE*            tree,               /**< branch-and-bound tree */
-   LP*              lp,                 /**< actual LP data */
-   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SOL*             sol,                /**< primal CIP solution */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
-   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
-   )
-{
-   Bool feasible;
-   int insertpos;
-
-   assert(primal != NULL);
-   assert(sol != NULL);
-   assert(stored != NULL);
-
-   /* search the position to insert solution in storage */
-   insertpos = primalSearchSolPos(primal, SCIPsolGetObj(sol));
-
-   if( insertpos < set->maxsol )
-   {
-      /* check solution for feasibility */
-      CHECK_OKAY( SCIPsolCheck(sol, memhdr, set, prob, chckintegrality, chcklprows, &feasible) );
-   }
-   else
-      feasible = FALSE;
-
-   if( feasible )
-   {
-      SOL* solcopy;
-
-      /* create a copy of the solution */
-      CHECK_OKAY( SCIPsolCopy(&solcopy, memhdr, sol) );
-      
-      /* insert copied solution into solution storage */
-      CHECK_OKAY( primalAddSol(primal, memhdr, set, stat, prob, tree, lp, eventfilter, solcopy, insertpos) );
-
-      *stored = TRUE;
-   }
-   else
-      *stored = FALSE;
-
-   return SCIP_OKAY;
-}

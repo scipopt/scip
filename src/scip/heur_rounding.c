@@ -56,7 +56,7 @@ DECL_HEURINIT(SCIPheurInitRounding)
    assert(scip != NULL);
 
    /* create heuristic data */
-   ALLOC_OKAY( allocMemory(&heurdata) );
+   CHECK_OKAY( SCIPallocMemory(scip, &heurdata) );
    CHECK_OKAY( SCIPcreateSol(scip, &heurdata->sol, heur) );
    SCIPheurSetData(heur, heurdata);
 
@@ -76,7 +76,7 @@ DECL_HEUREXIT(SCIPheurExitRounding)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    CHECK_OKAY( SCIPfreeSol(scip, &heurdata->sol) );
-   freeMemory(&heurdata);
+   SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -538,7 +538,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
        * neither integrality nor feasibility of LP rows has to be checked, because this is already
        * done in the rounding heuristic itself
        */
-      CHECK_OKAY( SCIPtrySolCopy(scip, sol, FALSE, FALSE, &stored) );
+      CHECK_OKAY( SCIPtrySol(scip, sol, FALSE, FALSE, &stored) );
 
       if( stored )
       {

@@ -612,7 +612,10 @@ RETCODE SCIPincludeDisp(
 /** creates empty problem and initializes all solving data structures */
 RETCODE SCIPcreateProb(
    SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
+   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   PROBDATA*        probdata            /**< user problem data set by the reader */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPcreateProb", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -620,7 +623,7 @@ RETCODE SCIPcreateProb(
    scip->stage = SCIP_STAGE_PROBLEM;
    
    CHECK_OKAY( SCIPstatCreate(&scip->stat) );
-   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name) );
+   CHECK_OKAY( SCIPprobCreate(&scip->origprob, name, probdelete, probtrans, probdata) );
    
    return SCIP_OKAY;
 }
@@ -698,6 +701,64 @@ RETCODE SCIPfreeProb(
 
       scip->stage = SCIP_STAGE_INIT;
 
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+}
+
+/** gets user problem data */
+RETCODE SCIPgetProbData(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROBDATA**       probdata            /**< pointer to store user problem data */
+   )
+{
+   assert(probdata != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPgetProbData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      *probdata = SCIPprobGetData(scip->origprob);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      *probdata = SCIPprobGetData(scip->transprob);
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage");
+      return SCIP_ERROR;
+   }
+}
+
+/** sets user problem data */
+RETCODE SCIPsetProbData(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROBDATA*        probdata            /**< user problem data to use */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetProbData", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIPprobSetData(scip->origprob, probdata);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_FREESOLVE:
+      SCIPprobSetData(scip->transprob, probdata);
       return SCIP_OKAY;
 
    default:
@@ -2580,53 +2641,36 @@ RETCODE SCIPprintBestSol(
    return SCIP_OKAY;
 }
 
-/** adds feasible primal solution to solution storage by moving it */
-RETCODE SCIPaddSolMove(
-   SCIP*            scip,               /**< SCIP data structure */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
-   )
-{
-   CHECK_OKAY( checkStage(scip, "SCIPaddSolMove", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
-
-   CHECK_OKAY( SCIPprimalAddSolMove(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol) );
-
-   return SCIP_OKAY;
-}
-
 /** adds feasible primal solution to solution storage by copying it */
-RETCODE SCIPaddSolCopy(
+RETCODE SCIPaddSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal CIP solution */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPaddSolCopy", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPprimalAddSolCopy(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+   CHECK_OKAY( SCIPprimalAddSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                   scip->lp, scip->eventfilter, sol) );
 
    return SCIP_OKAY;
 }
 
-/** checks solution for feasibility; if possible, adds it to storage by moving */
-RETCODE SCIPtrySolMove(
+/** adds primal solution to solution storage, frees the solution afterwards */
+RETCODE SCIPaddSolFree(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   Bool             chckintegrality,    /**< has integrality to be checked? */
-   Bool             chcklprows,         /**< have current LP rows to be checked? */
-   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPtrySolMove", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPprimalTrySolMove(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
-                  scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
+   CHECK_OKAY( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, scip->eventfilter, sol) );
 
    return SCIP_OKAY;
 }
 
 /** checks solution for feasibility; if possible, adds it to storage by copying */
-RETCODE SCIPtrySolCopy(
+RETCODE SCIPtrySol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol,                /**< primal CIP solution */
    Bool             chckintegrality,    /**< has integrality to be checked? */
@@ -2634,9 +2678,26 @@ RETCODE SCIPtrySolCopy(
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPtrySolCopy", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPprimalTrySolCopy(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+   CHECK_OKAY( SCIPprimalTrySol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+                  scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
+
+   return SCIP_OKAY;
+}
+
+/** checks primal solution; if feasible, adds it to storage; solution is freed afterwards */
+RETCODE SCIPtrySolFree(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   Bool             chckintegrality,    /**< has integrality to be checked? */
+   Bool             chcklprows,         /**< have current LP rows to be checked? */
+   Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE) );
+
+   CHECK_OKAY( SCIPprimalTrySolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
                   scip->lp, scip->eventfilter, sol, chckintegrality, chcklprows, stored) );
 
    return SCIP_OKAY;

@@ -75,6 +75,7 @@ typedef struct MpsInput MPSINPUT;
 
 static
 RETCODE mpsinputCreate(
+   SCIP*            scip,
    MPSINPUT**       mpsi,
    FILE*            fp
    )
@@ -82,7 +83,7 @@ RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   ALLOC_OKAY( allocMemory(mpsi) );
+   CHECK_OKAY( SCIPallocMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -105,10 +106,11 @@ RETCODE mpsinputCreate(
 
 static
 void mpsinputFree(
+   SCIP*            scip,
    MPSINPUT**       mpsi
    )
 {
-   freeMemory(mpsi);
+   SCIPfreeMemory(scip, mpsi);
 }
 
 static
@@ -1216,9 +1218,11 @@ RETCODE readMPS(
       return SCIP_NOFILE;
    }   
 
-   CHECK_OKAY( mpsinputCreate(&mpsi, fp) );
+   CHECK_OKAY( mpsinputCreate(scip, &mpsi, fp) );
 
    CHECK_OKAY( readName(mpsi) );
+
+   CHECK_OKAY( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL) );
 
    if (mpsinputSection(mpsi) == MPS_OBJSEN)
    {
@@ -1261,7 +1265,7 @@ RETCODE readMPS(
 
       /*printf("Objective sense: %s\n", (mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE) ? "Minimize" : "Maximize");*/
    }
-   mpsinputFree(&mpsi);
+   mpsinputFree(scip, &mpsi);
 
    if( error )
       return SCIP_READERR;

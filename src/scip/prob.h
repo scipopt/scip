@@ -35,6 +35,26 @@ enum Objsense
 typedef enum Objsense OBJSENSE;
 
 typedef struct Prob PROB;               /**< main problem to solve */
+typedef struct ProbData PROBDATA;       /**< user problem data set by the reader */
+
+
+/** frees user problem data
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    probdata        : pointer to the user problem data to free
+ */
+#define DECL_PROBDELETE(x) RETCODE x (SCIP* scip, PROBDATA** probdata)
+
+/** transforms user problem data into data belonging to the transformed problem
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    sourcedata      : source problem data to transform
+ *    targetdata      : pointer to store created transformed problem data
+ */
+#define DECL_PROBTRANS(x) RETCODE x (SCIP* scip, PROBDATA* sourcedata, PROBDATA** targetdata)
+
 
 
 #include "memory.h"
@@ -49,6 +69,9 @@ typedef struct Prob PROB;               /**< main problem to solve */
 struct Prob
 {
    char*            name;               /**< problem name */
+   DECL_PROBDELETE  ((*probdelete));    /**< frees user problem data */
+   DECL_PROBTRANS   ((*probtrans));     /**< transforms user problem data into data belonging to the transformed problem */
+   PROBDATA*        probdata;           /**< user problem data set by the reader */
    VAR**            fixedvars;          /**< array with fixed and aggregated variables */
    VAR**            vars;               /**< array with active variables ordered binary, integer, implicit, continous */
    HASHTABLE*       varnames;           /**< hash table storing variable's names */
@@ -78,7 +101,10 @@ struct Prob
 extern
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
+   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
 /** frees problem data structure */
@@ -120,6 +146,13 @@ RETCODE SCIPprobDeactivate(
 /*
  * problem modification
  */
+
+/** sets user problem data */
+extern
+void SCIPprobSetData(
+   PROB*            prob,               /**< problem */
+   PROBDATA*        probdata            /**< user problem data to use */
+   );
 
 /** adds variable to the problem and captures it */
 extern
@@ -188,6 +221,12 @@ Real SCIPprobExternObjval(
 extern
 const char* SCIPprobGetName(
    PROB*            prob                /**< problem data */
+   );
+
+/** gets user problem data */
+extern
+PROBDATA* SCIPprobGetData(
+   PROB*            prob                /**< problem */
    );
 
 /** returns variable of the problem with given name */

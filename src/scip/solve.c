@@ -803,7 +803,7 @@ RETCODE SCIPsolveCIP(
             {
                CHECK_OKAY( SCIPsolCreatePseudoSol(&sol, memhdr, stat, tree, NULL) );
             }
-            CHECK_OKAY( SCIPprimalAddSolMove(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
+            CHECK_OKAY( SCIPprimalAddSolFree(primal, memhdr, set, stat, prob, tree, lp, eventfilter, &sol) );
          }
       }
 

@@ -433,7 +433,7 @@ RETCODE colAddCoeff(
    assert(col->var != NULL);
    assert(row != NULL);
    assert(!SCIPsetIsZero(set, val));
-   assert(colSearchCoeff(col, row) == -1);
+   /*assert(colSearchCoeff(col, row) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    checkLinks(lp);
 
@@ -693,7 +693,7 @@ RETCODE rowAddCoeff(
    assert(col != NULL);
    assert(col->var != NULL);
    assert(!SCIPsetIsZero(set, val));
-   assert(rowSearchCoeff(row, col) == -1);
+   /*assert(rowSearchCoeff(row, col) == -1);*/ /* this assert would lead to slight differences in the solution process */
 
    checkLinks(lp);
 

@@ -325,7 +325,10 @@ RETCODE SCIPincludeDisp(
 extern
 RETCODE SCIPcreateProb(
    SCIP*            scip,               /**< SCIP data structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
+   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   PROBDATA*        probdata            /**< user problem data set by the reader */
    );
 
 /** reads problem from file and initializes all solving data structures */
@@ -339,6 +342,20 @@ RETCODE SCIPreadProb(
 extern
 RETCODE SCIPfreeProb(
    SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets user problem data */
+extern
+RETCODE SCIPgetProbData(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROBDATA**       probdata            /**< pointer to store user problem data */
+   );
+
+/** sets user problem data */
+extern
+RETCODE SCIPsetProbData(
+   SCIP*            scip,               /**< SCIP data structure */
+   PROBDATA*        probdata            /**< user problem data to use */
    );
 
 /** sets objective sense of problem */
@@ -1097,35 +1114,35 @@ RETCODE SCIPprintBestSol(
    FILE*            file                /**< output file (or NULL for standard output) */
    );
 
-/** adds feasible primal solution to solution storage by moving it */
-extern
-RETCODE SCIPaddSolMove(
-   SCIP*            scip,               /**< SCIP data structure */
-   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
-   );
-
 /** adds feasible primal solution to solution storage by copying it */
 extern
-RETCODE SCIPaddSolCopy(
+RETCODE SCIPaddSol(
    SCIP*            scip,               /**< SCIP data structure */
    SOL*             sol                 /**< primal CIP solution */
    );
 
-/** checks solution for feasibility; if possible, adds it to storage by moving */
+/** adds primal solution to solution storage, frees the solution afterwards */
 extern
-RETCODE SCIPtrySolMove(
+RETCODE SCIPaddSolFree(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SOL**            sol                 /**< pointer to primal CIP solution; is cleared in function call */
+   );
+
+/** checks solution for feasibility; if possible, adds it to storage by copying */
+extern
+RETCODE SCIPtrySol(
+   SCIP*            scip,               /**< SCIP data structure */
+   SOL*             sol,                /**< primal CIP solution */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
-/** checks solution for feasibility; if possible, adds it to storage by copying */
+/** checks primal solution; if feasible, adds it to storage; solution is freed afterwards */
 extern
-RETCODE SCIPtrySolCopy(
+RETCODE SCIPtrySolFree(
    SCIP*            scip,               /**< SCIP data structure */
-   SOL*             sol,                /**< primal CIP solution */
+   SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    Bool             chckintegrality,    /**< has integrality to be checked? */
    Bool             chcklprows,         /**< have current LP rows to be checked? */
    Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */

@@ -64,7 +64,7 @@ DECL_NODESELFREE(SCIPnodeselFreeBfs)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   freeMemory(&nodeseldata);
+   SCIPfreeMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
@@ -177,7 +177,7 @@ RETCODE SCIPincludeNodeselBfs(
    NODESELDATA* nodeseldata;
 
    /* allocate and initialise node selector data; this has to be freed in the destructor */
-   ALLOC_OKAY( allocMemory(&nodeseldata) );
+   CHECK_OKAY( SCIPallocMemory(scip, &nodeseldata) );
    nodeseldata->maxplungedepth = SCIP_DEFAULT_MAXPLUNGEDEPTH;
 
    /* include node selector */

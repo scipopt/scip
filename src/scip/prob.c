@@ -91,7 +91,10 @@ RETCODE probEnsureConssMem(
 /** creates problem data structure */
 RETCODE SCIPprobCreate(
    PROB**           prob,               /**< pointer to problem data structure */
-   const char*      name                /**< problem name */
+   const char*      name,               /**< problem name */
+   DECL_PROBDELETE  ((*probdelete)),    /**< frees user problem data */
+   DECL_PROBTRANS   ((*probtrans)),     /**< transforms user problem data into data belonging to the transformed problem */
+   PROBDATA*        probdata            /**< user problem data set by the reader */
    )
 {
    assert(prob != NULL);
@@ -99,6 +102,9 @@ RETCODE SCIPprobCreate(
    ALLOC_OKAY( allocMemory(prob) );
    ALLOC_OKAY( duplicateMemoryArray(&(*prob)->name, name, strlen(name)+1) );
 
+   (*prob)->probdata = probdata;
+   (*prob)->probdelete = probdelete;
+   (*prob)->probtrans = probtrans;
    (*prob)->fixedvars = NULL;
    (*prob)->vars = NULL;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, SCIP_HASHSIZE_NAMES,
@@ -136,7 +142,14 @@ RETCODE SCIPprobFree(
 
    assert(prob != NULL);
    assert(*prob != NULL);
+   assert(set != NULL);
    
+   /* free user problem data */
+   if( (*prob)->probdelete != NULL )
+   {
+      CHECK_OKAY( (*prob)->probdelete(set->scip, &(*prob)->probdata) );
+   }
+
    freeMemoryArray(&(*prob)->name);
 
    /* release constraints and free constraint array */
@@ -178,14 +191,15 @@ RETCODE SCIPprobTransform(
    int v;
    int c;
 
+   assert(set != NULL);
    assert(source != NULL);
    assert(memhdr != NULL);
    assert(target != NULL);
 
    debugMessage("transform problem: original has %d variables\n", source->nvars);
 
-   /* create target problem data */
-   CHECK_OKAY( SCIPprobCreate(target, source->name) );
+   /* create target problem data (probtrans is not needed, probdata is set later) */
+   CHECK_OKAY( SCIPprobCreate(target, source->name, source->probdelete, NULL, NULL) );
 
    /* transform and copy all variables to target problem */
    CHECK_OKAY( probEnsureVarsMem(*target, set, source->nvars) );
@@ -204,6 +218,14 @@ RETCODE SCIPprobTransform(
       CHECK_OKAY( SCIPprobAddCons(*target, memhdr, set, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
    }
+
+   /* call user data transformation */
+   if( source->probtrans != NULL )
+   {
+      CHECK_OKAY( source->probtrans(set->scip, source->probdata, &(*target)->probdata) );
+   }
+   else
+      (*target)->probdata = source->probdata;
 
    return SCIP_OKAY;
 }
@@ -254,6 +276,17 @@ RETCODE SCIPprobDeactivate(
 /*
  * problem modification
  */
+
+/** sets user problem data */
+void SCIPprobSetData(
+   PROB*            prob,               /**< problem */
+   PROBDATA*        probdata            /**< user problem data to use */
+   )
+{
+   assert(prob != NULL);
+
+   prob->probdata = probdata;
+}
 
 /** insert var at the correct position in vars array, depending on its type */
 static
@@ -604,6 +637,16 @@ const char* SCIPprobGetName(
 {
    assert(prob != NULL);
    return prob->name;
+}
+
+/** gets user problem data */
+PROBDATA* SCIPprobGetData(
+   PROB*            prob                /**< problem */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->probdata;
 }
 
 /** returns variable of the problem with given name */

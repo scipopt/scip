@@ -1680,7 +1680,7 @@ RETCODE SCIPlinconsSeparate(
             assert(SCIPisSumEQ(scip, rowfeasibility, feasibility));
          }
 #endif
-         
+
          /* free the linconsdata data and convert lincons to point to the row */
          CHECK_OKAY( linconsdataFree(scip, &lincons->data.linconsdata) );
          lincons->islprow = TRUE;
