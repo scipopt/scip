@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.118 2004/05/05 14:05:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.119 2004/05/14 13:43:54 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -441,7 +441,7 @@ void rowBSort(
    }
 }
 
-/** sorts column entries of rows currently in the LP such that lower row indices precede higher ones */
+/** sorts column entries of linked rows currently in the LP such that lower row indices precede higher ones */
 static
 void colSortLP(
    COL*             col                 /**< column to be sorted */
@@ -472,7 +472,9 @@ void colSortLP(
    col->lprowssorted = TRUE;
 }
 
-/** sorts column entries of rows currently not in the LP such that lower row indices precede higher ones */
+/** sorts column entries of unlinked rows or rows currently not in the LP such that lower row indices precede higher
+ *  ones
+ */
 static
 void colSortNonLP(
    COL*             col                 /**< column to be sorted */
@@ -503,7 +505,7 @@ void colSortNonLP(
    col->nonlprowssorted = TRUE;
 }
 
-/** sorts row entries of columns currently in the LP such that lower column indices precede higher ones */
+/** sorts row entries of linked columns currently in the LP such that lower column indices precede higher ones */
 static
 void rowSortLP(
    ROW*             row                 /**< row to be sorted */
@@ -534,7 +536,9 @@ void rowSortLP(
    row->lpcolssorted = TRUE;
 }
 
-/** sorts row entries of columns currently not in the LP such that lower column indices precede higher ones */
+/** sorts row entries of unlinked columns or columns currently not in the LP such that lower column indices precede
+ *  higher ones
+ */
 static
 void rowSortNonLP(
    ROW*             row                 /**< row to be sorted */
@@ -642,7 +646,7 @@ int colSearchCoef(
 
 /** searches coefficient in part of the row, returns position in col vector or -1 if not found */
 static
-int rowSearchCoeffPart(
+int rowSearchCoefPart(
    ROW*             row,                /**< row to be searched in */
    const COL*       col,                /**< coefficient to be searched for */
    int              minpos,             /**< first position of search range */
@@ -702,20 +706,31 @@ int rowSearchCoef(
       rowSortLP(row);
       assert(row->lpcolssorted);
 
-      pos = rowSearchCoeffPart(row, col, 0, row->nlpcols-1);
-      if( pos >= 0 )
-         return pos;
+      pos = rowSearchCoefPart(row, col, 0, row->nlpcols-1);
    }
 
    /* search in the non-LP/unlinked columns */
-   if( col->lppos == -1 || row->nunlinked > 0 )
+   if( pos == -1 && (col->lppos == -1 || row->nunlinked > 0) )
    {
       /* row has to be sorted, such that binary search works */
       rowSortNonLP(row);
       assert(row->nonlpcolssorted);
 
-      pos = rowSearchCoeffPart(row, col, row->nlpcols, row->len-1);
+      pos = rowSearchCoefPart(row, col, row->nlpcols, row->len-1);
    }
+
+#ifndef NDEBUG
+   /* validate result */
+   assert(-1 <= pos && pos < row->len);
+   if( pos >= 0 )
+      assert(row->cols[pos] == col);
+   else
+   {
+      int i;
+      for( i = 0; i < row->len; ++i )
+         assert(row->cols[i] != col);
+   }
+#endif
 
    return pos;
 }
@@ -847,7 +862,7 @@ void rowMoveCoef(
    }
 
    /* update sorted flags */
-   if( row->cols[newpos]->lppos >= 0 )
+   if( row->cols[newpos]->lppos >= 0 && row->linkpos[newpos] >= 0 )
       row->lpcolssorted = FALSE;
    else
       row->nonlpcolssorted = FALSE;
@@ -907,11 +922,11 @@ void rowSwapCoeffs(
    }
 
    /* update sorted flags */
-   if( row->cols[pos1]->lppos >= 0 )
+   if( row->cols[pos1]->lppos >= 0 && row->linkpos[pos1] >= 0 )
       row->lpcolssorted = FALSE;
    else
       row->nonlpcolssorted = FALSE;
-   if( row->cols[pos2]->lppos >= 0 )
+   if( row->cols[pos2]->lppos >= 0 && row->linkpos[pos2] >= 0 )
       row->lpcolssorted = FALSE;
    else
       row->nonlpcolssorted = FALSE;
@@ -1395,7 +1410,7 @@ RETCODE rowAddCoef(
    }
 
    /* update the sorted flags */
-   if( col->lppos >= 0 )
+   if( col->lppos >= 0 && linkpos >= 0 )
    {
       if( row->nlpcols > 1 )
          row->lpcolssorted = row->lpcolssorted && (row->cols[row->nlpcols-2]->index < col->index);
@@ -3891,6 +3906,8 @@ void rowMerge(
    assert(row->nunlinked == row->len);
    assert(row->nlpcols == 0);
 
+   debugMessage("merging row <%s>\n", row->name);
+
    /* do nothing on empty rows; if row is sorted, nothing has to be done */
    if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
    {
@@ -3950,6 +3967,20 @@ void rowMerge(
       row->len = t;
       row->nunlinked = t;
    }
+
+#ifndef NDEBUG
+   /* check for double entries */
+   {
+      int i;
+      int j;
+
+      for( i = 0; i < row->len; ++i )
+      {
+         for( j = i+1; j < row->len; ++j )
+            assert(row->cols[i] != row->cols[j]);
+      }
+   }
+#endif
 }
 
 /** enables delaying of row sorting */
@@ -6577,6 +6608,18 @@ RETCODE lpSolveStable(
    infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
       "(node %lld) numerical troubles in LP %d -- solve again from scratch with %s simplex\n", 
       stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
+   CHECK_OKAY( lpSetFeastol(lp, set->feastol) );
+   CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
+
+   /* check for stability */
+   if( SCIPlpiIsStable(lp->lpi) )
+      return SCIP_OKAY;
+
+   /* solve again with tighter feasibility tolerance, use other simplex this time */
+   infoMessage(set->verblevel, SCIP_VERBLEVEL_FULL,
+      "(node %lld) numerical troubles in LP %d -- solve again with tighter feasibility tolerance with %s simplex\n", 
+      stat->nnodes, stat->nlps, !useprimal ? "primal" : "dual");
+   CHECK_OKAY( lpSetFeastol(lp, 0.001*set->feastol) );
    CHECK_OKAY( lpSimplex(lp, set, stat, !useprimal) );
 
    /* check for stability */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.16 2004/05/05 12:47:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.17 2004/05/14 13:43:54 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -88,7 +88,7 @@ struct Col
    int              index;              /**< consecutively numbered column identifier */
    int              size;               /**< size of the row- and val-arrays */
    int              len;                /**< number of nonzeros in column */
-   int              nlprows;            /**< number of rows in column, that belong to the current LP */
+   int              nlprows;            /**< number of linked rows in column, that belong to the current LP */
    int              nunlinked;          /**< number of column entries, where the rows don't know about the column */
    int              lppos;              /**< column position number in current LP, or -1 if not in current LP */
    int              lpipos;             /**< column position number in LP solver, or -1 if not in LP solver */
@@ -140,7 +140,7 @@ struct Row
    int              index;              /**< consecutively numbered row identifier */
    int              size;               /**< size of the col- and val-arrays */
    int              len;                /**< number of nonzeros in row */
-   int              nlpcols;            /**< number of columns in row, that belong to the current LP */
+   int              nlpcols;            /**< number of linked columns in row, that belong to the current LP */
    int              nunlinked;          /**< number of row entries, where the columns don't know about the row */
    int              nuses;              /**< number of times, this row is referenced */
    int              lppos;              /**< row position number in current LP, or -1 if not in current LP */

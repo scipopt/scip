@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.62 2004/05/07 11:56:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.63 2004/05/14 13:43:54 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -1108,6 +1108,13 @@ RETCODE SCIPlpiChgBounds(
    assert(lpi->cpxlp != NULL);
 
    debugMessage("changing %d bounds in CPLEX\n", ncols);
+#ifdef DEBUG
+   {
+      int i;
+      for( i = 0; i < ncols; ++i )
+         printf("  col %d: [%g,%g]\n", ind[i], lb[i], ub[i]);
+   }
+#endif
 
    invalidateSolution(lpi);
 

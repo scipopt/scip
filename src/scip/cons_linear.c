@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.95 2004/05/05 13:27:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.96 2004/05/14 13:43:54 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3852,15 +3852,15 @@ RETCODE aggregateConstraints(
       /* normalize the new constraint */
       CHECK_OKAY( normalizeCons(scip, newcons) );
 
-      debugMessage(" -> <%s>: ", SCIPconsGetName(newcons));
-      debug(consdataPrint(scip, SCIPconsGetData(newcons), NULL));
-
       /* check, if we really want to use the new constraint instead of the old one:
        * use the new one, if the maximum norm doesn't grow too much
        */
       if( consdataGetMaxAbsval(SCIPconsGetData(newcons)) <= maxaggrnormscale * consdataGetMaxAbsval(consdata0) )
       {
          CONS* upgdcons;
+
+         debugMessage(" -> aggregated to <%s>: ", SCIPconsGetName(newcons));
+         debug(consdataPrint(scip, SCIPconsGetData(newcons), NULL));
 
          /* update the statistics: we changed all coefficients */
          if( !consdata0->upgraded )
@@ -4382,6 +4382,9 @@ DECL_CONSPRESOL(consPresolLinear)
       if( SCIPconsIsModifiable(cons) )
          continue;
 
+      /* normalize constraint */
+      CHECK_OKAY( normalizeCons(scip, cons) );
+
       /* tighten left and right hand side due to integrality */
       CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
 
@@ -4501,6 +4504,7 @@ DECL_CONSPRESOL(consPresolLinear)
    }
 
    /* process pairs of constraints: check them for redundancy and try to aggregate them */
+#if 0 /*???????????????????????*/
    if( *result != SCIP_CUTOFF && firstchange != -1 )
    {
       for( c = firstchange; c < nconss; ++c )
@@ -4518,6 +4522,7 @@ DECL_CONSPRESOL(consPresolLinear)
          consdata->changed = FALSE;
       }
    }
+#endif /*???????????????????????????*/
 
    /* modify the result code */
    if( *result == SCIP_REDUCEDDOM )
@@ -5020,7 +5025,6 @@ RETCODE SCIPupgradeConsLinear(
          CHECK_OKAY( SCIPreleaseRow(scip, &consdata->row) );
       }
    }
-
 
    /* normalize constraint */
    CHECK_OKAY( normalizeCons(scip, cons) );
