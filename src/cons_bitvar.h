@@ -53,6 +53,34 @@ RETCODE SCIPcreateConsBitvar(
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
+/** creates and captures a constant bitvar constraint with constant given as bit vector
+ *  Warning! Either the bitvar should be short, or the objective value should be zero, because the objective
+ *  value of the most significant bit in the variable would be 2^(nbits-1)*obj
+ */
+extern
+RETCODE SCIPcreateConsBitconst(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*      name,               /**< name of constraint */
+   int              nbits,              /**< number of bits in the bitvar */
+   Real             obj,                /**< objective value of bitvar constant */
+   Bool*            fixedbits           /**< array with the fixed bit values of constant (least significant first) */
+   );
+
+/** creates and captures a constant bitvar constraint with constant parsed from a string
+ *  Warning! Either the bitvar should be short, or the objective value should be zero, because the objective
+ *  value of the most significant bit in the variable would be 2^(nbits-1)*obj
+ */
+extern
+RETCODE SCIPcreateConsBitconstString(
+   SCIP*            scip,               /**< SCIP data structure */
+   CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*      name,               /**< name of constraint */
+   int              nbits,              /**< number of bits in the bitvar */
+   Real             obj,                /**< objective value of bitvar constant */
+   const char*      cstring             /**< constant given as a string */
+   );
+
 /** gets number of bits in bitvar */
 extern
 int SCIPgetNBitsBitvar(

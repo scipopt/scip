@@ -129,7 +129,7 @@ RETCODE SCIPfree(
    SCIP**           scip                /**< pointer to SCIP data structure */
    );
 
-/** prints a message depending on the verbosity level */
+/** prints a message (with newline) depending on the verbosity level */
 extern
 void SCIPmessage(
    SCIP*            scip,               /**< SCIP data structure */

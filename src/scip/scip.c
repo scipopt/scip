@@ -328,7 +328,7 @@ RETCODE SCIPfree(
    return SCIP_OKAY;
 }
 
-/** prints a message depending on the verbosity level */
+/** prints a message (with newline) depending on the verbosity level */
 void SCIPmessage(
    SCIP*            scip,               /**< SCIP data structure */
    VERBLEVEL        msgverblevel,       /**< verbosity level of this message */

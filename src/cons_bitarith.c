@@ -602,7 +602,7 @@ RETCODE checkAdd(
 
 /** checks a bitarith constraint for feasibility of given solution */
 static
-RETCODE check(
+RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< bitarith constraint */
    SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
@@ -744,7 +744,7 @@ RETCODE separateAdd(
 
 /** separates bitarith constraint */
 static
-RETCODE separate(
+RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< bitarith constraint */
    RESULT*          result              /**< pointer to store result of separation */
@@ -910,7 +910,7 @@ DECL_CONSSEPA(consSepaBitarith)
    for( c = 0; c < nusefulconss; ++c )
    {
       debugMessage("separating bitarith constraint <%s>\n", SCIPconsGetName(conss[c]));
-      CHECK_OKAY( separate(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
 
    /* step 2: if no cuts were found and we are in the root node, check remaining bitarith constraints for feasibility */
@@ -919,7 +919,7 @@ DECL_CONSSEPA(consSepaBitarith)
       for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
       {
          debugMessage("separating bitarith constraint <%s>\n", SCIPconsGetName(conss[c]));
-         CHECK_OKAY( separate(scip, conss[c], result) );
+         CHECK_OKAY( separateCons(scip, conss[c], result) );
       }
    }
 
@@ -946,7 +946,7 @@ DECL_CONSENFOLP(consEnfolpBitarith)
    for( c = 0; c < nusefulconss; ++c )
    {
       debugMessage("LP enforcing bitarith constraint <%s>\n", SCIPconsGetName(conss[c]));
-      CHECK_OKAY( separate(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
    if( *result != SCIP_FEASIBLE )
       return SCIP_OKAY;
@@ -955,7 +955,7 @@ DECL_CONSENFOLP(consEnfolpBitarith)
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
       debugMessage("LP enforcing bitarith constraint <%s>\n", SCIPconsGetName(conss[c]));
-      CHECK_OKAY( separate(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
 
    return SCIP_OKAY;
@@ -984,7 +984,7 @@ DECL_CONSENFOPS(consEnfopsBitarith)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      CHECK_OKAY( check(scip, conss[c], NULL, TRUE, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, TRUE, &violated) );
    }
 
    if( violated )
@@ -1011,7 +1011,7 @@ DECL_CONSCHECK(consCheckBitarith)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      CHECK_OKAY( check(scip, conss[c], sol, checklprows, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], sol, checklprows, &violated) );
    }
 
    if( violated )

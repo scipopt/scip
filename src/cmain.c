@@ -45,6 +45,7 @@
 #include "cons_varlb.h"
 #include "cons_varub.h"
 #include "presol_dualfix.h"
+#include "presol_trivial.h"
 #include "nodesel_bfs.h"
 #include "nodesel_dfs.h"
 #include "nodesel_restartdfs.h"
@@ -78,10 +79,6 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* include user defined callbacks */
-   CHECK_OKAY( SCIPincludeReaderCnf(scip) );
-   CHECK_OKAY( SCIPincludeReaderMps(scip) );
-   CHECK_OKAY( SCIPincludeReaderRtp(scip) );
-   CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrAnd(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrBitarith(scip) );
    CHECK_OKAY( SCIPincludeConsHdlrBitvar(scip) );
@@ -99,7 +96,12 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPincludeConsHdlrVarub(scip) );
 #endif
 
+   CHECK_OKAY( SCIPincludeReaderCnf(scip) );
+   CHECK_OKAY( SCIPincludeReaderMps(scip) );
+   CHECK_OKAY( SCIPincludeReaderRtp(scip) );
+   CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludePresolDualfix(scip) );
+   CHECK_OKAY( SCIPincludePresolTrivial(scip) );
    CHECK_OKAY( SCIPincludeNodeselBfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselDfs(scip) );
    CHECK_OKAY( SCIPincludeNodeselRestartdfs(scip) );
@@ -159,8 +161,12 @@ RETCODE runSCIP(
 
       CHECK_OKAY( SCIPcreateProb(scip, "testprob", NULL, NULL, NULL) );
       
+      CHECK_OKAY( SCIPcreateConsBitconstString(scip, &bitvar1, "bitvar1", 16, 0.0, "b0000000000001001010010") );
+      CHECK_OKAY( SCIPaddCons(scip, bitvar1) );
+#if 0
       CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar1, "bitvar1", 16, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, bitvar1) );
+#endif
       CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar2, "bitvar2", 16, +0.0, TRUE, TRUE, TRUE, TRUE, TRUE) );
       CHECK_OKAY( SCIPaddCons(scip, bitvar2) );
       CHECK_OKAY( SCIPcreateConsBitvar(scip, &bitvar3, "bitvar3", 16, -1.0, TRUE, TRUE, TRUE, TRUE, TRUE) );

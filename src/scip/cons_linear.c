@@ -1723,7 +1723,7 @@ RETCODE chgCoefPos(
 
 /** scales a linear constraint with a constant scalar */
 static
-RETCODE scale(
+RETCODE scaleCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint to scale */
    Real             scalar              /**< value to scale constraint with */
@@ -1800,7 +1800,7 @@ RETCODE scale(
  *      If all coefficients are integral, divide them by the greatest common divisor.
  */
 static
-RETCODE normalize(
+RETCODE normalizeCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons                /**< linear constraint to normalize */
    )
@@ -1901,7 +1901,7 @@ RETCODE normalize(
       /* scale the constraint with -1 */
       debugMessage("multiply linear constraint with -1.0\n");
       debug(consdataPrint(scip, consdata, NULL));
-      CHECK_OKAY( scale(scip, cons, -1.0) );
+      CHECK_OKAY( scaleCons(scip, cons, -1.0) );
    }
 
    /*
@@ -1925,7 +1925,7 @@ RETCODE normalize(
       /* scale the constraint with the smallest common multiple of all denominators */
       debugMessage("scale linear constraint with %lld to make coefficients integral\n", scm);
       debug(consdataPrint(scip, consdata, NULL));
-      CHECK_OKAY( scale(scip, cons, (Real)scm) );
+      CHECK_OKAY( scaleCons(scip, cons, (Real)scm) );
    }
 
    /*
@@ -1948,7 +1948,7 @@ RETCODE normalize(
          /* divide the constaint by the greatest common divisor of the coefficients */
          debugMessage("divide linear constraint by greatest common divisor %lld\n", gcd);
          debug(consdataPrint(scip, consdata, NULL));
-         CHECK_OKAY( scale(scip, cons, 1.0/(Real)gcd) );
+         CHECK_OKAY( scaleCons(scip, cons, 1.0/(Real)gcd) );
       }
    }
    
@@ -2175,7 +2175,7 @@ RETCODE tightenBounds(
 
 /** checks linear constraint for feasibility of given solution or actual solution */
 static
-RETCODE check(
+RETCODE checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
@@ -2285,7 +2285,7 @@ RETCODE addCut(
 
 /** separates linear constraint: adds linear constraint as cut, if violated by current LP solution */
 static
-RETCODE separate(
+RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< linear constraint */
    RESULT*          result              /**< pointer to store result of separation */
@@ -2297,7 +2297,7 @@ RETCODE separate(
    assert(cons != NULL);
    assert(result != NULL);
 
-   CHECK_OKAY( check(scip, cons, NULL, FALSE, &violation, &violated) );
+   CHECK_OKAY( checkCons(scip, cons, NULL, FALSE, &violation, &violated) );
 
    if( violated )
    {
@@ -2405,7 +2405,7 @@ DECL_CONSTRANS(consTransLinear)
    /* normalize constraint, if it is unmodifiable */
    if( !SCIPconsIsModifiable(*targetcons) )
    {
-      CHECK_OKAY( normalize(scip, *targetcons) );
+      CHECK_OKAY( normalizeCons(scip, *targetcons) );
    }
 
    /* try to upgrade target linear constraint into more specific constraint */
@@ -2460,7 +2460,7 @@ DECL_CONSSEPA(consSepaLinear)
    for( c = 0; c < nusefulconss; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      CHECK_OKAY( separate(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
 
    /* step 2: combine linear constraints to get more cuts */
@@ -2472,7 +2472,7 @@ DECL_CONSSEPA(consSepaLinear)
       for( c = nusefulconss; c < nconss && *result == SCIP_DIDNOTFIND; ++c )
       {
          /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-         CHECK_OKAY( separate(scip, conss[c], result) );
+         CHECK_OKAY( separateCons(scip, conss[c], result) );
       }
    }
 
@@ -2501,7 +2501,7 @@ DECL_CONSENFOLP(consEnfolpLinear)
    for( c = 0; c < nusefulconss; ++c )
    {
       /*debugMessage("separating linear constraint <%s>\n", SCIPconsGetName(conss[c]));*/
-      CHECK_OKAY( separate(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
    if( *result != SCIP_FEASIBLE )
       return SCIP_OKAY;
@@ -2509,7 +2509,7 @@ DECL_CONSENFOLP(consEnfolpLinear)
    /* step 2: check all obsolete linear constraints for feasibility */
    for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], result) );
+      CHECK_OKAY( separateCons(scip, conss[c], result) );
    }
 
    return SCIP_OKAY;
@@ -2540,7 +2540,7 @@ DECL_CONSENFOPS(consEnfopsLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      CHECK_OKAY( check(scip, conss[c], NULL, TRUE, NULL, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], NULL, TRUE, NULL, &violated) );
    }
 
    if( violated )
@@ -2569,7 +2569,7 @@ DECL_CONSCHECK(consCheckLinear)
    violated = FALSE;
    for( c = 0; c < nconss && !violated; ++c )
    {
-      CHECK_OKAY( check(scip, conss[c], sol, checklprows, NULL, &violated) );
+      CHECK_OKAY( checkCons(scip, conss[c], sol, checklprows, NULL, &violated) );
    }
 
    if( violated )

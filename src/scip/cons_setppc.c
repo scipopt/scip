@@ -898,7 +898,7 @@ RETCODE processFixings(
 
 /** checks constraint for violation, returns TRUE iff constraint is feasible */
 static
-Bool check(
+Bool checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< set partitioning / packing / covering constraint to be checked */
    SOL*             sol                 /**< primal CIP solution */
@@ -1010,7 +1010,7 @@ RETCODE addCut(
 
 /** checks constraint for violation, and adds it as a cut if possible */
 static
-RETCODE separate(
+RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< set partitioning / packing / covering constraint to be separated */
    Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
@@ -1053,7 +1053,7 @@ RETCODE separate(
          addcut = !SCIPisFeasible(scip, SCIPgetRowLPFeasibility(scip, consdata->row));
       }
       else
-         addcut = !check(scip, consdata, NULL);
+         addcut = !checkCons(scip, consdata, NULL);
 
       if( !addcut )
       {
@@ -1108,7 +1108,7 @@ RETCODE enforcePseudo(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( check(scip, consdata, NULL) )
+      if( checkCons(scip, consdata, NULL) )
       {
          /* constraint was feasible -> increase age */
          CHECK_OKAY( SCIPincConsAge(scip, cons) );
@@ -1271,7 +1271,7 @@ DECL_CONSSEPA(consSepaSetppc)
    /* step 1: check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
    /* step 2: combine set partitioning / packing / covering constraints to get more cuts */
@@ -1282,7 +1282,7 @@ DECL_CONSSEPA(consSepaSetppc)
    {
       for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
       {
-         CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
+         CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
       }
    }
 
@@ -1580,13 +1580,13 @@ DECL_CONSENFOLP(consEnfolpSetppc)
    /* step 1: check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
    /* step 2: check all obsolete set partitioning / packing / covering constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( separateCons(scip, conss[c], &cutoff, &separated, &reduceddom) );
    }
 
 #if 0
@@ -1697,7 +1697,7 @@ DECL_CONSCHECK(consCheckSetppc)
       assert(consdata != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         if( !check(scip, consdata, sol) )
+         if( !checkCons(scip, consdata, sol) )
          {
             /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );

@@ -819,7 +819,7 @@ RETCODE processWatchedVars(
 
 /** checks constraint for violation, returns TRUE iff constraint is feasible */
 static
-Bool check(
+Bool checkCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA*        consdata,           /**< logic or constraint to be checked */
    SOL*             sol                 /**< primal CIP solution */
@@ -920,7 +920,7 @@ RETCODE addCut(
 
 /** checks constraint for violation, and adds it as a cut if possible */
 static
-RETCODE separate(
+RETCODE separateCons(
    SCIP*            scip,               /**< SCIP data structure */
    CONS*            cons,               /**< logic or constraint to be separated */
    EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
@@ -965,7 +965,7 @@ RETCODE separate(
          addcut = !SCIPisFeasible(scip, feasibility);
       }
       else
-         addcut = !check(scip, consdata, NULL);
+         addcut = !checkCons(scip, consdata, NULL);
 
       if( !addcut )
       {
@@ -1021,7 +1021,7 @@ RETCODE enforcePseudo(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      if( check(scip, consdata, NULL) )
+      if( checkCons(scip, consdata, NULL) )
       {
          /* constraint was feasible -> increase age */
          CHECK_OKAY( SCIPincConsAge(scip, cons) );
@@ -1183,7 +1183,7 @@ DECL_CONSSEPA(consSepaLogicor)
    /* step 1: check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
    /* step 2: combine logic or constraints to get more cuts */
@@ -1194,7 +1194,7 @@ DECL_CONSSEPA(consSepaLogicor)
    {
       for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
       {
-         CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+         CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
       }
    }
 
@@ -1541,13 +1541,13 @@ DECL_CONSENFOLP(consEnfolpLogicor)
    /* step 1: check all useful logic or constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
    /* step 2: check all obsolete logic or constraints for feasibility */
    for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
    {
-      CHECK_OKAY( separate(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+      CHECK_OKAY( separateCons(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
    }
 
 #if 0
@@ -1662,7 +1662,7 @@ DECL_CONSCHECK(consCheckLogicor)
       assert(consdata != NULL);
       if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
       {
-         if( !check(scip, consdata, sol) )
+         if( !checkCons(scip, consdata, sol) )
          {
             /* constraint is violated */
             CHECK_OKAY( SCIPresetConsAge(scip, cons) );

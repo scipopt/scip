@@ -28,9 +28,9 @@
 #include "presol_dualfix.h"
 
 
-#define PRESOL_NAME              "dualfix"
-#define PRESOL_DESC              "roundable variables dual fixing"
-#define PRESOL_PRIORITY          100000
+#define PRESOL_NAME            "dualfix"
+#define PRESOL_DESC            "roundable variables dual fixing"
+#define PRESOL_PRIORITY        +0100000
 
 
 
@@ -81,7 +81,12 @@ DECL_PRESOLEXEC(presolExecDualfix)
       /* apply the fixing */
       if( SCIPisInfinity(scip, ABS(bound)) )
       {
+         char msg[MAXSTRLEN];
+
          debugMessage(" -> unbounded fixing\n");
+         sprintf(msg, "problem infeasible or unbounded: variable <%s> with objective %g can be made infinitely %s",
+            SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound < 0.0 ? "small" : "large");
+         SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL, msg);
          *result = SCIP_UNBOUNDED;
          return SCIP_OKAY;
       }
@@ -107,7 +112,7 @@ DECL_PRESOLEXEC(presolExecDualfix)
  * presolver specific interface methods
  */
 
-/** creates the most infeasible LP braching rule and includes it in SCIP */
+/** creates the dual fixing presolver and includes it in SCIP */
 RETCODE SCIPincludePresolDualfix(
    SCIP*            scip                /**< SCIP data structure */
    )
