@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.33 2004/01/07 13:14:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.34 2004/01/19 14:10:02 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -189,6 +189,8 @@ RETCODE SCIPbranchcandGetLPCands(
 
          primsol = SCIPcolGetPrimsol(col);
          assert(primsol < SCIP_INVALID);
+         assert(SCIPsetIsFeasGE(set, primsol, col->lb));
+         assert(SCIPsetIsFeasLE(set, primsol, col->ub));
 
          var = col->var;
          assert(var != NULL);

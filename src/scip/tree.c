@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.73 2004/01/13 11:58:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.74 2004/01/19 14:10:06 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch-and-bound tree
@@ -1600,7 +1600,7 @@ RETCODE nodeToLeaf(
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    NODE*            lpfork,             /**< LP fork of the node */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
@@ -1617,7 +1617,7 @@ RETCODE nodeToLeaf(
    (*node)->data.leaf.lpfork = lpfork;
 
    /* if node is good enough to keep, put it on the node queue */
-   if( SCIPsetIsLT(set, (*node)->lowerbound, upperbound) )
+   if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
    {
       /* insert leaf in node queue */
       CHECK_OKAY( SCIPnodepqInsert(tree->leaves, set, *node) );
@@ -1732,24 +1732,30 @@ RETCODE actnodeToFork(
    /* resolve LP after cleaning up */
    if( !lp->solved )
    {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, FALSE) );
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+   }
+   assert(lp->solved);
 
-      /* If the reduced LP is not solved to optimality, something numerically weird happened.
-       * The only thing we can do, is to completely forget about the LP and treat the node as
-       * if it was only a pseudo-solution node. Therefore we have to remove all additional
-       * columns and rows from the LP and convert the node into a junction.
-       */
-      if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         /* remove all additions to the LP at this node */
-         CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
-         CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
-
-         /* convert node into a junction */
-         CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
-
-         return SCIP_OKAY;
-      }
+   /* There are two reasons, that the (reduced) LP is not solved to optimality:
+    *  - The primal heuristics (called after the current node's LP was solved) found a new 
+    *    solution, that is better than the current node's lower bound.
+    *  - Something numerically weird happened after cleaning up.
+    * The only thing we can do, is to completely forget about the LP and treat the node as
+    * if it was only a pseudo-solution node. Therefore we have to remove all additional
+    * columns and rows from the LP and convert the node into a junction.
+    * However, the node's lower bound is kept, thus automatically throwing away nodes that
+    * were cut off due to a primal solution.
+    */
+   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      /* remove all additions to the LP at this node */
+      CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+      CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
+      
+      /* convert node into a junction */
+      CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+      
+      return SCIP_OKAY;
    }
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
@@ -1826,24 +1832,30 @@ RETCODE actnodeToSubroot(
    /* resolve LP after cleaning up */
    if( !lp->solved )
    {
-      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, FALSE) );
+      CHECK_OKAY( SCIPlpSolve(lp, memhdr, set, stat, set->fastmip, FALSE) );
+   }
+   assert(lp->solved);
 
-      /* If the reduced LP is not solved to optimality, something numerically weird happened.
-       * The only thing we can do, is to completely forget about the LP and treat the node as
-       * if it was only a pseudo-solution node. Therefore we have to remove all additional
-       * columns and rows from the LP and convert the node into a junction.
-       */
-      if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         /* remove all additions to the LP at this node */
-         CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
-         CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
-
-         /* convert node into a junction */
-         CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
-
-         return SCIP_OKAY;
-      }
+   /* There are two reasons, that the (reduced) LP is not solved to optimality:
+    *  - The primal heuristics (called after the current node's LP was solved) found a new 
+    *    solution, that is better than the current node's lower bound.
+    *  - Something numerically weird happened after cleaning up.
+    * The only thing we can do, is to completely forget about the LP and treat the node as
+    * if it was only a pseudo-solution node. Therefore we have to remove all additional
+    * columns and rows from the LP and convert the node into a junction.
+    * However, the node's lower bound is kept, thus automatically throwing away nodes that
+    * were cut off due to a primal solution.
+    */
+   if( lp->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      /* remove all additions to the LP at this node */
+      CHECK_OKAY( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+      CHECK_OKAY( SCIPlpShrinkRows(lp, memhdr, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
+      
+      /* convert node into a junction */
+      CHECK_OKAY( actnodeToJunction(memhdr, set, tree, lp) );
+      
+      return SCIP_OKAY;
    }
    assert(lp->solved);
    assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
@@ -1891,7 +1903,7 @@ RETCODE treeNodesToQueue(
    NODE**           nodes,              /**< array of nodes to put on the queue */
    int*             nnodes,             /**< pointer to number of nodes in the array */
    NODE*            lpfork,             /**< LP fork of the nodes */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    int i;
@@ -1903,8 +1915,8 @@ RETCODE treeNodesToQueue(
 
    for( i = 0; i < *nnodes; ++i )
    {
-      /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the upper bound */
-      CHECK_OKAY( nodeToLeaf(&nodes[i], memhdr, set, tree, lp, lpfork, upperbound) );
+      /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the cutoff bound */
+      CHECK_OKAY( nodeToLeaf(&nodes[i], memhdr, set, tree, lp, lpfork, cutoffbound) );
       assert(nodes[i] == NULL);
    }
    *nnodes = 0;
@@ -1956,7 +1968,7 @@ RETCODE SCIPnodeActivate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    NODE* oldlpfork;
@@ -2019,10 +2031,10 @@ RETCODE SCIPnodeActivate(
    if( node == NULL )
    {
       /* move siblings to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, upperbound) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, cutoffbound) );
 
       /* move children to the queue, make them LEAFs */
-      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, upperbound) );
+      CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, cutoffbound) );
    }
    else
    {
@@ -2030,7 +2042,7 @@ RETCODE SCIPnodeActivate(
       {  
       case SCIP_NODETYPE_SIBLING:
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, upperbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, cutoffbound) );
 
          /* remove selected sibling from the siblings array */
          treeRemoveSibling(tree, node);
@@ -2049,7 +2061,7 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_CHILD:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, upperbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, cutoffbound) );
 
          /* remove selected child from the children array */      
          treeRemoveChild(tree, node);
@@ -2061,10 +2073,10 @@ RETCODE SCIPnodeActivate(
          
       case SCIP_NODETYPE_LEAF:
          /* move siblings to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, upperbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->siblings, &tree->nsiblings, oldlpfork, cutoffbound) );
          
          /* move children to the queue, make them LEAFs */
-         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, upperbound) );
+         CHECK_OKAY( treeNodesToQueue(tree, memhdr, set, lp, tree->children, &tree->nchildren, newlpfork, cutoffbound) );
 
          /* remove node from the queue */
          CHECK_OKAY( SCIPnodepqRemove(tree->leaves, set, node) );
@@ -2212,13 +2224,13 @@ RETCODE SCIPtreeSetNodesel(
    return SCIP_OKAY;
 }
 
-/** cuts off nodes with lower bound not better than given upper bound */
+/** cuts off nodes with lower bound not better than given cutoff bound */
 RETCODE SCIPtreeCutoff(
    TREE*            tree,               /**< branch-and-bound tree */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    NODE* node;
@@ -2240,13 +2252,13 @@ RETCODE SCIPtreeCutoff(
    tree->cutoffdelayed = FALSE;
 
    /* cut off leaf nodes in the queue */
-   CHECK_OKAY( SCIPnodepqBound(tree->leaves, memhdr, set, tree, lp, upperbound) );
+   CHECK_OKAY( SCIPnodepqBound(tree->leaves, memhdr, set, tree, lp, cutoffbound) );
 
    /* cut off siblings: we have to loop backwards, because a removal leads to moving the last node in empty slot */
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( SCIPsetIsGE(set, node->lowerbound, upperbound) )
+      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          debugMessage("cut off sibling %p in depth %d with lowerbound=%g at position %d\n", 
             node, node->depth, node->lowerbound, i);
@@ -2258,7 +2270,7 @@ RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( SCIPsetIsGE(set, node->lowerbound, upperbound) )
+      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
          debugMessage("cut off child %p in depth %d with lowerbound=%g at position %d\n",
             node, node->depth, node->lowerbound, i);
@@ -2579,7 +2591,7 @@ NODE* SCIPtreeGetLowerboundNode(
 /** gets the average lower bound of all nodes in the tree */
 Real SCIPtreeGetAvgLowerbound(
    TREE*            tree,               /**< branch-and-bound tree */
-   Real             upperbound          /**< global upper bound */
+   Real             cutoffbound         /**< global cutoff bound */
    )
 {
    Real lowerboundsum;
@@ -2593,7 +2605,7 @@ Real SCIPtreeGetAvgLowerbound(
    nnodes = SCIPtreeGetNLeaves(tree);
 
    /* add lower bound of active node */
-   if( tree->actnode != NULL && tree->actnode->lowerbound < upperbound )
+   if( tree->actnode != NULL && tree->actnode->lowerbound < cutoffbound )
    {
       lowerboundsum += tree->actnode->lowerbound;
       nnodes++;

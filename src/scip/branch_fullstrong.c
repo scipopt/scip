@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.12 2004/01/15 09:12:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.13 2004/01/19 14:10:02 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -45,7 +45,7 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
    VAR** lpcands;
    Real* lpcandssol;
    Real* lpcandsfrac;
-   Real upperbound;
+   Real cutoffbound;
    Real lowerbound;
    Real down;
    Real up;
@@ -69,9 +69,9 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* get current lower objective bound of the local sub problem and global upper bound */
+   /* get current lower objective bound of the local sub problem and global cutoff bound */
    lowerbound = SCIPgetLocalLowerbound(scip);
-   upperbound = SCIPgetUpperbound(scip);
+   cutoffbound = SCIPgetCutoffbound(scip);
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -110,8 +110,8 @@ DECL_BRANCHEXECLP(branchExeclpFullstrong)
             Bool upinf;
 
             /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            downinf = SCIPisGE(scip, down, upperbound);
-            upinf = SCIPisGE(scip, up, upperbound);
+            downinf = SCIPisGE(scip, down, cutoffbound);
+            upinf = SCIPisGE(scip, up, cutoffbound);
 
             if( downinf && upinf )
             {

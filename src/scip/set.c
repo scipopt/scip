@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.84 2004/01/16 11:25:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.85 2004/01/19 14:10:05 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -85,6 +85,7 @@
 
 /* LP Solving */
 
+#define SCIP_DEFAULT_CHECKLPFEAS      TRUE /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
 #define SCIP_DEFAULT_FASTMIP          TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_SCALING          TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LPSOLVEFREQ         1 /**< frequency for solving LP at the nodes; -1: never; 0: only root LP */
@@ -463,6 +464,11 @@ RETCODE SCIPsetCreate(
                   "lp/redcostfreq",
                   "frequency for applying reduced cost fixing (-1: never; 0: only root LP)",
                   &(*set)->redcostfreq, SCIP_DEFAULT_REDCOSTFREQ, -1, INT_MAX,
+                  NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
+                  "lp/checklpfeas",
+                  "should LP solutions be checked, resolving LP when numerical troubles occur?",
+                  &(*set)->checklpfeas, SCIP_DEFAULT_CHECKLPFEAS,
                   NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, memhdr,
                   "lp/fastmip",
@@ -2376,8 +2382,8 @@ Bool SCIPsetIsFracIntegral(
    )
 {
    assert(set != NULL);
-   assert(val >= -set->feastol);
-   assert(val < 1.0);
+   assert(SCIPsetIsGE(set, val, -set->feastol));
+   assert(SCIPsetIsLE(set, val, 1.0+set->feastol));
 
    return (val <= set->feastol);
 }

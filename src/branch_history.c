@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_history.c,v 1.3 2004/01/15 09:12:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_history.c,v 1.4 2004/01/19 14:10:03 bzfpfend Exp $"
 
 /**@file   branch_history.c
  * @brief  history branching rule
@@ -86,7 +86,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    Real* lpcandssol;
    Real* lpcandsfrac;
    Real lowerbound;
-   Real upperbound;
+   Real cutoffbound;
    Real bestdown;
    Real bestup;
    Real bestscore;
@@ -108,9 +108,9 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* get current lower objective bound of the local sub problem and global upper bound */
+   /* get current lower objective bound of the local sub problem and global cutoff bound */
    lowerbound = SCIPgetLocalLowerbound(scip);
-   upperbound = SCIPgetUpperbound(scip);
+   cutoffbound = SCIPgetCutoffbound(scip);
 
    /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
    allcolsinlp = SCIPallColsInLP(scip);
@@ -165,6 +165,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       for( c = 0; c < nlpcands; ++c )
       {
          assert(lpcands[c] != NULL);
+         assert(!SCIPisIntegral(scip, lpcandssol[c]));
 
          /* if strong branching was already applied to the variable at the current node, use the old strong branching
           * values and don't use strong branching again
@@ -233,6 +234,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       {
          /* get candidate number to initialize */
          c = sbcands[i];
+         assert(!SCIPisIntegral(scip, lpcandssol[c]));
 
          debugMessage("initializing history (%g/%g) of variable <%s> at %g with strong branching (%d iterations)\n",
             SCIPgetVarLPHistoryCount(scip, lpcands[c], 0), SCIPgetVarLPHistoryCount(scip, lpcands[c], 1), 
@@ -252,8 +254,8 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
             Bool upinf;
 
             /* because all existing columns are in LP, the strong branching bounds are feasible lower bounds */
-            downinf = SCIPisGE(scip, down, upperbound);
-            upinf = SCIPisGE(scip, up, upperbound);
+            downinf = SCIPisGE(scip, down, cutoffbound);
+            upinf = SCIPisGE(scip, up, cutoffbound);
 
             if( downinf && upinf )
             {
@@ -315,10 +317,11 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       NODE* node;
 
       assert(*result == SCIP_DIDNOTRUN);
-      assert(bestlpcand >= 0);
+      assert(0 <= bestlpcand && bestlpcand < nlpcands);
+      assert(!SCIPisIntegral(scip, lpcandssol[bestlpcand]));
 
       /* perform the branching */
-      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, prio=%g, score=%g)\n",
+      debugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%.12f, down=%g, up=%g, prio=%g, score=%g)\n",
          nlpcands, bestlpcand, SCIPvarGetName(lpcands[bestlpcand]), lpcandssol[bestlpcand], bestdown, bestup, 
          SCIPvarGetBranchingPriority(lpcands[bestlpcand]), bestscore);
 
@@ -329,7 +332,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       CHECK_OKAY( SCIPchgVarUbNode(scip, node, lpcands[bestlpcand], SCIPfloor(scip, lpcandssol[bestlpcand])) );
       if( allcolsinlp && bestisstrongbranch )
       {
-         assert(SCIPisLT(scip, bestdown, upperbound));
+         assert(SCIPisLT(scip, bestdown, cutoffbound));
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestdown) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));
@@ -341,7 +344,7 @@ DECL_BRANCHEXECLP(branchExeclpHistory)
       CHECK_OKAY( SCIPchgVarLbNode(scip, node, lpcands[bestlpcand], SCIPceil(scip, lpcandssol[bestlpcand])) );
       if( allcolsinlp && bestisstrongbranch )
       {
-         assert(SCIPisLT(scip, bestup, upperbound));
+         assert(SCIPisLT(scip, bestup, cutoffbound));
          CHECK_OKAY( SCIPupdateNodeLowerbound(scip, node, bestup) );
       }
       debugMessage(" -> child's lowerbound: %g\n", SCIPnodeGetLowerbound(node));

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.3 2003/11/21 10:35:31 bzfpfend Exp $
+# $Id: check.awk,v 1.4 2004/01/19 14:10:02 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -146,40 +146,32 @@ BEGIN {
    if( sblps >= 1 )
       sblpprod *= sblps;
    if (pb > 1e+19  ||  pb < -1e+19) {
-      printf ("%-19s & %7d & %5d & %14.10g & %14s & %6.1f & %s \\\\\n", 
+      printf ("%-19s & %7d & %5d & %14.9g & %14s & %6.1f & %s \\\\\n", 
 	      pprob, bbnodes, sblps, db, 
 	      "\\multicolumn{1}{c}{   -   }", tottime, 
 	      "\\multicolumn{1}{c}{   -   }")                      >TEXFILE;
    }
    else {
-      if ( pb > db ) {
-	 if (db >  0.001)  
-	    gap = 100.0 * (pb - db) / (1.0 * db);
-	 else if (db < -0.001)  
-	    gap = 100.0 * (pb - db) / (-1.0 * db);
-	 else      
-	    gap = 0.0;
+      if (abs(db) > 1e-4)
+      {
+	 gap = abs((pb-db)/db);
       }
-      else {
-	 if (db >  0.001)  
-  	    gap = 100.0 * (db - pb) / (1.0 * db);
-	 else if (db < -0.001)  
-	    gap = 100.0 * (db - pb) / (-1.0 * db);
-	 else                   
-	    gap = 0.0;
+      else
+      {
+	 gap = 0.0;
       }
       sgap += gap;
       
-      printf ("%-19s & %7d & %5d & %14.10g & %14.10g & %6.1f & %7.3f \\\\\n",
+      printf ("%-19s & %7d & %5d & %14.9g & %14.9g & %6.1f & %7.3f \\\\\n",
 	      pprob, bbnodes, sblps, db, pb, tottime, gap)           >TEXFILE;
    }
-   printf("%-19s %6d %6d %7d %14.10g %6.1f %6.1f ",
+   printf("%-19s %6d %6d %7d %14.9g %6.1f %6.1f ",
 	  prob, cons, vars, bbnodes, pb, gap, tottime);
    
    if (sol[prob] == "")
       printf("unknown\n");
    else {
-      if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob])/max(abs(pb),1.0) > 1e-6)) {
+      if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0))) {
 	 if (timeout)
 	    printf("timeout\n");
 	 else
@@ -199,7 +191,7 @@ END {
     printf ("%-14s (%d) & %8d & %5d &                &                & %8.1f & %7.3f \\\\\n", 
 	    "Total", nprobs, sbab, ssblp, stottime, sgap)                 >TEXFILE;
     printf ("%-14s      & %8.1f & %5.1f &                &                & %8.1f &         \\\\\n",
-            "Geom.\\ Mean", babprod^(1.0/nprobs), sblpprod^(1.0/nprobs), timeprod^(1.0/nprobs))  >TEXFILE;
+            "Geom.\\ Mean", babprod^(1.0/max(nprobs,1)), sblpprod^(1.0/max(nprobs,1)), timeprod^(1.0/max(nprobs,1)))  >TEXFILE;
     printf("\\hline\n")                                                   >TEXFILE;
     printf("\\end{tabular}\n")                                            >TEXFILE;
     printf("\\caption{%s}\n", brrule)                                     >TEXFILE;
@@ -214,6 +206,6 @@ END {
     printf("  Cnt  Pass  Fail  kNodes FailTime  TotTime  NodeGeom  TimeGeom\n");
     printf("----------------------------------------------------------------\n");
     printf("%5d %5d %5d %7d %8.0f %8.0f %9.1f %9.1f\n",
-	   nprobs, pass, fail, sbab / 1000, failtime, stottime, babprod^(1.0/nprobs), timeprod^(1.0/nprobs));
+	   nprobs, pass, fail, sbab / 1000, failtime, stottime, babprod^(1.0/max(nprobs,1)), timeprod^(1.0/(max(nprobs,1))));
     printf("----------------------------------------------------------------\n");
 }

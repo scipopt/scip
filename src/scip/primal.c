@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.26 2003/12/23 12:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.27 2004/01/19 14:10:04 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -87,10 +87,11 @@ RETCODE SCIPprimalCreate(
    (*primal)->nsols = 0;
    (*primal)->nsolsfound = 0;
    (*primal)->upperbound = SCIP_INVALID;
+   (*primal)->cutoffbound = SCIP_INVALID;
 
    objlim = SCIPprobGetInternObjlim(prob, set);
    objlim = MIN(objlim, set->infinity);
-   CHECK_OKAY( SCIPprimalSetUpperbound(*primal, memhdr, set, NULL, lp, objlim) );
+   CHECK_OKAY( SCIPprimalSetUpperbound(*primal, memhdr, set, prob, NULL, lp, objlim) );
 
    return SCIP_OKAY;
 }
@@ -121,6 +122,7 @@ RETCODE SCIPprimalSetUpperbound(
    PRIMAL*          primal,             /**< primal data */
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
    Real             upperbound          /**< new upper bound */
@@ -134,10 +136,20 @@ RETCODE SCIPprimalSetUpperbound(
    if( upperbound < primal->upperbound )
    {
       primal->upperbound = upperbound;
-      CHECK_OKAY( SCIPlpSetUpperbound(lp, upperbound) );
+
+      /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
+      if( SCIPprobIsObjIntegral(prob) )
+      {
+         primal->cutoffbound = SCIPsetCeil(set, upperbound) - (1.0 - 10.0*set->feastol);
+      }
+      else
+         primal->cutoffbound = upperbound;
+
+      /* set cut off value, and cut off leaves of the tree */
+      CHECK_OKAY( SCIPlpSetCutoffbound(lp, primal->cutoffbound) );
       if( tree != NULL )
       {
-         CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, lp, upperbound) );
+         CHECK_OKAY( SCIPtreeCutoff(tree, memhdr, set, lp, primal->cutoffbound) );
       }
    }
    else
@@ -165,6 +177,7 @@ RETCODE primalAddSol(
    )
 {
    EVENT event;
+   Real obj;
    int pos;
 
    assert(primal != NULL);
@@ -225,10 +238,11 @@ RETCODE primalAddSol(
    CHECK_OKAY( SCIPeventProcess(&event, set, NULL, NULL, eventfilter) );
 
    /* check, if the global upper bound has to be updated */
-   if( SCIPsolGetObj(sol) < primal->upperbound )
+   obj = SCIPsolGetObj(sol);
+   if( obj < primal->upperbound )
    {
       /* update the upper bound */
-      CHECK_OKAY( SCIPprimalSetUpperbound(primal, memhdr, set, tree, lp, SCIPsolGetObj(sol)) );
+      CHECK_OKAY( SCIPprimalSetUpperbound(primal, memhdr, set, prob, tree, lp, obj) );
       
       /* display node information line */
       CHECK_OKAY( SCIPdispPrintLine(set, stat, TRUE) );

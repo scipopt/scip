@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.21 2004/01/16 11:25:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.22 2004/01/19 14:10:03 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -886,10 +886,10 @@ RETCODE lpGenerateAltLP(
          ++cnt;
       }
    }
-   if( !SCIPsetIsZero(set, lp->upperbound) )
+   if( !SCIPsetIsZero(set, lp->cutoffbound) )
    {
       inds[cnt] = ncols;
-      vals[cnt] = lp->upperbound;
+      vals[cnt] = lp->cutoffbound;
       ++cnt;
    }
    obj = 0.0;

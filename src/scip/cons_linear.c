@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.81 2004/01/16 11:25:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.82 2004/01/19 14:10:03 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1272,8 +1272,8 @@ RETCODE consdataTightenVarBounds(
             }
             else if( newub <= lb )
                newub = lb;  /* avoid infeasibilities in consequence of numerical inaccuracies */
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               newub += SCIPfeastol(scip); /* avoid numerical troubles */
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, newub) )
+               newub += 0.1*SCIPepsilon(scip); /* avoid numerical troubles */
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
             ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasLE(scip, ub, newub));
@@ -1298,8 +1298,8 @@ RETCODE consdataTightenVarBounds(
             }
             else if( newlb >= ub )
                newlb = ub; /* avoid infeasibilities in consequence of numerical inaccuracies */
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               newlb -= SCIPfeastol(scip); /* avoid numerical troubles */
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, newlb) )
+               newlb -= 0.1*SCIPepsilon(scip); /* avoid numerical troubles */
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
             lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasGE(scip, lb, newlb));
@@ -1328,8 +1328,8 @@ RETCODE consdataTightenVarBounds(
             }
             else if( newlb >= ub )
                newlb = ub; /* avoid infeasibilities in consequence of numerical inaccuracies */
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               newlb -= SCIPfeastol(scip); /* avoid numerical troubles */
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, newlb) )
+               newlb -= 0.1*SCIPepsilon(scip); /* avoid numerical troubles */
             CHECK_OKAY( SCIPchgVarLb(scip, var, newlb) );
             lb = SCIPvarGetLbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasGE(scip, lb, newlb));
@@ -1354,8 +1354,8 @@ RETCODE consdataTightenVarBounds(
             }
             else if( newub <= lb )
                newub = lb; /* avoid infeasibilities in consequence of numerical inaccuracies */
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               newub += SCIPfeastol(scip); /* avoid numerical troubles */
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, newub) )
+               newub += 0.1*SCIPepsilon(scip); /* avoid numerical troubles */
             CHECK_OKAY( SCIPchgVarUb(scip, var, newub) );
             ub = SCIPvarGetUbLocal(var); /* get bound again, because it may be additionally modified due to integrality */
             assert(SCIPisFeasLE(scip, ub, newub));
@@ -4191,28 +4191,6 @@ DECL_CONSPRESOL(consPresolLinear)
       if( SCIPconsIsModifiable(cons) )
          continue;
 
-      /* check, if constraint is empty */
-      if( consdata->nvars == 0 )
-      {
-         if( SCIPisFeasPositive(scip, consdata->lhs) || SCIPisFeasNegative(scip, consdata->rhs) )
-         {
-            debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
-               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-            *result = SCIP_CUTOFF;
-            continue;
-         }
-         else
-         {
-            debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
-               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-            CHECK_OKAY( SCIPdelCons(scip, cons) );
-            if( !consdata->upgraded )
-               (*ndelconss)++;
-            *result = SCIP_SUCCESS;
-            continue;
-         }
-      }
-
       /* tighten left and right hand side due to integrality */
       CHECK_OKAY( tightenSides(scip, cons, nchgsides, &conschanged) );
 
@@ -4234,6 +4212,29 @@ DECL_CONSPRESOL(consPresolLinear)
       CHECK_OKAY( fixVariables(scip, cons, nfixedvars, result, &conschanged) );
       if( *result == SCIP_CUTOFF )
          continue;
+
+      /* check, if constraint is empty */
+      if( consdata->nvars == 0 )
+      {
+         if( SCIPisFeasPositive(scip, consdata->lhs) || SCIPisFeasNegative(scip, consdata->rhs) )
+         {
+            debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
+               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+            *result = SCIP_CUTOFF;
+            continue;
+         }
+         else
+         {
+            debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
+               SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
+            CHECK_OKAY( SCIPdelCons(scip, cons) );
+            assert(!SCIPconsIsActive(cons));
+            if( !consdata->upgraded )
+               (*ndelconss)++;
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
 
       /* check constraint for infeasibility and redundancy */
       consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);

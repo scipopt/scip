@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.101 2004/01/16 11:25:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.102 2004/01/19 14:10:05 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1010,6 +1010,18 @@ RETCODE SCIPsetObjlimit(
 /** gets current limit on objective function */
 extern
 Real SCIPgetObjlimit(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** informs SCIP, that the objective value is always integral in every feasible solution */
+extern
+RETCODE SCIPsetObjIntegral(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** returns whether the objective value is known to be integral in every feasible solution */
+extern
+Bool SCIPisObjIntegral(
    SCIP*            scip                /**< SCIP data structure */
    );
 
@@ -2910,15 +2922,24 @@ Real SCIPgetLowerbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets global primal bound */
+/** gets global primal bound (objective value of best solution or user objective limit) */
 extern
 Real SCIPgetPrimalbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 
-/** gets global upper (primal) bound in transformed problem */
+/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
 extern
 Real SCIPgetUpperbound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
+ *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound
+ */
+extern
+Real SCIPgetCutoffbound(
    SCIP*            scip                /**< SCIP data structure */
    );
 

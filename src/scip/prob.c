@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.37 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.38 2004/01/19 14:10:04 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -150,6 +150,7 @@ RETCODE SCIPprobCreate(
    (*prob)->fixedvarssize = 0;
    (*prob)->nfixedvars = 0;
    (*prob)->vars = NULL;
+   (*prob)->varssize = 0;
    (*prob)->nvars = 0;
    (*prob)->nbin = 0;
    (*prob)->nint = 0;
@@ -159,14 +160,14 @@ RETCODE SCIPprobCreate(
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->conss = NULL;
+   (*prob)->consssize = 0;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
    (*prob)->startnconss = 0;
    (*prob)->objsense = SCIP_OBJSENSE_MINIMIZE;
    (*prob)->objoffset = 0.0;
    (*prob)->objlim = SCIP_INVALID;
-   (*prob)->varssize = 0;
-   (*prob)->consssize = 0;
+   (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
 
    return SCIP_OKAY;
@@ -289,6 +290,9 @@ RETCODE SCIPprobTransform(
       CHECK_OKAY( SCIPprobAddCons(*target, memhdr, set, targetcons) );
       CHECK_OKAY( SCIPconsRelease(&targetcons, memhdr, set) );
    }
+
+   /* objective value is always integral, iff original objective value is always integral and shift is integral */
+   (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
    /* call user data transformation */
    if( source->probtrans != NULL )
@@ -798,6 +802,64 @@ void SCIPprobSetInternObjlim(
    prob->objlim = SCIPprobExternObjval(prob, set, objlim);
 }
 
+/** informs the problem, that its objective value is always integral in every feasible solution */
+void SCIPprobSetObjIntegral(
+   PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   
+   prob->objisintegral = TRUE;
+}
+
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+ *  integral objective value
+ */
+void SCIPprobCheckObjIntegral(
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   )
+{
+   Real obj;
+   int v;
+
+   assert(prob != NULL);
+   
+   /* if we know already, that the objective value is integral, nothing has to be done */
+   if( prob->objisintegral )
+      return;
+
+   /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
+   if( set->nactivepricers != 0 )
+      return;
+
+   /* if the objective value offset is fractional, the value itself is possibly fractional */
+   if( !SCIPsetIsIntegral(set, prob->objoffset) )
+      return;
+
+   /* scan through the variables */
+   for( v = 0; v < prob->nvars; ++v )
+   {
+      /* get objective value of variable */
+      obj = SCIPvarGetObj(prob->vars[v]);
+
+      /* check, if objective value is non-zero */
+      if( !SCIPsetIsZero(set, obj) )
+      {
+         /* if variable's objective value is fractional, the problem's objective value may also be fractional */
+         if( !SCIPsetIsIntegral(set, obj) )
+            break;
+         
+         /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
+         if( SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            break;
+      }
+   }
+
+   /* objective value is integral, if the variable loop scanned all variables */
+   prob->objisintegral = (v == prob->nvars);
+}
+
 
 
 
@@ -877,6 +939,16 @@ Real SCIPprobGetInternObjlim(
    assert(prob != NULL);
 
    return SCIPprobInternObjval(prob, set, prob->objlim);
+}
+
+/** returns whether the objective value is known to be integral in every feasible solution */
+Bool SCIPprobIsObjIntegral(
+   PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   return prob->objisintegral;
 }
 
 /** returns variable of the problem with given name */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.6 2004/01/16 11:25:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.7 2004/01/19 14:10:06 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -140,6 +140,7 @@ struct Set
    int              lpsolvefreq;        /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
    int              lpsolvedepth;       /**< maximal depth for solving LP at the nodes (-1: no depth limit) */
    int              redcostfreq;        /**< frequency for applying reduced cost fixing (-1: never; 0: only root LP) */
+   Bool             checklpfeas;        /**< should LP solutions be checked, resolving LP when numerical troubles occur? */
    Bool             fastmip;            /**< should FASTMIP setting of LP solver be used? */
    Bool             scaling;            /**< should scaling of LP solver be used? */
    Bool             cleanupcols;        /**< should new non-basic columns be removed after LP solving? */

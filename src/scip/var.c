@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.65 2004/01/15 14:33:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.66 2004/01/19 14:10:07 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1756,7 +1756,7 @@ RETCODE SCIPvarFix(
       holelistFree(&var->actdom.holelist, memhdr);
       CHECK_OKAY( SCIPvarChgLbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval, NULL, NULL, 0, 0) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, memhdr, set, stat, lp, branchcand, eventqueue, fixedval, NULL, NULL, 0, 0) );
-
+      
       /* convert variable into fixed variable */
       var->varstatus = SCIP_VARSTATUS_FIXED; /*lint !e641*/
       

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.12 2004/01/13 11:58:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.13 2004/01/19 14:10:05 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory Cuts
@@ -244,8 +244,11 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
                      CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
                                  TRUE, FALSE, sepadata->dynamiccuts) );
-                     /*debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
-                       cutname, cutact, cutrhs, cutnorm);*/
+#if 0
+                     debugMessage(" -> found potential gomory cut <%s>: activity=%f, rhs=%f, norm=%f\n",
+                        cutname, cutact, cutrhs, cutnorm);
+                     debug(SCIPprintRow(scip, cut, NULL));
+#endif
 
                      /* try to scale the cut to integral values */
                      CHECK_OKAY( SCIPmakeRowRational(scip, cut, maxdnom, &success) );
@@ -266,6 +269,12 @@ DECL_SEPAEXEC(SCIPsepaExecGomory)
                            CHECK_OKAY( SCIPaddCut(scip, cut, (cutact-cutrhs)/cutnorm/(cutlen+1)) );
                            *result = SCIP_SEPARATED;
                            ncuts++;
+                        }
+                        else
+                        {
+                           debugMessage(" -> gomory cut <%s> no longer violated: act=%f, rhs=%f, norm=%f, viol=%f\n",
+                              cutname, cutact, cutrhs, cutnorm, (cutact-cutrhs)/cutnorm);
+                           debug(SCIPprintRow(scip, cut, NULL));
                         }
                      }
 

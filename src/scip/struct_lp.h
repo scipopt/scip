@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.4 2004/01/15 09:12:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.5 2004/01/19 14:10:06 bzfpfend Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -183,7 +183,7 @@ struct Lp
    Real             pseudoobjval;       /**< actual pseudo solution value with all variables set to their best bounds,
                                          *   ignoring variables, with infinite best bound */
    int              pseudoobjvalinf;    /**< number of variables with infinite best bound in actual pseudo solution */
-   Real             upperbound;         /**< upper objective limit of LP (copy of primal->upperbound) */
+   Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
    int              validsollp;         /**< LP number for which the currently stored solution values are valid */
    int              validfarkaslp;      /**< LP number for which the currently stored farkas values are valid */
    Bool             flushdeletedcols;   /**< have LPI-columns been deleted in the last lpFlush() call? */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.26 2003/12/15 17:45:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.27 2004/01/19 14:10:04 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -184,6 +184,21 @@ void SCIPprobSetInternObjlim(
    Real             objlim              /**< transformed internal objective limit */
    );
 
+/** informs the problem, that its objective value is always integral in every feasible solution */
+extern
+void SCIPprobSetObjIntegral(
+   PROB*            prob                /**< problem data */
+   );
+
+/** sets integral objective value flag, if all variables with non-zero objective values are integral and have 
+ *  integral objective value
+ */
+extern
+void SCIPprobCheckObjIntegral(
+   PROB*            prob,               /**< problem data */
+   const SET*       set                 /**< global SCIP settings */
+   );
+
 
 
 
@@ -230,6 +245,12 @@ extern
 Real SCIPprobGetInternObjlim(
    PROB*            prob,               /**< problem data */
    const SET*       set                 /**< global SCIP settings */
+   );
+
+/** returns whether the objective value is known to be integral in every feasible solution */
+extern
+Bool SCIPprobIsObjIntegral(
+   PROB*            prob                /**< problem data */
    );
 
 /** returns variable of the problem with given name */

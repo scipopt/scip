@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.62 2004/01/15 09:12:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.63 2004/01/19 14:10:03 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -595,9 +595,9 @@ RETCODE SCIPlpSetState(
 
 /** sets the upper objective limit of the LP solver */
 extern
-RETCODE SCIPlpSetUpperbound(
+RETCODE SCIPlpSetCutoffbound(
    LP*              lp,                 /**< actual LP data */
-   Real             upperbound          /**< new upper objective limit */
+   Real             cutoffbound         /**< new upper objective limit */
    );
 
 /** solves the LP with the primal or dual simplex algorithm, depending on the current basis feasibility */
@@ -607,6 +607,7 @@ RETCODE SCIPlpSolve(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   Bool             fastmip,            /**< should the FASTMIP setting of the LP solver be activated? */
    Bool             fromscratch         /**< should the LP be solved from scratch without using actual basis? */
    );
 

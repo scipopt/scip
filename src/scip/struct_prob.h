@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.4 2003/12/15 17:45:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.5 2004/01/19 14:10:06 bzfpfend Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -63,6 +63,7 @@ struct Prob
    OBJSENSE         objsense;           /**< objective sense */
    Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
    Real             objlim;             /**< objective limit as external value */
+   Bool             objisintegral;      /**< is objective value always integral for feasible solutions? */
    Bool             transformed;        /**< TRUE iff problem is the transformed problem */
 };
 

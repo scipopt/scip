@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_diving.c,v 1.12 2003/12/15 17:45:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_diving.c,v 1.13 2004/01/19 14:10:03 bzfpfend Exp $"
 
 /**@file   heur_diving.c
  * @brief  LP diving heuristic
@@ -112,6 +112,7 @@ DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
    Real searchavgbound;
    Real searchbound;
    Real objval;
+   Real oldobjval;
    Real bestfrac;
    Real frac;
    Bool bestcandmayrounddown;
@@ -338,7 +339,26 @@ DECL_HEUREXEC(SCIPheurExecDiving) /*lint --e{715}*/
       lpsolstat = SCIPgetLPSolstat(scip);
       if( lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
       {
+         /* get new objective value */
+         oldobjval = objval;
          objval = SCIPgetLPObjval(scip);
+
+         /* update history values */
+         if( SCIPisGT(scip, objval, oldobjval) )
+         {
+            if( bestcandroundup )
+            {
+               CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand], 
+                              objval - oldobjval, 1.0) );
+            }
+            else
+            {
+               CHECK_OKAY( SCIPupdateVarLPHistory(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand], 
+                              objval - oldobjval, 1.0) );
+            }
+         }
+
+         /* get new fractional variables */
          CHECK_OKAY( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
       }
       debugMessage("   -> lpsolstat=%d, objval=%g, nfrac=%d\n", lpsolstat, objval, nlpcands);

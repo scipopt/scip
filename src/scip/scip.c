@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.120 2004/01/16 11:25:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.121 2004/01/19 14:10:04 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1925,8 +1925,8 @@ RETCODE SCIPsetObjlimit(
       objlimit = SCIPprobGetInternObjlim(scip->transprob, scip->set);
       if( SCIPsetIsLT(scip->set, objlimit, scip->primal->upperbound) )
       {
-         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->tree, scip->lp,
-                        objlimit) );
+         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->tree, 
+                        scip->lp, objlimit) );
       }
       break;
    default:
@@ -1945,6 +1945,58 @@ Real SCIPgetObjlimit(
    CHECK_ABORT( checkStage(scip, "SCIPgetObjlimit", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPprobGetExternObjlim(scip->origprob);
+}
+
+/** informs SCIP, that the objective value is always integral in every feasible solution */
+RETCODE SCIPsetObjIntegral(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPsetObjIntegral", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIPprobSetObjIntegral(scip->origprob);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIPprobSetObjIntegral(scip->transprob);
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
+}
+
+/** returns whether the objective value is known to be integral in every feasible solution */
+Bool SCIPisObjIntegral(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPisObjIntegral", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIPprobIsObjIntegral(scip->origprob);
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIPprobIsObjIntegral(scip->transprob);
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage\n");
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 }
 
 /** adds variable to the problem */
@@ -2863,7 +2915,10 @@ RETCODE SCIPpresolve(
    {
       CHECK_OKAY( SCIPconshdlrSolstart(scip->set->conshdlrs[h], scip) );
    }
-   
+
+   /* check, whether the objective value is always integral */
+   SCIPprobCheckObjIntegral(scip->transprob, scip->set);
+
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
 
@@ -2899,6 +2954,11 @@ RETCODE SCIPpresolve(
             infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH,
                " %5d constraints of type <%s>\n", nconss, SCIPconshdlrGetName(scip->set->conshdlrs[h]));
          }
+      }
+
+      if( SCIPprobIsObjIntegral(scip->transprob) )
+      {
+         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "objective value is always integral\n");
       }
    }
    else
@@ -2944,8 +3004,8 @@ RETCODE SCIPpresolve(
       if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound, scip->primal->upperbound) )
       {
          /* add 1.0 to primal bound, such that solution with worst bound may be found */
-         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->tree, scip->lp,
-                        objbound + 1.0) );
+         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->transprob, scip->tree,
+                        scip->lp, objbound + 1.0) );
       }
    }
 
@@ -3065,7 +3125,7 @@ RETCODE SCIPfreeSolve(
 
       /* deactivate the active node */
       CHECK_OKAY( SCIPnodeActivate(NULL, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp, 
-                     scip->branchcand, scip->eventqueue, scip->primal->upperbound) );
+                     scip->branchcand, scip->eventqueue, scip->primal->cutoffbound) );
 
       /* exit callback methods */
       CHECK_OKAY( SCIPsetExitCallbacks(scip->set) );
@@ -4994,7 +5054,7 @@ RETCODE SCIPendDive(
     */
    if( scip->tree->cutoffdelayed )
    {
-      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->primal->upperbound) );
+      CHECK_OKAY( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->lp, scip->primal->cutoffbound) );
    }
 
    return SCIP_OKAY;
@@ -6909,7 +6969,7 @@ Real SCIPgetAvgDualbound(
    CHECK_ABORT( checkStage(scip, "SCIPgetAvgDualbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPprobExternObjval(scip->origprob, scip->set, 
-      SCIPprobExternObjval(scip->transprob, scip->set, SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound)));
+      SCIPprobExternObjval(scip->transprob, scip->set, SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound)));
 }
 
 /** gets average lower (dual) bound of all unprocessed nodes in transformed problem */
@@ -6919,7 +6979,7 @@ Real SCIPgetAvgLowerbound(
 {
    CHECK_ABORT( checkStage(scip, "SCIPgetAvgLowerbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->upperbound);
+   return SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound);
 }
 
 /** gets global dual bound */
@@ -6948,7 +7008,7 @@ Real SCIPgetLowerbound(
    return SCIPtreeGetLowerbound(scip->tree, scip->set);
 }
 
-/** gets global primal bound */
+/** gets global primal bound (objective value of best solution or user objective limit) */
 Real SCIPgetPrimalbound(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -6959,7 +7019,7 @@ Real SCIPgetPrimalbound(
       SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound));
 }
 
-/** gets global upper (primal) bound in transformed problem */
+/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
 Real SCIPgetUpperbound(
    SCIP*            scip                /**< SCIP data structure */
    )
@@ -6967,6 +7027,19 @@ Real SCIPgetUpperbound(
    CHECK_ABORT( checkStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->primal->upperbound;
+}
+
+/** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
+ *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound
+ */
+Real SCIPgetCutoffbound(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetCutoffbound", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->primal->cutoffbound;
 }
 
 /** gets current gap |(primalbound - dualbound)/dualbound| */

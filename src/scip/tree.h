@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.49 2004/01/15 12:09:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.50 2004/01/19 14:10:06 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch-and-bound tree
@@ -93,7 +93,7 @@ RETCODE SCIPnodeActivate(
    LP*              lp,                 /**< actual LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
 /** adds constraint locally to the node and captures it; activates constraint, if node is active;
@@ -192,7 +192,7 @@ RETCODE SCIPtreeCutoff(
    MEMHDR*          memhdr,             /**< block memory */
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
 /** constructs the LP and loads LP state for fork/subroot of the active node */
@@ -278,7 +278,7 @@ NODE* SCIPtreeGetLowerboundNode(
 extern
 Real SCIPtreeGetAvgLowerbound(
    TREE*            tree,               /**< branch-and-bound tree */
-   Real             upperbound          /**< global upper bound */
+   Real             cutoffbound         /**< global cutoff bound */
    );
 
 #endif

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.25 2003/12/01 14:41:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.26 2004/01/19 14:10:04 bzfpfend Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -142,7 +142,7 @@ RETCODE SCIPnodepqBound(
    const SET*       set,                /**< global SCIP settings */
    TREE*            tree,               /**< branch-and-bound tree */
    LP*              lp,                 /**< actual LP data */
-   Real             upperbound          /**< upper bound: all nodes with lowerbound >= upperbound are cut off */
+   Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
 
 
