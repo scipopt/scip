@@ -217,7 +217,7 @@ RETCODE selectRounding(
       col = rowcols[c];
       var = SCIPcolGetVar(col);
       
-      CHECK_OKAY( SCIPgetSolVal(scip, sol, var, &solval) );
+      solval = SCIPgetSolVal(scip, sol, var);
       
       if( !SCIPisIntegral(scip, solval) )
       {
@@ -306,7 +306,7 @@ RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      CHECK_OKAY( SCIPgetSolVal(scip, sol, var, &solval) );
+      solval = SCIPgetSolVal(scip, sol, var);
       
       if( !SCIPisIntegral(scip, solval) )
       {
@@ -344,8 +344,6 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    Real* activities;
    ROW** violrows;
    int* violrowpos;
-   LPSOLSTAT lpsolstat;
-   Bool actnodehaslp;
    Bool aborted;
    int nlpcands;
    int nlprows;
@@ -360,9 +358,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    assert(result != NULL);
 
    /* only call heuristic, if an optimal LP solution is at hand */
-   CHECK_OKAY( SCIPhasActnodeLP(scip, &actnodehaslp) );
-   CHECK_OKAY( SCIPgetLPSolstat(scip, &lpsolstat) );
-   if( !actnodehaslp || lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
+   if( !SCIPhasActnodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
@@ -382,7 +378,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
    *result = SCIP_DIDNOTFIND;
 
    /* get LP rows */
-   CHECK_OKAY( SCIPgetLPRows(scip, &lprows, &nlprows) );
+   CHECK_OKAY( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
    debugMessage("executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
@@ -401,7 +397,7 @@ DECL_HEUREXEC(SCIPheurExecRounding)
 
       if( !SCIProwIsLocal(row) )
       {
-         CHECK_OKAY( SCIPgetRowActivity(scip, row, &activities[r]) );
+         activities[r] = SCIPgetRowActivity(scip, row);
          assert(SCIPisFeasGE(scip, activities[r], SCIProwGetLhs(row)));
          assert(SCIPisFeasLE(scip, activities[r], SCIProwGetRhs(row)));
          violrowpos[r] = -1;

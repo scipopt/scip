@@ -75,7 +75,7 @@ DECL_CONSCHECK(consCheckIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetVars(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
+   CHECK_OKAY( SCIPgetVarsData(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
    *result = SCIP_FEASIBLE;
 
@@ -83,7 +83,7 @@ DECL_CONSCHECK(consCheckIntegral)
    {
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
-         CHECK_OKAY( SCIPgetSolVal(scip, sol, vars[v], &solval) );
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
          if( !SCIPisIntegral(scip, solval) )
             *result = SCIP_INFEASIBLE;
       }

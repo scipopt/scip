@@ -725,7 +725,7 @@ RETCODE rowAddCoeff(
 
    row->pseudoactivity = SCIP_INVALID;
    row->validpsactivity = FALSE;
-   CHECK_OKAY( SCIProwInvalidActivityBounds(row) );
+   CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
 
    rowAddNorms(row, set, col->index, val);
 
@@ -785,7 +785,7 @@ RETCODE rowDelCoeffPos(
    
    row->pseudoactivity = SCIP_INVALID;
    row->validpsactivity = FALSE;
-   CHECK_OKAY( SCIProwInvalidActivityBounds(row) );
+   CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
 
    rowDelNorms(row, set, col->index, val);
 
@@ -837,7 +837,7 @@ RETCODE rowChgCoeffPos(
 
       row->pseudoactivity = SCIP_INVALID;
       row->validpsactivity = FALSE;
-      CHECK_OKAY( SCIProwInvalidActivityBounds(row) );
+      CHECK_OKAY( SCIProwInvalidateActivityBounds(row) );
    }
 
    return SCIP_OKAY;
@@ -2470,7 +2470,7 @@ void SCIProwSort(
 
 /** recalculates the actual activity of a row */
 static
-void rowCalcActivity(
+void rowCalcLPActivity(
    ROW*             row                 /**< LP row */
    )
 {
@@ -2489,7 +2489,7 @@ void rowCalcActivity(
 }
 
 /** returns the activity of a row in the last LP or after recalculation */
-Real SCIProwGetActivity(
+Real SCIProwGetLPActivity(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    )
@@ -2498,7 +2498,7 @@ Real SCIProwGetActivity(
    assert(row->validactivitylp <= stat->nlp);
 
    if( row->validactivitylp != stat->nlp )
-      rowCalcActivity(row);
+      rowCalcLPActivity(row);
    assert(row->activity < SCIP_INVALID);
    row->validactivitylp = stat->nlp;
 
@@ -2506,7 +2506,7 @@ Real SCIProwGetActivity(
 }
 
 /** returns the feasibility of a row in the last solution or after recalc */
-Real SCIProwGetFeasibility(
+Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    )
@@ -2515,7 +2515,7 @@ Real SCIProwGetFeasibility(
 
    assert(row != NULL);
 
-   activity = SCIProwGetActivity(row, stat);
+   activity = SCIProwGetLPActivity(row, stat);
 
    return MIN(row->rhs - activity, activity - row->lhs);
 }
@@ -2609,6 +2609,54 @@ RETCODE SCIProwGetPseudoFeasibility(
    CHECK_OKAY( SCIProwGetPseudoActivity(row, memhdr, set, lp, &pseudoactivity) );
 
    *pseudofeasibility = MIN(row->rhs - pseudoactivity, pseudoactivity - row->lhs);
+
+   return SCIP_OKAY;
+}
+
+/** returns the activity of a row in the last LP or after recalculation */
+RETCODE SCIProwGetActivity(
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   Real*            activity            /**< pointer to store the activity */
+   )
+{
+   assert(tree != NULL);
+   assert(activity != NULL);
+
+   if( tree->actnodehaslp )
+      *activity = SCIProwGetLPActivity(row, stat);
+   else
+   {
+      CHECK_OKAY( SCIProwGetPseudoActivity(row, memhdr, set, lp, activity) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns the feasibility of a row in the last solution or after recalc */
+RETCODE SCIProwGetFeasibility(
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   Real*            feasibility         /**< pointer to store the feasibility */
+   )
+{
+   assert(tree != NULL);
+   assert(feasibility != NULL);
+
+   if( tree->actnodehaslp )
+      *feasibility = SCIProwGetLPFeasibility(row, stat);
+   else
+   {
+      CHECK_OKAY( SCIProwGetPseudoFeasibility(row, memhdr, set, lp, feasibility) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2863,7 +2911,7 @@ RETCODE SCIProwGetActivityResiduals(
 }
 
 /** invalidates activity bounds, such that they are recalculated in next get */
-RETCODE SCIProwInvalidActivityBounds(
+RETCODE SCIProwInvalidateActivityBounds(
    ROW*             row                 /**< LP row */
    )
 {

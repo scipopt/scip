@@ -74,7 +74,6 @@ static
 DECL_NODESELSELECT(SCIPnodeselSelectBfs)
 {
    NODESELDATA* nodeseldata;
-   int plungedepth;
 
    assert(nodesel != NULL);
    assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
@@ -87,27 +86,24 @@ DECL_NODESELSELECT(SCIPnodeselSelectBfs)
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
 
-   /* get the number of plungings we have done so far */
-   CHECK_OKAY( SCIPgetPlungeDepth(scip, &plungedepth) );
-
    /* check, if we want to plunge once more */
-   if( plungedepth < nodeseldata->maxplungedepth )
+   if( SCIPgetPlungeDepth(scip) < nodeseldata->maxplungedepth )
    {
       /* we want to plunge again: prefer children over siblings, and siblings over leaves */
-      CHECK_OKAY( SCIPgetBestChild(scip, selnode) );
+      *selnode = SCIPgetBestChild(scip);
       if( *selnode == NULL )
       {
-         CHECK_OKAY( SCIPgetBestSibling(scip, selnode) );
+         *selnode = SCIPgetBestSibling(scip);
          if( *selnode == NULL )
          {
-            CHECK_OKAY( SCIPgetBestLeaf(scip, selnode) );
+            *selnode = SCIPgetBestLeaf(scip);
          }
       }
    }
    else
    {
       /* we don't want to plunge again: select best node from the tree */
-      CHECK_OKAY( SCIPgetBestNode(scip, selnode) );
+      *selnode = SCIPgetBestNode(scip);
    }
 
    return SCIP_OKAY;

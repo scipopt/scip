@@ -46,7 +46,7 @@ DECL_NODESELSELECT(SCIPnodeselSelectDfs)
    assert(scip != NULL);
    assert(selnode != NULL);
 
-   CHECK_OKAY( SCIPgetBestNode(scip, selnode) );
+   *selnode = SCIPgetBestNode(scip);
 
    return SCIP_OKAY;
 }

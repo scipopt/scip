@@ -451,7 +451,7 @@ RETCODE linconsdataCreateTransformed(
    (*linconsdata)->transformed = TRUE;
 
    /* get event handler for updating linear constraint activity bounds */
-   CHECK_OKAY( SCIPfindEventHdlr(scip, EVENTHDLR_NAME, &eventhdlr) );
+   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
    if( eventhdlr == NULL )
    {
       errorMessage("event handler for linear constraints not found");
@@ -492,7 +492,7 @@ RETCODE linconsdataFree(
       int i;
 
       /* get event handler for updating linear constraint activity bounds */
-      CHECK_OKAY( SCIPfindEventHdlr(scip, EVENTHDLR_NAME, &eventhdlr) );
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
       if( eventhdlr == NULL )
       {
          errorMessage("event handler for linear constraints not found");
@@ -546,7 +546,7 @@ RETCODE linconsdataAddCoef(
       EVENTHDLR* eventhdlr;
 
       /* get event handler for updating linear constraint activity bounds */
-      CHECK_OKAY( SCIPfindEventHdlr(scip, EVENTHDLR_NAME, &eventhdlr) );
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
       if( eventhdlr == NULL )
       {
          errorMessage("event handler for linear constraints not found");
@@ -597,21 +597,10 @@ RETCODE linconsdataGetActivity(
    assert(activity != NULL);
 
    *activity = 0.0;
-   if( sol != NULL )
+   for( v = 0; v < linconsdata->nvars; ++v )
    {
-      for( v = 0; v < linconsdata->nvars; ++v )
-      {
-         CHECK_OKAY( SCIPgetSolVal(scip, sol, linconsdata->vars[v], &solval) );
-         *activity += linconsdata->vals[v] * solval;
-      }
-   }
-   else
-   {
-      for( v = 0; v < linconsdata->nvars; ++v )
-      {
-         CHECK_OKAY( SCIPgetVarSol(scip, linconsdata->vars[v], &solval) );
-         *activity += linconsdata->vals[v] * solval;
-      }
+      solval = SCIPgetSolVal(scip, sol, linconsdata->vars[v]);
+      *activity += linconsdata->vals[v] * solval;
    }
 
    return SCIP_OKAY;
@@ -1134,7 +1123,7 @@ RETCODE SCIPlinconsInvalidActivityBounds(
 
    if( lincons->islprow )
    {
-      CHECK_OKAY( SCIProwInvalidActivityBounds(lincons->data.row) );
+      CHECK_OKAY( SCIProwInvalidateActivityBounds(lincons->data.row) );
    }
    else
    {
@@ -1649,7 +1638,7 @@ RETCODE SCIPlinconsSeparate(
       {         
          Real feasibility;
          
-         CHECK_OKAY( SCIPgetRowFeasibility(scip, row, &feasibility) );
+         feasibility = SCIPgetRowFeasibility(scip, row);
          /*debugMessage("  row feasibility = %g\n", feasibility);*/
          if( !SCIPisFeasible(scip, feasibility) )
          {
@@ -1676,7 +1665,7 @@ RETCODE SCIPlinconsSeparate(
 #ifndef NDEBUG
          {
             Real rowfeasibility;
-            CHECK_OKAY( SCIPgetRowFeasibility(scip, row, &rowfeasibility) );
+            rowfeasibility = SCIPgetRowFeasibility(scip, row);
             assert(SCIPisSumEQ(scip, rowfeasibility, feasibility));
          }
 #endif
@@ -1697,12 +1686,12 @@ RETCODE SCIPlinconsSeparate(
    return SCIP_OKAY;
 }
 
-/** checks linear constraint for feasibility of given solution or pseudo solution */
+/** checks linear constraint for feasibility of given solution or actual LP/pseudo solution */
 RETCODE SCIPlinconsCheck(
    SCIP*            scip,               /**< SCIP data structure */
    LINCONS*         lincons,            /**< linear constraint */
-   SOL*             sol,                /**< solution to be checked, NULL to check pseudo solution */
-   Bool             checklprows,         /**< has linear constraint to be checked, if it is already in current LP? */
+   SOL*             sol,                /**< solution to be checked, or NULL for actual solution */
+   Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
    Bool*            violated            /**< pointer to store information, if linear constraint is violated */
    )
 {
@@ -1719,14 +1708,7 @@ RETCODE SCIPlinconsCheck(
       {         
          Real feasibility;
          
-         if( sol != NULL )
-         {
-            CHECK_OKAY( SCIPgetRowSolFeasibility(scip, row, sol, &feasibility) );
-         }
-         else
-         {
-            CHECK_OKAY( SCIPgetRowPseudoFeasibility(scip, row, &feasibility) );
-         }
+         feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
          /*debugMessage("  row feasibility = %g\n", feasibility);*/
          *violated |= !SCIPisFeasible(scip, feasibility);
       }
@@ -2060,7 +2042,7 @@ DECL_CONSPROP(consPropLinear)
 
    /* check, if we want to tighten variable's bounds */
    propfreq = SCIPconshdlrGetPropFreq(conshdlr);
-   CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
+   actdepth = SCIPgetActDepth(scip);
    tightenbounds = (actdepth % (propfreq * TIGHTENBOUNDSFREQ) == 0);
 
    /* process useful constraints */
@@ -2222,7 +2204,7 @@ RETCODE SCIPincludeLinconsUpgrade(
    assert(linconsupgd != NULL);
 
    /* find the linear constraint handler */
-   CHECK_OKAY( SCIPfindConsHdlr(scip, CONSHDLR_NAME, &conshdlr) );
+   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("Linear constraint handler not found");
@@ -2265,7 +2247,7 @@ RETCODE SCIPcreateConsLinear(
    assert(scip != NULL);
 
    /* find the linear constraint handler */
-   CHECK_OKAY( SCIPfindConsHdlr(scip, CONSHDLR_NAME, &conshdlr) );
+   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("Linear constraint handler not found");

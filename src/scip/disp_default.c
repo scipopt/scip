@@ -175,15 +175,13 @@ static
 DECL_DISPOUTPUT(SCIPdispOutputSolfound)
 {
    SOL* sol;
-   Longint nodenum;
 
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SOLFOUND) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetBestSol(scip, &sol) );
-   CHECK_OKAY( SCIPgetNodenum(scip, &nodenum) );
-   if( sol != NULL && SCIPsolGetNodenum(sol) == nodenum )
+   sol = SCIPgetBestSol(scip);
+   if( sol != NULL && SCIPsolGetNodenum(sol) == SCIPgetNodenum(scip) )
    {
       fprintf(file, "%c", SCIPheurGetDispchar(SCIPsolGetHeur(sol)));
    }
@@ -196,14 +194,11 @@ DECL_DISPOUTPUT(SCIPdispOutputSolfound)
 static
 DECL_DISPOUTPUT(SCIPdispOutputNodenum)
 {
-   Longint nodenum;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODENUM) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetNodenum(scip, &nodenum) );
-   SCIPdispDecimal(file, nodenum, DISP_WIDT_NODENUM);
+   SCIPdispDecimal(file, SCIPgetNodenum(scip), DISP_WIDT_NODENUM);
 
    return SCIP_OKAY;
 }
@@ -211,14 +206,11 @@ DECL_DISPOUTPUT(SCIPdispOutputNodenum)
 static
 DECL_DISPOUTPUT(SCIPdispOutputNodesleft)
 {
-   int nnodes;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODESLEFT) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetNNodesLeft(scip, &nnodes) );
-   SCIPdispDecimal(file, nnodes, DISP_WIDT_NODESLEFT);
+   SCIPdispDecimal(file, SCIPgetNNodesLeft(scip), DISP_WIDT_NODESLEFT);
 
    return SCIP_OKAY;
 }
@@ -226,14 +218,11 @@ DECL_DISPOUTPUT(SCIPdispOutputNodesleft)
 static
 DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
 {
-   int lpiterations;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPITERATIONS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetNLPIterations(scip, &lpiterations) );
-   SCIPdispDecimal(file, lpiterations, DISP_WIDT_LPITERATIONS);
+   SCIPdispDecimal(file, SCIPgetNLPIterations(scip), DISP_WIDT_LPITERATIONS);
 
    return SCIP_OKAY;
 }
@@ -241,14 +230,11 @@ DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
 static
 DECL_DISPOUTPUT(SCIPdispOutputActdepth)
 {
-   int actdepth;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTDEPTH) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetActDepth(scip, &actdepth) );
-   SCIPdispDecimal(file, actdepth, DISP_WIDT_ACTDEPTH);
+   SCIPdispDecimal(file, SCIPgetActDepth(scip), DISP_WIDT_ACTDEPTH);
 
    return SCIP_OKAY;
 }
@@ -256,14 +242,11 @@ DECL_DISPOUTPUT(SCIPdispOutputActdepth)
 static
 DECL_DISPOUTPUT(SCIPdispOutputMemused)
 {
-   Longint memused;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMUSED) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetMemUsed(scip, &memused) );
-   SCIPdispDecimal(file, memused, DISP_WIDT_MEMUSED);
+   SCIPdispDecimal(file, SCIPgetMemUsed(scip), DISP_WIDT_MEMUSED);
 
    return SCIP_OKAY;
 }
@@ -271,14 +254,11 @@ DECL_DISPOUTPUT(SCIPdispOutputMemused)
 static
 DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
 {
-   int maxdepth;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MAXDEPTH) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetMaxDepth(scip, &maxdepth) );
-   SCIPdispDecimal(file, maxdepth, DISP_WIDT_MAXDEPTH);
+   SCIPdispDecimal(file, SCIPgetMaxDepth(scip), DISP_WIDT_MAXDEPTH);
 
    return SCIP_OKAY;
 }
@@ -286,14 +266,11 @@ DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
 static
 DECL_DISPOUTPUT(SCIPdispOutputActvars)
 {
-   int nvars;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTVARS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetVars(scip, NULL, &nvars, NULL, NULL, NULL, NULL) );
-   SCIPdispDecimal(file, nvars, DISP_WIDT_ACTVARS);
+   SCIPdispDecimal(file, SCIPgetNVars(scip), DISP_WIDT_ACTVARS);
 
    return SCIP_OKAY;
 }
@@ -301,14 +278,11 @@ DECL_DISPOUTPUT(SCIPdispOutputActvars)
 static
 DECL_DISPOUTPUT(SCIPdispOutputActconss)
 {
-   int actconss;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCONSS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetNEnabledConss(scip, &actconss) );
-   SCIPdispDecimal(file, actconss, DISP_WIDT_ACTCONSS);
+   SCIPdispDecimal(file, SCIPgetNEnabledConss(scip), DISP_WIDT_ACTCONSS);
 
    return SCIP_OKAY;
 }
@@ -316,14 +290,11 @@ DECL_DISPOUTPUT(SCIPdispOutputActconss)
 static
 DECL_DISPOUTPUT(SCIPdispOutputActcols)
 {
-   int actcols;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTCOLS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetLPCols(scip, NULL, &actcols) );
-   SCIPdispDecimal(file, actcols, DISP_WIDT_ACTCOLS);
+   SCIPdispDecimal(file, SCIPgetNLPCols(scip), DISP_WIDT_ACTCOLS);
 
    return SCIP_OKAY;
 }
@@ -331,14 +302,11 @@ DECL_DISPOUTPUT(SCIPdispOutputActcols)
 static
 DECL_DISPOUTPUT(SCIPdispOutputActrows)
 {
-   int actrows;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTROWS) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetLPRows(scip, NULL, &actrows) );
-   SCIPdispDecimal(file, actrows, DISP_WIDT_ACTROWS);
+   SCIPdispDecimal(file, SCIPgetNLPRows(scip), DISP_WIDT_ACTROWS);
 
    return SCIP_OKAY;
 }
@@ -346,14 +314,11 @@ DECL_DISPOUTPUT(SCIPdispOutputActrows)
 static
 DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
 {
-   int poolsize;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_POOLSIZE) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetPoolsize(scip, &poolsize) );
-   SCIPdispDecimal(file, poolsize, DISP_WIDT_POOLSIZE);
+   SCIPdispDecimal(file, SCIPgetPoolsize(scip), DISP_WIDT_POOLSIZE);
 
    return SCIP_OKAY;
 }
@@ -361,14 +326,11 @@ DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
 static
 DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
 {
-   Real actdualbound;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_ACTDUALBOUND) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetActDualBound(scip, &actdualbound) );
-   fprintf(file, "%13.6e ", actdualbound);
+   fprintf(file, "%13.6e ", SCIPgetActDualBound(scip));
 
    return SCIP_OKAY;
 }
@@ -376,14 +338,11 @@ DECL_DISPOUTPUT(SCIPdispOutputActdualbound)
 static
 DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 {
-   Real avgdualbound;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_AVGDUALBOUND) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetAvgDualBound(scip, &avgdualbound) );
-   fprintf(file, "%13.6e ", avgdualbound);
+   fprintf(file, "%13.6e ", SCIPgetAvgDualBound(scip));
 
    return SCIP_OKAY;
 }
@@ -391,14 +350,11 @@ DECL_DISPOUTPUT(SCIPdispOutputAvgdualbound)
 static
 DECL_DISPOUTPUT(SCIPdispOutputDualbound)
 {
-   Real dualbound;
-
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DUALBOUND) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetDualBound(scip, &dualbound) );
-   fprintf(file, "%13.6e ", dualbound);
+   fprintf(file, "%13.6e ", SCIPgetDualBound(scip));
 
    return SCIP_OKAY;
 }
@@ -412,7 +368,7 @@ DECL_DISPOUTPUT(SCIPdispOutputPrimalbound)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PRIMALBOUND) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetPrimalBound(scip, &primalbound) );
+   primalbound = SCIPgetPrimalBound(scip);
    if( SCIPisInfinity(scip, ABS(primalbound)) )
       fprintf(file, "      --      ");
    else
@@ -432,8 +388,8 @@ DECL_DISPOUTPUT(SCIPdispOutputGap)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_GAP) == 0);
    assert(scip != NULL);
 
-   CHECK_OKAY( SCIPgetDualBound(scip, &dualbound) );
-   CHECK_OKAY( SCIPgetPrimalBound(scip, &primalbound) );
+   dualbound = SCIPgetDualBound(scip);
+   primalbound = SCIPgetPrimalBound(scip);
 
    if( SCIPisZero(scip, dualbound) || SCIPisInfinity(scip, ABS(primalbound)) )
       fprintf(file, "    Inf ");

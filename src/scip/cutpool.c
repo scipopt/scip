@@ -473,7 +473,7 @@ RETCODE SCIPcutpoolSeparate(
          {         
             Real feasibility;
             
-            feasibility = SCIProwGetFeasibility(row, stat);
+            feasibility = SCIProwGetLPFeasibility(row, stat);
             debugMessage("  cut feasibility = %g\n", feasibility);
             if( !SCIPsetIsFeasible(set, feasibility) )
             {

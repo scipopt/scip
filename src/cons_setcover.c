@@ -220,7 +220,7 @@ RETCODE setcoverconsCreateTransformed(
    (*setcovercons)->transformed = TRUE;
 
    /* find the bound change event handler */
-   CHECK_OKAY( SCIPfindEventHdlr(scip, EVENTHDLR_NAME, &eventhdlr) );
+   eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
    if( eventhdlr == NULL )
    {
       errorMessage("event handler for processing bound change events on set covering constraints not found");
@@ -261,7 +261,7 @@ RETCODE setcoverconsFree(
       int v;
       
       /* find the bound change event handler */
-      CHECK_OKAY( SCIPfindEventHdlr(scip, EVENTHDLR_NAME, &eventhdlr) );
+      eventhdlr = SCIPfindEventHdlr(scip, EVENTHDLR_NAME);
       if( eventhdlr == NULL )
       {
          errorMessage("event handler for processing bound change events on set covering constraints not found");
@@ -444,7 +444,7 @@ RETCODE separate(
          {         
             Real feasibility;
             
-            CHECK_OKAY( SCIPgetRowFeasibility(scip, row, &feasibility) );
+            feasibility = SCIPgetRowLPFeasibility(scip, row);
             /*debugMessage("  row feasibility = %g\n", feasibility);*/
             if( !SCIPisFeasible(scip, feasibility) )
             {
@@ -474,7 +474,7 @@ RETCODE separate(
          for( v = 0; v < nvars && sum < 1.0; ++v )
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
-            CHECK_OKAY( SCIPgetSolVal(scip, NULL, vars[v], &solval) );
+            solval = SCIPgetSolVal(scip, NULL, vars[v]);
             assert(SCIPisGE(scip, solval, 0.0) || SCIPisLE(scip, solval, 1.0));
             sum += solval;
          }
@@ -490,7 +490,7 @@ RETCODE separate(
 #ifndef NDEBUG
             {
                Real rowactivity;
-               CHECK_OKAY( SCIPgetRowActivity(scip, consdata->row, &rowactivity) );
+               rowactivity = SCIPgetRowLPActivity(scip, consdata->row);
                assert(SCIPisSumEQ(scip, rowactivity, sum));
             }
 #endif
@@ -620,7 +620,7 @@ RETCODE branchLP(
    branchweight = 0.0;
    for( nselcands = 0; nselcands < nsortcands && branchweight <= MAXBRANCHWEIGHT; ++nselcands )
    {
-      CHECK_OKAY( SCIPgetVarSol(scip, sortcands[nselcands], &solval) );
+      solval = SCIPgetVarSol(scip, sortcands[nselcands]);
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
       branchweight += solval;
    }
@@ -655,12 +655,10 @@ RETCODE branchLP(
       else
       {
          CONS* newcons;
-         Longint nodenum;
          char name[255];
          
          /* add constraint x(S) >= 1 */
-         CHECK_OKAY( SCIPgetNodenum(scip, &nodenum) );
-         sprintf(name, "SCB%lld", nodenum);
+         sprintf(name, "SCB%lld", SCIPgetNodenum(scip));
 
          CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                         TRUE, TRUE, FALSE, TRUE, FALSE) );
@@ -915,7 +913,7 @@ DECL_CONSENFOPS(consEnfopsSetcover)
          for( v = 0; v < nvars && !found; ++v )
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
-            CHECK_OKAY( SCIPgetSolVal(scip, NULL, vars[v], &solval) );
+            solval = SCIPgetSolVal(scip, NULL, vars[v]);
             assert(SCIPisEQ(scip, solval, 0.0) || SCIPisEQ(scip, solval, 1.0));
             found = SCIPisEQ(scip, solval, 1.0);
          }
@@ -974,7 +972,7 @@ DECL_CONSCHECK(consCheckSetcover)
          for( v = 0; v < nvars && !found; ++v )
          {
             assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
-            CHECK_OKAY( SCIPgetSolVal(scip, sol, vars[v], &solval) );
+            solval = SCIPgetSolVal(scip, sol, vars[v]);
             assert(SCIPisEQ(scip, solval, 0.0) || SCIPisEQ(scip, solval, 1.0));
             found = SCIPisEQ(scip, solval, 1.0);
          }
@@ -1197,7 +1195,7 @@ RETCODE SCIPcreateConsSetcover(
    assert(scip != NULL);
 
    /* find the set covering constraint handler */
-   CHECK_OKAY( SCIPfindConsHdlr(scip, CONSHDLR_NAME, &conshdlr) );
+   conshdlr = SCIPfindConsHdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
       errorMessage("set covering constraint handler not found");

@@ -337,30 +337,24 @@ RETCODE SCIPsetIncludeConsHdlr(
    return SCIP_OKAY;
 }   
 
-/** finds the constraint handler of the given name */
-RETCODE SCIPsetFindConsHdlr(
+/** returns the constraint handler of the given name, or NULL if not existing */
+CONSHDLR* SCIPsetFindConsHdlr(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of constraint handler */
-   CONSHDLR**       conshdlr            /**< pointer for storing the constraint handler (returns NULL, if not found) */
+   const char*      name                /**< name of constraint handler */
    )
 {
    int i;
 
    assert(set != NULL);
    assert(name != NULL);
-   assert(conshdlr != NULL);
 
-   *conshdlr = NULL;
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       if( strcmp(SCIPconshdlrGetName(set->conshdlrs[i]), name) == 0 )
-      {
-         *conshdlr = set->conshdlrs[i];
-         return SCIP_OKAY;
-      }
+         return set->conshdlrs[i];
    }
 
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** inserts primal heuristic in primal heuristic list */
@@ -386,30 +380,24 @@ RETCODE SCIPsetIncludeHeur(
    return SCIP_OKAY;
 }   
 
-/** finds the primal heuristic of the given name */
-RETCODE SCIPsetFindHeur(
+/** returns the primal heuristic of the given name, or NULL if not existing */
+HEUR* SCIPsetFindHeur(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of primal heuristic */
-   HEUR**           heur                /**< pointer for storing the primal heuristic (returns NULL, if not found) */
+   const char*      name                /**< name of primal heuristic */
    )
 {
    int i;
 
    assert(set != NULL);
    assert(name != NULL);
-   assert(heur != NULL);
 
-   *heur = NULL;
    for( i = 0; i < set->nheurs; ++i )
    {
       if( strcmp(SCIPheurGetName(set->heurs[i]), name) == 0 )
-      {
-         *heur = set->heurs[i];
-         return SCIP_OKAY;
-      }
+         return set->heurs[i];
    }
 
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** inserts event handler in event handler list */
@@ -435,30 +423,24 @@ RETCODE SCIPsetIncludeEventHdlr(
    return SCIP_OKAY;
 }   
 
-/** finds the event handler of the given name */
-RETCODE SCIPsetFindEventHdlr(
+/** returns the event handler of the given name, or NULL if not existing */
+EVENTHDLR* SCIPsetFindEventHdlr(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of event handler */
-   EVENTHDLR**      eventhdlr           /**< pointer for storing the event handler (returns NULL, if not found) */
+   const char*      name                /**< name of event handler */
    )
 {
    int i;
 
    assert(set != NULL);
    assert(name != NULL);
-   assert(eventhdlr != NULL);
 
-   *eventhdlr = NULL;
    for( i = 0; i < set->neventhdlrs; ++i )
    {
       if( strcmp(SCIPeventhdlrGetName(set->eventhdlrs[i]), name) == 0 )
-      {
-         *eventhdlr = set->eventhdlrs[i];
-         return SCIP_OKAY;
-      }
+         return set->eventhdlrs[i];
    }
 
-   return SCIP_OKAY;
+   return NULL;
 }
 
 /** inserts node selector in node selector list */
@@ -486,6 +468,26 @@ RETCODE SCIPsetIncludeNodesel(
 
    return SCIP_OKAY;
 }   
+
+/** returns the node selector of the given name, or NULL if not existing */
+NODESEL* SCIPsetFindNodesel(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of event handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nnodesels; ++i )
+   {
+      if( strcmp(SCIPnodeselGetName(set->nodesels[i]), name) == 0 )
+         return set->nodesels[i];
+   }
+
+   return NULL;
+}
 
 /** inserts branching rule in branching rule list */
 RETCODE SCIPsetIncludeBranchrule(
@@ -517,6 +519,26 @@ RETCODE SCIPsetIncludeBranchrule(
    return SCIP_OKAY;
 }   
 
+/** returns the branching rule of the given name, or NULL if not existing */
+BRANCHRULE* SCIPsetFindBranchrule(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of event handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nbranchrules; ++i )
+   {
+      if( strcmp(SCIPbranchruleGetName(set->branchrules[i]), name) == 0 )
+         return set->branchrules[i];
+   }
+
+   return NULL;
+}
+
 /** inserts display column in display column list */
 RETCODE SCIPsetIncludeDisp(
    SET*             set,                /**< global SCIP settings */
@@ -545,6 +567,26 @@ RETCODE SCIPsetIncludeDisp(
 
    return SCIP_OKAY;
 }   
+
+/** returns the display column of the given name, or NULL if not existing */
+DISP* SCIPsetFindDisp(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of event handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ndisps; ++i )
+   {
+      if( strcmp(SCIPdispGetName(set->disps[i]), name) == 0 )
+         return set->disps[i];
+   }
+
+   return NULL;
+}
 
 /** initializes all user callback functions */
 RETCODE SCIPsetInitCallbacks(

@@ -524,14 +524,14 @@ RETCODE SCIProwChgRhs(
 
 /** returns the activity of a row in the last LP or after recalculation */
 extern
-Real SCIProwGetActivity(
+Real SCIProwGetLPActivity(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
 
 /** returns the feasibility of a row in the last solution or after recalc */
 extern
-Real SCIProwGetFeasibility(
+Real SCIProwGetLPFeasibility(
    ROW*             row,                /**< LP row */
    STAT*            stat                /**< problem statistics */
    );
@@ -554,6 +554,30 @@ RETCODE SCIProwGetPseudoFeasibility(
    const SET*       set,                /**< global SCIP settings */
    LP*              lp,                 /**< actual LP data */
    Real*            pseudofeasibility   /**< pointer to store the pseudo feasibility */
+   );
+
+/** returns the activity of a row in the last LP or after recalculation */
+extern
+RETCODE SCIProwGetActivity(
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   Real*            activity            /**< pointer to store the activity */
+   );
+
+/** returns the feasibility of a row in the last solution or after recalc */
+extern
+RETCODE SCIProwGetFeasibility(
+   ROW*             row,                /**< LP row */
+   MEMHDR*          memhdr,             /**< block memory */
+   const SET*       set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   TREE*            tree,               /**< branch-and-bound tree */
+   LP*              lp,                 /**< actual LP data */
+   Real*            feasibility         /**< pointer to store the feasibility */
    );
 
 /** returns the activity of a row for a given solution */
@@ -604,7 +628,7 @@ RETCODE SCIProwGetActivityResiduals(
 
 /** invalidates activity bounds, such that they are recalculated in next get */
 extern
-RETCODE SCIProwInvalidActivityBounds(
+RETCODE SCIProwInvalidateActivityBounds(
    ROW*             row                 /**< LP row */
    );
 

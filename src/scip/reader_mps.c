@@ -687,7 +687,7 @@ RETCODE readRows(
       {
          CONS* cons;
    
-         CHECK_OKAY( SCIPfindCons(scip, mpsinputField2(mpsi), &cons) );
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons != NULL )
             break;
 
@@ -787,7 +787,7 @@ RETCODE readCols(
       }
       else 
       {
-         CHECK_OKAY( SCIPfindCons(scip, mpsinputField2(mpsi), &cons) );
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
             mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else if( !SCIPisZero(scip, val) )
@@ -807,7 +807,7 @@ RETCODE readCols(
          }
          else 
          {
-            CHECK_OKAY( SCIPfindCons(scip, mpsinputField4(mpsi), &cons) );
+            cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
                mpsinputEntryIgnored(mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else if( !SCIPisZero(scip, val) )
@@ -864,7 +864,7 @@ RETCODE readRhs(
       
       if (!strcmp(rhsname, mpsinputField1(mpsi)))
       {
-         CHECK_OKAY( SCIPfindCons(scip, mpsinputField2(mpsi), &cons) );
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
             mpsinputEntryIgnored(mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else
@@ -898,7 +898,7 @@ RETCODE readRhs(
       }
       if (mpsinputField5(mpsi) != NULL)
       {
-         CHECK_OKAY( SCIPfindCons(scip, mpsinputField4(mpsi), &cons) );
+         cons = SCIPfindCons(scip, mpsinputField4(mpsi));
          if( cons == NULL )
             mpsinputEntryIgnored(mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
          else
@@ -985,7 +985,7 @@ RETCODE readRanges(
        */  
       if (!strcmp(rngname, mpsinputField1(mpsi)))
       {
-         CHECK_OKAY( SCIPfindCons(scip, mpsinputField2(mpsi), &cons) );
+         cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
             mpsinputEntryIgnored(mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
          else
@@ -1021,7 +1021,7 @@ RETCODE readRanges(
          }
          if (mpsinputField5(mpsi) != NULL)
          {
-            CHECK_OKAY( SCIPfindCons(scip, mpsinputField4(mpsi), &cons) );
+            cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
                mpsinputEntryIgnored(mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
             else
@@ -1111,7 +1111,7 @@ RETCODE readBounds(
       /* Only read the first Bound in section */
       if (!strcmp(bndname, mpsinputField2(mpsi)))
       {
-         CHECK_OKAY( SCIPfindVar(scip, mpsinputField3(mpsi), &var) );
+         var = SCIPfindVar(scip, mpsinputField3(mpsi));
          if( var == NULL )
             mpsinputEntryIgnored(mpsi, "column", mpsinputField3(mpsi), "bound", bndname);
          else

@@ -147,12 +147,11 @@ RETCODE SCIPsetIncludeConsHdlr(
    CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** finds the constraint handler of the given name */
+/** returns the constraint handler of the given name, or NULL if not existing */
 extern
-RETCODE SCIPsetFindConsHdlr(
+CONSHDLR* SCIPsetFindConsHdlr(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of constraint handler */
-   CONSHDLR**       conshdlr            /**< pointer for storing the constraint handler (returns NULL, if not found) */
+   const char*      name                /**< name of constraint handler */
    );
 
 /** inserts primal heuristic in primal heuristic list */
@@ -162,12 +161,11 @@ RETCODE SCIPsetIncludeHeur(
    HEUR*            heur                /**< primal heuristic */
    );
 
-/** finds the primal heuristic of the given name */
+/** returns the primal heuristic of the given name, or NULL if not existing */
 extern
-RETCODE SCIPsetFindHeur(
+HEUR* SCIPsetFindHeur(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of primal heuristic */
-   HEUR**           heur                /**< pointer for storing the primal heuristic (returns NULL, if not found) */
+   const char*      name                /**< name of primal heuristic */
    );
 
 /** inserts event handler in event handler list */
@@ -177,12 +175,11 @@ RETCODE SCIPsetIncludeEventHdlr(
    EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
-/** finds the event handler of the given name */
+/** returns the event handler of the given name, or NULL if not existing */
 extern
-RETCODE SCIPsetFindEventHdlr(
+EVENTHDLR* SCIPsetFindEventHdlr(
    const SET*       set,                /**< global SCIP settings */
-   const char*      name,               /**< name of event handler */
-   EVENTHDLR**      eventhdlr           /**< pointer for storing the event handler (returns NULL, if not found) */
+   const char*      name                /**< name of event handler */
    );
 
 /** inserts node selector in node selector list */
@@ -192,6 +189,13 @@ RETCODE SCIPsetIncludeNodesel(
    NODESEL*         nodesel             /**< node selector */
    );
 
+/** returns the node selector of the given name, or NULL if not existing */
+extern
+NODESEL* SCIPsetFindNodesel(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of event handler */
+   );
+
 /** inserts branching rule in branching rule list */
 extern
 RETCODE SCIPsetIncludeBranchrule(
@@ -199,11 +203,25 @@ RETCODE SCIPsetIncludeBranchrule(
    BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** returns the branching rule of the given name, or NULL if not existing */
+extern
+BRANCHRULE* SCIPsetFindBranchrule(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of event handler */
+   );
+
 /** inserts display column in display column list */
 extern
 RETCODE SCIPsetIncludeDisp(
    SET*             set,                /**< global SCIP settings */
    DISP*            disp                /**< display column */
+   );
+
+/** returns the display column of the given name, or NULL if not existing */
+extern
+DISP* SCIPsetFindDisp(
+   const SET*       set,                /**< global SCIP settings */
+   const char*      name                /**< name of event handler */
    );
 
 /** initializes all user callback functions */
