@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.37 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.38 2004/05/03 08:13:10 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -305,7 +305,7 @@ RETCODE primalAddSol(
    debugMessage("insert primal solution at position %d:", insertpos);
    debug( SCIPsolPrint(sol, set, stat, prob, NULL) );
 
-#if 1
+#if 0
 #ifndef NDEBUG
    /* check solution again completely
     * (this may fail, because in the LP solver, the feasibility tolerance is a relative measure against the row's norm

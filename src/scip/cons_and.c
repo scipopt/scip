@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.19 2004/04/27 15:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.20 2004/05/03 08:13:08 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -1077,6 +1077,14 @@ DECL_CONSFREE(consFreeAnd)
 #define consExitAnd NULL
 
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreAnd NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreAnd NULL
+
+
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolAnd NULL
 
@@ -1335,6 +1343,10 @@ DECL_CONSPRESOL(consPresolAnd)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* force presolving the constraint in the initial round */
+      if( nrounds == 0 )
+         consdata->propagated = FALSE;
+
       /* remove all variables that are fixed to one */
       CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
 
@@ -1478,7 +1490,8 @@ RETCODE SCIPincludeConshdlrAnd(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeAnd, consInitAnd, consExitAnd, consInitsolAnd, consExitsolAnd,
+                  consFreeAnd, consInitAnd, consExitAnd, 
+                  consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
                   consDeleteAnd, consTransAnd, consInitlpAnd,
                   consSepaAnd, consEnfolpAnd, consEnfopsAnd, consCheckAnd, 
                   consPropAnd, consPresolAnd, consRescvarAnd,

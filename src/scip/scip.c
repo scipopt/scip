@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.157 2004/04/30 11:16:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.158 2004/05/03 08:13:10 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1004,6 +1004,8 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
+   DECL_CONSINITPRE ((*consinitpre)),   /**< presolving initialization method of constraint handler */
+   DECL_CONSEXITPRE ((*consexitpre)),   /**< presolving deinitialization method of constraint handler */
    DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
    DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */
@@ -1031,9 +1033,9 @@ RETCODE SCIPincludeConshdlr(
 
    CHECK_OKAY( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
                   name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, needscons, 
-                  consfree, consinit, consexit, consinitsol, consexitsol, consdelete, constrans, consinitlp,
-                  conssepa, consenfolp, consenfops, conscheck, consprop, conspresol, consrescvar,
-                  conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
+                  consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol, 
+                  consdelete, constrans, consinitlp, conssepa, consenfolp, consenfops, conscheck, consprop, conspresol,
+                  consrescvar, conslock, consunlock, consactive, consdeactive, consenable, consdisable, conshdlrdata) );
    CHECK_OKAY( SCIPsetIncludeConshdlr(scip->set, conshdlr) );
    
    return SCIP_OKAY;
@@ -2999,6 +3001,13 @@ RETCODE presolve(
 
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
+   /* inform constraint handlers that the presolving is abound to begin */
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      CHECK_OKAY( SCIPconshdlrInitpre(scip->set->conshdlrs[i], scip) );
+   }
+
+   /* perform presolving rounds */
    while( nrounds < maxnrounds && !aborted )
    {
       lastnfixedvars = nfixedvars;
@@ -3070,6 +3079,12 @@ RETCODE presolve(
       }
    }
    
+   /* inform constraint handlers that the presolving is finished, and perform final modifications */
+   for( i = 0; i < scip->set->nconshdlrs && result != SCIP_CUTOFF && result != SCIP_UNBOUNDED; ++i )
+   {
+      CHECK_OKAY( SCIPconshdlrExitpre(scip->set->conshdlrs[i], scip, &result) );
+   }
+
    /* print presolving statistics */
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "presolving (%d rounds):\n", nrounds);
    infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
@@ -3100,8 +3115,6 @@ RETCODE initSolve(
 {
    RESULT result;
    int h;
-   Bool infeasible;
-   Bool unbounded;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -3137,62 +3150,38 @@ RETCODE initSolve(
    CHECK_OKAY( SCIPprobInitSolve(scip->transprob, scip->set) );
 
    /* inform constraint handlers that the branch and bound process starts now */
-   infeasible = FALSE;
-   unbounded = FALSE;
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
-      CHECK_OKAY( SCIPconshdlrInitsol(scip->set->conshdlrs[h], scip, &result) );
-      infeasible = infeasible || (result == SCIP_CUTOFF);
-      unbounded = unbounded || (result == SCIP_UNBOUNDED);
+      CHECK_OKAY( SCIPconshdlrInitsol(scip->set->conshdlrs[h], scip) );
    }
    
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
 
-   /* check for infeasibility or unboundness */
-   if( infeasible || unbounded )
+   /* if all variables are known, calculate a trivial primal bound by setting all variables to their worst bound */
+   if( scip->set->nactivepricers == 0 )
    {
-      if( infeasible )
-      {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
-            "solving process initialization detected infeasibility.\n");
-      }
-      else
-      {
-         infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL,
-            "solving process initialization detected unboundness.\n");
-      }
+      VAR* var;
+      Real objbound;
+      Real bd;
+      int v;
       
-      /* switch stage to SOLVED */
-      scip->stage = SCIP_STAGE_SOLVED;
-   }
-   else
-   {
-      /* if all variables are known, calculate a trivial primal bound by setting all variables to their worst bound */
-      if( scip->set->nactivepricers == 0 )
+      objbound = 0.0;
+      for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
       {
-         VAR* var;
-         Real objbound;
-         Real bd;
-         int v;
-      
-         objbound = 0.0;
-         for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
-         {
-            var = scip->transprob->vars[v];
-            bd = SCIPvarGetWorstBound(var);
-            if( SCIPsetIsInfinity(scip->set, ABS(bd)) )
-               objbound = scip->set->infinity;
-            else
-               objbound += SCIPvarGetObj(var) * bd;
-         }
+         var = scip->transprob->vars[v];
+         bd = SCIPvarGetWorstBound(var);
+         if( SCIPsetIsInfinity(scip->set, ABS(bd)) )
+            objbound = scip->set->infinity;
+         else
+            objbound += SCIPvarGetObj(var) * bd;
+      }
 
-         /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
-         if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->upperbound) )
-         {
-            CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat,
-                           scip->transprob, scip->tree, scip->lp, objbound + 1.0) );
-         }
+      /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
+      if( !SCIPsetIsInfinity(scip->set, objbound) && SCIPsetIsLT(scip->set, objbound + 1.0, scip->primal->upperbound) )
+      {
+         CHECK_OKAY( SCIPprimalSetUpperbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat,
+                        scip->transprob, scip->tree, scip->lp, objbound + 1.0) );
       }
    }
 
@@ -3423,8 +3412,6 @@ RETCODE SCIPsolve(
    case SCIP_STAGE_PRESOLVED:
       /* initialize solving process data structures */
       CHECK_OKAY( initSolve(scip) );
-      if( scip->stage == SCIP_STAGE_SOLVED )
-         return SCIP_OKAY;
       assert(scip->stage == SCIP_STAGE_SOLVING);
       infoMessage(scip->set->verblevel, SCIP_VERBLEVEL_NORMAL, "\n");
       

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.38 2004/04/27 15:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.39 2004/05/03 08:13:09 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1068,6 +1068,14 @@ DECL_CONSFREE(consFreeLogicor)
 #define consExitLogicor NULL
 
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreLogicor NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreLogicor NULL
+
+
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolLogicor NULL
 
@@ -1776,6 +1784,10 @@ DECL_CONSPRESOL(consPresolLogicor)
 
       debugMessage("presolving logic or constraint <%s>\n", SCIPconsGetName(cons));
 
+      /* force presolving the constraint in the initial round */
+      if( nrounds == 0 )
+         consdata->propagated = FALSE;
+
       /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
       CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
@@ -2161,7 +2173,8 @@ RETCODE SCIPincludeConshdlrLogicor(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ,
                   CONSHDLR_NEEDSCONS,
-                  consFreeLogicor, consInitLogicor, consExitLogicor, consInitsolLogicor, consExitsolLogicor,
+                  consFreeLogicor, consInitLogicor, consExitLogicor, 
+                  consInitpreLogicor, consExitpreLogicor, consInitsolLogicor, consExitsolLogicor,
                   consDeleteLogicor, consTransLogicor, 
                   consInitlpLogicor, consSepaLogicor, 
                   consEnfolpLogicor, consEnfopsLogicor, consCheckLogicor, 

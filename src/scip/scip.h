@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.128 2004/04/29 15:20:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.129 2004/05/03 08:13:10 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -504,6 +504,8 @@ RETCODE SCIPincludeConshdlr(
    DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
+   DECL_CONSINITPRE ((*consinitpre)),   /**< presolving initialization method of constraint handler */
+   DECL_CONSEXITPRE ((*consexitpre)),   /**< presolving deinitialization method of constraint handler */
    DECL_CONSINITSOL ((*consinitsol)),   /**< solving process initialization method of constraint handler */
    DECL_CONSEXITSOL ((*consexitsol)),   /**< solving process deinitialization method of constraint handler */
    DECL_CONSDELETE  ((*consdelete)),    /**< free specific constraint data */

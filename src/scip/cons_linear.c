@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.93 2004/04/30 11:16:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.94 2004/05/03 08:13:09 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2616,9 +2616,13 @@ DECL_CONSFREE(consFreeLinear)
 #define consExitLinear NULL
 
 
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreLinear NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
-DECL_CONSINITSOL(consInitsolLinear)
+DECL_CONSEXITPRE(consExitpreLinear)
 {  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
@@ -2637,6 +2641,10 @@ DECL_CONSINITSOL(consInitsolLinear)
 
    return SCIP_OKAY;
 }
+
+
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#define consInitsolLinear NULL
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -3357,6 +3365,9 @@ RETCODE convertLongEquality(
       assert(SCIPvarGetNLocksDown(var) >= 1); /* because variable is locked in this equality */
       assert(SCIPvarGetNLocksUp(var) >= 1);
 
+      slacktype = SCIPvarGetType(var);
+      integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
+
       /* check, if variable is already fixed or aggregated */
       if( !SCIPvarIsActive(var) )
          continue;
@@ -3366,8 +3377,6 @@ RETCODE convertLongEquality(
          continue;
 
       /* check, if variable can be used as a slack variable */
-      slacktype = SCIPvarGetType(var);
-      integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
       if( slacktype == SCIP_VARTYPE_CONTINUOUS
          || slacktype == SCIP_VARTYPE_IMPLINT
          || (integral && SCIPisEQ(scip, ABS(val), 1.0))
@@ -4312,6 +4321,10 @@ DECL_CONSPRESOL(consPresolLinear)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* force presolving the constraint in the initial round */
+      if( nrounds == 0 )
+         consdata->propagated = FALSE;
+
       /* check, if constraint is already propagated/preprocessed */
       if( consdata->propagated )
          continue;
@@ -4340,6 +4353,7 @@ DECL_CONSPRESOL(consPresolLinear)
       consdeleted = FALSE;
       conschanged = FALSE;
 
+#if 0 /*?????????????????????????*/
       /* try to upgrade the constraint into a more specific constraint type */
       CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
       if( upgdcons != NULL )
@@ -4359,6 +4373,7 @@ DECL_CONSPRESOL(consPresolLinear)
          assert(!consdata->upgraded);
          consdata->upgraded = TRUE;
       }
+#endif
 
       /* incorporate fixings and aggregations in constraint */
       if( nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars )
@@ -4464,8 +4479,8 @@ DECL_CONSPRESOL(consPresolLinear)
       if( *result == SCIP_CUTOFF || consdeleted )
          continue;
 
-      /* if constraint was changed, try again to upgrade linear constraint into more specific constraint */
-      if( conschanged )
+      /* try to upgrade the constraint into a more specific constraint type */
+      /*if( conschanged ) ????????????????????????*/
       {
          CHECK_OKAY( SCIPupgradeConsLinear(scip, cons, &upgdcons) );
          if( upgdcons != NULL )
@@ -4699,7 +4714,8 @@ RETCODE SCIPincludeConshdlrLinear(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_SEPAFREQ,
                   CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeLinear, consInitLinear, consExitLinear, consInitsolLinear, consExitsolLinear,
+                  consFreeLinear, consInitLinear, consExitLinear, 
+                  consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
                   consDeleteLinear, consTransLinear, 
                   consInitlpLinear, consSepaLinear, consEnfolpLinear, consEnfopsLinear, consCheckLinear, 
                   consPropLinear, consPresolLinear, consRescvarLinear,

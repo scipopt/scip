@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.2 2004/04/27 15:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.3 2004/05/03 08:13:09 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -483,6 +483,14 @@ RETCODE propagateCons(
 #define consExitVarbound NULL
 
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreVarbound NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreVarbound NULL
+
+
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolVarbound NULL
 
@@ -713,6 +721,10 @@ DECL_CONSPRESOL(consPresolVarbound)
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
+      /* force presolving the constraint in the initial round */
+      if( nrounds == 0 )
+         consdata->propagated = FALSE;
+
       if( consdata->propagated )
          continue;
 
@@ -935,7 +947,8 @@ RETCODE SCIPincludeConshdlrVarbound(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeVarbound, consInitVarbound, consExitVarbound, consInitsolVarbound, consExitsolVarbound,
+                  consFreeVarbound, consInitVarbound, consExitVarbound, 
+                  consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
                   consDeleteVarbound, consTransVarbound, consInitlpVarbound,
                   consSepaVarbound, consEnfolpVarbound, consEnfopsVarbound, consCheckVarbound, 
                   consPropVarbound, consPresolVarbound, consRescvarVarbound,

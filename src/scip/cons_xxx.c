@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.15 2004/04/27 15:49:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.16 2004/05/03 08:13:09 bzfpfend Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -124,6 +124,36 @@ DECL_CONSEXIT(consExitXxx)
 }
 #else
 #define consExitXxx NULL
+#endif
+
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#if 0
+static
+DECL_CONSINITPRE(consInitpreXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consInitpreXxx NULL
+#endif
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#if 0
+static
+DECL_CONSEXITPRE(consExitpreXxx)
+{  /*lint --e{715}*/
+   errorMessage("method of xxx constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitpreXxx NULL
 #endif
 
 
@@ -434,7 +464,8 @@ RETCODE SCIPincludeConshdlrXxx(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeXxx, consInitXxx, consExitXxx, consInitsolXxx, consExitsolXxx,
+                  consFreeXxx, consInitXxx, consExitXxx, 
+                  consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
                   consDeleteXxx, consTransXxx, consInitlpXxx,
                   consSepaXxx, consEnfolpXxx, consEnfopsXxx, consCheckXxx, 
                   consPropXxx, consPresolXxx, consRescvarXxx,

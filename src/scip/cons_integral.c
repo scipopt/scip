@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.24 2004/04/27 15:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.25 2004/05/03 08:13:08 bzfpfend Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -55,6 +55,14 @@
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitIntegral NULL
+
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreIntegral NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreIntegral NULL
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -209,7 +217,8 @@ RETCODE SCIPincludeConshdlrIntegral(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeIntegral, consInitIntegral, consExitIntegral, consInitsolIntegral, consExitsolIntegral,
+                  consFreeIntegral, consInitIntegral, consExitIntegral, 
+                  consInitpreIntegral, consExitpreIntegral, consInitsolIntegral, consExitsolIntegral,
                   consDeleteIntegral, consTransIntegral, consInitlpIntegral,
                   consSepaIntegral, consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, 
                   consPropIntegral, consPresolIntegral, consRescvarIntegral,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.7 2004/04/27 15:50:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.8 2004/05/03 08:13:10 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -101,6 +101,8 @@ struct Conshdlr
    DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    DECL_CONSINIT    ((*consinit));      /**< initialize constraint handler */
    DECL_CONSEXIT    ((*consexit));      /**< deinitialize constraint handler */
+   DECL_CONSINITPRE ((*consinitpre));   /**< presolving initialization method of constraint handler */
+   DECL_CONSEXITPRE ((*consexitpre));   /**< presolving deinitialization method of constraint handler */
    DECL_CONSINITSOL ((*consinitsol));   /**< solving process initialization method of constraint handler */
    DECL_CONSEXITSOL ((*consexitsol));   /**< solving process deinitialization method of constraint handler */
    DECL_CONSDELETE  ((*consdelete));    /**< free specific constraint data */

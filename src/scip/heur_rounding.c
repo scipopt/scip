@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.24 2004/04/27 15:50:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.25 2004/05/03 08:13:10 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -154,7 +154,7 @@ RETCODE updateActivities(
       row = colrows[r];
       rowpos = SCIProwGetLPPos(row);
       assert(-1 <= rowpos && rowpos < nlprows);
-      
+
       if( rowpos >= 0 && !SCIProwIsLocal(row) )
       {
          Real oldactivity;

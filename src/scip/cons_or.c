@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.3 2004/04/27 15:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.4 2004/05/03 08:13:09 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1079,6 +1079,14 @@ DECL_CONSFREE(consFreeOr)
 #define consExitOr NULL
 
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreOr NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreOr NULL
+
+
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolOr NULL
 
@@ -1337,6 +1345,10 @@ DECL_CONSPRESOL(consPresolOr)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* force presolving the constraint in the initial round */
+      if( nrounds == 0 )
+         consdata->propagated = FALSE;
+
       /* remove all variables that are fixed to one */
       CHECK_OKAY( applyFixings(scip, cons, conshdlrdata->eventhdlr) );
 
@@ -1480,7 +1492,8 @@ RETCODE SCIPincludeConshdlrOr(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeOr, consInitOr, consExitOr, consInitsolOr, consExitsolOr,
+                  consFreeOr, consInitOr, consExitOr, 
+                  consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
                   consDeleteOr, consTransOr, consInitlpOr,
                   consSepaOr, consEnfolpOr, consEnfopsOr, consCheckOr, 
                   consPropOr, consPresolOr, consRescvarOr,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.12 2004/04/27 15:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.13 2004/05/03 08:13:08 bzfpfend Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -103,6 +103,36 @@ DECL_CONSEXIT(consExitBinpack)
 }
 #else
 #define consExitBinpack NULL
+#endif
+
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#if 0
+static
+DECL_CONSINITPRE(consInitpreBinpack)
+{  /*lint --e{715}*/
+   errorMessage("method of binpack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consInitpreBinpack NULL
+#endif
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#if 0
+static
+DECL_CONSEXITPRE(consExitpreBinpack)
+{  /*lint --e{715}*/
+   errorMessage("method of binpack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitpreBinpack NULL
 #endif
 
 
@@ -443,7 +473,8 @@ RETCODE SCIPincludeConshdlrBinpack(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeBinpack, consInitBinpack, consExitBinpack, consInitsolBinpack, consExitsolBinpack,
+                  consFreeBinpack, consInitBinpack, consExitBinpack, 
+                  consInitpreBinpack, consExitpreBinpack, consInitsolBinpack, consExitsolBinpack,
                   consDeleteBinpack, consTransBinpack, consInitlpBinpack,
                   consSepaBinpack, consEnfolpBinpack, consEnfopsBinpack, consCheckBinpack, 
                   consPropBinpack, consPresolBinpack, consRescvarBinpack,

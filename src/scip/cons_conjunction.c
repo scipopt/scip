@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.2 2004/04/27 15:49:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.3 2004/05/03 08:13:08 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -255,6 +255,14 @@ RETCODE checkAllConss(
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #define consExitConjunction NULL
+
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#define consInitpreConjunction NULL
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#define consExitpreConjunction NULL
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -501,7 +509,7 @@ RETCODE SCIPincludeConshdlrConjunction(
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
                   consFreeConjunction, consInitConjunction, consExitConjunction, 
-                  consInitsolConjunction, consExitsolConjunction,
+                  consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
                   consDeleteConjunction, consTransConjunction, consInitlpConjunction,
                   consSepaConjunction, consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, 
                   consPropConjunction, consPresolConjunction, consRescvarConjunction,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.12 2004/04/27 15:49:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.13 2004/05/03 08:13:08 bzfpfend Exp $"
 
 /**@file   cons_eqknapsack.c
  * @brief  constraint handler for eqknapsack constraints
@@ -103,6 +103,36 @@ DECL_CONSEXIT(consExitEqknapsack)
 }
 #else
 #define consExitEqknapsack NULL
+#endif
+
+
+/** presolving initialization method of constraint handler (called when presolving is about to begin) */
+#if 0
+static
+DECL_CONSINITPRE(consInitpreEqknapsack)
+{  /*lint --e{715}*/
+   errorMessage("method of eqknapsack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consInitpreEqknapsack NULL
+#endif
+
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
+#if 0
+static
+DECL_CONSEXITPRE(consExitpreEqknapsack)
+{  /*lint --e{715}*/
+   errorMessage("method of eqknapsack constraint handler not implemented yet\n");
+   abort(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consExitpreEqknapsack NULL
 #endif
 
 
@@ -417,7 +447,8 @@ RETCODE SCIPincludeConshdlrEqknapsack(
    CHECK_OKAY( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
                   CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
                   CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_NEEDSCONS,
-                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
+                  consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, 
+                  consInitpreEqknapsack, consExitpreEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
                   consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,
                   consSepaEqknapsack, consEnfolpEqknapsack, consEnfopsEqknapsack, consCheckEqknapsack, 
                   consPropEqknapsack, consPresolEqknapsack, consRescvarEqknapsack,
