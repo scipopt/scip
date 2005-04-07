@@ -186,6 +186,7 @@ fixed bugs:
 - heuristic's display character is now only shown the first time, the new solution was found
 - fixed bug that SCIPreadProb() doesn't discard the transformed problem
 - fixed bug in cmir separator with empty rows
+- fixed bug in linear constraint handler's knapsack relaxation separator
 
 
 SCIP version 0.78

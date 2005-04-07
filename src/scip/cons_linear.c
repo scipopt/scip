@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.155 2005/03/21 11:37:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.156 2005/04/07 14:23:57 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2631,6 +2631,7 @@ RETCODE separateRelaxedKnapsack(
    VAR** consvars;
    Real* binvals;
    Longint* consvals;
+   Longint maxact;
    Real intscalar;
    Bool success;
    int nbinvars;
@@ -2645,7 +2646,7 @@ RETCODE separateRelaxedKnapsack(
 
    CHECK_OKAY( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
 
-   if(nbinvars == 0)
+   if( nbinvars == 0 )
       return SCIP_OKAY;
       
    /* set up data structures */
@@ -2677,7 +2678,7 @@ RETCODE separateRelaxedKnapsack(
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          debugMessage(" -> binary variable %+g<%s>\n", valscale * knapvals[i], SCIPvarGetName(var));
       }
-      else if( valscale * knapvals[i] > 0 )
+      else if( valscale * knapvals[i] > 0.0 )
       {
          VAR** zvlb;
          Real* bvlb;
@@ -2705,7 +2706,7 @@ RETCODE separateRelaxedKnapsack(
 
                assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
                vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
-               if( SCIPisGE(scip, vlbsol, bestlbsol) )
+               if( SCIPisGT(scip, vlbsol, bestlbsol) )
                {
                   bestlbsol = vlbsol;
                   bestlbtype = j;
@@ -2742,7 +2743,9 @@ RETCODE separateRelaxedKnapsack(
          int bestubtype;
          int nvub;
          int j;
-         
+
+         assert(valscale * knapvals[i] < 0.0);
+
          /* a_j < 0: substitution with ub or vub */
          nvub = SCIPvarGetNVubs(var);
          zvub = SCIPvarGetVubVars(var);
@@ -2761,7 +2764,7 @@ RETCODE separateRelaxedKnapsack(
 
                assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
                vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
-               if( SCIPisLE(scip, vubsol, bestubsol) )
+               if( SCIPisLT(scip, vubsol, bestubsol) )
                {
                   bestubsol = vubsol;
                   bestubtype = j;
@@ -2813,6 +2816,7 @@ RETCODE separateRelaxedKnapsack(
    rhs = rhs*intscalar;
 
    debugMessage(" -> rhs = %g\n", rhs);
+   maxact = 0;
    for( i = 0; i < nbinvars; i++ )
    {
       VAR* var;
@@ -2830,7 +2834,7 @@ RETCODE separateRelaxedKnapsack(
       }
       else
       {
-         assert( val < 0 );
+         assert(val < 0);
       
          CHECK_OKAY( SCIPgetNegatedVar(scip, binvars[i], &var) );
          val = -val;
@@ -2839,27 +2843,38 @@ RETCODE separateRelaxedKnapsack(
             -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
       }
       
+      maxact += val;
       consvals[nconsvars] = val;
       consvars[nconsvars] = var;
       nconsvars++;
    }
 
-   if( nconsvars == 0 )
-      goto TERMINATE;
- 
-   /* separate lifted cut from relaxed knapsack constraint */
-   assert(consvars != NULL);
-   assert(consvals != NULL);
+   if( nconsvars > 0 )
+   { 
+      Longint capacity;
 
+      assert(consvars != NULL);
+      assert(consvals != NULL);
+      capacity = (Longint)SCIPfeasFloor(scip, rhs);
+      if( maxact > capacity )
+      {
 #ifdef DEBUG
-   debugMessage(" -> linear relaxed to knapsack:");
-   for( i = 0; i < nconsvars; ++i )
-      printf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
-   printf(" <= %lld\n", (Longint)SCIPfeasFloor(scip, rhs));
+         Real act;
+
+         debugMessage(" -> linear relaxed to knapsack:");
+         act = 0.0;
+         for( i = 0; i < nconsvars; ++i )
+         {
+            printf(" %+lld<%s>(%g)", consvals[i], SCIPvarGetName(consvars[i]), SCIPvarGetLPSol(consvars[i]));
+            act += consvals[i] * SCIPvarGetLPSol(consvars[i]);
+         }
+         printf(" <= %lld (%g) [act: %g, max: %lld]\n", capacity, rhs, act, maxact);
 #endif
-  
-   CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, 
-         (Longint)SCIPfeasFloor(scip, rhs), ncuts) );
+         
+         /* separate lifted cut from relaxed knapsack constraint */
+         CHECK_OKAY( SCIPseparateKnapsackCardinality(scip, cons, nconsvars, consvars, consvals, capacity, ncuts) );
+      }
+   }
    
  TERMINATE:
    /* free data structures */
@@ -2906,15 +2921,15 @@ RETCODE separateCons(
 
          dualsol = SCIProwGetDualsol(consdata->row);
          if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasNegative(scip, dualsol) )
-         { 
+         {
             CHECK_OKAY( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
                   consdata->vals, +1.0, consdata->rhs, ncuts) ); 
          }
-         else if( !SCIPisInfinity(scip, consdata->lhs) && SCIPisFeasPositive(scip, dualsol) )
+         else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasPositive(scip, dualsol) )
          { 
             CHECK_OKAY( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars, 
                   consdata->vals, -1.0, -consdata->lhs, ncuts) ); 
-         }  
+         }
       }
    }
 

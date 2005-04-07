@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.154 2005/03/24 09:47:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.155 2005/04/07 14:23:57 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1484,6 +1484,44 @@ RETCODE vboundsAdd(
  * methods for implications
  */
 
+#ifndef NDEBUG
+/** comparator function for implication variables in the implication data structure */
+static
+DECL_SORTPTRCOMP(compImplvars)
+{
+   VAR* var1;
+   VAR* var2;
+
+   var1 = (VAR*)elem1;
+   var2 = (VAR*)elem2;
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   if( var1->vartype == var2->vartype )
+   {
+      if( var1 < var2 )
+         return -1;
+      else if( var1 > var2 )
+         return +1;
+      else
+         return 0;
+   }
+   else
+   {
+      if( var1->vartype == SCIP_VARTYPE_BINARY && var2->vartype != SCIP_VARTYPE_BINARY )
+         return -1;
+      if( var1->vartype != SCIP_VARTYPE_BINARY && var2->vartype == SCIP_VARTYPE_BINARY )
+         return +1;
+      else if( var1 < var2 )
+         return -1;
+      else if( var1 > var2 )
+         return +1;
+      else
+         return 0;
+   }
+}
+#endif
+
 /** creates an implications data structure */
 static
 RETCODE implicsCreate(
@@ -1576,7 +1614,7 @@ RETCODE implicsEnsureSize(
  */
 static
 RETCODE implicsSearchVar(
-   IMPLICS**        implics,            /**< pointer to implications data structure */
+   IMPLICS*         implics,            /**< implications data structure */
    VAR*             implvar,            /**< variable y to search for */
    BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
    Bool             varfixing,          /**< FALSE if y is searched in implications for x <= 0, TRUE for x >= 1 */
@@ -1598,7 +1636,7 @@ RETCODE implicsSearchVar(
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
       /* no implications with binary variable y */
-      if( (*implics)->nbinimpls[varfixing] == 0 )
+      if( implics->nbinimpls[varfixing] == 0 )
       {
          *posadd = 0;
          *poslower = INT_MAX;
@@ -1606,29 +1644,29 @@ RETCODE implicsSearchVar(
           return SCIP_OKAY;
       }      
       left = 0;
-      right = (*implics)->nbinimpls[varfixing] - 1;
+      right = implics->nbinimpls[varfixing] - 1;
       assert(left <= right);
    }
    else
    {
       /* no implications with nonbinary variable y */
-      if( (*implics)->nimpls[varfixing] == (*implics)->nbinimpls[varfixing] )
+      if( implics->nimpls[varfixing] == implics->nbinimpls[varfixing] )
       {
-         *posadd = (*implics)->nbinimpls[varfixing];
+         *posadd = implics->nbinimpls[varfixing];
          *poslower = INT_MAX;
          *posupper = INT_MAX;
          return SCIP_OKAY;
       }
-      left = (*implics)->nbinimpls[varfixing];
-      right = (*implics)->nimpls[varfixing] - 1;
+      left = implics->nbinimpls[varfixing];
+      right = implics->nimpls[varfixing] - 1;
       assert(left <= right);
    }
 
    /* searches for y */
    middle = (left + right) / 2;
-   while( left <= right && (*implics)->implvars[varfixing][middle] != implvar )
+   while( left <= right && implics->implvars[varfixing][middle] != implvar )
    {
-      if( implvar < (*implics)->implvars[varfixing][middle] ) 
+      if( implvar < implics->implvars[varfixing][middle] ) 
          right = middle - 1;
       else
          left = middle + 1;
@@ -1638,8 +1676,8 @@ RETCODE implicsSearchVar(
    if( left == right + 1 )
    {
       /* y was not found */
-      assert(right == -1 || (*implics)->implvars[varfixing][right] < implvar);
-      assert(left >= (*implics)->nimpls[varfixing] || (*implics)->implvars[varfixing][left] != implvar);
+      assert(right == -1 || compImplvars((void*)implics->implvars[varfixing][right], (void*)implvar) < 0);
+      assert(left >= implics->nimpls[varfixing] || implics->implvars[varfixing][left] != implvar);
       *poslower = INT_MAX;
       *posupper = INT_MAX;
       *posadd = left;
@@ -1647,16 +1685,16 @@ RETCODE implicsSearchVar(
    else
    {
       /* y was found */
-      assert(implvar == (*implics)->implvars[varfixing][middle]);
+      assert(implvar == implics->implvars[varfixing][middle]);
 
       /* sets poslower and posupper */
-      if( (*implics)->impltypes[varfixing][middle] == SCIP_BOUNDTYPE_LOWER )
+      if( implics->impltypes[varfixing][middle] == SCIP_BOUNDTYPE_LOWER )
       {
          /* y was found as y_lower (on position middle) */
          *poslower = middle;
-         if( middle + 1 < (*implics)->nimpls[varfixing] && (*implics)->implvars[varfixing][middle+1] == implvar )
+         if( middle + 1 < implics->nimpls[varfixing] && implics->implvars[varfixing][middle+1] == implvar )
          {  
-            assert((*implics)->impltypes[varfixing][middle+1] == SCIP_BOUNDTYPE_UPPER);
+            assert(implics->impltypes[varfixing][middle+1] == SCIP_BOUNDTYPE_UPPER);
             *posupper = middle + 1;
          }
          else
@@ -1666,9 +1704,9 @@ RETCODE implicsSearchVar(
       {
          /* y was found as y_upper (on position middle) */
          *posupper = middle;
-         if( middle - 1 >= 0 && (*implics)->implvars[varfixing][middle-1] == implvar )
+         if( middle - 1 >= 0 && implics->implvars[varfixing][middle-1] == implvar )
          {  
-            assert((*implics)->impltypes[varfixing][middle-1] == SCIP_BOUNDTYPE_LOWER);
+            assert(implics->impltypes[varfixing][middle-1] == SCIP_BOUNDTYPE_LOWER);
             *poslower = middle - 1;
          }
          else
@@ -1729,10 +1767,11 @@ RETCODE implicsAdd(
    {
       return SCIP_OKAY;
    }
+
    /* searches if variable is already contained in implications data structure */
    if( *implics != NULL )
    {
-      CHECK_OKAY( implicsSearchVar(implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd) );
+      CHECK_OKAY( implicsSearchVar(*implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd) );
       assert(poslower >= 0);
       assert(posupper >= 0);
       assert(posadd >= 0 && posadd <= (*implics)->nimpls[varfixing]);
@@ -1764,6 +1803,7 @@ RETCODE implicsAdd(
       if( posadd == poslower )
       {
          /* add y >= b by changing old entry on poslower */
+         assert((*implics)->implvars[varfixing][poslower] == implvar);
          assert(SCIPsetIsFeasGT(set, implbound, (*implics)->implbounds[varfixing][poslower]));
          (*implics)->implbounds[varfixing][poslower] = implbound;
 
@@ -1779,7 +1819,7 @@ RETCODE implicsAdd(
       
       for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
       {
-         assert((*implics)->implvars[varfixing][k-1] >= implvar);
+         assert(compImplvars((void*)(*implics)->implvars[varfixing][k-1], (void*)implvar) >= 0);
          (*implics)->implvars[varfixing][k] = (*implics)->implvars[varfixing][k-1];
          (*implics)->impltypes[varfixing][k] = (*implics)->impltypes[varfixing][k-1];
          (*implics)->implbounds[varfixing][k] = (*implics)->implbounds[varfixing][k-1];
@@ -1791,6 +1831,10 @@ RETCODE implicsAdd(
       if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
          (*implics)->nbinimpls[varfixing]++;
       (*implics)->nimpls[varfixing]++;
+#ifndef NDEBUG
+      for( k = posadd-1; k >= 0; k-- )
+         assert(compImplvars((void*)(*implics)->implvars[varfixing][k], (void*)implvar) <= 0);
+#endif
    }
    else
    {
@@ -1812,6 +1856,7 @@ RETCODE implicsAdd(
       if( posadd == posupper )
       {
          /* add y <= b by changing old entry on posupper */
+         assert((*implics)->implvars[varfixing][posupper] == implvar);
          assert(SCIPsetIsFeasLT(set, implbound,(*implics)->implbounds[varfixing][posupper]));
          (*implics)->implbounds[varfixing][posupper] = implbound;
 
@@ -1827,7 +1872,7 @@ RETCODE implicsAdd(
       
       for( k = (*implics)->nimpls[varfixing]; k > posadd; k-- )
       {
-         assert((*implics)->implvars[varfixing][k-1] >= implvar);
+         assert(compImplvars((void*)(*implics)->implvars[varfixing][k-1], (void*)implvar) >= 0);
          (*implics)->implvars[varfixing][k] = (*implics)->implvars[varfixing][k-1];
          (*implics)->impltypes[varfixing][k] = (*implics)->impltypes[varfixing][k-1];
          (*implics)->implbounds[varfixing][k] = (*implics)->implbounds[varfixing][k-1];
@@ -1839,6 +1884,10 @@ RETCODE implicsAdd(
       if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
          (*implics)->nbinimpls[varfixing]++;
       (*implics)->nimpls[varfixing]++;
+#ifndef NDEBUG
+      for( k = posadd-1; k >= 0; k-- )
+         assert(compImplvars((void*)(*implics)->implvars[varfixing][k], (void*)implvar) <= 0);
+#endif
    }
     
    return SCIP_OKAY;
