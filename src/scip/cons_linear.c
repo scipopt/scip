@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.156 2005/04/07 14:23:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.157 2005/04/07 14:41:05 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2706,7 +2706,7 @@ RETCODE separateRelaxedKnapsack(
 
                assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
                vlbsol = bvlb[j] * SCIPvarGetLPSol(zvlb[j]) + dvlb[j];
-               if( SCIPisGT(scip, vlbsol, bestlbsol) )
+               if( SCIPisGE(scip, vlbsol, bestlbsol) )
                {
                   bestlbsol = vlbsol;
                   bestlbtype = j;
@@ -2764,7 +2764,7 @@ RETCODE separateRelaxedKnapsack(
 
                assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
                vubsol = bvub[j] * SCIPvarGetLPSol(zvub[j]) + dvub[j];
-               if( SCIPisLT(scip, vubsol, bestubsol) )
+               if( SCIPisLE(scip, vubsol, bestubsol) )
                {
                   bestubsol = vubsol;
                   bestubtype = j;
