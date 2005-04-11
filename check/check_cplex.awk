@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.9 2005/03/15 13:43:34 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.10 2005/04/11 10:56:14 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -126,7 +126,7 @@ BEGIN {
 /cuts applied/ { 
     cuts += $NF;
 }
-/^Current MIP best bound/ {
+/^Current MIP best bound =/ {
     db = $6;
     split ($9, a, ",");
     absgap = a[1];
@@ -157,11 +157,10 @@ BEGIN {
       gap = -1.0;
    else
       gap = 100.0*abs((pb-db)/db);
-   if( gap >= 0.0 )
+   if( gap >= 0.0 && gap < 10000.0 )
       gapstr = sprintf("%6.1f", gap);
    else
       gapstr = "  --  ";
-
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    

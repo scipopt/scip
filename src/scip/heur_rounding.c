@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.41 2005/03/22 18:42:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.42 2005/04/11 10:56:15 bzfpfend Exp $"
 
 /**@file   heur_rounding.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
@@ -229,7 +229,7 @@ RETCODE selectRounding(
       {
          solval = SCIPgetSolVal(scip, sol, var);
       
-         if( !SCIPisIntegral(scip, solval) )
+         if( !SCIPisFeasIntegral(scip, solval) )
          {
             val = rowvals[c];
             obj = SCIPvarGetObj(var);
@@ -349,7 +349,7 @@ RETCODE selectEssentialRounding(
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
       
       solval = SCIPgetSolVal(scip, sol, var);
-      if( !SCIPisIntegral(scip, solval) )
+      if( !SCIPisFeasIntegral(scip, solval) )
       {
          obj = SCIPvarGetObj(var);
 

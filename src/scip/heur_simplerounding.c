@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.16 2005/03/02 19:04:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.17 2005/04/11 10:56:15 bzfpfend Exp $"
 
 /**@file   heur_simplerounding.c
  * @brief  simple and fast LP rounding heuristic
@@ -160,7 +160,7 @@ DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       Bool mayroundup;
 
       oldsolval = lpcandssol[c];
-      assert(!SCIPisIntegral(scip, oldsolval));
+      assert(!SCIPisFeasIntegral(scip, oldsolval));
       var = lpcands[c];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       mayrounddown = SCIPvarMayRoundDown(var);

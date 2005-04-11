@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.19 2005/03/14 16:10:19 bzfpfend Exp $
+# $Id: check.awk,v 1.20 2005/04/11 10:56:14 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -40,19 +40,19 @@ BEGIN {
     printf("\\begin{center}\n")                                      >TEXFILE;
     printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
     printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-#    printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n")  >TEXFILE;
-    printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n")  >TEXFILE;
+    printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n")  >TEXFILE;
+#    printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n")  >TEXFILE;
     printf("\\toprule\n")                                            >TEXFILE;
-#    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &    Confs &    Lits &     Nodes &     Time &   BTime &   OTime &   CTime \\\\\n") > TEXFILE;
-    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
+    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &    Confs &    Lits &     Nodes &     Time &   BTime &   OTime &   CTime \\\\\n") > TEXFILE;
+#    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
     printf("\\midrule\n")                                            >TEXFILE;
 
-#    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-#    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
-#    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
-    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Confs |  Lits | Nodes | Time | BTim | OTim | CTim |       \n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+#    printf("Name              | Conss | Vars |   Dual Bound | Primal Bound | Gap% | Nodes | Time |       \n");
+#    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
 
     nprobs = 0;
     sbab = 0;
@@ -202,17 +202,17 @@ BEGIN {
    else
       gapstr = "  --  ";
 
-#   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-#      pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-#      markersym, bbnodes, markersym, tottime, tottime - conftime - overheadtime, overheadtime, conftime) >TEXFILE;
-   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
+      pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+      markersym, bbnodes, markersym, tottime, tottime - conftime - overheadtime, overheadtime, conftime) >TEXFILE;
+#   printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+#      pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
    
-#   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
-#      shortprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
-#      bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
-   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
-      shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
+   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %7.1f %7d %6.1f %6.1f %6.1f %6.1f ",
+      shortprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
+      bbnodes, tottime, tottime - conftime - overheadtime, overheadtime, conftime);
+#   printf("%-19s %6d %6d %14.9g %14.9g %6s %7d %6.1f ",
+#      shortprob, cons, vars, db, pb, gapstr, bbnodes, tottime);
    
    if (sol[prob] == "")
       printf("unknown\n");
@@ -253,14 +253,14 @@ BEGIN {
 }
 END {   
     printf("\\midrule\n")                                                 >TEXFILE;
-#    printf("%-14s (%2d) &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-#       "Total", nprobs, sbab, stottime, stottime - conftottime - overheadtottime, overheadtottime, conftottime) >TEXFILE;
-#    printf("%-14s      &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
-#       "Geom. Mean", nodegeom, timegeom, basictimegeom, overheadtimegeom, conftimegeom) >TEXFILE;
-    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
-       "Total", nprobs, sbab, stottime) >TEXFILE;
-    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-       "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+    printf("%-14s (%2d) &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
+       "Total", nprobs, sbab, stottime, stottime - conftottime - overheadtottime, overheadtottime, conftottime) >TEXFILE;
+    printf("%-14s      &        &        &                &                &        &          &         & %9d & %8.1f & %7.1f & %7.1f & %7.1f \\\\\n",
+       "Geom. Mean", nodegeom, timegeom, basictimegeom, overheadtimegeom, conftimegeom) >TEXFILE;
+#    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
+#       "Total", nprobs, sbab, stottime) >TEXFILE;
+#    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
+#       "Geom. Mean", nodegeom, timegeom) >TEXFILE;
     printf("\\bottomrule\n")                                              >TEXFILE;
     printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
     printf("\\end{tabular*}\n")                                           >TEXFILE;
@@ -269,8 +269,8 @@ END {
     printf("\\end{table}\n")                                              >TEXFILE;
     printf("\\end{document}\n")                                           >TEXFILE;
     
-#    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
-    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
+    printf("------------------+-------+------+--------------+--------------+------+-------+-------+-------+------+------+------+------+-------\n");
+#    printf("------------------+-------+------+--------------+--------------+------+-------+------+-------\n");
     
     printf("\n");
     printf("------------------------[Nodes]---------------[Time]-----------[Basic Time]-------[Overhead Time]-----[Conflict Time]-\n");

@@ -78,6 +78,7 @@ plugins:
 - changed implementation of maximal strong branching iterations calculation in reliability branching
 - modified the automatic objfactor setting of feaspump heuristic to let the objective function have stronger influence
 - changed implementation of automatic minplungedepth and maxplungedepth calculation in bfs node selector
+- new pluging: implied bound cuts separator
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -187,6 +188,7 @@ fixed bugs:
 - fixed bug that SCIPreadProb() doesn't discard the transformed problem
 - fixed bug in cmir separator with empty rows
 - fixed bug in linear constraint handler's knapsack relaxation separator
+- fixed numerical bugs in rounding heuristic and rootsoldiving heuristic
 
 
 SCIP version 0.78

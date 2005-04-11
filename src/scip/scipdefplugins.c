@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.36 2005/03/10 17:11:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.37 2005/04/11 10:56:15 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -66,8 +66,9 @@
 #include "scip/sepa_clique.h"
 #include "scip/sepa_cmir.h"
 #include "scip/sepa_gomory.h"
-#include "scip/sepa_strongcg.h"
+#include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_intobj.h"
+#include "scip/sepa_strongcg.h"
 #include "scip/scipdefplugins.h"
 
 #if 0
@@ -131,8 +132,9 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeSepaClique(scip) );
    CHECK_OKAY( SCIPincludeSepaCmir(scip) );
    CHECK_OKAY( SCIPincludeSepaGomory(scip) );
-   CHECK_OKAY( SCIPincludeSepaStrongcg(scip) );
+   CHECK_OKAY( SCIPincludeSepaImpliedbounds(scip) );
    CHECK_OKAY( SCIPincludeSepaIntobj(scip) );
+   CHECK_OKAY( SCIPincludeSepaStrongcg(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeDialogDefault(scip) );
 

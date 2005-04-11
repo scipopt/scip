@@ -1578,6 +1578,30 @@ separating/gomory/maxweightrange = 10000
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/gomory/dynamiccuts = TRUE
 
+# priority of separator <impliedbounds>
+# [type: int, range: [-2147483648,2147483647], default: -50]
+separating/impliedbounds/priority = -50
+
+# frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/impliedbounds/freq = -1
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/impliedbounds/delay = FALSE
+
+# priority of separator <intobj>
+# [type: int, range: [-2147483648,2147483647], default: -100]
+separating/intobj/priority = -100
+
+# frequency for calling separator <intobj> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/intobj/freq = -1
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/intobj/delay = FALSE
+
 # priority of separator <strongcg>
 # [type: int, range: [-2147483648,2147483647], default: -2000]
 separating/strongcg/priority = -2000
@@ -1613,18 +1637,6 @@ separating/strongcg/maxweightrange = 10000
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/strongcg/dynamiccuts = TRUE
-
-# priority of separator <intobj>
-# [type: int, range: [-2147483648,2147483647], default: -100]
-separating/intobj/priority = -100
-
-# frequency for calling separator <intobj> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/intobj/freq = -1
-
-# should separator be delayed, if other separators found cuts?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/intobj/delay = FALSE
 
 # display activation status of display column <solfound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

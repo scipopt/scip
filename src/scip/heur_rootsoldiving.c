@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.19 2005/03/21 16:42:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.20 2005/04/11 10:56:15 bzfpfend Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
@@ -310,7 +310,7 @@ DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
          newobj = oldobj;
          
          solval =  SCIPvarGetLPSol(var);
-         if( SCIPisIntegral(scip, solval) )
+         if( SCIPisFeasIntegral(scip, solval) )
          {
             /* if the variable became integral after a soft rounding, fix it to this value;
              * otherwise, fade out the objective value
