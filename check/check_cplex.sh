@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.8 2005/01/21 09:16:45 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.9 2005/04/12 08:53:23 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2
@@ -43,6 +43,7 @@ do
 	echo read $i                             > $TMPFILE
 	echo set timelimit $TIMELIMIT           >> $TMPFILE
 	echo set clocktype 1                    >> $TMPFILE
+	echo set mip display 3                  >> $TMPFILE
 	echo set mip interval 10000             >> $TMPFILE
 	echo set mip tolerances absmipgap 1e-9  >> $TMPFILE
 	echo set mip tolerances mipgap 0.0      >> $TMPFILE
