@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.13 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.14 2005/04/12 16:56:17 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -105,7 +105,7 @@ RETCODE applyProbing(
    assert(SCIPvarGetLbLocal(vars[probingpos]) < 0.5);
    assert(SCIPvarGetUbLocal(vars[probingpos]) > 0.5);
 
-   /*debugMessage("applying probing on variable <%s> == %d\n", SCIPvarGetName(vars[probingpos]), probingdir);*/
+   debugMessage("applying probing on variable <%s> == %d\n", SCIPvarGetName(vars[probingpos]), probingdir);
 
    /* start probing mode */
    CHECK_OKAY( SCIPstartProbing(scip) );
@@ -132,6 +132,18 @@ RETCODE applyProbing(
       {
          lbs[i] = SCIPvarGetLbLocal(vars[i]);
          ubs[i] = SCIPvarGetUbLocal(vars[i]);
+#ifdef DEBUG
+         if( SCIPisGT(scip, lbs[i], SCIPvarGetLbGlobal(vars[i])) )
+         {
+            debugMessage(" -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]), 
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), lbs[i]);
+         }
+         if( SCIPisLT(scip, ubs[i], SCIPvarGetUbGlobal(vars[i])) )
+         {
+            debugMessage(" -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]), 
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), ubs[i]);
+         }
+#endif
       }
    }
 

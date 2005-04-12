@@ -1584,7 +1584,7 @@ separating/impliedbounds/priority = -50
 
 # frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 10]
-separating/impliedbounds/freq = -1
+separating/impliedbounds/freq = 0
 
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

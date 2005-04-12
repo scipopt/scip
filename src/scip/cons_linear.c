@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.158 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.159 2005/04/12 16:56:17 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4759,13 +4759,9 @@ DECL_CONSCHECK(consCheckLinear)
 static
 DECL_CONSPROP(consPropLinear)
 {  /*lint --e{715}*/
-   CONSHDLRDATA* conshdlrdata;
    Bool tightenbounds;
    Bool cutoff;
    int nchgbds;
-   int propfreq;
-   int tightenboundsfreq;
-   int depth;
    int c;
 
    assert(conshdlr != NULL);
@@ -4774,14 +4770,24 @@ DECL_CONSPROP(consPropLinear)
 
    /*debugMessage("Prop method of linear constraints\n");*/
 
-   /* check, if we want to tighten variable's bounds */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   depth = SCIPgetDepth(scip);
-   propfreq = SCIPconshdlrGetPropFreq(conshdlr);
-   tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
-   tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
-      && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
+   /* check, if we want to tighten variable's bounds (in probing, we always want to tighten the bounds) */
+   if( SCIPinProbing )
+      tightenbounds = TRUE;
+   else
+   {
+      CONSHDLRDATA* conshdlrdata;
+      int depth;
+      int propfreq;
+      int tightenboundsfreq;
+      
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      depth = SCIPgetDepth(scip);
+      propfreq = SCIPconshdlrGetPropFreq(conshdlr);
+      tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
+      tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
+         && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
+   }
 
    cutoff = FALSE;
    nchgbds = 0;

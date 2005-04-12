@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.1 2005/04/11 10:56:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.2 2005/04/12 16:56:17 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -57,48 +57,49 @@ struct SepaData
 static 
 RETCODE addCut(
    SCIP*            scip,               /**< SCIP data structure */
-   Real*            varsolvals,         /**< LP solution of active problem variables */
    Real             val1,               /**< given coefficient of first variable */
    VAR*             var1,               /**< given first variable */
+   Real             solval1,            /**< current LP solution value of first variable */
    Real             val2,               /**< given coefficient of second variable */
    VAR*             var2,               /**< given second variable */
+   Real             solval2,            /**< current LP solution value of second variable */
    Real             rhs,                /**< given right hand side of the cut to add */
    int*             ncuts               /**< pointer to update number of cuts added */
    )
 {
    Real activity;
 
-   assert(scip != NULL);
+   assert(ncuts != NULL);
 
-   activity = val1 * varsolvals[SCIPvarGetProbindex(var1)] + val2 * varsolvals[SCIPvarGetProbindex(var2)]; 
-   debugMessage(" -> %g<%s> + %g<%s> <= %g (act: %g)\n", val1, SCIPvarGetName(var1), val2, SCIPvarGetName(var2),
-      rhs, activity);
+   /* calculate activity of cut */
+   activity = val1 * solval1 + val2 * solval2;
+   /*debugMessage(" -> %g<%s>[%g] + %g<%s>[%g] <= %g (act: %g)\n", 
+     val1, SCIPvarGetName(var1), solval1, val2, SCIPvarGetName(var2), solval2, rhs, activity);*/
 
+   /* check, if cut is violated */
    if( SCIPisEfficacious(scip, activity - rhs) )
    {
       ROW* cut;
       char cutname[MAXSTRLEN];
-      
-      /* creates the cut */
+
+      /* create cut */
       sprintf(cutname, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
       CHECK_OKAY( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
-      
       CHECK_OKAY( SCIPcacheRowExtensions(scip, cut) );
- 
       CHECK_OKAY( SCIPaddVarToRow(scip, cut, var1, val1) );
       CHECK_OKAY( SCIPaddVarToRow(scip, cut, var2, val2) );
-      
       CHECK_OKAY( SCIPflushRowExtensions(scip, cut) );
       
 #ifdef DEBUG
-      printf(" -> found cut (activity = %g): ", activity);
+      debugMessage(" -> found cut (activity = %g): ", activity);
       SCIPprintRow(scip, cut, NULL);
 #endif
-      /* adds the cut */
+
+      /* add cut */
       CHECK_OKAY( SCIPaddCut(scip, cut, FALSE) );
       (*ncuts)++;
       
-      /* release the row */
+      /* release cut */
       CHECK_OKAY( SCIPreleaseRow(scip, &cut) );
    }
    
@@ -137,16 +138,14 @@ static
 DECL_SEPAEXEC(sepaExecImpliedbounds)
 {  /*lint --e{715}*/
    VAR** vars;
-   Real* varsolvals;
-   int nbinvars;
+   VAR** fracvars;
+   Real* solvals;
+   Real* fracvals;
    int nvars;
+   int nbinvars;
+   int nfracs;
    int ncuts;
    int i;
-   int j;
-   BOUNDTYPE* impltypes; 
-   Real* implbounds; 
-   VAR** implvars;
-   int nimpl;
 
    assert(sepa != NULL);
    assert(scip != NULL);
@@ -155,111 +154,131 @@ DECL_SEPAEXEC(sepaExecImpliedbounds)
 
    /* gets active problem variables */
    CHECK_OKAY( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
-   assert(vars != NULL);
-
-   /* there is nothing to do, if there are no binary variables */
    if( nbinvars == 0 )
       return SCIP_OKAY;
+
+   /* get fractional problem variables */
+   CHECK_OKAY( SCIPgetLPBranchCands(scip, &fracvars, &fracvals, NULL, &nfracs, NULL) );
+   if( nfracs == 0 )
+      return SCIP_OKAY;
+
+   /* get solution values for all variables */
+   CHECK_OKAY( SCIPallocBufferArray(scip, &solvals, nvars) );
+   CHECK_OKAY( SCIPgetVarSols(scip, nvars, vars, solvals) );
 
    *result = SCIP_DIDNOTFIND;
    ncuts = 0;
 
    debugMessage("searching for implied bound cuts\n");
 
-   /* gets data structure */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &varsolvals, nvars) );
-
-   /* gets LP solution of all active variables */
-   CHECK_OKAY( SCIPgetVarSols(scip, nvars, vars, varsolvals) );
-
    /* search binary variables for violated implications */
-   for( i = 0; i < nbinvars; i++ )
+   for( i = 0; i < nfracs; i++ )
    {
-      /* gets all implications x >= 1 ==> y <= p or y >= p */
-      nimpl = SCIPvarGetNBinImpls(vars[i], TRUE);
-      implvars = SCIPvarGetImplVars(vars[i], TRUE);
-      impltypes = SCIPvarGetImplTypes(vars[i], TRUE);
-      implbounds = SCIPvarGetImplBounds(vars[i], TRUE);
+      BOUNDTYPE* impltypes; 
+      Real* implbounds; 
+      VAR** implvars;
+      int nimpl;
+      int j;
+
+      /* only process binary variables */
+      if( SCIPvarGetType(fracvars[i]) != SCIP_VARTYPE_BINARY )
+         continue;
+
+      /* get implications of x == 1 */
+      nimpl = SCIPvarGetNImpls(fracvars[i], TRUE);
+      implvars = SCIPvarGetImplVars(fracvars[i], TRUE);
+      impltypes = SCIPvarGetImplTypes(fracvars[i], TRUE);
+      implbounds = SCIPvarGetImplBounds(fracvars[i], TRUE);
       
-      /* tries to add cuts for implications of x >= 1  
-       *    y <= ub + x * (p - ub)  <==>  y + (ub - p) * x <=  ub          if x >= 1 ==> y <= p,   
-       *    y >= lb + x * (p - lb)  <==> -y + (p - lb) * x <= -lb          if x >= 1 ==> y >= p
+      /*debugMessage("%d implications for <%s>[%g] == 1\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
+
+      /* try to add cuts for implications of x == 1
+       *    x == 1 -> y <= p:  y <= ub + x * (p - ub)  <==>  y + (ub - p) * x <=  ub
+       *    x == 1 -> y >= p:  y >= lb + x * (p - lb)  <==> -y + (p - lb) * x <= -lb
        * with lb (ub) global lower (upper) bound of y
        */
       for( j = 0; j < nimpl; j++ )
       {
-         assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
+         Real solval;
 
+         solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
             Real ub;
          
-            /* implication x >= 1 ==> y <= p */
+            /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
             assert(SCIPisLE(scip, implbounds[j], ub));
             
-            /* adds cut if violated */
-            CHECK_OKAY( addCut(scip, varsolvals, 1.0, implvars[j], (ub - implbounds[j]), vars[i], ub, &ncuts) );
+            /* add cut if violated */
+            CHECK_OKAY( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
+                  ub, &ncuts) );
          }
          else
          {
             Real lb;
 
-            /* implication x >= 1 ==> y >= p */
+            /* implication x == 1 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, implbounds[j], lb));
  
-            /* adds cut if violated */
-            CHECK_OKAY( addCut(scip, varsolvals, -1.0, implvars[j], (implbounds[j] - lb), vars[i], -lb, &ncuts) );
+            /* add cut if violated */
+            CHECK_OKAY( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
+                  -lb, &ncuts) );
          }
       } 
 
-      /* gets all implications x <= 0 ==> y <= p or y >= p */
-      nimpl = SCIPvarGetNBinImpls(vars[i], FALSE);
-      implvars = SCIPvarGetImplVars(vars[i], FALSE);
-      impltypes = SCIPvarGetImplTypes(vars[i], FALSE);
-      implbounds = SCIPvarGetImplBounds(vars[i], FALSE);
+      /* get implications of x == 0 */
+      nimpl = SCIPvarGetNImpls(fracvars[i], FALSE);
+      implvars = SCIPvarGetImplVars(fracvars[i], FALSE);
+      impltypes = SCIPvarGetImplTypes(fracvars[i], FALSE);
+      implbounds = SCIPvarGetImplBounds(fracvars[i], FALSE);
       
-      /* tries to add cuts for implications of x >= 1  
-       *    y <= p + x * (ub - p)  <==>  y + (p - ub) * x <=  p            if x <= 0 ==> y <= p,   
-       *    y >= p + x * (lb - p)  <==> -y + (lb - p) * x <= -p            if x <= 0 ==> y >= p
+      /*debugMessage("%d implications for <%s>[%g] == 0\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
+
+      /* try to add cuts for implications of x == 0
+       *    x == 0 -> y <= p:  y <= p + x * (ub - p)  <==>  y + (p - ub) * x <=  p
+       *    x == 0 -> y >= p:  y >= p + x * (lb - p)  <==> -y + (lb - p) * x <= -p
        * with lb (ub) global lower (upper) bound of y
        */
       for( j = 0; j < nimpl; j++ )
       {
-         assert(SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY);
+         Real solval;
 
+         solval = solvals[SCIPvarGetProbindex(implvars[j])];
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
             Real ub;
          
-            /* implication x <= 0 ==> y <= p */
+            /* implication x == 0 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
             assert(SCIPisLE(scip, implbounds[j], ub));
  
-            /* adds cut if violated */
-            CHECK_OKAY( addCut(scip, varsolvals, 1.0, implvars[j], (implbounds[j] - ub), vars[i], implbounds[j], &ncuts) );
+            /* add cut if violated */
+            CHECK_OKAY( addCut(scip, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
+                  implbounds[j], &ncuts) );
          }
          else
          {
             Real lb;
 
-            /* implication x <= 0 ==> y >= p */
+            /* implication x == 0 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, implbounds[j], lb));
  
-            /* adds cut if violated */
-            CHECK_OKAY( addCut(scip, varsolvals, -1.0, implvars[j], (lb - implbounds[j]), vars[i], -implbounds[j],
-                  &ncuts) );
+            /* add cut if violated */
+            CHECK_OKAY( addCut(scip, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
+                  -implbounds[j], &ncuts) );
          }
-      } 
+      }
    }
 
+   /* adjust result code */
    if( ncuts > 0 )
       *result = SCIP_SEPARATED;
 
-   /* frees data structures */
-   SCIPfreeBufferArray(scip, &varsolvals);
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &solvals);
 
    return SCIP_OKAY;
 }

@@ -80,6 +80,8 @@ plugins:
 - modified the automatic objfactor setting of feaspump heuristic to let the objective function have stronger influence
 - changed implementation of automatic minplungedepth and maxplungedepth calculation in bfs node selector
 - new pluging: implied bound cuts separator
+- during probing, propagation of bounds is now always performed in linear constraint handler, ignoring the
+  parameter "tightenboundsfreq"
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -190,6 +192,7 @@ fixed bugs:
 - fixed bug in cmir separator with empty rows
 - fixed bug in linear constraint handler's knapsack relaxation separator
 - fixed numerical bugs in rounding heuristic and rootsoldiving heuristic
+- fixed bug in implied bound cut separator: only implications between binary variables were generated before
 
 
 SCIP version 0.78
