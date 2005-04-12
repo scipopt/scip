@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.13 2005/02/14 13:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.14 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -347,6 +347,30 @@ RETCODE SCIPcalcIntegralScalar(
    Real             maxscale,           /**< maximal allowed scalar */
    Real*            intscalar,          /**< pointer to store scalar that would make the coefficients integral, or NULL */
    Bool*            success             /**< stores whether returned value is valid */
+   );
+
+/** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
+ *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
+ *  number inside the interval was found
+ */
+extern
+Bool SCIPfindSimpleRational(
+   Real             lb,                 /**< lower bound of the interval */
+   Real             ub,                 /**< upper bound of the interval */
+   Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
+   Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator d of the rational number */
+   );
+
+/** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
+ *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
+ *  if no valid rational number inside the interval was found, selects the central value of the interval
+ */
+extern
+Real SCIPselectSimpleValue(
+   Real             lb,                 /**< lower bound of the interval */
+   Real             ub,                 /**< upper bound of the interval */
+   Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
    );
 
 #ifndef NDEBUG

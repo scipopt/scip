@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.24 2005/01/31 12:20:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.25 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -28,6 +28,7 @@
 
 
 #include <stdlib.h>
+#include <assert.h>
 
 
 

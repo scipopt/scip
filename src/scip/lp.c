@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.188 2005/03/24 09:47:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.189 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10533,7 +10533,7 @@ RETCODE SCIPlpGetDualfarkas(
    debugMessage("LP is infeasible:\n");
    for( r = 0; r < nlpirows; ++r )
    {
-      /*debugMessage(" row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);*/
+      debugMessage(" row <%s>: dualfarkas=%f\n", lpirows[r]->name, dualfarkas[r]);
       lpirows[r]->dualfarkas = dualfarkas[r];
    }
 

@@ -65,6 +65,7 @@ interface:
 - new methods SCIPgetNPrimalResolveLPs(), SCIPgetNPrimalResolveLPIterations(),
   SCIPgetNDualResolveLPs(), SCIPgetNDualResolveLPIterations()
 - new methods SCIPgetVarNStrongbranchs(), SCIPcolGetNStrongbranchs()
+- new methods SCIPfindSimpleRational(), SCIPselectSimpleValue()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);

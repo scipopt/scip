@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.39 2005/02/16 17:46:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.40 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3071,6 +3071,9 @@ Longint SCIPcalcSmaComMul(
    return val1/gcd * val2;
 }
 
+static const Real simplednoms[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+                                   17.0, 18.0, 19.0, 25.0, -1.0};
+
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
@@ -3094,12 +3097,50 @@ Bool SCIPrealToRational(
    Real delta0;
    Real delta1;
    Real epsilon;
+   int i;
 
    assert(mindelta < 0.0);
    assert(maxdelta > 0.0);
    assert(nominator != NULL);
    assert(denominator != NULL);
 
+   /* try the simple denominators first: each value of the simpledenoms table multiplied by powers of 10
+    * is tried as denominator
+    */
+   for( i = 0; simplednoms[i] > 0.0; ++i )
+   {
+      Real nom;
+      Real dnom;
+      Real ratval0;
+      Real ratval1;
+
+      /* try powers of 10 (including 10^0) */
+      dnom = simplednoms[i];
+      while( dnom <= maxdnom )
+      {
+         nom = EPSFLOOR(val * dnom, 0.0);
+         ratval0 = nom/dnom;
+         ratval1 = (nom+1.0)/dnom;
+         if( mindelta <= val - ratval0 && val - ratval1 <= maxdelta )
+         {
+            if( val - ratval0 <= maxdelta )
+            {
+               *nominator = (Longint)nom;
+               *denominator = (Longint)dnom;
+               return TRUE;
+            }
+            if( mindelta <= val - ratval1 )
+            {
+               *nominator = (Longint)(nom+1.0);
+               *denominator = (Longint)dnom;
+               return TRUE;
+            }
+         }
+         dnom *= 10.0;
+      }
+   }
+
+   /* the simple denominators didn't work: calculate rational representation with arbitrary denominator */
    epsilon = MIN(-mindelta, maxdelta);
 
    b = val;
@@ -3401,6 +3442,57 @@ RETCODE SCIPcalcIntegralScalar(
    }
 
    return SCIP_OKAY;
+}
+
+/** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
+ *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
+ *  number inside the interval was found
+ */
+Bool SCIPfindSimpleRational(
+   Real             lb,                 /**< lower bound of the interval */
+   Real             ub,                 /**< upper bound of the interval */
+   Longint          maxdnom,            /**< maximal denominator allowed for resulting rational number */
+   Longint*         nominator,          /**< pointer to store the nominator n of the rational number */
+   Longint*         denominator         /**< pointer to store the denominator d of the rational number */
+   )
+{
+   Real center;
+   Real delta;
+
+   assert(lb <= ub);
+
+   center = 0.5*(lb+ub);
+   delta = 0.5*(ub-lb);
+
+   return SCIPrealToRational(center, -delta, +delta, maxdnom, nominator, denominator);
+}
+
+/** given a (usually very small) interval, selects a value inside this interval; it is tried to select a rational number
+ *  with simple denominator (i.e. a small number, probably multiplied with powers of 10);
+ *  if no valid rational number inside the interval was found, selects the central value of the interval
+ */
+Real SCIPselectSimpleValue(
+   Real             lb,                 /**< lower bound of the interval */
+   Real             ub,                 /**< upper bound of the interval */
+   Longint          maxdnom             /**< maximal denominator allowed for resulting rational number */
+   )
+{
+   Real val;
+
+   val = 0.5*(lb+ub);
+   if( lb < ub )
+   {
+      Longint nominator;
+      Longint denominator;
+      Bool success;
+      
+      /* try to find a "simple" rational number inside the interval */
+      success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
+      if( success )
+         val = (Real)nominator/(Real)denominator;
+   }
+   
+   return val;
 }
 
 

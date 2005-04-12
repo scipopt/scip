@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.20 2005/02/14 13:35:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.21 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -34,6 +34,8 @@
 #define PRESOL_PRIORITY        +9000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+
+#define MAXDNOM                   10000 /**< maximal denominator for simple rational fixed values */
 
 
 
@@ -105,7 +107,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
          if( newlb > newub + 0.5 )
          {
             SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
-               "problem infeasible: integral variable <%s> has bounds [%g,%g] rounded to [%g,%g]\n",
+               "problem infeasible: integral variable <%s> has bounds [%.17f,%.17f] rounded to [%.17f,%.17f]\n",
                SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
@@ -114,7 +116,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* fix variables with equal bounds */
          if( newlb > newub - 0.5 )
          {
-            debugMessage("fixing integral variable <%s>: [%g,%g] -> [%g,%g]\n",
+            debugMessage("fixing integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(vars[v]), lb, ub, newlb, newub);
             CHECK_OKAY( SCIPfixVar(scip, vars[v], newlb, &infeasible, &fixed) );
             if( infeasible )
@@ -131,14 +133,14 @@ DECL_PRESOLEXEC(presolExecTrivial)
             /* round fractional bounds */
             if( !SCIPisFeasEQ(scip, lb, newlb) )
             {
-               debugMessage("rounding lower bound of integral variable <%s>: [%g,%g] -> [%g,%g]\n",
+               debugMessage("rounding lower bound of integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                   SCIPvarGetName(vars[v]), lb, ub, newlb, ub);
                CHECK_OKAY( SCIPchgVarLb(scip, vars[v], newlb) );
                (*nchgbds)++;
             }
             if( !SCIPisFeasEQ(scip, ub, newub) )
             {
-               debugMessage("rounding upper bound of integral variable <%s>: [%g,%g] -> [%g,%g]\n",
+               debugMessage("rounding upper bound of integral variable <%s>: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                   SCIPvarGetName(vars[v]), newlb, ub, newlb, newub);
                CHECK_OKAY( SCIPchgVarUb(scip, vars[v], newub) );
                (*nchgbds)++;
@@ -151,7 +153,7 @@ DECL_PRESOLEXEC(presolExecTrivial)
          if( SCIPisFeasGT(scip, lb, ub) )
          {
             SCIPmessage(scip, SCIP_VERBLEVEL_NORMAL,
-               "problem infeasible: continuous variable <%s> has bounds [%g,%g]\n",
+               "problem infeasible: continuous variable <%s> has bounds [%.17f,%.17f]\n",
                SCIPvarGetName(vars[v]), lb, ub);
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
@@ -160,8 +162,12 @@ DECL_PRESOLEXEC(presolExecTrivial)
          /* fix variables with equal bounds */
          if( SCIPisFeasEQ(scip, lb, ub) )
          {
-            debugMessage("fixing continuous variable <%s>: [%g,%g]\n", SCIPvarGetName(vars[v]), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, vars[v], lb, &infeasible, &fixed) );
+            Real fixval;
+
+            fixval = SCIPselectSimpleValue(lb, ub, MAXDNOM);
+            debugMessage("fixing continuous variable <%s>[%.17f,%.17f] to %.17f\n", 
+               SCIPvarGetName(vars[v]), lb, ub, fixval);
+            CHECK_OKAY( SCIPfixVar(scip, vars[v], fixval, &infeasible, &fixed) );
             if( infeasible )
             {
                debugMessage(" -> infeasible fixing\n");

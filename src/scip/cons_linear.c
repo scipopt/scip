@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.157 2005/04/07 14:41:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.158 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -84,6 +84,8 @@
 #define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
 #define KNAPSACKRELAX_MAXDNOM      1000 /**< maximal allowed denominator in knapsack rational relaxation */
 #define KNAPSACKRELAX_MAXSCALE   1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
+
+#define MAXDNOM                   10000 /**< maximal denominator for simple rational fixed values */
 
 
 /** constraint data for linear constraints */
@@ -2010,6 +2012,9 @@ RETCODE applyFixings(
 
    if( !consdata->removedfixings )
    {
+      debugMessage("applying fixings:\n");
+      debug(CHECK_OKAY( SCIPprintCons(scip, cons, NULL) ));
+
       v = 0;
       while( v < consdata->nvars )
       {
@@ -3277,8 +3282,7 @@ RETCODE convertUnaryEquality(
    var = consdata->vars[0];
    val = consdata->vals[0];
    assert(!SCIPisZero(scip, val));
-   fixval = consdata->rhs/val;
-
+   fixval = SCIPselectSimpleValue(consdata->lhs/val, consdata->rhs/val, MAXDNOM);
    debugMessage("linear equality <%s>: fix <%s> == %g\n",
       SCIPconsGetName(cons), SCIPvarGetName(var), fixval);
    
@@ -3613,9 +3617,12 @@ RETCODE fixVariables(
          ub = SCIPvarGetUbGlobal(var);
          if( SCIPisEQ(scip, lb, ub) )
          {
-            debugMessage("converting variable <%s> with fixed bounds [%g,%g] into fixed variable\n",
-               SCIPvarGetName(var), lb, ub);
-            CHECK_OKAY( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
+            Real fixval;
+
+            fixval = SCIPselectSimpleValue(lb, ub, MAXDNOM);
+            debugMessage("converting variable <%s> with fixed bounds [%g,%g] into fixed variable fixed at %g\n",
+               SCIPvarGetName(var), lb, ub, fixval);
+            CHECK_OKAY( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
             if( infeasible )
             {
                debugMessage(" -> infeasible fixing\n");

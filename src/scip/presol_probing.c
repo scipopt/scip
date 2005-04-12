@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.12 2005/03/15 13:43:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.13 2005/04/12 08:48:19 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -33,6 +33,8 @@
 #define PRESOL_PRIORITY         -100000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
+
+#define MAXDNOM                   10000 /**< maximal denominator for simple rational fixed values */
 
 
 
@@ -422,11 +424,14 @@ DECL_PRESOLEXEC(presolExecProbing)
          /* check for fixed variables */
          if( SCIPisFeasEQ(scip, newlb, newub) )
          {
+            Real fixval;
+
             /* in both probings, variable j is deduced to 0: fix variable to 0 */
+            fixval = SCIPselectSimpleValue(newlb, newub, MAXDNOM);
             debugMessage("fixing variable <%s> to %g due to probing on <%s> with nlocks=(%d/%d)\n",
-               SCIPvarGetName(vars[j]), (newlb+newub)/2.0,
+               SCIPvarGetName(vars[j]), fixval, 
                SCIPvarGetName(vars[i]), SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i]));
-            CHECK_OKAY( SCIPfixVar(scip, vars[j], (newlb+newub)/2.0, &cutoff, &fixed) );
+            CHECK_OKAY( SCIPfixVar(scip, vars[j], fixval, &cutoff, &fixed) );
             if( fixed )
             {
                (*nfixedvars)++;
