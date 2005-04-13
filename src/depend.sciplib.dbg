@@ -507,8 +507,8 @@ $(OBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c \
   src/scip/presol_probing.h src/scip/presol_trivial.h \
   src/scip/prop_pseudoobj.h src/scip/reader_cnf.h src/scip/reader_mps.h \
   src/scip/sepa_clique.h src/scip/sepa_cmir.h src/scip/sepa_gomory.h \
-  src/scip/sepa_strongcg.h src/scip/sepa_intobj.h \
-  src/scip/scipdefplugins.h
+  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h \
+  src/scip/sepa_strongcg.h src/scip/scipdefplugins.h
 $(OBJDIR)/scip/sepa.o: src/scip/sepa.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/set.h src/scip/memory.h src/scip/buffer.h \
   src/scip/type_set.h src/scip/type_buffer.h src/scip/type_stat.h \
@@ -1621,6 +1621,26 @@ $(OBJDIR)/scip/sepa_gomory.o: src/scip/sepa_gomory.c src/scip/sepa_gomory.h \
   src/scip/pub_relax.h src/scip/pub_sepa.h src/scip/pub_prop.h \
   src/scip/pub_sol.h src/scip/pub_tree.h src/scip/pub_var.h \
   src/scip/type_history.h
+$(OBJDIR)/scip/sepa_impliedbounds.o: src/scip/sepa_impliedbounds.c \
+  src/scip/sepa_impliedbounds.h src/scip/scip.h src/scip/def.h \
+  src/scip/type_retcode.h src/scip/message.h src/scip/memory.h \
+  src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
+  src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
+  src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
+  src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+  src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+  src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+  src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+  src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+  src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_heur.h \
+  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+  src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+  src/scip/pub_var.h src/scip/type_history.h
 $(OBJDIR)/scip/sepa_intobj.o: src/scip/sepa_intobj.c src/scip/sepa_intobj.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/type_result.h \
