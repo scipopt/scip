@@ -1,6 +1,6 @@
-#--- $Id: make.osf1.alpha.gnu.dbg,v 1.5 2004/07/13 15:03:48 bzfpfend Exp $
+#--- $Id: make.osf1.alpha.gnu.dbg,v 1.6 2005/04/14 18:55:05 bzfpfets Exp $
 FLAGS		+=	-O -g # -DWITH_READLINE
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=	-lcurses -pthread -static # -lreadline
+LDFLAGS		+=	-lcurses -lz -static # -lreadline
