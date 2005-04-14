@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPProbData.h,v 1.1 2005/03/03 16:43:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: ProbDataTSP.h,v 1.1 2005/04/14 19:05:05 bzfberth Exp $"
 
-/**@file   TSPProbData.h
+/**@file   ProbDataTSP.h
  * @brief  C++ problem data for TSP
  * @author Timo Berthold
  */
@@ -27,20 +27,20 @@
 #define __TSPPROBDATA_H__
 
 #include "objscip/objscip.h"
-#include "gminucut.h"
+#include "GomoryHuTree.h"
 
 namespace tsp
 {
 
 /** SCIP user problem data for TSP */
-class TSPProbData : public scip::ObjProbData
+class ProbDataTSP : public scip::ObjProbData
 {
    GRAPH*           graph_;            /**< graph data */
 
 public:
 
    /** default constructor */
-   TSPProbData(
+   ProbDataTSP(
       GRAPH*        g                  /**< graph data */
       )
         : graph_(g)
@@ -49,7 +49,7 @@ public:
    }
 
    /** destructor */
-   virtual ~TSPProbData()
+   virtual ~ProbDataTSP()
    {
    }
 

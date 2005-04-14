@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPReader.h,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.h,v 1.1 2005/04/14 19:05:05 bzfberth Exp $"
 
-/**@file   TSPReader.h
+/**@file   ReaderTSP.h
  * @brief  C++ file reader for TSP data files
  * @author Timo Berthold
  */
@@ -29,21 +29,21 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "gminucut.h"
+#include "GomoryHuTree.h"
 #include "objscip/objscip.h"
 
 namespace tsp
 {
 
 /** SCIP file reader for TSP data files */
-class TSPReader : public scip::ObjReader
+class ReaderTSP : public scip::ObjReader
 {
 public:
 
    Bool round_lengths_;
   
    /** default constructor */
-   TSPReader(SCIP* scip)
+   ReaderTSP(SCIP* scip)
       : scip::ObjReader("tspreader", "file reader for TSP files", "tsp")
    {
       /* add TSP reader parameters */
@@ -53,7 +53,7 @@ public:
    }
 
    /** destructor */
-   virtual ~TSPReader()
+   virtual ~ReaderTSP()
    {
    }
 
@@ -80,14 +80,14 @@ public:
 
 private:
    
-   void TSPReader::getNodesFromFile(
+   void ReaderTSP::getNodesFromFile(
       std::ifstream&      filedata, 
       double*      x_coords, 
       double*      y_coords, 
       GRAPH*        graph
       );
 
-   bool TSPReader::checkValid(
+   bool ReaderTSP::checkValid(
       GRAPH*         graph, 
       std::string        name,
       std::string        type, 

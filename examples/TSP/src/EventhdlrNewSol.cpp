@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: EventhdlrNewSol.cpp,v 1.3 2005/04/14 19:05:04 bzfberth Exp $"
 
 /**@file   EventhdlrNewSol.cpp
  * @brief  event handler for new solutions in TSP
@@ -29,9 +29,8 @@
 #include <unistd.h>
 
 #include "EventhdlrNewSol.h"
-#include "TSPProbData.h"
-#include "gminucut.h"
-
+#include "ProbDataTSP.h"
+#include "GomoryHuTree.h"
 
 using namespace tsp;
 using namespace std;
@@ -46,6 +45,7 @@ RETCODE EventhdlrNewSol::scip_free(
    return SCIP_OKAY;
 }
    
+
 /** initialization method of event handler (called after problem was transformed) */
 RETCODE EventhdlrNewSol::scip_init(
    SCIP*         scip,               /**< SCIP data structure */
@@ -81,7 +81,8 @@ RETCODE EventhdlrNewSol::scip_init(
    sleep(1);
    return SCIP_OKAY;
 }
-   
+ 
+  
 /** deinitialization method of event handler (called before transformed problem is freed) */
 RETCODE EventhdlrNewSol::scip_exit(
    SCIP*         scip,               /**< SCIP data structure */
@@ -91,6 +92,7 @@ RETCODE EventhdlrNewSol::scip_exit(
    return SCIP_OKAY;
 }
    
+
 /** solving process initialization method of event handler (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
@@ -105,6 +107,7 @@ RETCODE EventhdlrNewSol::scip_initsol(
    CHECK_OKAY( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
    return SCIP_OKAY;
 }
+
    
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed)
  *
@@ -120,6 +123,7 @@ RETCODE EventhdlrNewSol::scip_exitsol(
    return SCIP_OKAY;
 }
    
+
 /** frees specific constraint data */
 RETCODE EventhdlrNewSol::scip_delete(
    SCIP*         scip,               /**< SCIP data structure */
@@ -129,6 +133,7 @@ RETCODE EventhdlrNewSol::scip_delete(
 {
    return SCIP_OKAY;
 }
+
 
 /** execution method of event handler
  *
@@ -146,7 +151,7 @@ RETCODE EventhdlrNewSol::scip_exec(
 {
    SOL* sol;  
    sol = SCIPgetBestSol(scip);
-   TSPProbData* probdata = dynamic_cast<TSPProbData*>(SCIPgetObjProbData(scip));
+   ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    GRAPH* graph = probdata->getGraph();
    GRAPHNODE* node = &graph->nodes[0];
    GRAPHEDGE* lastedge = NULL;
@@ -159,6 +164,7 @@ RETCODE EventhdlrNewSol::scip_exec(
       sleep(1);
       lockwaits++;
    }
+
    if( SCIPfileExists("temp.tour.lock") )
    {
       warningMessage("cannot output tour in file, because lockfile <temp.tour.lock> is still existing\n");
@@ -188,21 +194,17 @@ RETCODE EventhdlrNewSol::scip_exec(
       GRAPHEDGE* edge = node->first_edge;
      
       // output the id and the coordinates of the nodes in the order they appear in the tour
-      if( edge != NULL )
+   
+      while( edge != NULL)
       {
-         do
+         if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
          {
-            if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
-            {
-               node = edge->adjac;
-               lastedge = edge;
-               break;
-            }
-            edge = edge->next;
+            node = edge->adjac;
+            lastedge = edge;
+            break;
          }
-         while ( edge != node->first_edge );
-         assert( edge != node->first_edge );
-      }
+         edge = edge->next;
+      }             
    }
    while ( node != &graph->nodes[0] );
 

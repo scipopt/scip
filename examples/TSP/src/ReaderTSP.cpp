@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPReader.cpp,v 1.3 2005/03/16 17:02:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.1 2005/04/14 19:05:05 bzfberth Exp $"
 
-/**@file   TSPReader.cpp
+/**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
  * @author Timo Berthold
  */
@@ -32,17 +32,17 @@ extern "C" {
 #include "scip/cons_linear.h"
 }
 
-#include "TSPReader.h"
-#include "TSPProbData.h"
-#include "TSPConshdlrSubtour.h"
-#include "gminucut.h"
+#include "ReaderTSP.h"
+#include "ProbDataTSP.h"
+#include "ConshdlrSubtour.h"
+#include "GomoryHuTree.h"
 
 using namespace tsp;
 using namespace scip;
 using namespace std;
 
 /** parses the node list */ 
-void TSPReader::getNodesFromFile(
+void ReaderTSP::getNodesFromFile(
    std::ifstream&    filedata,       /**< filestream containing the data to extract */
    double*           x_coords,       /**< double array to be filled with the x-coordinates of the nodes */
    double*           y_coords,       /**< same for y-coordinates */
@@ -53,12 +53,12 @@ void TSPReader::getNodesFromFile(
    int nodenumber;
    GRAPHNODE* node = &(graph->nodes[0]);
 
-   //extract every node out of the filestream
+   // extract every node out of the filestream
    while ( i < graph->nnodes && !filedata.eof() )
    {
       filedata >> nodenumber >> x_coords[i] >> y_coords[i];
 
-      //assign everything 
+      // assign everything 
       node->id = i;
       if( nodenumber-1 != i)
          cout<<"warning: nodenumber <" <<nodenumber<<"> does not match its index in node list <"<<i+1
@@ -72,8 +72,8 @@ void TSPReader::getNodesFromFile(
    assert( i == graph->nnodes );
 }
 
-/**< assert, that the file has had the correct format and everything was set correctly */
-bool TSPReader::checkValid(
+/**< method asserting, that the file has had the correct format and everything was set correctly */
+bool ReaderTSP::checkValid(
    GRAPH*         graph,             /**< the constructed graph, schould not be NULL */ 
    std::string    name,              /**< the name of the file */
    std::string    type,              /**< the type of the problem, should be "TSP" */
@@ -81,7 +81,7 @@ bool TSPReader::checkValid(
    int            nnodes             /**< dimension of the problem, should at least be one */
    )
 {   
-   //if sth. seems to be strange, it will be reported, that file was not valid
+   // if something seems to be strange, it will be reported, that file was not valid
    if( nnodes < 1 )
    {
       cout << "parse error in file <" << name << "> dimension should be greater than 0"<< endl ;
@@ -105,8 +105,10 @@ bool TSPReader::checkValid(
    }
    return true;
 }
+
+
 /** destructor of file reader to free user data (called when SCIP is exiting) */
-RETCODE TSPReader::scip_free(
+RETCODE ReaderTSP::scip_free(
    SCIP*         scip,               /**< SCIP data structure */
    READER*       reader              /**< the file reader itself */
    )
@@ -122,7 +124,7 @@ RETCODE TSPReader::scip_free(
  *
  *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
  */
-RETCODE TSPReader::scip_read(
+RETCODE ReaderTSP::scip_read(
    SCIP*         scip,               /**< SCIP data structure */
    READER*       reader,             /**< the file reader itself */
    const char*   filename,           /**< full path and name of file to read, or NULL if stdin should be used */
@@ -229,7 +231,7 @@ RETCODE TSPReader::scip_read(
       edgeforw = &( graph->edges[0] ); 
       edgebackw= &( graph->edges[nedges/2] );
 
-      // constructs all edges in a complete digraph
+      // construct all edges in a complete digraph
       for( i = 0; i < nnodes; i++ )
       {
          nodestart = &graph->nodes[i];
@@ -243,7 +245,7 @@ RETCODE TSPReader::scip_read(
             edgeforw->back = edgebackw;
             edgebackw->back = edgeforw;
 
-            // calculate the Euclidean distance of the two nodes
+            // calculate the Euclidean / Manhattan / Maximum distance of the two nodes
             x = x_coords[(*nodestart).id] -  x_coords[(*nodeend).id];
             y = y_coords[(*nodestart).id] -  y_coords[(*nodeend).id];
             if( edgeweighttype == "EUC_2D")
@@ -259,45 +261,44 @@ RETCODE TSPReader::scip_read(
             
             edgebackw->length = edgeforw->length;
          
-            // insert one of the halfedges into the implicit edge list of the node
+            // insert one of the halfedges into the edge list of the node
             if (nodestart->first_edge == NULL)
-            { 
+            {
                nodestart->first_edge = edgeforw;
-               nodestart->first_edge ->next = edgeforw;
+               nodestart->first_edge->next = NULL;
             }
             else
-            { 
-               edgeforw->next = nodestart->first_edge->next;
-               nodestart->first_edge->next = edgeforw;
+            {
+               edgeforw->next = nodestart->first_edge;
+               nodestart->first_edge = edgeforw;
             }
-
+                   
             // dito
             if (nodeend->first_edge == NULL)
-            { 
+            {
                nodeend->first_edge = edgebackw;
-               nodeend->first_edge->next = edgebackw;
+               nodeend->first_edge->next = NULL;
             }
             else
-            { 
-               edgebackw->next = nodeend->first_edge->next;
-               nodeend->first_edge->next = edgebackw;
-            }
-
+            {
+               edgebackw->next = nodeend->first_edge;
+               nodeend->first_edge = edgebackw;
+            }           
+                     
             edgeforw++;
-            edgebackw++;
+            edgebackw++;            
          }
       }
-
    }
 
    SCIPfreeBufferArray(scip, &y_coords);
    SCIPfreeBufferArray(scip, &x_coords);
-
+   
    if( retcode != SCIP_OKAY )
       return retcode;
 
    // create the problem's data structure
-   CHECK_OKAY( SCIPcreateObjProb(scip, name.c_str(), new TSPProbData(graph), TRUE) );
+   CHECK_OKAY( SCIPcreateObjProb(scip, name.c_str(), new ProbDataTSP(graph), TRUE) );
 
    // add variables to problem and link them for parallel halfedges
    for( i = 0; i < nedges/2; i++ )
@@ -319,40 +320,36 @@ RETCODE TSPReader::scip_read(
    // add all n node degree constraints
    if( nnodes >= 2 )
    {
-      for( i = 0, node = &(graph->nodes[0]); i < nnodes; i++, node++)
+      for( i = 0, node = &(graph->nodes[0]); i < nnodes; i++, node++ )
       {
          CONS* cons;
          stringstream consname;
          consname << "deg_con_v" << node->id+1;
-
+         
          // a new degree constraint is created, named after a node
          CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname.str().c_str(), 0, NULL, NULL, 2.0, 2.0, 
-               TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );  
-         
-         if( node->first_edge != NULL )
+               TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );  
+
+         edge = node->first_edge;
+         // sum up the values of all adjacent edges 
+         while( edge != NULL )
          {
-            edge = node->first_edge;
-            // sum up the values of all adjacent edges 
-            do
-            {
-               CHECK_OKAY( SCIPaddCoefLinear(scip, cons, edge->var, 1.0) );
-               edge = edge->next;
-            }
-            while( edge != node->first_edge );
+            CHECK_OKAY( SCIPaddCoefLinear(scip, cons, edge->var, 1.0) );
+            edge = edge->next;
          }
+             
          // add the constraint to SCIP
          CHECK_OKAY( SCIPaddCons(scip, cons) );
          CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
       }
    }
 
-   // last, we need s constraint forbidding subtours
+   // last, we need a constraint forbidding subtours
    CONS* cons;
-   CHECK_OKAY( SCIPcreateConsSubtour(scip, &cons, "subtour", graph, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE ) ); /* aus cons_subtour.h; eigener Constraint Handler */
+   CHECK_OKAY( SCIPcreateConsSubtour(scip, &cons, "subtour", graph, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE ) ); /* aus cons_subtour.h; eigener Constraint Handler */
    CHECK_OKAY( SCIPaddCons(scip, cons) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
-
-   
+ 
    release_graph(&graph);
    *result = SCIP_SUCCESS;
 

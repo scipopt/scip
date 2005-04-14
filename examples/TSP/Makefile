@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.2 2005/03/16 10:46:11 bzfberth Exp $
+# $Id: Makefile,v 1.3 2005/04/14 19:05:04 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ TSP example using SCIP as a callable library
@@ -104,10 +104,10 @@ include make/make.$(BASE)
 
 MAINNAME	=	sciptsp
 MAINOBJ		=	cppmain.o \
-			TSPConshdlrSubtour.o \
-			TSPProbData.o \
-			TSPReader.o \
-			gminucut.o \
+			ConshdlrSubtour.o \
+			ProbDataTSP.o \
+			ReaderTSP.o \
+			GomoryHuTree.o \
 			EventhdlrNewSol.o \
 			HeurFarthestInsert.o \
 			Heur2opt.o

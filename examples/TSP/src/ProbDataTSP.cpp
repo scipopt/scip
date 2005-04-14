@@ -14,34 +14,34 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPProbData.cpp,v 1.1 2005/03/03 16:43:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: ProbDataTSP.cpp,v 1.1 2005/04/14 19:05:05 bzfberth Exp $"
 
-/**@file   TSPProbData.cpp
+/**@file   ProbDataTSP.cpp
  * @brief  C++ problem data for TSP
  * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "TSPProbData.h"
+#include "ProbDataTSP.h"
 
 using namespace tsp;
 using namespace scip;
 
 
-   /** destructor of user problem data to free original user data (called when original problem is freed)
-    *
-    *  If the "deleteobject" flag in the SCIPcreateObjProb() method was set to TRUE, this method is not needed,
-    *  because all the work to delete the user problem data can be done in the destructor of the user problem
-    *  data object. If the "deleteobject" flag was set to FALSE, and the user problem data object stays alive
-    *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
-    *  longer needed.
-    */
-RETCODE TSPProbData::scip_delorig(
+/** destructor of user problem data to free original user data (called when original problem is freed)
+ *
+ *  If the "deleteobject" flag in the SCIPcreateObjProb() method was set to TRUE, this method is not needed,
+ *  because all the work to delete the user problem data can be done in the destructor of the user problem
+ *  data object. If the "deleteobject" flag was set to FALSE, and the user problem data object stays alive
+ *  after the SCIP problem is freed, this method should delete all the problem specific data that is no
+ *  longer needed.
+ */
+RETCODE ProbDataTSP::scip_delorig(
    SCIP*         scip                /**< SCIP data structure */
    )
 {
-   for( int i = 0; i < graph_->nedges; i++)
+   for( int i = 0; i < graph_->nedges; i++ )
    {
       CHECK_OKAY( SCIPreleaseVar(scip, &graph_->edges[i].var) );
    }

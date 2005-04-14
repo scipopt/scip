@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.2 2005/03/16 10:46:11 bzfberth Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.3 2005/04/14 19:05:06 bzfberth Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ TSP example using SCIP as a callable library
@@ -36,8 +36,8 @@ extern "C"
 }
 
 /* include TSP specific components */
-#include "TSPReader.h"
-#include "TSPConshdlrSubtour.h"
+#include "ReaderTSP.h"
+#include "ConshdlrSubtour.h"
 #include "HeurFarthestInsert.h"
 #include "Heur2opt.h"
 #include "EventhdlrNewSol.h"
@@ -148,8 +148,8 @@ RETCODE runSCIP(
    CHECK_OKAY( SCIPcreate(&scip) );
 
    /* include TSP specific plugins */
-   CHECK_OKAY( SCIPincludeObjReader(scip, new TSPReader(scip), TRUE) );
-   CHECK_OKAY( SCIPincludeObjConshdlr(scip, new TSPConshdlrSubtour(), TRUE) ); 
+   CHECK_OKAY( SCIPincludeObjReader(scip, new ReaderTSP(scip), TRUE) );
+   CHECK_OKAY( SCIPincludeObjConshdlr(scip, new ConshdlrSubtour(), TRUE) ); 
    CHECK_OKAY( SCIPincludeObjEventhdlr(scip, new EventhdlrNewSol(), TRUE) );
    CHECK_OKAY( SCIPincludeObjHeur(scip, new HeurFarthestInsert(), TRUE) );
    CHECK_OKAY( SCIPincludeObjHeur(scip, new Heur2opt(), TRUE) );

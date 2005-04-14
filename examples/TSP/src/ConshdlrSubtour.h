@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: TSPConshdlrSubtour.h,v 1.1 2005/03/03 16:43:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.1 2005/04/14 19:05:04 bzfberth Exp $"
 
-/**@file   TSPConshdlrSubtour.h
+/**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
  * @author Timo Berthold
  */
@@ -27,19 +27,19 @@
 #define __TSPCONSHDLRSUBTOUR_H__
 
 #include "objscip/objscip.h"
-#include "gminucut.h"
-#include "TSPProbData.h"
+#include "GomoryHuTree.h"
+#include "ProbDataTSP.h"
 
 namespace tsp
 {
 
 /** C++ constraint handler for TSP subtour elimination constraints */
-class TSPConshdlrSubtour : public scip::ObjConshdlr
+class ConshdlrSubtour : public scip::ObjConshdlr
 {
 
 public:
    /** default constructor */
-   TSPConshdlrSubtour(
+   ConshdlrSubtour(
       )
       : ObjConshdlr("subtour", "TSP subtour elimination constraints",
          1000000, -2000000, -2000000, 1, -1, 100, 0,
@@ -48,7 +48,7 @@ public:
    }
 
    /** destructor */
-   virtual ~TSPConshdlrSubtour()
+   virtual ~ConshdlrSubtour()
    {
    }
 
@@ -317,6 +317,7 @@ RETCODE SCIPcreateConsSubtour(
    Bool             propagate,          /**< should the constraint be propagated during node processing? */
    Bool             local,              /**< is constraint only valid locally? */
    Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   Bool             dynamic,            /**< is constraint dynamic? */
    Bool             removeable          /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
 
