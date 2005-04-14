@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.1 2005/03/16 17:02:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.2 2005/04/14 19:07:02 bzfberth Exp $"
 
 /**@file   heur2opt.cpp
- * @brief  C++ wrapper for primal heuristics
+ * @brief  2-Optimum - combinatorial improvement heuristic for TSP
  * @author Timo Berthold
  */
 
@@ -25,11 +25,9 @@
 
 #include <cassert>
 #include <iostream>
-#include "gminucut.h"
+#include "GomoryHuTree.h"
 #include "Heur2opt.h"
-#include "TSPProbData.h"
-
-
+#include "ProbDataTSP.h"
 
 using namespace tsp;
 using namespace std;
@@ -43,24 +41,18 @@ GRAPHEDGE* findEdge(
    GRAPHNODE*    node2               /**< id of the node where the searched edge ends */
    )
 {
-   GRAPHEDGE* startedge;
-   GRAPHEDGE* edge;
-
-   startedge = node1->first_edge;
-   assert(startedge != NULL);
-   edge = startedge;
+   GRAPHEDGE* edge =  node1->first_edge;
 
    // regard every outgoing edge of node index1 and stop if adjacent to node index2
-   do
+   while( edge != NULL )
    {
       if( edge->adjac == node2 )
-         return edge;
+         break;
       edge = edge->next;
    }
-   while(startedge != edge);
-
-   return NULL;
+   return edge;   
 }
+
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 RETCODE Heur2opt::scip_free(
@@ -79,6 +71,7 @@ RETCODE Heur2opt::scip_init(
 {
    return SCIP_OKAY;
 }
+
    
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 RETCODE Heur2opt::scip_exit(
@@ -88,6 +81,7 @@ RETCODE Heur2opt::scip_exit(
 {
    return SCIP_OKAY;
 }
+
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
  *
@@ -100,7 +94,7 @@ RETCODE Heur2opt::scip_initsol(
    HEUR*         heur                /**< the primal heuristic itself */
    )
 {
-   TSPProbData* probdata = dynamic_cast<TSPProbData*>(SCIPgetObjProbData(scip));
+   ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    graph_ = probdata->getGraph();
    capture_graph(graph_);
 
@@ -110,6 +104,7 @@ RETCODE Heur2opt::scip_initsol(
    
    return SCIP_OKAY;
 }
+
    
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
  *
@@ -139,8 +134,8 @@ RETCODE Heur2opt::scip_exec(
    SOL* sol = SCIPgetBestSol( scip );
    bool newsol;
 
-   //check whether a new solution was found meanwhile
-   if(sol != sol_)
+   // check whether a new solution was found meanwhile
+   if( sol != sol_ )
    {
       sol_ = sol;
       ncalls_ = 0;
@@ -164,8 +159,8 @@ RETCODE Heur2opt::scip_exec(
 
    GRAPHNODE* nodes = graph_->nodes; 
 
-   //get tour from sol and sort edges by length, if new solution was found
-   if(newsol)
+   // get tour from sol and sort edges by length, if new solution was found
+   if( newsol )
    {
       GRAPHEDGE* edge;
       GRAPHEDGE* lastedge = NULL;
@@ -175,9 +170,7 @@ RETCODE Heur2opt::scip_exec(
       do
       {
          edge = node->first_edge;      
-         assert( edge != NULL );
-
-         do
+         while( edge != NULL )
          {
             // find the next edge of the tour 
             if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
@@ -188,24 +181,18 @@ RETCODE Heur2opt::scip_exec(
                int j;
                // shift edge through the (sorted) array 
                for(j = i; j > 0 && tour_[j-1]->length < edge->length; j-- )
-               {
                   tour_[j] = tour_[j-1];
-               }                
-               // and insert the edge at the rigth position
+                               
+               // and insert the edge at the right position
                tour_[j] = edge; 
 
                i++;
                break;
             }
-
             edge = edge->next;
 
          }
-         while ( edge != node->first_edge );
-         assert( edge != node->first_edge );  
-
-      }
-      while ( node != &nodes[0] );
+      }while ( node != &nodes[0] );
       assert( i == nnodes );
 
    }
@@ -213,7 +200,8 @@ RETCODE Heur2opt::scip_exec(
    GRAPHEDGE** edges2test;
    CHECK_OKAY( SCIPallocBufferArray(scip, &edges2test, 4) ); 
 
-   // test current edge with all 'longer' edges for improvement if swapping with crossing edges (though do 2Opt for one edge)
+   // test current edge with all 'longer' edges for improvement 
+   // if swapping with crossing edges (though do 2Opt for one edge)
    for( int i = 0; i < ncalls_ && *result != SCIP_FOUNDSOL; i++ )
    {
       edges2test[0] = tour_[ncalls_];
@@ -228,7 +216,8 @@ RETCODE Heur2opt::scip_exec(
          Bool success;
          SOL* swapsol; // copy of sol with 4 edges swapped 
 
-         CHECK_OKAY( SCIPcreateSol (scip, &swapsol, heur) );
+         CHECK_OKAY( SCIPcreateSol(scip, &swapsol, heur) );
+
          // copy the old solution
          for( int j = 0; j < nnodes; j++)
          {
