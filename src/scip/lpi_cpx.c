@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.91 2005/03/22 18:42:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.92 2005/04/14 18:02:47 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -70,14 +70,15 @@ static const int intparam[NUMINTPARAM] = {
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND
 };
-#define NUMDBLPARAM  6
+#define NUMDBLPARAM  7
 static const int dblparam[NUMDBLPARAM] = {
    CPX_PARAM_EPRHS,
    CPX_PARAM_EPOPT,
    CPX_PARAM_BAREPCOMP,
    CPX_PARAM_OBJLLIM,
    CPX_PARAM_OBJULIM,
-   CPX_PARAM_TILIM
+   CPX_PARAM_TILIM,
+   CPX_PARAM_EPMRK
 };
 static const double dblparammin[NUMDBLPARAM] = {
    +1e-09, /*CPX_PARAM_EPRHS*/
@@ -85,7 +86,8 @@ static const double dblparammin[NUMDBLPARAM] = {
    +1e-12, /*CPX_PARAM_BAREPCOMP*/
    -1e+99, /*CPX_PARAM_OBJLLIM*/
    -1e+99, /*CPX_PARAM_OBJULIM*/
-   -1e+99  /*CPX_PARAM_TILIM*/
+   -1e+99, /*CPX_PARAM_TILIM*/
+   0.0001  /*CPX_PARAM_EPMRK*/
 };
 
 /** CPLEX parameter settings */
@@ -3032,6 +3034,9 @@ RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_LPTILIM:
       *dval = getDblParam(lpi, CPX_PARAM_TILIM);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+      *dval = getDblParam(lpi, CPX_PARAM_EPMRK);
+      break;
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
@@ -3071,6 +3076,9 @@ RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
       setDblParam(lpi, CPX_PARAM_TILIM, dval);
+      break;
+   case SCIP_LPPAR_MARKOWITZ:
+      setDblParam(lpi, CPX_PARAM_EPMRK, dval);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

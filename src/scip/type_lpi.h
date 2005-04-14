@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.12 2005/03/02 12:39:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.13 2005/04/14 18:02:29 bzfpfets Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -50,7 +50,8 @@ enum LPParam
    SCIP_LPPAR_LOBJLIM        =  9,      /**< lower objective limit */
    SCIP_LPPAR_UOBJLIM        = 10,      /**< upper objective limit */
    SCIP_LPPAR_LPITLIM        = 11,      /**< LP iteration limit */
-   SCIP_LPPAR_LPTILIM        = 12       /**< LP time limit */
+   SCIP_LPPAR_LPTILIM        = 12,      /**< LP time limit */
+   SCIP_LPPAR_MARKOWITZ      = 13       /**< Markowitz tolerance */
 };
 typedef enum LPParam LPPARAM;
 
