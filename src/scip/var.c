@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.155 2005/04/07 14:23:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.156 2005/04/15 11:46:55 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1536,6 +1536,7 @@ RETCODE implicsCreate(
    (*implics)->implvars[0] = NULL;
    (*implics)->impltypes[0] = NULL;
    (*implics)->implbounds[0] = NULL;
+   (*implics)->implids[0] = NULL;
    (*implics)->implsize[0] = 0;
    (*implics)->nimpls[0] = 0;
    (*implics)->nbinimpls[0] = 0;
@@ -1543,6 +1544,7 @@ RETCODE implicsCreate(
    (*implics)->implvars[1] = NULL;
    (*implics)->impltypes[1] = NULL;
    (*implics)->implbounds[1] = NULL;
+   (*implics)->implids[1] = NULL;
    (*implics)->implsize[1] = 0;
    (*implics)->nimpls[1] = 0;
    (*implics)->nbinimpls[1] = 0;
@@ -1561,23 +1563,25 @@ void implicsFree(
 
    if( *implics != NULL )
    {
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->implbounds[1], (*implics)->implsize[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->impltypes[1], (*implics)->implsize[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->implvars[1], (*implics)->implsize[1]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->implbounds[0], (*implics)->implsize[0]);
-      freeBlockMemoryArrayNull(blkmem, &(*implics)->impltypes[0], (*implics)->implsize[0]);
       freeBlockMemoryArrayNull(blkmem, &(*implics)->implvars[0], (*implics)->implsize[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->impltypes[0], (*implics)->implsize[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implbounds[0], (*implics)->implsize[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implids[0], (*implics)->implsize[0]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implvars[1], (*implics)->implsize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->impltypes[1], (*implics)->implsize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implbounds[1], (*implics)->implsize[1]);
+      freeBlockMemoryArrayNull(blkmem, &(*implics)->implids[1], (*implics)->implsize[1]);
       freeBlockMemory(blkmem, implics);
    }
 }
 
-/** ensures, that arrays for x <= 0 or x >= 1 in implications data structure can store at least num entries */
+/** ensures, that arrays for x == 0 or x == 1 in implications data structure can store at least num entries */
 static
 RETCODE implicsEnsureSize(
    IMPLICS**        implics,            /**< pointer to implications data structure */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   Bool             varfixing,          /**< FALSE if size of arrays for x <= 0 has to be ensured, TRUE for x >= 1 */
+   Bool             varfixing,          /**< FALSE if size of arrays for x == 0 has to be ensured, TRUE for x == 1 */
    int              num                 /**< minimum number of entries to store */
    )
 {
@@ -1602,6 +1606,8 @@ RETCODE implicsEnsureSize(
             newsize) );
       ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->implbounds[varfixing], (*implics)->implsize[varfixing],
             newsize) );
+      ALLOC_OKAY( reallocBlockMemoryArray(blkmem, &(*implics)->implids[varfixing], (*implics)->implsize[varfixing],
+            newsize) );
       (*implics)->implsize[varfixing] = newsize;
    }
    assert(num <= (*implics)->implsize[varfixing]);
@@ -1609,7 +1615,7 @@ RETCODE implicsEnsureSize(
    return SCIP_OKAY;
 }
 
-/** searches if variable y is already contained in implications for x <= 0 or x >= 1
+/** searches if variable y is already contained in implications for x == 0 or x == 1
  *  y can be contained in structure with y >= b (y_lower) and y <= b (y_upper) 
  */
 static
@@ -1617,7 +1623,7 @@ RETCODE implicsSearchVar(
    IMPLICS*         implics,            /**< implications data structure */
    VAR*             implvar,            /**< variable y to search for */
    BOUNDTYPE        impltype,           /**< type of implication y <=/>= b to search for */
-   Bool             varfixing,          /**< FALSE if y is searched in implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing,          /**< FALSE if y is searched in implications for x == 0, TRUE for x == 1 */
    int*             poslower,           /**< pointer to store position of y_lower (inf if not found) */
    int*             posupper,           /**< pointer to store position of y_upper (inf if not found) */
    int*             posadd              /**< pointer to store correct position (with respect to impltype) to add y */
@@ -1635,9 +1641,9 @@ RETCODE implicsSearchVar(
    /* set left and right pointer */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
-      /* no implications with binary variable y */
       if( implics->nbinimpls[varfixing] == 0 )
       {
+         /* there are no implications with binary variable y */
          *posadd = 0;
          *poslower = INT_MAX;
          *posupper = INT_MAX;
@@ -1645,13 +1651,12 @@ RETCODE implicsSearchVar(
       }      
       left = 0;
       right = implics->nbinimpls[varfixing] - 1;
-      assert(left <= right);
    }
    else
    {
-      /* no implications with nonbinary variable y */
       if( implics->nimpls[varfixing] == implics->nbinimpls[varfixing] )
       {
+         /* there are no implications with nonbinary variable y */
          *posadd = implics->nbinimpls[varfixing];
          *poslower = INT_MAX;
          *posupper = INT_MAX;
@@ -1659,21 +1664,24 @@ RETCODE implicsSearchVar(
       }
       left = implics->nbinimpls[varfixing];
       right = implics->nimpls[varfixing] - 1;
-      assert(left <= right);
    }
+   assert(left <= right);
 
-   /* searches for y */
-   middle = (left + right) / 2;
-   while( left <= right && implics->implvars[varfixing][middle] != implvar )
+   /* search for y */
+   do
    {
+      middle = (left + right) / 2;
       if( implvar < implics->implvars[varfixing][middle] ) 
          right = middle - 1;
-      else
+      else if( implvar > implics->implvars[varfixing][middle] ) 
          left = middle + 1;
-      middle = (left + right) / 2;
+      else
+         break;
    }
+   while( left <= right );
+   assert(left <= right+1);
 
-   if( left == right + 1 )
+   if( left > right )
    {
       /* y was not found */
       assert(right == -1 || compImplvars((void*)implics->implvars[varfixing][right], (void*)implvar) < 0);
@@ -1687,7 +1695,7 @@ RETCODE implicsSearchVar(
       /* y was found */
       assert(implvar == implics->implvars[varfixing][middle]);
 
-      /* sets poslower and posupper */
+      /* set poslower and posupper */
       if( implics->impltypes[varfixing][middle] == SCIP_BOUNDTYPE_LOWER )
       {
          /* y was found as y_lower (on position middle) */
@@ -1712,7 +1720,8 @@ RETCODE implicsSearchVar(
          else
             *poslower = INT_MAX;
       }
-      /* sets posadd */
+
+      /* set posadd */
       if( impltype == SCIP_BOUNDTYPE_LOWER )
       {
          if( *poslower < INT_MAX )
@@ -1733,13 +1742,14 @@ RETCODE implicsSearchVar(
    return SCIP_OKAY;
 }
 
-/** adds an implication y <=/>= b for x <= 0 or x >= 1 (x binary) to the implications data structure */
+/** adds an implication x == 0/1 -> y <= b or y >= b to the implications data structure */
 static
 RETCODE implicsAdd(
    IMPLICS**        implics,            /**< pointer to implications data structure */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   Bool             varfixing,          /**< FALSE if implication for x <= 0 has to be added, TRUE for x >= 1 */
+   STAT*            stat,               /**< problem statistics */
+   Bool             varfixing,          /**< FALSE if implication for x == 0 has to be added, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
@@ -1752,23 +1762,24 @@ RETCODE implicsAdd(
    int k;
 
    assert(implics != NULL);
-   assert(implvar != NULL);
-   assert(conflict != NULL);
-   assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE); 
    assert(*implics == NULL || (*implics)->nbinimpls[varfixing] <= (*implics)->nimpls[varfixing]);
+   assert(stat != NULL);
+   assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE); 
+   assert(conflict != NULL);
  
    *conflict = FALSE;
 
    /* don't add redundant implications with respect to global bounds:
     *    y >= b     if b <= lb (global lower bound of y) and
-    *    y <= b     if b >= ub (global upper bound of y) */
+    *    y <= b     if b >= ub (global upper bound of y)
+    */
    if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasLE(set, implbound, SCIPvarGetLbGlobal(implvar)) ) 
       || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasGE(set, implbound, SCIPvarGetUbGlobal(implvar)) ) )
    {
       return SCIP_OKAY;
    }
 
-   /* searches if variable is already contained in implications data structure */
+   /* check if variable is already contained in implications data structure */
    if( *implics != NULL )
    {
       CHECK_OKAY( implicsSearchVar(*implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd) );
@@ -1785,21 +1796,18 @@ RETCODE implicsAdd(
 
    if( impltype == SCIP_BOUNDTYPE_LOWER )
    {
-      /* add y >= b if not redundant and if it does not cause a conflict in x */
-
+      /* check if y >= b is redundant */
       if( poslower < INT_MAX && SCIPsetIsFeasLE(set, implbound, (*implics)->implbounds[varfixing][poslower]) )
-      {
-         /* y >= b is redundant */
          return SCIP_OKAY;
-      }      
 
+      /* check if y >= b causes conflict for x (i.e. y <= a (with a < b) is also valid) */
       if( posupper < INT_MAX && SCIPsetIsFeasGT(set, implbound, (*implics)->implbounds[varfixing][posupper]) )
       {      
-         /* y >= b causes conflict for x (i.e. y <= a (with a < b) is also valid) */
          *conflict = TRUE;
          return SCIP_OKAY;
       }
 
+      /* check if entry of the same type already exists */
       if( posadd == poslower )
       {
          /* add y >= b by changing old entry on poslower */
@@ -1823,11 +1831,13 @@ RETCODE implicsAdd(
          (*implics)->implvars[varfixing][k] = (*implics)->implvars[varfixing][k-1];
          (*implics)->impltypes[varfixing][k] = (*implics)->impltypes[varfixing][k-1];
          (*implics)->implbounds[varfixing][k] = (*implics)->implbounds[varfixing][k-1];
+         (*implics)->implids[varfixing][k] = (*implics)->implids[varfixing][k-1];
       }
       assert(posadd == k);
       (*implics)->implvars[varfixing][posadd] = implvar;
       (*implics)->impltypes[varfixing][posadd] = impltype;
       (*implics)->implbounds[varfixing][posadd] = implbound;
+      (*implics)->implids[varfixing][posadd] = stat->nimplications;
       if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
          (*implics)->nbinimpls[varfixing]++;
       (*implics)->nimpls[varfixing]++;
@@ -1835,24 +1845,22 @@ RETCODE implicsAdd(
       for( k = posadd-1; k >= 0; k-- )
          assert(compImplvars((void*)(*implics)->implvars[varfixing][k], (void*)implvar) <= 0);
 #endif
+      stat->nimplications++;
    }
    else
    {
-      /* add y <= b if not redundant and if it does not cause a conflict in x */
-
+      /* check if y <= b is redundant */
       if( posupper < INT_MAX && SCIPsetIsFeasGE(set, implbound, (*implics)->implbounds[varfixing][posupper]) )
-      {
-         /* y <= b is redundant */
          return SCIP_OKAY;
-      }      
 
+      /* check if y <= b causes conflict for x (i.e. y >= a (with a > b) is also valid) */
       if( poslower < INT_MAX && SCIPsetIsFeasLT(set, implbound, (*implics)->implbounds[varfixing][poslower]) )
       {      
-         /* y <= b causes conflict for x (i.e. y >= a (with a > b) is also valid) */
          *conflict = TRUE;
          return SCIP_OKAY;
       }
 
+      /* check if entry of the same type already exists */
       if( posadd == posupper )
       {
          /* add y <= b by changing old entry on posupper */
@@ -1876,11 +1884,13 @@ RETCODE implicsAdd(
          (*implics)->implvars[varfixing][k] = (*implics)->implvars[varfixing][k-1];
          (*implics)->impltypes[varfixing][k] = (*implics)->impltypes[varfixing][k-1];
          (*implics)->implbounds[varfixing][k] = (*implics)->implbounds[varfixing][k-1];
+         (*implics)->implids[varfixing][k] = (*implics)->implids[varfixing][k-1];
       }
       assert(posadd == k);
       (*implics)->implvars[varfixing][posadd] = implvar;
       (*implics)->impltypes[varfixing][posadd] = impltype;
       (*implics)->implbounds[varfixing][posadd] = implbound;
+      (*implics)->implids[varfixing][posadd] = stat->nimplications;
       if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
          (*implics)->nbinimpls[varfixing]++;
       (*implics)->nimpls[varfixing]++;
@@ -1888,6 +1898,7 @@ RETCODE implicsAdd(
       for( k = posadd-1; k >= 0; k-- )
          assert(compImplvars((void*)(*implics)->implvars[varfixing][k], (void*)implvar) <= 0);
 #endif
+      stat->nimplications++;
    }
     
    return SCIP_OKAY;
@@ -3269,10 +3280,10 @@ RETCODE SCIPvarAggregate(
    Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
-   BOUNDTYPE** impltypes;
    VAR*** implvars;
-   VAR** vars;
+   BOUNDTYPE** impltypes;
    Real** implbounds;
+   VAR** vars;
    Real* coefs;
    Real* constants;
    Real obj;
@@ -3418,8 +3429,8 @@ RETCODE SCIPvarAggregate(
       {
          for( j = 0; j < nimpls[i]; ++j )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, (Bool)i, implvars[i][j], impltypes[i][j], implbounds[i][j],
-                  &conflict) );
+            CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, stat,
+                  (Bool)i, implvars[i][j], impltypes[i][j], implbounds[i][j], &conflict) );
             implconflict[i] = implconflict[i] || conflict;
          }
       }
@@ -5535,12 +5546,13 @@ RETCODE SCIPvarUseActiveVbds(
    return SCIP_OKAY;
 }
 
-/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b */
+/** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b */
 RETCODE SCIPvarAddImplic(
    VAR*             var,                /**< problem variable  */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
-   Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   STAT*            stat,               /**< problem statistics */
+   Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
@@ -5557,8 +5569,8 @@ RETCODE SCIPvarAddImplic(
    {
    case SCIP_VARSTATUS_ORIGINAL:
       assert(var->data.original.transvar != NULL);
-      CHECK_OKAY( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, varfixing, 
-            implvar, impltype, implbound, conflict) );
+      CHECK_OKAY( SCIPvarAddImplic(var->data.original.transvar, blkmem, set, stat,
+            varfixing, implvar, impltype, implbound, conflict) );
       break;
          
    case SCIP_VARSTATUS_COLUMN:
@@ -5581,7 +5593,7 @@ RETCODE SCIPvarAddImplic(
          else if( SCIPvarGetStatus(implvar) != SCIP_VARSTATUS_FIXED )
          {
             /* add implication to the implications list */
-            CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, varfixing, implvar, impltype, implbound, conflict) );
+            CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound, conflict) );
          
             debugMessage("added implication: <%s> %s  ==>  <%s> %s %g\n", 
                SCIPvarGetName(var), varfixing == FALSE ? "<= 0" : ">= 1",
@@ -5597,12 +5609,12 @@ RETCODE SCIPvarAddImplic(
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:
-      /* implication added for x >= 1:
-       *   x >= 1 && x =  1*z + 0  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b 
-       *   x >= 1 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
-       * implication added for x <= 0:
-       *   x <= 0 && x =  1*z + 0  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
-       *   x <= 0 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b
+      /* implication added for x == 1:
+       *   x == 1 && x =  1*z + 0  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b 
+       *   x == 1 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
+       * implication added for x == 0:
+       *   x == 0 && x =  1*z + 0  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
+       *   x == 0 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b
        *
        * use only binary variables z 
        */
@@ -5614,13 +5626,13 @@ RETCODE SCIPvarAddImplic(
        
          if( var->data.aggregate.scalar > 0 )
          {
-            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, varfixing, implvar, impltype, implbound, 
-                  conflict) );
+            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat,
+                  varfixing, implvar, impltype, implbound, conflict) );
          }
          else
          {
-            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, !varfixing, implvar, impltype, implbound,
-                  conflict) );
+            CHECK_OKAY( SCIPvarAddImplic(var->data.aggregate.var, blkmem, set, stat,
+                  !varfixing, implvar, impltype, implbound, conflict) );
          }
       }
       break;
@@ -5630,17 +5642,18 @@ RETCODE SCIPvarAddImplic(
       break;
       
    case SCIP_VARSTATUS_NEGATED:
-      /* implication added for x >= 1:
-       *   x >= 1 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
-       * implication added for x <= 0:
-       *   x <= 0 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b
+      /* implication added for x == 1:
+       *   x == 1 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z <= 0  ==>  y <= b or y >= b
+       * implication added for x == 0:
+       *   x == 0 && x = -1*z + 1  ==>  y <= b or y >= b    <==>    z >= 1  ==>  y <= b or y >= b
        */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY);
 
-      CHECK_OKAY( SCIPvarAddImplic(var->negatedvar, blkmem, set, !varfixing, implvar, impltype, implbound, conflict) );
+      CHECK_OKAY( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat, 
+            !varfixing, implvar, impltype, implbound, conflict) );
       break;
       
    default:
@@ -5679,8 +5692,8 @@ RETCODE SCIPvarUseActiveImplics(
 
    for( j = 0; j < oldimplics->nimpls[0]; ++j )
    {
-      CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, 0, oldimplics->implvars[0][j], oldimplics->impltypes[0][j],
-            oldimplics->implbounds[0][j], &conflict) );
+      CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, stat, 
+            FALSE, oldimplics->implvars[0][j], oldimplics->impltypes[0][j], oldimplics->implbounds[0][j], &conflict) );
 
       if( conflict )
       {
@@ -5696,8 +5709,8 @@ RETCODE SCIPvarUseActiveImplics(
      
    for( j = 0; j < oldimplics->nimpls[1]; ++j )
    {
-      CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, 1, oldimplics->implvars[1][j], oldimplics->impltypes[1][j],
-            oldimplics->implbounds[1][j], &conflict) );
+      CHECK_OKAY( SCIPvarAddImplic(var, blkmem, set, stat, 
+            TRUE, oldimplics->implvars[1][j], oldimplics->impltypes[1][j], oldimplics->implbounds[1][j], &conflict) );
 
       if( conflict )
       {
@@ -8282,6 +8295,7 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetImplVars
 #undef SCIPvarGetImplTypes
 #undef SCIPvarGetImplBounds
+#undef SCIPvarGetImplIds
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
 #undef SCIPbdchgidxIsEarlierNonNull
@@ -8782,12 +8796,12 @@ Real* SCIPvarGetVubConstants(
    return var->vubs != NULL ? var->vubs->constants : NULL;
 }
 
-/** gets number of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x, 
+/** gets number of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x, 
  *  there are no implications for nonbinary variable x
  */
 int SCIPvarGetNImpls(
    VAR*             var,                /**< problem variable */
-   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
@@ -8795,12 +8809,12 @@ int SCIPvarGetNImpls(
    return var->implics != NULL ? var->implics->nimpls[varfixing] : 0;
 }
 
-/** gets number of implications  y <= 0 or y >= 1 for x <= 0 or x >= 1 of given variable x with binary y, 
+/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given variable x with binary y, 
  *  there are no implications for nonbinary variable x
  */
 int SCIPvarGetNBinImpls(
    VAR*             var,                /**< problem variable */
-   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
@@ -8808,12 +8822,12 @@ int SCIPvarGetNBinImpls(
    return var->implics != NULL ? var->implics->nbinimpls[varfixing] : 0;
 }
 
-/** gets array with implication variables y of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
+/** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
  *  there are no implications for nonbinary variable x
  */
 VAR** SCIPvarGetImplVars(
    VAR*             var,                /**< problem variable */
-   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
@@ -8821,13 +8835,13 @@ VAR** SCIPvarGetImplVars(
    return var->implics != NULL ? var->implics->implvars[varfixing] : NULL;
 }
 
-/** gets array with implication types of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x
+/** gets array with implication types of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x
  *  (SCIP_BOUNDTYPE_UPPER if y <= b, SCIP_BOUNDTYPE_LOWER if y >= b), 
  *  there are no implications for nonbinary variable x
  */
 BOUNDTYPE* SCIPvarGetImplTypes(
    VAR*             var,                /**< problem variable */
-   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
@@ -8835,17 +8849,30 @@ BOUNDTYPE* SCIPvarGetImplTypes(
    return var->implics != NULL ? var->implics->impltypes[varfixing] : NULL;
 }
 
-/** gets array with implication bounds b of implications  y <= b or y >= b for x <= 0 or x >= 1 of given variable x,  
+/** gets array with implication bounds b of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
  *  there are no implications for nonbinary variable x
  */
 Real* SCIPvarGetImplBounds(
    VAR*             var,                /**< problem variable */
-   Bool             varfixing           /**< FALSE for implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    )
 {
    assert(var != NULL);
 
    return var->implics != NULL ? var->implics->implbounds[varfixing] : NULL;
+}
+
+/** gets array with unique ids of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
+ *  there are no implications for nonbinary variable x
+ */
+int* SCIPvarGetImplIds(
+   VAR*             var,                /**< problem variable */
+   Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
+   )
+{
+   assert(var != NULL);
+
+   return var->implics != NULL ? var->implics->implids[varfixing] : NULL;
 }
 
 /** includes event handler with given data in variable's event filter */

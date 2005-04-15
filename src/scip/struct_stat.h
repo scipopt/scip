@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.33 2005/03/24 09:47:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.34 2005/04/15 11:46:54 bzfpfend Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -117,6 +117,7 @@ struct Stat
    int              plungedepth;        /**< current plunging depth (successive times, a child was selected as next node) */
    int              nactiveconss;       /**< total number of currently active constraints */
    int              nenabledconss;      /**< total number of currently enabled constraints */
+   int              nimplications;      /**< total number of implications stored in the implication graph */
    int              npresolrounds;      /**< number of presolving rounds in current run */
    int              npresolfixedvars;   /**< number of presolving fixings in current run */
    int              npresolaggrvars;    /**< number of presolving aggregations in current run */

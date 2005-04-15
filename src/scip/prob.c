@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.71 2005/03/15 13:43:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.72 2005/04/15 11:46:53 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -29,6 +29,7 @@
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/set.h"
+#include "scip/stat.h"
 #include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
@@ -958,6 +959,9 @@ RETCODE SCIPprobExitPresolve(
 
    /* check, wheter objective value is always integral */
    SCIPprobCheckObjIntegral(prob, set);
+
+   /* reset implication counter */
+   SCIPstatResetImplications(stat);
 
    /* use active variables in implication graph */
    for( v = 0; v < prob->nbinvars; v++ )

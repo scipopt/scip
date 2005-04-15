@@ -14,21 +14,21 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.1 2005/03/10 17:11:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.2 2005/04/15 11:46:53 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
- * @author Tobias Achterberg
  * @author Kati Wolter
+ * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
 
-#include "sepa_clique.h"
-#include "tclique/graph.h"
-#include "tclique/branch.h"
+#include "scip/sepa_clique.h"
+#include "scip/tclique_graph.h"
+#include "scip/tclique_branch.h"
 
 
 /* separator properties */
@@ -39,7 +39,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_SCALEVAL         1000.0 /**< factor for scaling weights */
-#define DEFAULT_MAXTREENODES        100 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
+#define DEFAULT_MAXTREENODES         -1 /**< maximal number of nodes in branch and bound tree (-1: no limit) */
 
 
 
@@ -78,34 +78,34 @@ int getVarTcliqueIndex(
    Bool             neg                 /**< TRUE if given variable is negated, FALSE if it is active */
    )
 {
-   int tcliqueindex; 
-
    /* index i of variable x in tclique data structure    
     *   i =  2 * probindex                 x is active  variable (neg = FALSE)
-    *   i = (2 * probindex) + 1            x is negated varaible (neg = TRUE) */
-   if( !neg )
-      tcliqueindex = 2 * probindex;
-   else
-      tcliqueindex = (2 * probindex) + 1;
+    *   i = (2 * probindex) + 1            x is negated varaible (neg = TRUE)
+    */
+   assert(FALSE == 0);
+   assert(TRUE == 1);
+   assert(neg == FALSE || neg == TRUE);
 
-   return tcliqueindex;
+   return 2*probindex + (int)neg;
 } 
 
 /** gets probindex of active binary variable corresponding to given binary (active or negated) variable 
- *  with index i in tclique data structure and flag that states whether given variable is active or negated */ 
+ *  with index i in tclique data structure and flag that states whether given variable is active or negated
+ */ 
 static
 void getVarIndex(
    int              i,                  /**< given index of variable in tclique data structure */
-   Bool*            neg,                /**< pointer to store wh. given var is negated (TRUE if negated, FALSE if active) */
-   int*             probindex           /**< pointer to store probindex of active variable cor. to given variable */
+   int*             probindex,          /**< pointer to store probindex of active variable cor. to given variable */
+   Bool*            neg                 /**< pointer to store wh. given var is negated (TRUE if negated, FALSE if active) */
    )
 {
    assert(neg != NULL);
    assert(probindex != NULL);
 
    /* probindex of corresponding active variable  
-    *   probindex =  i   / 2               i is eaven (given variable is active)
-    *   probindex = (i-1)/ 2               i is odd   (given variable is negated) */
+    *   probindex =  i   / 2               i is even (given variable is active)
+    *   probindex = (i-1)/ 2               i is odd  (given variable is negated)
+    */
    if( i % 2 == 0 )
    {
       *neg = FALSE;
@@ -118,358 +118,271 @@ void getVarIndex(
    }
 } 
 
-/* adds given variable contained in a clique with 3 variables in implication graph 
- * to the set of variables used for tclique data structure. */
-static 
-RETCODE addVar(
-   SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA*        sepadata,           /**< separator data */
-   VAR**            binvars,            /**< active binary problem variables */ 
-   int*             inthreeclique,      /**< index of all binary variables (active or negated) in set of vars for tclique */
-   int              i,                  /**< index of variable to add in inthreeclique array */
-   int*             nvars,
-   VAR**            vars
-   )
-{
-   VAR* var;
-   Bool neg; 
-   int probindex;
-   
-   assert(scip != NULL);
-   assert(sepadata != NULL);
-   assert(i >= 0);
-   assert(nvars != NULL);
-   assert(*nvars >= 0);
-   assert(vars != NULL);
-   assert(inthreeclique[i] >= -1);
-   assert(inthreeclique[i] < *nvars);
-
-   /* variable is not added yet */
-   if( inthreeclique[i] == -1 )
-   {
-      /* sets index of variable in set of vars for tclique */
-      inthreeclique[i] = *nvars;
-
-      /* adds variable to set of vars for tclique */
-      getVarIndex(i, &neg, &probindex);
-      if( neg )
-      {
-         CHECK_OKAY( SCIPgetNegatedVar(scip, binvars[probindex], &var) ); 
-         vars[inthreeclique[i]] = var;
-      }
-      else
-      {
-         assert(!neg);
-         vars[inthreeclique[i]] = binvars[probindex];
-      }
-      (*nvars)++;
-   } 
-   /* only asserts */
-   else
-   {
-      getVarIndex(i, &neg, &probindex);
-      if( neg )
-      {
-         CHECK_OKAY( SCIPgetNegatedVar(scip, binvars[probindex], &var) ); 
-         assert(vars[inthreeclique[i]] == var);
-      }
-      else
-      {
-         assert(vars[inthreeclique[i]] == binvars[probindex]);
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/* loads tclique data structure using implication graph; all nodes have dummy weight 1s 
- * and are contained in a clique with three nodes in implication graph */
+/* creates tclique data structure using the implication graph;
+ * only variables that are contained in a 3-clique are added as nodes to the clique graph
+ */
 static 
 RETCODE loadTcliquedata(
    SCIP*            scip,               /**< SCIP data structure */
-   SEPADATA*        sepadata,           /**< separator data */
-   VAR**            binvars,            /**< active binary problem variables */ 
-   int              nbinvars,           /**< number of binary active problem variables */
-   VAR**            vars,               /**< pointer to store all binary variables contained in a 3-clique in implgraph */
-   int*             nvars               /**< pointer to store number of binary vars contained in a 3-clique in implgraph */
+   SEPADATA*        sepadata            /**< separator data */
    )
 {
-   int i;
-   Bool* marked;
-   int* inthreeclique;
-   
-   assert(scip != NULL);
+   int* cliquegraphidx;
+   Bool* implused;
+   VAR** binvars;
+   int nimplications;
+   int nbinvars;
+   int xi;
+
    assert(sepadata != NULL);
-   assert(sepadata->tcliquedata == NULL );
+   assert(sepadata->tcliquedata == NULL);
    assert(sepadata->vars == NULL);
    assert(sepadata->nvars == 0);
 
-   /* gets data structures */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &marked, 2 * nbinvars) );
-   CHECK_OKAY( SCIPallocBufferArray(scip, &inthreeclique, 2 * nbinvars) );
+   /* get binary variables */
+   binvars = SCIPgetVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
+   if( nbinvars == 0 )
+      return SCIP_OKAY;
 
-   *nvars = 0;
+   /* get temporary memory for mapping variable indices to clique graph nodes and storing which implications are
+    * already in the graph
+    */
+   nimplications = SCIPgetNImplications(scip);
+   CHECK_OKAY( SCIPallocBufferArray(scip, &cliquegraphidx, 2*nbinvars) );
+   CHECK_OKAY( SCIPallocBufferArray(scip, &implused, nimplications) );
+   for( xi = 0; xi < 2*nbinvars; ++xi )
+      cliquegraphidx[xi] = -1;
+   clearMemoryArray(implused, nimplications);
+   sepadata->nvars = 0;
 
-   /* initialises inthreeclique */
-   for( i = 0; i < 2 * nbinvars; i++ )
-      inthreeclique[i] = -1;
+   debugMessage("initializing clique graph (%d implications)\n", nimplications);
 
-   /* gets all binary variables (active and negated) that are contained in a clique 
-    * with 3 variables in implication graph */
-   for( i = 0; i < 2 * nbinvars; i++ )
+   /* detect 3-cliques in the clique graph: triples (x,y,z) in the implication graph with x -> y', x -> z', and y -> z';
+    * in order to avoid double checks, we only check triplets with variable pointers x < y < z
+    */
+   for( xi = 0; xi < 2*(nbinvars-2); ++xi ) /* at least two variables must be left over for y and z */
    {
-      int j;
-      Bool neg;
-      int probindex;
-      BOUNDTYPE* impltypes; 
-      Real* implbounds; 
-      VAR** implvars;
-      int nbinimpl;
-      VAR* maxmarked;
+      VAR* x;
+      int xidx;
+      Bool xneg;
+      VAR** ximplvars;
+      BOUNDTYPE* ximpltypes; 
+      int* ximplids;
+      int xnbinimpls;
+      int i;
 
-      assert(inthreeclique[i] >= -1);
-      assert(inthreeclique[i] < *nvars);
+      getVarIndex(xi, &xidx, &xneg);
+      assert(0 <= xidx && xidx < nbinvars);
+      x = binvars[xidx];
 
-      if( inthreeclique[i] > -1) 
-         continue;
-
-      /* unmarks all variables */
-      clearMemoryArray(marked, 2 *nbinvars);
-
-      /* gets corresponding active variable x for current variable x_i */
-      getVarIndex(i, &neg, &probindex);
+      /* scan the implications of xi == 1 for potential y candidates */
+      xnbinimpls = SCIPvarGetNBinImpls(x, !xneg);
+      ximplvars = SCIPvarGetImplVars(x, !xneg);
+      ximpltypes = SCIPvarGetImplTypes(x, !xneg);
+      ximplids = SCIPvarGetImplIds(x, !xneg);
       
-      /* gets all implications x >= 1 ==> y <= 0 or y >= 1, if current variable x_i is active */
-      if( !neg )
-      {
-         nbinimpl = SCIPvarGetNBinImpls(binvars[probindex], 1);
-         implvars = SCIPvarGetImplVars(binvars[probindex], 1);
-         impltypes = SCIPvarGetImplTypes(binvars[probindex], 1);
-         implbounds = SCIPvarGetImplBounds(binvars[probindex], 1);
-      }   
-      /* gets all implications x <= 0 ==> y <= 0 or y >= 1, if current variable x_i is negated */
-      else
-      {
-         assert(neg);
+      /* ignore implicants y <= x */
+      for( i = 0; i < xnbinimpls && ximplvars[i] <= x; ++i )
+      {}
 
-         nbinimpl = SCIPvarGetNBinImpls(binvars[probindex], 0);
-         implvars = SCIPvarGetImplVars(binvars[probindex], 0);
-         impltypes = SCIPvarGetImplTypes(binvars[probindex], 0);
-         implbounds = SCIPvarGetImplBounds(binvars[probindex], 0);
-      }  
-      
-      if( nbinimpl <= 1 )
+      /* loop over all y > x */
+      for( ; i < xnbinimpls-1; ++i ) /* at least one variable must be left over for z */
       {
-         assert(inthreeclique[i] == -1); 
-         continue;
-      }
+         VAR* y;
+         int yidx;
+         Bool yneg;
+         int yi;
+         VAR** yimplvars;
+         BOUNDTYPE* yimpltypes; 
+         int* yimplids;
+         int ynbinimpls;
+         int xk;
+         int yk;
+         int xyid;
 
-      /* marks variables that are adjacent to current variable x_i in implication graph */
-      for( j = 0; j < nbinimpl; j++ )
-      {
-         assert((impltypes[j] == SCIP_BOUNDTYPE_UPPER && SCIPisEQ(scip, implbounds[j], 0.0)) || 
-            (impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, implbounds[j], 1.0)));
+         y = ximplvars[i];
+         assert(x < y); /* the implied variables are sorted by increasing pointer */
+         xyid = ximplids[i];
 
-         /* marks y for implication x <= 0/>=1 ==> y <= 0 */
-         if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-            marked[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)] = TRUE;
-         /* marks y' for implication x <= 0/>=1 ==> y >= 1 */
-         else
+         /* check, whether the implicant is y == 0 or y == 1 (yi is the variable that conflicts with xi == 1) */
+         yneg = (ximpltypes[i] == SCIP_BOUNDTYPE_LOWER);
+         yidx = SCIPvarGetProbindex(y);
+         yi = getVarTcliqueIndex(yidx, yneg);
+
+         /* scan the remaining implications of xi == 1 and the implications of yi == 1 for equal entries */
+         ynbinimpls = SCIPvarGetNBinImpls(y, !yneg);
+         yimplvars = SCIPvarGetImplVars(y, !yneg);
+         yimpltypes = SCIPvarGetImplTypes(y, !yneg);
+         yimplids = SCIPvarGetImplIds(y, !yneg);
+
+         /* we simultaneously scan both implication arrays for candidates z with x < y < z */
+         xk = i+1;
+         assert(y < ximplvars[xk]);
+         for( yk = 0; yk < ynbinimpls && yimplvars[yk] <= y; ++yk )
+         {}
+         while( xk < xnbinimpls && yk < ynbinimpls )
          {
-            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-            marked[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)] = TRUE;
-         }
-      }
-      maxmarked = implvars[nbinimpl-1];
-      
-      /* searches for two adjacent marked variables (y,z) --> clique = {x_i, y, z} */ 
-      for( j = 0; j < nbinimpl && inthreeclique[i] == -1; j++ )
-      {
-         int k;
-         BOUNDTYPE* impltypesmarked; 
-         Real* implboundsmarked; 
-         VAR** implvarsmarked;
-         int nbinimplmarked;
-         
-         /* gets all implications x_j >= 1 ==> y <= 0 or y >= 1, if x_j is active (x_i <=0/>=1 ==> x_j <= 0) */
-         if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-         {
-            if( !marked[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)] )
-               continue;
-            
-            nbinimplmarked = SCIPvarGetNBinImpls(implvars[j], 1);
-            implvarsmarked = SCIPvarGetImplVars(implvars[j], 1);
-            impltypesmarked = SCIPvarGetImplTypes(implvars[j], 1);
-            implboundsmarked = SCIPvarGetImplBounds(implvars[j], 1);
-         }   
-         /* gets all implications x_j <= 0 ==> y <= 0 or y >= 1, if x_j is negated (x_i <=0/>=1 ==> x_j >= 1) */
-         else
-         {
-            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-
-            if( !marked[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)] )
-               continue;
-
-            nbinimplmarked = SCIPvarGetNBinImpls(implvars[j], 0);
-            implvarsmarked = SCIPvarGetImplVars(implvars[j], 0);
-            impltypesmarked = SCIPvarGetImplTypes(implvars[j], 0);
-            implboundsmarked = SCIPvarGetImplBounds(implvars[j], 0);
-         }  
-         
-         /* searches for marked variables in implications for x_j */
-         for( k = 0; k < nbinimplmarked && inthreeclique[i] == -1 && implvarsmarked[k] <= maxmarked; k++ )
-         {
-            /* implication x_j <= 0 or x_j >= 1 ==> x_k <= 0 && x_k is marked */
-            if( impltypesmarked[k] == SCIP_BOUNDTYPE_UPPER 
-               && marked[getVarTcliqueIndex(SCIPvarGetProbindex(implvarsmarked[k]), FALSE)])
+            assert(y < ximplvars[xk]);
+            assert(y < yimplvars[yk]);
+            while( xk < xnbinimpls && ximplvars[xk] < yimplvars[yk] )
+               xk++;
+            while( yk < ynbinimpls && yimplvars[yk] < ximplvars[xk] )
+               yk++;
+            if( xk < xnbinimpls && yk < ynbinimpls && ximplvars[xk] == yimplvars[yk] )
             {
-               addVar(scip, sepadata, binvars, inthreeclique, i, nvars, vars);
-
-               if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-                  addVar(scip, sepadata, binvars, inthreeclique, 
-                     getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE), nvars, vars);
-               else
+               /* check, whether both implications are of the same type */
+               if( ximpltypes[xk] == yimpltypes[yk] )
                {
-                  assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-                  addVar(scip, sepadata, binvars, inthreeclique, 
-                     getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE), nvars, vars);
-               }
-               addVar(scip, sepadata, binvars, inthreeclique, 
-                  getVarTcliqueIndex(SCIPvarGetProbindex(implvarsmarked[k]), FALSE), nvars, vars);
-               break;
-            }
-            /* implication x_j <= 0 or x_j >= 1 ==> x_k >= 1 && x_k' is marked */
-            if( impltypesmarked[k] == SCIP_BOUNDTYPE_LOWER 
-               && marked[getVarTcliqueIndex(SCIPvarGetProbindex(implvarsmarked[k]), TRUE)])
-            {
-               addVar(scip, sepadata, binvars, inthreeclique, i, nvars, vars);
+                  VAR* z;
+                  int zidx;
+                  Bool zneg;
+                  int zi;
+                  int xzid;
+                  int yzid;
 
-               if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-                  addVar(scip, sepadata, binvars, inthreeclique, 
-                     getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE), nvars, vars);
-               else
-               {
-                  assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-                  addVar(scip, sepadata, binvars, inthreeclique, 
-                     getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE), nvars, vars);
+                  /* we found z with x < y < z and xi + yi + zi <= 1 */
+                  z = ximplvars[xk];
+                  xzid = ximplids[xk];
+                  yzid = yimplids[yk];
+
+                  /* check, whether the implicant is z == 0 or z == 1 (zi is the variable that conflicts with xi == 1) */
+                  zneg = (ximpltypes[xk] == SCIP_BOUNDTYPE_LOWER);
+                  zidx = SCIPvarGetProbindex(z);
+                  zi = getVarTcliqueIndex(zidx, zneg);
+
+                  /* create the tclique data structure, if not yet existing */
+                  if( sepadata->tcliquedata == NULL )
+                  {
+                     assert(sepadata->vars == NULL);
+                     assert(sepadata->nvars == 0);
+
+                     if( !tcliqueCreate(&sepadata->tcliquedata) )
+                     {
+                        debugMessage("failed to create tclique data structure\n");
+                        return SCIP_NOMEMORY;
+                     }
+                     CHECK_OKAY( SCIPallocMemoryArray(scip, &sepadata->vars, 2*nbinvars) );
+                  }
+                  assert(sepadata->tcliquedata != NULL);
+                  assert(sepadata->vars != NULL);
+
+                  /* add nodes xi, yi, and zi to clique graph (if not yet existing) */
+                  if( cliquegraphidx[xi] == -1 )
+                  {
+                     assert(sepadata->nvars < 2*nbinvars);
+                     if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
+                     {
+                        debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
+                        return SCIP_NOMEMORY;
+                     }
+                     cliquegraphidx[xi] = sepadata->nvars;
+                     if( xneg )
+                     {
+                        CHECK_OKAY( SCIPgetNegatedVar(scip, x, &sepadata->vars[sepadata->nvars]) ); 
+                     }
+                     else
+                        sepadata->vars[sepadata->nvars] = x;
+                     sepadata->nvars++;
+                  }
+                  if( cliquegraphidx[yi] == -1 )
+                  {
+                     assert(sepadata->nvars < 2*nbinvars);
+                     if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
+                     {
+                        debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
+                        return SCIP_NOMEMORY;
+                     }
+                     cliquegraphidx[yi] = sepadata->nvars;
+                     if( yneg )
+                     {
+                        CHECK_OKAY( SCIPgetNegatedVar(scip, y, &sepadata->vars[sepadata->nvars]) ); 
+                     }
+                     else
+                        sepadata->vars[sepadata->nvars] = y;
+                     sepadata->nvars++;
+                  }
+                  if( cliquegraphidx[zi] == -1 )
+                  {
+                     assert(sepadata->nvars < 2*nbinvars);
+                     if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
+                     {
+                        debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
+                        return SCIP_NOMEMORY;
+                     }
+                     cliquegraphidx[zi] = sepadata->nvars;
+                     if( zneg )
+                     {
+                        CHECK_OKAY( SCIPgetNegatedVar(scip, z, &sepadata->vars[sepadata->nvars]) ); 
+                     }
+                     else
+                        sepadata->vars[sepadata->nvars] = z;
+                     sepadata->nvars++;
+                  }
+
+                  /* add edges (xi,yi), (xi,zi), and (yi,zi) to clique graph (multiple edges are deleted afterwards) */
+                  if( !implused[xyid] )
+                  {
+                     if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[yi]) )
+                     {
+                        debugMessage("failed to add edge (%d,%d) to clique graph\n",
+                           cliquegraphidx[xi], cliquegraphidx[yi]);
+                        return SCIP_NOMEMORY;
+                     }
+                     implused[xyid] = TRUE;
+                  }
+                  if( !implused[xzid] )
+                  {
+                     if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[zi]) )
+                     {
+                        debugMessage("failed to add edge (%d,%d) to clique graph\n",
+                           cliquegraphidx[xi], cliquegraphidx[zi]);
+                        return SCIP_NOMEMORY;
+                     }
+                     implused[xzid] = TRUE;
+                  }
+                  if( !implused[yzid] )
+                  {
+                     if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[yi], cliquegraphidx[zi]) )
+                     {
+                        debugMessage("failed to add edge (%d,%d) to clique graph\n",
+                           cliquegraphidx[yi], cliquegraphidx[zi]);
+                        return SCIP_NOMEMORY;
+                     }
+                     implused[yzid] = TRUE;
+                  }
                }
-               addVar(scip, sepadata, binvars, inthreeclique, 
-                  getVarTcliqueIndex(SCIPvarGetProbindex(implvarsmarked[k]), TRUE), nvars, vars);
-               break;
+
+               /* proceed with the next pair of implications */
+               xk++;
+               yk++;
             }
          }
       }
    }
+   assert((sepadata->nvars == 0) == (sepadata->vars == NULL));
+   assert((sepadata->nvars == 0) == (sepadata->tcliquedata == NULL));
 
-   if( *nvars > 0 )
+   /* reduce the size of the vars array */
+   if( 0 < sepadata->nvars && sepadata->nvars < 2*nbinvars )
    {
-      /* adds a node with weight = 1 for all binary variables (active or negated) that are contained 
-       * in a clique with 3 variables in implication graph  */
-      for( i = 0; i < *nvars; i++ )
-         tcliqueAddNode(&sepadata->tcliquedata, i, 0);
-
-      /* adds the following edges for all binary variables x (active or negated) that are contained 
-       * in a clique with 3 variables in implication graph:  
-       *    (x , y )      for all implications x >= 1 ==> y <= 0
-       *    (x , y')      for all implications x >= 1 ==> y >= 1,             y' = 1 - x
-       *    (x', y )      for all implications x <= 0 ==> y <= 0, x' = 1 - x 
-       *    (x', y')      for all implications x <= 0 ==> y >= 1, x' = 1 - x, y' = 1 - y */
-      for( i = 0; i < nbinvars; i++ )
-      {
-         BOUNDTYPE* impltypes; 
-         Real* implbounds; 
-         VAR** implvars;
-         int j;
-         int nbinimpl;
-      
-         assert(inthreeclique[getVarTcliqueIndex(i, FALSE)] >= -1);
-
-         /* active binary variable */
-         if( inthreeclique[getVarTcliqueIndex(i, FALSE)] > -1)
-         {
-            assert(inthreeclique[getVarTcliqueIndex(i, FALSE)] < *nvars);
-
-            /* gets all implications x >= 1 ==> y <= 0 or y >= 1 */
-            nbinimpl = SCIPvarGetNBinImpls(binvars[i], 1);
-            implvars = SCIPvarGetImplVars(binvars[i], 1);
-            impltypes = SCIPvarGetImplTypes(binvars[i], 1);
-            implbounds = SCIPvarGetImplBounds(binvars[i], 1);
-         
-            /* adds edges for all implication x >= 1 ==> y <= 0 / y >= 1 to tclique data structure */  
-            for( j = 0; j < nbinimpl; j++ )
-            {
-               assert((impltypes[j] == SCIP_BOUNDTYPE_UPPER && SCIPisEQ(scip, implbounds[j], 0.0)) || 
-                  (impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, implbounds[j], 1.0)));
-            
-               if( impltypes[j] == SCIP_BOUNDTYPE_UPPER 
-                  && inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)] > -1 )
-               {
-                  assert(inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)] < *nvars);
-         
-                  tcliqueAddEdge(&sepadata->tcliquedata, inthreeclique[getVarTcliqueIndex(i, FALSE)], 
-                     inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)]);
-               }
-               if( impltypes[j] == SCIP_BOUNDTYPE_LOWER 
-                  && inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)] > -1 )
-               {
-                  assert(inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)] < *nvars);
-
-                  tcliqueAddEdge(&sepadata->tcliquedata, inthreeclique[getVarTcliqueIndex(i, FALSE)], 
-                     inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)]);
-               }
-            }  
-         }
-      
-         assert(inthreeclique[getVarTcliqueIndex(i, TRUE)] >= -1);
-
-         /* negated binary variable */
-         if( inthreeclique[getVarTcliqueIndex(i, TRUE)] > -1)
-         {
-            assert(inthreeclique[getVarTcliqueIndex(i, TRUE)] < *nvars);
-
-            /* gets all implications x <= 0 ==> y <= 0 or y >= 1 */
-            nbinimpl = SCIPvarGetNBinImpls(binvars[i], 0);
-            implvars = SCIPvarGetImplVars(binvars[i], 0);
-            impltypes = SCIPvarGetImplTypes(binvars[i], 0);
-            implbounds = SCIPvarGetImplBounds(binvars[i], 0);
-         
-            /* adds edges for all implication x <= 0 ==> y <= 0 / y >= 1 to tclique data structure */  
-            for( j = 0; j < nbinimpl; j++ )
-            {
-               assert((impltypes[j] == SCIP_BOUNDTYPE_UPPER && SCIPisEQ(scip, implbounds[j], 0.0)) || 
-                  (impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, implbounds[j], 1.0)));
-            
-               if( impltypes[j] == SCIP_BOUNDTYPE_UPPER 
-                  && inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)] > -1)
-               {
-                  assert(inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)] < *nvars);
-         
-                  tcliqueAddEdge(&sepadata->tcliquedata, inthreeclique[getVarTcliqueIndex(i, TRUE)], 
-                     inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), FALSE)]);
-               }
-               if( impltypes[j] == SCIP_BOUNDTYPE_LOWER 
-                  && inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)] > -1)
-               {
-                  assert(inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)] < *nvars);
-
-                  tcliqueAddEdge(&sepadata->tcliquedata, inthreeclique[getVarTcliqueIndex(i, TRUE)], 
-                     inthreeclique[getVarTcliqueIndex(SCIPvarGetProbindex(implvars[j]), TRUE)]);
-               }
-            }  
-         }
-      }
+      CHECK_OKAY( SCIPreallocMemoryArray(scip, &sepadata->vars, sepadata->nvars) );
    }
 
-#ifdef DEBUG
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &implused);
+   SCIPfreeBufferArray(scip, &cliquegraphidx);
+
+   /* flush the changes to the clique graph */
    if( sepadata->tcliquedata != NULL )
-      printTcliquedata(sepadata->tcliquedata);
-   else
-      debugMessage("no tclique data structure created, because no variable is cont. in clique with 3 nodes!\n");
-#endif
-
-   /* frees data structures */
-   SCIPfreeBufferArray(scip, &inthreeclique);
-   SCIPfreeBufferArray(scip, &marked);
+   {
+      debugMessage(" -> flushing clique graph\n");
+      if( !tcliqueFlush(sepadata->tcliquedata) )
+         return SCIP_NOMEMORY;
+      
+      debugMessage(" -> clique graph constructed (%d nodes, %d edges)\n", 
+         tcliqueGetNNodes(sepadata->tcliquedata), tcliqueGetNEdges(sepadata->tcliquedata));
+   }
 
    return SCIP_OKAY;
 }
@@ -485,12 +398,12 @@ void updateTcliquedata(
 
    assert(sepadata != NULL);
    assert(sepadata->tcliquedata != NULL);
-   assert(getNnodes(sepadata->tcliquedata) == sepadata->nvars);
+   assert(tcliqueGetNNodes(sepadata->tcliquedata) == sepadata->nvars);
 
    /* updates weight of all nodes in tclique data structure */
    for( i = 0; i < sepadata->nvars; i++ )
    {
-      tcliqueNodeChangeWeight(&sepadata->tcliquedata, i, 
+      tcliqueChangeWeight(sepadata->tcliquedata, i, 
          (int)SCIPfeasFloor(scip, sepadata->varsolvals[i] * sepadata->scaleval));
    }
 }
@@ -520,13 +433,15 @@ TCLIQUE_USRCALLBACK(tcliqueNewClique)
    nvars = sepadata->nvars; 
    varsolvals = sepadata->varsolvals; 
 
+#if 0
 #ifdef DEBUG
-   printf("found %der mwc=[ ", nmwc);
+   debugMessage("found %der mwc=[ ", nmwc);
    for( i = 0; i < nmwc; i++ )
    {
       printf("%s(%g), ", SCIPvarGetName(vars[mwc[i]]), varsolvals[mwc[i]]);
    }
-   printf("] wmwc=%d", weightmwc);
+   printf("] wmwc=%d\n", weightmwc);
+#endif
 #endif
 
    weightmwcunscaled = 0.0;
@@ -537,9 +452,8 @@ TCLIQUE_USRCALLBACK(tcliqueNewClique)
       for( i = 0; i < nmwc; i++ )
          weightmwcunscaled += varsolvals[mwc[i]];
       
-#ifdef DEBUG
-      printf("->%g, ncuts=%d\n", weightmwcunscaled, sepadata->ncuts);
-#endif
+      /*debugMessage("->%g, ncuts=%d\n", weightmwcunscaled, sepadata->ncuts);*/
+
       if( SCIPisEfficacious(sepadata->scip, weightmwcunscaled - 1.0) )
       {
          ROW* cut;
@@ -559,10 +473,9 @@ TCLIQUE_USRCALLBACK(tcliqueNewClique)
          }
          CHECK_OKAY( SCIPflushRowExtensions(sepadata->scip, cut) );
 
-#ifdef DEBUG
-         printf("-----> CUT FOUND: ");
-         SCIPprintRow(sepadata->scip, cut, NULL);
-#endif
+         debugMessage("found clique cut (act=%g): ", weightmwcunscaled);
+         debug(SCIPprintRow(sepadata->scip, cut, NULL));
+
          CHECK_OKAY( SCIPaddCut(sepadata->scip, cut, FALSE) );
          (sepadata->ncuts)++;
          
@@ -600,47 +513,16 @@ DECL_SEPAFREE(sepaFreeClique)
 
 
 /** initialization method of separator (called after problem was transformed) */
-#if 0
-static
-DECL_SEPAINIT(sepaInitClique)
-{  /*lint --e{715}*/
-   errorMessage("method of clique separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define sepaInitClique NULL
-#endif
 
 
 /** deinitialization method of separator (called before transformed problem is freed) */
-#if 0
-static
-DECL_SEPAEXIT(sepaExitClique)
-{  /*lint --e{715}*/
-   errorMessage("method of clique separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define sepaExitClique NULL
-#endif
+
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
-#if 0
-static
-DECL_SEPAINITSOL(sepaInitsolClique)
-{  /*lint --e{715}*/
-   errorMessage("method of clique separator not implemented yet\n");
-   abort(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
 #define sepaInitsolClique NULL
-#endif
+
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
@@ -669,18 +551,16 @@ DECL_SEPAEXITSOL(sepaExitsolClique)
 static
 DECL_SEPAEXEC(sepaExecClique)
 {
-   VAR** binvars;
    SEPADATA* sepadata;
    Real* varsolvals;
    int* mwc; 	        
    WEIGHT weightmwc;    
    int nmwc;	        
-   int nbinvars;
    int maxtreenodes;
 
    assert(scip != NULL);
    
-   /* gets separator data */
+   /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
    
@@ -689,66 +569,28 @@ DECL_SEPAEXEC(sepaExecClique)
 
    *result = SCIP_DIDNOTRUN;
    sepadata->ncuts = 0;
-   
-   /* gets active problem variables */
-   binvars = SCIPgetVars(scip);
-   nbinvars = SCIPgetNBinVars(scip);
-   assert(binvars != NULL);
 
-   if( nbinvars == 0 )
-      return SCIP_OKAY;
-
+   /* if we already detected that no implications between binary variables exist, nothing has to be done */
    if( sepadata->tcliquedata == NULL && sepadata->tcliqueloaded )
       return SCIP_OKAY;
 
-   assert((!sepadata->tcliqueloaded && sepadata->tcliquedata == NULL)
-      || (sepadata->tcliqueloaded && sepadata->tcliquedata != NULL));
-
    *result = SCIP_DIDNOTFIND;
       
-   /* loads tclique data structure */
+   /* load tclique data structure */
    if( !sepadata->tcliqueloaded )
    {
-      VAR** vars;
-      int nvars;
-      
       assert(sepadata->tcliquedata == NULL);
 
-      CHECK_OKAY( SCIPallocBufferArray(scip, &vars, 2 * nbinvars) );
-      nvars = 0;
-      
-      CHECK_OKAY( loadTcliquedata(scip, sepadata, binvars, nbinvars, vars, &nvars ) );
+      CHECK_OKAY( loadTcliquedata(scip, sepadata) );
+      assert((sepadata->tcliquedata == NULL) == (sepadata->vars == NULL));
       sepadata->tcliqueloaded = TRUE;
-
-      assert((sepadata->tcliquedata == NULL && nvars == 0) || 
-         (sepadata->tcliquedata != NULL && nvars > 0) );
    
-      /* found variables that are contained in a clique with 3 variables in implication graph 
-       * -> creats tclique data structure */
-      if( sepadata->tcliquedata != NULL )
+      if( sepadata->vars == NULL )
       {
-         int i;
-         
-         /* sets sepadata */
-         CHECK_OKAY( SCIPallocMemoryArray(scip, &(sepadata->vars), nvars) );
-
-         for( i = 0; i < nvars; i++ )
-            sepadata->vars[i] = vars[i];
-
-         sepadata->nvars = nvars;
-
-         SCIPfreeBufferArray(scip, &vars);
-      }
-      /* did not find any variables that are contained in a clique with 3 variables in implication graph 
-       * -> does not create tclique data structure */
-      else
-      {
-         SCIPfreeBufferArray(scip, &vars);
-
-         /* sets sepadata */
-         assert(sepadata->vars == NULL);
+         /* we did not find any variables that are contained in a clique with at least 3 variables in the
+          * implication graph -> we disable the clique cut separator
+          */
          assert(sepadata->nvars == 0);
-
          return SCIP_OKAY;
       }
    }
@@ -764,9 +606,9 @@ DECL_SEPAEXEC(sepaExecClique)
    maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
 
    /* finds maximum weight clique in tclique */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &mwc, getNnodes(sepadata->tcliquedata)) );
-   maxClique(sepadata->tcliquedata, tcliqueNewClique, (void*)sepadata, mwc, &nmwc, &weightmwc, 
-      (int)sepadata->scaleval-1, maxtreenodes);
+   CHECK_OKAY( SCIPallocBufferArray(scip, &mwc, tcliqueGetNNodes(sepadata->tcliquedata)) );
+   tcliqueMaxClique(sepadata->tcliquedata, tcliqueNewClique, (void*)sepadata, mwc, &nmwc, &weightmwc, 
+      (int)sepadata->scaleval-1, (int)sepadata->scaleval, maxtreenodes);
 
    /* frees data structures */
    SCIPfreeBufferArray(scip, &mwc);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.60 2005/03/24 09:47:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.61 2005/04/15 11:46:54 bzfpfend Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -200,7 +200,18 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
 
+   SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
+}
+
+/** reset implication counter */
+void SCIPstatResetImplications(
+   STAT*            stat                /**< problem statistics data */
+   )
+{
+   assert(stat != NULL);
+
+   stat->nimplications = 0;
 }
 
 /** reset presolving and current run specific statistics */

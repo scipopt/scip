@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.120 2005/03/21 11:37:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.121 2005/04/15 11:46:52 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1717,7 +1717,7 @@ RETCODE SCIPconshdlrCreate(
 
    sprintf(paramname, "constraints/%s/propfreq", name);
    CHECK_OKAY( SCIPsetAddIntParam(set, blkmem, paramname, 
-         "frequency for propagating domains (-1: never, 0: only in presolving)",
+         "frequency for propagating domains (-1: never, 0: only in root node)",
          &(*conshdlr)->propfreq, propfreq, -1, INT_MAX, NULL, NULL) );
 
    sprintf(paramname, "constraints/%s/eagerfreq", name);
@@ -2571,7 +2571,7 @@ RETCODE SCIPconshdlrPropagate(
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   int              depth,              /**< depth of current node; -1 if preprocessing domain propagation */
+   int              depth,              /**< depth of current node */
    Bool             execdelayed,        /**< execute propagation method even if it is marked to be delayed */
    RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -2585,13 +2585,16 @@ RETCODE SCIPconshdlrPropagate(
       || (0 <= conshdlr->lastnusefulpropconss && conshdlr->lastnusefulpropconss <= conshdlr->nusefulpropconss));
    assert(set != NULL);
    assert(stat != NULL);
+   assert(depth >= 0);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
    if( conshdlr->consprop != NULL
       && (!conshdlr->needscons || conshdlr->npropconss > 0)
-      && (depth == -1 || (conshdlr->propfreq > 0 && depth % conshdlr->propfreq == 0) || conshdlr->propwasdelayed) )
+      && ((depth == 0 && conshdlr->propfreq == 0)
+         || (conshdlr->propfreq > 0 && depth % conshdlr->propfreq == 0)
+         || conshdlr->propwasdelayed) )
    {
       /* check, if propagation method should be delayed */
       if( !conshdlr->delayprop || execdelayed )

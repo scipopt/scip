@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.282 2005/03/24 09:47:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.283 2005/04/15 11:46:53 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5904,7 +5904,8 @@ RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, varfixing, implvar, impltype, implbound, &conflict) );
+   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, scip->stat,
+         varfixing, implvar, impltype, implbound, &conflict) );
    if( conflict )
    {
       CHECK_OKAY( SCIPfixVar(scip, var, varfixing == TRUE ? 0.0 : 1.0, infeasible, &fixed) );
@@ -5920,7 +5921,7 @@ RETCODE SCIPaddVarImplication(
        *  "x == 1  ==>  y <= 0": add "y == 1  ==>  x <= 0"
        *  "x == 1  ==>  y >= 1": add "y == 0  ==>  x <= 0"
        */
-      CHECK_OKAY( SCIPvarAddImplic(implvar, scip->mem->solvemem, scip->set,
+      CHECK_OKAY( SCIPvarAddImplic(implvar, scip->mem->solvemem, scip->set, scip->stat,
             impltype == SCIP_BOUNDTYPE_UPPER, var, varfixing == TRUE ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
             varfixing == TRUE ? 0.0 : 1.0, &conflict) );
       if( conflict )
@@ -11975,6 +11976,16 @@ RETCODE SCIPprintDisplayLine(
    }
 
    return SCIP_OKAY;
+}
+
+/** gets total number of implications between variables that are stored in the implication graph */
+int SCIPgetNImplications(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPgetNImplications", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nimplications;
 }
 
 /** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool */

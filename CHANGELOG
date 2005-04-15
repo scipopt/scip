@@ -66,6 +66,7 @@ interface:
   SCIPgetNDualResolveLPs(), SCIPgetNDualResolveLPIterations()
 - new methods SCIPgetVarNStrongbranchs(), SCIPcolGetNStrongbranchs()
 - new methods SCIPfindSimpleRational(), SCIPselectSimpleValue()
+- new method SCIPvarGetImplIds()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -82,6 +83,7 @@ plugins:
 - new pluging: implied bound cuts separator
 - during probing, propagation of bounds is now always performed in linear constraint handler, ignoring the
   parameter "tightenboundsfreq"
+- new implementation of the clique graph construction method in clique separator
 
 parameters:
 - new parameters lp/cleanupcolsroot and lp/cleanuprowsroot to distinguish cleanup settings between root node and other
@@ -137,6 +139,7 @@ parameters:
 - new parameter heuristics/objpscostdiving/maxsols
 - new parameter heuristics/rootsoldiving/maxsols
 - new parameter branching/scorefunc
+- default parameter separating/clique/maxtreenodes changed to -1
 
 features:
 - aging and cleanup now only remove non-basic columns and basic rows, s.t. resolving can be applied with 0 simplex

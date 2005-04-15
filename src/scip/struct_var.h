@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.29 2005/03/24 09:47:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.30 2005/04/15 11:46:54 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -175,8 +175,10 @@ struct VBounds
 struct Implics
 {
    VAR**            implvars[2];        /**< variables y  in implications y <= b or y >= b */
-   BOUNDTYPE*       impltypes[2];       /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   BOUNDTYPE*       impltypes[2];       /**< types        of implications y <= b (SCIP_BOUNDTYPE_UPPER)
+                                         *                             or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real*            implbounds[2];      /**< bounds b     in implications y <= b or y >= b */
+   int*             implids[2];         /**< unique ids of implications */
    int              implsize[2];        /**< size of implvars, implbounds and implvals arrays  for x <= 0 and x >= 1*/
    int              nimpls[2];          /**< number of all implications                        for x <= 0 and x >= 1 */
    int              nbinimpls[2];       /**< number of     implications with binary variable y for x <= 0 and x >= 1 */

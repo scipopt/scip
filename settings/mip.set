@@ -374,7 +374,7 @@ conflict/linear/priority = -1000000
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/linear/propfreq = 5
 
@@ -430,7 +430,7 @@ constraints/linear/maxpresolaggrrounds = -1
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/and/propfreq = 1
 
@@ -458,7 +458,7 @@ constraints/and/delaypresol = FALSE
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/propfreq = -1
 
@@ -486,7 +486,7 @@ constraints/conjunction/delaypresol = FALSE
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/propfreq = -1
 
@@ -514,7 +514,7 @@ constraints/integral/delaypresol = FALSE
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/knapsack/propfreq = 1
 
@@ -566,7 +566,7 @@ conflict/logicor/priority = 800000
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/logicor/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/logicor/propfreq = 1
 
@@ -594,7 +594,7 @@ constraints/logicor/delaypresol = FALSE
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/or/propfreq = 1
 
@@ -626,7 +626,7 @@ conflict/setppc/priority = 700000
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/setppc/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/setppc/propfreq = 1
 
@@ -658,7 +658,7 @@ constraints/setppc/npseudobranches = 2
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/varbound/propfreq = 1
 
@@ -686,7 +686,7 @@ constraints/varbound/delaypresol = FALSE
 # [type: int, range: [-1,2147483647], default: 5]
 constraints/xor/sepafreq = 0
 
-# frequency for propagating domains (-1: never, 0: only in presolving)
+# frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
 constraints/xor/propfreq = 1
 
@@ -1455,8 +1455,8 @@ separating/clique/delay = FALSE
 separating/clique/scaleval = 1000
 
 # maximal number of nodes in branch and bound tree (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 100]
-separating/clique/maxtreenodes = 100
+# [type: int, range: [-1,2147483647], default: -1]
+separating/clique/maxtreenodes = -1
 
 # priority of separator <cmir>
 # [type: int, range: [-2147483648,2147483647], default: -3000]

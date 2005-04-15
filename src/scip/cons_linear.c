@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.159 2005/04/12 16:56:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.160 2005/04/15 11:46:52 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4771,7 +4771,7 @@ DECL_CONSPROP(consPropLinear)
    /*debugMessage("Prop method of linear constraints\n");*/
 
    /* check, if we want to tighten variable's bounds (in probing, we always want to tighten the bounds) */
-   if( SCIPinProbing )
+   if( SCIPinProbing(scip) )
       tightenbounds = TRUE;
    else
    {

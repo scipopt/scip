@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.h,v 1.1 2005/03/10 17:11:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.h,v 1.2 2005/04/15 11:46:54 bzfpfend Exp $"
 
 /**@file   sepa_clique.h
  * @brief  clique separator
@@ -28,7 +28,7 @@
 #define __SEPA_CLIQUE_H__
 
 
-#include "scip.h"
+#include "scip/scip.h"
 
 
 /** creates the clique separator and includes it in SCIP */

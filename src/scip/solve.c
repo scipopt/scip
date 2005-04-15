@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.176 2005/03/10 17:11:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.177 2005/04/15 11:46:54 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -203,6 +203,7 @@ RETCODE SCIPpropagateDomains(
 
    assert(set != NULL);
    assert(tree != NULL);
+   assert(depth >= 0);
    assert(cutoff != NULL);
 
    node = SCIPtreeGetCurrentNode(tree);

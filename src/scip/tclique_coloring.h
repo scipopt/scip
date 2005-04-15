@@ -8,9 +8,9 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloring.h,v 1.1 2005/03/10 17:11:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.1 2005/04/15 11:46:55 bzfpfend Exp $"
 
-/**@file   coloring.h
+/**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
@@ -19,11 +19,11 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __COLORING_H__
-#define __COLORING_H__
+#ifndef __TCLIQUE_COLORING_H__
+#define __TCLIQUE_COLORING_H__
 
 #include "scip/memory.h"
-#include "tclique/graph.h"
+#include "scip/tclique_graph.h"
 
 
 typedef struct _ITV{
@@ -45,8 +45,10 @@ typedef struct _NBC{
 
 
 /** colors the nodes of of a given set of nodes V with the lowest possible color and 
- *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps. */
-int coloring( 
+ *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps.
+ */
+extern
+int tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             V,                  /**< nodes for branching */ 

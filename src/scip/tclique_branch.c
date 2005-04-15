@@ -8,9 +8,9 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.1 2005/03/10 17:11:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.1 2005/04/15 11:46:54 bzfpfend Exp $"
 
-/**@file   branch.c
+/**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
@@ -26,9 +26,9 @@
 #include "scip/def.h"
 #include "scip/memory.h"
 #include "scip/message.h"
-#include "tclique/graph.h"
-#include "tclique/branch.h"
-#include "tclique/coloring.h"
+#include "scip/tclique_graph.h"
+#include "scip/tclique_branch.h"
+#include "scip/tclique_coloring.h"
 
 
 
@@ -62,21 +62,21 @@ void reduced(
    assert(nmwc != NULL);
    assert(weightmwc != NULL);
 
-   weights = getWeights(tcliquedata);
+   weights = tcliqueGetWeights(tcliquedata);
    weightclique = 0.;
 
    /* V has only two nodes */
    if( *nV == 2 )
    {
       /* checks if nodes are adjacent */ 
-      if( isEdge(tcliquedata, V[0], V[1]) )
+      if( tcliqueIsEdge(tcliquedata, V[0], V[1]) )
       {
-         assert(isEdge(tcliquedata, V[1], V[0]));
+         assert(tcliqueIsEdge(tcliquedata, V[1], V[0]));
          weightclique = weights[V[1]];
       }
       else
       {	
-         assert(!isEdge(tcliquedata, V[1], V[0]));
+         assert(!tcliqueIsEdge(tcliquedata, V[1], V[0]));
          /* updates V 
           *   V = {node with maximum weight}
           */
@@ -215,7 +215,7 @@ BOOL bound(
    ALLOC_ABORT( allocMemoryArray(&clique, nV) );
 
    /* colors the graph induces by nodes of V */
-   ncolors = coloring(tcliquedata, mem, V, nV, gsd, iscolored, apbound, &clique, &nclique, &weightclique);
+   ncolors = tcliqueColoring(tcliquedata, mem, V, nV, gsd, iscolored, apbound, &clique, &nclique, &weightclique);
 
    /* improves global lower bound */
    if( (weightK + weightclique) > *weightmwc ) 
@@ -390,7 +390,7 @@ BOOL branch(
    assert(*treenodes >= 0);
    assert(maxtreenodes >= 0);
 
-   weights = getWeights(tcliquedata);
+   weights = tcliqueGetWeights(tcliquedata);
 
    /* sets data structures */
    ALLOC_ABORT( allocMemoryArray(&Vcurrent, nV-1) );
@@ -468,7 +468,7 @@ BOOL branch(
       /* sets the nodes for the next level of b&b tree 
        *   V = nodes of V, that are adjacent to branchingnode
        */
-      nVcurrent = selectAdjnodes(tcliquedata, branchingnode, V, nValive, Vcurrent);  
+      nVcurrent = tcliqueSelectAdjnodes(tcliquedata, branchingnode, V, nValive, Vcurrent);  
       
       /* branchingnode has no adjacent node in V */
       if( nVcurrent == 0) 
@@ -530,15 +530,16 @@ BOOL branch(
 }
 
 /** finds maximum weight clique */
-void maxClique(
+void tcliqueMaxClique(
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
    void*            usrdata,            /**< user data to pass to user callback function */
    int*             mwc, 	        /**< pointer to store nodes of the maximum weight clique */
    int*             nmwc,	        /**< pointer to store number of nodes in the maximum weight clique */
    WEIGHT*          weightmwc,          /**< pointer to store weight of the maximum weight clique */
-   WEIGHT           maxweight,          /**< maximum weight of branching nodes in level 0; 0 if not used 
-                                         ** (for cliques with at least one fractional node) */
+   WEIGHT           maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used 
+                                         *   for cliques with at least one fractional node) */
+   WEIGHT           minweight,          /**< lower bound for weight of generated cliques */
    int              maxtreenodes 	/**< maximum number of nodes of b&b tree */
    )
 {
@@ -564,9 +565,9 @@ void maxClique(
    assert(weightmwc != NULL);
    assert(maxtreenodes >= 0);
 
-   nnodes = getNnodes(tcliquedata);
+   nnodes = tcliqueGetNNodes(tcliquedata);
    level = -1;
-   weightK = 0.;
+   weightK = 0;
 
    /* sets data structures */
    ALLOC_ABORT( allocMemoryArray(&K, nnodes) );
@@ -577,7 +578,7 @@ void maxClique(
 
    /* set weight and number of nodes of maximum weighted clique */
    *nmwc = 0; 
-   *weightmwc = 0.;
+   *weightmwc = minweight-1;
    bestlevel = -1;
    treenodes = 0;
 
@@ -593,7 +594,7 @@ void maxClique(
     */
 
    /* sorts V by non decreasing weights */
-   weights = getWeights(tcliquedata);
+   weights = tcliqueGetWeights(tcliquedata);
    sortWeightInc(nnodes, &V, weights);
 
    /* sets apbound of all nodes */
@@ -616,7 +617,7 @@ void maxClique(
 
    /* branches to find maximum weight clique */
    branch(tcliquedata, usrcallback, usrdata, mem, &level, V, nV, gsd, iscolored, apbound, K, &weightK, 
-      mwc, nmwc, weightmwc, maxweight, &bestlevel, &treenodes, maxtreenodes);
+      mwc, nmwc, weightmwc, maxfirstnodeweight, &bestlevel, &treenodes, maxtreenodes);
 
    /* deletes own memory allocator for coloring */ 
    destroyChunkMemory(&mem); 

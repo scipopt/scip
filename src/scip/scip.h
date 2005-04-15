@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.221 2005/03/24 09:47:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.222 2005/04/15 11:46:53 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2020,14 +2020,15 @@ RETCODE SCIPaddVarVub(
    Real             vubconstant         /**< constant d    in x <= b*z + d */
    );
 
-/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
+/** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
  *  if y is binary, the corresponding valid implication for y is also added;
  *  if y is non-binary, the corresponding variable lower or upper bound for y is also added
  */
+extern
 RETCODE SCIPaddVarImplication(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
-   Bool             varfixing,          /**< FALSE if y should be added in implications for x <= 0, TRUE for x >= 1 */
+   Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER)
                                          *                          or y >= b (SCIP_BOUNDTYPE_LOWER) */
@@ -4544,6 +4545,12 @@ RETCODE SCIPprintDisplayLine(
    SCIP*            scip,               /**< SCIP data structure */
    FILE*            file,               /**< output file (or NULL for standard output) */
    VERBLEVEL        verblevel           /**< minimal verbosity level to actually display the information line */
+   );
+
+/** gets total number of implications between variables that are stored in the implication graph */
+extern
+int SCIPgetNImplications(
+   SCIP*            scip                /**< SCIP data structure */
    );
 
 /** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool */

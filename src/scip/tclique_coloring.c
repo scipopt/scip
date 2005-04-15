@@ -8,9 +8,9 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloring.c,v 1.1 2005/03/10 17:11:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.1 2005/04/15 11:46:54 bzfpfend Exp $"
 
-/**@file   coloring.c
+/**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
  * @author Ralf Borndoerfer
  * @author Zoltan Kormos
@@ -27,8 +27,8 @@
 #include "scip/def.h"
 #include "scip/memory.h"
 #include "scip/message.h"
-#include "tclique/graph.h"
-#include "tclique/coloring.h"
+#include "scip/tclique_graph.h"
+#include "scip/tclique_coloring.h"
 
 
 
@@ -107,7 +107,7 @@ int getMaxWeightIndex(
    assert(tcliquedata != NULL);
    assert(nnodes > 0);
 
-   weights = getWeights(tcliquedata);
+   weights = tcliqueGetWeights(tcliquedata);
 
    maxweightindex = -1;
    maxweight = -1.;
@@ -221,7 +221,7 @@ void updateNeighbour(
 /** colors the nodes of a given set of nodes V with the lowest possible color and 
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
-int coloring( 
+int tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             V,                  /**< nodes for branching */ 
@@ -261,7 +261,7 @@ int coloring(
    assert(gsd != NULL);
    assert(iscolored != NULL);
 
-   weights = getWeights(tcliquedata);
+   weights = tcliqueGetWeights(tcliquedata);
 
    /* sets data structures for coloring */
    clearMemoryArray(iscolored, nV); /* new-memory */
@@ -302,8 +302,8 @@ int coloring(
     * if node has weight zero the colorinterval is empty and update of neighbours is not nes. */     
    if( range > 0 )
    {
-      currentadjedge = getFirstAdjedge(tcliquedata, node);
-      lastadjedge = getLastAdjedge(tcliquedata, node);
+      currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
+      lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
       for( i = 0; i < nV; i++ )
       {
          /* checks if V[i] is contained in adjacency list of node started at position of V[i-1] 
@@ -314,7 +314,7 @@ int coloring(
             {
                if( *currentadjedge == V[i] )
                {
-                  assert(isEdge(tcliquedata, V[i], node));
+                  assert(tcliqueIsEdge(tcliquedata, V[i], node));
                   debugMessage("       nodeVindex=%d, node=%d, satdegold=%d  ->  ", i, V[i], gsd[i].satdeg); 
                
                   /* sets satdeg for adjacent node */
@@ -478,8 +478,8 @@ int coloring(
        * if node has weight zero the colorinterval is empty and update of neighbours is not nes. */     
       if( range > 0.0 )
       {
-         currentadjedge = getFirstAdjedge(tcliquedata, node);
-         lastadjedge = getLastAdjedge(tcliquedata, node);
+         currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
+         lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
          for( j = 0; j < nV; j++)
          {
             /* updates only uncolored neighbours */
@@ -494,7 +494,7 @@ int coloring(
                {
                   if( *currentadjedge == V[j] )
                   {
-                     assert(isEdge(tcliquedata, V[j], node));
+                     assert(tcliqueIsEdge(tcliquedata, V[j], node));
                   
                      debugMessage("       nodeVindex=%d, node=%d, satdegold=%d  ->  ", j, V[j], gsd[j].satdeg); 
                   
