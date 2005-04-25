@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.189 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.190 2005/04/25 14:32:37 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4413,9 +4413,15 @@ void rowMerge(
          row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
          t++;
       }
+      assert(s == row->len);
       assert(t <= row->len);
+
       row->len = t;
       row->nunlinked = t;
+
+      /* if equal entries were merged, we have to recalculate the norms, since the squared euclidean norm is wrong */
+      if( t < s )
+         rowCalcNorms(row, set);
    }
 
 #ifndef NDEBUG
