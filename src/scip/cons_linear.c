@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.160 2005/04/15 11:46:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.161 2005/04/25 11:56:28 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -575,7 +575,10 @@ RETCODE consdataCreate(
    {
       /* allocate the additional needed eventdatas array */
       assert((*consdata)->eventdatas == NULL);
-      CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
+      if( (*consdata)->varssize > 0 )
+      {
+         CHECK_OKAY( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->varssize) );
+      }
       
       /* get transformed variables */
       CHECK_OKAY( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
