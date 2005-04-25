@@ -196,6 +196,9 @@ fixed bugs:
 - fixed bug in linear constraint handler's knapsack relaxation separator
 - fixed numerical bugs in rounding heuristic and rootsoldiving heuristic
 - fixed bug in implied bound cut separator: only implications between binary variables were generated before
+- fixed bug in linear constraint handler with eventdatas, if the original constraint has no variables
+- fixed bug with wrong euclidean norm calculation of row, if multiple coefficients for the same variable are added
+  and the sorting of the row was delayed with SCIProwDelaySort()
 
 
 SCIP version 0.78

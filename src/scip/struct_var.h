@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.30 2005/04/15 11:46:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.31 2005/04/25 14:34:08 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -32,6 +32,7 @@
 #include "scip/type_event.h"
 #include "scip/type_var.h"
 #include "scip/type_cons.h"
+#include "scip/type_prop.h"
 
 
 /** hole in a domain */
