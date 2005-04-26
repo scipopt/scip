@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.16 2005/03/21 11:37:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.17 2005/04/26 14:32:26 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -592,3 +592,4 @@ RETCODE SCIPaddConsElemConjunction(
    return SCIP_OKAY;
    
 }
+

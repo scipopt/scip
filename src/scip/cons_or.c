@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.39 2005/03/21 11:37:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.40 2005/04/26 14:32:27 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -1631,3 +1631,4 @@ RETCODE SCIPcreateConsOr(
 
    return SCIP_OKAY;
 }
+
