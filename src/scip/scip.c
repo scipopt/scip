@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.283 2005/04/15 11:46:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.284 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4309,6 +4309,37 @@ RETCODE SCIPsolve(
             printf("infinite\n");
          else
             printf("%.2f %%\n", 100.0*SCIPgetGap(scip));
+      }
+
+      /* check solution for feasibility in original problem */
+      if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+      {
+         SOL* sol;
+
+         sol = SCIPgetBestSol(scip);
+         if( sol != NULL )
+         {
+            CONSHDLR* infeasconshdlr;
+            CONS* infeascons;
+            Bool feasible;
+            
+            CHECK_OKAY( SCIPcheckSolOrig(scip, sol, &feasible, &infeasconshdlr, &infeascons) );
+
+            if( !feasible )
+            {
+               printf("\nbest solution is not feasible in original problem!\n");
+               if( infeascons == NULL )
+               { 
+                  printf("best solution violates constraint handler [%s]\n", SCIPconshdlrGetName(infeasconshdlr));
+               }
+               else
+               { 
+                  printf("best solution violates constraint <%s> [%s] of original problem:\n", 
+                     SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
+                  CHECK_OKAY( SCIPprintCons(scip, infeascons, NULL) );
+               }
+            }
+         }
       }
    }
 

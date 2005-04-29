@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.h,v 1.2 2005/04/25 14:34:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.h,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   tclique_graph.h
  * @brief  tclique data part of algorithm for maximum cliques
@@ -123,7 +123,17 @@ extern
 BOOL tcliqueLoadFile(
    TCLIQUEDATA**    tcliquedata,        /**< pointer to store tclique data structure */
    const char*      filename,           /**< name of file with graph data */
+   double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
    char*            probname            /**< buffer to store the name of the problem */
+   );
+
+/** saves tclique data structure to file */
+extern
+BOOL tcliqueSaveFile(
+   TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
+   const char*      filename,           /**< name of file to create */
+   double           scaleval,           /**< value to unscale weights with */
+   const char*      probname            /**< name of the problem */
    );
 
 /** gets number of nodes in the graph */

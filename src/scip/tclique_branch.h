@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.h,v 1.2 2005/04/25 14:34:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.h,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   tclique_branch.h
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -44,7 +44,8 @@
 
 
 /* */
-#define TCLIQUE_USRCALLBACK(x) BOOL x (int* mwc, int nmwc, WEIGHT weightmwc, void* usrdata)
+#define TCLIQUE_USRCALLBACK(x) void x (int* cliquenodes, int ncliquenodes, WEIGHT cliqueweight, void* usrdata, \
+      BOOL* acceptsol, BOOL* stopsolving)
 
 /** finds maximum weight clique */
 extern
@@ -52,9 +53,9 @@ void tcliqueMaxClique(
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
    void*            usrdata,            /**< user data to pass to user callback function */
-   int*             mwc, 	        /**< pointer to store nodes of the maximum weight clique */
-   int*             nmwc,	        /**< pointer to store number of nodes in the maximum weight clique */
-   WEIGHT*          weightmwc,          /**< pointer to store weight of the maximum weight clique */
+   int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
+   int*             nmaxcliquenodes,    /**< pointer to store number of nodes in the maximum weight clique */
+   WEIGHT*          maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
    WEIGHT           maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used 
                                          *   for cliques with at least one fractional node) */
    WEIGHT           minweight,          /**< lower bound for weight of generated cliques */

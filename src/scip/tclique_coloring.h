@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.2 2005/04/25 14:34:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
@@ -61,11 +61,11 @@ typedef struct _NBC{
 
 
 
-/** colors the nodes of of a given set of nodes V with the lowest possible color and 
- *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps.
+/** colors the positive weighted nodes of a given set of nodes V with the lowest possible number of colors and 
+ *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
 extern
-int tcliqueColoring( 
+WEIGHT tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             V,                  /**< nodes for branching */ 
@@ -73,7 +73,7 @@ int tcliqueColoring(
    NBC*             gsd,                /**< neighbour color information of all nodes */
    BOOL*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 
-   int**            clique,             /**< pointer to store the clique */           
+   int*             clique,             /**< buffer for storing the clique */
    int*             nclique,            /**< pointer to store number of nodes in the clique */
    WEIGHT*          weightclique        /**< pointer to store the weight of the clique */
    );

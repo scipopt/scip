@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.156 2005/04/15 11:46:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.157 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1520,6 +1520,82 @@ DECL_SORTPTRCOMP(compImplvars)
          return 0;
    }
 }
+
+/** performs integrity check on implications data structure */
+static
+void checkImplics(
+   IMPLICS*         implics,            /**< implications data structure */
+   SET*             set                 /**< global SCIP settings */
+   )
+{
+   Bool varfixing;
+
+   if( implics == NULL )
+      return;
+
+   varfixing = FALSE;
+   do
+   {
+      VAR** implvars;
+      BOUNDTYPE* impltypes;
+      Real* implbounds;
+      int nimpls;
+      int nbinimpls;
+      int i;
+      
+      implvars = implics->implvars[varfixing];
+      impltypes = implics->impltypes[varfixing];
+      implbounds = implics->implbounds[varfixing];
+      nimpls = implics->nimpls[varfixing];
+      nbinimpls = implics->nbinimpls[varfixing];
+
+      assert(0 <= nbinimpls && nbinimpls <= nimpls && nimpls <= implics->implsize[varfixing]);
+      assert(nimpls == 0 || implvars != NULL);
+      assert(nimpls == 0 || impltypes != NULL);
+      assert(nimpls == 0 || implbounds != NULL);
+
+      for( i = 0; i < nbinimpls; ++i )
+      {
+         int cmp;
+
+         assert(SCIPvarGetType(implics->implvars[varfixing][i]) == SCIP_VARTYPE_BINARY);
+         assert((impltypes[i] == SCIP_BOUNDTYPE_LOWER) == (implbounds[i] > 0.5));
+         assert(SCIPsetIsFeasEQ(set, implbounds[i], 0.0) || SCIPsetIsFeasEQ(set, implbounds[i], 1.0));
+
+         if( i == 0 )
+            continue;
+
+         cmp = compImplvars(implvars[i-1], implvars[i]);
+         assert(cmp <= 0);
+         assert((cmp == 0) == (implvars[i-1] == implvars[i]));
+         assert(cmp < 0 || (impltypes[i-1] == SCIP_BOUNDTYPE_LOWER && impltypes[i] == SCIP_BOUNDTYPE_UPPER));
+      }
+
+      for( i = nbinimpls; i < nimpls; ++i )
+      {
+         Real lb;
+         Real ub;
+         int cmp;
+         
+         lb = SCIPvarGetLbGlobal(implvars[i]);
+         ub = SCIPvarGetUbGlobal(implvars[i]);
+         assert(SCIPvarGetType(implics->implvars[varfixing][i]) != SCIP_VARTYPE_BINARY);
+
+         if( i == 0 )
+            continue;
+
+         cmp = compImplvars(implvars[i-1], implvars[i]);
+         assert(cmp <= 0);
+         assert((cmp == 0) == (implvars[i-1] == implvars[i]));
+         assert(cmp < 0 || (impltypes[i-1] == SCIP_BOUNDTYPE_LOWER && impltypes[i] == SCIP_BOUNDTYPE_UPPER));
+      }
+
+      varfixing = !varfixing;
+   }
+   while( varfixing == TRUE );
+}
+#else
+#define checkImplics(implics,set) /**/
 #endif
 
 /** creates an implications data structure */
@@ -1734,7 +1810,7 @@ RETCODE implicsSearchVar(
          if( *posupper < INT_MAX )
             *posadd = *posupper;
          else
-            *posadd = *poslower;
+            *posadd = (*poslower)+1;
       }
       assert(*posadd < INT_MAX);
    }
@@ -1766,7 +1842,9 @@ RETCODE implicsAdd(
    assert(stat != NULL);
    assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE); 
    assert(conflict != NULL);
- 
+
+   checkImplics(*implics, set);
+
    *conflict = FALSE;
 
    /* don't add redundant implications with respect to global bounds:
@@ -4088,6 +4166,22 @@ void SCIPvarAdjustUb(
    *ub = adjustedUb(set, SCIPvarGetType(var), *ub);
 }
 
+/** adjust lower or upper bound to integral value, if variable is integral */
+void SCIPvarAdjustBd(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   BOUNDTYPE        boundtype,          /**< type of bound to adjust */
+   Real*            bd                  /**< pointer to bound to adjust */
+   )
+{
+   assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+      SCIPvarAdjustLb(var, set, bd);
+   else
+      SCIPvarAdjustUb(var, set, bd);
+}
+
 /** changes lower bound of original variable in original problem */
 RETCODE SCIPvarChgLbOriginal(
    VAR*             var,                /**< problem variable to change */
@@ -5576,6 +5670,7 @@ RETCODE SCIPvarAddImplic(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
+      SCIPvarAdjustBd(var, set, impltype, &implbound);
          
       /* check for conflicting and redundant implication */
       if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.ub, implbound))
@@ -5594,6 +5689,7 @@ RETCODE SCIPvarAddImplic(
          {
             /* add implication to the implications list */
             CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound, conflict) );
+            checkImplics(var->implics, set);
          
             debugMessage("added implication: <%s> %s  ==>  <%s> %s %g\n", 
                SCIPvarGetName(var), varfixing == FALSE ? "<= 0" : ">= 1",
@@ -5725,6 +5821,7 @@ RETCODE SCIPvarUseActiveImplics(
    }
 
    implicsFree(&oldimplics, blkmem);
+   checkImplics(var->implics, set);
 
    return SCIP_OKAY;
 }

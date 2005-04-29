@@ -154,6 +154,9 @@ features:
 - added TSP example in examples/TSP
 - SCIPaddVarImplication() now also adds variable lower and upper bounds, if the implied variable is non-binary
 - removed storing of dual norms in LPI state of CPLEX interface (too memory consuming)
+- included debugging module to check whether cutting planes cut off the optimal solution
+- if verblevel is at least NORMAL, an automatical check of the best solution is performed in the original problem,
+  and an error message is displayed, if it violates an original constraint
 
 fixed bugs:
 - fixed bug in MPS file reader
@@ -199,6 +202,8 @@ fixed bugs:
 - fixed bug in linear constraint handler with eventdatas, if the original constraint has no variables
 - fixed bug with wrong euclidean norm calculation of row, if multiple coefficients for the same variable are added
   and the sorting of the row was delayed with SCIProwDelaySort()
+- fixed bug with adding implications: wrong insertion position, if only the lower bound change was present but not
+  the upper bound change
 
 
 SCIP version 0.78

@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.2 2005/04/25 14:34:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -49,14 +49,15 @@
 
 
 
-/** gets index of the uncolored node in a given array of nodes in V with maximum satdeg. 
- *  in case of a tie choose node with maximum weight. V has to have uncolored nodes.
+/** gets index of the uncolored node in a given array of nodes in V with maximum satdeg and positive weight;
+ *  in case of a tie choose node with maximum weight;
+ *  if no uncolored node with positive weight is found, -1 is returned
  */
 static
 int getMaxSatdegIndex(
    int*             V,                  /**< nodes in V */ 
    int              nV,		        /**< number of nodes in V */
-   NBC*             gsd,                /**< neighbour color information of all nodes */
+   NBC*             gsd,                /**< neighbor color information of all nodes */
    BOOL*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          weights             /**< weight of nodes in grpah */
    )
@@ -64,11 +65,10 @@ int getMaxSatdegIndex(
    WEIGHT maxweight;
    int maxsatdeg;
    int maxsatdegindex;
-   int satdeg;
    int i;
 	
-   maxweight = -1.;
-   maxsatdeg = -1.;
+   maxweight = -1;
+   maxsatdeg = -1;
    maxsatdegindex = -1;
    
    assert(gsd != NULL);
@@ -76,34 +76,27 @@ int getMaxSatdegIndex(
 
    for( i = 0; i < nV; i++ )
    {
-      /* checks only uncolored nodes */ 
+      WEIGHT weight;
+      int satdeg;
+
+      /* check only uncolored nodes */ 
       if( iscolored[i] ) 
          continue;
-      
+
+      /* check only nodes with positive weight */
+      weight = weights[V[i]];
+      assert(weight >= 0);
+      if( weight <= 0 )
+         continue;
+
       satdeg = gsd[i].satdeg;
-      if( satdeg  >= maxsatdeg )
+      if( satdeg > maxsatdeg || (satdeg == maxsatdeg && weight > maxweight) )
       {
-         /* tie: satdeg(v_i) = maxsatdeg */
-         if( satdeg == maxsatdeg )
-         {
-            /* chooses node with maximum weight */
-            if( weights[V[i]] > maxweight )
-            { 	 
-               maxweight = weights[V[i]];
-               maxsatdegindex = i;
-            }
-         }
-         /* satdeg(v_i) > maxsatdeg */
-         else
-         {
-            maxsatdeg = satdeg;
-            maxweight = weights[V[i]];
-            maxsatdegindex = i;
-         }
+         maxsatdeg = satdeg;
+         maxweight = weight;
+         maxsatdegindex = i;
       }
    }
-   
-   assert(maxsatdegindex > -1);
 
    return maxsatdegindex;	
 }
@@ -127,14 +120,16 @@ int getMaxWeightIndex(
    weights = tcliqueGetWeights(tcliquedata);
 
    maxweightindex = -1;
-   maxweight = -1.;
+   maxweight = -1;
 
-   /* tries to improve maxweight */
+   /* try to improve maxweight */
    for( i = 0 ; i < nnodes; i++ )
    {
-      /* node has larger weight */
+      assert(0 <= nodes[i] && nodes[i] < tcliqueGetNNodes(tcliquedata));
+      assert(weights[nodes[i]] >= 0);
       if( weights[nodes[i]] > maxweight)
       {
+         /* node has larger weight */
          maxweight = weights[nodes[i]];
          maxweightindex = i;
       }
@@ -144,13 +139,13 @@ int getMaxWeightIndex(
    return maxweightindex;
 }
 
-/** updates the neighbour colors information of a node: updates the list of neighbour color intervals 
+/** updates the neighbor colors information of a node: updates the list of neighbor color intervals 
  *  by making the union of the existing list and the given list of color intervals, and updates the saturation degree
  */
 static
-void updateNeighbour(
+void updateNeighbor(
    CHKMEM*          mem,                /**< block memory */
-   NBC*             pgsd,               /**< pointer to neighbour color information of node to update */
+   NBC*             pgsd,               /**< pointer to neighbor color information of node to update */
    LIST_ITV*        pnc                 /**< pointer to given list of color intervals */
    )
 {
@@ -159,18 +154,17 @@ void updateNeighbour(
    LIST_ITV* pciv;
    LIST_ITV* nciv;
 
-   /* saves the pointer to the first element of the list */
+   /* save the pointer to the first element of the list */
    head.next = pgsd->lcitv;
    apciv = &head;
    pciv = apciv->next;
    
-   /* makes the union of the two intervals */
+   /* construct the union of the two intervals */
    while( (pnc != NULL) && (pciv != NULL) )
    {
       if( pnc->itv.inf < pciv->itv.inf ) 
       {	
          ALLOC_ABORT( allocChunkMemory(mem, &nciv) );
-         nciv->next = NULL;
          nciv->itv = pnc->itv;
          nciv->next = pciv;
          apciv->next = nciv;
@@ -190,27 +184,25 @@ void updateNeighbour(
          pciv = pciv->next;
       }
    }
-   
+
    while( pnc != NULL )
    {
       ALLOC_ABORT( allocChunkMemory(mem, &nciv) );
-      nciv->next = NULL;
       nciv->itv = pnc->itv;
       nciv->next = NULL;
       
       apciv->next = nciv;
       apciv = nciv;
       
-      pnc = pnc->next ;
+      pnc = pnc->next;
    }
 
-   /* tries to reduce the number of intervals */
+   /* try to reduce the number of intervals */
    pgsd->satdeg = 0;
    apciv = head.next;
    while( (pciv = apciv->next) != NULL )
    {
-      
-      if( apciv->itv.sup < (pciv->itv.inf -1) )
+      if( apciv->itv.sup < (pciv->itv.inf - 1) )
       {
          pgsd->satdeg += apciv->itv.sup - apciv->itv.inf + 1;
          apciv = apciv->next;
@@ -218,15 +210,15 @@ void updateNeighbour(
       else
       {
          LIST_ITV* tmp;
+
          if( apciv->itv.sup < pciv->itv.sup )
             apciv->itv.sup = pciv->itv.sup;
          apciv->next = pciv->next;
        
-         /* frees data structure for created colorinterval */
+         /* free data structure for created colorinterval */
          tmp = pciv->next; 
          freeChunkMemory(mem, &pciv); 
          pciv = tmp; 
-    
       }
    }
    pgsd->satdeg += apciv->itv.sup - apciv->itv.inf + 1;
@@ -235,18 +227,18 @@ void updateNeighbour(
    pgsd->lcitv = head.next;
 }
 
-/** colors the nodes of a given set of nodes V with the lowest possible color and 
+/** colors the positive weighted nodes of a given set of nodes V with the lowest possible number of colors and 
  *  finds a clique in the graph induced by V, an upper bound and an apriori bound for further branching steps
  */
-int tcliqueColoring( 
+WEIGHT tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
    int*             V,                  /**< nodes for branching */ 
    int              nV,		        /**< number of nodes for branching */
-   NBC*             gsd,                /**< neighbour color information of all nodes */
+   NBC*             gsd,                /**< neighbor color information of all nodes */
    BOOL*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 
-   int**            clique,             /**< pointer to store the clique */           
+   int*             clique,             /**< buffer for storing the clique */
    int*             nclique,            /**< pointer to store number of nodes in the clique */
    WEIGHT*          weightclique        /**< pointer to store the weight of the clique */
    )
@@ -265,14 +257,16 @@ int tcliqueColoring(
    LIST_ITV* lcitv;
    LIST_ITV* item;
    LIST_ITV* tmpitem;
+   int* workclique;
    int* currentclique;
    int ncurrentclique;
    int weightcurrentclique;
    int* currentadjedge;
    int* lastadjedge;
 
+   assert(V != NULL);
+   assert(nV > 0);
    assert(clique != NULL);
-   assert(*clique != NULL);
    assert(nclique != NULL);
    assert(weightclique != NULL);
    assert(gsd != NULL);
@@ -280,128 +274,138 @@ int tcliqueColoring(
 
    weights = tcliqueGetWeights(tcliquedata);
 
-   /* sets data structures for coloring */
-   clearMemoryArray(iscolored, nV); /* new-memory */
-   clearMemoryArray(gsd, nV); /* new-memory */
-      
-   /* initialise maximum weight clique found so far */
+   /* initialize maximum weight clique found so far */
    growclique = YES;
    *nclique = 0;
-   *weightclique = 0.;
+   *weightclique = 0;
 
-   /* sets data structures for the current clique */
-   ALLOC_ABORT( allocMemoryArray(&currentclique, nV) );
-
-   ncurrentclique = 0;
-   weightcurrentclique = 0.;
-   
-   /* -> colors the first node: */
-
-   /* gets node of V with maximum weight */
+   /* get node of V with maximum weight */
    nodeVindex = getMaxWeightIndex(tcliquedata, V, nV);
    node = V[nodeVindex];
-   iscolored[nodeVindex] = YES;
+   assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
    range = weights[node];
+   assert(range >= 0);
+   if( range == 0 ) /* there are no nodes with positive weight: nothing has to be done */
+      return 0;
 
-   debugMessage("---------------coloring-----------------\n\n1. node choosen: vindex=%d vertex=%d)\n ",nodeVindex, node);
+   /* set up data structures for coloring */
+   clearMemoryArray(iscolored, nV); /* new-memory */
+   clearMemoryArray(gsd, nV); /* new-memory */
+   iscolored[nodeVindex] = YES;
 
-   /* sets apriori bound 
-    *   apbound(v_i) = satdeg(v_i) + weight(v_i) */
+   /* color the first node */
+   debugMessage("---------------coloring-----------------\n");
+   debugMessage("1. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d)\n",
+      nodeVindex, node, gsd[nodeVindex].satdeg, range);
+
+   /* set apriori bound: apbound(v_i) = satdeg(v_i) + weight(v_i) */
    apbound[nodeVindex] = range;
+   assert(apbound[nodeVindex] > 0);
 
-   /* updates maximum saturation degree 
-    *   maxsatdeg = max { satdeg(v_i) + weight(v_i) | v_i in V } */
+   /* update maximum saturation degree: maxsatdeg = max { satdeg(v_i) + weight(v_i) | v_i in V } */
    maxsatdegree = range;
 
-   debugMessage("-> updated neighbours:\n");
+   debugMessage("-> updated neighbors:\n");
 
-   /* sets neighbourcolor of the adjacent nodes of node, 
-    * if node has weight zero the colorinterval is empty and update of neighbours is not nes. */     
-   if( range > 0 )
+   /* set neighbor color of the adjacent nodes of node */
+   currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
+   lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
+   for( i = 0; i < nV; i++ )
    {
-      currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
-      lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
-      for( i = 0; i < nV; i++ )
-      {
-         /* checks if V[i] is contained in adjacency list of node started at position of V[i-1] 
-          * (list is ordered by adjacent nodes) */
-         for( ; currentadjedge <= lastadjedge; currentadjedge++ ) 
-         {
-            if( *currentadjedge >= V[i] )
-            {
-               if( *currentadjedge == V[i] )
-               {
-                  assert(tcliqueIsEdge(tcliquedata, V[i], node));
-                  debugMessage("       nodeVindex=%d, node=%d, satdegold=%d  ->  ", i, V[i], gsd[i].satdeg); 
-               
-                  /* sets satdeg for adjacent node */
-                  gsd[i].satdeg = range;
-               
-                  /* creates new color interval [1,range] */
-                  ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
-                  colorinterval->next = NULL;
-                  colorinterval->itv.inf = 1;
-                  colorinterval->itv.sup = range;
-               
-                  /* colorinterval is the first added element of the list of neighbourcolors of the adjacent node  */ 
-                  gsd[i].lcitv = colorinterval;
+      assert(i == 0 || V[i] > V[i-1]);
 
-#ifdef DEBUG
-                  printf("satdegnew=%d, nbc=[%d,%d]\n", gsd[i].satdeg, gsd[i].lcitv->itv.inf, gsd[i].lcitv->itv.sup);
-#endif
-               }
-               break;
+      /* check if V[i] is contained in adjacency list of node started at position of V[i-1] 
+       * (list is ordered by adjacent nodes)
+       */
+      for( ; currentadjedge <= lastadjedge; currentadjedge++ ) 
+      {
+         if( *currentadjedge >= V[i] )
+         {
+            if( *currentadjedge == V[i] )
+            {
+               assert(tcliqueIsEdge(tcliquedata, V[i], node));
+               debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
+                  i, V[i], weights[V[i]], gsd[i].satdeg); 
+               
+               /* sets satdeg for adjacent node */
+               gsd[i].satdeg = range;
+               
+               /* creates new color interval [1,range] */
+               ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
+               colorinterval->next = NULL;
+               colorinterval->itv.inf = 1;
+               colorinterval->itv.sup = range;
+               
+               /* colorinterval is the first added element of the list of neighborcolors of the adjacent node  */ 
+               gsd[i].lcitv = colorinterval;
+
+               debug(printf("satdegnew=%d, nbc=[%d,%d]\n", gsd[i].satdeg, gsd[i].lcitv->itv.inf, gsd[i].lcitv->itv.sup));
             }
+            break;
          }
       }
    }
 
-   /* adds node to the current clique */ 
+   /* set up data structures for the current clique */
+   ALLOC_ABORT( allocMemoryArray(&currentclique, nV) );
+   ncurrentclique = 0;
+   weightcurrentclique = 0;
+   workclique = clique;
+
+   /* add node to the current clique */ 
    currentclique[0] = node; 
    ncurrentclique = 1; 
    weightcurrentclique = range; 
       
-   /* -> colors all other nodes of V: */
+   /* color all other nodes of V */
    for( i = 0 ; i < nV-1; i++ )
    {
+      assert((workclique == clique) != (currentclique == clique));
+
       /* selects the next uncolored node to color */
       nodeVindex = getMaxSatdegIndex(V, nV, gsd, iscolored, weights);
+      if( nodeVindex == -1 ) /* no nodes left with positive weight */
+         break;
+
       node = V[nodeVindex];
-      iscolored[nodeVindex] = YES;	
+      assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
       range = weights[node];
+      assert(range > 0);
+      iscolored[nodeVindex] = YES;	
 
-      debugMessage("\nn. node choosen: vindex=%d vertex=%d)\n",nodeVindex, node);
+      debugMessage("%d. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d, growclique=%d, weight=%d)\n",
+         i+2, nodeVindex, node, gsd[nodeVindex].satdeg, range, growclique, weightcurrentclique);
 
-      /* sets apriori bound 
-       *   apbound(v_i) = satdeg(v_i) + weight(v_i) */
+      /* set apriori bound: apbound(v_i) = satdeg(v_i) + weight(v_i) */
       apbound[nodeVindex] = gsd[nodeVindex].satdeg + range;
-      
-      /* updates maximum saturation degree 
-       *   maxsatdeg = max { satdeg(v_i) + weight(v_i) | v_i in V } */
+      assert(apbound[nodeVindex] > 0);
+
+      /* update maximum saturation degree: maxsatdeg = max { satdeg(v_i) + weight(v_i) | v_i in V } */
       if( maxsatdegree < apbound[nodeVindex] )
          maxsatdegree = apbound[nodeVindex];
       
-      /* only nodes with zero weight, that are not adjacent to current clique left 
-       * (no coloring steps nessesary, clique with greater weight can't be found */ 
-      if( range == 0 && gsd[nodeVindex].satdeg == 0 )
-         break;
-
-      /* updates clique: */
-      /* current node is not adjacent to nodes of current clique, 
-       * i.e. current clique can not be increased */
+      /* update clique */
       if( gsd[nodeVindex].satdeg == 0 )
       {
-         /* weight of current clique is larger than weight of maximum weight clique found so far */ 
+         /* current node is not adjacent to nodes of current clique, 
+          * i.e. current clique can not be increased
+          */
+         debugMessage("current node not adjacend to current clique (weight:%d) -> starting new clique\n", 
+            weightcurrentclique);
+
+         /* check, if weight of current clique is larger than weight of maximum weight clique found so far */ 
          if( weightcurrentclique > *weightclique )
          {
             int* tmp;
 
-            /* updates maximum weight clique found so far */
+            /* update maximum weight clique found so far */
+            assert((workclique == clique) != (currentclique == clique));
+            tmp = workclique;
             *weightclique = weightcurrentclique;
             *nclique = ncurrentclique;
-            tmp = currentclique;
-            currentclique = *clique;
-            *clique = tmp;
+            workclique = currentclique;
+            currentclique = tmp;
+            assert((workclique == clique) != (currentclique == clique));
          }
          weightcurrentclique = 0;
          ncurrentclique = 0;
@@ -409,43 +413,55 @@ int tcliqueColoring(
       }
       if( growclique )
       {
+         /* check, if the current node is still adjacent to all nodes in the clique */
          if( gsd[nodeVindex].satdeg == weightcurrentclique )
          {
+            assert(ncurrentclique < nV);
             currentclique[ncurrentclique] = node;
             ncurrentclique++; 
             weightcurrentclique += range;
+#ifdef DEBUG
+            {
+               int k;
+               printf("current clique (size:%d, weight:%d):", ncurrentclique, weightcurrentclique);
+               for( k = 0; k < ncurrentclique; ++k )
+                  printf(" %d", currentclique[k]);
+               printf("\n");
+            }
+#endif
          }
          else
          {
+            debugMessage("node satdeg: %d, clique weight: %d -> stop growing clique\n", 
+               gsd[nodeVindex].satdeg, weightcurrentclique);
             growclique = NO;
          }
       }
 
-      /* searches for fitting color intervals for current node: */
-      /* current node has no colored neighbours yet */
+      /* search for fitting color intervals for current node */
       pnc = &nwcitv;
       if( gsd[nodeVindex].lcitv == NULL )
       {
-         /* creates new color interval [1,range] */
+         /* current node has no colored neighbors yet: create new color interval [1,range] */
          ALLOC_ABORT( allocChunkMemory(mem, &colorinterval) );
          colorinterval->next = NULL;
          colorinterval->itv.inf = 1;
          colorinterval->itv.sup = range;
          
-         /* adds the new colorinterval [1, range] to the list of chosen colorintervals for node */
+         /* add the new colorinterval [1, range] to the list of chosen colorintervals for node */
          pnc->next = colorinterval;
          pnc = colorinterval;
       }
-      /* current node has colored neighbours */
       else
       {
          int tocolor;
          int dif;
          
+         /* current node has colored neighbors */
          tocolor = range;
          lcitv = gsd[nodeVindex].lcitv;
          
-         /* first neighbour color interval [inf, sup] has inf > 1 */
+         /* check, if first neighbor color interval [inf, sup] has inf > 1 */
          if( lcitv->itv.inf != 1 )
          {
             /* create new interval [1, min{range, inf}] */ 
@@ -462,8 +478,10 @@ int tcliqueColoring(
             pnc->next = colorinterval;
             pnc = colorinterval;
          }
+
          /* as long as node is not colored with all colors, create new color interval by filling 
-          * the gaps in the existing neighbour color intervals of the neighbours of node */
+          * the gaps in the existing neighbor color intervals of the neighbors of node
+          */
          while( tocolor > 0 )
          {	
             dif = tocolor;	
@@ -475,13 +493,13 @@ int tcliqueColoring(
             {
                int min;
 
-               min = lcitv->next->itv.inf - lcitv->itv.sup-1;
+               min = lcitv->next->itv.inf - lcitv->itv.sup - 1;
           
                if( dif > min )  
                   dif = min;	
                lcitv = lcitv->next;
             }
-            colorinterval->itv.sup = colorinterval->itv.inf + dif -1;
+            colorinterval->itv.sup = colorinterval->itv.inf + dif - 1;
             
             tocolor -= dif;
             pnc->next = colorinterval;
@@ -489,53 +507,49 @@ int tcliqueColoring(
          }	
       }
       
-      debugMessage("-> updated neighbours:\n"); 
+      debugMessage("-> updated neighbors:\n"); 
 
-      /* updates saturation degree and neighbour colorintervals of all neighbours of node; 
-       * if node has weight zero the colorinterval is empty and update of neighbours is not nes. */     
-      if( range > 0.0 )
+      /* update saturation degree and neighbor colorintervals of all neighbors of node */
+      currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
+      lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
+      for( j = 0; j < nV; j++)
       {
-         currentadjedge = tcliqueGetFirstAdjedge(tcliquedata, node);
-         lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
-         for( j = 0; j < nV; j++)
-         {
-            /* updates only uncolored neighbours */
-            if( iscolored[j] )
-               continue;
+         /* update only uncolored neighbors */
+         if( iscolored[j] )
+            continue;
       
-            /* checks if V[i] is contained in adjacency list of node started at position of V[i-1] 
-             * (list is ordered by adjacent nodes) */
-            for( ; currentadjedge <= lastadjedge; currentadjedge++ ) 
+         /* check if V[i] is contained in adjacency list of node started at position of V[i-1] 
+          * (list is ordered by adjacent nodes)
+          */
+         for( ; currentadjedge <= lastadjedge; currentadjedge++ ) 
+         {
+            if( *currentadjedge >= V[j] )
             {
-               if( *currentadjedge >= V[j] )
+               if( *currentadjedge == V[j] )
                {
-                  if( *currentadjedge == V[j] )
-                  {
-                     assert(tcliqueIsEdge(tcliquedata, V[j], node));
+                  assert(tcliqueIsEdge(tcliquedata, V[j], node));
                   
-                     debugMessage("       nodeVindex=%d, node=%d, satdegold=%d  ->  ", j, V[j], gsd[j].satdeg); 
-                  
-                     updateNeighbour(mem, &gsd[j], nwcitv.next);
-#ifdef DEBUG
-                     printf("satdegnew=%d, nbc=[%d,%d]\n", gsd[j].satdeg, gsd[j].lcitv->itv.inf, gsd[j].lcitv->itv.sup); 
-#endif   
-                  }
-                  break;
+                  debugMessage("     nodeVindex=%d, node=%d, weight=%d, satdegold=%d  ->  ", 
+                     j, V[j], weights[V[j]], gsd[j].satdeg); 
+                  updateNeighbor(mem, &gsd[j], nwcitv.next);
+                  debug(printf("satdegnew=%d, nbc=[%d,%d]\n", 
+                        gsd[j].satdeg, gsd[j].lcitv->itv.inf, gsd[j].lcitv->itv.sup));
                }
+               break;
             }
          }
-
-         /* frees data structure of created colorintervals */
-         item = nwcitv.next;
-         while( item != NULL )
-         {
-            tmpitem = item->next;                  
-            freeChunkMemory(mem, &item);       
-            item = tmpitem;                        
-         }                                     
       }
 
-      /* frees data structure of neighbour colorinterval of node just colored; even if weight is zero */
+      /* free data structure of created colorintervals */
+      item = nwcitv.next;
+      while( item != NULL )
+      {
+         tmpitem = item->next;                  
+         freeChunkMemory(mem, &item);       
+         item = tmpitem;                        
+      }                                     
+
+      /* free data structure of neighbor colorinterval of node just colored */
       item = gsd[nodeVindex].lcitv;
       while( item != NULL )
       {
@@ -543,23 +557,33 @@ int tcliqueColoring(
          freeChunkMemory(mem, &item);       
          item = tmpitem;                        
       }                                     
-      
    }
+   assert((workclique == clique) != (currentclique == clique));
    
-   /* updates maximum weight clique found so far */
+   /* update maximum weight clique found so far */
    if( weightcurrentclique > *weightclique )
    {
       int* tmp;
     
+      tmp = workclique;
       *weightclique = weightcurrentclique;
       *nclique = ncurrentclique;
-      tmp = currentclique;
-      currentclique = *clique;
-      *clique = tmp;
+      workclique = currentclique;
+      currentclique = tmp;
+   }
+   assert((workclique == clique) != (currentclique == clique));
+
+   /* move the found clique to the provided clique pointer, if it is not the memory array */
+   if( workclique != clique )
+   {
+      assert(clique == currentclique);
+      assert(*nclique <= nV);
+      copyMemoryArray(clique, workclique, *nclique);
+      currentclique = workclique;
    }
 
-   /* frees data structures */
-   freeMemory(&currentclique);
+   /* free data structures */
+   freeMemoryArray(&currentclique);
 
    debugMessage("------------coloringend-----------------\n");
 

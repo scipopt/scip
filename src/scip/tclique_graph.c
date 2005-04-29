@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.2 2005/04/25 14:34:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  tclique data part of algorithm for maximum cliques
@@ -45,8 +45,6 @@
 #include "scip/tclique_graph.h" 
 
 
-
-#define EPSILON (0.000999999)       
 
 #define ALLOC_NO(x)  do                                                 \
    {                                                                    \
@@ -238,7 +236,8 @@ void tcliqueChangeWeight(
    )
 {
    assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
-      
+   assert(weight >= 0);
+
    tcliquedata->weights[node] = weight;
 }
 
@@ -422,22 +421,24 @@ BOOL tcliqueFlush(
 BOOL tcliqueLoadFile(
    TCLIQUEDATA**    tcliquedata,        /**< pointer to store tclique data structure */
    const char*      filename,           /**< name of file with graph data */
+   double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
    char*            probname            /**< buffer to store the name of the problem */
    )
 {
    FILE* file;
-   float weight;
+   double weight;
    int node1;
    int node2;
    int currentnode;
    int i;
    
    assert(tcliquedata != NULL);
+   assert(scaleval > 0.0);
 
-   /* opens file */
-   if( (file = fopen(filename, "rt")) == NULL )
+   /* open file */
+   if( (file = fopen(filename, "r")) == NULL )
    {
-      if( (file = fopen("default.dat", "rt")) == NULL )
+      if( (file = fopen("default.dat", "r")) == NULL )
       {
          printf("\nCan't open file: %s", filename);
          return NO;
@@ -447,30 +448,31 @@ BOOL tcliqueLoadFile(
    if( !tcliqueCreate(tcliquedata) )
       return NO;
  
-   /* sets name of problem, number of nodes and number of edges in graph */
-   fscanf(file, "%s", probname );
-   fscanf(file, "%d", &(*tcliquedata)->nnodes );
-   fscanf(file, "%d", &(*tcliquedata)->nedges );
+   /* set name of problem, number of nodes and number of edges in graph */
+   fscanf(file, "%s", probname);
+   fscanf(file, "%d", &(*tcliquedata)->nnodes);
+   fscanf(file, "%d", &(*tcliquedata)->nedges);
    
-   /* sets data structures for tclique */
+   /* set data structures for tclique */
    ALLOC_NO( allocMemoryArray(&(*tcliquedata)->weights, (*tcliquedata)->nnodes) );
    ALLOC_NO( allocMemoryArray(&(*tcliquedata)->degrees, (*tcliquedata)->nnodes) );
    ALLOC_NO( allocMemoryArray(&(*tcliquedata)->adjnodes, (*tcliquedata)->nedges) );
    ALLOC_NO( allocMemoryArray(&(*tcliquedata)->adjedges, (*tcliquedata)->nnodes) );
 
-   /* sets weights of all nodes (scaled!) */
+   /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquedata)->nnodes; i++ )
    {
-      fscanf(file, "%f", &weight );
-      (*tcliquedata)->weights[i] = (weight + EPSILON) * 1000;
+      fscanf(file, "%lf", &weight);
+      (*tcliquedata)->weights[i] = (WEIGHT)(weight * scaleval);
+      assert((*tcliquedata)->weights[i] >= 0);
    }
 
-   /* sets adjacent edges and degree of all nodes */
+   /* set adjacent edges and degree of all nodes */
    currentnode = -1;
    for( i = 0; i < (*tcliquedata)->nedges; i++ )
    {
-      /* reads edge (node1, node2) */
-      fscanf(file, "%d%d", &node1, &node2 );
+      /* read edge (node1, node2) */
+      fscanf(file, "%d%d", &node1, &node2);
       
       /* (node1, node2) is the first adjacent edge of node1 */
       if( node1 != currentnode )
@@ -485,7 +487,51 @@ BOOL tcliqueLoadFile(
       (*tcliquedata)->adjedges[currentnode].last++;
    }
 
-   /* closes file */
+   /* close file */
+   fclose(file);
+   
+   return YES;
+}
+
+/** saves tclique data structure to file */
+BOOL tcliqueSaveFile(
+   TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
+   const char*      filename,           /**< name of file to create */
+   double           scaleval,           /**< value to unscale weights with */
+   const char*      probname            /**< name of the problem */
+   )
+{
+   FILE* file;
+   int i;
+   int j;
+
+   assert(tcliquedata != NULL);
+   assert(scaleval > 0.0);
+
+   /* create file */
+   if( (file = fopen(filename, "w")) == NULL )
+   {
+      printf("\nCan't create file: %s", filename);
+      return NO;
+   }
+ 
+   /* write name of problem, number of nodes and number of edges in graph */
+   fprintf(file, "%s\n", probname);
+   fprintf(file, "%d\n", tcliquedata->nnodes);
+   fprintf(file, "%d\n", tcliquedata->nedges);
+   
+   /* write weights of all nodes (scaled!) */
+   for( i = 0; i < tcliquedata->nnodes; i++ )
+      fprintf(file, "%f\n", (double)tcliquedata->weights[i]/scaleval);
+
+   /* write edges */
+   for( i = 0; i < tcliquedata->nnodes; i++ )
+   {
+      for( j = tcliquedata->adjedges[i].first; j < tcliquedata->adjedges[i].last; j++ )
+         fprintf(file, "%d %d\n", i, tcliquedata->adjnodes[j]);
+   }
+
+   /* close file */
    fclose(file);
    
    return YES;
@@ -653,7 +699,8 @@ int tcliqueIsEdge(
 }
 
 /* selects all nodes from a given set of nodes which are adjacent to a given node
- * and returns the number of selected nodes */
+ * and returns the number of selected nodes
+ */
 int tcliqueSelectAdjnodes( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    int              node,               /**< given node */
@@ -678,7 +725,8 @@ int tcliqueSelectAdjnodes(
    lastadjedge = tcliqueGetLastAdjedge(tcliquedata, node);
 
    /* checks for each node in given set nodes, if it is adjacent to given node 
-    * (adjacent nodes are ordered by node index) */
+    * (adjacent nodes are ordered by node index)
+    */
    for( i = 0; i < nnodes; i++ )
    {
       assert(0 <= nodes[i] && nodes[i] < tcliquedata->nnodes);
@@ -717,7 +765,6 @@ void tcliquePrintData(
    weights = tcliqueGetWeights(tcliquedata);
    adjnodes = tcliqueGetAdjnodes(tcliquedata);
 
-   printf("tcliquedata:\n");
    printf("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquedata), tcliqueGetNEdges(tcliquedata));
    for( i = 0; i < tcliqueGetNNodes(tcliquedata); i++ )
    {

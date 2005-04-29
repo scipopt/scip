@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.2 2005/04/15 11:46:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -31,7 +31,6 @@
 #include "scip/tclique_branch.h"
 
 
-/* separator properties */
 #define SEPA_NAME              "clique"
 #define SEPA_DESC              "clique separator of stable set relaxation"
 #define SEPA_PRIORITY             -5000
@@ -106,16 +105,8 @@ void getVarIndex(
     *   probindex =  i   / 2               i is even (given variable is active)
     *   probindex = (i-1)/ 2               i is odd  (given variable is negated)
     */
-   if( i % 2 == 0 )
-   {
-      *neg = FALSE;
-      *probindex = i / 2;
-   }
-   else
-   {
-      *neg = TRUE;
-      *probindex = i / 2;
-   }
+   *neg = (i % 2 == 1);
+   *probindex = i / 2;
 } 
 
 /* creates tclique data structure using the implication graph;
@@ -323,6 +314,9 @@ RETCODE loadTcliquedata(
                   /* add edges (xi,yi), (xi,zi), and (yi,zi) to clique graph (multiple edges are deleted afterwards) */
                   if( !implused[xyid] )
                   {
+                     /*debugMessage(" -> adding xy-edge (%d,%d) for variables %d:<%s>(neg=%d,idx=%d) and %d:<%s>(neg=%d,idx=%d)\n",
+                       cliquegraphidx[xi], cliquegraphidx[yi],
+                       xi, SCIPvarGetName(x), xneg, xidx, yi, SCIPvarGetName(y), yneg, yidx);*/
                      if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[yi]) )
                      {
                         debugMessage("failed to add edge (%d,%d) to clique graph\n",
@@ -333,6 +327,9 @@ RETCODE loadTcliquedata(
                   }
                   if( !implused[xzid] )
                   {
+                     /*debugMessage(" -> adding xz-edge (%d,%d) for variables %d:<%s>(neg=%d,idx=%d) and %d:<%s>(neg=%d,idx=%d)\n",
+                       cliquegraphidx[xi], cliquegraphidx[zi],
+                       xi, SCIPvarGetName(x), xneg, xidx, zi, SCIPvarGetName(z), zneg, zidx);*/
                      if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[zi]) )
                      {
                         debugMessage("failed to add edge (%d,%d) to clique graph\n",
@@ -343,6 +340,9 @@ RETCODE loadTcliquedata(
                   }
                   if( !implused[yzid] )
                   {
+                     /*debugMessage(" -> adding yz-edge (%d,%d) for variables %d:<%s>(neg=%d,idx=%d) and %d:<%s>(neg=%d,idx=%d)\n",
+                       cliquegraphidx[yi], cliquegraphidx[zi],
+                       yi, SCIPvarGetName(y), yneg, yidx, zi, SCIPvarGetName(z), zneg, zidx);*/
                      if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[yi], cliquegraphidx[zi]) )
                      {
                         debugMessage("failed to add edge (%d,%d) to clique graph\n",
@@ -382,6 +382,12 @@ RETCODE loadTcliquedata(
       
       debugMessage(" -> clique graph constructed (%d nodes, %d edges)\n", 
          tcliqueGetNNodes(sepadata->tcliquedata), tcliqueGetNEdges(sepadata->tcliquedata));
+
+#if 0
+      debug(printf("---v---- tcliquedata ----v---\n"));
+      debug(tcliquePrintData(sepadata->tcliquedata));
+      debug(printf("---^---- tcliquedata ----^---\n"));
+#endif
    }
 
    return SCIP_OKAY;
@@ -403,22 +409,33 @@ void updateTcliquedata(
    /* updates weight of all nodes in tclique data structure */
    for( i = 0; i < sepadata->nvars; i++ )
    {
-      tcliqueChangeWeight(sepadata->tcliquedata, i, 
-         (int)SCIPfeasFloor(scip, sepadata->varsolvals[i] * sepadata->scaleval));
+      int weight;
+
+      weight = (int)SCIPfeasFloor(scip, sepadata->varsolvals[i] * sepadata->scaleval);
+      weight = MAX(weight, 0);
+      tcliqueChangeWeight(sepadata->tcliquedata, i, weight);
    }
 }
 
 /** generates cuts using a clique found by algorithm for maximum weight clique 
- *  and decides whether to stop generating cliques with the algorithm for maximum weight clique */
+ *  and decides whether to stop generating cliques with the algorithm for maximum weight clique
+ */
 static
 TCLIQUE_USRCALLBACK(tcliqueNewClique)
 {
    SEPADATA* sepadata;
    VAR** vars;
    Real* varsolvals;
-   Real weightmwcunscaled;
+   Real unscaledweight;
    int i;
    int nvars;
+
+   assert(acceptsol != NULL);
+   assert(stopsolving != NULL);
+
+   /* we don't accept the solution as new incumbent, because we want to find many violated clique inequalities */
+   *acceptsol = FALSE;
+   *stopsolving = FALSE;
 
    sepadata = (SEPADATA*)usrdata;
 
@@ -433,59 +450,48 @@ TCLIQUE_USRCALLBACK(tcliqueNewClique)
    nvars = sepadata->nvars; 
    varsolvals = sepadata->varsolvals; 
 
-#if 0
-#ifdef DEBUG
-   debugMessage("found %der mwc=[ ", nmwc);
-   for( i = 0; i < nmwc; i++ )
-   {
-      printf("%s(%g), ", SCIPvarGetName(vars[mwc[i]]), varsolvals[mwc[i]]);
-   }
-   printf("] wmwc=%d\n", weightmwc);
-#endif
-#endif
-
-   weightmwcunscaled = 0.0;
+   unscaledweight = 0.0;
 
    /* adds cut if weight of the clique is greater than 1 */
-   if( weightmwc > sepadata->scaleval )
+   if( cliqueweight > sepadata->scaleval )
    {
-      for( i = 0; i < nmwc; i++ )
-         weightmwcunscaled += varsolvals[mwc[i]];
+      for( i = 0; i < ncliquenodes; i++ )
+         unscaledweight += varsolvals[cliquenodes[i]];
       
-      /*debugMessage("->%g, ncuts=%d\n", weightmwcunscaled, sepadata->ncuts);*/
+      /*debugMessage("->%g, ncuts=%d\n", unscaledweight, sepadata->ncuts);*/
 
-      if( SCIPisEfficacious(sepadata->scip, weightmwcunscaled - 1.0) )
+      if( SCIPisEfficacious(sepadata->scip, unscaledweight - 1.0) )
       {
          ROW* cut;
          char cutname[MAXSTRLEN];
       
-         /* creates the cut */
+         /* create the cut */
          sprintf(cutname, "clique%d_%d", SCIPgetNLPs(sepadata->scip), sepadata->ncuts);
-         CHECK_OKAY( SCIPcreateEmptyRow(sepadata->scip, &cut, cutname, -SCIPinfinity(sepadata->scip), 1.0, 
+         CHECK_ABORT( SCIPcreateEmptyRow(sepadata->scip, &cut, cutname, -SCIPinfinity(sepadata->scip), 1.0, 
                FALSE, FALSE, TRUE) );
 
-         CHECK_OKAY( SCIPcacheRowExtensions(sepadata->scip, cut) );
-         assert(nmwc <= nvars);
-         for( i = 0; i < nmwc; ++i )
+         CHECK_ABORT( SCIPcacheRowExtensions(sepadata->scip, cut) );
+         assert(ncliquenodes <= nvars);
+         debugMessage("clique in graph:");
+         for( i = 0; i < ncliquenodes; ++i )
          {
-            assert(mwc[i] < nvars);
-            CHECK_OKAY( SCIPaddVarToRow(sepadata->scip, cut, vars[mwc[i]], 1.0) );
+            assert(cliquenodes[i] < nvars);
+            CHECK_ABORT( SCIPaddVarToRow(sepadata->scip, cut, vars[cliquenodes[i]], 1.0) );
+            debug(printf(" [%d]<%s>", cliquenodes[i], SCIPvarGetName(vars[cliquenodes[i]])));
          }
-         CHECK_OKAY( SCIPflushRowExtensions(sepadata->scip, cut) );
+         debug(printf("\n"));
+         CHECK_ABORT( SCIPflushRowExtensions(sepadata->scip, cut) );
 
-         debugMessage("found clique cut (act=%g): ", weightmwcunscaled);
+         debugMessage("found clique cut (act=%g): ", unscaledweight);
          debug(SCIPprintRow(sepadata->scip, cut, NULL));
 
-         CHECK_OKAY( SCIPaddCut(sepadata->scip, cut, FALSE) );
+         CHECK_ABORT( SCIPaddCut(sepadata->scip, cut, FALSE) );
          (sepadata->ncuts)++;
          
          /* release the row */
-         CHECK_OKAY( SCIPreleaseRow(sepadata->scip, &cut) );
+         CHECK_ABORT( SCIPreleaseRow(sepadata->scip, &cut) );
       }
    }
-
-   /* decides whether to stop the search for a maximum weight clique */
-   return FALSE;
 }
 
 
@@ -552,10 +558,9 @@ static
 DECL_SEPAEXEC(sepaExecClique)
 {
    SEPADATA* sepadata;
-   Real* varsolvals;
-   int* mwc; 	        
-   WEIGHT weightmwc;    
-   int nmwc;	        
+   int* cliquenodes; 	        
+   WEIGHT cliqueweight;    
+   int ncliquenodes;	        
    int maxtreenodes;
 
    assert(scip != NULL);
@@ -597,22 +602,21 @@ DECL_SEPAEXEC(sepaExecClique)
    
    /* updates LP-solution in sepadata and weights in tclique data structure */
    assert(sepadata->tcliquedata != NULL);
-   CHECK_OKAY( SCIPallocBufferArray(scip, &varsolvals, sepadata->nvars) );
-   CHECK_OKAY( SCIPgetVarSols(scip, sepadata->nvars, sepadata->vars, varsolvals) );
-   sepadata->varsolvals = varsolvals;
+   CHECK_OKAY( SCIPallocBufferArray(scip, &sepadata->varsolvals, sepadata->nvars) );
+   CHECK_OKAY( SCIPgetVarSols(scip, sepadata->nvars, sepadata->vars, sepadata->varsolvals) );
    updateTcliquedata(scip, sepadata);
-   
+
    /* get maximal number of tree nodes */
    maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
 
    /* finds maximum weight clique in tclique */
-   CHECK_OKAY( SCIPallocBufferArray(scip, &mwc, tcliqueGetNNodes(sepadata->tcliquedata)) );
-   tcliqueMaxClique(sepadata->tcliquedata, tcliqueNewClique, (void*)sepadata, mwc, &nmwc, &weightmwc, 
-      (int)sepadata->scaleval-1, (int)sepadata->scaleval, maxtreenodes);
+   CHECK_OKAY( SCIPallocBufferArray(scip, &cliquenodes, tcliqueGetNNodes(sepadata->tcliquedata)) );
+   tcliqueMaxClique(sepadata->tcliquedata, tcliqueNewClique, (void*)sepadata, cliquenodes, &ncliquenodes, &cliqueweight, 
+      (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, maxtreenodes);
 
    /* frees data structures */
-   SCIPfreeBufferArray(scip, &mwc);
-   SCIPfreeBufferArray(scip, &varsolvals);
+   SCIPfreeBufferArray(scip, &cliquenodes);
+   SCIPfreeBufferArray(scip, &sepadata->varsolvals);
 
    if( sepadata->ncuts > 0 )
       *result = SCIP_SEPARATED;
@@ -653,7 +657,7 @@ RETCODE SCIPincludeSepaClique(
    CHECK_OKAY( SCIPaddRealParam(scip,
          "separating/clique/scaleval",
          "factor for scaling weights",
-         &sepadata->scaleval, DEFAULT_SCALEVAL, 0.0, REAL_MAX, NULL, NULL) );
+         &sepadata->scaleval, DEFAULT_SCALEVAL, 1.0, REAL_MAX, NULL, NULL) );
    CHECK_OKAY( SCIPaddIntParam(scip,
          "separating/clique/maxtreenodes",
          "maximal number of nodes in branch and bound tree (-1: no limit)",

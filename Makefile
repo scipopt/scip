@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.104 2005/04/15 11:46:52 bzfpfend Exp $
+# $Id: Makefile,v 1.105 2005/04/29 12:56:42 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -169,6 +169,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/conflict.o \
 			scip/cons.o \
 			scip/cutpool.o \
+			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \

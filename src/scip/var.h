@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.91 2005/04/15 11:46:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.92 2005/04/29 12:56:44 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -418,6 +418,15 @@ void SCIPvarAdjustUb(
    VAR*             var,                /**< problem variable */
    SET*             set,                /**< global SCIP settings */
    Real*            ub                  /**< pointer to upper bound to adjust */
+   );
+
+/** adjust lower or upper bound to integral value, if variable is integral */
+extern
+void SCIPvarAdjustBd(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   BOUNDTYPE        boundtype,          /**< type of bound to adjust */
+   Real*            bd                  /**< pointer to bound to adjust */
    );
 
 /** changes lower bound of original variable in original problem */
