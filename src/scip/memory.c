@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.39 2005/03/01 17:21:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.40 2005/04/29 13:50:50 bzfpfend Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -210,6 +210,14 @@ void checkEmptyMemory_call(
    }
 }
 
+/** returns total number of allocated bytes */
+long long getMemoryUsed_call(
+   void
+   )
+{
+   return memused;
+}
+
 #else
 
 /* these methods are implemented even in optimized mode, such that a program, that includes memory.h in debug mode
@@ -238,6 +246,14 @@ void checkEmptyMemory_call(
    )
 {
    printf("optimized version of memory shell linked - no memory leakage check available\n");
+}
+
+/** returns total number of allocated bytes */
+long long getMemoryUsed_call(
+   void
+   )
+{
+   return 0;
 }
 
 #endif
@@ -1321,6 +1337,23 @@ void garbagecollectChunkMemory_call(
    debugMessage("garbage collection on chunk memory %p [elemsize: %d]\n", chkmem, chkmem->elemsize);
 
    garbagecollectChkmem(chkmem);
+}
+
+/** returns the number of allocated bytes in the chunk block */
+long long getChunkMemoryUsed_call(
+   const CHKMEM*    chkmem              /**< chunk block */
+   )
+{
+   long long chkmemused;
+   int i;
+
+   assert(chkmem != NULL);
+
+   chkmemused = 0;
+   for( i = 0; i < chkmem->nchunks; ++i )
+      chkmemused += (long long)(chkmem->chunks[i]->elemsize) * (long long)(chkmem->chunks[i]->storesize);
+   
+   return chkmemused;
 }
 
 

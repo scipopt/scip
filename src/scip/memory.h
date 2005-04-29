@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.25 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.26 2005/04/29 13:50:50 bzfpfend Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -74,10 +74,12 @@
 #define getPointerSize(ptr)                getPointerSize_call(ptr)
 #define displayMemory()                    displayMemory_call()
 #define checkEmptyMemory()                 checkEmptyMemory_call()
+#define getMemoryUsed()                    getMemoryUsed_call()
 #else
 #define getPointerSize(ptr)                0
 #define displayMemory()                    /**/
 #define checkEmptyMemory()                 /**/
+#define getMemoryUsed()                    0LL
 #endif
 
 
@@ -148,6 +150,12 @@ void checkEmptyMemory_call(
    void
    );
 
+/** returns total number of allocated bytes */
+extern
+long long getMemoryUsed_call(
+   void
+   );
+
 
 
 
@@ -178,6 +186,7 @@ typedef struct ChkMem CHKMEM;           /**< collection of memory chunks of the 
                                              assert(*(ptr) == NULL); }
 #define freeChunkMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) freeChunkMemory( (mem), (ptr) ); }
 #define garbagecollectChunkMemory(mem)     garbagecollectChunkMemory_call(mem)
+#define getChunkMemoryUsed(mem)            getChunkMemoryUsed_call(mem)
 
 #else
 
@@ -193,6 +202,7 @@ typedef struct ChkMem CHKMEM;           /**< collection of memory chunks of the 
 #define freeChunkMemory(mem,ptr)                freeMemory(ptr)
 #define freeChunkMemoryNull(mem,ptr)            freeMemoryNull(ptr)
 #define garbagecollectChunkMemory(mem)          /**/
+#define getChunkMemoryUsed(mem)                 0LL
 
 #endif
 
@@ -269,6 +279,12 @@ void freeChunkMemory_call(
 extern
 void garbagecollectChunkMemory_call(
    CHKMEM*          chkmem              /**< chunk block */
+   );
+
+/** returns the number of allocated bytes in the chunk block */
+extern
+long long getChunkMemoryUsed_call(
+   const CHKMEM*    chkmem              /**< chunk block */
    );
 
 
@@ -352,7 +368,7 @@ typedef struct BlkMem BLKMEM;           /**< block memory: collection of chunk b
 #define freeBlockMemorySize(mem,ptr,size)                 freeMemory(ptr)
 #define freeBlockMemorySizeNull(mem,ptr,size)             freeMemoryNull(ptr)
 #define garbagecollectBlockMemory(mem)                    /**/
-#define getBlockMemoryUsed(mem)                           0
+#define getBlockMemoryUsed(mem)                           0LL
 #define getBlockPointerSize(mem,ptr)                      0
 #define displayBlockMemory(mem)                           /**/
 #define blockMemoryCheckEmpty(mem)                        /**/
@@ -434,6 +450,7 @@ void garbagecollectBlockMemory_call(
    );
 
 /** returns the number of allocated bytes in the block memory */
+extern
 long long getBlockMemoryUsed_call(
    const BLKMEM*    blkmem              /**< block memory */
    );

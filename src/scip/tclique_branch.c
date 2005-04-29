@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.4 2005/04/29 13:50:50 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -781,8 +781,9 @@ BOOL branch(
 
    /* increase the number of nodes, and stop solving, if the node limit is exceeded */
    (*ntreenodes)++;
-   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d\n",
-      level, *ntreenodes, *maxcliqueweight, *curcliqueweight);
+   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%lld (%lld), cliques=%d]\n",
+      level, *ntreenodes, *maxcliqueweight, *curcliqueweight, 
+      getChunkMemoryUsed(mem), getMemoryUsed(), cliquetable->ncliques);
    debugMessage(" -> current branching (weight %d):", weightK);
 #ifdef DEBUG
    for( i = 0; i < level; ++i )
@@ -795,7 +796,7 @@ BOOL branch(
       printf(" %d", V[i]);
    printf("\n");
 #endif
-   
+
    if( *ntreenodes > maxntreenodes )
       return YES;
 

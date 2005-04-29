@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.4 2005/04/29 13:50:50 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -584,6 +584,9 @@ WEIGHT tcliqueColoring(
 
    /* free data structures */
    freeMemoryArray(&currentclique);
+
+   /* clear chunk memory */
+   clearChunkMemory(mem);
 
    debugMessage("------------coloringend-----------------\n");
 

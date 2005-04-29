@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.4 2005/04/29 13:50:50 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -609,6 +609,11 @@ DECL_SEPAEXEC(sepaExecClique)
    /* get maximal number of tree nodes */
    maxtreenodes = (sepadata->maxtreenodes == -1 ? INT_MAX : sepadata->maxtreenodes);
 
+#if 0 /*?????????????????????*/
+   printf("WRITING <tclique.dat>\n");
+   tcliqueSaveFile(sepadata->tcliquedata, "tclique.dat", sepadata->scaleval, "tclique");
+#endif
+
    /* finds maximum weight clique in tclique */
    CHECK_OKAY( SCIPallocBufferArray(scip, &cliquenodes, tcliqueGetNNodes(sepadata->tcliquedata)) );
    tcliqueMaxClique(sepadata->tcliquedata, tcliqueNewClique, (void*)sepadata, cliquenodes, &ncliquenodes, &cliqueweight, 
@@ -630,6 +635,15 @@ DECL_SEPAEXEC(sepaExecClique)
 /*
  * separator specific interface methods
  */
+
+#if 0 /*????????????????????*/
+static
+TCLIQUE_USRCALLBACK(NewClique)
+{
+   *acceptsol = FALSE;
+   *stopsolving = FALSE;
+}
+#endif
 
 /** creates the clique separator and includes it in SCIP */
 RETCODE SCIPincludeSepaClique(
@@ -662,6 +676,25 @@ RETCODE SCIPincludeSepaClique(
          "separating/clique/maxtreenodes",
          "maximal number of nodes in branch and bound tree (-1: no limit)",
          &sepadata->maxtreenodes, DEFAULT_MAXTREENODES, -1, INT_MAX, NULL, NULL) );
+
+#if 0 /*????????????????????????*/
+   {
+      char probname[MAXSTRLEN];
+      int cliquenodes[100000];
+      int ncliquenodes;
+      WEIGHT cliqueweight;
+
+      printf("SOLVING <mzzv11.dat>\n");
+      printf("A: memory = %lld\n", getMemoryUsed());
+      tcliqueLoadFile(&sepadata->tcliquedata, "mzzv11.dat", sepadata->scaleval, probname);
+      printf("B: memory = %lld\n", getMemoryUsed());
+      tcliqueMaxClique(sepadata->tcliquedata, NewClique, (void*)sepadata, cliquenodes, &ncliquenodes, &cliqueweight, 
+         (int)sepadata->scaleval-1, (int)sepadata->scaleval+1, INT_MAX);
+      printf("C: memory = %lld\n", getMemoryUsed());
+      tcliqueFree(&sepadata->tcliquedata);
+      printf("D: memory = %lld\n", getMemoryUsed());
+   }
+#endif
 
    return SCIP_OKAY;
 }
