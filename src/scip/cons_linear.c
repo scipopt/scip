@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.163 2005/05/02 11:42:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.164 2005/05/02 15:55:30 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4932,30 +4932,6 @@ DECL_CONSPRESOL(consPresolLinear)
          CHECK_OKAY( fixVariables(scip, cons, &cutoff, nfixedvars) );
          if( cutoff )
             break;
-
-#if 0 /*?????????????????? already included in checks below */
-         /* check, if constraint is empty */
-         if( consdata->nvars == 0 )
-         {
-            if( SCIPisFeasPositive(scip, consdata->lhs) || SCIPisFeasNegative(scip, consdata->rhs) )
-            {
-               debugMessage("linear constraint <%s> is empty and infeasible: sides=[%g,%g]\n",
-                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-               cutoff = TRUE;
-               break;
-            }
-            else
-            {
-               debugMessage("linear constraint <%s> is empty and redundant: sides=[%g,%g]\n",
-                  SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
-               CHECK_OKAY( SCIPdelCons(scip, cons) );
-               assert(!SCIPconsIsActive(cons));
-               if( !consdata->upgraded )
-                  (*ndelconss)++;
-               break;
-            }
-         }
-#endif
 
          /* check constraint for infeasibility and redundancy */
          consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);

@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.4 2005/04/29 13:50:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.5 2005/05/02 15:55:30 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -49,14 +49,14 @@
 
 
 
-/** gets index of the uncolored node in a given array of nodes in V with maximum satdeg and positive weight;
+/** gets index of the uncolored node in a given array of nodes in V with maximum satdeg;
  *  in case of a tie choose node with maximum weight;
- *  if no uncolored node with positive weight is found, -1 is returned
+ *  if no uncolored node is found, -1 is returned
  */
 static
 int getMaxSatdegIndex(
-   int*             V,                  /**< nodes in V */ 
-   int              nV,		        /**< number of nodes in V */
+   int*             V,                  /**< non-zero weighted nodes for branching */
+   int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
    BOOL*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          weights             /**< weight of nodes in grpah */
@@ -83,11 +83,8 @@ int getMaxSatdegIndex(
       if( iscolored[i] ) 
          continue;
 
-      /* check only nodes with positive weight */
       weight = weights[V[i]];
-      assert(weight >= 0);
-      if( weight <= 0 )
-         continue;
+      assert(weight > 0);
 
       satdeg = gsd[i].satdeg;
       if( satdeg > maxsatdeg || (satdeg == maxsatdeg && weight > maxweight) )
@@ -105,8 +102,8 @@ int getMaxSatdegIndex(
 static
 int getMaxWeightIndex( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
-   int*             nodes,              /**< given set of nodes (ordered by node index) */ 
-   int              nnodes              /**< number of nodes in given set nodes */ 
+   int*             V,                  /**< non-zero weighted nodes for branching */
+   int              nV                  /**< number of non-zero weighted nodes for branching */
    )
 {
    WEIGHT* weights;
@@ -115,22 +112,22 @@ int getMaxWeightIndex(
    int i;
    
    assert(tcliquedata != NULL);
-   assert(nnodes > 0);
+   assert(nV > 0);
 
    weights = tcliqueGetWeights(tcliquedata);
 
    maxweightindex = -1;
-   maxweight = -1;
+   maxweight = 0;
 
    /* try to improve maxweight */
-   for( i = 0 ; i < nnodes; i++ )
+   for( i = 0 ; i < nV; i++ )
    {
-      assert(0 <= nodes[i] && nodes[i] < tcliqueGetNNodes(tcliquedata));
-      assert(weights[nodes[i]] >= 0);
-      if( weights[nodes[i]] > maxweight)
+      assert(0 <= V[i] && V[i] < tcliqueGetNNodes(tcliquedata));
+      assert(weights[V[i]] > 0);
+      if( weights[V[i]] > maxweight)
       {
          /* node has larger weight */
-         maxweight = weights[nodes[i]];
+         maxweight = weights[V[i]];
          maxweightindex = i;
       }
    }
@@ -233,8 +230,8 @@ void updateNeighbor(
 WEIGHT tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
-   int*             V,                  /**< nodes for branching */ 
-   int              nV,		        /**< number of nodes for branching */
+   int*             V,                  /**< non-zero weighted nodes for branching */
+   int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
    BOOL*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 
@@ -284,9 +281,7 @@ WEIGHT tcliqueColoring(
    node = V[nodeVindex];
    assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
    range = weights[node];
-   assert(range >= 0);
-   if( range == 0 ) /* there are no nodes with positive weight: nothing has to be done */
-      return 0;
+   assert(range > 0);
 
    /* set up data structures for coloring */
    clearMemoryArray(iscolored, nV); /* new-memory */
@@ -364,7 +359,7 @@ WEIGHT tcliqueColoring(
 
       /* selects the next uncolored node to color */
       nodeVindex = getMaxSatdegIndex(V, nV, gsd, iscolored, weights);
-      if( nodeVindex == -1 ) /* no nodes left with positive weight */
+      if( nodeVindex == -1 ) /* no uncolored nodes left */
          break;
 
       node = V[nodeVindex];

@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.4 2005/05/02 15:55:31 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  tclique data part of algorithm for maximum cliques
@@ -56,6 +56,25 @@
       }                                                                 \
    }                                                                    \
    while( FALSE )
+
+
+struct _TCLIQUEDATA
+{
+   int              nnodes;		/**< number of nodes in graph */
+   int              nedges;		/**< number of edges in graph */
+   WEIGHT*          weights;	        /**< weight of nodes */
+   int*             degrees;	        /**< degree of nodes */
+   int*             adjnodes;	        /**< adjacent nodes of edges */
+   HEAD_ADJ*        adjedges;           /**< pointer to first and one after last adjacent edge of nodes */
+   int              sizenodes;		/**< size of arrays concerning nodes (weights, degrees and adjedges) */
+   int              sizeedges;		/**< size of arrays concerning edges (adjnodes) */
+   int*             cacheddegrees;      /**< number of adjacent cached edges for each node */
+   int*             cachedorigs;        /**< origin nodes of cached edges */
+   int*             cacheddests;        /**< destination nodes of cached edges */
+   int              ncachededges;       /**< number of cached edges (not yet inserted in all data structures) */
+   int              sizecachededges;    /**< size of arrays concerning cached edges */
+}; 
+
 
 /** creates tclique data structure */
 BOOL tcliqueCreate(

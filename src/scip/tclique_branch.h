@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.h,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.h,v 1.4 2005/05/02 15:55:30 bzfpfend Exp $"
 
 /**@file   tclique_branch.h
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -43,9 +43,19 @@
 #include "scip/tclique_coloring.h"
 
 
-/* */
-#define TCLIQUE_USRCALLBACK(x) void x (int* cliquenodes, int ncliquenodes, WEIGHT cliqueweight, void* usrdata, \
-      BOOL* acceptsol, BOOL* stopsolving)
+/** user callback method which is called whenever a feasible clique was found
+ *  input:
+ *   - usrdata      : user data given to tcliqueMaxClique()
+ *   - cliquenodes  : array with nodes of the clique
+ *   - ncliquenodes : number of nodes in the clique
+ *   - cliqueweight : weight of the clique
+ *  output:
+ *   - minweight    : new minimal weight for feasible cliques
+ *   - acceptsol    : setting TRUE makes clique the new best clique, and updates minweight
+ *   - stopsolving  : setting TRUE aborts the search for cliques
+ */
+#define TCLIQUE_USRCALLBACK(x) void x (void* usrdata, int* cliquenodes, int ncliquenodes, WEIGHT cliqueweight, \
+      WEIGHT* minweight, BOOL* acceptsol, BOOL* stopsolving)
 
 /** finds maximum weight clique */
 extern

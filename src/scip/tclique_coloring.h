@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.3 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.4 2005/05/02 15:55:31 bzfpfend Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
@@ -68,8 +68,8 @@ extern
 WEIGHT tcliqueColoring( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    CHKMEM*          mem,                /**< block memory */
-   int*             V,                  /**< nodes for branching */ 
-   int              nV,		        /**< number of nodes for branching */
+   int*             V,                  /**< non-zero weighted nodes for branching */
+   int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbour color information of all nodes */
    BOOL*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 

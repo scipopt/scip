@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.177 2005/04/15 11:46:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.178 2005/05/02 15:55:30 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1301,22 +1301,6 @@ RETCODE solveNodeLP(
    stat->nnodelps += stat->nlps - nlps;
    stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
 
-#if 0 /**@todo check if this is valid and useful (faster (but not so well?) strong branching -> see 10teams.mps) */
-   /*???????????????????????????????*/
-   if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      /* clean up newly created part of LP to keep only necessary columns and rows */
-      CHECK_OKAY( SCIPlpCleanupNew(lp, blkmem, set, stat, SCIPtreeGetFocusDepth(tree) == 0) );
-      
-      /* resolve LP after cleaning up */
-      if( !lp->solved || !lp->flushed )
-      {
-         debugMessage("resolving LP after cleanup\n");
-         CHECK_OKAY( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, TRUE, lperror) );
-      }
-   }
-#endif
-   
    return SCIP_OKAY;
 }
 
