@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.91 2005/04/26 14:32:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.92 2005/05/02 11:42:54 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -1133,7 +1133,6 @@ RETCODE addCoef(
    )
 {
    CONSDATA* consdata;
-   Bool negated;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1146,18 +1145,19 @@ RETCODE addCoef(
       CHECK_OKAY( SCIPaddVarToRow(scip, consdata->row, var, (Real)weight) );
    }
 
-   /* get binary representative of variable */
-   CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &var, &negated) );
-
    /* check for fixed variable */
-   if( var == NULL )
+   if( SCIPvarGetLbGlobal(var) > 0.5 )
    {
-      /* variable is fixed: if it is fixed to one, reduce capacity */
-      if( negated )
-         consdata->capacity -= weight;
+      /* variable is fixed to one: reduce capacity */
+      consdata->capacity -= weight;
    }
-   else
+   else if( SCIPvarGetUbGlobal(var) > 0.5 )
    {
+      Bool negated;
+
+      /* get binary representative of variable */
+      CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &var, &negated) );
+
       /* insert coefficient */
       CHECK_OKAY( consdataEnsureVarsSize(scip, consdata, consdata->nvars+1, SCIPconsIsTransformed(cons)) );
       consdata->vars[consdata->nvars] = var;
@@ -1368,7 +1368,6 @@ RETCODE applyFixings(
          
          /* get binary representative of variable */
          CHECK_OKAY( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
-         assert(repvar != NULL); /* fixed variables are already treated in the other cases above */
 
          /* check, if the variable should be replaced with the representative */
          if( repvar != var )

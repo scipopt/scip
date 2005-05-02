@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.284 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.285 2005/05/02 11:42:55 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4679,9 +4679,8 @@ RETCODE SCIPgetNegatedVar(
    return SCIP_OKAY;
 }
 
-/** gets a binary variable that is equal to the given binary variable, and that is either active or the negated
- *  variable of an active binary variable; if the given variable is fixed, NULL is returned as representative,
- *  and *negated is TRUE iff the variable is fixed to TRUE
+/** gets a binary variable that is equal to the given binary variable, and that is either active, fixed, or 
+ *  multi-aggregated, or the negated variable of an active, fixed, or multi-aggregated variable
  */
 RETCODE SCIPgetBinvarRepresentative(
    SCIP*            scip,               /**< SCIP data structure */
@@ -4701,7 +4700,7 @@ RETCODE SCIPgetBinvarRepresentative(
    CHECK_OKAY( SCIPvarGetProbvarBinary(repvar, negated) );
 
    /* negate the representative, if it corresponds to the negation of the given variable */
-   if( *repvar != NULL && *negated )
+   if( *negated )
    {
       CHECK_OKAY( SCIPvarNegate(*repvar, scip->mem->solvemem, scip->set, scip->stat, repvar) );
    }
@@ -6555,10 +6554,6 @@ RETCODE SCIPaggregateVars(
    }
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
 
-   /* we cannot aggregate multiaggregated variables */
-   if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
-      return SCIP_OKAY;
-
    /* get the corresponding equality in active problem variable space:
     * transform both expressions "a*x + 0" and "b*y + 0" into problem variable space
     */
@@ -6567,6 +6562,10 @@ RETCODE SCIPaggregateVars(
    CHECK_OKAY( SCIPvarGetProbvarSum(&varx, &scalarx, &constantx) );
    CHECK_OKAY( SCIPvarGetProbvarSum(&vary, &scalary, &constanty) );
    
+   /* we cannot aggregate multiaggregated variables */
+   if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
    /* move the constant to the right hand side to acquire the form "a'*x' + b'*y' == c'" */
    rhs -= (constantx + constanty);
 

@@ -67,6 +67,15 @@ interface:
 - new methods SCIPgetVarNStrongbranchs(), SCIPcolGetNStrongbranchs()
 - new methods SCIPfindSimpleRational(), SCIPselectSimpleValue()
 - new method SCIPvarGetImplIds()
+- methods SCIPvarGetProbvar(), SCIPvarGetProbvarBinary() now return the fixed or multi-aggregated variable instead
+  of returning NULL or aborting with an error message; in SCIPvarGetProbvarBinary(), the fixing of a fixed variable
+  does not influence the negation status anymore
+- method SCIPvarGetProbvarBound() returns the multi-aggregated variable instead of aborting with an error message
+- method SCIPvarGetProbvarSum() does not set *var to NULL for fixed variables anymore; it may also return a
+  multi-aggregated variable instead of aborting with an error message
+- method SCIPgetBinvarRepresentative() now returns the fixed or multi-aggregated variable instead of returning
+  NULL or aborting with an error message
+- new method SCIPvarGetOrigvarSum()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);
@@ -204,6 +213,8 @@ fixed bugs:
   and the sorting of the row was delayed with SCIProwDelaySort()
 - fixed bug with adding implications: wrong insertion position, if only the lower bound change was present but not
   the upper bound change
+- fixed bug in SCIPvarAddImplics() with wrong variable used in varAdjustBd()
+- fixed bug in method reduced() of tclique_branch.c with sorting nodes in V
 
 
 SCIP version 0.78

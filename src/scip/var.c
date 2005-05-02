@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.157 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.158 2005/05/02 11:42:56 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -39,6 +39,7 @@
 #include "scip/primal.h"
 #include "scip/cons.h"
 #include "scip/prop.h"
+#include "scip/debug.h"
 
 
 
@@ -3384,14 +3385,20 @@ RETCODE SCIPvarAggregate(
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
+   *infeasible = FALSE;
+   *aggregated = FALSE;
+
    /* get active problem variable of aggregation variable */
    CHECK_OKAY( SCIPvarGetProbvarSum(&aggvar, &scalar, &constant) );
-   assert((aggvar == NULL) == SCIPsetIsZero(set, scalar));
 
    /* aggregation is a fixing, if the scalar is zero */
    if( SCIPsetIsZero(set, scalar) )
       return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, constant,
          infeasible, aggregated);
+
+   /* don't perform the aggregation if the aggregation variable is multi-aggregated itself */
+   if( SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
 
    assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
@@ -3400,9 +3407,6 @@ RETCODE SCIPvarAggregate(
 
    debugMessage("aggregate variable <%s>[%g,%g] == %g*<%s>[%g,%g] %+g\n", var->name, var->glbdom.lb, var->glbdom.ub,
       scalar, aggvar->name, aggvar->glbdom.lb, aggvar->glbdom.ub, constant);
-
-   *infeasible = FALSE;
-   *aggregated = FALSE;
 
    /* if variable and aggregation variable are equal, the variable can be fixed: x == a*x + c  =>  x == c/(1-a) */
    if( var == aggvar )
@@ -5452,8 +5456,10 @@ RETCODE SCIPvarAddVlb(
       debugMessage(" -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", 
          SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
-      if( vlbvar != NULL )
+      if( SCIPvarIsActive(vlbvar) )
       {
+         assert(SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_COLUMN);
+
          /* add variable bound to the variable bounds list */
          CHECK_OKAY( vboundsAdd(&var->vlbs, blkmem, set, SCIP_BOUNDTYPE_LOWER, vlbvar, vlbcoef, vlbconstant) );
       }
@@ -5540,8 +5546,10 @@ RETCODE SCIPvarAddVub(
       debugMessage(" -> transformed to variable upper bound <%s> <= %g<%s> + %g\n", 
          SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
-      if( vubvar != NULL )
+      if( SCIPvarIsActive(vubvar) )
       {
+         assert(SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_COLUMN);
+
          /* add variable bound to the variable bounds list */
          CHECK_OKAY( vboundsAdd(&var->vubs, blkmem, set, SCIP_BOUNDTYPE_UPPER, vubvar, vubcoef, vubconstant) );
       }
@@ -5670,7 +5678,7 @@ RETCODE SCIPvarAddImplic(
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
       CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
-      SCIPvarAdjustBd(var, set, impltype, &implbound);
+      SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          
       /* check for conflicting and redundant implication */
       if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.ub, implbound))
@@ -5679,14 +5687,20 @@ RETCODE SCIPvarAddImplic(
       else if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, implvar->glbdom.lb, implbound))
          || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.ub, implbound)) )
       {
+         /* check implication on debugging solution */
+         CHECK_OKAY( SCIPdebugCheckImplic(var, set, varfixing, implvar, impltype, implbound) );
+
          if( var == implvar )
          {
             /* variable implies itself: x == varfixing  =>  x == (impltype == SCIP_BOUNDTYPE_LOWER) */
             assert(SCIPsetIsEQ(set, implbound, 0.0) || SCIPsetIsEQ(set, implbound, 1.0));
             *conflict = ((varfixing == TRUE) == (impltype == SCIP_BOUNDTYPE_UPPER));
          }
-         else if( SCIPvarGetStatus(implvar) != SCIP_VARSTATUS_FIXED )
+         else if( SCIPvarIsActive(implvar) )
          {
+            assert(SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_LOOSE
+               || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_COLUMN);
+
             /* add implication to the implications list */
             CHECK_OKAY( implicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound, conflict) );
             checkImplics(var->implics, set);
@@ -6203,7 +6217,7 @@ int SCIPvarCompare(
    }
 }
 
-/** gets corresponding active problem variable of a variable; returns NULL for fixed variables */
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 VAR* SCIPvarGetProbvar(
    VAR*             var                 /**< problem variable */
    )
@@ -6224,17 +6238,12 @@ VAR* SCIPvarGetProbvar(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      return var;
-
    case SCIP_VARSTATUS_FIXED:
-      return NULL;
+   case SCIP_VARSTATUS_MULTAGGR:
+      return var;
 
    case SCIP_VARSTATUS_AGGREGATED:
       return SCIPvarGetProbvar(var->data.aggregate.var);
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("multi-aggregated variable has no single active problem variable\n");
-      abort();
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetProbvar(var->negatedvar);
@@ -6245,8 +6254,8 @@ VAR* SCIPvarGetProbvar(
    }
 }
 
-/** gets corresponding active problem variable of a binary variable and updates the given negation status;
- *  for fixed variables, NULL is returned and the negation status is switched iff the variable is fixed to TRUE
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
+ *  negation status
  */
 RETCODE SCIPvarGetProbvarBinary(
    VAR**            var,                /**< pointer to binary problem variable */
@@ -6254,6 +6263,7 @@ RETCODE SCIPvarGetProbvarBinary(
    )
 {
    assert(var != NULL);
+   assert(*var != NULL);
    assert(negated != NULL);
 
    while( *var != NULL )
@@ -6270,13 +6280,9 @@ RETCODE SCIPvarGetProbvarBinary(
 
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
-         return SCIP_OKAY;
-
       case SCIP_VARSTATUS_FIXED:
-         assert(SCIPvarGetLbGlobal(*var) > 0.5 || SCIPvarGetUbGlobal(*var) < 0.5);
-         *negated = (*negated != (SCIPvarGetLbGlobal(*var) > 0.5));
-         *var = NULL;
-         break;
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_OKAY;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
          assert((*var)->data.aggregate.var != NULL);
@@ -6287,10 +6293,6 @@ RETCODE SCIPvarGetProbvarBinary(
          *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
          *var = (*var)->data.aggregate.var;
          break;
-
-      case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("multiple aggregated variable has no single corresponding active problem variable\n");
-         return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
          assert((*var)->negatedvar != NULL);
@@ -6304,10 +6306,13 @@ RETCODE SCIPvarGetProbvarBinary(
       }
    }
 
-   return SCIP_OKAY;
+   errorMessage("active variable path leads to NULL pointer\n");
+   return SCIP_INVALIDDATA;
 }
 
-/** transforms given variable, boundtype and bound to the corresponding active or fixed variable values */
+/** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ */
 RETCODE SCIPvarGetProbvarBound(
    VAR**            var,                /**< pointer to problem variable */
    Real*            bound,              /**< pointer to bound value to transform */
@@ -6336,6 +6341,7 @@ RETCODE SCIPvarGetProbvarBound(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_MULTAGGR:
       break;
       
    case SCIP_VARSTATUS_AGGREGATED:  /* x = a*y + c  ->  y = x/a - c/a */
@@ -6354,10 +6360,6 @@ RETCODE SCIPvarGetProbvarBound(
       *var = (*var)->data.aggregate.var;
       CHECK_OKAY( SCIPvarGetProbvarBound(var, bound, boundtype) );
       break;
-
-   case SCIP_VARSTATUS_MULTAGGR:
-      errorMessage("multiple aggregated variable has no single corresponding active problem variable\n");
-      return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert((*var)->negatedvar != NULL);
@@ -6380,9 +6382,10 @@ RETCODE SCIPvarGetProbvarBound(
    return SCIP_OKAY;
 }
 
-/** transforms given variable, scalar and constant to the corresponding active variable, scalar and constant;
- *  if the variable resolves to a fixed variable, the returned variable will be NULL, "scalar" will be 0.0 and
- *  the value of the sum will be stored in "constant"
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
+ *  scalar and constant;
+ *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
+ *  in "constant"
  */
 RETCODE SCIPvarGetProbvarSum(
    VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
@@ -6409,12 +6412,12 @@ RETCODE SCIPvarGetProbvarSum(
 
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_MULTAGGR:
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_FIXED:       /* x = c'          =>  a*x + c ==             (a*c' + c) */
          (*constant) += *scalar * (*var)->glbdom.lb;
          *scalar = 0.0;
-         *var = NULL;
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
@@ -6423,10 +6426,6 @@ RETCODE SCIPvarGetProbvarSum(
          (*scalar) *= (*var)->data.aggregate.scalar;
          *var = (*var)->data.aggregate.var;
          break;
-
-      case SCIP_VARSTATUS_MULTAGGR:
-         errorMessage("multiple aggregated variable has no single corresponding active problem variable\n");
-         return SCIP_INVALIDDATA;
 
       case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
          assert((*var)->negatedvar != NULL);
@@ -6443,6 +6442,74 @@ RETCODE SCIPvarGetProbvarSum(
       }
    }
    *scalar = 0.0;
+
+   return SCIP_OKAY;
+}
+
+/** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
+ *  if possible;
+ *  if the retransformation is impossible, NULL is returned as variable
+ */
+RETCODE SCIPvarGetOrigvarSum(
+   VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   Real*            constant            /**< pointer to constant c in sum a*x + c */
+   )
+{
+   VAR* parentvar;
+
+   assert(var != NULL);
+   assert(*var != NULL);
+   assert(scalar != NULL);
+   assert(constant != NULL);
+
+   while( SCIPvarGetStatus(*var) != SCIP_VARSTATUS_ORIGINAL )
+   {
+      /* if the variable has no parent variables, it was generated during solving and has no corresponding original var */
+      if( (*var)->nparentvars == 0 )
+      {
+         *var = NULL;
+         return SCIP_OKAY;
+      }
+
+      /* follow the link to the first parent variable */
+      parentvar = (*var)->parentvars[0];
+      assert(parentvar != NULL);
+
+      switch( SCIPvarGetStatus(parentvar) )
+      {
+      case SCIP_VARSTATUS_ORIGINAL:
+         break;
+         
+      case SCIP_VARSTATUS_COLUMN:
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_MULTAGGR:
+         errorMessage("column, loose, fixed or multi-aggregated variable cannot be the parent of a variable\n");
+         return SCIP_INVALIDDATA;
+      
+      case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + b  ->  y = (x-b)/a,  s*y + c = (s/a)*x + c-b*s/a */
+         assert(parentvar->data.aggregate.var == *var);
+         assert(parentvar->data.aggregate.scalar != 0.0);
+         *scalar /= parentvar->data.aggregate.scalar;
+         *constant -= parentvar->data.aggregate.constant * (*scalar);
+         break;
+
+      case SCIP_VARSTATUS_NEGATED: /* x = b - y  ->  y = b - x,  s*y + c = -s*x + c+b*s */
+         assert(parentvar->negatedvar != NULL);
+         assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(parentvar->negatedvar->negatedvar == parentvar);
+         *scalar *= -1.0;
+         *constant -= parentvar->data.negate.constant * (*scalar);
+         break;
+
+      default:
+         errorMessage("unknown variable status\n");
+         return SCIP_INVALIDDATA;
+      }
+
+      *var = parentvar;
+   }
 
    return SCIP_OKAY;
 }
@@ -8236,8 +8303,10 @@ BDCHGIDX* SCIPvarGetLastBdchgIndex(
    var = SCIPvarGetProbvar(var);
 
    /* check, if variable was fixed in presolving */
-   if( var == NULL )
+   if( !SCIPvarIsActive(var) )
       return &presolvebdchgidx;
+
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* get depths of last bound change infos for the lower and upper bound */
    lbchgidx = (var->nlbchginfos > 0 ? &var->lbchginfos[var->nlbchginfos-1].bdchgidx : &initbdchgidx);
@@ -8284,15 +8353,17 @@ Bool SCIPvarWasFixedEarlier(
 
    var1 = SCIPvarGetProbvar(var1);
    var2 = SCIPvarGetProbvar(var2);
-
-   /* check, if variables are globally fixed */
-   if( var2 == NULL || var2->glbdom.lb > 0.5 || var2->glbdom.ub < 0.5 )
-      return FALSE;
-   if( var1 == NULL || var1->glbdom.lb > 0.5 || var1->glbdom.ub < 0.5 )
-      return TRUE;
-
    assert(var1 != NULL);
    assert(var2 != NULL);
+
+   /* check, if variables are globally fixed */
+   if( !SCIPvarIsActive(var2) || var2->glbdom.lb > 0.5 || var2->glbdom.ub < 0.5 )
+      return FALSE;
+   if( !SCIPvarIsActive(var1) || var1->glbdom.lb > 0.5 || var1->glbdom.ub < 0.5 )
+      return TRUE;
+
+   assert(SCIPvarGetStatus(var1) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetStatus(var2) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
    assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
    assert(var1->nlbchginfos + var1->nubchginfos <= 1);

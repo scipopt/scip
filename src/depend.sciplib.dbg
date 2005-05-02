@@ -124,6 +124,14 @@ $(OBJDIR)/scip/debug.o: src/scip/debug.c src/scip/def.h src/scip/type_retcode.h 
   src/scip/type_prob.h src/scip/pub_lp.h src/scip/type_lpi.h \
   src/scip/struct_lp.h src/scip/var.h src/scip/type_history.h \
   src/scip/type_primal.h src/scip/pub_var.h src/scip/struct_var.h \
+  src/scip/prob.h src/scip/struct_prob.h src/scip/scip.h \
+  src/scip/type_dialog.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+  src/scip/pub_heur.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
   src/scip/debug.h
 $(OBJDIR)/scip/dialog.o: src/scip/dialog.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/memory.h src/scip/set.h src/scip/buffer.h \
@@ -702,7 +710,8 @@ $(OBJDIR)/scip/var.o: src/scip/var.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/pub_var.h src/scip/struct_var.h src/scip/prob.h \
   src/scip/struct_prob.h src/scip/primal.h src/scip/struct_primal.h \
   src/scip/cons.h src/scip/type_sepastore.h src/scip/pub_cons.h \
-  src/scip/struct_cons.h src/scip/prop.h src/scip/pub_prop.h
+  src/scip/struct_cons.h src/scip/prop.h src/scip/pub_prop.h \
+  src/scip/debug.h
 $(OBJDIR)/scip/vbc.o: src/scip/vbc.c src/scip/memory.h src/scip/set.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/buffer.h \
   src/scip/type_set.h src/scip/type_buffer.h src/scip/type_stat.h \

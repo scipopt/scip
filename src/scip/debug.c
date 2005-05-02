@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.1 2005/04/29 12:56:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.2 2005/05/02 11:42:55 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -33,6 +33,8 @@
 #include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/var.h"
+#include "scip/prob.h"
+#include "scip/scip.h"
 #include "scip/debug.h"
 
 
@@ -120,6 +122,9 @@ RETCODE getSolutionValue(
    Real*            val                 /**< pointer to store solution value */
    )
 {
+   VAR* origvar;
+   Real scalar;
+   Real constant;
    const char* name;
    int left;
    int right;
@@ -130,9 +135,20 @@ RETCODE getSolutionValue(
 
    CHECK_OKAY( readSolution() );
 
-   name = SCIPvarGetName(var);
-
+   /* retransform variable onto orginal variable space */
+   origvar = var;
+   scalar = 1.0;
+   constant = 0.0;
+   CHECK_OKAY( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+   if( origvar == NULL )
+   {
+      warningMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
+      *val = 0.0;
+      return SCIP_OKAY;
+   }
+   
    /* perform a binary search for the variable */
+   name = SCIPvarGetName(origvar);
    left = 0;
    right = nsolvals-1;
    while( left <= right )
@@ -145,11 +161,11 @@ RETCODE getSolutionValue(
          left = middle+1;
       else
       {
-         *val = solvals[middle];
+         *val = scalar * solvals[middle] + constant;
          return SCIP_OKAY;
       }
    }
-   *val = 0.0;
+   *val = constant;
 
    return SCIP_OKAY;
 }
@@ -203,7 +219,56 @@ RETCODE SCIPdebugCheckRow(
       }
       printf(" <= %g\n", rhs);
 
+      abort();
       return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether given implication is valid for the debugging solution */
+RETCODE SCIPdebugCheckImplic(
+   VAR*             var,                /**< problem variable  */
+   SET*             set,                /**< global SCIP settings */
+   Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
+   VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Real             implbound           /**< bound b    in implication y <= b or y >= b */
+   )
+{
+   Real solval;
+
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+   /* get solution value of variable */
+   CHECK_OKAY( getSolutionValue(var, &solval) );
+   assert(SCIPsetIsEQ(set, solval, 0.0) || SCIPsetIsEQ(set, solval, 1.0));
+
+   /* check, whether the implication applies for the debugging solution */
+   if( (solval > 0.5) != varfixing )
+      return SCIP_OKAY;
+
+   /* get solution value of implied variable */
+   CHECK_OKAY( getSolutionValue(implvar, &solval) );
+   if( impltype == SCIP_BOUNDTYPE_LOWER )
+   {
+      if( SCIPsetIsLT(set, solval, implbound) )
+      {
+         errorMessage("invalid implication <%s> == %d -> <%s> >= %g (variable has value %g in solution)\n",
+            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
+         abort();
+         return SCIP_ERROR;
+      }
+   }
+   else
+   {
+      if( SCIPsetIsGT(set, solval, implbound) )
+      {
+         errorMessage("invalid implication <%s> == %d -> <%s> <= %g (variable has value %g in solution)\n",
+            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), implbound, solval);
+         abort();
+         return SCIP_ERROR;
+      }
    }
 
    return SCIP_OKAY;

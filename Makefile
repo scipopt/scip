@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.105 2005/04/29 12:56:42 bzfpfend Exp $
+# $Id: Makefile,v 1.106 2005/05/02 11:42:54 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -347,16 +347,7 @@ $(BINDIR):
 clean:
 		-rm -rf $(OBJDIR)/* $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
-depend:
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
-		>$(MAINDEP)'
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
-		>$(SCIPLIBDEP)'
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/objscip/\1.o|g'\'' \
-		>$(OBJSCIPLIBDEP)'
+lpidepend:
 ifeq ($(LINKER),C)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
@@ -367,6 +358,17 @@ ifeq ($(LINKER),CPP)
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
 		>$(LPILIBDEP)'
 endif
+
+depend:		lpidepend
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/\1.o|g'\'' \
+		>$(MAINDEP)'
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/scip/\1.o|g'\'' \
+		>$(SCIPLIBDEP)'
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(OBJSCIPLIBSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o|$$\(OBJDIR\)/objscip/\1.o|g'\'' \
+		>$(OBJSCIPLIBDEP)'
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)

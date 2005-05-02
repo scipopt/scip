@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.140 2005/03/24 09:47:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.141 2005/05/02 11:42:56 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1268,7 +1268,11 @@ RETCODE SCIPnodeAddBoundinfer(
    inferboundtype = boundtype;
    CHECK_OKAY( SCIPvarGetProbvarBound(&var, &newbound, &boundtype) );
 
-   assert(var != NULL);
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      errorMessage("cannot change bounds of multi-aggregated variale <%s>\n", SCIPvarGetName(var));
+      return SCIP_INVALIDDATA;
+   }
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    oldlb = SCIPvarGetLbLocal(var);
@@ -3225,12 +3229,13 @@ RETCODE SCIPtreeBranchVar(
    /* get the corresponding active problem variable */
    var = SCIPvarGetProbvar(var);
 
-   if( var == NULL )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
-      errorMessage("cannot branch on a fixed variable\n");
+      errorMessage("cannot branch on fixed or multi-aggregated variable <%s>\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
 
+   assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY

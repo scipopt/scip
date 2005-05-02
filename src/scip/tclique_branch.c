@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.4 2005/04/29 13:50:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.5 2005/05/02 11:42:56 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -497,30 +497,24 @@ void reduced(
    *tmpcliqueweight = 0;
    *ntmpcliquenodes = 0;
 
-   /* sort V by decreasing weight */
-   if( nV >= 2 && weights[V[1]] > weights[V[0]] )
-   {
-      int node;
-
-      node = V[1];
-      V[1] = V[0];
-      V[0] = node;
-   }
-
-   /* put V[0] into clique */
-   if( nV >= 1 && weights[V[0]] > 0 )
-   {
-      tmpcliquenodes[*ntmpcliquenodes] = V[0];
-      (*ntmpcliquenodes)++;
-      *tmpcliqueweight = weights[V[0]];
-   }
+   if( nV >= 1 )
+      apbound[0] = weights[V[0]];
+   if( nV >= 2 )
+      apbound[1] = weights[V[1]];
 
    /* check if nodes are adjacent */ 
    if( nV >= 2 && tcliqueIsEdge(tcliquedata, V[0], V[1]) )
    {
       assert(tcliqueIsEdge(tcliquedata, V[1], V[0]));
 
-      /* put V[1] into clique */
+      /* put nodes into clique, if they have positive weight */
+      if( weights[V[0]] > 0 )
+      {
+         tmpcliquenodes[*ntmpcliquenodes] = V[0];
+         (*ntmpcliquenodes)++;
+         *tmpcliqueweight = weights[V[0]];
+         apbound[0] += weights[V[1]];
+      }
       if( weights[V[1]] > 0 )
       {
          tmpcliquenodes[*ntmpcliquenodes] = V[1];
@@ -528,12 +522,20 @@ void reduced(
          *tmpcliqueweight = weights[V[1]];
       }
    }
-
-   /* update a priori bounds */
-   if( nV >= 1 )
-      apbound[0] = *tmpcliqueweight;
-   if( nV >= 2 )
-      apbound[1] = weights[V[1]];
+   else if( nV >= 2 && weights[V[1]] > weights[V[0]] )
+   {
+      /* put V[1] into clique */
+      tmpcliquenodes[*ntmpcliquenodes] = V[1];
+      (*ntmpcliquenodes)++;
+      *tmpcliqueweight = weights[V[1]];
+   }
+   else if( nV >= 1 )
+   {
+      /* put V[0] into clique */
+      tmpcliquenodes[*ntmpcliquenodes] = V[0];
+      (*ntmpcliquenodes)++;
+      *tmpcliqueweight = weights[V[0]];
+   }
 }
 
 /** calculates upper bound on remaining subgraph, and heuristically generates a clique */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.90 2005/03/21 11:37:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.91 2005/05/02 11:42:54 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -799,14 +799,34 @@ RETCODE SCIPconflictAddBound(
    CHECK_OKAY( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
 
    /* we can ignore fixed variables */
-   if( var == NULL )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       return SCIP_OKAY;
 
    assert(!SCIPsetIsZero(set, scalar));
 
    /* if the scalar of the aggregation is negative, we have to switch the bound type */
    if( scalar < 0.0 )
-      boundtype = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+      boundtype = SCIPboundtypeOpposite(boundtype);
+
+   /* if the variable is multi-aggregated, add the bounds of all aggregation variables */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      VAR** vars;
+      Real* scalars;
+      int nvars;
+      int i;
+
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalars(var);
+      nvars = SCIPvarGetMultaggrNVars(var);
+      for( i = 0; i < nvars; ++i )
+      {
+         CHECK_OKAY( SCIPconflictAddBound(conflict, set, vars[i], 
+               (scalars[i] < 0.0 ? SCIPboundtypeOpposite(boundtype) : boundtype), bdchgidx) );
+      }
+      
+      return SCIP_OKAY;
+   }
 
    /* get bound change information */
    bdchginfo = SCIPvarGetBdchgInfo(var, boundtype, bdchgidx, FALSE);

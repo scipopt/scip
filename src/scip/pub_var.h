@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.42 2005/04/15 11:46:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.43 2005/05/02 11:42:55 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -77,14 +77,14 @@ int SCIPvarCompare(
    VAR*             var2                /**< second problem variable */
    );
 
-/** gets corresponding active problem variable of a variable; returns NULL for fixed variables */
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 extern
 VAR* SCIPvarGetProbvar(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets corresponding active problem variable of a binary variable and updates the given negation status;
- *  for fixed variables, NULL is returned, and the negation status is switched iff the variable is fixed to TRUE
+/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
+ *  negation status
  */
 extern
 RETCODE SCIPvarGetProbvarBinary(
@@ -92,7 +92,9 @@ RETCODE SCIPvarGetProbvarBinary(
    Bool*            negated             /**< pointer to update the negation status */
    );
 
-/** transforms given variable, boundtype and bound to the corresponding active or fixed variable values */
+/** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ */
 extern
 RETCODE SCIPvarGetProbvarBound(
    VAR**            var,                /**< pointer to problem variable */
@@ -100,12 +102,24 @@ RETCODE SCIPvarGetProbvarBound(
    BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
    );
 
-/** transforms given variable, scalar and constant to the corresponding active variable, scalar and constant;
- *  if the variable resolves to a fixed variable, the returned variable will be NULL, "scalar" will be 0.0 and
- *  the value of the sum will be stored in "constant"
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
+ *  scalar and constant;
+ *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
+ *  in "constant"
  */
 extern
 RETCODE SCIPvarGetProbvarSum(
+   VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
+   Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
+/** retransforms given variable, scalar and constant to the corresponding original variable, scalar and constant,
+ *  if possible;
+ *  if the retransformation is impossible, NULL is returned as variable
+ */
+extern
+RETCODE SCIPvarGetOrigvarSum(
    VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
    Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
    Real*            constant            /**< pointer to constant c in sum a*x + c */
