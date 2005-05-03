@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.3 2005/04/13 12:21:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.4 2005/05/03 15:06:40 bzfpfend Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -34,18 +34,6 @@
 #define SEPA_PRIORITY               -50
 #define SEPA_FREQ                    10
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-
-
-
-
-/*
- * Data structures
- */
-
-/** separator data */
-struct SepaData
-{
-};
 
 
 

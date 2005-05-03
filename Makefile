@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.107 2005/05/03 14:47:58 bzfpfend Exp $
+# $Id: Makefile,v 1.108 2005/05/03 15:06:40 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -409,9 +409,9 @@ $(LPILIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(LPILIBXXX)
 		$(RANLIB) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
-		$(CC) $(FLAGS) $(CFLAGS) $(OFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(OFLAGS) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
-		$(CXX) $(FLAGS) $(CXXFLAGS) $(OFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(OFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # --- EOF ---------------------------------------------------------------------
