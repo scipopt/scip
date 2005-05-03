@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.14 2005/04/12 16:56:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.15 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -34,7 +34,7 @@
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
 
-#define MAXDNOM                   10000 /**< maximal denominator for simple rational fixed values */
+#define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
 

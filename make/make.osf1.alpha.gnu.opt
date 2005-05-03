@@ -1,5 +1,6 @@
-#--- $Id: make.osf1.alpha.gnu.opt,v 1.8 2005/04/14 18:55:05 bzfpfets Exp $
-FLAGS		+=      -DNDEBUG -O6 -mcpu=ev6 -g # -DWITH_READLINE
+#--- $Id: make.osf1.alpha.gnu.opt,v 1.9 2005/05/03 14:47:59 bzfpfend Exp $
+FLAGS		+=      -DNDEBUG # -DWITH_READLINE
+OFLAGS		+=	-O6 -mcpu=ev6 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs

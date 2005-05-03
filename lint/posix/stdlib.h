@@ -58,6 +58,7 @@ ldiv_t ldiv (long, long);
 void * malloc (size_t);
 void qsort (void *, size_t, size_t, int (*) (const void *, const void *));
 int rand (void);
+int rand_r(unsigned int *); /* added by Tobias Achterberg */
 void * realloc(void *, size_t);
 void srand (unsigned);
 double strtod (const char *, char **);

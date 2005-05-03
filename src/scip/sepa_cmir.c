@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.33 2005/04/01 10:43:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.34 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -281,7 +281,7 @@ RETCODE addCut(
 #endif
 
       /* if scaling was successful, add the cut */
-      if( success )
+      if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
       {
          debugMessage(" -> found c-mir cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%g)\n",
             cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, cut),
@@ -909,15 +909,19 @@ DECL_SEPAEXEC(sepaExecCmir)
    if( nrows == 0 )
       return SCIP_OKAY;
 
-   *result = SCIP_DIDNOTFIND;
-
-   /* get the type of norm to use for efficacy calculations */
-   CHECK_OKAY( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
-
    /* get active problem variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    assert(nvars == 0 || vars != NULL);
+
+   /* nothing to do, if problem has no variables */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* get the type of norm to use for efficacy calculations */
+   CHECK_OKAY( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
 
    /* get data structure */
    CHECK_OKAY( SCIPallocBufferArray(scip, &rowlhsscores, nrows) );
@@ -983,16 +987,16 @@ DECL_SEPAEXEC(sepaExecCmir)
 
          slack = (activity - lhs)/rownorm;
          if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
-            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r]))
-            && rowdensity <= sepadata->maxrowdensity )
+            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
+            && rowdensity <= sepadata->maxrowdensity )  /*lint !e774*/
             rowlhsscores[r] = -rowdensity - sepadata->slackscore * slack;
          else
             rowlhsscores[r] = -SCIPinfinity(scip);
 
          slack = (rhs - activity)/rownorm;
          if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
-            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r]))
-            && rowdensity <= sepadata->maxrowdensity )
+            && (ALLOWLOCAL || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
+            && rowdensity <= sepadata->maxrowdensity )  /*lint !e774*/
             rowrhsscores[r] = -rowdensity - sepadata->slackscore * slack;
          else
             rowrhsscores[r] = -SCIPinfinity(scip);

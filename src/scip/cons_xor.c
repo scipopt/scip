@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.29 2005/04/26 14:32:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.30 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -230,7 +230,6 @@ static
 RETCODE consdataCreate(
    SCIP*            scip,               /**< SCIP data structure */
    CONSDATA**       consdata,           /**< pointer to store the constraint data */
-   EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    int              nvars,              /**< number of variables in the xor operation */
    VAR**            vars,               /**< variables in xor operation */
    VAR*             resvar              /**< resultant variable */
@@ -549,7 +548,7 @@ RETCODE checkCons(
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
          assert(SCIPisFeasIntegral(scip, solval));
-         odd = odd ^ (solval > 0.5);
+         odd = (odd != (solval > 0.5));
       }
       if( odd )
       {
@@ -751,7 +750,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: only one unfixed variable -> fix <%s> to %d\n",
          SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), odd);
-      CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], odd, cons, PROPRULE_1, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], odd, cons, (int)PROPRULE_1, &infeasible, &tightened) );
       assert(!infeasible);
       assert(tightened);
       (*nfixedvars)++;
@@ -920,8 +919,7 @@ DECL_CONSTRANS(consTransXor)
    assert(sourcedata->vars != NULL);
 
    /* create target constraint data */
-   CHECK_OKAY( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
-         sourcedata->nvars-1, &sourcedata->vars[1], sourcedata->vars[0]) );
+   CHECK_OKAY( consdataCreate(scip, &targetdata, sourcedata->nvars-1, &sourcedata->vars[1], sourcedata->vars[0]) );
 
    /* create target constraint */
    CHECK_OKAY( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1291,7 +1289,7 @@ DECL_CONSLOCK(consLockXor)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintXor)
-{
+{  /*lint --e{715}*/
    consdataPrint(scip, SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;
@@ -1396,7 +1394,7 @@ RETCODE SCIPcreateConsXor(
    assert(conshdlrdata != NULL);
 
    /* create constraint data */
-   CHECK_OKAY( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, resvar) );
+   CHECK_OKAY( consdataCreate(scip, &consdata, nvars, vars, resvar) );
 
    /* create constraint */
    CHECK_OKAY( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.25 2005/02/14 13:35:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.26 2005/05/03 14:48:02 bzfpfend Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -43,7 +44,7 @@
 /** hash key retrieval function for parameters */
 static
 DECL_HASHGETKEY(hashGetKeyParam)
-{
+{  /*lint --e{715}*/
    PARAM* param;
 
    param = (PARAM*)elem;

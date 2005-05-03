@@ -14,7 +14,7 @@
 //*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// $Id: scip.lnt,v 1.11 2005/02/16 17:46:17 bzfpfend Exp $
+// $Id: scip.lnt,v 1.12 2005/05/03 14:47:58 bzfpfend Exp $
 
 -passes(1)
 // esoteric size settings to find erros.
@@ -48,7 +48,7 @@
 
 -esym(534,close,creat,fclose,fflush,fprintf,vfprintf,fputc)
 -esym(534,fputs,fscanf,fseek,fwrite,lseek,memcpy,memmove,memset)
--esym(534,printf,vprintf,puts,scanf,sprintf,sscanf,strcat,strcpy)
+-esym(534,printf,vprintf,puts,scanf,sprintf,snprintf,sscanf,strcat,strcpy)
 -esym(534,strncat,strncpy,unlink,write)
 -esym(534,free_history_entry)
 
@@ -57,6 +57,8 @@
 -emacro(506,debugMessage) // Constant value Boolean
 -emacro(681,debugMessage) // Loop is not entered
 -emacro(506,assert)       // Constant value Boolean
+-emacro(506,SCIPdebugCheckRow) // Constant value Boolean
+-emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
 
 -esym(578,clock)          // Declaration of symbol hides symbol
 -esym(715,scip)           // Symbol not referenced

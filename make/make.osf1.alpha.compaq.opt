@@ -1,7 +1,8 @@
-#--- $Id: make.osf1.alpha.compaq.opt,v 1.6 2005/04/14 18:55:05 bzfpfets Exp $
+#--- $Id: make.osf1.alpha.compaq.opt,v 1.7 2005/05/03 14:47:59 bzfpfend Exp $
 CC		=	cc
 CXX		=	cxx
-FLAGS		+=      -DROUNDING_FP -DNDEBUG -O4 -fast -std
+FLAGS		+=      -DROUNDING_FP -DNDEBUG
+OFLAGS		+=	-O4 -fast -std
 CFLAGS		+=	
 CXXFLAGS	+=	-nortti -D__USE_STD_IOSTREAM # -noexceptions (CLP uses exceptions)
 LDFLAGS		+=	-om # -non_shared

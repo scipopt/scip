@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.20 2005/02/18 14:06:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.21 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -428,7 +428,7 @@ DECL_BRANCHFREE(branchFreeAllfullstrong)
 /** initialization method of branching rule (called after problem was transformed) */
 static
 DECL_BRANCHINIT(branchInitAllfullstrong)
-{
+{  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
 
    /* init branching rule data */
@@ -454,7 +454,7 @@ DECL_BRANCHINIT(branchInitAllfullstrong)
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
-{
+{  /*lint --e{715}*/
    assert(result != NULL);
 
    debugMessage("Execlp method of allfullstrong branching\n");
@@ -470,7 +470,7 @@ DECL_BRANCHEXECLP(branchExeclpAllfullstrong)
 /** branching execution method for not completely fixed pseudo solutions */
 static
 DECL_BRANCHEXECPS(branchExecpsAllfullstrong)
-{
+{  /*lint --e{715}*/
    assert(result != NULL);
 
    debugMessage("Execps method of allfullstrong branching\n");

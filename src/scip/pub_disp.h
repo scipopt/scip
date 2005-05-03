@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_disp.h,v 1.5 2005/02/14 13:35:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_disp.h,v 1.6 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   pub_disp.h
  * @brief  public methods for displaying runtime statistics
@@ -96,11 +96,19 @@ Bool SCIPdispIsInitialized(
    DISP*            disp                /**< display column */
    );
 
-/** displays an integer in decimal form fitting in a given width */
+/** displays a long integer in decimal form fitting in a given width */
 extern
-void SCIPdispDecimal(
+void SCIPdispLongint(
    FILE*            file,               /**< output stream */
    Longint          val,                /**< value to display */
+   int              width               /**< width to fit into */
+   );
+
+/** displays an integer in decimal form fitting in a given width */
+extern
+void SCIPdispInt(
+   FILE*            file,               /**< output stream */
+   int              val,                /**< value to display */
    int              width               /**< width to fit into */
    );
 

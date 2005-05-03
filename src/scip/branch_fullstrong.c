@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.38 2005/02/18 14:06:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.39 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   branch_fullstrong.c
  * @brief  full strong LP branching rule
@@ -67,7 +67,7 @@ DECL_BRANCHFREE(branchFreeFullstrong)
 /** initialization method of branching rule (called after problem was transformed) */
 static
 DECL_BRANCHINIT(branchInitFullstrong)
-{
+{  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
 
    /* init branching rule data */

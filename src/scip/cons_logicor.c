@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.80 2005/04/26 14:32:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.81 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -928,7 +928,7 @@ DECL_CONSFREE(consFreeLogicor)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 DECL_CONSEXITSOL(consExitsolLogicor)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -1491,7 +1491,7 @@ DECL_CONSDEACTIVE(consDeactiveLogicor)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintLogicor)
-{
+{  /*lint --e{715}*/
    consdataPrint(scip, SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;

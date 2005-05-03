@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.h,v 1.4 2005/05/02 15:55:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.h,v 1.5 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   tclique_branch.h
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -55,7 +55,7 @@
  *   - stopsolving  : setting TRUE aborts the search for cliques
  */
 #define TCLIQUE_USRCALLBACK(x) void x (void* usrdata, int* cliquenodes, int ncliquenodes, WEIGHT cliqueweight, \
-      WEIGHT* minweight, BOOL* acceptsol, BOOL* stopsolving)
+      WEIGHT* minweight, Bool* acceptsol, Bool* stopsolving)
 
 /** finds maximum weight clique */
 extern

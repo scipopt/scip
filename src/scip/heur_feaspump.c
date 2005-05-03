@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.27 2005/03/22 18:42:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.28 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -51,6 +51,9 @@
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
                                          *   1.0 for dynamic, depending on solutions already found */
+
+#define MINLPITER               10000   /**< minimal number of LP iterations allowed in each LP solving call */
+
 
 
 /** primal heuristic data */
@@ -307,7 +310,6 @@ DECL_HEUREXEC(heurExecFeaspump)
    int nvars;            /* number of variables  */
    int nbinvars;         /* number of 0-1-variables */
    int nintvars;         /* number of integer variables */
-   int nstartfracs;      /* number of fractional variables that should be integer at the beginning of the heuristic */
    int nfracs;           /* number of fractional variables updated after each pumping round*/
    int i;
    int j;
@@ -367,7 +369,7 @@ DECL_HEUREXEC(heurExecFeaspump)
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
+   maxnlpiterations = (Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
   
    /* don't try to dive, if we took too many LP iterations during diving */
@@ -375,7 +377,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
    
    /* allow at least a certain number of LP iterations in this dive */
-   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
+   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
    
    /* calculate maximal number of flips and loops */
    maxflips = 3*heurdata->minflips;
@@ -414,7 +416,6 @@ DECL_HEUREXEC(heurExecFeaspump)
    else  
       objfactor = heurdata->objfactor;
    alpha = 1.0;
-   nstartfracs = nfracs;
    nloops = 0;
    while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops )
    {
@@ -450,7 +451,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       {
          var = vars[i];
          solval = SCIPvarGetLPSol(var);
-         orgobjcoeff = SCIPvarGetObj(var) * SQRT(nbinvars + nintvars) / objnorm;
+         orgobjcoeff = SCIPvarGetObj(var) * SQRT((Real)(nbinvars + nintvars)) / objnorm;
 
          /* handle all integer variables*/
          if( i < nbinvars + nintvars )
@@ -542,7 +543,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       
       /* the LP with the new (distance) objective is solved */
       nlpiterations = SCIPgetNLPIterations(scip);
-      CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations , &lperror) );
+      CHECK_OKAY( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* check whether LP was solved optimal */

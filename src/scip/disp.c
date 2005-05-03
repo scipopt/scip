@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.41 2005/02/16 17:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.42 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -488,8 +488,8 @@ static
 const char decpowerchar[] = {' ', 'k', 'M', 'G', 'T', 'P', 'E'};
 #define MAXDECPOWER 6
 
-/** displays an integer in decimal form fitting in a given width */
-void SCIPdispDecimal(
+/** displays a long integer in decimal form fitting in a given width */
+void SCIPdispLongint(
    FILE*            file,               /**< output stream */
    Longint          val,                /**< value to display */
    int              width               /**< width to fit into */
@@ -532,6 +532,17 @@ void SCIPdispDecimal(
          fprintf(file, format, val);
    }
 }
+
+/** displays an integer in decimal form fitting in a given width */
+void SCIPdispInt(
+   FILE*            file,               /**< output stream */
+   int              val,                /**< value to display */
+   int              width               /**< width to fit into */
+   )
+{
+   SCIPdispLongint(file, (Longint)val, width);
+}
+
 
 static
 const char timepowerchar[] = {'s', 'm', 'h', 'd', 'y'};

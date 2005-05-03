@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.178 2005/05/02 15:55:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.179 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -189,7 +189,6 @@ RETCODE SCIPpropagateDomains(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
    int              depth,              /**< depth level to use for propagator frequency checks */
    int              maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
@@ -1160,8 +1159,7 @@ RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
-                  CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, 
-                        SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+                  CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
                }
                
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
@@ -1736,7 +1734,7 @@ RETCODE solveNode(
       if( propagateagain && !(*cutoff) )
       {
          propagateagain = FALSE;
-         CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+         CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);

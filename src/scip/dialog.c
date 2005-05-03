@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.18 2005/02/16 17:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.19 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -137,7 +137,7 @@ static
 RETCODE addHistory(
    const char*      s                   /**< string to add to the command history */
    )
-{
+{  /*lint --e{715}*/
    /* nothing to do here */
    return SCIP_OKAY;
 }
@@ -156,7 +156,7 @@ static
 RETCODE removeHistory(
    int              pos                 /**< list position of history entry to remove */
    )
-{
+{  /*lint --e{715}*/
    /* nothing to do here */
    return SCIP_OKAY;
 }

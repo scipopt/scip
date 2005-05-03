@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.53 2005/03/21 11:37:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.54 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   reader_mps.c
  * @brief  mps file reader
@@ -336,10 +336,10 @@ void mpsinputEntryIgnored(
 static
 void clearFrom(
    char*            buf,
-   int              pos
+   unsigned int     pos
    )
 {
-   int i;
+   unsigned int i;
 
    for(i = pos; i < 80; i++)
       buf[i] = BLANK;

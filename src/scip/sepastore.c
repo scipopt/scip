@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.36 2005/04/29 12:56:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.37 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -503,7 +503,7 @@ RETCODE SCIPsepastoreAddCut(
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* debug: check cut for feasibility */
-   CHECK_OKAY( SCIPdebugCheckRow(cut, set) );
+   CHECK_OKAY( SCIPdebugCheckRow(cut, set) ); /*lint !e506 !e774*/
 
    /* update statistics of total number of found cuts */
    if( !sepastore->initiallp )

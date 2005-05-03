@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.4 2005/05/02 15:55:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.5 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   tclique_graph.c
  * @brief  tclique data part of algorithm for maximum cliques
@@ -46,13 +46,13 @@
 
 
 
-#define ALLOC_NO(x)  do                                                 \
+#define ALLOC_FALSE(x)  do                                                 \
    {                                                                    \
       if( NULL == (x) )                                                 \
       {                                                                 \
          printf("[%s:%d] ERROR: No memory in function call\n", __FILE__, __LINE__); \
          fflush(stdout);                                                \
-         return NO;                                                     \
+         return FALSE;                                                     \
       }                                                                 \
    }                                                                    \
    while( FALSE )
@@ -77,13 +77,13 @@ struct _TCLIQUEDATA
 
 
 /** creates tclique data structure */
-BOOL tcliqueCreate(
+Bool tcliqueCreate(
    TCLIQUEDATA**    tcliquedata         /**< pointer to store tclique data structure */
    )
 {
    assert(tcliquedata != NULL);
 
-   ALLOC_NO( allocMemory(tcliquedata) );
+   ALLOC_FALSE( allocMemory(tcliquedata) );
 
    (*tcliquedata)->nnodes = 0;
    (*tcliquedata)->nedges = 0;
@@ -99,7 +99,7 @@ BOOL tcliqueCreate(
    (*tcliquedata)->ncachededges = 0;
    (*tcliquedata)->sizecachededges = 0;
 
-   return YES;
+   return TRUE;
 }
 
 /** frees tclique data structure */
@@ -124,7 +124,7 @@ void tcliqueFree(
 
 /** ensures, that arrays concerning edges in tclique data structure can store at least num entries */
 static
-BOOL tcliqueEnsureSizeEdges(
+Bool tcliqueEnsureSizeEdges(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              num                 /**< minimum number of entries concerning edges to store */
    )
@@ -139,18 +139,18 @@ BOOL tcliqueEnsureSizeEdges(
       if( newsize < num )
          newsize = num;
 
-      ALLOC_NO( reallocMemoryArray(&tcliquedata->adjnodes, newsize) );
+      ALLOC_FALSE( reallocMemoryArray(&tcliquedata->adjnodes, newsize) );
       tcliquedata->sizeedges = newsize;
    }
 
    assert(num <= tcliquedata->sizeedges);
 
-   return YES;
+   return TRUE;
 }
 
 /** ensures, that arrays concerning cached edges in tclique data structure can store at least num entries */
 static
-BOOL tcliqueEnsureSizeCachedEdges(
+Bool tcliqueEnsureSizeCachedEdges(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              num                 /**< minimum number of entries concerning cached edges to store */
    )
@@ -165,19 +165,19 @@ BOOL tcliqueEnsureSizeCachedEdges(
       if( newsize < num )
          newsize = num;
 
-      ALLOC_NO( reallocMemoryArray(&tcliquedata->cachedorigs, newsize) );
-      ALLOC_NO( reallocMemoryArray(&tcliquedata->cacheddests, newsize) );
+      ALLOC_FALSE( reallocMemoryArray(&tcliquedata->cachedorigs, newsize) );
+      ALLOC_FALSE( reallocMemoryArray(&tcliquedata->cacheddests, newsize) );
       tcliquedata->sizecachededges = newsize;
    }
 
    assert(num <= tcliquedata->sizecachededges);
 
-   return YES;
+   return TRUE;
 }
 
 /** ensures, that arrays concerning nodes in tclique data structure can store at least num entries */
 static
-BOOL tcliqueEnsureSizeNodes(
+Bool tcliqueEnsureSizeNodes(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              num                 /**< minimum number of entries concerning nodes to store */
    )
@@ -185,7 +185,7 @@ BOOL tcliqueEnsureSizeNodes(
    assert(tcliquedata != NULL);
    
    if( !tcliqueEnsureSizeEdges(tcliquedata, 1) )
-      return NO;
+      return FALSE;
    assert(tcliquedata->adjnodes != NULL);
    
    if( num > tcliquedata->sizenodes )
@@ -197,9 +197,9 @@ BOOL tcliqueEnsureSizeNodes(
       if( newsize < num )
          newsize = num;
 
-      ALLOC_NO( reallocMemoryArray(&tcliquedata->weights, newsize) );
-      ALLOC_NO( reallocMemoryArray(&tcliquedata->degrees, newsize) );
-      ALLOC_NO( reallocMemoryArray(&tcliquedata->adjedges, newsize) );
+      ALLOC_FALSE( reallocMemoryArray(&tcliquedata->weights, newsize) );
+      ALLOC_FALSE( reallocMemoryArray(&tcliquedata->degrees, newsize) );
+      ALLOC_FALSE( reallocMemoryArray(&tcliquedata->adjedges, newsize) );
 
       for( i = tcliquedata->sizenodes; i < newsize; i++ )
       {
@@ -212,7 +212,7 @@ BOOL tcliqueEnsureSizeNodes(
       if( tcliquedata->ncachededges > 0 )
       {
          assert(tcliquedata->cacheddegrees != NULL);
-         ALLOC_NO( reallocMemoryArray(&tcliquedata->cacheddegrees, newsize) );
+         ALLOC_FALSE( reallocMemoryArray(&tcliquedata->cacheddegrees, newsize) );
          for( i = tcliquedata->sizenodes; i < newsize; i++ )
             tcliquedata->cacheddegrees[i] = 0;
       }
@@ -221,12 +221,12 @@ BOOL tcliqueEnsureSizeNodes(
    }
    assert(num <= tcliquedata->sizenodes);
 
-   return YES;
+   return TRUE;
 }
 
 
 /** adds nodes up to the given node number to tclique data structure (intermediate nodes have weight 0) */
-BOOL tcliqueAddNode(
+Bool tcliqueAddNode(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              node,               /**< node number to add */
    WEIGHT           weight              /**< weight of node to add */
@@ -235,7 +235,7 @@ BOOL tcliqueAddNode(
    assert(weight >= 0);
 
    if( !tcliqueEnsureSizeNodes(tcliquedata, node + 1) )
-      return NO;
+      return FALSE;
 
    tcliquedata->weights[node] = weight;
    
@@ -244,7 +244,7 @@ BOOL tcliqueAddNode(
    assert(tcliquedata->adjedges[node].last == tcliquedata->adjedges[node].first);
    tcliquedata->nnodes = MAX(tcliquedata->nnodes, node+1);
 
-   return YES;
+   return TRUE;
 }
 
 /** changes weight of node in tclique data structure */
@@ -265,7 +265,7 @@ void tcliqueChangeWeight(
  *  new edges are cached, s.t. the graph data structures are not correct until a call to tcliqueFlush();
  *  you have to make sure, that no double edges are inserted
  */
-BOOL tcliqueAddEdge(
+Bool tcliqueAddEdge(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              node1,              /**< start node of edge to add */
    int              node2               /**< end node of edge to add */
@@ -277,13 +277,13 @@ BOOL tcliqueAddEdge(
    assert(node1 != node2);
 
    if( !tcliqueEnsureSizeCachedEdges(tcliquedata, tcliquedata->ncachededges + 2) )
-      return NO;
+      return FALSE;
 
    /* make sure, the array for counting the cached node degrees exists */
    if( tcliquedata->ncachededges == 0 && tcliquedata->sizenodes > 0 )
    {
       assert(tcliquedata->cacheddegrees == NULL);
-      ALLOC_NO( allocMemoryArray(&tcliquedata->cacheddegrees, tcliquedata->sizenodes) );
+      ALLOC_FALSE( allocMemoryArray(&tcliquedata->cacheddegrees, tcliquedata->sizenodes) );
       clearMemoryArray(tcliquedata->cacheddegrees, tcliquedata->sizenodes);
    }
    assert(tcliquedata->cacheddegrees != NULL);
@@ -298,11 +298,11 @@ BOOL tcliqueAddEdge(
    tcliquedata->cacheddegrees[node1]++;
    tcliquedata->cacheddegrees[node2]++;
 
-   return YES;
+   return TRUE;
 }
 
 /** inserts all cached edges into the data structures */
-BOOL tcliqueFlush(
+Bool tcliqueFlush(
    TCLIQUEDATA*     tcliquedata         /**< tclique data structure */
    )
 {
@@ -318,7 +318,7 @@ BOOL tcliqueFlush(
 
       /* reallocate adjnodes array to be able to store all additional edges */
       if( !tcliqueEnsureSizeEdges(tcliquedata, tcliquedata->nedges + tcliquedata->ncachededges) )
-         return NO;
+         return FALSE;
       assert(tcliquedata->adjnodes != NULL);
       assert(tcliquedata->adjedges != NULL);
 
@@ -433,11 +433,11 @@ BOOL tcliqueFlush(
    }   
 #endif
 
-   return YES;
+   return TRUE;
 }
 
 /** loads tclique data structure from file */
-BOOL tcliqueLoadFile(
+Bool tcliqueLoadFile(
    TCLIQUEDATA**    tcliquedata,        /**< pointer to store tclique data structure */
    const char*      filename,           /**< name of file with graph data */
    double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
@@ -460,12 +460,12 @@ BOOL tcliqueLoadFile(
       if( (file = fopen("default.dat", "r")) == NULL )
       {
          printf("\nCan't open file: %s", filename);
-         return NO;
+         return FALSE;
       }
    }
  
    if( !tcliqueCreate(tcliquedata) )
-      return NO;
+      return FALSE;
  
    /* set name of problem, number of nodes and number of edges in graph */
    fscanf(file, "%s", probname);
@@ -473,10 +473,10 @@ BOOL tcliqueLoadFile(
    fscanf(file, "%d", &(*tcliquedata)->nedges);
    
    /* set data structures for tclique */
-   ALLOC_NO( allocMemoryArray(&(*tcliquedata)->weights, (*tcliquedata)->nnodes) );
-   ALLOC_NO( allocMemoryArray(&(*tcliquedata)->degrees, (*tcliquedata)->nnodes) );
-   ALLOC_NO( allocMemoryArray(&(*tcliquedata)->adjnodes, (*tcliquedata)->nedges) );
-   ALLOC_NO( allocMemoryArray(&(*tcliquedata)->adjedges, (*tcliquedata)->nnodes) );
+   ALLOC_FALSE( allocMemoryArray(&(*tcliquedata)->weights, (*tcliquedata)->nnodes) );
+   ALLOC_FALSE( allocMemoryArray(&(*tcliquedata)->degrees, (*tcliquedata)->nnodes) );
+   ALLOC_FALSE( allocMemoryArray(&(*tcliquedata)->adjnodes, (*tcliquedata)->nedges) );
+   ALLOC_FALSE( allocMemoryArray(&(*tcliquedata)->adjedges, (*tcliquedata)->nnodes) );
 
    /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquedata)->nnodes; i++ )
@@ -509,11 +509,11 @@ BOOL tcliqueLoadFile(
    /* close file */
    fclose(file);
    
-   return YES;
+   return TRUE;
 }
 
 /** saves tclique data structure to file */
-BOOL tcliqueSaveFile(
+Bool tcliqueSaveFile(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    const char*      filename,           /**< name of file to create */
    double           scaleval,           /**< value to unscale weights with */
@@ -531,7 +531,7 @@ BOOL tcliqueSaveFile(
    if( (file = fopen(filename, "w")) == NULL )
    {
       printf("\nCan't create file: %s", filename);
-      return NO;
+      return FALSE;
    }
  
    /* write name of problem, number of nodes and number of edges in graph */
@@ -553,7 +553,7 @@ BOOL tcliqueSaveFile(
    /* close file */
    fclose(file);
    
-   return YES;
+   return TRUE;
 }
 
 /** gets number of nodes in the graph */
@@ -773,7 +773,6 @@ void tcliquePrintData(
    )
 {
    int* weights;
-   int* adjnodes;
    int* degrees;
    int i;
 
@@ -782,7 +781,6 @@ void tcliquePrintData(
 
    degrees = tcliqueGetDegrees(tcliquedata);
    weights = tcliqueGetWeights(tcliquedata);
-   adjnodes = tcliqueGetAdjnodes(tcliquedata);
 
    printf("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquedata), tcliqueGetNEdges(tcliquedata));
    for( i = 0; i < tcliqueGetNNodes(tcliquedata); i++ )

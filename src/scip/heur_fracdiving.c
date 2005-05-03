@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.33 2005/03/21 16:42:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.34 2005/05/03 14:48:02 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -56,6 +56,8 @@
                                          *   where diving is performed */
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 8.0 /**< maximal AVGQUOT when no solution was found yet */
+
+#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
 
 
@@ -239,7 +241,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
+   maxnlpiterations = (Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
    /* don't try to dive, if we took too many LP iterations during diving */
@@ -247,7 +249,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* allow at least a certain number of LP iterations in this dive */
-   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
+   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
    /* calculate the objective search bound */
    if( SCIPgetNSolsFound(scip) == 0 )
@@ -455,7 +457,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
-      CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations, &lperror) );
+      CHECK_OKAY( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       if( lperror )
          break;
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.6 2005/05/03 08:41:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.7 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -552,7 +552,7 @@ DECL_SEPAFREE(sepaFreeClique)
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
 DECL_SEPAEXITSOL(sepaExitsolClique)
-{ 
+{  /*lint --e{715}*/
    SEPADATA* sepadata;
    
    sepadata = SCIPsepaGetData(sepa);
@@ -575,7 +575,7 @@ DECL_SEPAEXITSOL(sepaExitsolClique)
 /** execution method of separator */
 static
 DECL_SEPAEXEC(sepaExecClique)
-{
+{  /*lint --e{715}*/
    SEPADATA* sepadata;
    int* cliquenodes; 	        
    WEIGHT cliqueweight;    

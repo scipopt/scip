@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.141 2005/05/02 11:42:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.142 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -930,7 +930,6 @@ RETCODE nodeRepropagate(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
@@ -997,7 +996,7 @@ RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, SCIPnodeGetDepth(node), 0, cutoff) );
+   CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, tree, SCIPnodeGetDepth(node), 0, cutoff) );
    assert(!node->reprop);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
    assert((NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
@@ -1066,7 +1065,6 @@ RETCODE nodeActivate(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
@@ -1115,7 +1113,7 @@ RETCODE nodeActivate(
    {
       Bool propcutoff;
 
-      CHECK_OKAY( nodeRepropagate(node, blkmem, set, stat, prob, primal, tree, lp, branchcand, 
+      CHECK_OKAY( nodeRepropagate(node, blkmem, set, stat, primal, tree, lp, branchcand, 
             eventfilter, eventqueue, &propcutoff) );
       *cutoff = *cutoff || propcutoff;
    }
@@ -1781,7 +1779,6 @@ RETCODE treeSwitchPath(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
-   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1841,7 +1838,7 @@ RETCODE treeSwitchPath(
       assert(fork->active);
       assert(!fork->cutoff);
 
-      CHECK_OKAY( nodeRepropagate(fork, blkmem, set, stat, prob, primal, tree, lp, branchcand, 
+      CHECK_OKAY( nodeRepropagate(fork, blkmem, set, stat, primal, tree, lp, branchcand, 
             eventfilter, eventqueue, cutoff) );
    }
    assert(fork != NULL || !(*cutoff));
@@ -1857,7 +1854,7 @@ RETCODE treeSwitchPath(
 
       /* activate the node, and apply domain propagation if the reprop flag is set */
       tree->pathlen++;
-      CHECK_OKAY( nodeActivate(tree->path[i], blkmem, set, stat, prob, primal, tree, lp, branchcand,
+      CHECK_OKAY( nodeActivate(tree->path[i], blkmem, set, stat, primal, tree, lp, branchcand,
             eventfilter, eventqueue, cutoff) );
    }
 
@@ -2853,7 +2850,7 @@ RETCODE SCIPnodeFocus(
    tree->focussubroot = subroot;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
-   CHECK_OKAY( treeSwitchPath(tree, blkmem, set, stat, prob, primal, lp, branchcand, eventfilter, eventqueue, 
+   CHECK_OKAY( treeSwitchPath(tree, blkmem, set, stat, primal, lp, branchcand, eventfilter, eventqueue, 
          fork, *node, cutoff) );
    assert(tree->pathlen >= 0);
    assert(*node != NULL || tree->pathlen == 0);

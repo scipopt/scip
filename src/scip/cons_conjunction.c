@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.17 2005/04/26 14:32:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.18 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -477,7 +477,7 @@ DECL_CONSLOCK(consLockConjunction)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintConjunction)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int i;
 

@@ -1,5 +1,6 @@
-#--- $Id: make.osf1.alpha.gnu.dbg,v 1.6 2005/04/14 18:55:05 bzfpfets Exp $
-FLAGS		+=	-O -g # -DWITH_READLINE
+#--- $Id: make.osf1.alpha.gnu.dbg,v 1.7 2005/05/03 14:47:59 bzfpfend Exp $
+FLAGS		+=	# -DWITH_READLINE
+OFLAGS		+=	-O -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs

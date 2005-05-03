@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.12 2005/03/21 16:42:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objfeaspump.c,v 1.13 2005/05/03 14:48:02 bzfpfend Exp $"
 
 /**@file   heur_objfeaspump.c
  * @brief  variant of feasibility pump heuristic by Fischetti, Glover and Lodi, taking the objective into account
@@ -53,6 +53,9 @@
                                          *   (-1: no limit) */
 #define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
+
+#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
+
 
 
 /* locally defined heuristic data */
@@ -203,7 +206,7 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
    nlpiterations = SCIPgetNNodeLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = SCIPheurGetNSolsFound(heur);
-   maxnlpiterations = (1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations;
+   maxnlpiterations = (Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
    maxnlpiterations += heurdata->maxlpiterofs;
 
    /* don't try to dive, if we took too many LP iterations during diving */
@@ -211,7 +214,7 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* allow at least a certain number of LP iterations in this dive */
-   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + 10000);
+   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
 
 
    *result = SCIP_DIDNOTFIND;
@@ -221,9 +224,9 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
 
    /* calculate the maximal diving depth */
    if( SCIPgetNSolsFound(scip) == 0 )
-      maxdivedepth = heurdata->depthfacnosol * (nbinvars + nintvars);
+      maxdivedepth = (int)(heurdata->depthfacnosol * (nbinvars + nintvars));
    else
-      maxdivedepth = heurdata->depthfac * (nbinvars + nintvars);
+      maxdivedepth = (int)(heurdata->depthfac * (nbinvars + nintvars));
 
    /* start diving */
    CHECK_OKAY( SCIPstartDive(scip) );
@@ -334,7 +337,7 @@ DECL_HEUREXEC(heurExecObjfeaspump) /*lint --e{715}*/
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
-      CHECK_OKAY( SCIPsolveDiveLP(scip, maxnlpiterations, &lperror) );
+      CHECK_OKAY( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       if( lperror )
          break;
 

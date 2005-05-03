@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.164 2005/05/02 15:55:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.165 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -82,10 +82,10 @@
 #define DEFAULT_MAXPRESOLAGGRROUNDS  -1 /**< maximal number of presolving aggregation rounds (-1: no limit) */
 
 #define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
-#define KNAPSACKRELAX_MAXDNOM      1000 /**< maximal allowed denominator in knapsack rational relaxation */
+#define KNAPSACKRELAX_MAXDNOM    1000LL /**< maximal allowed denominator in knapsack rational relaxation */
 #define KNAPSACKRELAX_MAXSCALE   1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
-#define MAXDNOM                   10000 /**< maximal denominator for simple rational fixed values */
+#define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
 /** constraint data for linear constraints */
@@ -2324,7 +2324,7 @@ RETCODE tightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newub=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2357,7 +2357,7 @@ RETCODE tightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n", 
@@ -2394,7 +2394,7 @@ RETCODE tightenVarBounds(
             /* tighten lower bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g] -> newlb=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
-            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -2427,7 +2427,7 @@ RETCODE tightenVarBounds(
             /* tighten upper bound */
             debugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.9f,%.9f], val=%g, resactivity=[%g,%g], sides=[%g,%g], newub=%.9f\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
-            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, var, newub, cons, (int)PROPRULE_1, &infeasible, &tightened) );
             if( infeasible )
             {
                debugMessage("linear constraint <%s>: cutoff  <%s>, new bds=[%.9f,%.9f]\n",
@@ -4492,7 +4492,7 @@ DECL_CONSEXITPRE(consExitpreLinear)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 DECL_CONSEXITSOL(consExitsolLinear)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -5143,7 +5143,7 @@ DECL_CONSLOCK(consLockLinear)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintLinear)
-{
+{  /*lint --e{715}*/
    consdataPrint(scip, SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;

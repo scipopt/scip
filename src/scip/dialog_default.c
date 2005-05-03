@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.47 2005/02/15 19:59:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.48 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -25,7 +25,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <ctype.h>
 
 #include "scip/dialog_default.h"
 

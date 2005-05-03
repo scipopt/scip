@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.52 2005/03/15 14:09:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.53 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -284,7 +284,7 @@ DECL_DISPOUTPUT(SCIPdispOutputNNodes)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NNODES) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, SCIPgetNNodes(scip), DISP_WIDT_NNODES);
+   SCIPdispLongint(file, SCIPgetNNodes(scip), DISP_WIDT_NNODES);
 
    return SCIP_OKAY;
 }
@@ -297,7 +297,7 @@ DECL_DISPOUTPUT(SCIPdispOutputNodesleft)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NODESLEFT) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNNodesLeft(scip), DISP_WIDT_NODESLEFT);
+   SCIPdispInt(file, SCIPgetNNodesLeft(scip), DISP_WIDT_NODESLEFT);
 
    return SCIP_OKAY;
 }
@@ -310,7 +310,7 @@ DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPITERATIONS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, SCIPgetNLPIterations(scip), DISP_WIDT_LPITERATIONS);
+   SCIPdispLongint(file, SCIPgetNLPIterations(scip), DISP_WIDT_LPITERATIONS);
 
    return SCIP_OKAY;
 }
@@ -323,7 +323,7 @@ DECL_DISPOUTPUT(SCIPdispOutputDepth)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_DEPTH) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetDepth(scip), DISP_WIDT_DEPTH);
+   SCIPdispInt(file, SCIPgetDepth(scip), DISP_WIDT_DEPTH);
 
    return SCIP_OKAY;
 }
@@ -336,7 +336,7 @@ DECL_DISPOUTPUT(SCIPdispOutputMemused)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MEMUSED) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, SCIPgetMemUsed(scip), DISP_WIDT_MEMUSED);
+   SCIPdispLongint(file, SCIPgetMemUsed(scip), DISP_WIDT_MEMUSED);
 
    return SCIP_OKAY;
 }
@@ -349,7 +349,7 @@ DECL_DISPOUTPUT(SCIPdispOutputMaxdepth)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_MAXDEPTH) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetMaxDepth(scip), DISP_WIDT_MAXDEPTH);
+   SCIPdispInt(file, SCIPgetMaxDepth(scip), DISP_WIDT_MAXDEPTH);
 
    return SCIP_OKAY;
 }
@@ -362,7 +362,7 @@ DECL_DISPOUTPUT(SCIPdispOutputPlungedepth)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_PLUNGEDEPTH) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetPlungeDepth(scip), DISP_WIDT_PLUNGEDEPTH);
+   SCIPdispInt(file, SCIPgetPlungeDepth(scip), DISP_WIDT_PLUNGEDEPTH);
 
    return SCIP_OKAY;
 }
@@ -376,7 +376,7 @@ DECL_DISPOUTPUT(SCIPdispOutputNfrac)
    assert(scip != NULL);
 
    if( SCIPhasCurrentNodeLP(scip) && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
-      SCIPdispDecimal(file, (Longint)SCIPgetNLPBranchCands(scip), DISP_WIDT_NFRAC);
+      SCIPdispInt(file, SCIPgetNLPBranchCands(scip), DISP_WIDT_NFRAC);
    else
       fprintf(file, "   - ");
 
@@ -391,7 +391,7 @@ DECL_DISPOUTPUT(SCIPdispOutputVars)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_VARS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNVars(scip), DISP_WIDT_VARS);
+   SCIPdispInt(file, SCIPgetNVars(scip), DISP_WIDT_VARS);
 
    return SCIP_OKAY;
 }
@@ -404,7 +404,7 @@ DECL_DISPOUTPUT(SCIPdispOutputConss)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONSS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNGlobalConss(scip), DISP_WIDT_CONSS);
+   SCIPdispInt(file, SCIPgetNGlobalConss(scip), DISP_WIDT_CONSS);
 
    return SCIP_OKAY;
 }
@@ -417,7 +417,7 @@ DECL_DISPOUTPUT(SCIPdispOutputCurconss)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCONSS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNEnabledConss(scip), DISP_WIDT_CURCONSS);
+   SCIPdispInt(file, SCIPgetNEnabledConss(scip), DISP_WIDT_CURCONSS);
 
    return SCIP_OKAY;
 }
@@ -430,7 +430,7 @@ DECL_DISPOUTPUT(SCIPdispOutputCurcols)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURCOLS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNLPCols(scip), DISP_WIDT_CURCOLS);
+   SCIPdispInt(file, SCIPgetNLPCols(scip), DISP_WIDT_CURCOLS);
 
    return SCIP_OKAY;
 }
@@ -443,7 +443,7 @@ DECL_DISPOUTPUT(SCIPdispOutputCurrows)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CURROWS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNLPRows(scip), DISP_WIDT_CURROWS);
+   SCIPdispInt(file, SCIPgetNLPRows(scip), DISP_WIDT_CURROWS);
 
    return SCIP_OKAY;
 }
@@ -456,7 +456,7 @@ DECL_DISPOUTPUT(SCIPdispOutputCuts)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CUTS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNCutsApplied(scip), DISP_WIDT_CUTS);
+   SCIPdispInt(file, SCIPgetNCutsApplied(scip), DISP_WIDT_CUTS);
 
    return SCIP_OKAY;
 }
@@ -469,7 +469,7 @@ DECL_DISPOUTPUT(SCIPdispOutputSeparounds)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_SEPAROUNDS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNSepaRounds(scip), DISP_WIDT_SEPAROUNDS);
+   SCIPdispInt(file, SCIPgetNSepaRounds(scip), DISP_WIDT_SEPAROUNDS);
 
    return SCIP_OKAY;
 }
@@ -482,7 +482,7 @@ DECL_DISPOUTPUT(SCIPdispOutputPoolsize)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_POOLSIZE) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, (Longint)SCIPgetNPoolCuts(scip), DISP_WIDT_POOLSIZE);
+   SCIPdispInt(file, SCIPgetNPoolCuts(scip), DISP_WIDT_POOLSIZE);
 
    return SCIP_OKAY;
 }
@@ -495,7 +495,7 @@ DECL_DISPOUTPUT(SCIPdispOutputConflicts)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, SCIPgetNConflictClausesFound(scip), DISP_WIDT_CONFLICTS);
+   SCIPdispLongint(file, SCIPgetNConflictClausesFound(scip), DISP_WIDT_CONFLICTS);
 
    return SCIP_OKAY;
 }
@@ -508,7 +508,7 @@ DECL_DISPOUTPUT(SCIPdispOutputStrongbranchs)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_STRONGBRANCHS) == 0);
    assert(scip != NULL);
 
-   SCIPdispDecimal(file, SCIPgetNStrongbranchs(scip), DISP_WIDT_STRONGBRANCHS);
+   SCIPdispInt(file, SCIPgetNStrongbranchs(scip), DISP_WIDT_STRONGBRANCHS);
 
    return SCIP_OKAY;
 }

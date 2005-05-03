@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.29 2005/04/26 14:32:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.30 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -391,7 +391,7 @@ RETCODE propagateCons(
          if( newlb > xlb + 0.1 )
          {
             debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->var), xlb, xub, newlb, xub);
-            CHECK_OKAY( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, PROPRULE_1, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarLbCons(scip, consdata->var, newlb, cons, (int)PROPRULE_1, &infeasible, &tightened) );
             *cutoff = *cutoff || infeasible;
             tightenedround = tightenedround || tightened;
             xlb = newlb;
@@ -408,7 +408,8 @@ RETCODE propagateCons(
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
                   SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-               CHECK_OKAY( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, PROPRULE_2, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_2,
+                     &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                ylb = newlb;
@@ -422,7 +423,8 @@ RETCODE propagateCons(
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
                   SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-               CHECK_OKAY( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, PROPRULE_2, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_2,
+                     &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                yub = newub;
@@ -444,7 +446,7 @@ RETCODE propagateCons(
          if( newub < xub - 0.1 )
          {
             debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", SCIPvarGetName(consdata->var), xlb, xub, xlb, newub);
-            CHECK_OKAY( SCIPinferVarUbCons(scip, consdata->var, newub, cons, PROPRULE_3, &infeasible, &tightened) );
+            CHECK_OKAY( SCIPinferVarUbCons(scip, consdata->var, newub, cons, (int)PROPRULE_3, &infeasible, &tightened) );
             *cutoff = *cutoff || infeasible;
             tightenedround = tightenedround || tightened;
             xub = newub;
@@ -461,7 +463,8 @@ RETCODE propagateCons(
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
                   SCIPvarGetName(consdata->vbdvar), ylb, yub, ylb, newub);
-               CHECK_OKAY( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, PROPRULE_4, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarUbCons(scip, consdata->vbdvar, newub, cons, (int)PROPRULE_4,
+                     &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                yub = newub;
@@ -475,7 +478,8 @@ RETCODE propagateCons(
             {
                debugMessage(" -> tighten <%s>[%g,%g] -> [%g,%g]\n", 
                   SCIPvarGetName(consdata->vbdvar), ylb, yub, newlb, yub);
-               CHECK_OKAY( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, PROPRULE_4, &infeasible, &tightened) );
+               CHECK_OKAY( SCIPinferVarLbCons(scip, consdata->vbdvar, newlb, cons, (int)PROPRULE_4,
+                     &infeasible, &tightened) );
                *cutoff = *cutoff || infeasible;
                tightenedround = tightenedround || tightened;
                ylb = newlb;
@@ -622,7 +626,7 @@ RETCODE resolvePropagation(
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 DECL_CONSEXITSOL(consExitsolVarbound)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -946,7 +950,7 @@ DECL_CONSLOCK(consLockVarbound)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintVarbound)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
 
    consdata = SCIPconsGetData(cons);
@@ -1045,7 +1049,7 @@ DECL_LINCONSUPGD(linconsUpgdVarbound)
 /** execution methode of bound change event handler */
 static
 DECL_EVENTEXEC(eventExecVarbound)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
 
    consdata = (CONSDATA*)eventdata;

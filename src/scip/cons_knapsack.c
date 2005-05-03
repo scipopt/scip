@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.92 2005/05/02 11:42:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.93 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -507,7 +507,7 @@ RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-#define IDX(j,d) ((j)*(capacity+1)+(d))
+#define IDX(j,d) ((j)*(intcap+1)+(d))
 
 /** solves knapsack problem with dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
@@ -527,29 +527,39 @@ RETCODE SCIPsolveKnapsack(
    ) 
 {
    Real* optvalues;
+   int intcap;
    int d;
    int j;
 
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
+   assert(capacity < INT_MAX);
    assert(nitems >= 0);
 
-   CHECK_OKAY( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(capacity+1)) );
+   intcap = (int)capacity;
+   assert(intcap >= 0);
+   CHECK_OKAY( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
    
    /* fill dynamic programming table with optimal values */
-   for( d = 0; d <= capacity; d++ )
+   for( d = 0; d <= intcap; d++ )
       optvalues[IDX(0,d)] = 0.0;
    for( j = 1; j <= nitems; j++ )
    {
-      for( d = 0; d < weights[j-1] && d <= capacity; d++)
+      int intweight;
+
+      assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
+      intweight = (int)weights[j-1];
+      assert(intweight >= 0);
+
+      for( d = 0; d < intweight && d <= intcap; d++ )
          optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
-      for( d = weights[j-1]; d <= capacity; d++ )
+      for( d = intweight; d <= intcap; d++ )
       {
-         if( optvalues[IDX(j-1,d-weights[j-1])]+profits[j-1] > optvalues[IDX(j-1,d)] )
-            optvalues[IDX(j,d)] = optvalues[IDX(j-1,d-weights[j-1])] + profits[j-1];
-         else
-            optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
+         Real sumprofit;
+
+         sumprofit = optvalues[IDX(j-1,d-intweight)] + profits[j-1];
+         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
       } 
    }
 
@@ -563,15 +573,16 @@ RETCODE SCIPsolveKnapsack(
 
       *nnonsolitems = 0;
       *nsolitems = 0;
-      d = capacity;
+      d = intcap;
       
       for( j = nitems; j > 0; j-- )
       {
          if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
          {
+            assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
             solitems[*nsolitems] = items[j-1];
             (*nsolitems)++;
-            d -= weights[j-1];
+            d -= (int)weights[j-1];
          } 
          else
          { 
@@ -584,7 +595,7 @@ RETCODE SCIPsolveKnapsack(
    }
 
    if( solval != NULL )
-      *solval = optvalues[IDX(nitems,capacity)];
+      *solval = optvalues[IDX(nitems,intcap)];
 
    SCIPfreeBufferArray(scip, &optvalues);
 
@@ -1567,7 +1578,7 @@ DECL_CONSFREE(consFreeKnapsack)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 DECL_CONSEXITSOL(consExitsolKnapsack)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -1991,7 +2002,7 @@ DECL_CONSLOCK(consLockKnapsack)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintKnapsack)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int i;
 
@@ -2070,7 +2081,8 @@ RETCODE createNormalizedKnapsack(
    /* negate positive or negative variables */
    for( v = 0; v < nvars; ++v )
    {
-      weight = mult * vals[v];
+      assert(SCIPisFeasIntegral(scip, vals[v]));
+      weight = mult * (Longint)SCIPfeasFloor(scip, vals[v]);
       if( weight > 0 )
       {
          transvars[v] = vars[v];
@@ -2139,7 +2151,7 @@ DECL_LINCONSUPGD(linconsUpgdKnapsack)
 /** execution methode of bound change event handler */
 static
 DECL_EVENTEXEC(eventExecKnapsack)
-{
+{  /*lint --e{715}*/
    assert(eventdata != NULL);
    assert(eventdata->consdata != NULL);
    

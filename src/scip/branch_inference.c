@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.9 2005/02/14 13:35:39 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.10 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   branch_inference.c
  * @brief  inference history branching rule
@@ -123,7 +123,7 @@ DECL_BRANCHFREE(branchFreeInference)
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpInference)
-{
+{  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
    VAR** lpcands;
    int nlpcands;
@@ -149,7 +149,7 @@ DECL_BRANCHEXECLP(branchExeclpInference)
 /** branching execution method for not completely fixed pseudo solutions */
 static
 DECL_BRANCHEXECPS(branchExecpsInference)
-{
+{  /*lint --e{715}*/
    BRANCHRULEDATA* branchruledata;
    VAR** pseudocands;
    int npseudocands;

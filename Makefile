@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.106 2005/05/02 11:42:54 bzfpfend Exp $
+# $Id: Makefile,v 1.107 2005/05/03 14:47:58 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -59,6 +59,7 @@ LINT		=	flexelint
 DOXY		=	doxygen
 
 FLAGS		=	-I$(SRCDIR)
+OFLAGS		=
 CFLAGS		=	
 CXXFLAGS	=	
 LDFLAGS		=	-lpthread -lm
@@ -317,9 +318,14 @@ MAINXXX		=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
 all:            $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE)
 
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
-		$(LINT) lint/$(MAINNAME).lnt -os\(lint.out\) \
-		$(FLAGS) -UNDEBUG $^
+lint:		$(SCIPLIBSRC) $(LPILIBSRC) $(MAINSRC) $(OBJSCIPLIBSRC)
+		-rm -f lint.out
+		$(SHELL) -ec 'for i in $^; \
+			do \
+			echo $$i; \
+			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			done'
 
 doc:		
 		cd doc; $(DOXY) $(MAINNAME).dxy
@@ -378,12 +384,12 @@ depend:		lpidepend
 $(MAINFILE):	$(BINDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINXXX)
 ifeq ($(LINKER),C)
 		$(CC) $(MAINXXX) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(LPSLDFLAGS) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 endif
 ifeq ($(LINKER),CPP)
 		$(CXX) $(MAINXXX) \
-		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(LPSLDFLAGS) \
+		-L$(LIBDIR) -l$(SCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 endif
 
@@ -403,9 +409,9 @@ $(LPILIBFILE):	$(OBJSUBDIRS) $(LIBDIR) $(LPILIBXXX)
 		$(RANLIB) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
-		$(CC) $(FLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(CFLAGS) $(OFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
-		$(CXX) $(FLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(CXXFLAGS) $(OFLAGS) -c $< -o $@
 
 # --- EOF ---------------------------------------------------------------------

@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.6 2005/05/02 15:55:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.7 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -133,14 +133,14 @@ int compSubcliques(
 {
    int pos1;
    int pos2;
-   BOOL clique2smaller;
+   Bool clique2smaller;
 
    assert(clique1 != NULL);
    assert(clique2 != NULL);
 
    pos1 = 0;
    pos2 = 0;
-   clique2smaller = NO;
+   clique2smaller = FALSE;
    while( pos1 < clique1->nnodes && pos2 < clique2->nnodes )
    {
       if( clique1->nodes[pos1] < clique2->nodes[pos2] )
@@ -156,7 +156,7 @@ int compSubcliques(
           * contained in clique2
           */
          pos2++;
-         clique2smaller = YES;
+         clique2smaller = TRUE;
       }
       else
       {
@@ -290,7 +290,7 @@ void printCliquetable(
 
 /** searches the given clique in the clique table and returns whether it (or a stronger clique) exists */
 static
-BOOL inCliquetable(
+Bool inCliquetable(
    CLIQUETABLE*     cliquetable,        /**< clique table */
    CLIQUE*          clique,             /**< clique to search in the table */
    int*             insertpos           /**< position where the clique should be inserted in the table */
@@ -320,7 +320,7 @@ BOOL inCliquetable(
       else
       {
          *insertpos = middle;
-         return YES;
+         return TRUE;
       }
    }
 
@@ -331,10 +331,10 @@ BOOL inCliquetable(
       cmp = compSubcliques(clique, cliquetable->cliques[middle]);
       assert(cmp >= 0);
       if( cmp == 0 )
-         return YES;
+         return TRUE;
    }
 
-   return NO;
+   return FALSE;
 }
 
 /** inserts clique into clique table */
@@ -463,12 +463,12 @@ void newSolution(
    WEIGHT*          maxcliqueweight,    /**< pointer to store weight of the maximum weight clique */
    TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
    void*            usrdata,            /**< user data to pass to user callback function */
-   BOOL*            stopsolving         /**< pointer to store whether the solving should be stopped */
+   Bool*            stopsolving         /**< pointer to store whether the solving should be stopped */
    )
 {
    CLIQUE* clique;
    int insertpos;
-   BOOL acceptsol;
+   Bool acceptsol;
 
    assert(cliquetable != NULL);
    assert(curcliquenodes != NULL);
@@ -478,8 +478,8 @@ void newSolution(
    assert(curcliqueweight > *maxcliqueweight);
    assert(stopsolving != NULL);
 
-   acceptsol = YES;
-   *stopsolving = NO;
+   acceptsol = TRUE;
+   *stopsolving = FALSE;
    clique = NULL;
    insertpos = 0;
 
@@ -622,7 +622,7 @@ WEIGHT boundSubgraph(
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbour color information of all nodes */
-   BOOL*            iscolored,          /**< coloring status of all nodes */
+   Bool*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          apbound,            /**< apriori bound of nodes for branching */ 
    int*             tmpcliquenodes,     /**< buffer for storing the temporary clique */
    int*             ntmpcliquenodes,    /**< pointer to store number of nodes of the temporary clique */
@@ -716,7 +716,7 @@ int getMaxApBoundIndexNotMaxWeight(
  *  returns whether to stop branching
  */
 static
-BOOL branch( 
+Bool branch( 
    TCLIQUEDATA*     tcliquedata,        /**< pointer to tclique data structure */
    TCLIQUE_USRCALLBACK ((*usrcallback)),/**< user function to call on every new solution */
    void*            usrdata,            /**< user data to pass to user callback function */
@@ -728,7 +728,7 @@ BOOL branch(
    int*             Vzero,              /**< zero weighted nodes */
    int              nVzero,             /**< number of non-zero weighted nodes */
    NBC*             gsd,                /**< neighbour color information of all nodes */
-   BOOL*            iscolored,          /**< coloring status of all nodes */
+   Bool*            iscolored,          /**< coloring status of all nodes */
    int*             K,                  /**< nodes from the b&b tree */ 
    WEIGHT           weightK,            /**< weight of the nodes from b&b tree */
    int*             maxcliquenodes,     /**< pointer to store nodes of the maximum weight clique */
@@ -744,8 +744,8 @@ BOOL branch(
    int              maxntreenodes       /**< maximum number of nodes of b&b tree */
    )
 {
-   BOOL stopsolving;
-   BOOL isleaf;
+   Bool stopsolving;
+   Bool isleaf;
    WEIGHT* apbound;
    WEIGHT* weights;
    WEIGHT subgraphweight;
@@ -787,11 +787,11 @@ BOOL branch(
    printf("\n");
 #endif
    if( *ntreenodes > maxntreenodes )
-      return YES;
+      return TRUE;
 
    weights = tcliqueGetWeights(tcliquedata);
-   stopsolving = NO;
-   isleaf = YES;
+   stopsolving = FALSE;
+   isleaf = TRUE;
 
    /* allocate temporary memory for a priori bounds */
    ALLOC_ABORT( allocMemoryArray(&apbound, nV) );
@@ -881,7 +881,7 @@ BOOL branch(
             weightKold + apbound[branchidx], *maxcliqueweight); 
 
          /* because we branch on this node, the node is no leaf in the tree */
-         isleaf = NO;
+         isleaf = FALSE;
 
          /* update the set of nodes from the b&b tree 
           *   K = K & {branchingnode}
@@ -966,11 +966,10 @@ void tcliqueMaxClique(
    int nnodes;
    int nV;
    int nVzero;
-   int level;
    int i;
    CHKMEM* mem;
    NBC* gsd;
-   BOOL* iscolored;
+   Bool* iscolored;
    int* curcliquenodes;
    int ncurcliquenodes;
    WEIGHT curcliqueweight;
@@ -987,7 +986,6 @@ void tcliqueMaxClique(
       tcliqueGetNNodes(tcliquedata), tcliqueGetNEdges(tcliquedata));
 
    nnodes = tcliqueGetNNodes(tcliquedata);
-   level = 0;
 
    /* set up data structures */
    createCliquetable(&cliquetable, CLIQUETABLE_INITSIZE);
@@ -1029,7 +1027,7 @@ void tcliqueMaxClique(
    mem = createChunkMemory(sizeof(LIST_ITV), CHUNK_SIZE, -1); 
 
    /* branch to find maximum weight clique */
-   branch(tcliquedata, usrcallback, usrdata, mem, cliquetable,
+   (void)branch(tcliquedata, usrcallback, usrdata, mem, cliquetable,
       0, V, nV, Vzero, nVzero, gsd, iscolored, K, 0, 
       maxcliquenodes, nmaxcliquenodes, maxcliqueweight, 
       curcliquenodes, &ncurcliquenodes, &curcliqueweight, tmpcliquenodes,

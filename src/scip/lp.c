@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.190 2005/04/25 14:32:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.191 2005/05/03 14:48:02 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2255,11 +2255,11 @@ RETCODE lpSetPricing(
 
    assert(lp != NULL);
 
-   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_PRICING, lp->lpipricing) );
+   CHECK_OKAY( lpCheckIntpar(lp, SCIP_LPPAR_PRICING, (int)lp->lpipricing) );
 
    if( pricing != lp->lpipricing )
    {
-      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_PRICING, pricing, &success) );
+      CHECK_OKAY( lpSetIntpar(lp, SCIP_LPPAR_PRICING, (int)pricing, &success) );
       if( success )
          lp->lpipricing = pricing;
    }

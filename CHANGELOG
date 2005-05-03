@@ -76,6 +76,7 @@ interface:
 - method SCIPgetBinvarRepresentative() now returns the fixed or multi-aggregated variable instead of returning
   NULL or aborting with an error message
 - new method SCIPvarGetOrigvarSum()
+- method SCIPdispDecimal() is replaced by SCIPdispInt() and SCIPdispLongint()
 
 plugins:
 - new implementation of the feasibility pump heuristic by Timo Berthold (replaces old implementation);

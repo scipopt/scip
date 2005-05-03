@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.5 2005/05/02 15:55:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.6 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -37,7 +37,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
-#include <memory.h>
 #include <assert.h>
 #include <stdlib.h>
 
@@ -58,7 +57,7 @@ int getMaxSatdegIndex(
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
-   BOOL*            iscolored,          /**< coloring status of all nodes */
+   Bool*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          weights             /**< weight of nodes in grpah */
    )
 {   
@@ -233,7 +232,7 @@ WEIGHT tcliqueColoring(
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    NBC*             gsd,                /**< neighbor color information of all nodes */
-   BOOL*            iscolored,          /**< coloring status of all nodes */
+   Bool*            iscolored,          /**< coloring status of all nodes */
    WEIGHT*          apbound,            /**< pointer to store apriori bound of nodes for branching */ 
    int*             clique,             /**< buffer for storing the clique */
    int*             nclique,            /**< pointer to store number of nodes in the clique */
@@ -243,7 +242,7 @@ WEIGHT tcliqueColoring(
    WEIGHT* weights;
    WEIGHT maxsatdegree; 
    WEIGHT range;
-   BOOL growclique; 
+   Bool growclique; 
    int node; 
    int nodeVindex;
    int i;     
@@ -272,7 +271,7 @@ WEIGHT tcliqueColoring(
    weights = tcliqueGetWeights(tcliquedata);
 
    /* initialize maximum weight clique found so far */
-   growclique = YES;
+   growclique = TRUE;
    *nclique = 0;
    *weightclique = 0;
 
@@ -286,7 +285,7 @@ WEIGHT tcliqueColoring(
    /* set up data structures for coloring */
    clearMemoryArray(iscolored, nV); /* new-memory */
    clearMemoryArray(gsd, nV); /* new-memory */
-   iscolored[nodeVindex] = YES;
+   iscolored[nodeVindex] = TRUE;
 
    /* color the first node */
    debugMessage("---------------coloring-----------------\n");
@@ -366,7 +365,7 @@ WEIGHT tcliqueColoring(
       assert(0 <= node && node < tcliqueGetNNodes(tcliquedata));
       range = weights[node];
       assert(range > 0);
-      iscolored[nodeVindex] = YES;	
+      iscolored[nodeVindex] = TRUE;	
 
       debugMessage("%d. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d, growclique=%d, weight=%d)\n",
          i+2, nodeVindex, node, gsd[nodeVindex].satdeg, range, growclique, weightcurrentclique);
@@ -404,7 +403,7 @@ WEIGHT tcliqueColoring(
          }
          weightcurrentclique = 0;
          ncurrentclique = 0;
-         growclique = YES;
+         growclique = TRUE;
       }
       if( growclique )
       {
@@ -429,7 +428,7 @@ WEIGHT tcliqueColoring(
          {
             debugMessage("node satdeg: %d, clique weight: %d -> stop growing clique\n", 
                gsd[nodeVindex].satdeg, weightcurrentclique);
-            growclique = NO;
+            growclique = FALSE;
          }
       }
 

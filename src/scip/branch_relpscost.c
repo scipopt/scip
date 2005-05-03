@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.33 2005/03/24 09:47:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.34 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   branch_relpscost.c
  * @brief  reliable pseudo costs branching rule
@@ -184,9 +184,6 @@ DECL_BRANCHFREE(branchFreeRelpscost)
 #define branchExitsolRelpscost NULL
 
 
-#define MINMAXDEPTH   20
-#define MAXMAXDEPTH  100
-#define MAXSIZE     5000
 /** branching execution method for fractional LP solutions */
 static
 DECL_BRANCHEXECLP(branchExeclpRelpscost)
@@ -276,10 +273,7 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       Longint nodenum;
       Longint nsblpiterations;
       Longint maxnsblpiterations;
-      int depth;
-      int maxdepth;
       int maxbdchgs;
-      int nintvars;
       int bestpscand;
       int bestsbcand;
       int inititer;
@@ -296,8 +290,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       /* calculate maximal number of strong branching LP iterations; if we used too many, don't apply strong branching
        * any more
        */
-      maxnsblpiterations = branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip) + branchruledata->sbiterofs
-         + SCIPgetNRootStrongbranchLPIterations(scip);
+      maxnsblpiterations = (Longint)(branchruledata->sbiterquot * SCIPgetNNodeLPIterations(scip))
+         + branchruledata->sbiterofs + SCIPgetNRootStrongbranchLPIterations(scip);
       if( SCIPgetNStrongbranchLPIterations(scip) > maxnsblpiterations )
          maxninitcands = 0;
 
@@ -306,13 +300,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
       CHECK_OKAY( SCIPallocBufferArray(scip, &initcandscores, maxninitcands+1) );
       ninitcands = 0;
 
-      /* get current node number, depth, maximal depth, and number of binary/integer variables */
+      /* get current node number */
       nodenum = SCIPgetNNodes(scip);
-      depth = SCIPgetDepth(scip);
-      maxdepth = SCIPgetMaxDepth(scip);
-      maxdepth = MAX(maxdepth, MINMAXDEPTH);
-      maxdepth = MIN(maxdepth, MAXMAXDEPTH);
-      nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
 
       /* initialize bound change arrays */
       bdchginds = NULL;
@@ -446,8 +435,8 @@ DECL_BRANCHEXECLP(branchExeclpRelpscost)
             }
          }
          assert(nlps >= 1);
-         inititer = 2*nlpiterations / nlps;
-         inititer *= (1.0 + 20.0/nodenum);
+         inititer = (int)(2*nlpiterations / nlps);
+         inititer = (int)((Real)inititer * (1.0 + 20.0/nodenum));
          inititer = MAX(inititer, 10);
          inititer = MIN(inititer, 10000);
       }

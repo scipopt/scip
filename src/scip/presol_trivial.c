@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.21 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.22 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   presol_trivial.c
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
@@ -35,7 +35,7 @@
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
-#define MAXDNOM                   10000 /**< maximal denominator for simple rational fixed values */
+#define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 
 
 

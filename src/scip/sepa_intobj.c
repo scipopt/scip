@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.16 2005/02/25 14:27:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.17 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   sepa_intobj.c
  * @brief  integer objective value separator
@@ -288,7 +288,7 @@ DECL_SEPAEXEC(sepaExecIntobj)
 /** initialization method of event handler (called after problem was transformed) */
 static
 DECL_EVENTINIT(eventInitIntobj)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPcatchEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -297,7 +297,7 @@ DECL_EVENTINIT(eventInitIntobj)
 /** deinitialization method of event handler (called before transformed problem is freed) */
 static
 DECL_EVENTEXIT(eventExitIntobj)
-{
+{  /*lint --e{715}*/
    CHECK_OKAY( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_OBJCHANGED, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
@@ -315,7 +315,7 @@ DECL_EVENTEXIT(eventExitIntobj)
 /** execution methode of objective change event handler */
 static
 DECL_EVENTEXEC(eventExecIntobj)
-{
+{  /*lint --e{715}*/
    EVENTHDLRDATA* eventhdlrdata;
    SEPADATA* sepadata;
    VAR* var;

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.82 2005/04/26 14:32:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.83 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1039,7 +1039,7 @@ Bool checkCons(
    vars = consdata->vars;
    nvars = consdata->nvars;
    sum = 0.0;
-   sumbound = (consdata->setppctype == SCIP_SETPPCTYPE_COVERING ? 1.0 : 1.0 + 2*SCIPfeastol(scip));
+   sumbound = ((SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING ? 1.0 : 1.0 + 2*SCIPfeastol(scip));
    for( v = 0; v < nvars && sum < sumbound; ++v )  /* if sum >= sumbound, the feasibility is clearly decided */
    {
       assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
@@ -1312,7 +1312,7 @@ DECL_CONSFREE(consFreeSetppc)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 DECL_CONSEXITSOL(consExitsolSetppc)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -2240,8 +2240,9 @@ DECL_CONSRESPROP(consRespropSetppc)
 
    debugMessage("conflict resolving method of set partitioning / packing / covering constraint handler\n");
 
-   if( consdata->setppctype == SCIP_SETPPCTYPE_COVERING
-      || (consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5) )
+   if( (SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING
+      || ((SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
+         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > 0.5) )
    {
       Bool confvarfound;
 
@@ -2382,7 +2383,7 @@ DECL_CONSDEACTIVE(consDeactiveSetppc)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintSetppc)
-{
+{  /*lint --e{715}*/
    consdataPrint(SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;
@@ -2627,7 +2628,7 @@ DECL_EVENTEXEC(eventExecSetppc)
    case SCIP_EVENTTYPE_UBRELAXED:
       consdata->nfixedzeros--;
       break;
-  default:
+   default:
       errorMessage("invalid event type\n");
       return SCIP_INVALIDDATA;
    }

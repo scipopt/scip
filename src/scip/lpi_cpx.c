@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.92 2005/04/14 18:02:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.93 2005/05/03 14:48:02 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -48,7 +48,6 @@
                         }                                                           \
                       }
 
-#define NOTCALLED  -1
 #define CPX_INT_MAX 2100000000 /* CPLEX doesn't accept larger values in integer parameters */
 
 
@@ -321,7 +320,7 @@ int colpacketNum(
    int              ncols               /**< number of columns to store */
    )
 {
-   return (ncols+COLS_PER_PACKET-1)/COLS_PER_PACKET;
+   return (ncols+(int)COLS_PER_PACKET-1)/(int)COLS_PER_PACKET;
 }
 
 /** returns the number of packets needed to store row packet information */
@@ -330,7 +329,7 @@ int rowpacketNum(
    int              nrows               /**< number of rows to store */
    )
 {
-   return (nrows+ROWS_PER_PACKET-1)/ROWS_PER_PACKET;
+   return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
 }
 
 /** store row and column basis status in a packed LPi state object */
@@ -431,18 +430,20 @@ RETCODE getParameterValues(CPXPARAM* cpxparam)
 }
    
 static
-void checkParameterValues(void)
+RETCODE checkParameterValues(void)
 {
 #ifndef NDEBUG
    CPXPARAM par;
    int i;
    
-   getParameterValues(&par);
+   CHECK_OKAY( getParameterValues(&par) );
    for( i = 0; i < NUMINTPARAM; ++i )
       assert(curparam.intparval[i] == par.intparval[i]);
    for( i = 0; i < NUMDBLPARAM; ++i )
-      assert(MAX(curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]);
+      assert(MAX(curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
+
+   return SCIP_OKAY;
 }
 
 static
@@ -467,7 +468,7 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
    {
-      if( curparam.dblparval[i] != cpxparam->dblparval[i] )
+      if( curparam.dblparval[i] != cpxparam->dblparval[i] ) /*lint !e777*/
       {
          debugMessage("setting CPLEX dbl parameter %d from %g to %g\n", 
             dblparam[i], curparam.dblparval[i], MAX(cpxparam->dblparval[i], dblparammin[i]));
@@ -476,7 +477,7 @@ RETCODE setParameterValues(const CPXPARAM* cpxparam)
       }
    }
 
-   checkParameterValues();
+   CHECK_OKAY( checkParameterValues() );
 
    return SCIP_OKAY;
 }
@@ -604,7 +605,7 @@ void convertSides(
    for( i = 0; i < nrows; ++i )
    {
       assert(lhs[i] <= rhs[i]);
-      if( lhs[i] == rhs[i] )
+      if( lhs[i] == rhs[i] ) /*lint !e777*/
       {
          assert(-CPX_INFBOUND < rhs[i] && rhs[i] < CPX_INFBOUND);
          lpi->senarray[i] = 'E';
@@ -886,7 +887,7 @@ RETCODE SCIPlpiCreate(
 #endif
 
       /* get default parameter values */
-      getParameterValues(&defparam);
+      CHECK_OKAY( getParameterValues(&defparam) );
       copyParameterValues(&curparam, &defparam);
    }
    assert(cpxenv != NULL);
@@ -1720,7 +1721,7 @@ RETCODE SCIPlpiGetSides(
    Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-   RETCODE retcode;
+   int retval;
 
    assert(cpxenv != NULL);
    assert(lpi != NULL);
@@ -1733,10 +1734,10 @@ RETCODE SCIPlpiGetSides(
    CHECK_OKAY( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
    CHECK_ZERO( CPXgetsense(cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
    CHECK_ZERO( CPXgetrhs(cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
-   retcode = CPXgetrngval(cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
-   if( retcode != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
+   retval = CPXgetrngval(cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
+   if( retval != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
    {
-      CHECK_ZERO( retcode );
+      CHECK_ZERO( retval );
    }
    else
       clearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
@@ -1951,7 +1952,7 @@ RETCODE SCIPlpiSolveBarrier(
 
    invalidateSolution(lpi);
 
-   setParameterValues(&(lpi->cpxparam));
+   CHECK_OKAY( setParameterValues(&(lpi->cpxparam)) );
 
    debugMessage("calling CPXhybaropt()\n");
    retval = CPXhybbaropt(cpxenv, lpi->cpxlp, crossover ? 0 : CPX_ALG_NONE);
@@ -2261,7 +2262,7 @@ Bool SCIPlpiIsPrimalFeasible(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, NULL) );
    
-   return primalfeasible;
+   return (Bool)primalfeasible;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -2350,7 +2351,7 @@ Bool SCIPlpiIsDualFeasible(
 
    ABORT_ZERO( CPXsolninfo(cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
    
-   return dualfeasible;
+   return (Bool)dualfeasible;
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -2603,10 +2604,10 @@ RETCODE SCIPlpiGetBase(
    CHECK_ZERO( CPXgetbase(cpxenv, lpi->cpxlp, cstat, rstat) );
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert(SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
-   assert(SCIP_BASESTAT_BASIC == CPX_BASIC);
-   assert(SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
-   assert(SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
    return SCIP_OKAY;
 }
@@ -2629,10 +2630,10 @@ RETCODE SCIPlpiSetBase(
    invalidateSolution(lpi);
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert(SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
-   assert(SCIP_BASESTAT_BASIC == CPX_BASIC);
-   assert(SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
-   assert(SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER);
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC);
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
    CHECK_ZERO( CPXcopybase(cpxenv, lpi->cpxlp, cstat, rstat) );
 
@@ -2680,7 +2681,7 @@ RETCODE SCIPlpiGetBInvARow(
    const Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
    Real*            val                 /**< vector to return coefficients */
    )
-{
+{  /*lint --e{715}*/
    assert(cpxenv != NULL);
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2807,7 +2808,7 @@ Bool SCIPlpiHasStateBasis(
    LPI*             lpi,                /**< LP interface structure */
    LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
-{
+{  /*lint --e{715}*/
    return (lpistate != NULL);
 }
 
@@ -2889,21 +2890,21 @@ RETCODE SCIPlpiGetIntpar(
       switch( getIntParam(lpi, CPX_PARAM_DPRIIND) )
       {
       case CPX_DPRIIND_FULL:
-         *ival = SCIP_PRICING_FULL;
+         *ival = (int)SCIP_PRICING_FULL;
          break;
       case CPX_DPRIIND_STEEP:
-         *ival = SCIP_PRICING_STEEP;
+         *ival = (int)SCIP_PRICING_STEEP;
          break;
       case CPX_DPRIIND_STEEPQSTART:
-         *ival = SCIP_PRICING_STEEPQSTART;
+         *ival = (int)SCIP_PRICING_STEEPQSTART;
          break;
 #if (CPX_VERSION >= 900)
       case CPX_DPRIIND_DEVEX:
-         *ival = SCIP_PRICING_DEVEX;
+         *ival = (int)SCIP_PRICING_DEVEX;
          break;
 #endif
       default:
-         *ival = SCIP_PRICING_AUTO;
+         *ival = (int)SCIP_PRICING_AUTO;
          break;
       }
       break;
@@ -2917,7 +2918,7 @@ RETCODE SCIPlpiGetIntpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -2995,7 +2996,7 @@ RETCODE SCIPlpiSetIntpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -3039,7 +3040,7 @@ RETCODE SCIPlpiGetRealpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
    
    return SCIP_OKAY;
 }
@@ -3082,7 +3083,7 @@ RETCODE SCIPlpiSetRealpar(
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
-   }
+   }  /*lint !e788*/
 
    return SCIP_OKAY;
 }
@@ -3103,7 +3104,7 @@ RETCODE SCIPlpiSetRealpar(
 Real SCIPlpiInfinity(
    LPI*             lpi                 /**< LP interface structure */
    )
-{
+{  /*lint --e{715}*/
    return CPX_INFBOUND;
 }
 
@@ -3112,7 +3113,7 @@ Bool SCIPlpiIsInfinity(
    LPI*             lpi,                /**< LP interface structure */
    Real             val
    )
-{
+{  /*lint --e{715}*/
    return (val >= CPX_INFBOUND);
 }
 

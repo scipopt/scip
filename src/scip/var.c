@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.160 2005/05/03 08:47:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.161 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1496,9 +1496,11 @@ RETCODE vboundsAdd(
 /** comparator function for implication variables in the implication data structure */
 static
 DECL_SORTPTRCOMP(compImplvars)
-{
+{  /*lint --e{715}*/
    VAR* var1;
    VAR* var2;
+   VARTYPE var1type;
+   VARTYPE var2type;
    int var1idx;
    int var2idx;
 
@@ -1506,10 +1508,12 @@ DECL_SORTPTRCOMP(compImplvars)
    var2 = (VAR*)elem2;
    assert(var1 != NULL);
    assert(var2 != NULL);
+   var1type = SCIPvarGetType(var1);
+   var2type = SCIPvarGetType(var2);
    var1idx = SCIPvarGetIndex(var1);
    var2idx = SCIPvarGetIndex(var2);
 
-   if( var1->vartype == var2->vartype )
+   if( var1type == var2type )
    {
       if( var1idx < var2idx )
          return -1;
@@ -1520,9 +1524,9 @@ DECL_SORTPTRCOMP(compImplvars)
    }
    else
    {
-      if( var1->vartype == SCIP_VARTYPE_BINARY && var2->vartype != SCIP_VARTYPE_BINARY )
+      if( var1type == SCIP_VARTYPE_BINARY && var2type != SCIP_VARTYPE_BINARY )
          return -1;
-      if( var1->vartype != SCIP_VARTYPE_BINARY && var2->vartype == SCIP_VARTYPE_BINARY )
+      if( var1type != SCIP_VARTYPE_BINARY && var2type == SCIP_VARTYPE_BINARY )
          return +1;
       else if( var1idx < var2idx )
          return -1;
@@ -1588,12 +1592,8 @@ void checkImplics(
 
       for( i = nbinimpls; i < nimpls; ++i )
       {
-         Real lb;
-         Real ub;
          int cmp;
          
-         lb = SCIPvarGetLbGlobal(implvars[i]);
-         ub = SCIPvarGetUbGlobal(implvars[i]);
          assert(SCIPvarGetType(implics->implvars[varfixing][i]) != SCIP_VARTYPE_BINARY);
 
          if( i == 0 )
@@ -5710,7 +5710,7 @@ RETCODE SCIPvarAddImplic(
          || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, implvar->glbdom.ub, implbound)) )
       {
          /* check implication on debugging solution */
-         CHECK_OKAY( SCIPdebugCheckImplic(var, set, varfixing, implvar, impltype, implbound) );
+         CHECK_OKAY( SCIPdebugCheckImplic(var, set, varfixing, implvar, impltype, implbound) ); /*lint !e506 !e774*/
 
          if( var == implvar )
          {
@@ -8323,6 +8323,10 @@ BDCHGIDX* SCIPvarGetLastBdchgIndex(
    assert(var != NULL);
 
    var = SCIPvarGetProbvar(var);
+
+   /* check, if variable is original without transformed variable */
+   if( var == NULL )
+      return &initbdchgidx;
 
    /* check, if variable was fixed in presolving */
    if( !SCIPvarIsActive(var) )

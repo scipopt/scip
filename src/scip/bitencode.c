@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.c,v 1.10 2005/02/14 13:35:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: bitencode.c,v 1.11 2005/05/03 14:48:00 bzfpfend Exp $"
 
 /**@file   bitencode.c
  * @brief  packing single and dual bit values
@@ -71,20 +71,28 @@ void SCIPencodeSingleBit(
       {0x00000000, 0x80000000}
    };
    int i;
-   int rest = count % SINGLEPACKETSIZE;
-   int nfull = count - rest;
+   int rest;
+   int nfull;
 
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
    assert(SINGLEPACKETSIZE == 32);
 
-   for( i = 0; i < nfull; i += SINGLEPACKETSIZE )
+   rest = count % (int)SINGLEPACKETSIZE;
+   nfull = count - rest;
+
+   for( i = 0; i < nfull; i += (int)SINGLEPACKETSIZE )
    {
+      assert(inp != NULL);
+      assert(out != NULL);
+
 #ifndef NDEBUG
-      unsigned int j;
-      for( j = 0; j < SINGLEPACKETSIZE; ++j )
-         assert(0 <= inp[j] && inp[j] <= 1);
+      {
+         unsigned int j;
+         for( j = 0; j < SINGLEPACKETSIZE; ++j )
+            assert(0 <= inp[j] && inp[j] <= 1);
+      }
 #endif
       *out++ =
 	 mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
@@ -102,6 +110,9 @@ void SCIPencodeSingleBit(
    {
       SINGLEPACKET  m = (SINGLEPACKET) 0u;
 
+      assert(inp != NULL);
+      assert(out != NULL);
+
       for( i = 0; i < rest; i++ )
 	 m |= mask[i][inp[i]];
       *out = m;
@@ -116,8 +127,8 @@ void SCIPdecodeSingleBit(
    )
 {
    SINGLEPACKET m;
-   int rest = count % SINGLEPACKETSIZE;
-   int nfull = count - rest;
+   int rest;
+   int nfull;
    int i;
 
    assert(inp != NULL || count == 0);
@@ -125,8 +136,14 @@ void SCIPdecodeSingleBit(
    assert(count >= 0);
    assert(SINGLEPACKETSIZE == 32);
 
-   for( i = 0; i < nfull; i += SINGLEPACKETSIZE )
+   rest = count % (int)SINGLEPACKETSIZE;
+   nfull = count - rest;
+
+   for( i = 0; i < nfull; i += (int)SINGLEPACKETSIZE )
    {
+      assert(inp != NULL);
+      assert(out != NULL);
+
       m = *inp++;
 
       *out++ = m & 1;
@@ -197,6 +214,9 @@ void SCIPdecodeSingleBit(
 
    if( rest > 0 )
    {
+      assert(inp != NULL);
+      assert(out != NULL);
+
       m = *inp;
       for( i = 0; i < rest; i++ )
       {
@@ -232,20 +252,28 @@ void SCIPencodeDualBit(
       {0x00000000, 0x40000000, 0x80000000, 0xC0000000}
    };
    int i;
-   int rest = count % DUALPACKETSIZE;
-   int nfull = count - rest;
+   int rest;
+   int nfull;
 
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
    assert(DUALPACKETSIZE == 16);
 
-   for( i = 0; i < nfull; i += DUALPACKETSIZE, inp += DUALPACKETSIZE )
+   rest = count % (int)DUALPACKETSIZE;
+   nfull = count - rest;
+
+   for( i = 0; i < nfull; i += (int)DUALPACKETSIZE, inp += (int)DUALPACKETSIZE )
    {
+      assert(inp != NULL);
+      assert(out != NULL);
+
 #ifndef NDEBUG
-      unsigned int j;
-      for( j = 0; j < DUALPACKETSIZE; ++j )
-         assert(0 <= inp[j] && inp[j] <= 3);
+      {
+         unsigned int j;
+         for( j = 0; j < DUALPACKETSIZE; ++j )
+            assert(0 <= inp[j] && inp[j] <= 3);
+      }
 #endif
       *out++ =
 	 mask[0][inp[0]] | mask[1][inp[1]] | mask[2][inp[2]] | mask[3][inp[3]]
@@ -257,7 +285,10 @@ void SCIPencodeDualBit(
 
    if( rest > 0 )
    {
-      DUALPACKET  m = (DUALPACKET) 0u;
+      DUALPACKET m = (DUALPACKET) 0u;
+
+      assert(inp != NULL);
+      assert(out != NULL);
 
       for( i = 0; i < rest; i++ )
 	 m |= mask[i][inp[i]];
@@ -273,8 +304,8 @@ void SCIPdecodeDualBit(
    )
 {
    DUALPACKET m;
-   int rest = count % DUALPACKETSIZE;
-   int nfull = count - rest;
+   int rest;
+   int nfull;
    int i;
 
    assert(inp != NULL || count == 0);
@@ -282,8 +313,14 @@ void SCIPdecodeDualBit(
    assert(count >= 0);
    assert(DUALPACKETSIZE == 16);
 
-   for( i = 0; i < nfull; i += DUALPACKETSIZE )
+   rest = count % (int)DUALPACKETSIZE;
+   nfull = count - rest;
+
+   for( i = 0; i < nfull; i += (int)DUALPACKETSIZE )
    {
+      assert(inp != NULL);
+      assert(out != NULL);
+
       m = *inp++;
 
       *out++ = m & 3;
@@ -322,6 +359,9 @@ void SCIPdecodeDualBit(
 
    if( rest > 0 )
    {
+      assert(inp != NULL);
+      assert(out != NULL);
+
       m = *inp;
       for( i = 0; i < rest; i++ )
       {

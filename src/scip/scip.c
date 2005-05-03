@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.285 2005/05/02 11:42:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.286 2005/05/03 14:48:03 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9063,7 +9063,7 @@ RETCODE SCIPpropagateProbing(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+   CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->tree, 
          0, maxproprounds, cutoff) );
 
    return SCIP_OKAY;
@@ -12013,7 +12013,7 @@ int SCIPgetNImplications(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_OKAY( checkStage(scip, "SCIPgetNImplications", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetNImplications", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return scip->stat->nimplications;
 }

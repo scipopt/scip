@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.40 2005/04/26 14:32:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.41 2005/05/03 14:48:01 bzfpfend Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -856,7 +856,7 @@ RETCODE propagateCons(
       {
          debugMessage("constraint <%s>: operator var <%s> fixed to 1.0 -> fix resultant <%s> to 1.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(vars[i]), SCIPvarGetName(resvar));
-         CHECK_OKAY( SCIPinferBinvarCons(scip, resvar, TRUE, cons, PROPRULE_1, &infeasible, &tightened) );
+         CHECK_OKAY( SCIPinferBinvarCons(scip, resvar, TRUE, cons, (int)PROPRULE_1, &infeasible, &tightened) );
          if( infeasible )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -888,7 +888,7 @@ RETCODE propagateCons(
       {
          debugMessage("constraint <%s>: resultant var <%s> fixed to 0.0 -> fix operator var <%s> to 0.0\n",
             SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[i]));
-         CHECK_OKAY( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, PROPRULE_2, &infeasible, &tightened) );
+         CHECK_OKAY( SCIPinferBinvarCons(scip, vars[i], FALSE, cons, (int)PROPRULE_2, &infeasible, &tightened) );
          if( infeasible )
          {
             /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -974,7 +974,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
-      CHECK_OKAY( SCIPinferBinvarCons(scip, resvar, FALSE, cons, PROPRULE_3, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
       if( infeasible )
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -1004,7 +1004,7 @@ RETCODE propagateCons(
       
       debugMessage("constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
-      CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, PROPRULE_4, &infeasible, &tightened) );
+      CHECK_OKAY( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
       if( infeasible )
       {
          /* use conflict analysis to get a conflict clause out of the conflicting assignment */
@@ -1175,7 +1175,7 @@ DECL_CONSFREE(consFreeOr)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 DECL_CONSEXITSOL(consExitsolOr)
-{
+{  /*lint --e{715}*/
    CONSDATA* consdata;
    int c;
 
@@ -1514,7 +1514,7 @@ DECL_CONSLOCK(consLockOr)
 /** constraint display method of constraint handler */
 static
 DECL_CONSPRINT(consPrintOr)
-{
+{  /*lint --e{715}*/
    consdataPrint(scip, SCIPconsGetData(cons), file);
 
    return SCIP_OKAY;

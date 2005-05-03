@@ -25,7 +25,7 @@
 /*                                                                           */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.h,v 1.4 2005/05/02 15:55:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.h,v 1.5 2005/05/03 14:48:04 bzfpfend Exp $"
 
 /**@file   tclique_graph.h
  * @brief  tclique data part of algorithm for maximum cliques
@@ -40,11 +40,22 @@
 #define __TCLIQUE_GRAPH_H__
 
 
+/*
+ * Boolean values
+ */
 
-typedef enum {
-   NO, 
-   YES
-} BOOL;
+#ifndef Bool
+#define Bool unsigned int               /**< type used for boolean values */
+#endif
+#ifndef TRUE
+#define TRUE  1                         /**< boolean value TRUE */
+#define FALSE 0                         /**< boolean value FALSE */
+#endif
+
+
+/*
+ * Data Types and Structures
+ */
 
 typedef int  WEIGHT;
 
@@ -58,9 +69,13 @@ typedef struct _TCLIQUEDATA TCLIQUEDATA;
 
 
 
+/*
+ * Interface Methods
+ */
+
 /** creates tclique data structure */
 extern
-BOOL tcliqueCreate(
+Bool tcliqueCreate(
    TCLIQUEDATA**    tcliquedata         /**< pointer to store tclique data structure */
    );
 
@@ -72,7 +87,7 @@ void tcliqueFree(
 
 /** adds nodes up to the given node number to tclique data structure (intermediate nodes have weight 0) */
 extern
-BOOL tcliqueAddNode(
+Bool tcliqueAddNode(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              node,               /**< node number to add */
    WEIGHT           weight              /**< weight of node to add */
@@ -92,7 +107,7 @@ void tcliqueChangeWeight(
  *  you have to make sure, that no double edges are inserted
  */
 extern
-BOOL tcliqueAddEdge(
+Bool tcliqueAddEdge(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    int              node1,              /**< start node of edge to add */
    int              node2               /**< end node of edge to add */
@@ -100,13 +115,13 @@ BOOL tcliqueAddEdge(
 
 /** inserts all cached edges into the data structures */
 extern
-BOOL tcliqueFlush(
+Bool tcliqueFlush(
    TCLIQUEDATA*     tcliquedata         /**< tclique data structure */
    );
 
 /** loads tclique data structure from file */
 extern
-BOOL tcliqueLoadFile(
+Bool tcliqueLoadFile(
    TCLIQUEDATA**    tcliquedata,        /**< pointer to store tclique data structure */
    const char*      filename,           /**< name of file with graph data */
    double           scaleval,           /**< value to scale weights (only integral part of scaled weights is considered) */
@@ -115,7 +130,7 @@ BOOL tcliqueLoadFile(
 
 /** saves tclique data structure to file */
 extern
-BOOL tcliqueSaveFile(
+Bool tcliqueSaveFile(
    TCLIQUEDATA*     tcliquedata,        /**< tclique data structure */
    const char*      filename,           /**< name of file to create */
    double           scaleval,           /**< value to unscale weights with */
