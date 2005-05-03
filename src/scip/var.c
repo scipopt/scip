@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.158 2005/05/02 11:42:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.159 2005/05/03 08:41:38 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1365,9 +1365,9 @@ RETCODE vboundsSearchPos(
    Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
    )
 {
+   int varidx;
    int left;
    int right;
-   int middle;
 
    assert(insertpos != NULL);
    assert(found != NULL);
@@ -1382,18 +1382,25 @@ RETCODE vboundsSearchPos(
    assert(vbounds->len >= 1);
 
    /* binary search for the given variable */
+   varidx = SCIPvarGetIndex(var);
    left = -1;
    right = vbounds->len;
    while( left < right-1 )
    {
+      int middle;
+      int idx;
+
       middle = (left+right)/2;
       assert(0 <= middle && middle < vbounds->len);
-      if( var < vbounds->vars[middle] )
+      idx = SCIPvarGetIndex(vbounds->vars[middle]);
+
+      if( varidx < idx )
          right = middle;
-      else if( var > vbounds->vars[middle] )
+      else if( varidx > idx )
          left = middle;
       else
       {
+         assert(var == vbounds->vars[middle]);
          *insertpos = middle;
          *found = TRUE;
          return SCIP_OKAY;
@@ -1492,17 +1499,21 @@ DECL_SORTPTRCOMP(compImplvars)
 {
    VAR* var1;
    VAR* var2;
+   int var1idx;
+   int var2idx;
 
    var1 = (VAR*)elem1;
    var2 = (VAR*)elem2;
    assert(var1 != NULL);
    assert(var2 != NULL);
+   var1idx = SCIPvarGetIndex(var1);
+   var2idx = SCIPvarGetIndex(var2);
 
    if( var1->vartype == var2->vartype )
    {
-      if( var1 < var2 )
+      if( var1idx < var2idx )
          return -1;
-      else if( var1 > var2 )
+      else if( var1idx > var2idx )
          return +1;
       else
          return 0;
@@ -1513,12 +1524,15 @@ DECL_SORTPTRCOMP(compImplvars)
          return -1;
       if( var1->vartype != SCIP_VARTYPE_BINARY && var2->vartype == SCIP_VARTYPE_BINARY )
          return +1;
-      else if( var1 < var2 )
+      else if( var1idx < var2idx )
          return -1;
-      else if( var1 > var2 )
+      else if( var1idx > var2idx )
          return +1;
       else
+      {
+         assert(var1 == var2);
          return 0;
+      }
    }
 }
 
@@ -1706,6 +1720,7 @@ RETCODE implicsSearchVar(
    int*             posadd              /**< pointer to store correct position (with respect to impltype) to add y */
    )
 {
+   int implvaridx;
    int left;
    int right;
    int middle;
@@ -1745,15 +1760,22 @@ RETCODE implicsSearchVar(
    assert(left <= right);
 
    /* search for y */
+   implvaridx = SCIPvarGetIndex(implvar);
    do
    {
+      int idx;
+
       middle = (left + right) / 2;
-      if( implvar < implics->implvars[varfixing][middle] ) 
+      idx = SCIPvarGetIndex(implics->implvars[varfixing][middle]);
+      if( implvaridx < idx )
          right = middle - 1;
-      else if( implvar > implics->implvars[varfixing][middle] ) 
+      else if( implvaridx > idx )
          left = middle + 1;
       else
+      {
+         assert(implvar == implics->implvars[varfixing][middle]);
          break;
+      }
    }
    while( left <= right );
    assert(left <= right+1);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.5 2005/05/02 15:55:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.6 2005/05/03 08:41:38 bzfpfend Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -150,12 +150,13 @@ RETCODE loadTcliquedata(
    debugMessage("initializing clique graph (%d implications)\n", nimplications);
 
    /* detect 3-cliques in the clique graph: triples (x,y,z) in the implication graph with x -> y', x -> z', and y -> z';
-    * in order to avoid double checks, we only check triplets with variable pointers x < y < z
+    * in order to avoid double checks, we only check triplets with variable indices xindex < yindex < zindex
     */
    for( xi = 0; xi < 2*(nbinvars-2); ++xi ) /* at least two variables must be left over for y and z */
    {
       VAR* x;
-      int xidx;
+      int xindex;
+      int xprobindex;
       Bool xneg;
       VAR** ximplvars;
       BOUNDTYPE* ximpltypes; 
@@ -163,9 +164,10 @@ RETCODE loadTcliquedata(
       int xnbinimpls;
       int i;
 
-      getVarIndex(xi, &xidx, &xneg);
-      assert(0 <= xidx && xidx < nbinvars);
-      x = binvars[xidx];
+      getVarIndex(xi, &xprobindex, &xneg);
+      assert(0 <= xprobindex && xprobindex < nbinvars);
+      x = binvars[xprobindex];
+      xindex = SCIPvarGetIndex(x);
 
       /* scan the implications of xi == 1 for potential y candidates */
       xnbinimpls = SCIPvarGetNBinImpls(x, !xneg);
@@ -173,15 +175,16 @@ RETCODE loadTcliquedata(
       ximpltypes = SCIPvarGetImplTypes(x, !xneg);
       ximplids = SCIPvarGetImplIds(x, !xneg);
       
-      /* ignore implicants y <= x */
-      for( i = 0; i < xnbinimpls && ximplvars[i] <= x; ++i )
+      /* ignore implicants with yindex <= xindex */
+      for( i = 0; i < xnbinimpls && SCIPvarGetIndex(ximplvars[i]) <= xindex; ++i )
       {}
 
       /* loop over all y > x */
       for( ; i < xnbinimpls-1; ++i ) /* at least one variable must be left over for z */
       {
          VAR* y;
-         int yidx;
+         int yindex;
+         int yprobindex;
          Bool yneg;
          int yi;
          VAR** yimplvars;
@@ -193,13 +196,14 @@ RETCODE loadTcliquedata(
          int xyid;
 
          y = ximplvars[i];
-         assert(x < y); /* the implied variables are sorted by increasing pointer */
+         yindex = SCIPvarGetIndex(y);
+         assert(xindex < yindex); /* the implied variables are sorted by increasing variable index */
          xyid = ximplids[i];
 
          /* check, whether the implicant is y == 0 or y == 1 (yi is the variable that conflicts with xi == 1) */
          yneg = (ximpltypes[i] == SCIP_BOUNDTYPE_LOWER);
-         yidx = SCIPvarGetProbindex(y);
-         yi = getVarTcliqueIndex(yidx, yneg);
+         yprobindex = SCIPvarGetProbindex(y);
+         yi = getVarTcliqueIndex(yprobindex, yneg);
 
          /* scan the remaining implications of xi == 1 and the implications of yi == 1 for equal entries */
          ynbinimpls = SCIPvarGetNBinImpls(y, !yneg);
@@ -209,154 +213,163 @@ RETCODE loadTcliquedata(
 
          /* we simultaneously scan both implication arrays for candidates z with x < y < z */
          xk = i+1;
-         assert(y < ximplvars[xk]);
-         for( yk = 0; yk < ynbinimpls && yimplvars[yk] <= y; ++yk )
+         assert(yindex < SCIPvarGetIndex(ximplvars[xk]));
+         for( yk = 0; yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) <= yindex; ++yk )
          {}
          while( xk < xnbinimpls && yk < ynbinimpls )
          {
-            assert(y < ximplvars[xk]);
-            assert(y < yimplvars[yk]);
-            while( xk < xnbinimpls && ximplvars[xk] < yimplvars[yk] )
+            int zindex;
+
+            assert(yindex < SCIPvarGetIndex(ximplvars[xk]));
+            assert(yindex < SCIPvarGetIndex(yimplvars[yk]));
+
+            /* scan the implications of x */
+            zindex = SCIPvarGetIndex(yimplvars[yk]);
+            while( xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex )
                xk++;
-            while( yk < ynbinimpls && yimplvars[yk] < ximplvars[xk] )
+            if( xk >= xnbinimpls )
+               break;
+
+            /* scan the implications of y */
+            zindex = SCIPvarGetIndex(ximplvars[xk]);
+            while( yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex )
                yk++;
-            if( xk < xnbinimpls && yk < ynbinimpls && ximplvars[xk] == yimplvars[yk] )
+            if( yk >= ynbinimpls )
+               break;
+
+            /* check, whether we reached a common implied variable */
+            if( ximplvars[xk] != yimplvars[yk] )
+               continue;
+
+            assert(SCIPvarGetIndex(ximplvars[xk]) == zindex);
+            assert(SCIPvarGetIndex(yimplvars[yk]) == zindex);
+
+            /* check, whether both implications are of the same type */
+            if( ximpltypes[xk] == yimpltypes[yk] )
             {
-               /* check, whether both implications are of the same type */
-               if( ximpltypes[xk] == yimpltypes[yk] )
+               VAR* z;
+               int zprobindex;
+               Bool zneg;
+               int zi;
+               int xzid;
+               int yzid;
+
+               /* we found z with x < y < z and xi + yi + zi <= 1 */
+               z = ximplvars[xk];
+               xzid = ximplids[xk];
+               yzid = yimplids[yk];
+               assert(SCIPvarGetIndex(z) == zindex);
+
+               /* check, whether the implicant is z == 0 or z == 1 (zi is the variable that conflicts with xi == 1) */
+               zneg = (ximpltypes[xk] == SCIP_BOUNDTYPE_LOWER);
+               zprobindex = SCIPvarGetProbindex(z);
+               zi = getVarTcliqueIndex(zprobindex, zneg);
+
+               /* create the tclique data structure, if not yet existing */
+               if( sepadata->tcliquedata == NULL )
                {
-                  VAR* z;
-                  int zidx;
-                  Bool zneg;
-                  int zi;
-                  int xzid;
-                  int yzid;
+                  assert(sepadata->vars == NULL);
+                  assert(sepadata->nvars == 0);
 
-                  /* we found z with x < y < z and xi + yi + zi <= 1 */
-                  z = ximplvars[xk];
-                  xzid = ximplids[xk];
-                  yzid = yimplids[yk];
+                  if( !tcliqueCreate(&sepadata->tcliquedata) )
+                  {
+                     debugMessage("failed to create tclique data structure\n");
+                     return SCIP_NOMEMORY;
+                  }
+                  CHECK_OKAY( SCIPallocMemoryArray(scip, &sepadata->vars, 2*nbinvars) );
+               }
+               assert(sepadata->tcliquedata != NULL);
+               assert(sepadata->vars != NULL);
 
-                  /* check, whether the implicant is z == 0 or z == 1 (zi is the variable that conflicts with xi == 1) */
-                  zneg = (ximpltypes[xk] == SCIP_BOUNDTYPE_LOWER);
-                  zidx = SCIPvarGetProbindex(z);
-                  zi = getVarTcliqueIndex(zidx, zneg);
-
-                  /* create the tclique data structure, if not yet existing */
-                  if( sepadata->tcliquedata == NULL )
+               /* add nodes xi, yi, and zi to clique graph (if not yet existing) */
+               if( cliquegraphidx[xi] == -1 )
+               {
+                  assert(sepadata->nvars < 2*nbinvars);
+                  if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
                   {
-                     assert(sepadata->vars == NULL);
-                     assert(sepadata->nvars == 0);
-
-                     if( !tcliqueCreate(&sepadata->tcliquedata) )
-                     {
-                        debugMessage("failed to create tclique data structure\n");
-                        return SCIP_NOMEMORY;
-                     }
-                     CHECK_OKAY( SCIPallocMemoryArray(scip, &sepadata->vars, 2*nbinvars) );
+                     debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
+                     return SCIP_NOMEMORY;
                   }
-                  assert(sepadata->tcliquedata != NULL);
-                  assert(sepadata->vars != NULL);
-
-                  /* add nodes xi, yi, and zi to clique graph (if not yet existing) */
-                  if( cliquegraphidx[xi] == -1 )
+                  cliquegraphidx[xi] = sepadata->nvars;
+                  if( xneg )
                   {
-                     assert(sepadata->nvars < 2*nbinvars);
-                     if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
-                     {
-                        debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
-                        return SCIP_NOMEMORY;
-                     }
-                     cliquegraphidx[xi] = sepadata->nvars;
-                     if( xneg )
-                     {
-                        CHECK_OKAY( SCIPgetNegatedVar(scip, x, &sepadata->vars[sepadata->nvars]) ); 
-                     }
-                     else
-                        sepadata->vars[sepadata->nvars] = x;
-                     sepadata->nvars++;
+                     CHECK_OKAY( SCIPgetNegatedVar(scip, x, &sepadata->vars[sepadata->nvars]) ); 
                   }
-                  if( cliquegraphidx[yi] == -1 )
+                  else
+                     sepadata->vars[sepadata->nvars] = x;
+                  sepadata->nvars++;
+               }
+               if( cliquegraphidx[yi] == -1 )
+               {
+                  assert(sepadata->nvars < 2*nbinvars);
+                  if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
                   {
-                     assert(sepadata->nvars < 2*nbinvars);
-                     if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
-                     {
-                        debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
-                        return SCIP_NOMEMORY;
-                     }
-                     cliquegraphidx[yi] = sepadata->nvars;
-                     if( yneg )
-                     {
-                        CHECK_OKAY( SCIPgetNegatedVar(scip, y, &sepadata->vars[sepadata->nvars]) ); 
-                     }
-                     else
-                        sepadata->vars[sepadata->nvars] = y;
-                     sepadata->nvars++;
+                     debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
+                     return SCIP_NOMEMORY;
                   }
-                  if( cliquegraphidx[zi] == -1 )
+                  cliquegraphidx[yi] = sepadata->nvars;
+                  if( yneg )
                   {
-                     assert(sepadata->nvars < 2*nbinvars);
-                     if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
-                     {
-                        debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
-                        return SCIP_NOMEMORY;
-                     }
-                     cliquegraphidx[zi] = sepadata->nvars;
-                     if( zneg )
-                     {
-                        CHECK_OKAY( SCIPgetNegatedVar(scip, z, &sepadata->vars[sepadata->nvars]) ); 
-                     }
-                     else
-                        sepadata->vars[sepadata->nvars] = z;
-                     sepadata->nvars++;
+                     CHECK_OKAY( SCIPgetNegatedVar(scip, y, &sepadata->vars[sepadata->nvars]) ); 
                   }
-
-                  /* add edges (xi,yi), (xi,zi), and (yi,zi) to clique graph (multiple edges are deleted afterwards) */
-                  if( !implused[xyid] )
+                  else
+                     sepadata->vars[sepadata->nvars] = y;
+                  sepadata->nvars++;
+               }
+               if( cliquegraphidx[zi] == -1 )
+               {
+                  assert(sepadata->nvars < 2*nbinvars);
+                  if( !tcliqueAddNode(sepadata->tcliquedata, sepadata->nvars, 0) )
                   {
-                     /*debugMessage(" -> adding xy-edge (%d,%d) for variables %d:<%s>(neg=%d,idx=%d) and %d:<%s>(neg=%d,idx=%d)\n",
-                       cliquegraphidx[xi], cliquegraphidx[yi],
-                       xi, SCIPvarGetName(x), xneg, xidx, yi, SCIPvarGetName(y), yneg, yidx);*/
-                     if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[yi]) )
-                     {
-                        debugMessage("failed to add edge (%d,%d) to clique graph\n",
-                           cliquegraphidx[xi], cliquegraphidx[yi]);
-                        return SCIP_NOMEMORY;
-                     }
-                     implused[xyid] = TRUE;
+                     debugMessage("failed to add node %d to clique graph\n", sepadata->nvars);
+                     return SCIP_NOMEMORY;
                   }
-                  if( !implused[xzid] )
+                  cliquegraphidx[zi] = sepadata->nvars;
+                  if( zneg )
                   {
-                     /*debugMessage(" -> adding xz-edge (%d,%d) for variables %d:<%s>(neg=%d,idx=%d) and %d:<%s>(neg=%d,idx=%d)\n",
-                       cliquegraphidx[xi], cliquegraphidx[zi],
-                       xi, SCIPvarGetName(x), xneg, xidx, zi, SCIPvarGetName(z), zneg, zidx);*/
-                     if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[zi]) )
-                     {
-                        debugMessage("failed to add edge (%d,%d) to clique graph\n",
-                           cliquegraphidx[xi], cliquegraphidx[zi]);
-                        return SCIP_NOMEMORY;
-                     }
-                     implused[xzid] = TRUE;
+                     CHECK_OKAY( SCIPgetNegatedVar(scip, z, &sepadata->vars[sepadata->nvars]) ); 
                   }
-                  if( !implused[yzid] )
-                  {
-                     /*debugMessage(" -> adding yz-edge (%d,%d) for variables %d:<%s>(neg=%d,idx=%d) and %d:<%s>(neg=%d,idx=%d)\n",
-                       cliquegraphidx[yi], cliquegraphidx[zi],
-                       yi, SCIPvarGetName(y), yneg, yidx, zi, SCIPvarGetName(z), zneg, zidx);*/
-                     if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[yi], cliquegraphidx[zi]) )
-                     {
-                        debugMessage("failed to add edge (%d,%d) to clique graph\n",
-                           cliquegraphidx[yi], cliquegraphidx[zi]);
-                        return SCIP_NOMEMORY;
-                     }
-                     implused[yzid] = TRUE;
-                  }
+                  else
+                     sepadata->vars[sepadata->nvars] = z;
+                  sepadata->nvars++;
                }
 
-               /* proceed with the next pair of implications */
-               xk++;
-               yk++;
+               /* add edges (xi,yi), (xi,zi), and (yi,zi) to clique graph (multiple edges are deleted afterwards) */
+               if( !implused[xyid] )
+               {
+                  if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[yi]) )
+                  {
+                     debugMessage("failed to add edge (%d,%d) to clique graph\n",
+                        cliquegraphidx[xi], cliquegraphidx[yi]);
+                     return SCIP_NOMEMORY;
+                  }
+                  implused[xyid] = TRUE;
+               }
+               if( !implused[xzid] )
+               {
+                  if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[xi], cliquegraphidx[zi]) )
+                  {
+                     debugMessage("failed to add edge (%d,%d) to clique graph\n",
+                        cliquegraphidx[xi], cliquegraphidx[zi]);
+                     return SCIP_NOMEMORY;
+                  }
+                  implused[xzid] = TRUE;
+               }
+               if( !implused[yzid] )
+               {
+                  if( !tcliqueAddEdge(sepadata->tcliquedata, cliquegraphidx[yi], cliquegraphidx[zi]) )
+                  {
+                     debugMessage("failed to add edge (%d,%d) to clique graph\n",
+                        cliquegraphidx[yi], cliquegraphidx[zi]);
+                     return SCIP_NOMEMORY;
+                  }
+                  implused[yzid] = TRUE;
+               }
             }
+
+            /* proceed with the next pair of implications */
+            xk++;
+            yk++;
          }
       }
    }
