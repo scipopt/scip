@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.43 2005/05/02 11:42:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.44 2005/05/03 08:47:32 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -420,7 +420,9 @@ int SCIPvarGetNVlbs(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x */
+/** gets array with bounding variables z_i in variable lower bounds x >= b_i*z_i + d_i of given variable x;
+ *  the variable bounds are sorted by increasing variable index of the bounding variable z_i (see SCIPvarGetIndex())
+ */
 extern
 VAR** SCIPvarGetVlbVars(
    VAR*             var                 /**< problem variable */
@@ -444,7 +446,9 @@ int SCIPvarGetNVubs(
    VAR*             var                 /**< problem variable */
    );
 
-/** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x */
+/** gets array with bounding variables z_i in variable upper bounds x <= b_i*z_i + d_i of given variable x;
+ *  the variable bounds are sorted by increasing variable index of the bounding variable z_i (see SCIPvarGetIndex())
+ */
 extern
 VAR** SCIPvarGetVubVars(
    VAR*             var                 /**< problem variable */
@@ -481,7 +485,10 @@ int SCIPvarGetNBinImpls(
    );
 
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given variable x,  
- *  there are no implications for nonbinary variable x
+ *  there are no implications for nonbinary variable x;
+ *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
+ *  implied variables, and as a second criteria, the implied variables are sorted by increasing variable index
+ *  (see SCIPvarGetIndex())
  */
 extern
 VAR** SCIPvarGetImplVars(
