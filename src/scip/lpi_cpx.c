@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.93 2005/05/03 14:48:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.94 2005/05/04 12:59:07 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX 8.0 / 9.0
@@ -668,19 +668,16 @@ void reconvertBothSides(
       switch( lpi->senarray[i] )
       {
       case 'E':
-         assert(lpi->rngarray[i] == 0.0);
          lhs[i] = lpi->rhsarray[i];
          rhs[i] = lpi->rhsarray[i];
          break;
 
       case 'L':
-         assert(lpi->rngarray[i] == 0.0);
          lhs[i] = -CPX_INFBOUND;
          rhs[i] = lpi->rhsarray[i];
          break;
 
       case 'G':
-         assert(lpi->rngarray[i] == 0.0);
          lhs[i] = lpi->rhsarray[i];
          rhs[i] = CPX_INFBOUND;
          break;
