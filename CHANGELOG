@@ -10,6 +10,7 @@ parameters:
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
 - introduced subversion string
+- adding variable bounds automatically adds the corresponding implication
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);

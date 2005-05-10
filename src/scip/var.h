@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.92 2005/04/29 12:56:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.93 2005/05/10 16:25:42 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -449,6 +449,7 @@ RETCODE SCIPvarChgUbOriginal(
 extern
 RETCODE SCIPvarChgLbGlobal(
    VAR*             var,                /**< problem variable to change */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             newbound            /**< new bound for variable */
    );
@@ -457,6 +458,7 @@ RETCODE SCIPvarChgLbGlobal(
 extern
 RETCODE SCIPvarChgUbGlobal(
    VAR*             var,                /**< problem variable to change */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             newbound            /**< new bound for variable */
    );
@@ -465,6 +467,7 @@ RETCODE SCIPvarChgUbGlobal(
 extern
 RETCODE SCIPvarChgBdGlobal(
    VAR*             var,                /**< problem variable to change */
+   BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    Real             newbound,           /**< new bound for variable */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */

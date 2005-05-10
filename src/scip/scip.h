@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.224 2005/05/10 13:38:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.225 2005/05/10 16:25:41 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2004,7 +2004,9 @@ RETCODE SCIPinferBinvarProp(
    Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
    );
 
-/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
+/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;
+ *  if z is binary, the corresponding valid implication for z is also added;
+ */
 extern
 RETCODE SCIPaddVarVlb(
    SCIP*            scip,               /**< SCIP data structure */
@@ -2015,7 +2017,9 @@ RETCODE SCIPaddVarVlb(
    );
 
 
-/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
+/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z;
+ *  if z is binary, the corresponding valid implication for z is also added;
+ */
 extern
 RETCODE SCIPaddVarVub(
    SCIP*            scip,               /**< SCIP data structure */
