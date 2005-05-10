@@ -27,6 +27,8 @@ fixed bugs:
   (with type generality being cont > implint > int > bin); in this way, a binary variable's representant is
   always binary (which was not the case before, and resulted in a bug in SCIPgetBinvarRepresentative())
 - removed wrong asserts from lpi_cpx.c
+- global bound changes now lead to the removal of redundant implications (such that the asserts in sepa_implbounds.c
+  are now correct)
 
 
 SCIP version 0.79

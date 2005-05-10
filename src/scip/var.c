@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.162 2005/05/06 09:29:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.163 2005/05/10 14:16:55 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2048,7 +2048,8 @@ RETCODE implicsDel(
    SET*             set,                /**< global SCIP settings */
    Bool             varfixing,          /**< FALSE if y should be removed from implications for x <= 0, TRUE for x >= 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
-   BOUNDTYPE        impltype            /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
+   Bool             onlyredundant       /**< should only the redundant implications be removed? */
    )
 {
    int i;
@@ -2063,10 +2064,24 @@ RETCODE implicsDel(
    CHECK_OKAY( implicsSearchVar(var->implics, implvar, impltype, varfixing, &poslower, &posupper, &posadd) );
    assert((impltype == SCIP_BOUNDTYPE_LOWER && poslower < INT_MAX && posadd == poslower) 
       || (impltype == SCIP_BOUNDTYPE_UPPER && posupper < INT_MAX && posadd == posupper));
-   assert(posadd >= 0 && posadd < var->implics->nimpls[varfixing]);
+   assert(0 <= posadd && posadd < var->implics->nimpls[varfixing]);
    assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY) == (posadd < var->implics->nbinimpls[varfixing]));
    assert(var->implics->implvars[varfixing][posadd] == implvar);
    assert(var->implics->impltypes[varfixing][posadd] == impltype);
+
+   /* check, whether the entry should be removed */
+   if( onlyredundant )
+   {
+      Real implbound;
+
+      implbound = var->implics->implbounds[varfixing][posadd];
+      if( (impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
+         || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, implbound, SCIPvarGetUbGlobal(implvar))) )
+      {
+         /* the implication is not redundant: don't remove it */
+         return SCIP_OKAY;
+      }
+   }
 
    /* removes y from implications of x */
    for( i = posadd; i < var->implics->nimpls[varfixing] - 1; i++ )
@@ -2126,6 +2141,134 @@ Real adjustedUb(
       return 0.0;
    else
       return ub;
+}
+
+/* removes variable from all other variables' implications and variable bounds arrays */
+static
+RETCODE varRemoveImplicsVbs(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   Bool             onlyredundant       /**< should only the redundant implications be removed? */
+   )
+{
+   int i;
+   Bool varfixing;
+
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   if( var->implics != NULL )
+   {
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+
+      varfixing = FALSE;
+      do
+      {
+         for( i = 0; i < var->implics->nbinimpls[varfixing]; i++ )
+         {
+            /* removes for all implications z <= 0 / z >= 1  ==>  x <= 0 / x >= 1 (x binary)
+             * the following implication from x's implications 
+             *   x >= 1  ==>  z <= 0            ,for z >= 1  ==>  x <= 0
+             *   x <= 0  ==>  z <= 0            ,for z >= 1  ==>  x >= 1
+             *
+             *   x >= 1  ==>  z >= 1            ,for z <= 0  ==>  x <= 0
+             *   x <= 0  ==>  z >= 1            ,for z <= 0  ==>  x >= 1
+             */
+            if( varfixing )
+            {
+               if( var->implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_UPPER )
+               {
+                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, TRUE, var, SCIP_BOUNDTYPE_UPPER,
+                        onlyredundant) );
+               }
+               else
+               {
+                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, FALSE, var, SCIP_BOUNDTYPE_UPPER,
+                        onlyredundant) );
+               }
+            }
+            else
+            {
+               if( var->implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_UPPER )
+               {
+                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, TRUE, var, SCIP_BOUNDTYPE_LOWER,
+                        onlyredundant) );
+               }
+               else
+               {
+                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, FALSE, var, SCIP_BOUNDTYPE_LOWER,
+                        onlyredundant) );
+               }
+            }
+         }
+         for( i = var->implics->nbinimpls[varfixing]; i < var->implics->nimpls[varfixing]; i++ )
+         {
+            /* removes for all implications z <= 0 / z >= 1  ==>  x <=/>= p (x not binary)
+             * the following variable bound from x's variable bounds 
+             *   x <= b*z+d (z in vubs of x)            ,for z <= 0 / z >= 1  ==>  x <= p
+             *   x >= b*z+d (z in vlbs of x)            ,for z <= 0 / z >= 1  ==>  x >= p
+             */
+            if( var->implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_UPPER )
+            {
+               CHECK_OKAY( vboundsDel(var->implics->implvars[varfixing][i]->vubs, var) );
+            }
+            else
+            {
+               CHECK_OKAY( vboundsDel(var->implics->implvars[varfixing][i]->vlbs, var) );
+            }
+         }
+         varfixing = !varfixing;
+      }
+      while( varfixing == TRUE );
+   }
+
+   if( var->vlbs != NULL )
+   {
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+
+      /* removes for all implications x >= b*z+d the following implication from z's implications 
+       * z >= 1  ==>  x >= b + d           , if b > 0
+       * z <= 0  ==>  x >= d               , if b < 0
+       */
+      for( i = 0; i < var->vlbs->len; i++ )
+      {
+         assert(!SCIPsetIsZero(set, var->vlbs->coefs[i]));
+
+         if( var->vlbs->coefs[i] > 0.0 )
+         {
+            CHECK_OKAY( implicsDel(var->vlbs->vars[i], set, TRUE, var, SCIP_BOUNDTYPE_LOWER, onlyredundant) );
+         }
+         else
+         {
+            CHECK_OKAY( implicsDel(var->vlbs->vars[i], set, FALSE, var, SCIP_BOUNDTYPE_LOWER, onlyredundant) );
+         }
+      }
+   }
+
+   if( var->vubs != NULL )
+   {
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+
+      /* removes for all implications x <= b*z+d the following implication from z's implications 
+       * z <= 0  ==>  x <= d               , if b > 0
+       * z >= 1  ==>  x <= b + d           , if b < 0
+       */
+      for( i = 0; i < var->vubs->len; i++ )
+      {
+         assert(!SCIPsetIsZero(set, var->vubs->coefs[i]));
+
+         if( var->vubs->coefs[i] > 0.0 )
+         {
+            CHECK_OKAY( implicsDel(var->vubs->vars[i], set, FALSE, var, SCIP_BOUNDTYPE_UPPER, onlyredundant) );
+         }
+         else
+         {
+            CHECK_OKAY( implicsDel(var->vubs->vars[i], set, TRUE, var, SCIP_BOUNDTYPE_UPPER, onlyredundant) );
+         }
+      }
+   }
+   
+   return SCIP_OKAY;
 }
 
 /** creates variable; if variable is of integral type, fractional bounds are automatically rounded; an integer variable
@@ -3700,130 +3843,6 @@ RETCODE SCIPvarAggregate(
    return SCIP_OKAY;
 }
 
-
-/* removes variable from all other variables' implications and variable bounds arrays */
-static
-RETCODE varRemoveImplicsVbs(
-   VAR*             var,                /**< problem variable */
-   SET*             set                 /**< global SCIP settings */
-   )
-{
-   int i;
-   Bool varfixing;
-
-   assert(var != NULL);
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-
-   if( var->implics != NULL )
-   {
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-
-      varfixing = FALSE;
-      do
-      {
-         for( i = 0; i < var->implics->nbinimpls[varfixing]; i++ )
-         {
-            /* removes for all implications z <= 0 / z >= 1  ==>  x <= 0 / x >= 1 (x binary)
-             * the following implication from x's implications 
-             *   x >= 1  ==>  z <= 0            ,for z >= 1  ==>  x <= 0
-             *   x <= 0  ==>  z <= 0            ,for z >= 1  ==>  x >= 1
-             *
-             *   x >= 1  ==>  z >= 1            ,for z <= 0  ==>  x <= 0
-             *   x <= 0  ==>  z >= 1            ,for z <= 0  ==>  x >= 1
-             */
-            if( varfixing )
-            {
-               if( var->implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_UPPER )
-               {
-                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, TRUE, var, SCIP_BOUNDTYPE_UPPER) );
-               }
-               else
-               {
-                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, FALSE, var, SCIP_BOUNDTYPE_UPPER) );
-               }
-            }
-            else
-            {
-               if( var->implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_UPPER )
-               {
-                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, TRUE, var, SCIP_BOUNDTYPE_LOWER) );
-               }
-               else
-               {
-                  CHECK_OKAY( implicsDel(var->implics->implvars[varfixing][i], set, FALSE, var, SCIP_BOUNDTYPE_LOWER) );
-               }
-            }
-         }
-         for( i = var->implics->nbinimpls[varfixing]; i < var->implics->nimpls[varfixing]; i++ )
-         {
-            /* removes for all implications z <= 0 / z >= 1  ==>  x <=/>= p (x not binary)
-             * the following variable bound from x's variable bounds 
-             *   x <= b*z+d (z in vubs of x)            ,for z <= 0 / z >= 1  ==>  x <= p
-             *   x >= b*z+d (z in vlbs of x)            ,for z <= 0 / z >= 1  ==>  x >= p
-             */
-            if( var->implics->impltypes[varfixing][i] == SCIP_BOUNDTYPE_UPPER )
-            {
-               CHECK_OKAY( vboundsDel(var->implics->implvars[varfixing][i]->vubs, var) );
-            }
-            else
-            {
-               CHECK_OKAY( vboundsDel(var->implics->implvars[varfixing][i]->vlbs, var) );
-            }
-         }
-         varfixing = !varfixing;
-      }
-      while( varfixing == TRUE );
-   }
-
-   if( var->vlbs != NULL )
-   {
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-      /* removes for all implications x >= b*z+d the following implication from z's implications 
-       * z >= 1  ==>  x >= b + d           , if b > 0
-       * z <= 0  ==>  x >= d               , if b < 0
-       */
-      for( i = 0; i < var->vlbs->len; i++ )
-      {
-         assert(!SCIPsetIsZero(set, var->vlbs->coefs[i]));
-
-         if( var->vlbs->coefs[i] > 0.0 )
-         {
-            CHECK_OKAY( implicsDel(var->vlbs->vars[i], set, TRUE, var, SCIP_BOUNDTYPE_LOWER) );
-         }
-         else
-         {
-            CHECK_OKAY( implicsDel(var->vlbs->vars[i], set, FALSE, var, SCIP_BOUNDTYPE_LOWER) );
-         }
-      }
-   }
-
-   if( var->vubs != NULL )
-   {
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
-
-      /* removes for all implications x <= b*z+d the following implication from z's implications 
-       * z <= 0  ==>  x <= d               , if b > 0
-       * z >= 1  ==>  x <= b + d           , if b < 0
-       */
-      for( i = 0; i < var->vubs->len; i++ )
-      {
-         assert(!SCIPsetIsZero(set, var->vubs->coefs[i]));
-
-         if( var->vubs->coefs[i] > 0.0 )
-         {
-            CHECK_OKAY( implicsDel(var->vubs->vars[i], set, FALSE, var, SCIP_BOUNDTYPE_UPPER) );
-         }
-         else
-         {
-            CHECK_OKAY( implicsDel(var->vubs->vars[i], set, TRUE, var, SCIP_BOUNDTYPE_UPPER) );
-         }
-      }
-   }
-   
-   return SCIP_OKAY;
-}
-
 /** converts variable into multi-aggregated variable */
 RETCODE SCIPvarMultiaggregate(
    VAR*             var,                /**< problem variable */
@@ -3893,7 +3912,7 @@ RETCODE SCIPvarMultiaggregate(
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
        */
-      CHECK_OKAY( varRemoveImplicsVbs(var, set) );
+      CHECK_OKAY( varRemoveImplicsVbs(var, set, FALSE) );
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
@@ -4542,6 +4561,12 @@ RETCODE varProcessChgLbGlobal(
    oldbound = var->glbdom.lb;
    var->glbdom.lb = newbound;
 
+   /* remove redundant implications and variable bounds in other variables */
+   if( SCIPvarIsActive(var) )
+   {
+      CHECK_OKAY( varRemoveImplicsVbs(var, set, TRUE) );
+   }
+
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
    {
@@ -4623,6 +4648,12 @@ RETCODE varProcessChgUbGlobal(
    /* change the bound */
    oldbound = var->glbdom.ub;
    var->glbdom.ub = newbound;
+
+   /* remove redundant implications and variable bounds in other variables */
+   if( SCIPvarIsActive(var) )
+   {
+      CHECK_OKAY( varRemoveImplicsVbs(var, set, TRUE) );
+   }
 
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
