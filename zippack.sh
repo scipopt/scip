@@ -1,5 +1,5 @@
 #!/bin/sh
-VERSION="0.79"
+VERSION="0.79a"
 NAME="scip-$VERSION"
 cd ..
 ln -s scip $NAME
@@ -17,5 +17,5 @@ $NAME/examples/TSP/lint/posix/sys/* $NAME/examples/TSP/make/* $NAME/examples/TSP
 rm $NAME
 cd scip
 echo "check version numbers in src/scip/def.h, doc/xternal.c and zippack.sh ($VERSION):"
-grep "SCIP_VERSION" src/scip/def.h
+grep "VERSION" src/scip/def.h
 grep "@version" doc/xternal.c

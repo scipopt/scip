@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.17 2005/03/09 12:40:26 bzfpfend Exp $
+# $Id: check.sh,v 1.18 2005/05/10 13:38:42 bzfpfend Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -23,6 +23,7 @@ BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
+FEASTOL=$8
 
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
@@ -45,6 +46,10 @@ do
         echo @01 $i ===========
 	echo @01 $i ===========                >> $ERRFILE
 	echo set load $SETTINGS                >  $TMPFILE
+	if [ $FEASTOL != "default" ]
+	then
+	    echo set numerics feastol $FEASTOL >> $TMPFILE
+	fi
 	echo set limits time $TIMELIMIT        >> $TMPFILE
 	echo set limits nodes $NODELIMIT       >> $TMPFILE
 	echo set limits memory $MEMLIMIT       >> $TMPFILE

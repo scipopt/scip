@@ -1,3 +1,34 @@
+current version
+===============
+
+interface:
+
+plugins:
+
+parameters:
+
+features:
+- reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
+- introduced subversion string
+
+fixed bugs:
+- LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);
+  this fixes a bug (see alu8_9.mps), that an LP with an integral variable fixed to a large value yields an
+  accepted solution with that variable slightly different than the fixed value; the integrality feasibility
+  condition is measured with absolute differences, which leads to the fixed integer variable being fractional;
+  this leads to an error if branching is performed on this variable
+- locally fixed variables are no longer used as branching candidates even if their LP solution value is
+  fractional (due to numerical reasons, see above)
+- fixed minor bugs in debug code of primal.c and sol.c
+- variables that are being multiaggregated are now automatically removed from all other variables' variable bound
+  and implication arrays; this fixes bugs with methods, that rely on the fact, that the entries in the variable
+  bound and implication arrays are active variables only
+- aggregations are now always performed in a way, such that the variable of more general type is aggregated
+  (with type generality being cont > implint > int > bin); in this way, a binary variable's representant is
+  always binary (which was not the case before, and resulted in a bug in SCIPgetBinvarRepresentative())
+- removed wrong asserts from lpi_cpx.c
+
+
 SCIP version 0.79
 =================
 
@@ -90,7 +121,7 @@ plugins:
 - changed implementation of maximal strong branching iterations calculation in reliability branching
 - modified the automatic objfactor setting of feaspump heuristic to let the objective function have stronger influence
 - changed implementation of automatic minplungedepth and maxplungedepth calculation in bfs node selector
-- new pluging: implied bound cuts separator
+- new plugin: implied bound cuts separator
 - during probing, propagation of bounds is now always performed in linear constraint handler, ignoring the
   parameter "tightenboundsfreq"
 - new implementation of the clique graph construction method in clique separator

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.191 2005/05/03 14:48:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.192 2005/05/10 13:38:43 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10350,8 +10350,8 @@ RETCODE SCIPlpGetSol(
       lpicols[c]->validredcostlp = lpcount;
       if( primalfeasible != NULL )
          *primalfeasible = *primalfeasible
-            && SCIPsetIsFeasGE(set, lpicols[c]->primsol, lpicols[c]->lb)
-            && SCIPsetIsFeasLE(set, lpicols[c]->primsol, lpicols[c]->ub);
+            && !SCIPsetIsFeasNegative(set, lpicols[c]->primsol - lpicols[c]->lb)
+            && !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub);
       if( dualfeasible != NULL )
       {
          if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )

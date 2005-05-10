@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.165 2005/05/03 14:48:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.166 2005/05/10 13:38:43 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3415,13 +3415,6 @@ RETCODE convertLongEquality(
 
       slacktype = SCIPvarGetType(var);
       integral = integral && (slacktype != SCIP_VARTYPE_CONTINUOUS) && SCIPisIntegral(scip, val);
-
-      /* don't multiaggregate binary variables */
-      /**@todo binaries can be multiaggregated, if the bug is removed, that multiaggregated variables are not
-       *       removed from other variables vb/implics arrays
-       */
-      if( slacktype == SCIP_VARTYPE_BINARY )
-         continue;
 
       /* check, if variable is already fixed or aggregated */
       if( !SCIPvarIsActive(var) )

@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.108 2005/05/03 15:06:40 bzfpfend Exp $
+# $Id: Makefile,v 1.109 2005/05/10 13:38:42 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -44,6 +44,7 @@ COMP		=	gnu
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1024
+FEASTOL		=	default
 TEST		=	miplib
 SETTINGS        =       default
 
@@ -332,11 +333,11 @@ doc:
 
 test:		
 		cd check; \
-		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME) $(NODES) $(MEM);
+		/bin/sh ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(MAIN).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 testcplex:		
 		cd check; \
-		/bin/sh ./check_cplex.sh $(TEST) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM);
+		/bin/sh ./check_cplex.sh $(TEST) $(OSTYPE).$(ARCH).$(MACHINENAME) $(TIME) $(NODES) $(MEM) $(FEASTOL);
 
 $(OBJDIR):	
 		-mkdir -p $(OBJDIR)

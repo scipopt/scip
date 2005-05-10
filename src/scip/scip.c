@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.286 2005/05/03 14:48:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.287 2005/05/10 13:38:43 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -357,12 +357,23 @@ RETCODE checkStage(
  * miscellaneous methods
  */
 
-/** returns scip version number */
+/** returns SCIP version number */
 Real SCIPversion(
    void
    )
 {
    return (Real)(SCIP_VERSION)/100.0;
+}
+
+/** sub version string */
+static const char subversionstring[] = SCIP_SUBVERSION;
+
+/** returns SCIP sub version string */
+const char* SCIPsubversion(
+   void
+   )
+{
+   return subversionstring;
 }
 
 /** prints a version information line to a file stream */
@@ -373,7 +384,7 @@ void SCIPprintVersion(
    if( file == NULL )
       file = stdout;
 
-   fprintf(file, "SCIP version %g [precision: %d byte]", SCIPversion(), (int)sizeof(Real));
+   fprintf(file, "SCIP version %g%s [precision: %d byte]", SCIPversion(), SCIPsubversion(), (int)sizeof(Real));
 #ifndef NOBLOCKMEM
    fprintf(file, " [memory: block]");
 #else
@@ -6262,10 +6273,10 @@ RETCODE aggregateActiveIntVars(
    assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
    assert(varx != NULL);
    assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(varx) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER);
    assert(vary != NULL);
    assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(vary) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER);
    assert(varx != vary);
    assert(!SCIPsetIsZero(scip->set, scalarx));
    assert(!SCIPsetIsZero(scip->set, scalary));
@@ -6436,6 +6447,23 @@ RETCODE aggregateActiveVars(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
+   /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
+   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) )
+   {
+      VAR* var;
+      Real scalar;
+
+      /* switch the variables, such that varx is the variable of more general type (cont > implint > int > bin) */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+      agg = 0;
+   }
+   assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
+
    /* figure out, which variable should be aggregated */
    agg = -1;
    
@@ -6443,17 +6471,11 @@ RETCODE aggregateActiveVars(
     *  ->  x == -b/a * y + c/a  (agg=0)
     *  ->  y == -a/b * x + c/b  (agg=1)
     */
-   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT )
       agg = 0;
-   else if( SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS )
-      agg = 1;
-   else if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT )
-      agg = 0;
-   else if( SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT )
-      agg = 1;
    else if( SCIPsetIsFeasIntegral(scip->set, scalary/scalarx) )
       agg = 0;
-   else if( SCIPsetIsFeasIntegral(scip->set, scalarx/scalary) )
+   else if( SCIPsetIsFeasIntegral(scip->set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
       agg = 1;
    if( agg == 1 )
    {
@@ -6477,6 +6499,8 @@ RETCODE aggregateActiveVars(
       Real scalar;
       Real constant;
 
+      assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
+
       /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
       scalar = -scalary/scalarx;
       constant = rhs/scalarx;
@@ -6495,11 +6519,12 @@ RETCODE aggregateActiveVars(
             scip->primal, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, vary, scalar, constant,
             infeasible, aggregated) );
       assert(*aggregated);
-      return SCIP_OKAY;
    }
-
-   /* the variables are both integral: we have to try to find an integer aggregation */
-   CHECK_OKAY( aggregateActiveIntVars(scip, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+   else if( SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
+   {
+      /* the variables are both integral: we have to try to find an integer aggregation */
+      CHECK_OKAY( aggregateActiveIntVars(scip, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+   }
 
    return SCIP_OKAY;
 }

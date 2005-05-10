@@ -15,13 +15,14 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.sh,v 1.9 2005/04/12 08:53:23 bzfpfend Exp $
+# $Id: check_cplex.sh,v 1.10 2005/05/10 13:38:42 bzfpfend Exp $
 CPLEXBIN=cplex
 TSTNAME=$1
 BINNAME=$CPLEXBIN.$2
 TIMELIMIT=$3
 NODELIMIT=$4
 MEMLIMIT=$5
+FEASTOL=$6
 
 OUTFILE=results/check.$TSTNAME.$BINNAME.out
 ERRFILE=results/check.$TSTNAME.$BINNAME.err
@@ -41,6 +42,11 @@ do
 	echo @01 $i ===========
 	echo @01 $i ===========                 >> $ERRFILE
 	echo read $i                             > $TMPFILE
+	if [ $FEASTOL != "default" ]
+	then
+	    echo set simplex tolerances feas $FEASTOL    >> $TMPFILE
+	    echo set mip tolerances integrality $FEASTOL >> $TMPFILE
+	fi
 	echo set timelimit $TIMELIMIT           >> $TMPFILE
 	echo set clocktype 1                    >> $TMPFILE
 	echo set mip display 3                  >> $TMPFILE

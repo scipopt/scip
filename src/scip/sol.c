@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.57 2005/02/28 13:26:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.58 2005/05/10 13:38:44 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -864,7 +864,7 @@ RETCODE SCIPsolCheck(
 
 #ifdef DEBUG
       if( !(*feasible) )
-         printf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h-1])); 
+         printf("  -> infeasibility detected in constraint handler <%s>\n", SCIPconshdlrGetName(set->conshdlrs[h])); 
 #endif
    }
 

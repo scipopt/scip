@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.10 2005/04/11 10:56:14 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.11 2005/05/10 13:38:42 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -59,7 +59,8 @@ BEGIN {
     fail     = 0;
     pass     = 0;
 }
-/=opt=/ { sol[$2] = $3; }  # get optimum
+/=opt=/ { solfeasible[$2] = 1; sol[$2] = $3; }  # get optimum
+/=inf=/ { solfeasible[$2] = 0; sol[$2] = 0.0; } # problem infeasible
 #
 # problem name
 #
@@ -76,6 +77,7 @@ BEGIN {
     cons       = 0;
     timeout    = 0;
     opti       = 0;
+    feasible   = 1;
     cuts       = 0;
     pb         = 0.0;
     db         = 0.0;
@@ -96,15 +98,19 @@ BEGIN {
 # solution
 #
 /^Integer/  {
-    if ($2 == "infeasible.") {
+    if ($2 == "infeasible." || $2 == "infeasible")
+    {
 	db = 1e+20;
 	pb = 1e+20;
 	absgap = 0.0;
+        feasible = 0;
     }
-    else {
+    else
+    {
 	db = $NF;
 	pb = $NF;
 	absgap = 0.0;
+        feasible = 1;
     }
     opti = ($2 == "optimal") ? 1 : 0;
 }
@@ -169,18 +175,41 @@ BEGIN {
    
    if (sol[prob] == "")
       printf("unknown\n");
-   else {
-      if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0))) {
-	 if (timeout)
-	    printf("timeout\n");
-	 else
-	    printf("fail\n");
-	 failtime += tottime;
-	 fail++;
+   else
+   {
+      if (solfeasible[prob])
+      {
+         if ((abs(pb - db) > 1e-4) || (abs(pb - sol[prob]) > 1e-6*max(abs(pb),1.0)))
+         {
+            if (timeout)
+               printf("timeout\n");
+            else
+               printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else
+         {
+            printf("ok\n");
+            pass++;
+         }
       }
-      else {
-	 printf("ok\n");
-	 pass++;
+      else
+      {
+         if (feasible)
+         {
+            if (timeout)
+               printf("timeout\n");
+            else
+               printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else
+         {
+            printf("ok\n");
+            pass++;
+         }
       }
    }
    
