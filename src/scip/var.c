@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.164 2005/05/10 16:25:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.165 2005/05/10 16:39:22 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1379,7 +1379,7 @@ RETCODE vboundsSearchPos(
       *found = FALSE;
       return SCIP_OKAY;
    }
-   assert(vbounds->len >= 1);
+   assert(vbounds->len >= 0);
 
    /* binary search for the given variable */
    varidx = SCIPvarGetIndex(var);
@@ -2184,7 +2184,7 @@ RETCODE varRemoveImplicsVbs(
              *   x == 1  ==>  z >= 1            ,for z == 0  ==>  x <= 0
              *   x == 0  ==>  z >= 1            ,for z == 0  ==>  x >= 1
              */
-            if( SCIPvarIsActive(implvar) ) /* implvar may have been aggregated in the mean time */
+            if( implvar->implics != NULL ) /* implvar may have been aggregated in the mean time */
             {
                debugMessage("deleting implication: <%s> == %d  ==>  <%s> %s\n", 
                   SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER),
@@ -2210,15 +2210,18 @@ RETCODE varRemoveImplicsVbs(
              *   x <= b*z+d (z in vubs of x)            ,for z == 0 / 1  ==>  x <= p
              *   x >= b*z+d (z in vlbs of x)            ,for z == 0 / 1  ==>  x >= p
              */
-            if( SCIPvarIsActive(implvar) ) /* implvar may have been aggregated in the mean time */
+            if( impltype == SCIP_BOUNDTYPE_UPPER )
             {
-               if( impltype == SCIP_BOUNDTYPE_UPPER )
+               if( implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
                {
                   debugMessage("deleting variable bound: <%s> == %d  ==>  <%s> <= %g\n", 
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), var->implics->implbounds[varfixing][i]);
                   CHECK_OKAY( vboundsDel(&implvar->vubs, blkmem, var) );
                }
-               else
+            }
+            else
+            {
+               if( implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
                {
                   debugMessage("deleting variable bound: <%s> == %d  ==>  <%s> >= %g\n", 
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), var->implics->implbounds[varfixing][i]);
@@ -2278,7 +2281,7 @@ RETCODE varRemoveImplicsVbs(
          }
 
          /* remove the corresponding implication */
-         if( SCIPvarIsActive(var->vlbs->vars[i]) ) /* variable may have been aggregated in the mean time */
+         if( var->vlbs->vars[i]->implics != NULL ) /* variable may have been aggregated in the mean time */
          {
             debugMessage("deleting implication: <%s> == %d  ==>  <%s> >= %g\n", 
                SCIPvarGetName(var->vlbs->vars[i]), (coef > 0.0), 
@@ -2338,7 +2341,7 @@ RETCODE varRemoveImplicsVbs(
          }
 
          /* remove the corresponding implication */
-         if( SCIPvarIsActive(var->vlbs->vars[i]) ) /* variable may have been aggregated in the mean time */
+         if( var->vubs->vars[i]->implics != NULL ) /* variable may have been aggregated in the mean time */
          {
             debugMessage("deleting implication: <%s> == %d  ==>  <%s> >= %g\n", 
                SCIPvarGetName(var->vlbs->vars[i]), (coef < 0.0), 
