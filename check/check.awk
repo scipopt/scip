@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.22 2005/05/10 13:38:42 bzfpfend Exp $
+# $Id: check.awk,v 1.23 2005/05/11 15:08:31 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -202,12 +202,18 @@ BEGIN {
       gap = -1.0;
    else if( pb*db < 0.0 )
       gap = -1.0;
+   else if( abs(db) >= 1e+20 )
+      gap = -1.0;
+   else if( abs(pb) >= 1e+20 )
+      gap = -1.0;
    else
       gap = 100.0*abs((pb-db)/db);
-   if( gap >= 0.0 )
+   if( gap < 0.0 )
+      gapstr = "  --  ";
+   else if( gap < 1e+04 )
       gapstr = sprintf("%6.1f", gap);
    else
-      gapstr = "  --  ";
+      gapstr = " Large";
 
    printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s & %8d & %7.1f &%s%8d &%s%7.1f & %7.1f & %7.1f & %7.1f \\\\\n",
       pprob, cons, vars, db, pb, gapstr, confclauses, (confclauses > 0 ? confliterals / confclauses : 0.0), 
