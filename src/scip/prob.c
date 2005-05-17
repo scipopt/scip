@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.73 2005/05/02 11:42:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.74 2005/05/17 12:03:07 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -954,6 +954,7 @@ RETCODE SCIPprobExitPresolve(
    )
 {
    int v;
+   Bool infeas;
 
    assert(prob != NULL);
    assert(infeasible != NULL);
@@ -964,17 +965,21 @@ RETCODE SCIPprobExitPresolve(
    /* reset implication counter */
    SCIPstatResetImplications(stat);
 
+   infeas = FALSE;
+
    /* use active variables in implication graph */
-   for( v = 0; v < prob->nbinvars; v++ )
+   for( v = 0; v < prob->nbinvars && !infeas; v++ )
    {
-      CHECK_OKAY( SCIPvarUseActiveImplics(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, infeasible) );
+      CHECK_OKAY( SCIPvarUseActiveImplics(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, &infeas) );
    }
 
    /* replace variables in variable bounds with active problem variables */
-   for( v = 0; v < prob->nvars; ++v )
+   for( v = 0; v < prob->nvars && !infeas; ++v )
    {
-      CHECK_OKAY( SCIPvarUseActiveVbds(prob->vars[v], blkmem, set) );
+      CHECK_OKAY( SCIPvarUseActiveVbds(prob->vars[v], blkmem, set, stat, lp, branchcand, eventqueue, &infeas) );
    }
+
+   *infeasible = *infeasible || infeas;
 
    return SCIP_OKAY;
 }

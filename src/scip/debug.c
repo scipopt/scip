@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.2 2005/05/02 11:42:55 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.3 2005/05/17 12:03:07 bzfpfend Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -74,12 +74,13 @@ RETCODE readSolution(
    while( !feof(file) )
    {
       char name[MAXSTRLEN];
+      char objstring[MAXSTRLEN];
       Real val;
       int nread;
       int i;
 
-      nread = fscanf(file, "%s %lf\n", name, &val);
-      if( nread != 2 )
+      nread = fscanf(file, "%s %lf %s\n", name, &val, objstring);
+      if( nread < 2 )
       {
          printf("invalid input line %d in solution file <%s>\n", nsolvals, DEBUG_SOLUTION);
          fclose(file);
@@ -219,6 +220,85 @@ RETCODE SCIPdebugCheckRow(
       }
       printf(" <= %g\n", rhs);
 
+      abort();
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether given lower bound is valid for the debugging solution */
+RETCODE SCIPdebugCheckLb(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   Real             lb                  /**< lower bound */
+   )
+{
+   Real varsol;
+
+   /* get solution value of variable */
+   CHECK_OKAY( getSolutionValue(var, &varsol) );
+
+   /* check validity of debugging solution */
+   if( SCIPsetIsLT(set, varsol, lb) )
+   {
+      errorMessage("invalid lower bound: <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
+      abort();
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether given upper bound is valid for the debugging solution */
+RETCODE SCIPdebugCheckUb(
+   VAR*             var,                /**< problem variable */
+   SET*             set,                /**< global SCIP settings */
+   Real             ub                  /**< upper bound */
+   )
+{
+   Real varsol;
+
+   /* get solution value of variable */
+   CHECK_OKAY( getSolutionValue(var, &varsol) );
+
+   /* check validity of debugging solution */
+   if( SCIPsetIsGT(set, varsol, ub) )
+   {
+      errorMessage("invalid upper bound: <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
+      abort();
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether given variable bound is valid for the debugging solution */
+RETCODE SCIPdebugCheckVbound(
+   VAR*             var,                /**< problem variable x in x <= b*z + d  or  x >= b*z + d */
+   SET*             set,                /**< global SCIP settings */
+   BOUNDTYPE        vbtype,             /**< type of variable bound (LOWER or UPPER) */
+   VAR*             vbvar,              /**< variable z    in x <= b*z + d  or  x >= b*z + d */
+   Real             vbcoef,             /**< coefficient b in x <= b*z + d  or  x >= b*z + d */
+   Real             vbconstant          /**< constant d    in x <= b*z + d  or  x >= b*z + d */
+   )
+{
+   Real varsol;
+   Real vbvarsol;
+   Real vb;
+
+   /* get solution value of variables */
+   CHECK_OKAY( getSolutionValue(var, &varsol) );
+   CHECK_OKAY( getSolutionValue(vbvar, &vbvarsol) );
+
+   /* check validity of debugging solution */
+   vb = vbcoef * vbvarsol + vbconstant;
+   if( (vbtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLT(set, varsol, vb))
+      || (vbtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGT(set, varsol, vb)) )
+   {
+      errorMessage("invalid variable bound: <%s>[%g] %s %g<%s>[%g] %+g\n", 
+         SCIPvarGetName(var), varsol, vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef,
+         SCIPvarGetName(vbvar), vbvarsol, vbconstant);
       abort();
       return SCIP_ERROR;
    }

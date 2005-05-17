@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.288 2005/05/10 16:25:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.289 2005/05/17 12:03:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5162,16 +5162,16 @@ RETCODE SCIPchgVarLb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
-      CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
@@ -5202,16 +5202,16 @@ RETCODE SCIPchgVarUb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
-      CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, newbound) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
@@ -5315,9 +5315,10 @@ RETCODE SCIPtightenVarLb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
@@ -5385,9 +5386,10 @@ RETCODE SCIPtightenVarUb(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
@@ -5457,9 +5459,10 @@ RETCODE SCIPinferVarLbCons(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
@@ -5530,9 +5533,10 @@ RETCODE SCIPinferVarUbCons(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
@@ -5696,9 +5700,10 @@ RETCODE SCIPinferVarLbProp(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgLbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgLbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
@@ -5769,9 +5774,10 @@ RETCODE SCIPinferVarUbProp(
    {
    case SCIP_STAGE_PROBLEM:
       assert(!SCIPvarIsTransformed(var));
+      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+            scip->branchcand, scip->eventqueue, newbound) );
       CHECK_OKAY( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      CHECK_OKAY( SCIPvarChgUbGlobal(var, scip->mem->probmem, scip->set, newbound) );
       CHECK_OKAY( SCIPvarChgUbOriginal(var, scip->set, newbound) );
       return SCIP_OKAY;
 
@@ -5888,59 +5894,53 @@ RETCODE SCIPinferBinvarProp(
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  improves the global bounds of the variable and the vlb variable if possible
  */
 RETCODE SCIPaddVarVlb(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
-   Real             vlbconstant         /**< constant d    in x >= b*z + d */
+   Real             vlbconstant,        /**< constant d    in x >= b*z + d */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarVlb", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPvarAddVlb(var, scip->mem->solvemem, scip->set, vlbvar, vlbcoef, vlbconstant) );
-
-   if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
-   {
-      Bool conflict;
-
-      CHECK_OKAY( SCIPvarAddImplic(vlbvar, scip->mem->solvemem, scip->set, scip->stat,
-            (vlbcoef > 0.0), var, SCIP_BOUNDTYPE_LOWER, MAX(vlbcoef, 0.0) + vlbconstant, &conflict) );
-   }
+   CHECK_OKAY( SCIPvarAddVlb(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, scip->eventqueue,
+         vlbvar, vlbcoef, vlbconstant, infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }
 
 /** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  improves the global bounds of the variable and the vlb variable if possible
  */
 RETCODE SCIPaddVarVub(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var,                /**< problem variable */
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
-   Real             vubconstant         /**< constant d    in x <= b*z + d */
+   Real             vubconstant,        /**< constant d    in x <= b*z + d */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
    CHECK_OKAY( checkStage(scip, "SCIPaddVarVub", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPvarAddVub(var, scip->mem->solvemem, scip->set, vubvar, vubcoef, vubconstant) );
-
-   if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY )
-   {
-      Bool conflict;
-
-      CHECK_OKAY( SCIPvarAddImplic(vubvar, scip->mem->solvemem, scip->set, scip->stat,
-            (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, MIN(vubcoef, 0.0) + vubconstant, &conflict) );
-   }
+   CHECK_OKAY( SCIPvarAddVub(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, scip->eventqueue,
+         vubvar, vubcoef, vubconstant, infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }
 
-/** informs binary variable x about a globally valid implication:  x <= 0 or x >= 1  ==>  y <= b  or  y >= b;
- *  if y is binary, the corresponding valid implication for y is also added;
- *  if y is non-binary, the corresponding variable lower or upper bound for y is also added
+/** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
+ *  also adds the corresponding implication or variable bound to the implied variable;
+ *  if the implication is conflicting, the variable is fixed to the opposite value;
+ *  if the variable is already fixed to the given value, the implication is performed immediately;
+ *  if the implication is redundant with respect to the variables' global bounds, it is ignored
  */
 RETCODE SCIPaddVarImplication(
    SCIP*            scip,               /**< SCIP data structure */
@@ -5950,14 +5950,11 @@ RETCODE SCIPaddVarImplication(
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER)
                                          *                          or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
-   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    )
 {
-   Bool conflict;
-   Bool fixed;
-
    CHECK_OKAY( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-   *infeasible = FALSE;
     
    if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
    {
@@ -5965,68 +5962,8 @@ RETCODE SCIPaddVarImplication(
       return SCIP_INVALIDDATA;
    }
 
-   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, scip->stat,
-         varfixing, implvar, impltype, implbound, &conflict) );
-   if( conflict )
-   {
-      CHECK_OKAY( SCIPfixVar(scip, var, varfixing == TRUE ? 0.0 : 1.0, infeasible, &fixed) );
-      return SCIP_OKAY;
-   }
-
-   /* check, whether y is binary */
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-   {
-      /* add the corresponding valid implication for y: 
-       *  "x == 0  ==>  y <= 0": add "y == 1  ==>  x >= 1"
-       *  "x == 0  ==>  y >= 1": add "y == 0  ==>  x >= 1"
-       *  "x == 1  ==>  y <= 0": add "y == 1  ==>  x <= 0"
-       *  "x == 1  ==>  y >= 1": add "y == 0  ==>  x <= 0"
-       */
-      CHECK_OKAY( SCIPvarAddImplic(implvar, scip->mem->solvemem, scip->set, scip->stat,
-            impltype == SCIP_BOUNDTYPE_UPPER, var, varfixing == TRUE ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER,
-            varfixing == TRUE ? 0.0 : 1.0, &conflict) );
-      if( conflict )
-      {
-         CHECK_OKAY( SCIPfixVar(scip, implvar, impltype == SCIP_BOUNDTYPE_UPPER ? 0.0 : 1.0, infeasible, &fixed) );
-         return SCIP_OKAY;
-      }
-   }
-   else
-   {
-      /* add the corresponding variable lower or upper bound for y */
-      if( impltype == SCIP_BOUNDTYPE_UPPER )
-      {
-         Real oldub;
-
-         oldub = SCIPvarGetUbGlobal(implvar);
-         if( varfixing == FALSE )
-         {
-            /* "x == 0  ==>  y <= newub": add VUB "y <= newub + (oldub-newub) * x" */
-            CHECK_OKAY( SCIPvarAddVub(implvar, scip->mem->solvemem, scip->set, var, oldub - implbound, implbound) );
-         }
-         else
-         {
-            /* "x == 1  ==>  y <= newub": add VUB "y <= oldub + (newub-oldub) * x" */
-            CHECK_OKAY( SCIPvarAddVub(implvar, scip->mem->solvemem, scip->set, var, implbound - oldub, oldub) );
-         }
-      }
-      else
-      {
-         Real oldlb;
-
-         oldlb = SCIPvarGetLbGlobal(implvar);
-         if( varfixing == FALSE )
-         {
-            /* "x == 0  ==>  y >= newlb": add VLB "y >= newlb + (oldlb-newlb) * x" */
-            CHECK_OKAY( SCIPvarAddVlb(implvar, scip->mem->solvemem, scip->set, var, oldlb - implbound, implbound) );
-         }
-         else
-         {
-            /* "x == 1  ==>  y >= newlb": add VLB "y >= oldlb + (newlb-oldlb) * x" */
-            CHECK_OKAY( SCIPvarAddVlb(implvar, scip->mem->solvemem, scip->set, var, implbound - oldlb, oldlb) );
-         }
-      }
-   }
+   CHECK_OKAY( SCIPvarAddImplic(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand, 
+         scip->eventqueue, varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
 
    return SCIP_OKAY;
 }

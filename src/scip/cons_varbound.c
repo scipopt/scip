@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.30 2005/05/03 14:48:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.31 2005/05/17 12:03:07 bzfpfend Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for varbound constraints
@@ -163,19 +163,23 @@ RETCODE consdataCreate(
    /* if we are in the transformed problem, get transformed variables, add variable bound information, and catch events */
    if( SCIPisTransformed(scip) )
    {
+      Bool infeasible;
+
       CHECK_OKAY( SCIPgetTransformedVar(scip, (*consdata)->var, &(*consdata)->var) );
       CHECK_OKAY( SCIPgetTransformedVar(scip, (*consdata)->vbdvar, &(*consdata)->vbdvar) );
 
       /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
       if( !SCIPisInfinity(scip, -(*consdata)->lhs) )
       {
-         CHECK_OKAY( SCIPaddVarVlb(scip, (*consdata)->var, (*consdata)->vbdvar, -(*consdata)->vbdcoef, (*consdata)->lhs) );
+         CHECK_OKAY( SCIPaddVarVlb(scip, (*consdata)->var, (*consdata)->vbdvar, -(*consdata)->vbdcoef, (*consdata)->lhs,
+               &infeasible, NULL) );
       }
 
       /* if rhs is finite, we have a variable upper bound: x + c*y <= rhs  =>  x <= -c*y + rhs */
       if( !SCIPisInfinity(scip, (*consdata)->rhs) )
       {
-         CHECK_OKAY( SCIPaddVarVub(scip, (*consdata)->var, (*consdata)->vbdvar, -(*consdata)->vbdcoef, (*consdata)->rhs) );
+         CHECK_OKAY( SCIPaddVarVub(scip, (*consdata)->var, (*consdata)->vbdvar, -(*consdata)->vbdcoef, (*consdata)->rhs,
+               &infeasible, NULL) );
       }
 
       /* catch events for variables */

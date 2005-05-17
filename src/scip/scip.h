@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.225 2005/05/10 16:25:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.226 2005/05/17 12:03:08 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2006,6 +2006,7 @@ RETCODE SCIPinferBinvarProp(
 
 /** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  improves the global bounds of the variable and the vlb variable if possible
  */
 extern
 RETCODE SCIPaddVarVlb(
@@ -2013,12 +2014,15 @@ RETCODE SCIPaddVarVlb(
    VAR*             var,                /**< problem variable */
    VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
-   Real             vlbconstant         /**< constant d    in x >= b*z + d */
+   Real             vlbconstant,        /**< constant d    in x >= b*z + d */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
 
 /** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z;
  *  if z is binary, the corresponding valid implication for z is also added;
+ *  improves the global bounds of the variable and the vlb variable if possible
  */
 extern
 RETCODE SCIPaddVarVub(
@@ -2026,12 +2030,16 @@ RETCODE SCIPaddVarVub(
    VAR*             var,                /**< problem variable */
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
-   Real             vubconstant         /**< constant d    in x <= b*z + d */
+   Real             vubconstant,        /**< constant d    in x <= b*z + d */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
 /** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
- *  if y is binary, the corresponding valid implication for y is also added;
- *  if y is non-binary, the corresponding variable lower or upper bound for y is also added
+ *  also adds the corresponding implication or variable bound to the implied variable;
+ *  if the implication is conflicting, the variable is fixed to the opposite value;
+ *  if the variable is already fixed to the given value, the implication is performed immediately;
+ *  if the implication is redundant with respect to the variables' global bounds, it is ignored
  */
 extern
 RETCODE SCIPaddVarImplication(
@@ -2042,7 +2050,8 @@ RETCODE SCIPaddVarImplication(
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER)
                                          *                          or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
-   Bool*            infeasible          /**< pointer to store whether the fixing is infeasible */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score

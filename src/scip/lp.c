@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.192 2005/05/10 13:38:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.193 2005/05/17 12:03:07 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6999,8 +6999,15 @@ void transformMIRRow(
          }
       }
 
-      debugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, lb=%g, ub=%g -> rhs=%g\n", 
-         SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v], bestlb, bestub, *mirrhs);
+      debugMessage("MIR var <%s>: varsign=%d, boundtype=%d, mircoef=%g, lb=%g, ub=%g, vlb=%g<%s>%+g, vub=%g<%s>%+g -> rhs=%g\n", 
+         SCIPvarGetName(var), varsign[v], boundtype[v], mircoef[v], bestlb, bestub,
+         bestlbtype >= 0 ? SCIPvarGetVlbCoefs(var)[bestlbtype] : 0.0,
+         bestlbtype >= 0 ? SCIPvarGetName(SCIPvarGetVlbVars(var)[bestlbtype]) : "-",
+         bestlbtype >= 0 ? SCIPvarGetVlbConstants(var)[bestlbtype] : bestlb,
+         bestubtype >= 0 ? SCIPvarGetVubCoefs(var)[bestubtype] : 0.0,
+         bestubtype >= 0 ? SCIPvarGetName(SCIPvarGetVubVars(var)[bestubtype]) : "-",
+         bestubtype >= 0 ? SCIPvarGetVubConstants(var)[bestubtype] : bestub,
+         *mirrhs);
    }
 }
 

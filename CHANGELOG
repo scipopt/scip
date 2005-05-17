@@ -30,6 +30,9 @@ fixed bugs:
 - removed wrong asserts from lpi_cpx.c
 - global bound changes now lead to the removal of redundant implications (such that the asserts in sepa_implbounds.c
   are now correct)
+- due to usage of variable bounds, SCIPcalcMIR() may return LOOSE variables in the cut -> modified sepa_cmir.c,
+  sepa_gomory.c, and sepa_strongcg.c to use SCIPcreateEmptyRow() and SCIPaddVarsToRow() instead of SCIPcreateRow()
+  which only works for COLs
 
 
 SCIP version 0.79

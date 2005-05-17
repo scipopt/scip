@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.45 2005/02/22 19:13:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.46 2005/05/17 12:03:08 bzfpfend Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -79,7 +79,7 @@ RETCODE storeCutInArrays(
    Real*            cutcoefs,           /**< dense coefficient vector */
    Real*            varsolvals,         /**< dense variable LP solution vector */
    char             normtype,           /**< type of norm to use for efficacy norm calculation */
-   COL**            cutcols,            /**< array to store columns of sparse cut vector */
+   VAR**            cutvars,            /**< array to store variables of sparse cut vector */
    Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
    int*             cutlen,             /**< pointer to store number of nonzero entries in cut */
    Real*            cutact,             /**< pointer to store activity of cut */
@@ -96,7 +96,7 @@ RETCODE storeCutInArrays(
 
    assert(nvars == 0 || cutcoefs != NULL);
    assert(nvars == 0 || varsolvals != NULL);
-   assert(cutcols != NULL);
+   assert(cutvars != NULL);
    assert(cutvals != NULL);
    assert(cutlen != NULL);
    assert(cutact != NULL);
@@ -114,10 +114,9 @@ RETCODE storeCutInArrays(
          val = cutcoefs[v];
          if( !SCIPisZero(scip, val) )
          {
-            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
             cutsqrnorm += SQR(val);
-            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvars[len] = vars[v];
             cutvals[len] = val;
             len++;
          }
@@ -130,11 +129,10 @@ RETCODE storeCutInArrays(
          val = cutcoefs[v];
          if( !SCIPisZero(scip, val) )
          {
-            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
             absval = REALABS(val);
             norm = MAX(norm, absval);
-            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvars[len] = vars[v];
             cutvals[len] = val;
             len++;
          }
@@ -146,10 +144,9 @@ RETCODE storeCutInArrays(
          val = cutcoefs[v];
          if( !SCIPisZero(scip, val) )
          {
-            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
             norm += REALABS(val);
-            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvars[len] = vars[v];
             cutvals[len] = val;
             len++;
          }
@@ -161,10 +158,9 @@ RETCODE storeCutInArrays(
          val = cutcoefs[v];
          if( !SCIPisZero(scip, val) )
          {
-            assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_COLUMN);
             act += val * varsolvals[v];
             norm = 1.0;
-            cutcols[len] = SCIPvarGetCol(vars[v]);
+            cutvars[len] = vars[v];
             cutvals[len] = val;
             len++;
          }
@@ -372,7 +368,7 @@ DECL_SEPAEXEC(sepaExecGomory)
                /* if successful, convert dense cut into sparse row, and add the row as a cut */
                if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
                {
-                  COL** cutcols;
+                  VAR** cutvars;
                   Real* cutvals;
                   Real cutnorm;
                   int cutlen;
@@ -392,12 +388,12 @@ DECL_SEPAEXEC(sepaExecGomory)
                   assert(varsolvals != NULL);
 
                   /* get temporary memory for storing the cut as sparse row */
-                  CHECK_OKAY( SCIPallocBufferArray(scip, &cutcols, nvars) );
+                  CHECK_OKAY( SCIPallocBufferArray(scip, &cutvars, nvars) );
                   CHECK_OKAY( SCIPallocBufferArray(scip, &cutvals, nvars) );
 
                   /* store the cut as sparse row, calculate activity and norm of cut */
                   CHECK_OKAY( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
-                        cutcols, cutvals, &cutlen, &cutact, &cutnorm) );
+                        cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
                   debugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      SCIPvarGetName(var), cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
@@ -409,8 +405,9 @@ DECL_SEPAEXEC(sepaExecGomory)
 
                      /* create the cut */
                      sprintf(cutname, "gom%d_%d", SCIPgetNLPs(scip), c);
-                     CHECK_OKAY( SCIPcreateRow(scip, &cut, cutname, cutlen, cutcols, cutvals, -SCIPinfinity(scip), cutrhs, 
+                     CHECK_OKAY( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                            cutislocal, FALSE, sepadata->dynamiccuts) );
+                     CHECK_OKAY( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
                      debug(SCIPprintRow(scip, cut, NULL));
 
                      /* try to scale the cut to integral values */
@@ -455,7 +452,7 @@ DECL_SEPAEXEC(sepaExecGomory)
 
                   /* free temporary memory */
                   SCIPfreeBufferArray(scip, &cutvals);
-                  SCIPfreeBufferArray(scip, &cutcols);
+                  SCIPfreeBufferArray(scip, &cutvars);
                }
             }
          }

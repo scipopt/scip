@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.93 2005/05/10 16:25:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.94 2005/05/17 12:03:08 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -445,30 +445,48 @@ RETCODE SCIPvarChgUbOriginal(
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes global lower bound of variable; if possible, adjusts bound to integral value */
+/** changes global lower bound of variable; if possible, adjusts bound to integral value;
+ *  updates local lower bound if the global bound is tighter
+ */
 extern
 RETCODE SCIPvarChgLbGlobal(
    VAR*             var,                /**< problem variable to change */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes global upper bound of variable; if possible, adjusts bound to integral value */
+/** changes global upper bound of variable; if possible, adjusts bound to integral value;
+ *  updates local upper bound if the global bound is tighter
+ */
 extern
 RETCODE SCIPvarChgUbGlobal(
    VAR*             var,                /**< problem variable to change */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound            /**< new bound for variable */
    );
 
-/** changes global bound of variable; if possible, adjusts bound to integral value */
+/** changes global bound of variable; if possible, adjusts bound to integral value;
+ *  updates local bound if the global bound is tighter
+ */
 extern
 RETCODE SCIPvarChgBdGlobal(
    VAR*             var,                /**< problem variable to change */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Real             newbound,           /**< new bound for variable */
    BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
@@ -575,26 +593,44 @@ RETCODE SCIPvarResetBounds(
    SET*             set                 /**< global SCIP settings */
    );
 
-/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z */
+/** informs variable x about a globally valid variable lower bound x >= b*z + d with integer variable z;
+ *  if z is binary, the corresponding valid implication for z is also added;
+ *  improves the global bounds of the variable and the vlb variable if possible
+ */
 extern
 RETCODE SCIPvarAddVlb(
    VAR*             var,                /**< problem variable */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             vlbvar,             /**< variable z    in x >= b*z + d */
    Real             vlbcoef,            /**< coefficient b in x >= b*z + d */
-   Real             vlbconstant         /**< constant d    in x >= b*z + d */
+   Real             vlbconstant,        /**< constant d    in x >= b*z + d */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
-/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z */
+/** informs variable x about a globally valid variable upper bound x <= b*z + d with integer variable z;
+ *  if z is binary, the corresponding valid implication for z is also added;
+ *  updates the global bounds of the variable and the vub variable correspondingly
+ */
 extern
 RETCODE SCIPvarAddVub(
    VAR*             var,                /**< problem variable */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             vubvar,             /**< variable z    in x <= b*z + d */
    Real             vubcoef,            /**< coefficient b in x <= b*z + d */
-   Real             vubconstant         /**< constant d    in x <= b*z + d */
+   Real             vubconstant,        /**< constant d    in x <= b*z + d */
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
 /** replaces bounding variables in variable bounds of variable by their active problem variable counterparts */
@@ -602,20 +638,35 @@ extern
 RETCODE SCIPvarUseActiveVbds(
    VAR*             var,                /**< problem variable */
    BLKMEM*          blkmem,             /**< block memory */
-   SET*             set                 /**< global SCIP settings */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
-/** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b */
+/** informs binary variable x about a globally valid implication:  x == 0 or x == 1  ==>  y <= b  or  y >= b;
+ *  also adds the corresponding implication or variable bound to the implied variable;
+ *  if the implication is conflicting, the variable is fixed to the opposite value;
+ *  if the variable is already fixed to the given value, the implication is performed immediately;
+ *  if the implication is redundant with respect to the variables' global bounds, it is ignored
+ */
+extern
 RETCODE SCIPvarAddImplic(
    VAR*             var,                /**< problem variable  */
    BLKMEM*          blkmem,             /**< block memory */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   LP*              lp,                 /**< current LP data */
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
    VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
    BOUNDTYPE        impltype,           /**< type       of implication y <= b (SCIP_BOUNDTYPE_UPPER) or y >= b (SCIP_BOUNDTYPE_LOWER) */
    Real             implbound,          /**< bound b    in implication y <= b or y >= b */
-   Bool*            conflict            /**< pointer to store whether fixing variable to given value results in conflict */ 
+   Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*             nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
 /** replaces variables in implications of binary variable by their active problem variable counterparts */
@@ -628,7 +679,7 @@ RETCODE SCIPvarUseActiveImplics(
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue,         /**< event queue */
-   Bool*            infeasible          /**< pointer to store TRUE, if an infeasibility was detected */
+   Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
