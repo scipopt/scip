@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.31 2005/03/21 11:37:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.32 2005/05/31 17:20:22 bzfpfend Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -54,6 +54,7 @@ struct Cons
    int              nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int              nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
    int              activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
+   int              validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
    unsigned int     initial:1;          /**< TRUE iff LP relaxation of constraint should be in initial LP, if possible */
    unsigned int     separate:1;         /**< TRUE iff constraint should be separated during LP processing */
    unsigned int     enforce:1;          /**< TRUE iff constraint should be enforced during node processing */

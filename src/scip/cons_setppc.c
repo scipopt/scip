@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.83 2005/05/03 14:48:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.84 2005/05/31 17:20:12 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1600,7 +1600,7 @@ RETCODE branchLP(
 
             CHECK_OKAY( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                   FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
-            CHECK_OKAY( SCIPaddConsNode(scip, node, newcons) );
+            CHECK_OKAY( SCIPaddConsNode(scip, node, newcons, NULL) );
             CHECK_OKAY( SCIPreleaseCons(scip, &newcons) );
          }
       
@@ -2667,10 +2667,10 @@ DECL_CONFLICTEXEC(conflictExecSetppc)
    }
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%lld", SCIPgetNConflictClausesFound(scip));
+   sprintf(consname, "cf%lld", SCIPgetNConflictClausesApplied(scip));
    CHECK_OKAY( SCIPcreateConsSetcover(scip, &cons, consname, nconflictvars, conflictvars, 
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
-   CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, node, cons, validnode) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
    *result = SCIP_CONSADDED;

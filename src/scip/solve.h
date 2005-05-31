@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.34 2005/05/03 14:48:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.35 2005/05/31 17:20:22 bzfpfend Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -55,13 +55,15 @@ Bool SCIPsolveIsStopped(
    STAT*            stat                /**< dynamic problem statistics */
    );
 
-/** applies domain propagation on current node */
+/** applies domain propagation on current node and flushes the conflict storage afterwards */
 extern
 RETCODE SCIPpropagateDomains(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    TREE*            tree,               /**< branch and bound tree */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    int              depth,              /**< depth level to use for propagator frequency checks */
    int              maxrounds,          /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
    Bool*            cutoff              /**< pointer to store whether the node can be cut off */

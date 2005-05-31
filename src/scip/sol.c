@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.58 2005/05/10 13:38:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.59 2005/05/31 17:20:21 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1031,6 +1031,22 @@ RETCODE SCIPsolPrint(
       file = stdout;
 
    /* display variables of problem data */
+   for( v = 0; v < prob->nfixedvars; ++v )
+   {
+      assert(prob->fixedvars[v] != NULL);
+      solval = SCIPsolGetVal(sol, stat, prob->fixedvars[v]);
+      if( !SCIPsetIsZero(set, solval) )
+      {
+         fprintf(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         if( SCIPsetIsInfinity(set, solval) )
+            fprintf(file, " +infinity");
+         else if( SCIPsetIsInfinity(set, -solval) )
+            fprintf(file, " -infinity");
+         else
+            fprintf(file, " %f", solval);
+         fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+      }
+   }
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
@@ -1052,9 +1068,31 @@ RETCODE SCIPsolPrint(
    if( !prob->transformed )
    {
       assert(transprob != NULL);
-      for( v = transprob->startnvars; v < transprob->nvars; ++v )
+      for( v = 0; v < transprob->nfixedvars; ++v )
+      {
+         assert(transprob->fixedvars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
+            continue;
+
+         solval = SCIPsolGetVal(sol, stat, transprob->fixedvars[v]);
+         if( !SCIPsetIsZero(set, solval) )
+         {
+            fprintf(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
+            if( SCIPsetIsInfinity(set, solval) )
+               fprintf(file, " +infinity");
+            else if( SCIPsetIsInfinity(set, -solval) )
+               fprintf(file, " -infinity");
+            else
+               fprintf(file, " %f", solval);
+            fprintf(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+         }
+      }
+      for( v = 0; v < transprob->nvars; ++v )
       {
          assert(transprob->vars[v] != NULL);
+         if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
+            continue;
+
          solval = SCIPsolGetVal(sol, stat, transprob->vars[v]);
          if( !SCIPsetIsZero(set, solval) )
          {

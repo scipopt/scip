@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.74 2005/05/17 12:03:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.75 2005/05/31 17:20:18 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -46,6 +46,30 @@
  * dymanic memory arrays
  */
 
+/** resizes vars array to be able to store at least num entries */
+static
+RETCODE probEnsureVarsMem(
+   PROB*            prob,               /**< problem data */
+   SET*             set,                /**< global SCIP settings */
+   int              num                 /**< minimal number of slots in array */
+   )
+{
+   assert(prob != NULL);
+   assert(set != NULL);
+
+   if( num > prob->varssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      ALLOC_OKAY( reallocMemoryArray(&prob->vars, newsize) );
+      prob->varssize = newsize;
+   }
+   assert(num <= prob->varssize);
+
+   return SCIP_OKAY;
+}
+
 /** resizes fixedvars array to be able to store at least num entries */
 static
 RETCODE probEnsureFixedvarsMem(
@@ -70,9 +94,9 @@ RETCODE probEnsureFixedvarsMem(
    return SCIP_OKAY;
 }
 
-/** resizes vars array to be able to store at least num entries */
+/** resizes deletedvars array to be able to store at least num entries */
 static
-RETCODE probEnsureVarsMem(
+RETCODE probEnsureDeletedvarsMem(
    PROB*            prob,               /**< problem data */
    SET*             set,                /**< global SCIP settings */
    int              num                 /**< minimal number of slots in array */
@@ -81,15 +105,15 @@ RETCODE probEnsureVarsMem(
    assert(prob != NULL);
    assert(set != NULL);
 
-   if( num > prob->varssize )
+   if( num > prob->deletedvarssize )
    {
       int newsize;
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
-      ALLOC_OKAY( reallocMemoryArray(&prob->vars, newsize) );
-      prob->varssize = newsize;
+      ALLOC_OKAY( reallocMemoryArray(&prob->deletedvars, newsize) );
+      prob->deletedvarssize = newsize;
    }
-   assert(num <= prob->varssize);
+   assert(num <= prob->deletedvarssize);
 
    return SCIP_OKAY;
 }
@@ -154,9 +178,6 @@ RETCODE SCIPprobCreate(
    (*prob)->probexitsol = probexitsol;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->varnames, blkmem, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
-   (*prob)->fixedvars = NULL;
-   (*prob)->fixedvarssize = 0;
-   (*prob)->nfixedvars = 0;
    (*prob)->vars = NULL;
    (*prob)->varssize = 0;
    (*prob)->nvars = 0;
@@ -165,6 +186,12 @@ RETCODE SCIPprobCreate(
    (*prob)->nimplvars = 0;
    (*prob)->ncontvars = 0;
    (*prob)->ncolvars = 0;
+   (*prob)->fixedvars = NULL;
+   (*prob)->fixedvarssize = 0;
+   (*prob)->nfixedvars = 0;
+   (*prob)->deletedvars = NULL;
+   (*prob)->deletedvarssize = 0;
+   (*prob)->ndeletedvars = 0;
    CHECK_OKAY( SCIPhashtableCreate(&(*prob)->consnames, blkmem, SCIP_HASHSIZE_NAMES,
                   SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
    (*prob)->conss = NULL;
@@ -224,7 +251,7 @@ RETCODE SCIPprobFree(
    /* release problem variables */
    for( v = 0; v < (*prob)->nvars; ++v )
    {
-      assert((*prob)->vars[v]->probindex >= 0);
+      assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
       SCIPvarSetProbindex((*prob)->vars[v], -1);
       CHECK_OKAY( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, lp) );
    }
@@ -233,10 +260,13 @@ RETCODE SCIPprobFree(
    /* release fixed problem variables */
    for( v = 0; v < (*prob)->nfixedvars; ++v )
    {
-      assert((*prob)->fixedvars[v]->probindex == -1);
+      assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
       CHECK_OKAY( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, lp) );
    }
    freeMemoryArrayNull(&(*prob)->fixedvars);
+
+   /* free deleted problem variables array */
+   freeMemoryArrayNull(&(*prob)->deletedvars);
 
    /* free user problem data */
    if( (*prob)->transformed )
@@ -397,7 +427,7 @@ void probInsertVar(
    assert(prob->vars != NULL);
    assert(prob->nvars < prob->varssize);
    assert(var != NULL);
-   assert(var->probindex == -1);
+   assert(SCIPvarGetProbindex(var) == -1);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -481,9 +511,9 @@ void probRemoveVar(
 
    assert(prob != NULL);
    assert(var != NULL);
-   assert(var->probindex >= 0);
+   assert(SCIPvarGetProbindex(var) >= 0);
    assert(prob->vars != NULL);
-   assert(prob->vars[var->probindex] == var);
+   assert(prob->vars[SCIPvarGetProbindex(var)] == var);
 
    intstart = prob->nbinvars;
    implstart = intstart + prob->nintvars;
@@ -492,19 +522,19 @@ void probRemoveVar(
    switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
-      assert(0 <= var->probindex && var->probindex < intstart);
+      assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < intstart);
       prob->nbinvars--;
       break;
    case SCIP_VARTYPE_INTEGER:
-      assert(intstart <= var->probindex && var->probindex < implstart);
+      assert(intstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < implstart);
       prob->nintvars--;
       break;
    case SCIP_VARTYPE_IMPLINT:
-      assert(implstart <= var->probindex && var->probindex < contstart);
+      assert(implstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contstart);
       prob->nimplvars--;
       break;
    case SCIP_VARTYPE_CONTINUOUS:
-      assert(contstart <= var->probindex && var->probindex < prob->nvars);
+      assert(contstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < prob->nvars);
       prob->ncontvars--;
       break;
    default:
@@ -513,7 +543,7 @@ void probRemoveVar(
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */
-   freepos = var->probindex;
+   freepos = SCIPvarGetProbindex(var);
    if( freepos < intstart-1 )
    {
       /* move last binary variable to free slot */
@@ -567,24 +597,22 @@ RETCODE SCIPprobAddVar(
    VAR*             var                 /**< variable to add */
    )
 {
-   EVENT* event;
-
    assert(prob != NULL);
    assert(set != NULL);
    assert(var != NULL);
-   assert(var->probindex == -1);
+   assert(SCIPvarGetProbindex(var) == -1);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   /* capture variable */
+   SCIPvarCapture(var);
 
    /* allocate additional memory */
    CHECK_OKAY( probEnsureVarsMem(prob, set, prob->nvars+1) );
    
    /* insert variable in vars array and mark it to be in problem */
    probInsertVar(prob, var);
-
-   /* capture variable */
-   SCIPvarCapture(var);
 
    /* add variable's name to the namespace */
    CHECK_OKAY( SCIPhashtableInsert(prob->varnames, (void*)var) );
@@ -601,10 +629,106 @@ RETCODE SCIPprobAddVar(
 
    if( prob->transformed )
    {
+      EVENT* event;
+
       /* issue VARADDED event */
       CHECK_OKAY( SCIPeventCreateVarAdded(&event, blkmem, var) );
       CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** marks variable to be removed from the problem; however, the variable is NOT removed from the constraints */
+RETCODE SCIPprobDelVar(
+   PROB*            prob,               /**< problem data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(prob != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(SCIPvarGetProbindex(var) != -1);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+      || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   debugMessage("deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
+      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+
+   /* mark variable to be deleted from the problem */
+   SCIPvarMarkDeleted(var);
+
+   if( prob->transformed )
+   {
+      EVENT* event;
+
+      /* issue VARDELETED event */
+      CHECK_OKAY( SCIPeventCreateVarDeleted(&event, blkmem, var) );
+      CHECK_OKAY( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+   }
+
+   /* remember that the variable should be deleted from the problem in SCIPprobPerformVarDeletions() */
+   CHECK_OKAY( probEnsureDeletedvarsMem(prob, set, prob->ndeletedvars+1) );
+   prob->deletedvars[prob->ndeletedvars] = var;
+   prob->ndeletedvars++;
+
+   return SCIP_OKAY;
+}
+
+/** actually removes the deleted variables from the problem and releases them */
+RETCODE SCIPprobPerformVarDeletions(
+   PROB*            prob,               /**< problem data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data (may be NULL) */
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   int i;
+
+   assert(prob != NULL);
+
+   for( i = 0; i < prob->ndeletedvars; ++i )
+   {
+      VAR* var;
+
+      var = prob->deletedvars[i];
+
+      /* don't delete the variable, if it was fixed or aggregated in the meantime */
+      if( SCIPvarGetProbindex(var) == -1 )
+      {
+         debugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), var);
+         
+         /* convert column variable back into loose variable, free LP column */
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+         {
+            CHECK_OKAY( SCIPvarLoose(var, blkmem, set, prob, lp) );
+         }
+         
+         /* update branching candidates and pseudo and loose objective value in the LP */
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
+         {
+            CHECK_OKAY( SCIPlpUpdateDelVar(lp, set, var) );
+            CHECK_OKAY( SCIPbranchcandRemoveVar(branchcand, var) );
+         }
+         
+         /* remove variable's name from the namespace */
+         assert(SCIPhashtableExists(prob->varnames, (void*)var));
+         CHECK_OKAY( SCIPhashtableRemove(prob->varnames, (void*)var) );
+
+         /* remove variable from vars array and mark it to be not in problem */
+         probRemoveVar(prob, var);
+
+         /* release variable */
+         CHECK_OKAY( SCIPvarRelease(&prob->deletedvars[i], blkmem, set, lp) );
+      }
+   }
+   prob->ndeletedvars = 0;
 
    return SCIP_OKAY;
 }
@@ -620,7 +744,7 @@ RETCODE SCIPprobChgVarType(
 {
    assert(prob != NULL);
    assert(var != NULL);
-   assert(var->probindex >= 0);
+   assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -796,6 +920,7 @@ RETCODE SCIPprobDelCons(
    assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
+   assert(SCIPhashtableExists(prob->consnames, (void*)cons));
    CHECK_OKAY( SCIPhashtableRemove(prob->consnames, (void*)cons) );
 
    /* remove the constraint from the problem's constraint array */

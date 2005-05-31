@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.76 2005/05/10 13:38:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.77 2005/05/31 17:20:13 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -37,7 +37,7 @@
 
 
 #define SCIP_VERSION                 79 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION             "a" /**< SCIP sub version string */
+#define SCIP_SUBVERSION             "b" /**< SCIP sub version string */
 
 
 

@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.37 2005/05/03 14:48:03 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.38 2005/05/31 17:20:21 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -503,7 +503,7 @@ RETCODE SCIPsepastoreAddCut(
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
 
    /* debug: check cut for feasibility */
-   CHECK_OKAY( SCIPdebugCheckRow(cut, set) ); /*lint !e506 !e774*/
+   CHECK_OKAY( SCIPdebugCheckRow(set, cut) ); /*lint !e506 !e774*/
 
    /* update statistics of total number of found cuts */
    if( !sepastore->initiallp )

@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.81 2005/05/03 14:48:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.82 2005/05/31 17:20:12 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1651,10 +1651,10 @@ DECL_CONFLICTEXEC(conflictExecLogicor)
    }
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%d_%lld", SCIPgetNRuns(scip), SCIPgetNConflictClausesFound(scip));
+   sprintf(consname, "cf%d_%lld", SCIPgetNRuns(scip), SCIPgetNConflictClausesApplied(scip));
    CHECK_OKAY( SCIPcreateConsLogicor(scip, &cons, consname, nconflictvars, conflictvars, 
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
-   CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, node, cons, validnode) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
    *result = SCIP_CONSADDED;

@@ -8,13 +8,13 @@
 #*                  2002-2004 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the SCIP Academic License.        *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
-#*  You should have received a copy of the SCIP Academic License             *
+#*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.5 2005/02/09 10:57:53 bzfberth Exp $
+# $Id: Makefile,v 1.6 2005/05/31 17:20:06 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library

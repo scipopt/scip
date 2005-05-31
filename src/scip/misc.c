@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.40 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.41 2005/05/31 17:20:16 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -342,11 +342,6 @@ RETCODE hashtablelistRemove(
       freeBlockMemory(blkmem, hashtablelist);
       *hashtablelist = nextlist;
    }
-   else
-   {
-      errorMessage("element not found in the hash table\n");
-      return SCIP_INVALIDDATA;
-   }
 
    return SCIP_OKAY;
 }
@@ -477,7 +472,34 @@ void* SCIPhashtableRetrieve(
       hashtable->hashkeyval, keyval, key);
 }
 
-/** removes existing element from the hash table */
+/** returns whether the given element exists in the table */
+Bool SCIPhashtableExists(
+   HASHTABLE*       hashtable,          /**< hash table */
+   void*            element             /**< element to search in the table */
+   )
+{
+   void* key;
+   unsigned int keyval;
+   unsigned int hashval;
+
+   assert(hashtable != NULL);
+   assert(hashtable->lists != NULL);
+   assert(hashtable->nlists > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(element != NULL);
+
+   /* get the hash key and its hash value */
+   key = hashtable->hashgetkey(element);
+   keyval = hashtable->hashkeyval(key);
+   hashval = keyval % hashtable->nlists; /*lint !e573*/
+
+   return (hashtablelistFind(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq,
+         hashtable->hashkeyval, keyval, key) != NULL);
+}
+
+/** removes element from the hash table, if it exists */
 RETCODE SCIPhashtableRemove(
    HASHTABLE*       hashtable,          /**< hash table */
    void*            element             /**< element to remove from the table */
@@ -500,7 +522,7 @@ RETCODE SCIPhashtableRemove(
    keyval = hashtable->hashkeyval(key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
-   /* append element to the list at the hash position */
+   /* remove element from the list at the hash position */
    CHECK_OKAY( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) );
    
    return SCIP_OKAY;
@@ -733,11 +755,6 @@ RETCODE hashmaplistRemove(
       freeBlockMemory(blkmem, hashmaplist);
       *hashmaplist = nextlist;
    }
-   else
-   {
-      errorMessage("origin not found in the hash map\n");
-      return SCIP_INVALIDDATA;
-   }
 
    return SCIP_OKAY;
 }
@@ -854,7 +871,26 @@ RETCODE SCIPhashmapSetImage(
    return SCIP_OKAY;
 }
 
-/** removes existing origin->image pair from the hash map */
+/** checks whether an image to the given origin exists in the hash map */
+Bool SCIPhashmapExists(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin              /**< origin to search for */
+   )
+{
+   unsigned int hashval;
+
+   assert(hashmap != NULL);
+   assert(hashmap->lists != NULL);
+   assert(hashmap->nlists > 0);
+   assert(origin != NULL);
+
+   /* get the hash value */
+   hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
+
+   return (hashmaplistFind(hashmap->lists[hashval], origin) != NULL);
+}
+
+/** removes origin->image pair from the hash map, if it exists */
 RETCODE SCIPhashmapRemove(
    HASHMAP*         hashmap,            /**< hash map */
    void*            origin              /**< origin to remove from the list */
@@ -870,7 +906,7 @@ RETCODE SCIPhashmapRemove(
    /* get the hash value */
    hashval = (unsigned int)origin % (unsigned int)hashmap->nlists;
 
-   /* append element to the list at the hash position */
+   /* remove element from the list at the hash position */
    CHECK_OKAY( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
    
    return SCIP_OKAY;

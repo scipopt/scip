@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.166 2005/05/10 13:38:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.167 2005/05/31 17:20:12 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5251,7 +5251,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
       vals[v] = 1.0;
 
    /* create a constraint out of the conflict set */
-   sprintf(consname, "cf%lld", SCIPgetNConflictClausesFound(scip));
+   sprintf(consname, "cf%lld", SCIPgetNConflictClausesApplied(scip));
    CHECK_OKAY( SCIPcreateConsLinear(scip, &cons, consname, nconflictvars, conflictvars, vals, 1.0, SCIPinfinity(scip),
          FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removeable) );
 
@@ -5267,7 +5267,7 @@ DECL_CONFLICTEXEC(conflictExecLinear)
    }
 
    /* add constraint to SCIP */
-   CHECK_OKAY( SCIPaddConsNode(scip, node, cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, node, cons, validnode) );
    CHECK_OKAY( SCIPreleaseCons(scip, &cons) );
 
    *result = SCIP_CONSADDED;

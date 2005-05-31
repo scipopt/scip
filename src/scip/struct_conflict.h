@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.16 2005/02/14 13:35:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.17 2005/05/31 17:20:22 bzfpfend Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -52,9 +52,25 @@ struct Conflicthdlr
    Bool             initialized;        /**< is conflict handler initialized? */
 };
 
+/** conflict clause */
+struct Clause
+{
+   VAR**            vars;               /**< literals of the clause, sorted by variable index */
+   int              nvars;              /**< number of literals in the clause */
+   int              validdepth;         /**< depth in the tree where the clause is valid */
+   int              insertdepth;        /**< depth level where constraint should be added */
+   int              conflictdepth;      /**< depth in the tree where the clause yields a conflict */
+   int              repropdepth;        /**< depth at which the clause triggers a deduction */
+   int              score;              /**< score (usefulness) of the clause */
+};
+
 /** conflict analysis data structure */
 struct Conflict
 {
+   Longint          nappliedpermclauses; /**< total number of conflict clauses added permanently to the problem */
+   Longint          nappliedpermliterals;/**< total number of literals in permanently applied conflict clauses */
+   Longint          nappliedtempclauses; /**< total number of conflict clauses added temporarily to the problem */
+   Longint          nappliedtempliterals;/**< total number of literals in temporarily applied conflict clauses */
    Longint          npropcalls;         /**< number of calls to propagation conflict analysis */
    Longint          npropconfclauses;   /**< number of valid conflict clauses detected in propagation conflict analysis */
    Longint          npropconfliterals;  /**< total number of literals in valid propagation conflict clauses */
@@ -81,15 +97,16 @@ struct Conflict
    CLOCK*           lpanalyzetime;      /**< time used for infeasible LP conflict analysis */
    CLOCK*           sbanalyzetime;      /**< time used for infeasible LP conflict analysis */
    CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
-   LPI*             lpi;                /**< LP problem object for the alternative polyhedron */
+   CLAUSE**         clauses;            /**< conflict clauses found at the current node */
    PQUEUE*          binbdchgqueue;      /**< unprocessed conflict bound changes on binary variables */
    PQUEUE*          nonbinbdchgqueue;   /**< unprocessed conflict bound changes on non-binary variables */
    VAR**            conflictvars;       /**< variables resembling the conflict clause */
-   int*             conflictvardepths;  /**< depth at which the conflict variables were fixed */
    int              conflictvarssize;   /**< size of conflictvars array */
    int              nconflictvars;      /**< number of variables in the conflict set (used slots of conflictvars array) */
    int              ntmpconflictvars;   /**< number of additional variables added temporarily to conflict set */
    int              count;              /**< conflict set counter to label conflict variables with */
+   int              clausessize;        /**< size of clauses array */
+   int              nclauses;           /**< number of available conflict clauses (used slots in clauses array) */
 };
 
 

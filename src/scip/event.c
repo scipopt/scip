@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.46 2005/02/16 17:46:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.47 2005/05/31 17:20:13 bzfpfend Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -272,6 +272,24 @@ RETCODE SCIPeventCreateVarAdded(
    return SCIP_OKAY;
 }
 
+/** creates an event for a deletion of a variable from the problem */
+RETCODE SCIPeventCreateVarDeleted(
+   EVENT**          event,              /**< pointer to store the event */
+   BLKMEM*          blkmem,             /**< block memory */
+   VAR*             var                 /**< variable that is to be deleted from the problem */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+
+   /* create event data */
+   ALLOC_OKAY( allocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_VARDELETED;
+   (*event)->data.eventvardeleted.var = var;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for a fixing of a variable */
 RETCODE SCIPeventCreateVarFixed(
    EVENT**          event,              /**< pointer to store the event */
@@ -438,7 +456,7 @@ RETCODE SCIPeventChgType(
    return SCIP_OKAY;
 }
 
-/** gets variable for a variable event (var added, var fixed, objective value or domain change) */
+/** gets variable for a variable event (var added, var deleted, var fixed, objective value or domain change) */
 VAR* SCIPeventGetVar(
    EVENT*           event               /**< event */
    )
@@ -450,6 +468,10 @@ VAR* SCIPeventGetVar(
    case SCIP_EVENTTYPE_VARADDED:
       assert(event->data.eventvaradded.var != NULL);
       return event->data.eventvaradded.var;
+
+   case SCIP_EVENTTYPE_VARDELETED:
+      assert(event->data.eventvardeleted.var != NULL);
+      return event->data.eventvardeleted.var;
 
    case SCIP_EVENTTYPE_VARFIXED:
       assert(event->data.eventvarfixed.var != NULL);
@@ -650,6 +672,7 @@ RETCODE SCIPeventProcess(
       break;
 
    case SCIP_EVENTTYPE_VARADDED:
+   case SCIP_EVENTTYPE_VARDELETED:
    case SCIP_EVENTTYPE_NODEFOCUSED:
    case SCIP_EVENTTYPE_NODEFEASIBLE:
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
@@ -1240,6 +1263,7 @@ RETCODE SCIPeventqueueAdd(
          return SCIP_INVALIDDATA;
 
       case SCIP_EVENTTYPE_VARADDED:
+      case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:
       case SCIP_EVENTTYPE_LOCKSCHANGED:
       case SCIP_EVENTTYPE_NODEFOCUSED:

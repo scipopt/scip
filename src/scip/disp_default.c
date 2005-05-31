@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.53 2005/05/03 14:48:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.54 2005/05/31 17:20:13 bzfpfend Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -495,7 +495,7 @@ DECL_DISPOUTPUT(SCIPdispOutputConflicts)
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_CONFLICTS) == 0);
    assert(scip != NULL);
 
-   SCIPdispLongint(file, SCIPgetNConflictClausesFound(scip), DISP_WIDT_CONFLICTS);
+   SCIPdispLongint(file, SCIPgetNConflictClausesApplied(scip), DISP_WIDT_CONFLICTS);
 
    return SCIP_OKAY;
 }

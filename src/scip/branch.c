@@ -7,13 +7,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.65 2005/05/10 13:38:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.66 2005/05/31 17:20:09 bzfpfend Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -647,6 +647,23 @@ void branchcandRemovePseudoCand(
       branchcandSortPseudoCands(branchcand);
 }
 
+/** removes variable from branching candidate list */
+RETCODE SCIPbranchcandRemoveVar(
+   BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   VAR*             var                 /**< variable that changed its bounds */
+   )
+{
+   assert(var != NULL);
+
+   /* make sure, variable is not member of the pseudo branching candidate list */
+   if( var->pseudocandindex >= 0 )
+   {
+      branchcandRemovePseudoCand(branchcand, var);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** updates branching candidate list for a given variable */
 RETCODE SCIPbranchcandUpdateVar(
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -682,10 +699,7 @@ RETCODE SCIPbranchcandUpdateVar(
          || SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
       /* variable is continuous or fixed: make sure it is not member of the pseudo branching candidate list */
-      if( var->pseudocandindex >= 0 )
-      {
-         branchcandRemovePseudoCand(branchcand, var);
-      }
+      CHECK_OKAY( SCIPbranchcandRemoveVar(branchcand, var) );
    }
 
    return SCIP_OKAY;

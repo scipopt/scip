@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.14 2005/02/14 13:35:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.15 2005/05/31 17:20:22 bzfpfend Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -39,6 +39,12 @@
 struct EventVarAdded
 {
    VAR*             var;                /**< variable that was added to the problem */
+};
+
+/** data for variable deletion events */
+struct EventVarDeleted
+{
+   VAR*             var;                /**< variable that will be deleted from the problem */
 };
 
 /** data for variable fixing events */
@@ -75,6 +81,7 @@ struct Event
    union
    {
       EVENTVARADDED eventvaradded;      /**< data for variable addition events */
+      EVENTVARDELETED eventvardeleted;  /**< data for variable deletion events */
       EVENTVARFIXED eventvarfixed;      /**< data for variable fixing events */
       EVENTLOCKSCHG eventlockschg;      /**< data for locks change events */
       EVENTOBJCHG   eventobjchg;        /**< data for objective value change events */

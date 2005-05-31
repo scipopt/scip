@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.12 2005/03/21 11:37:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.13 2005/05/31 17:20:24 bzfpfend Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -29,6 +29,7 @@
 
 typedef struct Conflicthdlr CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct ConflicthdlrData CONFLICTHDLRDATA; /**< conflict handler data */
+typedef struct Clause CLAUSE;           /**< conflict clause */
 typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
 
 
@@ -96,6 +97,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - scip            : SCIP main data structure
  *  - conflicthdlr    : the conflict handler itself
  *  - node            : node to add resulting conflict clause to (with SCIPaddConsNode())
+ *  - validnode       : node at which the conflict clause is valid (should be passed to SCIPaddConsNode())
  *  - conflictvars    : array with binary variables in the conflict set
  *  - nconflictvars   : number of binary variables in the conflict set
  *  - local           : is the conflict set only valid locally, i.e. should the constraint created as local constraint?
@@ -109,7 +111,7 @@ typedef struct Conflict CONFLICT;       /**< conflict analysis data structure */
  *  - SCIP_DIDNOTFIND : the conflict handler could not create a constraint out of the conflict set
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
-#define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, NODE* node, \
+#define DECL_CONFLICTEXEC(x) RETCODE x (SCIP* scip, CONFLICTHDLR* conflicthdlr, NODE* node, NODE* validnode, \
       VAR** conflictvars, int nconflictvars, Bool local, Bool dynamic, Bool removeable, Bool resolved, RESULT* result)
 
 

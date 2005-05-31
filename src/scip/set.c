@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.148 2005/03/22 18:42:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.149 2005/05/31 17:20:21 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -72,6 +72,8 @@
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_INTERCLAUSES        1 /**< maximal number of intermediate conflict clauses generated in conflict
                                                  *   graph (-1: use every intermediate clause) */
+#define SCIP_DEFAULT_CONF_MAXCLAUSES         10 /**< maximal number of conflict clauses accepted at an infeasible node
+                                                 *   (-1: use all generated conflict clauses) */
 #define SCIP_DEFAULT_CONF_RECONVCLAUSES    TRUE /**< should reconvergence clauses be created for UIPs of last depth level? */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
@@ -159,9 +161,9 @@
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOL_RESTARTBDCHGS   100 /**< number of root node bound changes triggering a restart with
-                                                 *   preprocessing (-1: no restart, 0: restart only after complete root
-                                                 *   node evaluation) */
+#define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
+#define SCIP_DEFAULT_PRESOL_RESTARTFAC      0.0 /**< fraction of bounds that changed in the root node triggering a restart with
+                                                 *   preprocessing (0.0: restart only after complete root node evaluation) */
 
 
 /* Pricing */
@@ -430,6 +432,11 @@ RETCODE SCIPsetCreate(
          "conflict/interclauses",
          "maximal number of intermediate conflict clauses generated in conflict graph (-1: use every intermediate clause)",
          &(*set)->conf_interclauses, SCIP_DEFAULT_CONF_INTERCLAUSES, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
+         "conflict/maxclauses",
+         "maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)",
+         &(*set)->conf_maxclauses, SCIP_DEFAULT_CONF_MAXCLAUSES, -1, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/repropagate",
@@ -725,9 +732,14 @@ RETCODE SCIPsetCreate(
          &(*set)->presol_abortfac, SCIP_DEFAULT_PRESOL_ABORTFAC, 0.0, 1.0,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem, 
-         "presolving/restartbdchgs",
-         "number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)",
-         &(*set)->presol_restartbdchgs, SCIP_DEFAULT_PRESOL_RESTARTBDCHGS, -1, INT_MAX,
+         "presolving/maxrestarts",
+         "maximal number of restarts (-1: unlimited)",
+         &(*set)->presol_maxrestarts, SCIP_DEFAULT_PRESOL_MAXRESTARTS, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddRealParam(*set, blkmem, 
+         "presolving/restartfac",
+         "fraction of bounds that changed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)",
+         &(*set)->presol_restartfac, SCIP_DEFAULT_PRESOL_RESTARTFAC, 0.0, 1.0,
          NULL, NULL) );
 
    /* pricing parameters */

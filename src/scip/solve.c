@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.179 2005/05/03 14:48:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.180 2005/05/31 17:20:21 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -185,7 +185,8 @@ RETCODE propagationRound(
 }
 
 /** applies domain propagation on current node */
-RETCODE SCIPpropagateDomains(
+static
+RETCODE propagateDomains(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
@@ -213,10 +214,10 @@ RETCODE SCIPpropagateDomains(
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
 
    /* adjust maximal number of propagation rounds */
+   if( maxproprounds == 0 )
+      maxproprounds = (depth == 0 ? set->prop_maxroundsroot : set->prop_maxrounds);
    if( maxproprounds == -1 )
       maxproprounds = INT_MAX;
-   else if( maxproprounds == 0 )
-      maxproprounds = (depth == 0 ? set->prop_maxroundsroot : set->prop_maxrounds);
 
    debugMessage("domain propagation of node %p in depth %d (using depth %d, maxrounds %d)\n", 
       node, SCIPnodeGetDepth(node), depth, maxproprounds);
@@ -224,7 +225,8 @@ RETCODE SCIPpropagateDomains(
    /* propagate as long new bound changes were found and the maximal number of propagation rounds is not exceeded */
    *cutoff = FALSE;
    propround = 0;
-   do
+   propagain = TRUE;
+   while( propagain && !(*cutoff) && propround < maxproprounds )
    {
       propround++;
 
@@ -232,16 +234,37 @@ RETCODE SCIPpropagateDomains(
       CHECK_OKAY( propagationRound(blkmem, set, stat, depth, FALSE, &delayed, &propagain, cutoff) );
 
       /* if the propagation will be terminated, call the delayed propagators */
-      while( delayed && !propagain && !(*cutoff) )
+      while( delayed && (!propagain || propround >= maxproprounds) && !(*cutoff) )
       {
          /* call the delayed propagators and constraint handlers */
          CHECK_OKAY( propagationRound(blkmem, set, stat, depth, TRUE, &delayed, &propagain, cutoff) );
       }
    }
-   while( propagain && !(*cutoff) && propround < maxproprounds );
 
    /* mark the node to be completely propagated in the current repropagation subtree level */
    SCIPnodeMarkPropagated(node, tree);
+
+   return SCIP_OKAY;
+}
+
+/** applies domain propagation on current node and flushes the conflict storage afterwards */
+RETCODE SCIPpropagateDomains(
+   BLKMEM*          blkmem,             /**< block memory buffers */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
+   TREE*            tree,               /**< branch and bound tree */
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   int              depth,              /**< depth level to use for propagator frequency checks */
+   int              maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
+   Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   )
+{
+   /* apply domain propagation */
+   CHECK_OKAY( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, cutoff) );
+
+   /* flush the conflict clause storage */
+   CHECK_OKAY( SCIPconflictFlushClauses(conflict, blkmem, set, stat, prob, tree) );
 
    return SCIP_OKAY;
 }
@@ -1159,7 +1182,7 @@ RETCODE priceAndCutLoop(
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
-                  CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+                  CHECK_OKAY( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
                }
                
                mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
@@ -1669,6 +1692,7 @@ RETCODE solveNode(
    assert(tree != NULL);
    assert(primal != NULL);
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+   assert(SCIPconflictGetNClauses(conflict) == 0);
    assert(cutoff != NULL);
    assert(unbounded != NULL);
    assert(infeasible != NULL);
@@ -1734,7 +1758,7 @@ RETCODE solveNode(
       if( propagateagain && !(*cutoff) )
       {
          propagateagain = FALSE;
-         CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
+         CHECK_OKAY( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, cutoff) );
 
          /* check, if the path was cutoff */
          *cutoff = *cutoff || (tree->cutoffdepth <= actdepth);
@@ -2021,12 +2045,18 @@ RETCODE solveNode(
 
       /* check for immediate restart */
       *restart = *restart
-         || (actdepth == 0 && set->presol_restartbdchgs > 0 && stat->nrootboundchgsrun >= set->presol_restartbdchgs);
+         || (actdepth == 0
+            && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+            && set->presol_restartfac > 0.0 && stat->nrootboundchgsrun > set->presol_restartfac * prob->nvars);
 
       debugMessage("node solving iteration finished: cutoff=%d, propagateagain=%d, solverelaxagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",
          *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+   assert(*cutoff || SCIPconflictGetNClauses(conflict) == 0);
+
+   /* flush the conflict clause storage */
+   CHECK_OKAY( SCIPconflictFlushClauses(conflict, blkmem, set, stat, prob, tree) );
 
    /* check for too many LP errors */
    if( nlperrors >= MAXNLPERRORS )
@@ -2036,8 +2066,11 @@ RETCODE solveNode(
    }
 
    /* check for final restart */
-   *restart = *restart || (actdepth == 0 && set->presol_restartbdchgs >= 0 && stat->nrootboundchgsrun > 0);
-
+   *restart = *restart
+      || (actdepth == 0
+         && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+         && stat->nrootboundchgsrun > 0);
+   
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*restart) && !(*unbounded) )
    {
@@ -2228,7 +2261,9 @@ RETCODE SCIPsolveCIP(
    assert(restart != NULL);
 
    /* check for immediate restart (if problem solving marked to be restarted was aborted) */
-   *restart = (SCIPtreeGetCurrentDepth(tree) == 0 && set->presol_restartbdchgs >= 0 && stat->nrootboundchgsrun > 0);
+   *restart = (SCIPtreeGetCurrentDepth(tree) == 0
+      && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+      && stat->nrootboundchgsrun > 0);
 
    /* switch status to UNKNOWN */
    stat->status = SCIP_STATUS_UNKNOWN;
@@ -2278,7 +2313,7 @@ RETCODE SCIPsolveCIP(
          SCIPclockStart(stat->nodeactivationtime, set);
          
          /* focus selected node */
-         CHECK_OKAY( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand,
+         CHECK_OKAY( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
                eventfilter, eventqueue, &cutoff) );
          if( cutoff )
             stat->ndelayedcutoffs++;
@@ -2444,7 +2479,7 @@ RETCODE SCIPsolveCIP(
       && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
    {
       focusnode = NULL;
-      CHECK_OKAY( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand, 
+      CHECK_OKAY( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
             eventfilter, eventqueue, &cutoff) );
    }
 

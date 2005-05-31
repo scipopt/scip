@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.121 2005/04/15 11:46:52 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.122 2005/05/31 17:20:11 bzfpfend Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -3872,6 +3872,7 @@ RETCODE SCIPconsCreate(
    (*cons)->checkconsspos = -1;
    (*cons)->propconsspos = -1;
    (*cons)->activedepth = -2;
+   (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->nuses = 0;
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
@@ -4164,6 +4165,7 @@ void SCIPconsSetGlobal(
    assert(cons != NULL);
 
    cons->local = FALSE;
+   cons->validdepth = 0;
 }
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
@@ -4724,6 +4726,7 @@ DECL_HASHGETKEY(SCIPhashGetKeyCons)
 #undef SCIPconsGetData
 #undef SCIPconsGetNUses
 #undef SCIPconsGetActiveDepth
+#undef SCIPconsGetValidDepth
 #undef SCIPconsIsActive
 #undef SCIPconsIsEnabled
 #undef SCIPconsIsSeparationEnabled
@@ -4788,9 +4791,7 @@ int SCIPconsGetNUses(
    return cons->nuses;
 }
 
-/** for an active constraint, returns the depth in the tree at which the constraint was activated;
- *  for local active constraints, this is the depth at which the constraint is valid
- */
+/** for an active constraint, returns the depth in the tree at which the constraint was activated */
 int SCIPconsGetActiveDepth(
    CONS*            cons                /**< constraint */
    )
@@ -4809,6 +4810,22 @@ Bool SCIPconsIsActive(
    assert(cons != NULL);
 
    return cons->updateactivate || (cons->active && !cons->updatedeactivate);
+}
+
+/** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local
+ *  and currently not active
+ */
+int SCIPconsGetValidDepth(
+   CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->validdepth == 0 || cons->local);
+
+   return (!cons->local ? 0
+      : !SCIPconsIsActive(cons) ? INT_MAX
+      : cons->validdepth == -1 ? SCIPconsGetActiveDepth(cons)
+      : cons->validdepth);
 }
 
 /** returns TRUE iff constraint is enabled in the current node */

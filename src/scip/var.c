@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.166 2005/05/17 12:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.167 2005/05/31 17:20:25 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2178,14 +2178,14 @@ void checkImplic(
    Bool*            infeasible          /**< pointer to store whether the implication is infeasible */
    )
 {
-   Real implub;
    Real impllb;
+   Real implub;
 
    assert(redundant != NULL);
    assert(infeasible != NULL);
 
-   implub = SCIPvarGetUbGlobal(implvar);
    impllb = SCIPvarGetLbGlobal(implvar);
+   implub = SCIPvarGetUbGlobal(implvar);
    if( impltype == SCIP_BOUNDTYPE_LOWER )
    {
       *infeasible = SCIPsetIsFeasGT(set, implbound, implub);
@@ -2271,7 +2271,7 @@ RETCODE varAddVbound(
       SCIPvarGetName(var), vbtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", vbcoef, SCIPvarGetName(vbvar), vbconstant);
 
    /* check variable bound on debugging solution */
-   CHECK_OKAY( SCIPdebugCheckVbound(var, set, vbtype, vbvar, vbcoef, vbconstant) ); /*lint !e506 !e774*/
+   CHECK_OKAY( SCIPdebugCheckVbound(set, var, vbtype, vbvar, vbcoef, vbconstant) ); /*lint !e506 !e774*/
 
    /* perform the addition */
    if( vbtype == SCIP_BOUNDTYPE_LOWER )
@@ -2315,12 +2315,10 @@ RETCODE varAddImplic(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
-      || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
    assert(infeasible != NULL);
 
    /* check implication on debugging solution */
-   CHECK_OKAY( SCIPdebugCheckImplic(var, set, varfixing, implvar, impltype, implbound) ); /*lint !e506 !e774*/
+   CHECK_OKAY( SCIPdebugCheckImplic(set, var, varfixing, implvar, impltype, implbound) ); /*lint !e506 !e774*/
 
    *infeasible = FALSE;
 
@@ -2349,6 +2347,9 @@ RETCODE varAddImplic(
    assert(!redundant || !conflict);
    if( redundant )
       return SCIP_OKAY;
+
+   assert((impltype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, implbound, SCIPvarGetLbGlobal(implvar)))
+      || (impltype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, implbound, SCIPvarGetUbGlobal(implvar))));
 
    if( !conflict && SCIPvarIsActive(implvar) )
    {
@@ -2802,6 +2803,7 @@ RETCODE varCreate(
    (*var)->conflictsetcount = 0;
    (*var)->initial = initial;
    (*var)->removeable = removeable;
+   (*var)->deleted = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
 
@@ -2929,6 +2931,8 @@ RETCODE varAddParent(
 {
    assert(var != NULL);
    assert(parentvar != NULL);
+   /* the direct original counterpart must be stored as first parent */
+   assert(var->nparentvars == 0 || SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL);
 
    debugMessage("adding parent <%s>[%p] to variable <%s>[%p] in slot %d\n", 
       parentvar->name, parentvar, var->name, var, var->nparentvars);
@@ -3759,10 +3763,6 @@ RETCODE SCIPvarFix(
    case SCIP_VARSTATUS_LOOSE:
       assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
 
-      /* check fixing on debugging solution */
-      CHECK_OKAY( SCIPdebugCheckLb(var, set, fixedval) );
-      CHECK_OKAY( SCIPdebugCheckUb(var, set, fixedval) );
-
       /* set the fixed variable's objective value to 0.0 */
       obj = var->obj;
       CHECK_OKAY( SCIPvarChgObj(var, blkmem, set, primal, lp, eventqueue, 0.0) );
@@ -4534,6 +4534,17 @@ void SCIPvarSetProbindex(
    }
 }
 
+/** marks the variable to be deleted from the problem */
+void SCIPvarMarkDeleted(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->probindex != -1);
+
+   var->deleted = TRUE;
+}
+
 /** changes type of variable; cannot be called, if var belongs to a problem */
 RETCODE SCIPvarChgType(
    VAR*             var,                /**< problem variable to change */
@@ -4966,7 +4977,7 @@ RETCODE varProcessChgLbGlobal(
       return SCIP_OKAY;
 
    /* check bound on debugging solution */
-   CHECK_OKAY( SCIPdebugCheckLb(var, set, newbound) );
+   CHECK_OKAY( SCIPdebugCheckLbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
 
    /* change the bound */
    oldbound = var->glbdom.lb;
@@ -5062,7 +5073,7 @@ RETCODE varProcessChgUbGlobal(
       return SCIP_OKAY;
 
    /* check bound on debugging solution */
-   CHECK_OKAY( SCIPdebugCheckUb(var, set, newbound) );
+   CHECK_OKAY( SCIPdebugCheckUbGlobal(set, var, newbound) ); /*lint !e506 !e774*/
 
    /* change the bound */
    oldbound = var->glbdom.ub;
@@ -5939,13 +5950,13 @@ RETCODE SCIPvarChgLbDive(
       {
          /* a > 0 -> change lower bound of y */
          CHECK_OKAY( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, 
-                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change upper bound of y */
          CHECK_OKAY( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, 
-                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else
       {
@@ -6021,13 +6032,13 @@ RETCODE SCIPvarChgUbDive(
       {
          /* a > 0 -> change upper bound of y */
          CHECK_OKAY( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, 
-                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
          /* a < 0 -> change lower bound of y */
          CHECK_OKAY( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, 
-                        (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
+               (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar) );
       }
       else
       {
@@ -6625,6 +6636,8 @@ RETCODE SCIPvarUseActiveVbds(
    /* reinsert all variable bounds */
    if( oldvlbs != NULL )
    {
+      debugMessage("using active variable lower bounds for variable <%s>\n", SCIPvarGetName(var));
+
       for( i = 0; i < oldvlbs->len && !(*infeasible); ++i )
       {
          CHECK_OKAY( SCIPvarAddVlb(var, blkmem, set, stat, lp, branchcand, eventqueue,
@@ -6633,6 +6646,8 @@ RETCODE SCIPvarUseActiveVbds(
    }
    if( oldvubs != NULL )
    {
+      debugMessage("using active variable upper bounds for variable <%s>\n", SCIPvarGetName(var));
+
       for( i = 0; i < oldvubs->len && !(*infeasible); ++i )
       {
          CHECK_OKAY( SCIPvarAddVub(var, blkmem, set, stat, lp, branchcand, eventqueue,
@@ -6687,12 +6702,26 @@ RETCODE SCIPvarAddImplic(
          
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
-      CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
-      SCIPvarAdjustBd(implvar, set, impltype, &implbound);
+      /* if the variable is fixed (although it has no FIXED status), and varfixing corresponds to the fixed value of
+       * the variable, the implication can be applied directly;
+       * otherwise, add implication to the implications list (and add inverse of implication to the implied variable)
+       */
+      if( SCIPvarGetLbGlobal(var) > 0.5 || SCIPvarGetUbGlobal(var) < 0.5 )
+      {
+         if( varfixing == (SCIPvarGetLbGlobal(var) > 0.5) )
+         {
+            CHECK_OKAY( applyImplic(blkmem, set, stat, lp, branchcand, eventqueue,
+                  implvar, impltype, implbound, infeasible, nbdchgs) );
+         }
+      }
+      else
+      {
+         CHECK_OKAY( SCIPvarGetProbvarBound(&implvar, &implbound, &impltype) );
+         SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          
-      /* add implication to the implications list (and add inverse of implication to the implied variable) */
-      CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
-            varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+         CHECK_OKAY( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+               varfixing, implvar, impltype, implbound, infeasible, nbdchgs) );
+      }
       break;
       
    case SCIP_VARSTATUS_FIXED:
@@ -6784,6 +6813,8 @@ RETCODE SCIPvarUseActiveImplics(
 
    if( var->implics == NULL )
       return SCIP_OKAY;
+
+   debugMessage("using active implications for variable <%s>\n", SCIPvarGetName(var));
 
    oldimplics = var->implics;
    var->implics = NULL;
@@ -7479,6 +7510,18 @@ RETCODE SCIPvarGetOrigvarSum(
    }
 
    return SCIP_OKAY;
+}
+
+/** returns whether the given variable is the direct counterpart of an original problem variable */
+Bool SCIPvarIsTransformedOrigvar(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   /* the corresponding original variable is always the first parent variable of the transformed variable */
+   return (SCIPvarIsTransformed(var)
+      && var->nparentvars >= 1 && SCIPvarGetStatus(var->parentvars[0]) == SCIP_VARSTATUS_ORIGINAL);
 }
 
 /** gets objective value of variable in current LP; the value can be different from the bound stored in the variable's own
@@ -9395,6 +9438,7 @@ DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsIntegral
 #undef SCIPvarIsInitial
 #undef SCIPvarIsRemoveable
+#undef SCIPvarIsDeleted
 #undef SCIPvarIsActive
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex
@@ -9558,6 +9602,16 @@ Bool SCIPvarIsRemoveable(
    assert(var != NULL);
 
    return var->removeable;
+}
+
+/** returns whether the variable was deleted from the problem */
+Bool SCIPvarIsDeleted(
+   VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->deleted;
 }
 
 /** returns whether variable is an active (neither fixed nor aggregated) variable */

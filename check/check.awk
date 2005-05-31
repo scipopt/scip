@@ -8,13 +8,13 @@
 #*                  2002-2005 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the SCIP Academic License.        *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
-#*  You should have received a copy of the SCIP Academic License             *
+#*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.23 2005/05/11 15:08:31 bzfpfend Exp $
+# $Id: check.awk,v 1.24 2005/05/31 17:20:06 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -121,25 +121,31 @@ BEGIN {
 /^  propagation      :/ {
    if( inconflict == 1 )
    {
-      conftime += $3; confclauses += $5 + $7; confliterals += $5 * $6 + $7 * $8;
+      conftime += $3; #confclauses += $5 + $7; confliterals += $5 * $6 + $7 * $8;
    }
 }
 /^  infeasible LP    :/ {
    if( inconflict == 1 )
    {
-      conftime += $4; confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
    }
 }
 /^  strong branching :/ {
    if( inconflict == 1 )
    {
-      conftime += $4; confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
    }
 }
 /^  pseudo solution  :/ {
    if( inconflict == 1 )
    {
-      conftime += $4; confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+   }
+}
+/^  applied permanent:/ {
+   if( inconflict == 1 )
+   {
+      confclauses += $5; confliterals += $5 * $6;
    }
 }
 /^Separators         :/ { inconflict = 0; }
@@ -192,7 +198,7 @@ BEGIN {
 
    optimal = 0;
    markersym = "\\g";
-   if( abs(pb - db) < 1e-06 )
+   if( abs(pb - db) < 1e-06 || !feasible )
    {
       gap = 0.0;
       optimal = 1;

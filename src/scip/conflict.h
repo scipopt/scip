@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.29 2005/02/14 13:35:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.30 2005/05/31 17:20:11 bzfpfend Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -104,9 +104,9 @@ RETCODE SCIPconflicthdlrExec(
    CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SET*             set,                /**< global SCIP settings */
    NODE*            node,               /**< node to add conflict constraint to */
+   NODE*            validnode,          /**< node at which the constraint is valid */
    VAR**            conflictvars,       /**< variables of the conflict set */
    int              nconflictvars,      /**< number of variables in the conflict set */
-   Bool             local,              /**< is the conflict set only valid locally? */
    Bool             resolved,           /**< is the conflict set already used to create a constraint? */
    RESULT*          result              /**< pointer to store the result of the callback method */
    );
@@ -169,6 +169,62 @@ RETCODE SCIPconflictAnalyze(
    TREE*            tree,               /**< branch and bound tree */
    int              validdepth,         /**< minimal depth level at which the initial conflict set is valid */
    Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** adds the collected conflict clauses to the corresponding nodes; the best set->conf_maxclauses clauses are added
+ *  to the node of their validdepth; the remaining clauses are added to the node of their propdepth in order to just
+ *  trigger the deduction but not get introduced to a more global subtree
+ */
+extern
+RETCODE SCIPconflictFlushClauses(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree                /**< branch and bound tree */
+   );
+
+/** returns the current number of conflict clauses in the conflict clause storage */
+extern
+int SCIPconflictGetNClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of conflict clauses that were added to the problem */
+extern
+Longint SCIPconflictGetNAppliedClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of literals in conflict clauses that were added to the problem */
+extern
+Longint SCIPconflictGetNAppliedLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of conflict clauses that were added permanently to the problem */
+extern
+Longint SCIPconflictGetNAppliedPermClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of literals in conflict clauses that were added permanently to the problem */
+extern
+Longint SCIPconflictGetNAppliedPermLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of conflict clauses that were added temporarily to the problem */
+extern
+Longint SCIPconflictGetNAppliedTempClauses(
+   CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** returns the total number of literals in conflict clauses that were added temporarily to the problem */
+extern
+Longint SCIPconflictGetNAppliedTempLiterals(
+   CONFLICT*        conflict            /**< conflict analysis data */
    );
 
 /** gets time in seconds used for analyzing propagation conflicts */

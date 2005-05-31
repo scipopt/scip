@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.16 2005/05/17 12:03:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.17 2005/05/31 17:20:17 bzfpfend Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -81,6 +81,32 @@ struct PresolData
 /*
  * Local methods
  */
+
+/** frees the sorted vars array */
+static
+RETCODE freeSortedvars(
+   SCIP*            scip,               /**< SCIP data structure */
+   PRESOLDATA*      presoldata          /**< presolver data */
+   )
+{
+   assert(presoldata != NULL);
+
+   if( presoldata->sortedvars != NULL )
+   {
+      int i;
+
+      /* release variables */
+      for( i = 0; i < presoldata->nsortedvars; ++i )
+      {
+         CHECK_OKAY( SCIPreleaseVar(scip, &presoldata->sortedvars[i]) );
+      }
+      SCIPfreeMemoryArray(scip, &presoldata->sortedvars);
+      presoldata->nsortedvars = 0;
+      presoldata->nsortedbinvars = 0;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** applies and evaluates probing of a single variable in the given direction */
 static
@@ -169,6 +195,10 @@ DECL_PRESOLFREE(presolFreeProbing)
    /* free presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
+   assert(presoldata->sortedvars == NULL);
+   assert(presoldata->nsortedvars == 0);
+   assert(presoldata->nsortedbinvars == 0);
+
    SCIPfreeMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
@@ -207,12 +237,7 @@ DECL_PRESOLEXIT(presolExitProbing)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   if( presoldata->sortedvars != NULL )
-   {
-      SCIPfreeMemoryArray(scip, &presoldata->sortedvars);
-      presoldata->nsortedvars = 0;
-      presoldata->nsortedbinvars = 0;
-   }
+   CHECK_OKAY( freeSortedvars(scip, presoldata) );
    assert(presoldata->sortedvars == NULL);
    assert(presoldata->nsortedvars == 0);
    assert(presoldata->nsortedbinvars == 0);
@@ -248,12 +273,7 @@ DECL_PRESOLEXITPRE(presolExitpreProbing)
    /* delete the vars array, if the maximal number of runs are exceeded */
    if( presoldata->maxruns >= 0 && SCIPgetNRuns(scip) >= presoldata->maxruns )
    {
-      if( presoldata->sortedvars != NULL )
-      {
-         SCIPfreeMemoryArray(scip, &presoldata->sortedvars);
-         presoldata->nsortedvars = 0;
-         presoldata->nsortedbinvars = 0;
-      }
+      CHECK_OKAY( freeSortedvars(scip, presoldata) );
       assert(presoldata->sortedvars == NULL);
       assert(presoldata->nsortedvars == 0);
       assert(presoldata->nsortedbinvars == 0);
@@ -335,6 +355,12 @@ DECL_PRESOLEXEC(presolExecProbing)
       for( i = nbinvars; i < nvars; ++i )
          vars[i] = probvars[i];
       SCIPfreeBufferArray(scip, &varsnlocks);
+
+      /* capture variables to make sure, the variables are not deleted */
+      for( i = 0; i < nvars; ++i )
+      {
+         CHECK_OKAY( SCIPcaptureVar(scip, vars[i]) );
+      }
    }
    else
    {
@@ -377,8 +403,8 @@ DECL_PRESOLEXEC(presolExecProbing)
             presoldata->nfixings, presoldata->naggregations, presoldata->nimplications, presoldata->nbdchgs);
       }
 
-      /* ignore variables, that were fixed or aggregated in prior probings */
-      if( !SCIPvarIsActive(vars[i]) )
+      /* ignore variables, that were fixed, aggregated, or deleted in prior probings */
+      if( !SCIPvarIsActive(vars[i]) || SCIPvarIsDeleted(vars[i]) )
          continue;
 
       nuseless++;

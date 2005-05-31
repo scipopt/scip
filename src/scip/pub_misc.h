@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.14 2005/04/12 08:48:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.15 2005/05/31 17:20:18 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -136,7 +136,14 @@ void* SCIPhashtableRetrieve(
    void*            key                 /**< key to retrieve */
    );
 
-/** removes existing element from the hash table */
+/** returns whether the given element exists in the table */
+extern
+Bool SCIPhashtableExists(
+   HASHTABLE*       hashtable,          /**< hash table */
+   void*            element             /**< element to search in the table */
+   );
+
+/** removes element from the hash table, if it exists */
 extern
 RETCODE SCIPhashtableRemove(
    HASHTABLE*       hashtable,          /**< hash table */
@@ -203,7 +210,14 @@ RETCODE SCIPhashmapSetImage(
    void*            image               /**< new image for origin */
    );
 
-/** removes existing origin->image pair from the hash map */
+/** checks whether an image to the given origin exists in the hash map */
+extern
+Bool SCIPhashmapExists(
+   HASHMAP*         hashmap,            /**< hash map */
+   void*            origin              /**< origin to search for */
+   );
+
+/** removes origin->image pair from the hash map, if it exists */
 extern
 RETCODE SCIPhashmapRemove(
    HASHMAP*         hashmap,            /**< hash map */

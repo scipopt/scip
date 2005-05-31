@@ -8,13 +8,13 @@
 #*                  2002-2005 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the SCIP Academic License.        *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
-#*  You should have received a copy of the SCIP Academic License             *
+#*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.12 2005/05/11 15:08:31 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.13 2005/05/31 17:20:06 bzfpfend Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator

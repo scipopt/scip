@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.31 2005/04/25 14:34:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.32 2005/05/31 17:20:23 bzfpfend Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -114,16 +114,16 @@ struct BdChgInfo
 /** tracks changes of the variables' domains (static arrays, bound changes only) */
 struct DomChgBound
 {
+   unsigned int     nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
-   unsigned int     nboundchgs:30;      /**< number of bound changes */
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
 };
 
 /** tracks changes of the variables' domains (static arrays, bound and hole changes) */
 struct DomChgBoth
 {
+   unsigned int     nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
-   unsigned int     nboundchgs:30;      /**< number of bound changes */
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
    HOLECHG*         holechgs;           /**< array with changes in hole lists */
    int              nholechgs;          /**< number of hole list changes */
@@ -132,8 +132,8 @@ struct DomChgBoth
 /** tracks changes of the variables' domains (dynamic arrays) */
 struct DomChgDyn
 {
+   unsigned int     nboundchgs:30;      /**< number of bound changes (must be first structure entry!) */
    unsigned int     domchgtype:2;       /**< type of domain change data (must be first structure entry!) */
-   unsigned int     nboundchgs:30;      /**< number of bound changes */
    BOUNDCHG*        boundchgs;          /**< array with changes in bounds of variables */
    HOLECHG*         holechgs;           /**< array with changes in hole lists */
    int              nholechgs;          /**< number of hole list changes */
@@ -267,6 +267,7 @@ struct Var
    int              conflictsetcount;   /**< number of last conflict set, this variable was member of */
    unsigned int     initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int     removeable:1;       /**< TRUE iff var's column is removeable from the LP (due to aging or cleanup) */
+   unsigned int     deleted:1;          /**< TRUE iff variable was deleted from the problem */
    unsigned int     vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int     varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int     pseudocostflag:2;   /**< temporary flag used in pseudo cost update */

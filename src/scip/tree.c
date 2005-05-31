@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.144 2005/05/17 12:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.145 2005/05/31 17:20:24 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -39,6 +39,8 @@
 #include "scip/solve.h"
 #include "scip/cons.h"
 #include "scip/nodesel.h"
+#include "scip/prop.h"
+#include "scip/debug.h"
 
 
 #define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
@@ -752,6 +754,9 @@ RETCODE SCIPnodeFree(
 
    debugMessage("free node %p at depth %d of type %d\n", *node, (*node)->depth, SCIPnodeGetType(*node));
 
+   /* inform solution debugger, that the node has been freed */
+   CHECK_OKAY( SCIPdebugRemoveNode(*node) ); /*lint !e506 !e774*/
+
    /* free nodetype specific data, and release no longer needed LPI states */
    switch( SCIPnodeGetType(*node) )
    {
@@ -930,10 +935,12 @@ RETCODE nodeRepropagate(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -996,7 +1003,7 @@ RETCODE nodeRepropagate(
 
    /* propagate the domains again */
    oldnboundchgs = stat->nboundchgs;
-   CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, tree, SCIPnodeGetDepth(node), 0, cutoff) );
+   CHECK_OKAY( SCIPpropagateDomains(blkmem, set, stat, prob, tree, conflict, SCIPnodeGetDepth(node), 0, cutoff) );
    assert(!node->reprop);
    assert(node->parent == NULL || node->repropsubtreemark == node->parent->repropsubtreemark);
    assert((NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE);
@@ -1065,10 +1072,12 @@ RETCODE nodeActivate(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -1113,7 +1122,7 @@ RETCODE nodeActivate(
    {
       Bool propcutoff;
 
-      CHECK_OKAY( nodeRepropagate(node, blkmem, set, stat, primal, tree, lp, branchcand, 
+      CHECK_OKAY( nodeRepropagate(node, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict, 
             eventfilter, eventqueue, &propcutoff) );
       *cutoff = *cutoff || propcutoff;
    }
@@ -1169,6 +1178,7 @@ RETCODE SCIPnodeAddCons(
 {
    assert(node != NULL);
    assert(cons != NULL);
+   assert(cons->validdepth <= node->depth);
 
    /* if node is the root, mark constraint to be globally valid */
    if( node->depth == 0 )
@@ -1257,9 +1267,11 @@ RETCODE SCIPnodeAddBoundinfer(
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
-   debugMessage("adding boundchange at node at depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g\n",
+   debugMessage("adding boundchange at node at depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>)\n",
       node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
-      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound);
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
+      infercons != NULL ? "cons" : "prop", 
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"));
 
    /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
    infervar = var;
@@ -1362,6 +1374,9 @@ RETCODE SCIPnodeAddBoundinfer(
    }
    else
    {
+      /* check the infered bound change on the debugging solution */
+      CHECK_OKAY( SCIPdebugCheckInference(blkmem, set, node, var, newbound, boundtype) ); /*lint !e506 !e774*/
+
       /* remember the bound change as inference (lpsolval is not important: use 0.0) */
       CHECK_OKAY( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newbound, boundtype,
             infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER, 
@@ -1778,9 +1793,11 @@ RETCODE treeSwitchPath(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    NODE*            fork,               /**< common fork node of old and new focus node, or NULL */
@@ -1837,7 +1854,7 @@ RETCODE treeSwitchPath(
       assert(fork->active);
       assert(!fork->cutoff);
 
-      CHECK_OKAY( nodeRepropagate(fork, blkmem, set, stat, primal, tree, lp, branchcand, 
+      CHECK_OKAY( nodeRepropagate(fork, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict, 
             eventfilter, eventqueue, cutoff) );
    }
    assert(fork != NULL || !(*cutoff));
@@ -1853,7 +1870,7 @@ RETCODE treeSwitchPath(
 
       /* activate the node, and apply domain propagation if the reprop flag is set */
       tree->pathlen++;
-      CHECK_OKAY( nodeActivate(tree->path[i], blkmem, set, stat, primal, tree, lp, branchcand,
+      CHECK_OKAY( nodeActivate(tree->path[i], blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
             eventfilter, eventqueue, cutoff) );
    }
 
@@ -2582,6 +2599,7 @@ RETCODE SCIPnodeFocus(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
@@ -2849,7 +2867,7 @@ RETCODE SCIPnodeFocus(
    tree->focussubroot = subroot;
 
    /* track the path from the old focus node to the new node, and perform domain and constraint set changes */
-   CHECK_OKAY( treeSwitchPath(tree, blkmem, set, stat, primal, lp, branchcand, eventfilter, eventqueue, 
+   CHECK_OKAY( treeSwitchPath(tree, blkmem, set, stat, prob, primal, lp, branchcand, conflict, eventfilter, eventqueue, 
          fork, *node, cutoff) );
    assert(tree->pathlen >= 0);
    assert(*node != NULL || tree->pathlen == 0);
@@ -3039,6 +3057,7 @@ RETCODE SCIPtreeCreatePresolvingRoot(
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -3057,8 +3076,8 @@ RETCODE SCIPtreeCreatePresolvingRoot(
    assert(tree->root != NULL);
 
    /* install the temporary root node as focus node */
-   CHECK_OKAY( SCIPnodeFocus(&tree->root, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventfilter, eventqueue,
-         &cutoff) );
+   CHECK_OKAY( SCIPnodeFocus(&tree->root, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
+         eventfilter, eventqueue, &cutoff) );
    assert(!cutoff);
 
    return SCIP_OKAY;
@@ -3074,6 +3093,7 @@ RETCODE SCIPtreeFreePresolvingRoot(
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -3088,8 +3108,8 @@ RETCODE SCIPtreeFreePresolvingRoot(
 
    /* unfocus the temporary root node */
    node = NULL;
-   CHECK_OKAY( SCIPnodeFocus(&node, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventfilter, eventqueue,
-         &cutoff) );
+   CHECK_OKAY( SCIPnodeFocus(&node, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict, 
+         eventfilter, eventqueue, &cutoff) );
    assert(!cutoff);
    assert(tree->root == NULL);
    assert(tree->focusnode == NULL);

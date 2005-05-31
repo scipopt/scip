@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.37 2005/04/11 10:56:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.38 2005/05/31 17:20:20 bzfpfend Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -70,6 +70,7 @@
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_strongcg.h"
 #include "scip/scipdefplugins.h"
+#include "scip/debug.h"
 
 #if 0
 #include "scip/cons_binpack.h"
@@ -137,6 +138,8 @@ RETCODE SCIPincludeDefaultPlugins(
    CHECK_OKAY( SCIPincludeSepaStrongcg(scip) );
    CHECK_OKAY( SCIPincludeDispDefault(scip) );
    CHECK_OKAY( SCIPincludeDialogDefault(scip) );
+
+   CHECK_OKAY( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;
 }

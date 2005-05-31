@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.193 2005/05/17 12:03:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.194 2005/05/31 17:20:15 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3282,6 +3282,21 @@ void SCIPcolGetStrongbranchLast(
       *solval = col->sbsolval;
    if( lpobjval != NULL )
       *lpobjval = col->sblpobjval;
+}
+
+/** if strong branching was already applied on the column at the current node, returns the number of LPs solved after
+ *  the LP where the strong branching on this column was applied;
+ *  if strong branching was not yet applied on the column at the current node, returns INT_MAX
+ */
+int SCIPcolGetStrongbranchLPAge(
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< dynamic problem statistics */
+   )
+{
+   assert(col != NULL);
+   assert(stat != NULL);
+
+   return (col->sbnode != stat->nnodes ? INT_MAX : stat->lpcount - col->validsblp);
 }
 
 /** output column to file stream */
@@ -10015,6 +10030,27 @@ RETCODE SCIPlpUpdateAddVar(
    /* update the loose variables counter */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
       lp->nloosevars++;
+
+   return SCIP_OKAY;
+}
+
+/** informs LP, that given variable is to be deleted from the problem */
+RETCODE SCIPlpUpdateDelVar(
+   LP*              lp,                 /**< current LP data */
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable that will be deleted from the problem */
+   )
+{
+   assert(lp != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetProbindex(var) >= 0);
+
+   /* subtract the variable from the loose objective value sum */
+   CHECK_OKAY( SCIPlpUpdateVarObj(lp, set, var, SCIPvarGetObj(var), 0.0) );
+
+   /* update the loose variables counter */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+      lp->nloosevars--;
 
    return SCIP_OKAY;
 }

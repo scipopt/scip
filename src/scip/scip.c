@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.289 2005/05/17 12:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.290 2005/05/31 17:20:20 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2577,16 +2577,15 @@ RETCODE SCIPaddVar(
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      /* check variable's status */
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
-         {
-            errorMessage("cannot add original variables to transformed problem\n");
-         }
-         else
-         {
-            errorMessage("cannot add fixed or aggregated variables to transformed problem\n");
-         }
+         errorMessage("cannot add original variables to transformed problem\n");
+         return SCIP_INVALIDDATA;
+      }
+      else if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      {
+         errorMessage("cannot add fixed or aggregated variables to transformed problem\n");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
@@ -2620,16 +2619,14 @@ RETCODE SCIPaddPricedVar(
    if( SCIPvarGetProbindex(var) == -1 )
    {
       /* check variable's status */
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
       {
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
-         {
-            errorMessage("cannot add original variables to transformed problem\n");
-         }
-         else
-         {
-            errorMessage("cannot add fixed or aggregated variables to transformed problem\n");
-         }
+         errorMessage("cannot add original variables to transformed problem\n");
+         return SCIP_INVALIDDATA;
+      }
+      else if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      {
+         errorMessage("cannot add fixed or aggregated variables to transformed problem\n");
          return SCIP_INVALIDDATA;
       }
       CHECK_OKAY( SCIPprobAddVar(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
@@ -2641,6 +2638,69 @@ RETCODE SCIPaddPricedVar(
          (SCIPtreeGetCurrentDepth(scip->tree) == 0)) );
    
    return SCIP_OKAY;
+}
+
+/** removes variable from the problem; however, the variable is NOT removed from the constraints */
+RETCODE SCIPdelVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to delete */
+   )
+{
+   CHECK_OKAY( checkStage(scip, "SCIPdelVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE) );
+
+   /* don't remove variables that are not in the problem */
+   /**@todo what about negated variables? should the negation variable be removed instead? */
+   if( SCIPvarGetProbindex(var) == -1 )
+      return SCIP_OKAY;
+
+   /* don't remove the direct counterpart of an original variable from the transformed problem, because otherwise
+    * operations on the original variables would be applied to a NULL pointer
+    */
+   if( SCIPvarIsTransformedOrigvar(var) )
+      return SCIP_OKAY;
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
+      {
+         errorMessage("cannot remove transformed variables from original problem\n");
+         return SCIP_INVALIDDATA;
+      }
+      CHECK_OKAY( SCIPprobDelVar(scip->origprob, scip->mem->probmem, scip->set, scip->eventfilter, scip->eventqueue,
+            var) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_FREESOLVE:
+   case SCIP_STAGE_FREETRANS:
+      /* check variable's status */
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
+      {
+         errorMessage("cannot remove original variables from transformed problem\n");
+         return SCIP_INVALIDDATA;
+      }
+      else if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      {
+         errorMessage("cannot remove fixed or aggregated variables from transformed problem\n");
+         return SCIP_INVALIDDATA;
+      }
+
+      /* in FREETRANS stage, we don't need to remove the variable, because the transformed problem is freed anyways */
+      if( scip->set->stage != SCIP_STAGE_FREETRANS )
+      {
+         CHECK_OKAY( SCIPprobDelVar(scip->transprob, scip->mem->solvemem, scip->set, scip->eventfilter, scip->eventqueue,
+               var) );
+      }
+      return SCIP_OKAY;
+
+   default:
+      errorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_ERROR;
+   }  /*lint !e788*/
 }
 
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
@@ -3161,12 +3221,20 @@ CONS* SCIPfindCons(
  */
 
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
- *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
+ *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
+ *  only active in a small part of the tree although it is valid in a larger part.
+ *  In this case, one should pass the more global node where the constraint is valid as "validnode".
+ *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
+ *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
+ *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
+ *  upgraded into a global constraint.
  */
 RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to add constraint to */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons,               /**< constraint to add */
+   NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    )
 {
    assert(cons != NULL);
@@ -3174,10 +3242,33 @@ RETCODE SCIPaddConsNode(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   if( validnode != NULL )
+   {
+      int validdepth;
+
+      validdepth = SCIPnodeGetDepth(validnode);
+      if( validdepth > SCIPnodeGetDepth(node) )
+      {
+         errorMessage("cannot add constraint <%s> valid in depth %d to a node of depth %d\n",
+            SCIPconsGetName(cons), validdepth, SCIPnodeGetDepth(node));
+         return SCIP_INVALIDDATA;
+      }
+      if( cons->validdepth != -1 && cons->validdepth != validdepth )
+      {
+         errorMessage("constraint <%s> is already marked to be valid in depth %d - cannot mark it to be valid in depth %d\n",
+            SCIPconsGetName(cons), cons->validdepth, validdepth);
+         return SCIP_INVALIDDATA;
+      }
+      if( validdepth == 0 )
+         SCIPconsSetGlobal(cons);
+      else
+         cons->validdepth = validdepth;
+   }
+
    if( SCIPnodeGetDepth(node) == 0 )
    {
       assert(node == scip->tree->root);
-      cons->local = FALSE;
+      SCIPconsSetGlobal(cons);
       CHECK_OKAY( SCIPprobAddCons(scip->transprob, scip->set, scip->stat, cons) );
    }
    else
@@ -3189,18 +3280,26 @@ RETCODE SCIPaddConsNode(
 }
 
 /** adds constraint locally to the current node (and all of its subnodes), even if it is a global constraint;
- *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
+ *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
+ *  only active in a small part of the tree although it is valid in a larger part.
+ *  In this case, one should pass the more global node where the constraint is valid as "validnode".
+ *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
+ *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
+ *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
+ *  upgraded into a global constraint.
  */
 RETCODE SCIPaddConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons,               /**< constraint to add */
+   NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    )
 {
    assert(cons != NULL);
 
    CHECK_OKAY( checkStage(scip, "SCIPaddConsLocal", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   CHECK_OKAY( SCIPaddConsNode(scip, SCIPtreeGetCurrentNode(scip->tree), cons) );
+   CHECK_OKAY( SCIPaddConsNode(scip, SCIPtreeGetCurrentNode(scip->tree), cons, validnode) );
    
    return SCIP_OKAY;
 }
@@ -3509,10 +3608,13 @@ RETCODE initPresolve(
    
    /* create temporary presolving root node */
    CHECK_OKAY( SCIPtreeCreatePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-         scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
+         scip->primal, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
 
    /* inform plugins that the presolving is abound to begin */
    CHECK_OKAY( SCIPsetInitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
+
+   /* delete the variables from the problems that were marked to be deleted */
+   CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand) );
 
    return SCIP_OKAY;
 }
@@ -3535,6 +3637,9 @@ RETCODE exitPresolve(
    /* inform plugins that the presolving is finished, and perform final modifications */
    CHECK_OKAY( SCIPsetExitprePlugins(scip->set, scip->mem->solvemem, scip->stat, unbounded, infeasible) );
 
+   /* delete the variables from the problems that were marked to be deleted */
+   CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, scip->branchcand) );
+
    /* replace variables in variable bounds with active problem variables, and 
     * check, whether the objective value is always integral
     */
@@ -3543,7 +3648,7 @@ RETCODE exitPresolve(
  
    /* free temporary presolving root node */
    CHECK_OKAY( SCIPtreeFreePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
-         scip->primal, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue) );
+         scip->primal, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue) );
 
    /* switch stage to PRESOLVED */
    scip->set->stage = SCIP_STAGE_PRESOLVED;
@@ -3658,6 +3763,10 @@ RETCODE presolveRound(
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
 
+      /* delete the variables from the problems that were marked to be deleted */
+      CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
+            scip->branchcand) );
+
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
       if( onlydelayed && result == SCIP_SUCCESS )
       {
@@ -3691,6 +3800,10 @@ RETCODE presolveRound(
             SCIPconshdlrGetName(scip->set->conshdlrs[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* delete the variables from the problems that were marked to be deleted */
+      CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
+            scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
       if( onlydelayed && result == SCIP_SUCCESS )
@@ -3726,6 +3839,10 @@ RETCODE presolveRound(
             "presolver <%s> detected unboundness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i]));
       }
       *delayed = *delayed || (result == SCIP_DELAYED);
+
+      /* delete the variables from the problems that were marked to be deleted */
+      CHECK_OKAY( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, 
+            scip->branchcand) );
 
       /* if we work off the delayed presolvers, we stop immediately if a reduction was found */
       if( onlydelayed && result == SCIP_SUCCESS )
@@ -3972,7 +4089,7 @@ RETCODE freeSolve(
       Bool cutoff;
 
       CHECK_OKAY( SCIPnodeFocus(&node, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal,
-            scip->tree, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue, &cutoff) );
+            scip->tree, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &cutoff) );
       assert(!cutoff);
    }
 
@@ -4896,6 +5013,23 @@ Longint SCIPgetVarStrongbranchNode(
       return -1;
 
    return SCIPcolGetStrongbranchNode(SCIPvarGetCol(var));
+}
+
+/** if strong branching was already applied on the variable at the current node, returns the number of LPs solved after
+ *  the LP where the strong branching on this variable was applied;
+ *  if strong branching was not yet applied on the variable at the current node, returns INT_MAX
+ */
+int SCIPgetVarStrongbranchLPAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get strong branching LP age for */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetVarStrongbranchLPAge", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+      return INT_MAX;
+
+   return SCIPcolGetStrongbranchLPAge(SCIPvarGetCol(var), scip->stat);
 }
 
 /** gets number of times, strong branching was applied in current run on the given variable */
@@ -7142,7 +7276,7 @@ RETCODE SCIPanalyzeConflictCons(
    else if( SCIPconsIsActive(cons) )
    {
       CHECK_OKAY( SCIPconflictAnalyze(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, 
-            scip->transprob, scip->tree, SCIPconsGetActiveDepth(cons), success) );
+            scip->transprob, scip->tree, SCIPconsGetValidDepth(cons), success) );
    }
    
    return SCIP_OKAY;
@@ -9045,8 +9179,8 @@ RETCODE SCIPpropagateProbing(
       return SCIP_INVALIDCALL;
    }
 
-   CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->tree, 
-         0, maxproprounds, cutoff) );
+   CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
+         scip->conflict, 0, maxproprounds, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -10803,6 +10937,16 @@ Longint SCIPgetNConflictClausesFound(
       + SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict);
 }
 
+/** get total number of conflict clauses added to the problem */
+Longint SCIPgetNConflictClausesApplied(
+   SCIP*            scip                /**< SCIP data structure */
+   )
+{
+   CHECK_ABORT( checkStage(scip, "SCIPgetNConflictClausesApplied", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPconflictGetNAppliedClauses(scip->conflict);
+}
+
 /** gets depth of current node, or -1 if no current node exists */
 int SCIPgetDepth(
    SCIP*            scip                /**< SCIP data structure */
@@ -11504,6 +11648,16 @@ void printConflictStatistics(
       SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) > 0
       ? (Real)SCIPconflictGetNPseudoReconvergenceLiterals(scip->conflict)
       / (Real)SCIPconflictGetNPseudoReconvergenceClauses(scip->conflict) : 0);
+   fprintf(file, "  applied permanent:          -          - %10lld %10.1f          -          -          -\n",
+      SCIPconflictGetNAppliedPermClauses(scip->conflict),
+      SCIPconflictGetNAppliedPermClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNAppliedPermLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNAppliedPermClauses(scip->conflict) : 0);
+   fprintf(file, "  applied temporary:          -          - %10lld %10.1f          -          -          -\n",
+      SCIPconflictGetNAppliedTempClauses(scip->conflict),
+      SCIPconflictGetNAppliedTempClauses(scip->conflict) > 0
+      ? (Real)SCIPconflictGetNAppliedTempLiterals(scip->conflict)
+      / (Real)SCIPconflictGetNAppliedTempClauses(scip->conflict) : 0);
 }
 
 static

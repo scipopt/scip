@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.226 2005/05/17 12:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.227 2005/05/31 17:20:20 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1258,6 +1258,13 @@ RETCODE SCIPaddPricedVar(
    Real             score               /**< pricing score of variable (the larger, the better the variable) */
    );
 
+/** removes variable from the problem; however, the variable is NOT removed from the constraints */
+extern
+RETCODE SCIPdelVar(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to delete */
+   );
+
 /** gets variables of the problem along with the numbers of different variable types; data may become invalid after
  *  calls to SCIPchgVarType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()
  */
@@ -1433,22 +1440,38 @@ CONS* SCIPfindCons(
 /**@{ */
 
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
- *  if a local constraint is added to the root node, it is automatically upgraded into a global constraint
+ *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
+ *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
+ *  only active in a small part of the tree although it is valid in a larger part.
+ *  In this case, one should pass the more global node where the constraint is valid as "validnode".
+ *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
+ *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
+ *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
+ *  upgraded into a global constraint.
  */
 extern
 RETCODE SCIPaddConsNode(
    SCIP*            scip,               /**< SCIP data structure */
    NODE*            node,               /**< node to add constraint to */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons,               /**< constraint to add */
+   NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    );
 
 /** adds constraint locally to the current node (and all of its subnodes), even if it is a global constraint;
- *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
+ *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
+ *  only active in a small part of the tree although it is valid in a larger part.
+ *  In this case, one should pass the more global node where the constraint is valid as "validnode".
+ *  Note that the same constraint cannot be added twice to the branching tree with different "validnode" parameters.
+ *  If the constraint is valid at the same as it is inserted (the usual case), one should pass NULL as "validnode".
+ *  If a local constraint is added to the root node, or if the "validnode" is the root node, it is automatically
+ *  upgraded into a global constraint.
  */
 extern
 RETCODE SCIPaddConsLocal(
    SCIP*            scip,               /**< SCIP data structure */
-   CONS*            cons                /**< constraint to add */
+   CONS*            cons,               /**< constraint to add */
+   NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities at the given node (and all subnodes);
@@ -1754,6 +1777,16 @@ extern
 Longint SCIPgetVarStrongbranchNode(
    SCIP*            scip,               /**< SCIP data structure */
    VAR*             var                 /**< variable to get last strong branching node for */
+   );
+
+/** if strong branching was already applied on the variable at the current node, returns the number of LPs solved after
+ *  the LP where the strong branching on this variable was applied;
+ *  if strong branching was not yet applied on the variable at the current node, returns INT_MAX
+ */
+extern
+int SCIPgetVarStrongbranchLPAge(
+   SCIP*            scip,               /**< SCIP data structure */
+   VAR*             var                 /**< variable to get strong branching LP age for */
    );
 
 /** gets number of times, strong branching was applied in current run on the given variable */
@@ -4320,6 +4353,12 @@ int SCIPgetNCutsApplied(
 /** get total number of clauses found in conflict analysis (conflict and reconvergence clauses) */
 extern
 Longint SCIPgetNConflictClausesFound(
+   SCIP*            scip                /**< SCIP data structure */
+   );
+
+/** get total number of conflict clauses added to the problem */
+extern
+Longint SCIPgetNConflictClausesApplied(
    SCIP*            scip                /**< SCIP data structure */
    );
 

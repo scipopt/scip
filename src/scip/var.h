@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.94 2005/05/17 12:03:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.95 2005/05/31 17:20:26 bzfpfend Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -348,6 +348,12 @@ extern
 void SCIPvarSetProbindex(
    VAR*             var,                /**< problem variable */
    int              probindex           /**< new problem index of variable */
+   );
+
+/** marks the variable to be deleted from the problem */
+extern
+void SCIPvarMarkDeleted(
+   VAR*             var                 /**< problem variable */
    );
 
 /** modifies lock numbers for rounding */

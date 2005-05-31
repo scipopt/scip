@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.103 2005/02/22 19:13:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.104 2005/05/31 17:20:15 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -229,6 +229,16 @@ void SCIPcolGetStrongbranchLast(
                                          *   otherwise, it can only be used as an estimate value */
    Real*            solval,             /**< stores LP solution value of column at last strong branching call, or NULL */
    Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
+   );
+
+/** if strong branching was already applied on the column at the current node, returns the number of LPs solved after
+ *  the LP where the strong branching on this column was applied;
+ *  if strong branching was not yet applied on the column at the current node, returns INT_MAX
+ */
+extern
+int SCIPcolGetStrongbranchLPAge(
+   COL*             col,                /**< LP column */
+   STAT*            stat                /**< dynamic problem statistics */
    );
 
 
@@ -872,6 +882,14 @@ RETCODE SCIPlpUpdateAddVar(
    LP*              lp,                 /**< current LP data */
    SET*             set,                /**< global SCIP settings */
    VAR*             var                 /**< variable that is now a LOOSE problem variable */
+   );
+
+/** informs LP, that given variable is to be deleted from the problem */
+extern
+RETCODE SCIPlpUpdateDelVar(
+   LP*              lp,                 /**< current LP data */
+   SET*             set,                /**< global SCIP settings */
+   VAR*             var                 /**< variable that will be deleted from the problem */
    );
 
 /** informs LP, that given formerly loose problem variable is now a column variable */

@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.45 2005/02/14 13:35:47 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.46 2005/05/31 17:20:18 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -123,6 +123,27 @@ RETCODE SCIPprobAddVar(
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    VAR*             var                 /**< variable to add */
+   );
+
+/** marks variable to be removed from the problem; however, the variable is NOT removed from the constraints */
+extern
+RETCODE SCIPprobDelVar(
+   PROB*            prob,               /**< problem data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   EVENTQUEUE*      eventqueue,         /**< event queue */
+   VAR*             var                 /**< problem variable */
+   );
+
+/** actually removes the deleted variables from the problem and releases them */
+extern
+RETCODE SCIPprobPerformVarDeletions(
+   PROB*            prob,               /**< problem data */
+   BLKMEM*          blkmem,             /**< block memory */
+   SET*             set,                /**< global SCIP settings */
+   LP*              lp,                 /**< current LP data (may be NULL) */
+   BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
 
 /** changes the type of a variable in the problem */

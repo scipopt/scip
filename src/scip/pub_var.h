@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.44 2005/05/03 08:47:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.45 2005/05/31 17:20:19 bzfpfend Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -123,6 +123,12 @@ RETCODE SCIPvarGetOrigvarSum(
    VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
    Real*            scalar,             /**< pointer to scalar a in sum a*x + c */
    Real*            constant            /**< pointer to constant c in sum a*x + c */
+   );
+
+/** returns whether the given variable is the direct counterpart of an original problem variable */
+extern
+Bool SCIPvarIsTransformedOrigvar(
+   VAR*             var                 /**< problem variable */
    );
 
 /** returns the number of times, a bound of the variable was changed in given direction due to branching */
@@ -251,6 +257,12 @@ Bool SCIPvarIsInitial(
 /** returns whether variable's column is removeable from the LP (due to aging or cleanup) */
 extern
 Bool SCIPvarIsRemoveable(
+   VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether the variable was deleted from the problem */
+extern
+Bool SCIPvarIsDeleted(
    VAR*             var                 /**< problem variable */
    );
 
@@ -542,6 +554,7 @@ int* SCIPvarGetImplIds(
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemoveable(var)        (var)->removeable
+#define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex

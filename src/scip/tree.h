@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.76 2005/03/21 11:37:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.77 2005/05/31 17:20:24 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -100,6 +100,7 @@ RETCODE SCIPnodeFocus(
    TREE*            tree,               /**< branch and bound tree */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue,         /**< event queue */
    Bool*            cutoff              /**< pointer to store whether the given node can be cut off */
@@ -273,6 +274,7 @@ RETCODE SCIPtreeCreatePresolvingRoot(
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );
@@ -288,6 +290,7 @@ RETCODE SCIPtreeFreePresolvingRoot(
    PRIMAL*          primal,             /**< primal data */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   CONFLICT*        conflict,           /**< conflict analysis data */
    EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    EVENTQUEUE*      eventqueue          /**< event queue */
    );

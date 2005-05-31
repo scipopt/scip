@@ -2,15 +2,37 @@ current version
 ===============
 
 interface:
+- additional parameter "validnode" for SCIPaddConsLocal() and SCIPaddConsNode()
+- new method SCIPgetNConflictClausesApplied()
+- new method SCIPdelVar()
+- new method SCIPgetVarStrongbranchLPAge()
+- new method SCIPgetNConflictClausesApplied()
+- new event type SCIP_EVENTTYPE_VARDELETED
+- new method SCIPconsGetValidDepth()
+- new method SCIPhashtableExists()
+- method SCIPhashtableRemove() can now also be called, if the element does not exist in the table
+- new method SCIPhashmapExists()
+- method SCIPhashmapRemove() can now also be called, if the element does not exist in the map
+- new method SCIPvarIsTransformedOrigvar()
+- new method SCIPvarIsDeleted()
+- new callback parameter "validnode" for the CONFLICTEXEC method of conflict handlers, which should be passed to
+  SCIPaddConsNode()
 
 plugins:
 
 parameters:
+- replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
+- new parameter conflict/maxclauses
+- new parameter branching/fullstrong/reevalage
 
 features:
 - reactivated multiaggregation in cons_linear.c on binary variables again (possible due to bug fix below)
 - introduced subversion string
 - adding variable bounds automatically adds the corresponding implication
+- conflict clauses are now collected in a conflict store, redundant clauses are eliminated, and only the best
+  "conflict/maxclauses" clauses are added permanently to the problem; the remaining clauses are only added
+  temporarily, if they can be used for repropagation
+- improved debugging for infeasible cuts and propagations, given a primal feasible solution
 
 fixed bugs:
 - LP primal feasibility for bounds is now defined as absolute measure (was relative to the bound before);
@@ -33,6 +55,10 @@ fixed bugs:
 - due to usage of variable bounds, SCIPcalcMIR() may return LOOSE variables in the cut -> modified sepa_cmir.c,
   sepa_gomory.c, and sepa_strongcg.c to use SCIPcreateEmptyRow() and SCIPaddVarsToRow() instead of SCIPcreateRow()
   which only works for COLs
+- removed bug in presol_probing.c: the vars of the sorted variables array have to be captured
+- fixed bug in the output of solutions with priced variables
+- fixed bug in propagation with parameters prop_maxrounds and prop_maxroundsroot
+- removed wrong assertion in varAddImplic()
 
 
 SCIP version 0.79

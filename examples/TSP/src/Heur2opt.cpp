@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License.             */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.2 2005/04/14 19:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.3 2005/05/31 17:20:07 bzfpfend Exp $"
 
 /**@file   heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP

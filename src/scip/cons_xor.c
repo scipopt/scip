@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.30 2005/05/03 14:48:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.31 2005/05/31 17:20:12 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -310,6 +310,13 @@ RETCODE consdataFree(
    /* release internal variable */
    if( (*consdata)->intvar != NULL )
    {
+      /* if internal variable is not defined anymore by any checked constraint, delete it from the problem;
+       * otherwise, it could be fixed to a wrong value in dual presolving
+       */
+      if( SCIPvarMayRoundDown((*consdata)->intvar) && SCIPvarMayRoundUp((*consdata)->intvar) )
+      {
+         CHECK_OKAY( SCIPdelVar(scip, (*consdata)->intvar) );
+      }
       CHECK_OKAY( SCIPreleaseVar(scip, &(*consdata)->intvar) );
    }
 
@@ -474,8 +481,9 @@ RETCODE createRelaxation(
    if( consdata->intvar == NULL )
    {
       sprintf(varname, "%s_int", SCIPconsGetName(cons));
-      CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, SCIPfloor(scip, consdata->nvars/2.0), 0.0,
-            SCIP_VARTYPE_INTEGER, SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
+      CHECK_OKAY( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, (Real)(consdata->nvars/2), 0.0,
+            consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
+            SCIPconsIsInitial(cons), SCIPconsIsRemoveable(cons), NULL, NULL, NULL, NULL) );
       CHECK_OKAY( SCIPaddVar(scip, consdata->intvar) );
 
       /* install the rounding locks for the internal variable */

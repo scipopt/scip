@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.50 2005/03/22 18:42:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.51 2005/05/31 17:20:23 bzfpfend Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -120,6 +120,8 @@ struct Set
                                          *   analysis (-1: use All-FirstUIP rule) */
    int              conf_interclauses;  /**< maximal number of intermediate conflict clauses generated in conflict
                                          *   graph (-1: use every intermediate clause) */
+   int              conf_maxclauses;    /**< maximal number of conflict clauses accepted at an infeasible node
+                                         *   (-1: use all generated conflict clauses) */
    Bool             conf_reconvclauses; /**< should reconvergence clauses be created for UIPs of last depth level? */
    Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
    Bool             conf_uselp;         /**< should infeasible LP conflict analysis be used? */
@@ -201,8 +203,9 @@ struct Set
    /* presolving settings */
    Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int              presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
-   int              presol_restartbdchgs; /**< number of root node bound changes triggering a restart with preprocessing
-                                           *   (-1: no restart, 0: restart only after complete root node evaluation) */
+   int              presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
+   Real             presol_restartfac;  /**< fraction of bounds that changed in the root node triggering a restart with
+                                         *   preprocessing (0.0: restart only after complete root node evaluation) */
 
    /* pricing settings */
    Real             price_abortfac;     /**< pricing is aborted, if fac * maxpricevars pricing candidates were found */

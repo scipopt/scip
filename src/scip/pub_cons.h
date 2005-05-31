@@ -8,13 +8,13 @@
 /*                  2002-2005 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.22 2005/03/21 11:39:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.23 2005/05/31 17:20:18 bzfpfend Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -379,11 +379,17 @@ int SCIPconsGetNUses(
    CONS*            cons                /**< constraint */
    );
 
-/** for an active constraint, returns the depth in the tree at which the constraint was activated;
- *  for local active constraints, this is the depth at which the constraint is valid
- */
+/** for an active constraint, returns the depth in the tree at which the constraint was activated */
 extern
 int SCIPconsGetActiveDepth(
+   CONS*            cons                /**< constraint */
+   );
+
+/** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local
+ *  and currently not active
+ */
+extern
+int SCIPconsGetValidDepth(
    CONS*            cons                /**< constraint */
    );
 
@@ -536,6 +542,10 @@ Bool SCIPconsIsLocked(
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsGetNUses(cons)          (cons)->nuses
 #define SCIPconsGetActiveDepth(cons)    (cons)->activedepth
+#define SCIPconsGetValidDepth(cons)     (!(cons)->local ? 0     \
+      : !SCIPconsIsActive(cons) ? INT_MAX                       \
+      : (cons)->validdepth == -1 ? SCIPconsGetActiveDepth(cons) \
+      : (cons)->validdepth)
 #define SCIPconsIsActive(cons)          ((cons)->updateactivate || ((cons)->active && !(cons)->updatedeactivate))
 #define SCIPconsIsEnabled(cons)         ((cons)->updateenable || ((cons)->enabled && !(cons)->updatedisable))
 #define SCIPconsIsSeparationEnabled(cons)                               \
