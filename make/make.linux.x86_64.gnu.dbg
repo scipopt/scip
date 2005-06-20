@@ -1,0 +1,7 @@
+#--- $Id: make.linux.x86_64.gnu.dbg,v 1.1 2005/06/20 16:18:47 bzfpfend Exp $
+FLAGS		+=	-DWITH_READLINE -DROUNDING_FE
+OFLAGS		+=	-O0 -g -m64
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
+ARFLAGS		=	crs
+LDFLAGS		+=	-lreadline -lz -lncurses # -static

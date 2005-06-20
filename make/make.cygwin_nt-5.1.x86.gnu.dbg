@@ -1,0 +1,7 @@
+#--- $Id: make.cygwin_nt-5.1.x86.gnu.dbg,v 1.1 2005/06/20 16:18:47 bzfpfend Exp $
+FLAGS		+=	-DWITH_READLINE
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
+ARFLAGS		=	crs
+LDFLAGS		+=	-lreadline -lz -lncurses # -static
