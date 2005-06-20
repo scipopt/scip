@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.93 2005/06/20 10:56:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.94 2005/06/20 18:01:01 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1040,12 +1040,6 @@ RETCODE SCIPconflictFlushClauses(
       CHECK_OKAY( clauseFree(&conflict->clauses[i], blkmem) );
    }
    conflict->nclauses = 0;
-
-   assert(conflict->nappliedpermclauses + conflict->nappliedtempclauses
-      <= conflict->npropconfclauses + conflict->npropreconvclauses
-      + conflict->nlpconfclauses + conflict->nlpreconvclauses
-      + conflict->nsbconfclauses + conflict->nsbreconvclauses
-      + conflict->npseudoconfclauses + conflict->npseudoreconvclauses);
 
    return SCIP_OKAY;
 }
@@ -3907,6 +3901,8 @@ RETCODE conflictAnalyzeLP(
          assert(nbdchgs >= lastnbdchgs);
          if( solvelp )
          {
+            RETCODE retcode;
+
             if( nbdchgs > lastnbdchgs )
             {
                debugMessage(" -> applying %d bound changes to the LP solver (total: %d)\n", nbdchgs - lastnbdchgs, nbdchgs);
@@ -3918,10 +3914,18 @@ RETCODE conflictAnalyzeLP(
             SCIPclockStart(stat->conflictlptime, set);
             
             /* resolve LP */
-            CHECK_OKAY( SCIPlpiSolveDual(lpi) );
+            retcode = SCIPlpiSolveDual(lpi);
             
             /* stop LP timer */
             SCIPclockStop(stat->conflictlptime, set);
+
+            /* check return code of LP solving call */
+            if( retcode == SCIP_LPERROR )
+            {
+               valid = FALSE;
+               break;
+            }
+            CHECK_OKAY( retcode );
 
             /* count number of LP iterations */
             CHECK_OKAY( SCIPlpiGetIterations(lpi, &iter) );
@@ -4241,6 +4245,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
       newub = SCIPsetFeasCeil(set, col->primsol-1.0);
       if( newub >= col->lb - 0.5 )
       {
+         RETCODE retcode;
+
          debugMessage("analyzing conflict on infeasible downwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPtreeGetCurrentDepth(tree));
 
@@ -4252,28 +4258,34 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStart(stat->conflictlptime, set);
 
          /* resolve the LP */
-         CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
+         retcode = SCIPlpiSolveDual(lp->lpi);
             
          /* stop LP timer */
          SCIPclockStop(stat->conflictlptime, set);
 
-         /* count number of LP iterations */
-         CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, &iter) );
-         stat->nconflictlps++;
-         stat->nconflictlpiterations += iter;
-         conflict->nsbiterations += iter;
-         debugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
+         /* check return code of LP solving call */
+         if( retcode != SCIP_LPERROR )
+         {
+            CHECK_OKAY( retcode );
 
-         /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE, 
-               &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
-         conflict->nsbiterations += iter;
-         conflict->nsbconfclauses += nclauses;
-         conflict->nsbconfliterals += nliterals;
-         conflict->nsbreconvclauses += nreconvclauses;
-         conflict->nsbreconvliterals += nreconvliterals;
-         if( downconflict != NULL )
-            *downconflict = (nclauses > 0);
+            /* count number of LP iterations */
+            CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, &iter) );
+            stat->nconflictlps++;
+            stat->nconflictlpiterations += iter;
+            conflict->nsbiterations += iter;
+            debugMessage(" -> resolved downwards strong branching LP in %d iterations\n", iter);
+
+            /* perform conflict analysis on infeasible LP */
+            CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE, 
+                  &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
+            conflict->nsbiterations += iter;
+            conflict->nsbconfclauses += nclauses;
+            conflict->nsbconfliterals += nliterals;
+            conflict->nsbreconvclauses += nreconvclauses;
+            conflict->nsbreconvliterals += nreconvliterals;
+            if( downconflict != NULL )
+               *downconflict = (nclauses > 0);
+         }
 
          /* reset the upper bound */
          col->ub = oldub;
@@ -4290,6 +4302,8 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
       newlb = SCIPsetFeasFloor(set, col->primsol+1.0);
       if( newlb <= col->ub + 0.5 )
       {
+         RETCODE retcode;
+
          debugMessage("analyzing conflict on infeasible upwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPtreeGetCurrentDepth(tree));
 
@@ -4301,28 +4315,34 @@ RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIPclockStart(stat->conflictlptime, set);
 
          /* resolve the LP */
-         CHECK_OKAY( SCIPlpiSolveDual(lp->lpi) );
-            
+         retcode = SCIPlpiSolveDual(lp->lpi);
+
          /* stop LP timer */
          SCIPclockStop(stat->conflictlptime, set);
 
-         /* count number of LP iterations */
-         CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, &iter) );
-         stat->nconflictlps++;
-         stat->nconflictlpiterations += iter;
-         conflict->nsbiterations += iter;
-         debugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
+         /* check return code of LP solving call */
+         if( retcode != SCIP_LPERROR )
+         {
+            CHECK_OKAY( retcode );
+            
+            /* count number of LP iterations */
+            CHECK_OKAY( SCIPlpiGetIterations(lp->lpi, &iter) );
+            stat->nconflictlps++;
+            stat->nconflictlpiterations += iter;
+            conflict->nsbiterations += iter;
+            debugMessage(" -> resolved upwards strong branching LP in %d iterations\n", iter);
 
-         /* perform conflict analysis on infeasible LP */
-         CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE, 
-               &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
-         conflict->nsbiterations += iter;
-         conflict->nsbconfclauses += nclauses;
-         conflict->nsbconfliterals += nliterals;
-         conflict->nsbreconvclauses += nreconvclauses;
-         conflict->nsbreconvliterals += nreconvliterals;
-         if( upconflict != NULL )
-            *upconflict = (nclauses > 0);
+            /* perform conflict analysis on infeasible LP */
+            CHECK_OKAY( conflictAnalyzeLP(conflict, blkmem, set, stat, prob, tree, lp, TRUE, 
+                  &iter, &nclauses, &nliterals, &nreconvclauses, &nreconvliterals) );
+            conflict->nsbiterations += iter;
+            conflict->nsbconfclauses += nclauses;
+            conflict->nsbconfliterals += nliterals;
+            conflict->nsbreconvclauses += nreconvclauses;
+            conflict->nsbreconvliterals += nreconvliterals;
+            if( upconflict != NULL )
+               *upconflict = (nclauses > 0);
+         }
 
          /* reset the lower bound */
          col->lb = oldlb;

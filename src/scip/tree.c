@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.146 2005/06/20 10:57:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.147 2005/06/20 18:01:02 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -3275,7 +3275,11 @@ RETCODE SCIPtreeBranchVar(
       downprio = -1.0;
       break;
    case SCIP_BRANCHDIR_AUTO:
-      downprio = SCIPvarGetRootSol(var) - solval;
+      if( SCIPtreeHasFocusNodeLP(tree) )
+         downprio = SCIPvarGetRootSol(var) - solval;
+      else
+         downprio = (Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_UPWARDS)
+            - (Real)SCIPvarGetNInferences(var, SCIP_BRANCHDIR_DOWNWARDS);
       break;
    default:
       errorMessage("invalid preferred branching direction <%d> of variable <%s>\n", 
@@ -3309,7 +3313,7 @@ RETCODE SCIPtreeBranchVar(
                   
       /* create child node with x = x' */
       debugMessage(" -> creating child: <%s> == %g\n", SCIPvarGetName(var), fixval);
-      CHECK_OKAY( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, SCIPsetInfinity(set)) );
+      CHECK_OKAY( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 0.0) );
       if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          CHECK_OKAY( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
