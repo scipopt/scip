@@ -23,6 +23,7 @@ plugins:
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
 - new parameter conflict/maxclauses
+- new parameter conflict/allowlocal
 - new parameter branching/fullstrong/reevalage
 
 features:

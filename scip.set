@@ -46,6 +46,10 @@ conflict/fuiplevels = -1
 # [type: int, range: [-1,2147483647], default: 1]
 conflict/interclauses = 1
 
+# maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)
+# [type: int, range: [-1,2147483647], default: 10]
+conflict/maxclauses = 10
+
 # should earlier nodes be repropagated in order to replace branching decisions by deductions
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 conflict/repropagate = TRUE
@@ -258,9 +262,13 @@ presolving/maxrounds = -1
 # [type: real, range: [0,1], default: 0.0001]
 presolving/abortfac = 0.0001
 
-# number of root node bound changes triggering a restart with preprocessing (-1: no restart, 0: restart only after complete root node evaluation)
-# [type: int, range: [-1,2147483647], default: 100]
-presolving/restartbdchgs = 100
+# maximal number of restarts (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = -1
+
+# fraction of bounds that changed in the root node triggering a restart with preprocessing (0.0: restart only after complete root node evaluation)
+# [type: real, range: [0,1], default: 0]
+presolving/restartfac = 0
 
 # maximal number of variables priced in per pricing round
 # [type: int, range: [1,2147483647], default: 100]
@@ -849,6 +857,10 @@ branching/fullstrong/maxdepth = -1
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 1]
 branching/fullstrong/maxbounddist = 1
+
+# number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node
+# [type: int, range: [0,2147483647], default: 10]
+branching/fullstrong/reevalage = 10
 
 # priority of branching rule <inference>
 # [type: int, range: [-2147483648,2147483647], default: 1000]
@@ -1451,7 +1463,7 @@ separating/clique/freq = 10
 separating/clique/delay = FALSE
 
 # factor for scaling weights
-# [type: real, range: [0,1.79769313486232e+308], default: 1000]
+# [type: real, range: [1,1.79769313486232e+308], default: 1000]
 separating/clique/scaleval = 1000
 
 # maximal number of nodes in branch and bound tree (-1: no limit)

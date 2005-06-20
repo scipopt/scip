@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.290 2005/05/31 17:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.291 2005/06/20 10:56:59 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8226,6 +8226,9 @@ RETCODE SCIPaddVarsToRow(
 
    CHECK_OKAY( checkStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
+   /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
+   CHECK_OKAY( SCIProwEnsureSize(row, scip->mem->solvemem, scip->set, SCIProwGetNNonz(row) + nvars) );
+
    /* delay the row sorting */
    SCIProwDelaySort(row);
 
@@ -8260,7 +8263,7 @@ RETCODE SCIPaddVarsToRowSameCoef(
    CHECK_OKAY( checkStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
-   CHECK_OKAY( SCIProwEnsureSize(row, scip->mem->solvemem, scip->set, nvars) );
+   CHECK_OKAY( SCIProwEnsureSize(row, scip->mem->solvemem, scip->set, SCIProwGetNNonz(row) + nvars) );
 
    /* delay the row sorting */
    SCIProwDelaySort(row);
@@ -9696,12 +9699,28 @@ Real SCIPgetSolVal(
 
    if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL && SCIPvarIsTransformed(var) )
    {
-      errorMessage("cannot get value of transformed variable <%s> for original space solution\n",
-         SCIPvarGetName(var));
-      abort();
-   }
+      VAR* origvar;
+      Real scalar;
+      Real constant;
 
-   if( sol != NULL )
+      /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
+       * -> get the corresponding original variable first
+       */
+      origvar = var;
+      scalar = 1.0;
+      constant = 0.0;
+      CHECK_OKAY( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      if( origvar == NULL )
+      {
+         errorMessage("cannot get value of transformed variable <%s> for original space solution\n",
+            SCIPvarGetName(var));
+         abort();
+      }
+      assert(!SCIPvarIsTransformed(var));
+
+      return scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
+   }
+   else if( sol != NULL )
       return SCIPsolGetVal(sol, scip->stat, var);
    else
    {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.149 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.150 2005/06/20 10:57:00 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -79,6 +79,7 @@
 #define SCIP_DEFAULT_CONF_USELP           FALSE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USESB           FALSE /**< should infeasible strong branching conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
+#define SCIP_DEFAULT_CONF_ALLOWLOCAL       TRUE /**< should conflict clauses be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
@@ -421,7 +422,7 @@ RETCODE SCIPsetCreate(
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "conflict/maxlploops",
          "maximal number of LP resolving loops during conflict analysis",
-         &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 1, INT_MAX,
+         &(*set)->conf_maxlploops, SCIP_DEFAULT_CONF_MAXLPLOOPS, 0, INT_MAX,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddIntParam(*set, blkmem,
          "conflict/fuiplevels",
@@ -437,6 +438,11 @@ RETCODE SCIPsetCreate(
          "conflict/maxclauses",
          "maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)",
          &(*set)->conf_maxclauses, SCIP_DEFAULT_CONF_MAXCLAUSES, -1, INT_MAX,
+         NULL, NULL) );
+   CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
+         "conflict/allowlocal",
+         "should conflict clauses be generated that are only valid locally?",
+         &(*set)->conf_allowlocal, SCIP_DEFAULT_CONF_ALLOWLOCAL,
          NULL, NULL) );
    CHECK_OKAY( SCIPsetAddBoolParam(*set, blkmem,
          "conflict/repropagate",

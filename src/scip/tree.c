@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.145 2005/05/31 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.146 2005/06/20 10:57:00 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1018,8 +1018,8 @@ RETCODE nodeRepropagate(
    stat->nreprops++;
    stat->nrepropboundchgs += stat->nboundchgs - oldnboundchgs;
 
-   debugMessage("repropagation %lld at depth %d changed %lld bounds (total reprop bound changes: %lld)\n",
-      stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs);
+   debugMessage("repropagation %lld at depth %d changed %lld bounds (total reprop bound changes: %lld), cutoff: %d\n",
+      stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs, *cutoff);
 
    /* if a propagation marked with the reprop flag was successful, we want to repropagate the whole subtree */
    /**@todo because repropsubtree is only a bit flag, we cannot mark a whole subtree a second time for

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.92 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.93 2005/06/20 10:56:59 bzfpfend Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -134,7 +134,7 @@
 
 
 
-#define CLAUSESCORE(nvars, validdepth) (-(nvars) - 10*(validdepth))
+#define CLAUSESCORE(clause) (-(clause)->nvars - 100*(clause)->repropdepth - 1000*(clause)->validdepth)
 
 
 
@@ -463,7 +463,6 @@ RETCODE clauseCreate(
    (*clause)->nvars = nvars;
    (*clause)->validdepth = validdepth;
    (*clause)->insertdepth = insertdepth;
-   (*clause)->score = CLAUSESCORE(nvars, validdepth);
 
    /* sort the variables, and identify the depth of the last and last but one fixing */
    maxdepth[0] = validdepth;
@@ -498,6 +497,8 @@ RETCODE clauseCreate(
 
    (*clause)->conflictdepth = maxdepth[0];
    (*clause)->repropdepth = maxdepth[1];
+
+   (*clause)->score = CLAUSESCORE(*clause);
 
    return SCIP_OKAY;
 }
@@ -617,6 +618,7 @@ RETCODE conflictInsertClause(
    assert(conflict != NULL);
    assert(set != NULL);
    assert(validdepth <= insertdepth);
+   assert(set->conf_allowlocal || validdepth == 0);
 
    /* create a out of the given conflict set */
    CHECK_OKAY( clauseCreate(&clause, blkmem, vars, nvars, validdepth, insertdepth) );
@@ -669,11 +671,13 @@ RETCODE conflictInsertClause(
          j++;
       }
    }
+   assert(j <= conflict->nclauses);
    conflict->nclauses = j;
 
    return SCIP_OKAY;
 }
 
+#if 0 /*??????????????????????????*/
 /** adds the collected conflict clauses to the corresponding nodes; the best set->conf_maxclauses clauses are added
  *  to the node of their validdepth; the remaining clauses are added to the node of their repropdepth in order to just
  *  trigger the deduction but not get introduced to a more global subtree
@@ -723,7 +727,7 @@ RETCODE SCIPconflictFlushClauses(
    nclausesused = 0;
    cutoffdepth = currentdepth+1;
    repropdepth = currentdepth+1;
-   for( i = 0; i < conflict->nclauses; ++i )
+   for( i = 0; i < conflict->nclauses && nclausesused < maxclauses; ++i )
    {
       CLAUSE* clause;
       int insertdepth;
@@ -753,10 +757,10 @@ RETCODE SCIPconflictFlushClauses(
          continue;
       }
 
-      /* if the clause is too long, or if we already inserted enough clauses as global conflict clauses, use the
-       * clause only as triggering clause (i.e. insert it at the node of its repropdepth)
+      /* if the clause is too long, use the clause only as triggering clause
+       * (i.e. insert it at the node of its repropdepth)
        */
-      if( clause->nvars > maxsize || nclausesused >= maxclauses )
+      if( clause->nvars > maxsize )
       {
          insertdepth = clause->repropdepth;
          temporary = TRUE;
@@ -764,7 +768,6 @@ RETCODE SCIPconflictFlushClauses(
       else
       {
          insertdepth = clause->insertdepth;
-         nclausesused++;
          temporary = FALSE;
       }
 
@@ -814,6 +817,7 @@ RETCODE SCIPconflictFlushClauses(
 #endif
 
             repropdepth = MIN(repropdepth, clause->repropdepth);
+            nclausesused++;
          }
       }
    }
@@ -838,6 +842,214 @@ RETCODE SCIPconflictFlushClauses(
 
    return SCIP_OKAY;
 }
+#else
+/** adds the given clause as conflict constraint to the problem */
+static
+RETCODE conflictAddClauseCons(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree,               /**< branch and bound tree */
+   CLAUSE*          clause,             /**< clause to add to the tree */
+   Bool*            success             /**< pointer to store whether the addition was successful */
+   )
+{
+   int h;
+
+   assert(conflict != NULL);
+   assert(tree != NULL);
+   assert(tree->path != NULL);
+   assert(clause != NULL);
+   assert(success != NULL);
+
+   /* sort conflict handlers by priority */
+   SCIPsetSortConflicthdlrs(set);
+      
+   /* call conflict handlers to create a conflict constraint */
+   *success = FALSE;
+   for( h = 0; h < set->nconflicthdlrs; ++h )
+   {
+      RESULT result;
+
+      CHECK_OKAY( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[clause->insertdepth],
+            tree->path[clause->validdepth], clause->vars, clause->nvars, *success, &result) );
+      if( result == SCIP_CONSADDED )
+      {
+         *success = TRUE;
+         conflict->nappliedpermclauses++;
+         conflict->nappliedpermliterals += clause->nvars;
+      }
+      debugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict clause with %d literals returned result %d\n",
+         SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
+         clause->nvars, result);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds the collected conflict clauses to the corresponding nodes; the best set->conf_maxclauses clauses are added
+ *  to the node of their validdepth; additionally (if not yet added, and if repropagation is activated), the clause that
+ *  triggers the earliest repropagation is added to the node of its validdepth
+ */
+RETCODE SCIPconflictFlushClauses(
+   CONFLICT*        conflict,           /**< conflict analysis data */
+   BLKMEM*          blkmem,             /**< block memory of transformed problem */
+   SET*             set,                /**< global SCIP settings */
+   STAT*            stat,               /**< dynamic problem statistics */
+   PROB*            prob,               /**< problem data */
+   TREE*            tree                /**< branch and bound tree */
+   )
+{
+   CLAUSE* repropclause;
+   int nclausesused;
+   int currentdepth;
+   int cutoffdepth;
+   int repropdepth;
+   int maxclauses;
+   int maxsize;
+   int i;
+
+   assert(conflict != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(prob != NULL);
+   assert(tree != NULL);
+
+   /* is there anything to do? */
+   if( conflict->nclauses == 0 )
+      return SCIP_OKAY;
+
+   /* calculate the maximal number of conflict clauses to accept, and the maximal size of each accepted conflict clause */
+   maxclauses = (set->conf_maxclauses == -1 ? INT_MAX : set->conf_maxclauses);
+   maxsize = (int)(set->conf_maxvarsfac * prob->nbinvars);
+   maxsize = MAX(maxsize, set->conf_minmaxvars);
+
+   currentdepth = SCIPtreeGetCurrentDepth(tree);
+   assert(currentdepth == tree->pathlen-1);
+
+   debugMessage("flushing %d conflict clauses at depth %d (maxclauses: %d, maxsize: %d)\n",
+      conflict->nclauses, currentdepth, maxclauses, maxsize);
+
+   /* mark the current node to have produced conflict clauses in the VBC tool output */
+   SCIPvbcFoundConflict(stat->vbc, stat, tree->path[currentdepth]);
+
+   /* insert the conflict clauses at the corresponding nodes */
+   nclausesused = 0;
+   cutoffdepth = currentdepth+1;
+   repropdepth = currentdepth+1;
+   repropclause = NULL;
+   for( i = 0; i < conflict->nclauses && nclausesused < maxclauses; ++i )
+   {
+      CLAUSE* clause;
+
+      clause = conflict->clauses[i];
+      assert(clause != NULL);
+      assert(0 <= clause->validdepth && clause->validdepth <= clause->insertdepth && clause->insertdepth <= currentdepth);
+      assert(clause->insertdepth <= clause->repropdepth);
+      assert(clause->repropdepth <= currentdepth || clause->repropdepth == INT_MAX);
+      assert(clause->conflictdepth <= currentdepth || clause->conflictdepth == INT_MAX); /* INT_MAX for dive/strong */
+
+      /* ignore clauses that are only valid at a node that was already cut off */
+      if( clause->validdepth >= cutoffdepth )
+         continue;
+
+      /* if no conflict variables exist, the node and its sub tree in the conflict clause's valid depth can be 
+       * cut off completely
+       */
+      if( clause->nvars == 0 )
+      {
+         debugMessage("empty conflict clause in depth %d cuts off sub tree at depth %d\n", 
+            currentdepth, clause->validdepth);
+      
+         SCIPnodeCutoff(tree->path[clause->validdepth], set, stat, tree);
+         cutoffdepth = clause->validdepth;
+         continue;
+      }
+
+      /* if the clause is too long, use the clause only if it decreases the repropagation depth */
+      if( clause->nvars > maxsize )
+      {
+         if( clause->repropdepth < repropdepth )
+         {
+            repropdepth = clause->repropdepth;
+            repropclause = clause;
+         }
+      }
+      else if( clause->insertdepth < cutoffdepth
+         && (clause->insertdepth < currentdepth || clause->conflictdepth == INT_MAX) )
+      {
+         Bool success;
+
+         assert(clause->insertdepth <= currentdepth);
+
+         /* call conflict handlers to create a conflict constraint */
+         CHECK_OKAY( conflictAddClauseCons(conflict, set, stat, prob, tree, clause, &success) );
+
+         if( success )
+         {
+#ifdef DEBUG
+            debugMessage(" -> conflict clause added at depth %d (valid:%d, conf:%d, reprop:%d, len:%d):", 
+               insertdepth, clause->validdepth, clause->conflictdepth, clause->repropdepth, clause->nvars);
+            debug(clausePrint(clause));
+#endif
+
+            if( clause->repropdepth <= repropdepth )
+            {
+               repropdepth = clause->repropdepth;
+               repropclause = NULL;
+            }
+            nclausesused++;
+         }
+      }
+   }
+
+   /* reactivate propagation on the first node where one of the new conflict clauses trigger a deduction */
+   if( set->conf_repropagate && repropdepth < cutoffdepth && repropdepth < currentdepth )
+   {
+      assert(0 <= repropdepth && repropdepth < tree->pathlen);
+      assert(tree->path[repropdepth]->depth == repropdepth);
+
+      /* if the conflict constraint of smallest repropagation depth was not yet added, insert it now */
+      if( repropclause != NULL )
+      {
+         Bool success;
+
+         CHECK_OKAY( conflictAddClauseCons(conflict, set, stat, prob, tree, repropclause, &success) );
+#ifdef DEBUG
+         if( success )
+         {
+            debugMessage(" -> additional reprop conflict clause added at depth %d (valid:%d, conf:%d, reprop:%d, len:%d):", 
+               insertdepth, repropclause->validdepth, repropclause->conflictdepth, repropclause->repropdepth, 
+               repropclause->nvars);
+            debug(clausePrint(repropclause));
+         }
+#endif
+      }
+
+      /* mark the node in the repropdepth to be propagated again */
+      SCIPnodePropagateAgain(tree->path[repropdepth], set, stat, tree);
+      
+      debugMessage("marked node %p in depth %d to be repropagated due to conflicts found in depth %d\n", 
+         tree->path[repropdepth], repropdepth, currentdepth);
+   }
+
+   /* free the conflict storage */
+   for( i = 0; i < conflict->nclauses; ++i )
+   {
+      CHECK_OKAY( clauseFree(&conflict->clauses[i], blkmem) );
+   }
+   conflict->nclauses = 0;
+
+   assert(conflict->nappliedpermclauses + conflict->nappliedtempclauses
+      <= conflict->npropconfclauses + conflict->npropreconvclauses
+      + conflict->nlpconfclauses + conflict->nlpreconvclauses
+      + conflict->nsbconfclauses + conflict->nsbreconvclauses
+      + conflict->npseudoconfclauses + conflict->npseudoreconvclauses);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** returns the current number of conflict clauses in the conflict clause storage */
 int SCIPconflictGetNClauses(
@@ -1334,6 +1546,10 @@ RETCODE conflictAddClause(
    *success = FALSE;
    *nliterals = 0;
 
+   /* check, whether local conflicts are allowed */
+   if( !set->conf_allowlocal && validdepth > 0 )
+      return SCIP_OKAY;
+
    currentdepth = SCIPtreeGetCurrentDepth(tree);
    assert(currentdepth == tree->pathlen-1);
    assert(0 <= validdepth && validdepth <= currentdepth);
@@ -1653,6 +1869,7 @@ RETCODE conflictCreateReconvergenceClauses(
 {
    BDCHGINFO* uip;
    int firstuipdepth;
+   int maxvaliddepth;
 
    assert(conflict != NULL);
    assert(firstuip != NULL);
@@ -1660,6 +1877,9 @@ RETCODE conflictCreateReconvergenceClauses(
    assert(nreconvliterals != NULL);
 
    firstuipdepth = SCIPbdchginfoGetDepth(firstuip);
+
+   /* check, whether local conflicts are allowed */
+   maxvaliddepth = (set->conf_allowlocal ? firstuipdepth-1 : 0);
 
    /* for each succeeding UIP pair of the last depth level, create one reconvergence clause */
    uip = firstuip;
@@ -1689,7 +1909,7 @@ RETCODE conflictCreateReconvergenceClauses(
       bdchginfo = conflictFirstCand(conflict);
       nextuip = NULL;
       nresolutions = 0;
-      while( bdchginfo != NULL && validdepth < firstuipdepth )
+      while( bdchginfo != NULL && validdepth <= maxvaliddepth )
       {
          BDCHGINFO* nextbdchginfo;
          int bdchgdepth;
@@ -1784,7 +2004,7 @@ RETCODE conflictCreateReconvergenceClauses(
       /* if only one propagation was resolved, the reconvergence clause is already member of the constraint set
        * (it is exactly the clause that produced the propagation)
        */
-      if( nextuip != NULL && nresolutions >= 2 && bdchginfo == NULL && validdepth < firstuipdepth )
+      if( nextuip != NULL && nresolutions >= 2 && bdchginfo == NULL && validdepth <= maxvaliddepth )
       {
          int nlits;
          Bool success;
@@ -1832,6 +2052,7 @@ RETCODE conflictAnalyze(
    BDCHGINFO* bdchginfo;
    BDCHGINFO* firstuip;
    int currentdepth;
+   int maxvaliddepth;
    int resolvedepth;
    int nresolutions;
    int lastclausenresolutions;
@@ -1868,13 +2089,16 @@ RETCODE conflictAnalyze(
    if( validdepth == currentdepth )
       return SCIP_OKAY;
 
+   /* check, whether local conflicts are allowed */
+   maxvaliddepth = (set->conf_allowlocal ? currentdepth-1 : 0);
+
    /* process all bound changes in the conflict candidate queue */
    nresolutions = 0;
    lastclausenresolutions = (mustresolve ? 0 : -1);
    lastclauseresoldepth = (mustresolve ? currentdepth : INT_MAX);
    bdchginfo = conflictFirstCand(conflict);
    firstuip = NULL;
-   while( bdchginfo != NULL && validdepth < currentdepth )
+   while( bdchginfo != NULL && validdepth <= maxvaliddepth )
    {
       BDCHGINFO* nextbdchginfo;
       int bdchgdepth;
@@ -1897,7 +2121,7 @@ RETCODE conflictAnalyze(
       /* create intermediate conflict clause */
       if( nresolutions > lastclausenresolutions
          && (set->conf_interclauses == -1 || *nclauses < set->conf_interclauses)
-         && validdepth < currentdepth
+         && validdepth <= maxvaliddepth
          && SCIPpqueueNElems(conflict->nonbinbdchgqueue) == 0
          && bdchgdepth < lastclauseresoldepth )
       {
@@ -2001,7 +2225,7 @@ RETCODE conflictAnalyze(
    /* check, if a valid conflict set was found */
    if( bdchginfo == NULL
       && nresolutions > lastclausenresolutions
-      && validdepth < currentdepth
+      && validdepth <= maxvaliddepth
       && (!mustresolve || nresolutions > 0 || conflict->nconflictvars == 0) )
    {
       int nlits;
@@ -3398,7 +3622,7 @@ RETCODE conflictAnalyzeLP(
       Real* bdchgnewubs;
       Real lpiinfinity;
       Bool resolve;
-      Bool allcolsinlp;
+      Bool solvelp;
       int sidechgssize;
       int nsidechgs;
       int bdchgssize;
@@ -3411,7 +3635,7 @@ RETCODE conflictAnalyzeLP(
       int r;
 
       /* check if all columns are present in the LP */
-      allcolsinlp = SCIPprobAllColsInLP(prob, set, lp);
+      solvelp = (set->conf_maxlploops > 0 && SCIPprobAllColsInLP(prob, set, lp));
 
       /* get infinity value of LP solver */
       lpiinfinity = SCIPlpiInfinity(lpi);
@@ -3424,9 +3648,9 @@ RETCODE conflictAnalyzeLP(
       assert(nrows == 0 || rows != NULL);
       assert(ncols == 0 || cols != NULL);
 
-      /* temporarily remove objective limit in LP solver */
-      if( allcolsinlp )
+      if( solvelp )
       {
+         /* temporarily remove objective limit in LP solver */
          CHECK_OKAY( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, lpiinfinity) );
       }
 
@@ -3465,7 +3689,7 @@ RETCODE conflictAnalyzeLP(
       }
 
       /* apply changes of local rows to the LP solver */
-      if( nsidechgs > 0 && allcolsinlp )
+      if( nsidechgs > 0 && solvelp )
       {
          CHECK_OKAY( SCIPlpiChgSides(lpi, nsidechgs, sidechginds, sidechgnewlhss, sidechgnewrhss) );
       }
@@ -3681,7 +3905,7 @@ RETCODE conflictAnalyzeLP(
 
          /* apply bound changes to the LP solver */
          assert(nbdchgs >= lastnbdchgs);
-         if( allcolsinlp )
+         if( solvelp )
          {
             if( nbdchgs > lastnbdchgs )
             {
@@ -3742,12 +3966,12 @@ RETCODE conflictAnalyzeLP(
          debugMessage(" -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
             nloops, iter, nbdchgs - lastnbdchgs);
       }
-      while( resolve && nloops < set->conf_maxlploops && allcolsinlp );
+      while( resolve && nloops < set->conf_maxlploops && solvelp );
       debugMessage("finished undoing bound changes after %d loops (valid=%d, nbdchgs: %d)\n",
          nloops, valid, nbdchgs);
 
       /* reset LP solver data */
-      if( allcolsinlp )
+      if( solvelp )
       {
          /* reset variables to local bounds */
          if( nbdchgs > 0 )

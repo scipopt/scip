@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.167 2005/05/31 17:20:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.168 2005/06/20 10:57:00 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3535,7 +3535,7 @@ RETCODE SCIPvarTransform(
       CHECK_OKAY( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (Real)objsense * origvar->obj,
             SCIPvarGetType(origvar), origvar->initial, origvar->removeable,
-            NULL, NULL, origvar->vardeltrans, origvar->vardata) );
+            NULL, NULL, origvar->vardeltrans, NULL) );
       
       /* copy the branch factor and priority */
       (*transvar)->branchfactor = origvar->branchfactor;
@@ -3561,6 +3561,8 @@ RETCODE SCIPvarTransform(
       {
          CHECK_OKAY( origvar->vartrans(set->scip, origvar, origvar->vardata, *transvar, &(*transvar)->vardata) );
       }
+      else
+         (*transvar)->vardata = origvar->vardata;
    }
 
    debugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
