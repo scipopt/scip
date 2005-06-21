@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.22 2005/05/31 17:20:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.23 2005/06/21 13:13:05 bzfpfend Exp $"
 
 /**@file   branch_allfullstrong.c
  * @brief  all variables full strong LP branching rule
@@ -119,12 +119,14 @@ RETCODE branch(
       Bool upinf;
       Bool downconflict;
       Bool upconflict;
+      int nsbcalls;
       int i;
       int c;
 
       /* search the full strong candidate:
        * cycle through the candidates, starting with the position evaluated in the last run
        */
+      nsbcalls = 0;
       for( i = 0, c = branchruledata->lastcand; i < npseudocands; ++i, ++c )
       {
          c = c % npseudocands;
@@ -143,9 +145,10 @@ RETCODE branch(
 
          CHECK_OKAY( SCIPgetVarStrongbranch(scip, pseudocands[c], INT_MAX, 
                &down, &up, &downvalid, &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror) );
+         nsbcalls++;
 
          /* display node information line in root node */
-         if( SCIPgetDepth(scip) == 0 && SCIPgetNStrongbranchs(scip) % 100 == 0 )
+         if( SCIPgetDepth(scip) == 0 && nsbcalls % 100 == 0 )
          {
             CHECK_OKAY( SCIPprintDisplayLine(scip, NULL, SCIP_VERBLEVEL_HIGH) );
          }
