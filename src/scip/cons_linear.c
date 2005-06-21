@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.167 2005/05/31 17:20:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.168 2005/06/21 16:55:56 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -103,8 +103,10 @@ struct ConsData
    VAR**            vars;               /**< variables of constraint entries */
    Real*            vals;               /**< coefficients of constraint entries */
    EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
-   int              minactivityinf;     /**< number of coefficients contributing with infinite value to minactivity */
-   int              maxactivityinf;     /**< number of coefficients contributing with infinite value to maxactivity */
+   int              minactivityneginf;  /**< number of coefficients contributing with neg. infinite value to minactivity */
+   int              minactivityposinf;  /**< number of coefficients contributing with pos. infinite value to minactivity */
+   int              maxactivityneginf;  /**< number of coefficients contributing with neg. infinite value to maxactivity */
+   int              maxactivityposinf;  /**< number of coefficients contributing with pos. infinite value to maxactivity */
    int              varssize;           /**< size of the vars- and vals-arrays */
    int              nvars;              /**< number of nonzeros in constraint */
    unsigned int     validmaxabsval:1;   /**< is the maximum absolute value valid? */
@@ -554,8 +556,10 @@ RETCODE consdataCreate(
    (*consdata)->pseudoactivity = SCIP_INVALID;
    (*consdata)->minactivity = SCIP_INVALID;
    (*consdata)->maxactivity = SCIP_INVALID;
-   (*consdata)->minactivityinf = -1;
-   (*consdata)->maxactivityinf = -1;
+   (*consdata)->minactivityneginf = -1;
+   (*consdata)->minactivityposinf = -1;
+   (*consdata)->maxactivityneginf = -1;
+   (*consdata)->maxactivityposinf = -1;
    (*consdata)->varssize = nvars;
    (*consdata)->nvars = nvars;
    (*consdata)->validmaxabsval = FALSE;
@@ -686,41 +690,55 @@ void consdataUpdateChgLb(
       assert(consdata->pseudoactivity < SCIP_INVALID);
       assert(consdata->minactivity < SCIP_INVALID);
       assert(consdata->maxactivity < SCIP_INVALID);
-      assert(consdata->minactivityinf >= 0);
-      assert(consdata->maxactivityinf >= 0);
-      assert(!SCIPisInfinity(scip, oldlb));
-      assert(!SCIPisInfinity(scip, newlb));
+      assert(consdata->minactivityneginf >= 0);
+      assert(consdata->minactivityposinf >= 0);
+      assert(consdata->maxactivityneginf >= 0);
+      assert(consdata->maxactivityposinf >= 0);
 
       if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
          consdata->pseudoactivity += val * (newlb - oldlb);
 
       if( val > 0.0 )
       {
-         if( SCIPisInfinity(scip, -oldlb) )
+         if( SCIPisInfinity(scip, oldlb) )
          {
-            assert(consdata->minactivityinf >= 1);
-            consdata->minactivityinf--;
+            assert(consdata->minactivityposinf >= 1);
+            consdata->minactivityposinf--;
+         }
+         else if( SCIPisInfinity(scip, -oldlb) )
+         {
+            assert(consdata->minactivityneginf >= 1);
+            consdata->minactivityneginf--;
          }
          else
             consdata->minactivity -= val * oldlb;
 
-         if( SCIPisInfinity(scip, -newlb) )
-            consdata->minactivityinf++;
+         if( SCIPisInfinity(scip, newlb) )
+            consdata->minactivityposinf++;
+         else if( SCIPisInfinity(scip, -newlb) )
+            consdata->minactivityneginf++;
          else
             consdata->minactivity += val * newlb;
       }
       else
       {
-         if( SCIPisInfinity(scip, -oldlb) )
+         if( SCIPisInfinity(scip, oldlb) )
          {
-            assert(consdata->maxactivityinf >= 1);
-            consdata->maxactivityinf--;
+            assert(consdata->maxactivityneginf >= 1);
+            consdata->maxactivityneginf--;
+         }
+         else if( SCIPisInfinity(scip, -oldlb) )
+         {
+            assert(consdata->maxactivityposinf >= 1);
+            consdata->maxactivityposinf--;
          }
          else
             consdata->maxactivity -= val * oldlb;
 
-         if( SCIPisInfinity(scip, -newlb) )
-            consdata->maxactivityinf++;
+         if( SCIPisInfinity(scip, newlb) )
+            consdata->maxactivityneginf++;
+         else if( SCIPisInfinity(scip, -newlb) )
+            consdata->maxactivityposinf++;
          else
             consdata->maxactivity += val * newlb;
       }
@@ -745,8 +763,10 @@ void consdataUpdateChgUb(
       assert(consdata->pseudoactivity < SCIP_INVALID);
       assert(consdata->minactivity < SCIP_INVALID);
       assert(consdata->maxactivity < SCIP_INVALID);
-      assert(!SCIPisInfinity(scip, -oldub));
-      assert(!SCIPisInfinity(scip, -newub));
+      assert(consdata->minactivityneginf >= 0);
+      assert(consdata->minactivityposinf >= 0);
+      assert(consdata->maxactivityneginf >= 0);
+      assert(consdata->maxactivityposinf >= 0);
 
       if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_UPPER )
          consdata->pseudoactivity += val * (newub - oldub);
@@ -755,14 +775,21 @@ void consdataUpdateChgUb(
       {
          if( SCIPisInfinity(scip, oldub) )
          {
-            assert(consdata->maxactivityinf >= 1);
-            consdata->maxactivityinf--;
+            assert(consdata->maxactivityposinf >= 1);
+            consdata->maxactivityposinf--;
+         }
+         else if( SCIPisInfinity(scip, -oldub) )
+         {
+            assert(consdata->maxactivityneginf >= 1);
+            consdata->maxactivityneginf--;
          }
          else
             consdata->maxactivity -= val * oldub;
 
          if( SCIPisInfinity(scip, newub) )
-            consdata->maxactivityinf++;
+            consdata->maxactivityposinf++;
+         else if( SCIPisInfinity(scip, -newub) )
+            consdata->maxactivityneginf++;
          else
             consdata->maxactivity += val * newub;
       }
@@ -770,14 +797,21 @@ void consdataUpdateChgUb(
       {
          if( SCIPisInfinity(scip, oldub) )
          {
-            assert(consdata->minactivityinf >= 1);
-            consdata->minactivityinf--;
+            assert(consdata->minactivityneginf >= 1);
+            consdata->minactivityneginf--;
+         }
+         else if( SCIPisInfinity(scip, -oldub) )
+         {
+            assert(consdata->minactivityposinf >= 1);
+            consdata->minactivityposinf--;
          }
          else
             consdata->minactivity -= val * oldub;
 
          if( SCIPisInfinity(scip, newub) )
-            consdata->minactivityinf++;
+            consdata->minactivityneginf++;
+         else if( SCIPisInfinity(scip, -newub) )
+            consdata->minactivityposinf++;
          else
             consdata->minactivity += val * newub;
       }
@@ -927,8 +961,10 @@ void consdataCalcActivities(
    consdata->pseudoactivity = 0.0;
    consdata->minactivity = 0.0;
    consdata->maxactivity = 0.0;
-   consdata->minactivityinf = 0;
-   consdata->maxactivityinf = 0;
+   consdata->minactivityneginf = 0;
+   consdata->minactivityposinf = 0;
+   consdata->maxactivityneginf = 0;
+   consdata->maxactivityposinf = 0;
 
    for( i = 0; i < consdata->nvars; ++i )
       consdataUpdateAddCoef(scip, consdata, consdata->vars[i], consdata->vals[i]);
@@ -989,11 +1025,16 @@ void consdataGetActivityBounds(
    assert(consdata->minactivity < SCIP_INVALID);
    assert(consdata->maxactivity < SCIP_INVALID);
 
-   if( consdata->minactivityinf > 0 )
+   if( consdata->minactivityposinf > 0 )
+      *minactivity = SCIPinfinity(scip);
+   else if( consdata->minactivityneginf > 0 )
       *minactivity = -SCIPinfinity(scip);
    else
       *minactivity = consdata->minactivity;
-   if( consdata->maxactivityinf > 0 )
+
+   if( consdata->maxactivityneginf > 0 )
+      *maxactivity = -SCIPinfinity(scip);
+   else if( consdata->maxactivityposinf > 0 )
       *maxactivity = SCIPinfinity(scip);
    else
       *maxactivity = consdata->maxactivity;
@@ -1024,76 +1065,134 @@ void consdataGetActivityResiduals(
    assert(consdata->pseudoactivity < SCIP_INVALID);
    assert(consdata->minactivity < SCIP_INVALID);
    assert(consdata->maxactivity < SCIP_INVALID);
-   assert(consdata->minactivityinf >= 0);
-   assert(consdata->maxactivityinf >= 0);
+   assert(consdata->minactivityneginf >= 0);
+   assert(consdata->minactivityposinf >= 0);
+   assert(consdata->maxactivityneginf >= 0);
+   assert(consdata->maxactivityposinf >= 0);
 
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
-   assert(!SCIPisInfinity(scip, lb));
-   assert(!SCIPisInfinity(scip, -ub));
 
    if( val > 0.0 )
    {
-      if( SCIPisInfinity(scip, -lb) )
+      if( SCIPisInfinity(scip, lb) )
       {
-         assert(consdata->minactivityinf >= 1);
-         if( consdata->minactivityinf >= 2 )
+         assert(consdata->minactivityposinf >= 1);
+         if( consdata->minactivityposinf >= 2 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->minactivityneginf >= 1 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->minactivity;
+      }
+      else if( SCIPisInfinity(scip, -lb) )
+      {
+         assert(consdata->minactivityneginf >= 1);
+         if( consdata->minactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->minactivityneginf >= 2 )
             *minresactivity = -SCIPinfinity(scip);
          else
             *minresactivity = consdata->minactivity;
       }
       else
       {
-         if( consdata->minactivityinf >= 1 )
+         if( consdata->minactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         if( consdata->minactivityneginf >= 1 )
             *minresactivity = -SCIPinfinity(scip);
          else
             *minresactivity = consdata->minactivity - val * lb;
       }
-      if( SCIPisInfinity(scip, ub) )
+
+      if( SCIPisInfinity(scip, -ub) )
       {
-         assert(consdata->maxactivityinf >= 1);
-         if( consdata->maxactivityinf >= 2 )
-            *maxresactivity = +SCIPinfinity(scip);
+         assert(consdata->maxactivityneginf >= 1);
+         if( consdata->maxactivityneginf >= 2 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->maxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->maxactivity;
+      }
+      else if( SCIPisInfinity(scip, ub) )
+      {
+         assert(consdata->maxactivityposinf >= 1);
+         if( consdata->maxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->maxactivityposinf >= 2 )
+            *maxresactivity = SCIPinfinity(scip);
          else
             *maxresactivity = consdata->maxactivity;
       }
       else
       {
-         if( consdata->maxactivityinf >= 1 )
-            *maxresactivity = +SCIPinfinity(scip);
+         if( consdata->maxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->maxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
          else
             *maxresactivity = consdata->maxactivity - val * ub;
       }
    }
    else
    {
-      if( SCIPisInfinity(scip, ub) )
+      if( SCIPisInfinity(scip, -ub) )
       {
-         assert(consdata->minactivityinf >= 1);
-         if( consdata->minactivityinf >= 2 )
+         assert(consdata->minactivityposinf >= 1);
+         if( consdata->minactivityposinf >= 2 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->minactivityneginf >= 1 )
+            *minresactivity = -SCIPinfinity(scip);
+         else
+            *minresactivity = consdata->minactivity;
+      }
+      else if( SCIPisInfinity(scip, ub) )
+      {
+         assert(consdata->minactivityneginf >= 1);
+         if( consdata->minactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->minactivityneginf >= 2 )
             *minresactivity = -SCIPinfinity(scip);
          else
             *minresactivity = consdata->minactivity;
       }
       else
       {
-         if( consdata->minactivityinf >= 1 )
+         if( consdata->minactivityposinf >= 1 )
+            *minresactivity = SCIPinfinity(scip);
+         else if( consdata->minactivityneginf >= 1 )
             *minresactivity = -SCIPinfinity(scip);
          else
             *minresactivity = consdata->minactivity - val * ub;
       }
-      if( SCIPisInfinity(scip, -lb) )
+
+      if( SCIPisInfinity(scip, lb) )
       {
-         assert(consdata->maxactivityinf >= 1);
-         if( consdata->maxactivityinf >= 2 )
-            *maxresactivity = +SCIPinfinity(scip);
+         assert(consdata->maxactivityneginf >= 1);
+         if( consdata->maxactivityneginf >= 2 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->maxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
+         else
+            *maxresactivity = consdata->maxactivity;
+      }
+      else if( SCIPisInfinity(scip, -lb) )
+      {
+         assert(consdata->maxactivityposinf >= 1);
+         if( consdata->maxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->maxactivityposinf >= 2 )
+            *maxresactivity = SCIPinfinity(scip);
          else
             *maxresactivity = consdata->maxactivity;
       }
       else
       {
-         if( consdata->maxactivityinf >= 1 )
-            *maxresactivity = +SCIPinfinity(scip);
+         if( consdata->maxactivityneginf >= 1 )
+            *maxresactivity = -SCIPinfinity(scip);
+         else if( consdata->maxactivityposinf >= 1 )
+            *maxresactivity = SCIPinfinity(scip);
          else
             *maxresactivity = consdata->maxactivity - val * lb;
       }
@@ -1112,8 +1211,10 @@ void consdataInvalidateActivities(
    consdata->pseudoactivity = SCIP_INVALID;
    consdata->minactivity = SCIP_INVALID;
    consdata->maxactivity = SCIP_INVALID;
-   consdata->minactivityinf = -1;
-   consdata->maxactivityinf = -1;
+   consdata->minactivityneginf = -1;
+   consdata->minactivityposinf = -1;
+   consdata->maxactivityneginf = -1;
+   consdata->maxactivityposinf = -1;
 }
 
 /** calculates the activity of the linear constraint for given solution */

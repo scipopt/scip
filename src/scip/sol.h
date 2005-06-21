@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.39 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.40 2005/06/21 16:55:57 bzfpfend Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -206,6 +206,7 @@ RETCODE SCIPsolIncVal(
 extern
 Real SCIPsolGetVal(
    SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var                 /**< variable to get value for */
    );
@@ -256,6 +257,7 @@ RETCODE SCIPsolRound(
 extern
 void SCIPsolUpdateVarsum(
    SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem data */
    Real             weight              /**< weight of solution in weighted average */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.168 2005/06/20 10:57:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.169 2005/06/21 16:55:57 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3218,12 +3218,16 @@ void SCIPvarPrint(
       ub = SCIPvarGetUbOriginal(var);
    }
    fprintf(file, ", bounds=");
-   if( SCIPsetIsInfinity(set, -lb) )
+   if( SCIPsetIsInfinity(set, lb) )
+      fprintf(file, "[+inf,");
+   else if( SCIPsetIsInfinity(set, -lb) )
       fprintf(file, "[-inf,");
    else
       fprintf(file, "[%g,", lb);
    if( SCIPsetIsInfinity(set, ub) )
       fprintf(file, "+inf]");
+   else if( SCIPsetIsInfinity(set, -ub) )
+      fprintf(file, "-inf]");
    else
       fprintf(file, "%g]", ub);
 
@@ -3239,7 +3243,13 @@ void SCIPvarPrint(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      fprintf(file, ", fixed: %g", var->glbdom.lb);
+      fprintf(file, ", fixed:");
+      if( SCIPsetIsInfinity(set, var->glbdom.lb) )
+         fprintf(file, "+inf");
+      else if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
+         fprintf(file, "-inf");
+      else
+         fprintf(file, "%g", var->glbdom.lb);
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:

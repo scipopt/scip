@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.59 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.60 2005/06/21 16:55:57 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -714,6 +714,7 @@ RETCODE SCIPsolIncVal(
 /** returns value of variable in primal CIP solution */
 Real SCIPsolGetVal(
    SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    VAR*             var                 /**< variable to get value for */
    )
@@ -721,6 +722,7 @@ Real SCIPsolGetVal(
    VAR** vars;
    Real* scalars;
    Real solval;
+   Real solvalsum;
    int nvars;
    int i;
 
@@ -736,7 +738,7 @@ Real SCIPsolGetVal(
       if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
          return solGetArrayVal(sol, var);
       else
-         return SCIPsolGetVal(sol, stat, SCIPvarGetTransVar(var));
+         return SCIPsolGetVal(sol, set, stat, SCIPvarGetTransVar(var));
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
@@ -751,19 +753,42 @@ Real SCIPsolGetVal(
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      return SCIPvarGetAggrScalar(var) * SCIPsolGetVal(sol, stat, SCIPvarGetAggrVar(var)) + SCIPvarGetAggrConstant(var);
+      solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetAggrVar(var));
+      if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
+      {
+         if( SCIPvarGetAggrScalar(var) * solval > 0.0 )
+            return SCIPsetInfinity(set);
+         if( SCIPvarGetAggrScalar(var) * solval < 0.0 )
+            return -SCIPsetInfinity(set);
+      }
+      return SCIPvarGetAggrScalar(var) * solval + SCIPvarGetAggrConstant(var);
 
    case SCIP_VARSTATUS_MULTAGGR:
       nvars = SCIPvarGetMultaggrNVars(var);
       vars = SCIPvarGetMultaggrVars(var);
       scalars = SCIPvarGetMultaggrScalars(var);
-      solval = SCIPvarGetMultaggrConstant(var);
+      solvalsum = SCIPvarGetMultaggrConstant(var);
       for( i = 0; i < nvars; ++i )
-         solval += scalars[i] * SCIPsolGetVal(sol, stat, vars[i]);
-      return solval;
+      {
+         solval = SCIPsolGetVal(sol, set, stat, vars[i]);
+         if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
+         {
+            if( scalars[i] * solval > 0.0 )
+               return SCIPsetInfinity(set);
+            if( scalars[i] * solval < 0.0 )
+               return -SCIPsetInfinity(set);
+         }
+         solvalsum += scalars[i] * solval;
+      }
+      return solvalsum;
 
    case SCIP_VARSTATUS_NEGATED:
-      return SCIPvarGetNegationConstant(var) - SCIPsolGetVal(sol, stat, SCIPvarGetNegationVar(var));
+      solval = SCIPsolGetVal(sol, set, stat, SCIPvarGetNegationVar(var));
+      if( SCIPsetIsInfinity(set, solval) )
+         return -SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -solval) )
+         return SCIPsetInfinity(set);
+      return SCIPvarGetNegationConstant(var) - solval;
 
    default:
       errorMessage("unknown variable status\n");
@@ -844,7 +869,7 @@ RETCODE SCIPsolCheck(
          Real ub;
 
          var = prob->vars[v];
-         solval = SCIPsolGetVal(sol, stat, var);
+         solval = SCIPsolGetVal(sol, set, stat, var);
          lb = SCIPvarGetLbGlobal(var);
          ub = SCIPvarGetUbGlobal(var);
          *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
@@ -940,6 +965,7 @@ RETCODE SCIPsolRound(
 /** updates the solution value sums in variables by adding the value in the given solution */
 void SCIPsolUpdateVarsum(
    SOL*             sol,                /**< primal CIP solution */
+   SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics data */
    PROB*            prob,               /**< transformed problem data */
    Real             weight              /**< weight of solution in weighted average */
@@ -955,7 +981,7 @@ void SCIPsolUpdateVarsum(
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
-      solval = SCIPsolGetVal(sol, stat, prob->vars[v]);
+      solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
       prob->vars[v]->primsolavg *= (1.0-weight);
       prob->vars[v]->primsolavg += weight*solval;
    }
@@ -987,7 +1013,7 @@ RETCODE SCIPsolRetransform(
 
    /* get the solution in original problem variables */
    for( v = 0; v < nvars; ++v )
-      solvals[v] = SCIPsolGetVal(sol, stat, vars[v]);
+      solvals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
 
    /* clear the solution and convert it into original space */
    CHECK_OKAY( solClearArrays(sol) );
@@ -1034,7 +1060,7 @@ RETCODE SCIPsolPrint(
    for( v = 0; v < prob->nfixedvars; ++v )
    {
       assert(prob->fixedvars[v] != NULL);
-      solval = SCIPsolGetVal(sol, stat, prob->fixedvars[v]);
+      solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
       if( !SCIPsetIsZero(set, solval) )
       {
          fprintf(file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
@@ -1050,7 +1076,7 @@ RETCODE SCIPsolPrint(
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
-      solval = SCIPsolGetVal(sol, stat, prob->vars[v]);
+      solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
       if( !SCIPsetIsZero(set, solval) )
       {
          fprintf(file, "%-32s", SCIPvarGetName(prob->vars[v]));
@@ -1074,7 +1100,7 @@ RETCODE SCIPsolPrint(
          if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
             continue;
 
-         solval = SCIPsolGetVal(sol, stat, transprob->fixedvars[v]);
+         solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
          if( !SCIPsetIsZero(set, solval) )
          {
             fprintf(file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
@@ -1093,7 +1119,7 @@ RETCODE SCIPsolPrint(
          if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
             continue;
 
-         solval = SCIPsolGetVal(sol, stat, transprob->vars[v]);
+         solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
          if( !SCIPsetIsZero(set, solval) )
          {
             fprintf(file, "%-32s", SCIPvarGetName(transprob->vars[v]));

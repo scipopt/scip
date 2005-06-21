@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.292 2005/06/21 15:51:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.293 2005/06/21 16:55:57 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4458,7 +4458,10 @@ RETCODE SCIPsolve(
                printf("\nbest solution is not feasible in original problem!\n");
                if( infeascons == NULL )
                { 
-                  printf("best solution violates constraint handler [%s]\n", SCIPconshdlrGetName(infeasconshdlr));
+                  if( infeasconshdlr == NULL )
+                     printf("best solution violates bounds\n");
+                  else
+                     printf("best solution violates constraint handler [%s]\n", SCIPconshdlrGetName(infeasconshdlr));
                }
                else
                { 
@@ -9721,7 +9724,7 @@ Real SCIPgetSolVal(
       return scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
    }
    else if( sol != NULL )
-      return SCIPsolGetVal(sol, scip->stat, var);
+      return SCIPsolGetVal(sol, scip->set, scip->stat, var);
    else
    {
       CHECK_ABORT( checkStage(scip, "SCIPgetSolVal(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
@@ -9761,7 +9764,7 @@ RETCODE SCIPgetSolVals(
       }
 
       for( v = 0; v < nvars; ++v )
-         vals[v] = SCIPsolGetVal(sol, scip->stat, vars[v]);
+         vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
    }
    else
    {
@@ -10247,7 +10250,7 @@ RETCODE SCIPcheckSolOrig(
       Real ub;
       
       var = scip->origprob->vars[v];
-      solval = SCIPsolGetVal(sol, scip->stat, var);
+      solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
       lb = SCIPvarGetLbOriginal(var);
       ub = SCIPvarGetUbOriginal(var);
       if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )

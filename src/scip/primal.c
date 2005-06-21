@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.66 2005/05/31 17:20:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.67 2005/06/21 16:55:56 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -471,7 +471,7 @@ RETCODE primalAddSol(
    /* update the solution value sums in variables */
    if( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
    {
-      SCIPsolUpdateVarsum(sol, stat, prob, (Real)(primal->nsols - insertpos)/(Real)(2.0*primal->nsols - 1.0));
+      SCIPsolUpdateVarsum(sol, set, stat, prob, (Real)(primal->nsols - insertpos)/(Real)(2.0*primal->nsols - 1.0));
    }
 
    /* change color of node in VBC output */

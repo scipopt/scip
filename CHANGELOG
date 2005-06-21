@@ -62,6 +62,7 @@ fixed bugs:
 - fixed bug in propagation with parameters prop_maxrounds and prop_maxroundsroot
 - removed wrong assertion in varAddImplic()
 - conflict analysis can now handle errors in LP solving calls
+- fixed bug in linear constraint handler with variables fixed to infinity
 
 
 SCIP version 0.79

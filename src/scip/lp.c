@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.194 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.195 2005/06/21 16:55:56 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4652,7 +4652,7 @@ RETCODE SCIProwGetSolActivity(
       col = row->cols[i];
       assert(col != NULL);
       assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
-      (*solactivity) += row->vals[i] * SCIPsolGetVal(sol, stat, col->var);
+      (*solactivity) += row->vals[i] * SCIPsolGetVal(sol, set, stat, col->var);
    }
 
    inf = SCIPsetInfinity(set);
