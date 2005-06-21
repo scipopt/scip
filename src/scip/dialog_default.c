@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.49 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.50 2005/06/21 15:51:08 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -595,12 +595,7 @@ DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL) );
 
    printf("\n");
-   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
-   {
-      CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
-   }
-   else
-      printf("no solution available\n");
+   CHECK_OKAY( SCIPprintBestSol(scip, NULL) );
    printf("\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1359,6 +1354,45 @@ DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write solution command */
+static
+DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
+{  /*lint --e{715}*/
+   const char* filename;
+
+   printf("\n");
+
+   filename = SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ");
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      CHECK_OKAY( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         printf("error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         fprintf(file, "solution status: ");
+         CHECK_OKAY( SCIPprintStatus(scip, file) );
+         fprintf(file, "\n");
+         CHECK_OKAY( SCIPprintBestSol(scip, file) );
+         printf("written solution information to file <%s>\n", filename);
+         fclose(file);
+      }
+   }
+
+   printf("\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** includes or updates the default dialog menus in SCIP */
 RETCODE SCIPincludeDialogDefault(
    SCIP*            scip                /**< SCIP data structure */
@@ -1637,6 +1671,26 @@ RETCODE SCIPincludeDialogDefault(
    /* set */
    CHECK_OKAY( SCIPincludeDialogDefaultSet(scip) );
 
+   /* write */
+   if( !SCIPdialogHasEntry(root, "write") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL,
+            "write", "write information to file", TRUE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, root, submenu) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(root, "write", &submenu) != 1 )
+      return SCIP_PLUGINNOTFOUND;
+   
+   /* display solution */
+   if( !SCIPdialogHasEntry(submenu, "solution") )
+   {
+      CHECK_OKAY( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteSolution, NULL,
+            "solution", "write best primal solution to file", FALSE, NULL) );
+      CHECK_OKAY( SCIPaddDialogEntry(scip, submenu, dialog) );
+      CHECK_OKAY( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
    return SCIP_OKAY;
 }
 

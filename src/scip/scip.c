@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.291 2005/06/20 10:56:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.292 2005/06/21 15:51:08 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9953,9 +9953,9 @@ SOL* SCIPgetBestSol(
    SCIP*            scip                /**< SCIP data structure */
    )
 {
-   CHECK_ABORT( checkStage(scip, "SCIPgetBestSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_ABORT( checkStage(scip, "SCIPgetBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   if( scip->primal->nsols > 0 ) 
+   if( scip->primal != NULL && scip->primal->nsols > 0 )
    {
       assert(scip->primal->sols != NULL);
       assert(scip->primal->sols[0] != NULL);
@@ -9972,7 +9972,7 @@ RETCODE SCIPprintBestSol(
 {
    SOL* sol;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBestSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBestSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 
@@ -9997,11 +9997,11 @@ RETCODE SCIPprintBestTransSol(
 {
    SOL* sol;
 
-   CHECK_OKAY( checkStage(scip, "SCIPprintBestTransSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   CHECK_OKAY( checkStage(scip, "SCIPprintBestTransSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    sol = SCIPgetBestSol(scip);
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
       errorMessage("best solution is defined in original space - cannot print it as transformed solution\n");
       return SCIP_INVALIDCALL;

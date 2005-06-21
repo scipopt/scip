@@ -19,6 +19,7 @@ interface:
   SCIPaddConsNode()
 
 plugins:
+- added command "write solution" to default dialog
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
