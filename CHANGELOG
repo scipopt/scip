@@ -17,9 +17,12 @@ interface:
 - new method SCIPvarIsDeleted()
 - new callback parameter "validnode" for the CONFLICTEXEC method of conflict handlers, which should be passed to
   SCIPaddConsNode()
+- new method SCIPnodeGetNumber()
 
 plugins:
 - added command "write solution" to default dialog
+- changed restart dfs nodeselector to sort leaves by node number instead of node depth to aviod jumping around in the
+  search tree after a restart was applied and the current dive ended due to infeasibility
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
@@ -63,6 +66,7 @@ fixed bugs:
 - removed wrong assertion in varAddImplic()
 - conflict analysis can now handle errors in LP solving calls
 - fixed bug in linear constraint handler with variables fixed to infinity
+- fixed bug with potential infinite loop if a separator is delayed and the LP is infeasible
 
 
 SCIP version 0.79

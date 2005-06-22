@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.12 2005/05/31 17:20:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.13 2005/06/22 08:27:04 bzfpfend Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -57,6 +57,12 @@ NODETYPE SCIPnodeGetType(
    NODE*            node                /**< node */
    );
 
+/** gets successively assigned number of the node */
+extern
+Longint SCIPnodeGetNumber(
+   NODE*            node                /**< node */
+   );
+
 /** gets the depth of the node */
 extern
 int SCIPnodeGetDepth(
@@ -94,6 +100,7 @@ Bool SCIPnodeIsPropagatedAgain(
  */
 
 #define SCIPnodeGetType(node)           ((node)->nodetype)
+#define SCIPnodeGetNumber(node)         ((node)->number)
 #define SCIPnodeGetDepth(node)          ((node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
 #define SCIPnodeGetPriority(node)       ((node)->priority)

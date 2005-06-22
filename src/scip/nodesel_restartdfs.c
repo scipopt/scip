@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.19 2005/05/31 17:20:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.20 2005/06/22 08:27:03 bzfpfend Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @brief  node selector for depth first search with periodical selection of the best node
@@ -133,33 +133,7 @@ DECL_NODESELSELECT(nodeselSelectRestartdfs)
 static
 DECL_NODESELCOMP(nodeselCompRestartdfs)
 {  /*lint --e{715}*/
-   int depth1;
-   int depth2;
-
-   assert(nodesel != NULL);
-   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
-   assert(scip != NULL);
-
-   depth1 = SCIPnodeGetDepth(node1);
-   depth2 = SCIPnodeGetDepth(node2);
-   if( depth1 > depth2 )
-      return -1;
-   else if( depth1 < depth2 )
-      return +1;
-   else
-   {
-      Real lowerbound1;
-      Real lowerbound2;
-
-      lowerbound1 = SCIPnodeGetLowerbound(node1);
-      lowerbound2 = SCIPnodeGetLowerbound(node2);
-      if( lowerbound1 < lowerbound2 )
-         return -1;
-      else if( lowerbound1 > lowerbound2 )
-         return +1;
-      else
-         return 0;
-   }
+   return SCIPnodeGetNumber(node2) - SCIPnodeGetNumber(node1);
 }
 
 

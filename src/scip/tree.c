@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.147 2005/06/20 18:01:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.148 2005/06/22 08:27:04 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -682,6 +682,7 @@ RETCODE nodeCreate(
    (*node)->parent = NULL;
    (*node)->conssetchg = NULL;
    (*node)->domchg = NULL;
+   (*node)->number = 0;
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->priority = 0.0;
    (*node)->depth = 0;
@@ -719,6 +720,7 @@ RETCODE SCIPnodeCreateChild(
 
    /* create the node data structure */
    CHECK_OKAY( nodeCreate(node, blkmem, set) );
+   (*node)->number = stat->ncreatednodesrun;
 
    /* mark node to be a child node */
    (*node)->nodetype = SCIP_NODETYPE_CHILD; /*lint !e641*/
@@ -3897,6 +3899,7 @@ Real SCIPtreeGetAvgLowerbound(
  */
 
 #undef SCIPnodeGetType
+#undef SCIPnodeGetNumber
 #undef SCIPnodeGetDepth
 #undef SCIPnodeGetLowerbound
 #undef SCIPnodeGetPriority
@@ -3926,6 +3929,16 @@ NODETYPE SCIPnodeGetType(
    assert(node != NULL);
 
    return (NODETYPE)(node->nodetype);
+}
+
+/** gets successively assigned number of the node */
+Longint SCIPnodeGetNumber(
+   NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->number;
 }
 
 /** gets the depth of the node */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.180 2005/05/31 17:20:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.181 2005/06/22 08:27:04 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1082,11 +1082,14 @@ RETCODE priceAndCutLoop(
       mustsepa = mustsepa || delayedsepa;
 
       /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
-      mustsepa = mustsepa
-         && separate
-         && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_INFEASIBLE)
-         && (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OBJLIMIT)
-         && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
+      if( !separate
+         || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE)
+         || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+         || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
+      {
+         mustsepa = FALSE;
+         delayedsepa = FALSE;
+      }
 
       /* separation and reduced cost strengthening
        * (needs not to be done completely, because we just want to increase the lower bound)
