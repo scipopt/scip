@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.196 2005/06/23 16:02:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.197 2005/06/23 18:12:53 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11244,6 +11244,9 @@ RETCODE SCIPlpStartDive(
    assert(lp->divelpistate == NULL);
    assert(set != NULL);
 
+   debugMessage("diving started (LP flushed: %d, LP solved: %d, solstat: %d)\n",
+      lp->flushed, lp->solved, SCIPlpGetSolstat(lp));
+
 #ifndef NDEBUG
    {
       int c;
@@ -11289,6 +11292,9 @@ RETCODE SCIPlpEndDive(
    assert(lp->divelpistate != NULL);
    assert(nvars == 0 || vars != NULL);
 
+   debugMessage("diving ended (LP flushed: %d, solstat: %d)\n",
+      lp->flushed, SCIPlpGetSolstat(lp));
+   
    /* reset all columns' objective values and bounds to its original values */
    for( v = 0; v < nvars; ++v )
    {

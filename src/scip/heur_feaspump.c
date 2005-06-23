@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.30 2005/06/23 16:30:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.31 2005/06/23 18:12:53 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -321,10 +321,11 @@ DECL_HEUREXEC(heurExecFeaspump)
    int maxflips;         /* maximum number of flips, if a 1-cycle is found (depending on heurdata->minflips) */ 
    int maxloops;         /* maximum number of pumping rounds */
 
-   Longint nlpiterations;   /* number of LP iterations done during one pumping round */
+   Longint nlpiterations;    /* number of LP iterations done during one pumping round */
    Longint maxnlpiterations; /* maximum number of LP iterations fpr this heuristic */
-   Longint nsolsfound;   /* number of solutions found by this heuristic */
-   Longint ncalls;       /* number of calls of this heuristic */  
+   Longint nsolsfound;       /* number of solutions found by this heuristic */
+   Longint ncalls;           /* number of calls of this heuristic */  
+   Longint nbestsolsfound;   /* current total number of best solution updates in SCIP */
 
    Bool success;         
    Bool lperror; 
@@ -419,6 +420,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       objfactor = heurdata->objfactor;
    alpha = 1.0;
    nloops = 0;
+   nbestsolsfound = SCIPgetNBestSolsFound(scip);
    while( nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations && nloops < maxloops )
    {
       nloops++;
@@ -435,7 +437,13 @@ DECL_HEUREXEC(heurExecFeaspump)
       {
          CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
          if( success )
+         {
             *result = SCIP_FOUNDSOL; 
+
+            /* if the solution is the new best solution, abort the heuristic */
+            if( SCIPgetNBestSolsFound(scip) > nbestsolsfound )
+               break;
+         }
       }
       
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->roundedsol) );
