@@ -1270,6 +1270,50 @@ heuristics/objpscostdiving/depthfac = 0.5
 # [type: real, range: [0,1.79769313486232e+308], default: 2]
 heuristics/objpscostdiving/depthfacnosol = 2
 
+# priority of heuristic <octane>
+# [type: int, range: [-2147483648,2147483647], default: -1008000]
+heuristics/octane/priority = -1008000
+
+# frequency for calling primal heuristic <octane> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/octane/freq = 10
+
+# frequency offset for calling primal heuristic <octane>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/octane/freqofs = 0
+
+# maximal depth level to call primal heuristic <octane> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/octane/maxdepth = -1
+
+# number of 0-1-points to be tested as possible solutions by OCTANE
+# [type: int, range: [1,2147483647], default: 100]
+heuristics/octane/fmax = 100
+
+# number of 0-1-points to be tested at first whether they violate a common row
+# [type: int, range: [1,2147483647], default: 10]
+heuristics/octane/ffirst = 10
+
+# execute OCTANE only in the space of fractional variables (TRUE) or in the full space? 
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/usefracspace = TRUE
+
+# should the inner normal of the objective be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/useobjray = TRUE
+
+# should the average of the non-basics be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/useavgray = TRUE
+
+# should the difference between the root solution and the current LP solution be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/usediffray = TRUE
+
+# should the difference between the current LP solution and the root solution be used as one ray direction?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/octane/usediffbwray = TRUE
+
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1002000]
 heuristics/pscostdiving/priority = -1002000

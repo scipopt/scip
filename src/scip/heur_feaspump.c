@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.29 2005/05/31 17:20:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.30 2005/06/23 16:30:04 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -162,7 +162,9 @@ RETCODE handle1Cycle(
    return SCIP_OKAY;
 }
 
-/** flips the roundings of the most fractional variables, if a 1-cycle was found */
+/** flips the roundings of randomly chosen fractional variables, preferring highly fractional ones, 
+ *  if a longer cycle was found
+ */
 static
 RETCODE handleCycle(
    SCIP*            scip,               /**< SCIP data structure  */

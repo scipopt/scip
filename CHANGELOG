@@ -27,6 +27,7 @@ plugins:
   search tree after a restart was applied and the current dive ended due to infeasibility
 - removed "objfeaspump" heuristic, because the functionality can be achieved by using the "feaspump" heuristic
 - diving heuristics are now applying propagation after each bound change
+- new primal heuristic "octane"
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac
