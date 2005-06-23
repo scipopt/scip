@@ -28,6 +28,8 @@ plugins:
 - removed "objfeaspump" heuristic, because the functionality can be achieved by using the "feaspump" heuristic
 - diving heuristics are now applying propagation after each bound change
 - new primal heuristic "octane"
+- slightly changed feaspump heuristic, s.t. after finding a new best solution the target integral solution is modified
+  randomly
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac

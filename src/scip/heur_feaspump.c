@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.31 2005/06/23 18:12:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.32 2005/06/23 18:33:21 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -127,7 +127,7 @@ RETCODE handle1Cycle(
    SCIP*            scip,               /**< SCIP data structure  */
    HEURDATA*        heurdata,           /**< data of this special heuristic */
    VAR**            mostfracvars,       /**< sorted array of the currently most fractional variables */
-   int              nflipcands,          /**< number of variables to flip */
+   int              nflipcands,         /**< number of variables to flip */
    Real             alpha               /**< factor how much the original objective is regarded */
    )
 {
@@ -170,7 +170,7 @@ RETCODE handleCycle(
    SCIP*            scip,               /**< SCIP data structure  */
    HEURDATA*        heurdata,           /**< data of this special heuristic */
    VAR**            vars,               /**< array of all variables */
-   int              nbinandintvars,      /**< number of general integer and 0-1 variables */
+   int              nbinandintvars,     /**< number of general integer and 0-1 variables */
    Real             alpha               /**< factor how much the original objective is regarded */
    )
 {
@@ -437,13 +437,7 @@ DECL_HEUREXEC(heurExecFeaspump)
       {
          CHECK_OKAY( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, &success) );
          if( success )
-         {
             *result = SCIP_FOUNDSOL; 
-
-            /* if the solution is the new best solution, abort the heuristic */
-            if( SCIPgetNBestSolsFound(scip) > nbestsolsfound )
-               break;
-         }
       }
       
       CHECK_OKAY( SCIPlinkLPSol(scip, heurdata->roundedsol) );
@@ -468,7 +462,7 @@ DECL_HEUREXEC(heurExecFeaspump)
          {  
             frac = SCIPfeasFrac(scip, solval);
             /* variables which are already integral, are treated separately */
-            if( SCIPisFeasZero(scip,frac) )
+            if( SCIPisFeasZero(scip, frac) )
             {
                Real lb;
                Real ub;
@@ -521,12 +515,15 @@ DECL_HEUREXEC(heurExecFeaspump)
          }
       }
   
-      /* force to flip variables at random after a couple of pumping rounds */
+      /* force to flip variables at random after a couple of pumping rounds, or if a new best solution in the current
+       * region has been found
+       */
       assert(heurdata->perturbfreq > 0);
-      if( nloops % heurdata->perturbfreq == 0 )
+      if( nloops % heurdata->perturbfreq == 0 || SCIPgetNBestSolsFound(scip) > nbestsolsfound )
       {
          debugMessage(" -> random perturbation\n");
          CHECK_OKAY( handleCycle(scip, heurdata, vars, nintvars+nbinvars, alpha) );
+         nbestsolsfound = SCIPgetNBestSolsFound(scip);
       }
       else 
       {
