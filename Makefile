@@ -14,14 +14,14 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.110 2005/05/31 17:20:06 bzfpfend Exp $
+# $Id: Makefile,v 1.111 2005/06/23 16:07:37 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 
-.PHONY:		depend clean lint doc test testcplex
+.PHONY:		depend lpidepend clean lint doc test testcplex
 
 ARCH            :=      $(shell uname -m | \
                         sed \
@@ -234,7 +234,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
 			scip/heur_linesearchdiving.o \
-			scip/heur_objfeaspump.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_rootsoldiving.o \

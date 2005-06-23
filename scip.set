@@ -35,7 +35,7 @@ conflict/maxvarsfac = 0.02
 conflict/minmaxvars = 30
 
 # maximal number of LP resolving loops during conflict analysis
-# [type: int, range: [1,2147483647], default: 100]
+# [type: int, range: [0,2147483647], default: 100]
 conflict/maxlploops = 100
 
 # number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
@@ -49,6 +49,10 @@ conflict/interclauses = 1
 # maximal number of conflict clauses accepted at an infeasible node (-1: use all generated conflict clauses)
 # [type: int, range: [-1,2147483647], default: 10]
 conflict/maxclauses = 10
+
+# should conflict clauses be generated that are only valid locally?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+conflict/allowlocal = TRUE
 
 # should earlier nodes be repropagated in order to replace branching decisions by deductions
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1221,50 +1225,6 @@ heuristics/linesearchdiving/maxdiveubquotnosol = 0.1
 # maximal AVGQUOT when no solution was found yet
 # [type: real, range: [0,1.79769313486232e+308], default: 8]
 heuristics/linesearchdiving/maxdiveavgquotnosol = 8
-
-# priority of heuristic <objfeaspump>
-# [type: int, range: [-2147483648,2147483647], default: -1008000]
-heuristics/objfeaspump/priority = -1008000
-
-# frequency for calling primal heuristic <objfeaspump> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 20]
-heuristics/objfeaspump/freq = 20
-
-# frequency offset for calling primal heuristic <objfeaspump>
-# [type: int, range: [0,2147483647], default: 8]
-heuristics/objfeaspump/freqofs = 8
-
-# maximal depth level to call primal heuristic <objfeaspump> (-1: no limit)
-# [type: int, range: [-1,2147483647], default: -1]
-heuristics/objfeaspump/maxdepth = -1
-
-# minimal relative depth to start diving
-# [type: real, range: [0,1], default: 0]
-heuristics/objfeaspump/minreldepth = 0
-
-# maximal relative depth to start diving
-# [type: real, range: [0,1], default: 1]
-heuristics/objfeaspump/maxreldepth = 1
-
-# maximal fraction of diving LP iterations compared to node LP iterations
-# [type: real, range: [0,1.79769313486232e+308], default: 0.01]
-heuristics/objfeaspump/maxlpiterquot = 0.01
-
-# additional number of allowed LP iterations
-# [type: int, range: [0,2147483647], default: 1000]
-heuristics/objfeaspump/maxlpiterofs = 1000
-
-# total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
-heuristics/objfeaspump/maxsols = 5
-
-# maximal diving depth: number of binary/integer variables times depthfac
-# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
-heuristics/objfeaspump/depthfac = 0.5
-
-# maximal diving depth factor if no feasible solution was found yet
-# [type: real, range: [0,1.79769313486232e+308], default: 2]
-heuristics/objfeaspump/depthfacnosol = 2
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-2147483648,2147483647], default: -1004000]
