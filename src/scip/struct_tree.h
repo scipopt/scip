@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.23 2005/06/22 08:27:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.24 2005/06/23 16:02:03 bzfpfend Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -134,6 +134,7 @@ struct Tree
                                          *   newly added columns of the focus node) */
    int*             pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                          *   newly added rows of the focus node) */
+   LPISTATE*        probinglpistate;    /**< LP state information before probing started */
    int              focuslpforklpcount; /**< LP number of last solved LP in current LP fork, or -1 if unknown */
    int              childrensize;       /**< available slots in children vector */
    int              nchildren;          /**< number of children of focus node (number of used slots in children vector) */
@@ -146,8 +147,10 @@ struct Tree
    int              repropdepth;        /**< depth of first node in active path that has to be propagated again */
    int              repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
    Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
+   Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    Bool             cutoffdelayed;      /**< the treeCutoff() call was delayed because of diving and has to be executed */
-   Bool             probinglpflushed;   /**< was the LP flushed before we entered the probing mode? */
+   Bool             probinglpwasflushed;/**< was the LP flushed before we entered the probing mode? */
+   Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
 };
 
 

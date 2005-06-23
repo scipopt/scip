@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.293 2005/06/21 16:55:57 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.294 2005/06/23 16:02:02 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8754,6 +8754,12 @@ RETCODE SCIPstartDive(
       return SCIP_INVALIDCALL;
    }
 
+   if( SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("cannot start diving while being in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
       errorMessage("cannot start diving at a pseudo node\n");
@@ -8913,7 +8919,7 @@ Real SCIPgetVarUbDive(
    return SCIPvarGetUbLP(var);
 }
 
-/** solves the LP of the current dive */
+/** solves the LP of the current dive; no separation or pricing is applied */
 RETCODE SCIPsolveDiveLP(
    SCIP*            scip,               /**< SCIP data structure */
    int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
@@ -8974,8 +8980,8 @@ Bool SCIPinProbing(
    return SCIPtreeProbing(scip->tree);
 }
 
-/** initiates probing, making methods SCIPchgVarLbProbing(), SCIPchgVarUbProbing(), SCIPfixVarProbing() and
- *  SCIPpropagateProbing() available
+/** initiates probing, making methods SCIPnewProbingNode(), SCIPbacktrackProbing(), SCIPchgVarLbProbing(), 
+ *  SCIPchgVarUbProbing(), SCIPfixVarProbing(), SCIPpropagateProbing(), and SCIPsolveProbingLP() available
  */
 RETCODE SCIPstartProbing(
    SCIP*            scip                /**< SCIP data structure */
@@ -8986,6 +8992,12 @@ RETCODE SCIPstartProbing(
    if( SCIPtreeProbing(scip->tree) )
    {
       errorMessage("already in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( scip->lp != NULL && SCIPlpDiving(scip->lp) )
+   {
+      errorMessage("cannot start probing while in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -9074,7 +9086,7 @@ RETCODE SCIPendProbing(
    }
 
    /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
-   CHECK_OKAY( SCIPtreeEndProbing(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
+   CHECK_OKAY( SCIPtreeEndProbing(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->lp,
          scip->branchcand, scip->eventqueue) );
 
    return SCIP_OKAY;
@@ -9187,6 +9199,48 @@ RETCODE SCIPpropagateProbing(
 
    CHECK_OKAY( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, 
          scip->conflict, 0, maxproprounds, cutoff) );
+
+   return SCIP_OKAY;
+}
+
+/** solves the LP at the current probing node (cannot be applied at preprocessing stage);
+ *  no separation or pricing is applied
+ */
+RETCODE SCIPsolveProbingLP(
+   SCIP*            scip,               /**< SCIP data structure */
+   int              itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   assert(lperror != NULL);
+
+   CHECK_OKAY( checkStage(scip, "SCIPsolveProbingLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      errorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* solve probing LP */
+   CHECK_OKAY( SCIPlpSolveAndEval(scip->lp, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+         itlim, FALSE, FALSE, lperror) );
+
+   /* mark the probing node to have a solved LP */
+   if( !(*lperror) )
+      SCIPtreeMarkProbingNodeHasLP(scip->tree);
+
+   /* analyze an infeasible LP (not necessary in the root node)
+    * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)
+    */
+   if( !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
+      && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
+         || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+      && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+   {
+      CHECK_OKAY( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
+            scip->tree, scip->lp, NULL) );
+   }
 
    return SCIP_OKAY;
 }
@@ -9546,7 +9600,7 @@ RETCODE SCIPlinkLPSol(
 {
    CHECK_OKAY( checkStage(scip, "SCIPlinkLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   if( !SCIPlpIsSolved(scip->lp) )
    {
       errorMessage("LP solution does not exist\n");
       return SCIP_INVALIDCALL;

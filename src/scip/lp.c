@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.195 2005/06/21 16:55:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.196 2005/06/23 16:02:02 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5550,7 +5550,7 @@ RETCODE lpFlushChgCols(
    /* change objective values in LP */
    if( nobjchg > 0 )
    {
-      debugMessage("flushing bound changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
+      debugMessage("flushing objective changes: change %d objective values of %d changed columns\n", nobjchg, lp->nchgcols);
       CHECK_OKAY( SCIPlpiChgObj(lp->lpi, nobjchg, objind, obj) );
 
       /* mark the LP unsolved */
@@ -5688,8 +5688,9 @@ RETCODE SCIPlpFlush(
    assert(lp != NULL);
    assert(blkmem != NULL);
    
-   debugMessage("flushing LP changes: old (%d cols, %d rows), chgcol=%d, chgrow=%d, new (%d cols, %d rows), flushed=%d\n",
-      lp->nlpicols, lp->nlpirows, lp->lpifirstchgcol, lp->lpifirstchgrow, lp->ncols, lp->nrows, lp->flushed);
+   debugMessage("flushing LP changes: old (%d cols, %d rows), nchgcols=%d, nchgrows=%d, firstchgcol=%d, firstchgrow=%d, new (%d cols, %d rows), flushed=%d\n",
+      lp->nlpicols, lp->nlpirows, lp->nchgcols, lp->nchgrows, lp->lpifirstchgcol, lp->lpifirstchgrow, 
+      lp->ncols, lp->nrows, lp->flushed);
 
    if( lp->flushed )
    {
@@ -11593,6 +11594,7 @@ RETCODE SCIPlpWrite(
 #undef SCIPlpGetNNewrows
 #undef SCIPlpGetObjNorm
 #undef SCIPlpGetLPI
+#undef SCIPlpIsSolved
 #undef SCIPlpIsSolBasic
 #undef SCIPlpDiving
 #undef SCIPlpDivingObjChanged
@@ -12122,6 +12124,16 @@ LPI* SCIPlpGetLPI(
    assert(lp != NULL);
 
    return lp->lpi;
+}
+
+/** returns whether the current LP is flushed and solved */
+Bool SCIPlpIsSolved(
+   LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->flushed && lp->solved;
 }
 
 /** returns whether the current LP solution is a basic solution */

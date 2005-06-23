@@ -18,11 +18,15 @@ interface:
 - new callback parameter "validnode" for the CONFLICTEXEC method of conflict handlers, which should be passed to
   SCIPaddConsNode()
 - new method SCIPnodeGetNumber()
+- new method SCIPsolveProbingLP() to solve the LP in a probing node (enables mixing of propagation and LP solving
+  for diving heuristics)
 
 plugins:
 - added command "write solution" to default dialog
 - changed restart dfs nodeselector to sort leaves by node number instead of node depth to aviod jumping around in the
   search tree after a restart was applied and the current dive ended due to infeasibility
+- removed "objfeaspump" heuristic, because the functionality can be achieved by using the "feaspump" heuristic
+- diving heuristics are now applying propagation after each bound change
 
 parameters:
 - replaced parameter presolving/restartbdchgs with parameters presolving/maxrestarts and presolving/restartfac

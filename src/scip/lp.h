@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.104 2005/05/31 17:20:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.105 2005/06/23 16:02:02 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -1099,6 +1099,12 @@ LPI* SCIPlpGetLPI(
    LP*              lp                  /**< current LP data */
    );
 
+/** returns whether the current LP is flushed and solved */
+extern
+Bool SCIPlpIsSolved(
+   LP*              lp                  /**< current LP data */
+   );
+
 /** returns whether the current LP solution is a basic solution */
 extern
 Bool SCIPlpIsSolBasic(
@@ -1139,6 +1145,7 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
 #define SCIPlpGetObjNorm(lp)            (SQRT((lp)->objsqrnorm))
 #define SCIPlpGetLPI(lp)                (lp)->lpi
+#define SCIPlpIsSolved(lp)              ((lp)->flushed && (lp)->solved)
 #define SCIPlpIsSolBasic(lp)            ((lp)->solisbasic)
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg

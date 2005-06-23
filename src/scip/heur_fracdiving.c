@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.35 2005/05/31 17:20:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fracdiving.c,v 1.36 2005/06/23 16:02:02 bzfpfend Exp $"
 
 /**@file   heur_fracdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
@@ -191,6 +191,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    Bool mayroundup;
    Bool roundup;
    Bool lperror;
+   Bool cutoff;
    Longint ncalls;
    Longint nsolsfound;
    Longint nlpiterations;
@@ -277,7 +278,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    *result = SCIP_DIDNOTFIND;
 
    /* start diving */
-   CHECK_OKAY( SCIPstartDive(scip) );
+   CHECK_OKAY( SCIPstartProbing(scip) );
 
    /* get LP objective value, and fractional variables, that should be integral */
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
@@ -293,16 +294,18 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
    lperror = FALSE;
+   cutoff = FALSE;
    divedepth = 0;
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
-   while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (bestcandmayrounddown || bestcandmayroundup
          || divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
    {
+      CHECK_OKAY( SCIPnewProbingNode(scip) );
       divedepth++;
 
       /* choose variable fixing:
@@ -427,9 +430,11 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 
       var = lpcands[bestcand];
 
-      if( SCIPgetVarLbDive(scip, var) >= SCIPgetVarUbDive(scip, var) - 0.5 )
+      /* if the variable is already fixed, abort diving due to numerical troubles */
+      if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
       {
-         /* the variable is already fixed -> numerical troubles -> abort diving */
+         debugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
          break;
       }
 
@@ -440,9 +445,9 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
          debugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-            lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPgetVarUbDive(scip, var));
-         CHECK_OKAY( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
+            lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
+         CHECK_OKAY( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
       }
       else
       {
@@ -450,14 +455,19 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
          debugMessage("  dive %d/%d, LP iter %lld/%lld: var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
-            lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var),
-            SCIPgetVarLbDive(scip, var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-         CHECK_OKAY( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
+            lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+            SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
+         CHECK_OKAY( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
       }
+
+      /* apply domain propagation */
+      CHECK_OKAY( SCIPpropagateProbing(scip, -1, &cutoff) );
+      if( cutoff )
+         break;
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
-      CHECK_OKAY( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+      CHECK_OKAY( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
       if( lperror )
          break;
 
@@ -494,7 +504,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    }
 
    /* check if a solution has been found */
-   if( nlpcands == 0 && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
+   if( nlpcands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       Bool success;
 
@@ -514,7 +524,7 @@ DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
    }
 
    /* end diving */
-   CHECK_OKAY( SCIPendDive(scip) );
+   CHECK_OKAY( SCIPendProbing(scip) );
 
    debugMessage("fracdiving heuristic finished\n");
 

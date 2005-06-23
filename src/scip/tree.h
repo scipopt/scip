@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.77 2005/05/31 17:20:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.78 2005/06/23 16:02:03 bzfpfend Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -390,6 +390,7 @@ RETCODE SCIPtreeEndProbing(
    BLKMEM*          blkmem,             /**< block memory buffers */
    SET*             set,                /**< global SCIP settings */
    STAT*            stat,               /**< problem statistics */
+   PROB*            prob,               /**< transformed problem after presolve */
    LP*              lp,                 /**< current LP data */
    BRANCHCAND*      branchcand,         /**< branching candidate storage */
    EVENTQUEUE*      eventqueue          /**< event queue */
@@ -475,6 +476,12 @@ void SCIPtreeSetFocusNodeLP(
    Bool             solvelp             /**< should the LP be solved in focus node? */
    );
 
+/** marks the probing node to have a solved LP relaxation */
+extern
+void SCIPtreeMarkProbingNodeHasLP(
+   TREE*            tree                /**< branch and bound tree */
+   );
+
 /** gets current node of the tree, i.e. the last node in the active path, or NULL if no current node exists */
 extern
 NODE* SCIPtreeGetCurrentNode(
@@ -512,9 +519,10 @@ Bool SCIPtreeHasCurrentNodeLP(
 #define SCIPtreeGetFocusDepth(tree)     ((tree)->focusnode != NULL ? (tree)->focusnode->depth : -1)
 #define SCIPtreeHasFocusNodeLP(tree)    (tree)->focusnodehaslp
 #define SCIPtreeSetFocusNodeLP(tree,solvelp)  ((tree)->focusnodehaslp = solvelp)
+#define SCIPtreeMarkProbingNodeHasLP(tree) ((tree)->probingnodehaslp = TRUE)
 #define SCIPtreeGetCurrentNode(tree)    ((tree)->pathlen > 0 ? (tree)->path[(tree)->pathlen-1] : NULL)
 #define SCIPtreeGetCurrentDepth(tree)   ((tree)->pathlen-1)
-#define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? FALSE : SCIPtreeHasFocusNodeLP(tree))
+#define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
 
 #endif
 
