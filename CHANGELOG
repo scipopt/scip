@@ -74,6 +74,7 @@ fixed bugs:
 - conflict analysis can now handle errors in LP solving calls
 - fixed bug in linear constraint handler with variables fixed to infinity
 - fixed bug with potential infinite loop if a separator is delayed and the LP is infeasible
+- fixed numerical bug in pseudo objective propagator with only slightly tightened bounds
 
 
 SCIP version 0.79

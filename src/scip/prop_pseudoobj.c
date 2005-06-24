@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.10 2005/05/31 17:20:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.11 2005/06/24 15:17:20 bzfberth Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -231,11 +231,11 @@ DECL_PROPEXEC(propExecPseudoobj)
          newub = lb + (cutoffbound - pseudoobjval)/obj;
          if( SCIPisUbBetter(scip, newub, ub) )
          {
-            debugMessage(" -> new upper bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newub);
+            debugMessage(" -> new upper bound of variable <%s>[%.10f,%.10f]: %.10f\n", SCIPvarGetName(var), lb, ub, newub);
             CHECK_OKAY( SCIPinferVarUbProp(scip, var, newub, prop, 0, &infeasible, &tightened) );
             assert(!infeasible);
-            assert(tightened);
-            *result = SCIP_REDUCEDDOM;
+            if( tightened ) /* might not be tightened due to numerical reasons */
+               *result = SCIP_REDUCEDDOM;
          }
       }
       else if( SCIPisNegative(scip, obj) )
@@ -250,8 +250,8 @@ DECL_PROPEXEC(propExecPseudoobj)
             debugMessage(" -> new lower bound of variable <%s>[%g,%g]: %g\n", SCIPvarGetName(var), lb, ub, newlb);
             CHECK_OKAY( SCIPinferVarLbProp(scip, var, newlb, prop, 0, &infeasible, &tightened) );
             assert(!infeasible);
-            assert(tightened);
-            *result = SCIP_REDUCEDDOM;
+            if( tightened ) /* might not be tightened due to numerical reasons */
+               *result = SCIP_REDUCEDDOM;
          }
       }
    }
